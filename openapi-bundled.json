@@ -1,0 +1,1561 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Nobstacle API",
+    "description": "",
+    "version": "1.0.0"
+  },
+  "servers": [],
+  "tags": [],
+  "paths": {
+    "/api/v1/iam/user": {
+      "get": {
+        "operationId": "UserController_getUsers",
+        "parameters": [
+          {
+            "name": "skip",
+            "in": "query",
+            "description": "Paginate",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "nullable": true
+            }
+          },
+          {
+            "name": "take",
+            "in": "query",
+            "description": "Paginate",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "nullable": true
+            }
+          },
+          {
+            "name": "discordHandle",
+            "in": "query",
+            "description": "Filter: substring search",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "Roles",
+            "in": "query",
+            "description": "Filter: users by role",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "handle",
+            "in": "query",
+            "description": "search for user handle",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "email",
+            "in": "query",
+            "description": "search for user email",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/GetUserRes"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpExceptionSchema"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "users"
+        ]
+      },
+      "post": {
+        "operationId": "UserController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PostUserReq"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetUserRes"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpExceptionSchema"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpExceptionSchema"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/api/v1/iam/user/{id}": {
+      "get": {
+        "operationId": "UserController_getUser",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetUserRes"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpExceptionSchema"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpExceptionSchema"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "users"
+        ]
+      },
+      "patch": {
+        "operationId": "UserController_patchOne",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchUserReq"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetUserRes"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpExceptionSchema"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpExceptionSchema"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Authentication": []
+          }
+        ],
+        "tags": [
+          "users"
+        ]
+      },
+      "delete": {
+        "operationId": "UserController_deleteUserAccount",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteUserAccountRes"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpExceptionSchema"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpExceptionSchema"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpExceptionSchema"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpExceptionSchema"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Refresh": []
+          },
+          {
+            "Authentication": []
+          }
+        ],
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/api/v1/iam/user/user-info/{id}": {
+      "get": {
+        "operationId": "UserController_getUserInfo",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetUserRes"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpExceptionSchema"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpExceptionSchema"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/api/v1/iam/auth/signin": {
+      "post": {
+        "operationId": "AuthController_login",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginReq"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "",
+            "headers": {
+              "Set-Cookie": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetUserRes"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpExceptionSchema"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpExceptionSchema"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/iam/auth/signout": {
+      "post": {
+        "operationId": "AuthController_logout",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpExceptionSchema"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpExceptionSchema"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Refresh": []
+          },
+          {
+            "Authentication": []
+          }
+        ],
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/iam/auth/refresh": {
+      "post": {
+        "operationId": "AuthController_signAccessToken",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshReq"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetUserRes"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpExceptionSchema"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpExceptionSchema"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Refresh": []
+          }
+        ],
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/company": {
+      "post": {
+        "operationId": "CompanyController_createCompany",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PostCompanyReq"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetCompanyRes"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpExceptionSchema"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpExceptionSchema"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "company"
+        ]
+      },
+      "get": {
+        "operationId": "CompanyController_getUserCompany",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetCompanyRes"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpExceptionSchema"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpExceptionSchema"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "company"
+        ]
+      }
+    },
+    "/api/v1/company/{companyId}": {
+      "get": {
+        "operationId": "CompanyController_getCompanyOne",
+        "parameters": [
+          {
+            "name": "companyId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetCompanyRes"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpExceptionSchema"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpExceptionSchema"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "company"
+        ]
+      }
+    },
+    "/api/v1/company/{companyId}/templates": {
+      "get": {
+        "operationId": "CompanyController_getCompanyTemplates",
+        "parameters": [
+          {
+            "name": "companyId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "skip",
+            "in": "query",
+            "description": "Paginate",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "nullable": true
+            }
+          },
+          {
+            "name": "take",
+            "in": "query",
+            "description": "Paginate",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "nullable": true
+            }
+          },
+          {
+            "name": "ImageTemplates",
+            "in": "query",
+            "description": "Include all Image Templates",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "nullable": true
+            }
+          },
+          {
+            "name": "TextTemplates",
+            "in": "query",
+            "description": "Include all Text Templates",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "nullable": true
+            }
+          },
+          {
+            "name": "MapTemplates",
+            "in": "query",
+            "description": "Include all Map Templates",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "nullable": true
+            }
+          },
+          {
+            "name": "langCode",
+            "in": "query",
+            "description": "lang code of template",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetCompanyTemplatesRes"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpExceptionSchema"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpExceptionSchema"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "company"
+        ]
+      }
+    },
+    "/api/v1/template/text": {
+      "post": {
+        "operationId": "TextTemplateController_createTextTemplate",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PostTextTemplateReq"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetTextTemplateRes"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpExceptionSchema"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpExceptionSchema"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "template"
+        ]
+      }
+    },
+    "/api/v1/template/text/{id}": {
+      "get": {
+        "operationId": "TextTemplateController_getTextTemplateOne",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetTextTemplateRes"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpExceptionSchema"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpExceptionSchema"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "template"
+        ]
+      }
+    },
+    "/api/v1/template/text/{tagId}/{langCode}": {
+      "get": {
+        "operationId": "TextTemplateController_getTextTemplateByTagIdAndLangCode",
+        "parameters": [
+          {
+            "name": "tagId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "langCode",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetTextTemplateRes"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpExceptionSchema"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpExceptionSchema"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "template"
+        ]
+      }
+    },
+    "/api/v1/template/text/is-exist/{tagId}/{langCode}": {
+      "get": {
+        "operationId": "TextTemplateController_isTextTemplateExist",
+        "parameters": [
+          {
+            "name": "tagId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "langCode",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "boolean"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpExceptionSchema"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpExceptionSchema"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "template"
+        ]
+      }
+    },
+    "/api/v1/tag/tag": {
+      "post": {
+        "operationId": "TagController_createTag",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PostTagTemplate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetTagRes"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpExceptionSchema"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpExceptionSchema"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "tag"
+        ]
+      }
+    },
+    "/api/v1/tag/tag/{id}": {
+      "get": {
+        "operationId": "TagController_getTagOne",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetTagRes"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpExceptionSchema"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpExceptionSchema"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "tag"
+        ]
+      }
+    },
+    "/api/v1/tag/tag/company/{companyId}": {
+      "get": {
+        "operationId": "TagController_getCompanyTags",
+        "parameters": [
+          {
+            "name": "companyId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpExceptionSchema"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpExceptionSchema"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "tag"
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "HttpExceptionSchema": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "statusCode": {
+            "type": "number"
+          },
+          "error": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "message",
+          "statusCode",
+          "error"
+        ]
+      },
+      "GetUserRes": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "email": {
+            "type": "string",
+            "nullable": true
+          },
+          "firstName": {
+            "type": "string",
+            "nullable": true
+          },
+          "lastName": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "emailVerified": {
+            "type": "boolean"
+          },
+          "locale": {
+            "type": "string",
+            "enum": [
+              "en",
+              "fr",
+              "es"
+            ],
+            "nullable": true
+          },
+          "Role": {
+            "type": "string",
+            "enum": [
+              "Admin",
+              "Staff",
+              "User"
+            ],
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "firstName",
+          "lastName",
+          "createdAt",
+          "updatedAt",
+          "emailVerified",
+          "locale",
+          "Role"
+        ]
+      },
+      "PostUserReq": {
+        "type": "object",
+        "properties": {
+          "password": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "firstName": {
+            "type": "string",
+            "nullable": true
+          },
+          "lastName": {
+            "type": "string",
+            "nullable": true
+          },
+          "locale": {
+            "type": "string",
+            "default": "en",
+            "enum": [
+              "en",
+              "fr",
+              "es"
+            ]
+          }
+        },
+        "required": [
+          "password",
+          "email",
+          "locale"
+        ]
+      },
+      "PatchUserReq": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "nullable": true
+          },
+          "password": {
+            "description": "Required if email, cryptoWallet isn't null",
+            "type": "string",
+            "nullable": true
+          },
+          "firstName": {
+            "type": "string",
+            "nullable": true
+          },
+          "lastName": {
+            "type": "string",
+            "nullable": true
+          },
+          "newPassword": {
+            "type": "string",
+            "nullable": true
+          },
+          "oldPassword": {
+            "description": "Required if newPassword is not null",
+            "type": "string",
+            "nullable": true
+          },
+          "locale": {
+            "type": "string",
+            "enum": [
+              "en",
+              "fr",
+              "es"
+            ]
+          }
+        }
+      },
+      "DeleteUserAccountRes": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "success"
+        ]
+      },
+      "LoginReq": {
+        "type": "object",
+        "properties": {
+          "emailOrUsername": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          },
+          "timezone": {
+            "description": "The user current timezone, ex: Europe/Amsterdam",
+            "type": "string"
+          }
+        },
+        "required": [
+          "emailOrUsername",
+          "password"
+        ]
+      },
+      "RefreshReq": {
+        "type": "object",
+        "properties": {
+          "timezone": {
+            "description": "The user current timezone, ex: Europe/Amsterdam",
+            "type": "string"
+          }
+        }
+      },
+      "GetUploadFileRes": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "description": "Uploaded file id, nullable for landmark uploads",
+            "type": "integer",
+            "nullable": true
+          },
+          "source": {
+            "description": "Uploaded file source url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "source"
+        ]
+      },
+      "PostCompanyReq": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "nullable": false
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "GetCompanyRes": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "defaultLangCode": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "defaultLangCode"
+        ]
+      },
+      "GetTextTemplateRes": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "description": {
+            "type": "string"
+          },
+          "langCode": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "tagId": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "description",
+          "langCode",
+          "title",
+          "tagId"
+        ]
+      },
+      "GetImageTemplates": {
+        "type": "object"
+      },
+      "GetMapTemplates": {
+        "type": "object"
+      },
+      "GetCompanyTemplatesRes": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "defaultLangCode": {
+            "type": "string"
+          },
+          "TextTemplates": {
+            "description": "text template records",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GetTextTemplateRes"
+            }
+          },
+          "ImageTemplates": {
+            "description": "image template records",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GetImageTemplates"
+            }
+          },
+          "MapTemplates": {
+            "description": "map template records",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GetMapTemplates"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "defaultLangCode",
+          "TextTemplates",
+          "ImageTemplates",
+          "MapTemplates"
+        ]
+      },
+      "PostTextTemplateReq": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string",
+            "nullable": false
+          },
+          "title": {
+            "type": "string",
+            "nullable": false
+          },
+          "langCode": {
+            "type": "string",
+            "nullable": false
+          },
+          "companyId": {
+            "type": "integer",
+            "nullable": false
+          },
+          "tagId": {
+            "type": "integer",
+            "nullable": false
+          },
+          "tagLabel": {
+            "type": "string",
+            "nullable": false
+          }
+        },
+        "required": [
+          "description",
+          "langCode",
+          "companyId"
+        ]
+      },
+      "PostTagTemplate": {
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": "string",
+            "nullable": false
+          },
+          "companyId": {
+            "type": "number",
+            "nullable": false
+          }
+        },
+        "required": [
+          "label",
+          "companyId"
+        ]
+      },
+      "GetTagRes": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "label": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "label"
+        ]
+      }
+    },
+    "securitySchemes": {
+      "Authentication": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "Authentication"
+      },
+      "Refresh": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "Refresh"
+      }
+    }
+  }
+}
