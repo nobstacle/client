@@ -1,0 +1,169 @@
+import * as React from "react";
+import { SubmitHandler, useForm } from "react-hook-form";
+import {
+  getContentControllerFindOneQueryKey,
+  useCompanyControllerGetCompany,
+  useContentControllerFindOne,
+  useTextTemplateControllerCreateTextTemplate,
+  useTextTemplateControllerGetTextTags,
+  useTextTemplateControllerPatchTextTemplateOne,
+} from "../../../lib/client/api";
+import * as yup from "yup";
+import { yupResolver } from "@hookform/resolvers/yup";
+import Input from "../../Input";
+import { Button } from "../../Button";
+import { languages } from "../../../constant/languages";
+import { GetTextTemplateRes } from "../../../lib/client/model";
+
+interface CreateTextTemplateFormFieldValues {
+  content: string;
+}
+
+const schema = yup
+  .object({
+    content: yup.string().required("Content is required"),
+  })
+  .required();
+
+export const UpdateTextTemplateForm: React.FC<{
+  cb?: (template: GetTextTemplateRes) => void;
+  sourceId: number;
+  defaultLangCode: string;
+  tag: string;
+}> = ({ cb, sourceId, defaultLangCode, tag }) => {
+  const content = useContentControllerFindOne(
+    {
+      refType: "Text",
+      sourceId,
+      langCode: defaultLangCode,
+    },
+    {
+      query: {
+        staleTime: 0,
+        gcTime: 0,
+        queryKey: getContentControllerFindOneQueryKey({
+          refType: "Text",
+          sourceId,
+          langCode: defaultLangCode,
+        }),
+      },
+    },
+  );
+
+  const company = useCompanyControllerGetCompany();
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    setValue,
+  } = useForm<CreateTextTemplateFormFieldValues>({
+    resolver: yupResolver(schema),
+    defaultValues: {
+      content: "",
+    },
+    mode: "onChange",
+  });
+
+  React.useEffect(() => {
+    if (content.isSuccess) {
+      setValue("content", content.data.content ?? "");
+    }
+  }, [content.isSuccess]);
+
+  const updateTextTemplate = useTextTemplateControllerPatchTextTemplateOne();
+  const handleUpdateTextTemplate = (
+    data: CreateTextTemplateFormFieldValues,
+  ) => {
+    updateTextTemplate.mutate(
+      {
+        tag,
+        data: {
+          defaultLangCode: company.data?.defaultLangCode ?? "en",
+          content: data.content,
+          langCode: defaultLangCode,
+        },
+      },
+      {
+        onSuccess: (template) => {
+          if (cb) {
+            cb(template);
+          }
+        },
+      },
+    );
+  };
+
+  const onSubmit: SubmitHandler<CreateTextTemplateFormFieldValues> = (data) =>
+    handleUpdateTextTemplate(data);
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)}>
+      <div className="mt-3 flex flex-col gap-4">
+        <div className="flex flex-col gap-2">
+          <Input
+            register={register}
+            name="content"
+            label="Content"
+            type="text"
+            required
+            placeholder="Type content here..."
+          />
+        </div>
+        {/* <div className="flex flex-col items-end">
+          <div className="mt-4 flex">
+            <select {...register("tagSelect")}>
+              <option value="">Select tag...</option>
+              {textTags.data?.map((value, index) => (
+                <option value={value} key={`${value}-${index}`}>
+                  {value}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div> */}
+
+        {/* <div className="flex flex-col">
+          <label className="text-md text-gray-500">Language</label>
+          <div>
+            <select {...register("langCode")}>
+              <option value="">Select language...</option>
+              {languages.map(({ code, name }) => (
+                <option value={code} key={code}>
+                  {name}
+                </option>
+              ))}
+              <option value="tr">Turkish</option>
+              <option value="fr">French</option>
+            </select>
+          </div>
+        </div> */}
+
+        <div className="text-center">
+          {errors.content && (
+            <p className="text-xs text-rose-600">{errors.content.message}</p>
+          )}
+          {/* {errors.tagSelect && (
+            <p className="text-xs text-rose-600">{errors.tagSelect?.message}</p>
+          )}
+          {errors.langCode && (
+            <p className="text-xs text-rose-600">{errors.langCode.message}</p>
+          )} */}
+
+          {updateTextTemplate.error?.message && (
+            <p className="text-xs text-rose-600">
+              {updateTextTemplate.error.response?.data.message}{" "}
+            </p>
+          )}
+        </div>
+        <Button
+          isLoading={updateTextTemplate.status === "pending"}
+          disabled={updateTextTemplate.status === "pending"}
+          type="submit"
+        >
+          Update Template
+        </Button>
+      </div>
+    </form>
+  );
+};

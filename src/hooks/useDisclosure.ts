@@ -1,14 +1,15 @@
-import React from "react"
+import React from "react";
 
-const useDisclosure = () => {
-  const [isOpen, setIsOpen] = React.useState(false)
-  const onClose = () => {
-    setIsOpen(false)
+export const useDisclousure = () => {
+  const [isOpen, setIsOpen] = React.useState(false);
+
+  function handleOpen() {
+    setIsOpen(true);
   }
 
-  const onOpen = () => {
-    setIsOpen(true)
+  function handleClose() {
+    setIsOpen(false);
   }
-  return { isOpen, onClose, onOpen }
-}
-export default useDisclosure
+
+  return { handleOpen, handleClose, isOpen };
+};
