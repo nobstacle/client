@@ -49,7 +49,7 @@ export const CreateMapsTemplateForm: React.FC<{
   cb?: (template: any, isUpdate: boolean) => void;
 }> = ({ cb }) => {
   const { isLoaded } = useJsApiLoader({
-    googleMapsApiKey: "AIzaSyA9YqouCB4d0Kk-_jQ3m4GJd1nuxSQHxVU",
+    googleMapsApiKey: "AIzaSyAkuuYNDf-mtXBh61SgHX6GpQxI4AhogfA",
     libraries: ["places"],
     language: "en",
   });

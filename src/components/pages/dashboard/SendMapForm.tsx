@@ -26,7 +26,7 @@ export const SendMapForm: React.FC<{
   onSend: (origin: string, destination: string) => void;
 }> = ({ onSend }) => {
   const { isLoaded } = useJsApiLoader({
-    googleMapsApiKey: "AIzaSyA9YqouCB4d0Kk-_jQ3m4GJd1nuxSQHxVU",
+    googleMapsApiKey: "AIzaSyAkuuYNDf-mtXBh61SgHX6GpQxI4AhogfA",
     libraries: ["places"],
     language: "en",
   });

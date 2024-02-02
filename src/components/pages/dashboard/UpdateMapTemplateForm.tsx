@@ -100,7 +100,7 @@ export const UpdateMapTemplateForm: React.FC<{
     handleUpdateMapTemplate(data);
 
   const { isLoaded } = useJsApiLoader({
-    googleMapsApiKey: "AIzaSyA9YqouCB4d0Kk-_jQ3m4GJd1nuxSQHxVU",
+    googleMapsApiKey: "AIzaSyAkuuYNDf-mtXBh61SgHX6GpQxI4AhogfA",
     libraries: ["places"],
     language: "en",
   });
