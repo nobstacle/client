@@ -14,7 +14,7 @@ const SimpleMap: React.FC<{
 }> = ({ origin, destination, languageCode }) => {
   return (
     <LoadScript
-      googleMapsApiKey="AIzaSyAkuuYNDf-mtXBh61SgHX6GpQxI4AhogfA"
+      googleMapsApiKey="AIzaSyBB5xoUCTVJoyYUy-4r7LAySR8SpfaVsHA"
       libraries={["places"]}
       language={languageCode}
     >
