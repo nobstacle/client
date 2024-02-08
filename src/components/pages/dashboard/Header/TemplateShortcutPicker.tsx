@@ -42,25 +42,90 @@ export const TemplateShortcutPicker: React.FC = () => {
 
     if (!templateShortcut) return;
 
+    let isExistOnDefaultLanguage = false;
+
     switch (type) {
       case "Text":
-        template = texts.find((text) => text.tag === tag);
+        template = texts.find(
+          (text) =>
+            text.tag === tag &&
+            text.langCode.includes(
+              params.get("lang") || company?.defaultLangCode || "en",
+            ),
+        );
+
+        // if not exist on the selected language try to find default language to send
+        if (!template && company?.defaultLangCode) {
+          template = texts.find(
+            (text) =>
+              text.tag === tag &&
+              text.langCode.includes(company?.defaultLangCode),
+          );
+
+          isExistOnDefaultLanguage = true;
+        }
+
         break;
 
       case "Image":
         template = images.find((image) => image.tag === tag);
+
+        // if not exist on the selected language try to find default language to send
+        if (!template && company?.defaultLangCode) {
+          template = images.find(
+            (text) =>
+              text.tag === tag &&
+              text.langCode.includes(company?.defaultLangCode),
+          );
+
+          isExistOnDefaultLanguage = true;
+        }
         break;
 
       case "Video":
         template = videos.find((video) => video.tag === tag);
+
+        // if not exist on the selected language try to find default language to send
+        if (!template && company?.defaultLangCode) {
+          template = videos.find(
+            (text) =>
+              text.tag === tag &&
+              text.langCode.includes(company?.defaultLangCode),
+          );
+
+          isExistOnDefaultLanguage = true;
+        }
         break;
 
       case "Slideshow":
         template = slideshows.find((slideshow) => slideshow.tag === tag);
+
+        // if not exist on the selected language try to find default language to send
+        if (!template && company?.defaultLangCode) {
+          template = slideshows.find(
+            (text) =>
+              text.tag === tag &&
+              text.langCode.includes(company?.defaultLangCode),
+          );
+
+          isExistOnDefaultLanguage = true;
+        }
         break;
 
       case "Map":
         template = maps.find((map) => map.tag === tag);
+
+        // if not exist on the selected language try to find default language to send
+        if (!template && company?.defaultLangCode) {
+          template = maps.find(
+            (text) =>
+              text.tag === tag &&
+              text.langCode.includes(company?.defaultLangCode),
+          );
+
+          isExistOnDefaultLanguage = true;
+        }
+
         break;
 
       default:
@@ -71,7 +136,9 @@ export const TemplateShortcutPicker: React.FC = () => {
 
     emitSendTemplate({
       refId: template.id,
-      langCode: params.get("lang") || company?.defaultLangCode || "en",
+      langCode: isExistOnDefaultLanguage
+        ? company?.defaultLangCode || "en"
+        : params.get("lang") || company?.defaultLangCode || "en",
       refType: type as any,
       station: Number(params.get("station") ?? 1),
       contentExtra:
