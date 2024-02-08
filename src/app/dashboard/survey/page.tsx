@@ -5,6 +5,9 @@ import { useSearchTemplate } from "../../../hooks/useSearchTemplate";
 import { SearchTemplateForm } from "../../../components/pages/dashboard/SearchTemplateForm";
 import { surveyAnswerValToColor } from "../../../utils";
 import { CreateSurveyTemplate } from "../../../components/pages/dashboard/CreateSurveyTemplate";
+import { useSession } from "next-auth/react";
+import { TrashIcon } from "../../../components/icons/TrashIcon";
+import { useSurveyAnswerControllerDeleteSurveyAnswer } from "../../../lib/client/api";
 
 function Page() {
   const isHydrated = useHasHydrated();
@@ -23,9 +26,32 @@ function Page() {
 }
 
 function SurveyAnswers() {
-  const { surveysAnswer, searchSurveysAnswers } = useTemplateStore();
+  const {
+    surveysAnswer,
+    setSearchSurveysAnswers,
+    setSurveyAnswers,
+    searchSurveysAnswers,
+  } = useTemplateStore();
   const sourceAnswers =
     searchSurveysAnswers.length > 0 ? searchSurveysAnswers : surveysAnswer;
+
+  const { data: userData } = useSession();
+  const deleteSurveyAnswer = useSurveyAnswerControllerDeleteSurveyAnswer();
+
+  const handleDeleteSurveyAnswer = (id: number) => {
+    deleteSurveyAnswer.mutate(
+      { id },
+      {
+        onSuccess: () => {
+          // delete from local states
+          setSearchSurveysAnswers(
+            searchSurveysAnswers.filter((val) => val.id !== id),
+          );
+          setSurveyAnswers(surveysAnswer.filter((val) => val.id !== id));
+        },
+      },
+    );
+  };
 
   return (
     <div className="mt-4 flex w-full flex-col items-start justify-start gap-5">
@@ -50,6 +76,16 @@ function SurveyAnswers() {
               </p>
             </div>
           </div>
+
+          {userData?.user.Roles?.includes("Admin") && (
+            <button
+              className="h-8 w-8  text-danger"
+              onClick={() => handleDeleteSurveyAnswer(id)}
+              disabled={deleteSurveyAnswer.status === "pending"}
+            >
+              <TrashIcon />
+            </button>
+          )}
         </div>
       ))}
     </div>

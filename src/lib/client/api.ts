@@ -1673,6 +1673,53 @@ export const useSurveyAnswerControllerGetSurveyAnswers = <TData = Awaited<Return
 
 
 
+export const surveyAnswerControllerDeleteSurveyAnswer = (
+    id: number,
+ options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
+      
+      
+      return nobstacleBackendApiInstance<boolean>(
+      {url: `/api/v1/content/survey-answer/${id}`, method: 'DELETE'
+    },
+      options);
+    }
+  
+
+
+export const getSurveyAnswerControllerDeleteSurveyAnswerMutationOptions = <TError = ErrorType<HttpExceptionSchema>,
+    
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof surveyAnswerControllerDeleteSurveyAnswer>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof surveyAnswerControllerDeleteSurveyAnswer>>, TError,{id: number}, TContext> => {
+ const {mutation: mutationOptions, request: requestOptions} = options ?? {};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof surveyAnswerControllerDeleteSurveyAnswer>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  surveyAnswerControllerDeleteSurveyAnswer(id,requestOptions)
+        }
+
+        
+
+
+   return  { mutationFn, ...mutationOptions }}
+
+    export type SurveyAnswerControllerDeleteSurveyAnswerMutationResult = NonNullable<Awaited<ReturnType<typeof surveyAnswerControllerDeleteSurveyAnswer>>>
+    
+    export type SurveyAnswerControllerDeleteSurveyAnswerMutationError = ErrorType<HttpExceptionSchema>
+
+    export const useSurveyAnswerControllerDeleteSurveyAnswer = <TError = ErrorType<HttpExceptionSchema>,
+    
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof surveyAnswerControllerDeleteSurveyAnswer>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
+) => {
+
+      const mutationOptions = getSurveyAnswerControllerDeleteSurveyAnswerMutationOptions(options);
+
+      return useMutation(mutationOptions);
+    }
+    
 export const companyControllerCreateCompany = (
     postCompanyReq: BodyType<PostCompanyReq>,
  options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
