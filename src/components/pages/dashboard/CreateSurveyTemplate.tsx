@@ -20,7 +20,8 @@ const schema = yup.object().shape({
 });
 
 export const CreateSurveyTemplate: React.FC = () => {
-  const { surveysAnswer, setSearchSurveysAnswers } = useTemplateStore();
+  const { surveysAnswer, setSearchSurveysAnswers, searchSurveysAnswers } =
+    useTemplateStore();
   const { search } = useSearchTemplate(surveysAnswer, setSearchSurveysAnswers);
   const {
     register,
@@ -49,7 +50,7 @@ export const CreateSurveyTemplate: React.FC = () => {
     handleSendSurvey(data);
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)}>
+    <form className="flex" onSubmit={handleSubmit(onSubmit)}>
       <div className="mt-3 flex w-3/12 items-center gap-4 ">
         <Input
           register={register}
@@ -75,17 +76,27 @@ export const CreateSurveyTemplate: React.FC = () => {
             <SendIcon />
           </Button>
         </div>
+      </div>
 
+      <div className="flex w-full justify-end gap-4">
         {[1, 2, 3, 4, 5].map((val) => (
           <button
             type="button"
             onClick={() => {
-              const filteredVal = surveysAnswer.filter(
-                (temp) => temp.value === val,
-              );
-              console.log("filteredVal", filteredVal);
+              if (
+                searchSurveysAnswers.find(
+                  (searchSurvey) => searchSurvey.value === val,
+                )
+              ) {
+                // on the second click reset default
+                setSearchSurveysAnswers([]);
+              } else {
+                const filteredVal = surveysAnswer.filter(
+                  (temp) => temp.value === val,
+                );
 
-              setSearchSurveysAnswers(filteredVal);
+                setSearchSurveysAnswers(filteredVal);
+              }
             }}
             key={val}
             className="flex items-center gap-5"
