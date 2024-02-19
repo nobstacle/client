@@ -45,7 +45,7 @@ export const ColorShortcutForm: React.FC = () => {
       }) ?? [];
 
     setCurrColors(mappedInitial);
-  }, []);
+  }, [templatesShortcuts]);
 
   const handleAddLangaugeShortcut = () => {
     const color = inputRef.current?.value;
@@ -172,11 +172,13 @@ export const ColorShortcutForm: React.FC = () => {
           }}
         >
           <option value="null">Select type...</option>
-          {["Text", "Image", "Video", "Slideshow","Map"].map((value, index) => (
-            <option value={value} key={`${value}-${index}`}>
-              {value}
-            </option>
-          ))}
+          {["Text", "Image", "Video", "Slideshow", "Map"].map(
+            (value, index) => (
+              <option value={value} key={`${value}-${index}`}>
+                {value}
+              </option>
+            ),
+          )}
         </select>
 
         <select
