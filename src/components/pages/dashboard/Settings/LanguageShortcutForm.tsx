@@ -22,7 +22,7 @@ export const LanguageShortcutForm: React.FC = () => {
       }) ?? [];
 
     setCurrLanguages(mappedInitial);
-  }, []);
+  }, [languagesShortcuts]);
 
   const handleAddLangaugeShortcut = () => {
     const language = inputRef.current?.value;
