@@ -5,8 +5,7 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export interface PostSlideshowTemplateReq {
-  langCode: string;
+export interface GetWebsiteTemplateTagRes {
+  langCode: string[];
   tag: string;
-  urls: string[];
 }

@@ -5,10 +5,9 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export interface GetSurveyTemplateRes {
-  createdAt: string;
-  id: number;
+export interface PostWebsiteTemplateReq {
+  defaultLangCode: string;
+  langCode: string;
   tag: string;
-  templateId: number;
-  updatedAt: string;
+  url: string;
 }

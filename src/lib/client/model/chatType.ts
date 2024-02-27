@@ -15,4 +15,5 @@ export const ChatType = {
   Video: 'Video',
   Slideshow: 'Slideshow',
   Map: 'Map',
+  Website: 'Website',
 } as const;

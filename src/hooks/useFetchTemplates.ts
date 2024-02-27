@@ -12,6 +12,8 @@ import {
   useTemplateControllerGetVideoTemplates,
   useSurveyAnswerControllerGetSurveyAnswers,
   getSurveyAnswerControllerGetSurveyAnswersQueryKey,
+  useTemplateControllerGetWebsiteTemplates,
+  getTemplateControllerGetWebsiteTemplatesQueryKey,
 } from "../lib/client/api";
 import useTemplateStore from "../lib/zustand/store/templateStore";
 
@@ -23,6 +25,7 @@ export const useFetchTemplates = () => {
     setImages,
     setMaps,
     setSurveyAnswers,
+    setWebsites,
   } = useTemplateStore();
   const textTemplates = useTemplateControllerGetTextTemplates(
     {},
@@ -89,6 +92,18 @@ export const useFetchTemplates = () => {
     },
   });
 
+  const websiteTemplates = useTemplateControllerGetWebsiteTemplates(
+    {},
+    {
+      query: {
+        staleTime: Infinity,
+        retry: 0,
+        queryKey: getTemplateControllerGetWebsiteTemplatesQueryKey(),
+        gcTime: Infinity,
+      },
+    },
+  );
+
   useEffect(() => {
     if (textTemplates.isSuccess) {
       setTexts(textTemplates.data);
@@ -138,6 +153,12 @@ export const useFetchTemplates = () => {
       }
     }
   }, [surveyAnswers.isSuccess, surveyAnswers.isRefetching]);
+
+  useEffect(() => {
+    if (websiteTemplates.isSuccess) {
+      setWebsites(websiteTemplates.data);
+    }
+  }, [websiteTemplates.isSuccess]);
 
   return {
     isTextTemplatesLoading: textTemplates.isLoading,

@@ -8,9 +8,9 @@ import {
   GetSurveyAnswerTemplateRes,
   GetTextTemplateRes,
   GetVideoTemplateRes,
+  GetWebsiteTemplateRes,
 } from "../../client/model";
 import { persist } from "zustand/middleware";
-import { GetSurveyTemplateRes } from "../../client/model/getSurveyTemplateRes";
 
 interface BearState {
   searchTexts: GetTextTemplateRes[];
@@ -37,6 +37,10 @@ interface BearState {
   setSlideshows: (slideshows: GetSlideshowTemplateRes[]) => void;
   maps: GetMapTemplateRes[];
   setMaps: (maps: GetMapTemplateRes[]) => void;
+  websites: GetWebsiteTemplateRes[];
+  setWebsites: (websites: GetWebsiteTemplateRes[]) => void;
+  searchWebsites: GetWebsiteTemplateRes[];
+  setSearchWebsites: (Website: GetWebsiteTemplateRes[]) => void;
   setSurveyAnswers: (surveys: GetSurveyAnswerTemplateRes[]) => void;
   surveysAnswer: GetSurveyAnswerTemplateRes[];
   addSurveyAnswer: (survey: GetSurveyAnswerTemplateRes) => void;
@@ -75,6 +79,10 @@ const useTemplateStore = create<BearState>()(
         set((store) => ({
           surveysAnswer: [surveyAnswer, ...store.surveysAnswer],
         })),
+      websites: [],
+      setWebsites: (websites) => set(() => ({ websites })),
+      searchWebsites: [],
+      setSearchWebsites: (searchWebsites) => set(() => ({ searchWebsites })),
     }),
     {
       name: "templates-storage", // name of the item in the storage (must be unique)

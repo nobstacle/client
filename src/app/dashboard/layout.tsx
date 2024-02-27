@@ -86,6 +86,7 @@ const Sidebar = async () => {
           <ClientLink href="/dashboard/slideshow" title="Slideshow" />
           <ClientLink href="/dashboard/maps" title="Maps" />
           <ClientLink href="/dashboard/survey" title="Survey" />
+          <ClientLink href="/dashboard/website" title="Website" />
 
           {user?.user.Roles?.includes("Admin") && (
             <ClientLink href="/dashboard/settings" title="Settings" />

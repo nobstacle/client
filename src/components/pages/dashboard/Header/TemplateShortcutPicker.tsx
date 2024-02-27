@@ -13,12 +13,14 @@ import {
   GetSlideshowTemplateRes,
   GetTextTemplateRes,
   GetVideoTemplateRes,
+  GetWebsiteTemplateRes,
 } from "../../../../lib/client/model";
 
 export const TemplateShortcutPicker: React.FC = () => {
   const { emitSendTemplate } = useSocketContext();
   const { company } = useCompanyStore();
-  const { texts, images, videos, slideshows, maps } = useTemplateStore();
+  const { texts, images, videos, slideshows, maps, websites } =
+    useTemplateStore();
   const isHydrated = useHasHydrated();
 
   const params = useSearchParams();
@@ -35,6 +37,7 @@ export const TemplateShortcutPicker: React.FC = () => {
       | GetVideoTemplateRes
       | GetSlideshowTemplateRes
       | GetMapTemplateRes
+      | GetWebsiteTemplateRes
       | undefined;
     const templateShortcut = templatesShortcuts.filter(
       (templateShortcut) => templateShortcut.id === id,
@@ -114,6 +117,22 @@ export const TemplateShortcutPicker: React.FC = () => {
 
       case "Map":
         template = maps.find((map) => map.tag === tag);
+
+        // if not exist on the selected language try to find default language to send
+        if (!template && company?.defaultLangCode) {
+          template = maps.find(
+            (text) =>
+              text.tag === tag &&
+              text.langCode.includes(company?.defaultLangCode),
+          );
+
+          isExistOnDefaultLanguage = true;
+        }
+
+        break;
+
+      case "Website":
+        template = websites.find((website) => website.tag === tag);
 
         // if not exist on the selected language try to find default language to send
         if (!template && company?.defaultLangCode) {

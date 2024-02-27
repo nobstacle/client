@@ -15,4 +15,5 @@ export const ContentControllerFindOneRefType = {
   Video: 'Video',
   Slideshow: 'Slideshow',
   Map: 'Map',
+  Website: 'Website',
 } as const;

@@ -5,6 +5,9 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export interface PostSurveyReq {
-  tag: string;
-}
+export type TemplateControllerGetWebsiteTemplatesParams = {
+/**
+ * Filter by id
+ */
+id?: number | null;
+};

@@ -10,6 +10,7 @@ import { SlideshowIcon } from "../../../icons/sidebar/SlideshowIcon";
 import { MapsIcon } from "../../../icons/sidebar/MapsIcon";
 import { SurveyIcon } from "../../../icons/sidebar/SurveyIcon";
 import { SettingsIcon } from "../../../icons/sidebar/SettingsIcon";
+import { WebsiteIcon } from "../../../icons/sidebar/WebsiteIcon";
 
 export const ClientLink = ({
   href,
@@ -38,6 +39,7 @@ export const ClientLink = ({
         {title === "Maps" && <MapsIcon />}
         {title === "Survey" && <SurveyIcon />}
         {title === "Settings" && <SettingsIcon />}
+        {title === "Website" && <WebsiteIcon />}
       </div>
       <Link className="font-medium text-white" href={`${href}?${params}`}>
         {title}

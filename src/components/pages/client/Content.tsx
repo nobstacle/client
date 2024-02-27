@@ -139,5 +139,14 @@ export const Content: React.FC = () => {
     return <SurveyAnswer tag={messageStore.receivedSurvey.tag} />;
   }
 
+  if (messageStore.receivedType === "Website") {
+    return (
+      <iframe
+        className="h-full w-full"
+        src={messageStore.receivedContent?.content ?? ""}
+      />
+    );
+  }
+
   return <div></div>;
 };

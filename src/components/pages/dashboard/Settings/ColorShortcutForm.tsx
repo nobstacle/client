@@ -8,6 +8,7 @@ import {
   useSlideshowTemplateControllerGetTextTags,
   useTextTemplateControllerGetTextTags,
   useVideoTemplateControllerGetVideoTags,
+  useWebsiteTemplateControllerGetWebsiteTags,
 } from "../../../../lib/client/api";
 import { ChatType, PostShortcutReq } from "../../../../lib/client/model";
 import useShortcutStore from "../../../../lib/zustand/store/shortcutStore";
@@ -32,6 +33,7 @@ export const ColorShortcutForm: React.FC = () => {
   const slideshowTags = useSlideshowTemplateControllerGetTextTags();
   const videoTags = useVideoTemplateControllerGetVideoTags();
   const mapTags = useMapTemplateControllerGetMapTags();
+  const websiteTags= useWebsiteTemplateControllerGetWebsiteTags();
 
   React.useEffect(() => {
     const mappedInitial =
@@ -172,7 +174,7 @@ export const ColorShortcutForm: React.FC = () => {
           }}
         >
           <option value="null">Select type...</option>
-          {["Text", "Image", "Video", "Slideshow", "Map"].map(
+          {["Text", "Image", "Video", "Slideshow", "Map", "Website"].map(
             (value, index) => (
               <option value={value} key={`${value}-${index}`}>
                 {value}
@@ -239,6 +241,17 @@ export const ColorShortcutForm: React.FC = () => {
 
           {currType === "Map" &&
             mapTags.data
+              ?.filter(({ langCode }) =>
+                langCode.includes(company?.defaultLangCode ?? "en"),
+              )
+              .map((value, index) => (
+                <option value={value.tag} key={`${value.tag}-${index}`}>
+                  {value.tag}
+                </option>
+              ))}
+
+          {currType === "Website" &&
+            websiteTags.data
               ?.filter(({ langCode }) =>
                 langCode.includes(company?.defaultLangCode ?? "en"),
               )
