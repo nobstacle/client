@@ -22,6 +22,7 @@ import { useSearchTemplate } from "../../../hooks/useSearchTemplate";
 import { MapIcon } from "../../../components/icons/MapIcon";
 import { SearchTemplateForm } from "../../../components/pages/dashboard/SearchTemplateForm";
 import { WebsiteIcon } from "../../../components/icons/sidebar/WebsiteIcon";
+import { SendWebsiteTemplateForm } from "../../../components/pages/dashboard/SendWebsiteTemplateForm";
 
 export default function Dashboard() {
   const [editTemplate, setEditTemplate] =
@@ -74,11 +75,27 @@ export default function Dashboard() {
     updateHandleOpen();
   };
 
+  const sendWebsiteTemplateMessage = (url: string) => {
+    console.log("runned", url);
+    emitSendTemplate({
+      refId: 1,
+      langCode: params.get("lang") || companyData?.defaultLangCode || "en",
+      refType: "WebsiteTemplateMessage",
+      station: Number(params.get("station") ?? 1),
+      directContent: url,
+    });
+  };
+
   const websitesSource = searchWebsites.length > 0 ? searchWebsites : websites;
 
   if (hasHydrated)
     return (
       <div className="flex h-full w-full flex-col justify-start gap-4 overflow-y-auto  p-6">
+        <div className="flex w-full flex-col gap-4">
+          <div className="flex w-8/12 flex-col items-end gap-4 ">
+            <SendWebsiteTemplateForm onSend={sendWebsiteTemplateMessage} />
+          </div>
+        </div>
         {websitesSource.length > 0 && (
           <div className="w-50">
             <SearchTemplateForm searchOnChange={search} />

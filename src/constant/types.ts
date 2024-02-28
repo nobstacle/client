@@ -13,7 +13,8 @@ export type ReceivedType =
   | "TextTemplateMessage"
   | "ChatMessage"
   | "MapTemplateMessage"
-  | "Survey";
+  | "Survey"
+  | "WebsiteTemplateMessage";
 
 export interface SendTemplatePayloadType {
   refId: number;

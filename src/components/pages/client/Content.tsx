@@ -139,7 +139,10 @@ export const Content: React.FC = () => {
     return <SurveyAnswer tag={messageStore.receivedSurvey.tag} />;
   }
 
-  if (messageStore.receivedType === "Website") {
+  if (
+    messageStore.receivedType === "Website" ||
+    messageStore.receivedType === "WebsiteTemplateMessage"
+  ) {
     return (
       <iframe
         className="h-full w-full"
