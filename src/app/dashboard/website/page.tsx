@@ -23,6 +23,7 @@ import { MapIcon } from "../../../components/icons/MapIcon";
 import { SearchTemplateForm } from "../../../components/pages/dashboard/SearchTemplateForm";
 import { WebsiteIcon } from "../../../components/icons/sidebar/WebsiteIcon";
 import { SendWebsiteTemplateForm } from "../../../components/pages/dashboard/SendWebsiteTemplateForm";
+import { OpenLinkIcon } from "../../../components/icons/sidebar/OpenLinkIcon";
 
 export default function Dashboard() {
   const [editTemplate, setEditTemplate] =
@@ -153,6 +154,17 @@ export default function Dashboard() {
                     params.get("lang") || companyData?.defaultLangCode || "",
                   )}
                 >
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (val.url) {
+                        window.open(`${val.url}`);
+                      }
+                    }}
+                    className="absolute right-1 top-1 flex bg-white p-2"
+                  >
+                    <OpenLinkIcon />
+                  </button>
                   <div className="flex w-full items-center justify-center">
                     <WebsiteIcon width="100px" height="100px" />
                   </div>
