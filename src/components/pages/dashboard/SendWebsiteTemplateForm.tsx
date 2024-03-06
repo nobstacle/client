@@ -29,8 +29,11 @@ export const SendWebsiteTemplateForm: React.FC<PropsI> = ({ onSend }) => {
   const onSubmit: SubmitHandler<FormValues> = (data) => onSend(data.url);
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className=" w-full  gap-4">
-      <div className="flex items-end gap-4">
+    <form
+      onSubmit={handleSubmit(onSubmit)}
+      className=" w-full items-start justify-start gap-4"
+    >
+      <div className="flex items-center gap-4">
         <Input
           register={register}
           name="url"
@@ -38,7 +41,7 @@ export const SendWebsiteTemplateForm: React.FC<PropsI> = ({ onSend }) => {
           type="text"
           required
           placeholder="Type the url to send here..."
-          className="rounded-md border-2  p-2"
+          className="w-full rounded-md border-2  p-2"
         />
         <div className="flex items-start gap-2">
           <div>

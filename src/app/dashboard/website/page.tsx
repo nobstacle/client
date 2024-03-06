@@ -93,7 +93,7 @@ export default function Dashboard() {
     return (
       <div className="flex h-full w-full flex-col justify-start gap-4 overflow-y-auto  p-6">
         <div className="flex w-full flex-col gap-4">
-          <div className="flex w-8/12 flex-col items-end gap-4 ">
+          <div className="flex w-full flex-col items-end gap-4 ">
             <SendWebsiteTemplateForm onSend={sendWebsiteTemplateMessage} />
           </div>
         </div>
