@@ -161,7 +161,7 @@ export default function Dashboard() {
                         window.open(`${val.url}`);
                       }
                     }}
-                    className="absolute right-1 top-1 flex bg-white p-2"
+                    className="absolute bottom-12 left-2 flex"
                   >
                     <OpenLinkIcon />
                   </button>
