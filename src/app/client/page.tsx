@@ -8,6 +8,9 @@ import { useSocketContext } from "../../context/SocketContextProvider";
 import { useSearchParams } from "next/navigation";
 import Modal from "../../components/Modal";
 import { useDisclousure } from "../../hooks/useDisclosure";
+import { LogoutIcon } from "../../components/icons/sidebar/LogoutIcon";
+import { Logout } from "../../components/pages/dashboard/Header/Logout";
+import { signOut } from "next-auth/react";
 
 export default function Client() {
   return (
@@ -23,6 +26,11 @@ const ClientStationPicker = () => {
   const { emitLeaveChat, socketConnected } = useSocketContext();
   const searchParams = useSearchParams();
   const { isOpen, handleOpen, handleClose } = useDisclousure();
+
+  const handleLogout = async () => {
+    localStorage.clear();
+    await signOut();
+  };
 
   return (
     <>
@@ -53,6 +61,11 @@ const ClientStationPicker = () => {
               });
             }}
           />
+        </div>
+
+        <div className="mt-8 flex w-full justify-end gap-2">
+          <LogoutIcon />
+          <button onClick={handleLogout}>Logout</button>
         </div>
       </Modal>
     </>
