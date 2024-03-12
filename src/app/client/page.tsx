@@ -20,7 +20,7 @@ export default function Client() {
 
 const ClientStationPicker = () => {
   const { clearReceivedContent } = useMessageStore();
-  const { emitLeaveChat } = useSocketContext();
+  const { emitLeaveChat, socketConnected } = useSocketContext();
   const searchParams = useSearchParams();
   const { isOpen, handleOpen, handleClose } = useDisclousure();
 
@@ -31,7 +31,20 @@ const ClientStationPicker = () => {
         className="fixed bottom-0 left-0 h-8 w-screen"
       />
       <Modal title="" isOpen={isOpen} closeModal={handleClose}>
-        <div className="flex w-full justify-center">
+        <div className="mb-4 flex w-full justify-end ">
+          {socketConnected ? (
+            <div className="flex items-center gap-2">
+              <p className="text-xs text-gray-400">Status: </p>
+              <span className="block h-[10px] w-[10px] rounded-full bg-green-600" />
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <p className="text-xs text-gray-400">Status: </p>
+              <span className="block h-[10px] w-[10px] rounded-full bg-danger-dark" />
+            </div>
+          )}
+        </div>
+        <div className="flex w-full flex-col justify-center">
           <StationPicker
             cb={() => {
               clearReceivedContent();

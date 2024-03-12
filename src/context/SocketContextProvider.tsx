@@ -24,6 +24,7 @@ export const SocketContext = createContext<{
   emitLeaveChat: (data: CleanMessagesPayloadType) => void;
   emitSendSurveyAnswer: (data: SendSurveyMessagePayloadType) => void;
   emitSendSurvey: (data: SendSurveyPayloadType) => void;
+  socketConnected: boolean;
 } | null>(null);
 
 export const useSocketContext = () => {
@@ -44,6 +45,7 @@ export const SocketContextProvider = ({
   children: React.ReactNode;
 }) => {
   const [socketClient, setSocketClient] = useState<Socket<any, any>>();
+  const [socketConnected, setSocketConnected] = useState(false);
   const {
     setReceivedContent,
     setReceivedMessage,
@@ -66,6 +68,7 @@ export const SocketContextProvider = ({
   }, [session.data?.user.backendTokens.at]);
 
   useEffect(() => {
+    socketClient?.on("disconnect", onDisconnect);
     socketClient?.on("user-joined", onConnect);
     socketClient?.on("received-template", onReceivedTemplate);
     socketClient?.on("received-message", onReceivedMessage);
@@ -95,6 +98,12 @@ export const SocketContextProvider = ({
     socketClient?.emit("join-chat", {
       station: Number(params.get("station") ?? 1),
     });
+
+    setSocketConnected(true);
+  };
+
+  const onDisconnect = () => {
+    setSocketConnected(false);
   };
 
   const onReceivedTemplate = (data: any) => {
@@ -193,6 +202,7 @@ export const SocketContextProvider = ({
         emitLeaveChat,
         emitSendSurveyAnswer,
         emitSendSurvey,
+        socketConnected,
       }}
     >
       {children}
