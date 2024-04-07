@@ -4,6 +4,7 @@ import {
   useCompanyControllerGetCompany,
   useTextTemplateControllerGetTextTags,
   useWebsiteTemplateControllerCreateWebsiteTemplate,
+  useWebsiteTemplateControllerGetWebsiteTags,
 } from "../../../lib/client/api";
 import * as yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
@@ -45,7 +46,7 @@ const schema = yup.object().shape(
 export const CreateWebsiteTemplateForm: React.FC<{
   cb?: (template: GetWebsiteTemplateRes, isUpdate: boolean) => void;
 }> = ({ cb }) => {
-  const textTags = useTextTemplateControllerGetTextTags();
+  const websiteTags = useWebsiteTemplateControllerGetWebsiteTags();
   const company = useCompanyControllerGetCompany();
 
   const {
@@ -81,7 +82,7 @@ export const CreateWebsiteTemplateForm: React.FC<{
             cb(
               template,
               !!data.tagSelect ||
-                !!textTags.data?.find(({ tag }) => tag === template.tag) ||
+                !!websiteTags.data?.find(({ tag }) => tag === template.tag) ||
                 false,
             );
           }
@@ -121,7 +122,7 @@ export const CreateWebsiteTemplateForm: React.FC<{
           <div className="mt-4 flex">
             <select {...register("tagSelect")}>
               <option value="">Select tag...</option>
-              {textTags.data?.map((value, index) => (
+              {websiteTags.data?.map((value, index) => (
                 <option value={value.tag} key={`${value.tag}-${index}`}>
                   {value.tag}
                 </option>
