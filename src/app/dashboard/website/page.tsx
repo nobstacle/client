@@ -153,20 +153,22 @@ export default function Dashboard() {
                   isAvailable={val.langCode.includes(
                     params.get("lang") || companyData?.defaultLangCode || "",
                   )}
+                  icon={
+                    userData?.user.Roles?.includes("Staff") ? (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (val.url) {
+                            window.open(`${val.url}`);
+                          }
+                        }}
+                        className="absolute bottom-1 right-1 text-white"
+                      >
+                        <OpenLinkIcon />
+                      </button>
+                    ) : undefined
+                  }
                 >
-                  {userData?.user.Roles?.includes("Staff") && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (val.url) {
-                          window.open(`${val.url}`);
-                        }
-                      }}
-                      className="absolute bottom-12 left-2 flex"
-                    >
-                      <OpenLinkIcon />
-                    </button>
-                  )}
                   <div className="flex w-full items-center justify-center">
                     <WebsiteIcon width="100px" height="100px" />
                   </div>

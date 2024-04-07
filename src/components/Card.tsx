@@ -11,6 +11,7 @@ interface PropsI {
   onUpdate?: () => void;
   isRecevied?: boolean;
   isAdmin?: boolean;
+  icon?: JSX.Element;
 }
 
 export const Card: React.FC<React.PropsWithChildren<PropsI>> = ({
@@ -22,6 +23,7 @@ export const Card: React.FC<React.PropsWithChildren<PropsI>> = ({
   tag,
   children,
   isAdmin,
+  icon,
 }) => {
   const [isHover, setIsHover] = React.useState(false);
 
@@ -75,7 +77,8 @@ export const Card: React.FC<React.PropsWithChildren<PropsI>> = ({
       <div className="h-full">
         <Button className="relative h-full w-full rounded-b-md bg-primary  text-sm text-white">
           {tag}
-          {isAvailable && (
+          {icon}
+          {!icon && isAvailable && (
             <span
               className="absolute bottom-0 right-0 h-0 w-0
                  border-b-[15px] border-l-[15px]
@@ -83,7 +86,7 @@ export const Card: React.FC<React.PropsWithChildren<PropsI>> = ({
                  border-l-transparent"
             />
           )}
-          {!isAvailable && (
+          {!icon && !isAvailable && (
             <span
               className="absolute bottom-0 right-0 h-0 w-0
                  border-b-[15px] border-l-[15px]
