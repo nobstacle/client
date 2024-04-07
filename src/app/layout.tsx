@@ -9,6 +9,7 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "Nobstacle",
   description: "Nobstacle",
+  manifest: "/manifest.json",
 };
 
 interface RootLayourPropsI {
