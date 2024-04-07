@@ -46,7 +46,7 @@ export const SendTextTemplateForm: React.FC<PropsI> = ({ onSend }) => {
             </Button>
           </div>
 
-          <button
+          {/* <button
             className="border-1 flex justify-center rounded-md border-black  bg-green-500 p-2 px-6 text-center text-white"
             type="button"
             onClick={() => {
@@ -59,7 +59,7 @@ export const SendTextTemplateForm: React.FC<PropsI> = ({ onSend }) => {
             }}
           >
             <SendIcon />
-          </button>
+          </button> */}
         </div>
       </div>
 
