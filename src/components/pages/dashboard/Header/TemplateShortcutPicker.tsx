@@ -71,14 +71,20 @@ export const TemplateShortcutPicker: React.FC = () => {
         break;
 
       case "Image":
-        template = images.find((image) => image.tag === tag);
+        template = images.find(
+          (image) =>
+            image.tag === tag &&
+            image.langCode.includes(
+              params.get("lang") || company?.defaultLangCode || "en",
+            ),
+        );
 
         // if not exist on the selected language try to find default language to send
         if (!template && company?.defaultLangCode) {
           template = images.find(
-            (text) =>
-              text.tag === tag &&
-              text.langCode.includes(company?.defaultLangCode),
+            (image) =>
+              image.tag === tag &&
+              image.langCode.includes(company?.defaultLangCode),
           );
 
           isExistOnDefaultLanguage = true;
@@ -86,14 +92,20 @@ export const TemplateShortcutPicker: React.FC = () => {
         break;
 
       case "Video":
-        template = videos.find((video) => video.tag === tag);
+        template = videos.find(
+          (video) =>
+            video.tag === tag &&
+            video.langCode.includes(
+              params.get("lang") || company?.defaultLangCode || "en",
+            ),
+        );
 
         // if not exist on the selected language try to find default language to send
         if (!template && company?.defaultLangCode) {
           template = videos.find(
-            (text) =>
-              text.tag === tag &&
-              text.langCode.includes(company?.defaultLangCode),
+            (video) =>
+              video.tag === tag &&
+              video.langCode.includes(company?.defaultLangCode),
           );
 
           isExistOnDefaultLanguage = true;
@@ -101,14 +113,20 @@ export const TemplateShortcutPicker: React.FC = () => {
         break;
 
       case "Slideshow":
-        template = slideshows.find((slideshow) => slideshow.tag === tag);
+        template = slideshows.find(
+          (slideshow) =>
+            slideshow.tag === tag &&
+            slideshow.langCode.includes(
+              params.get("lang") || company?.defaultLangCode || "en",
+            ),
+        );
 
         // if not exist on the selected language try to find default language to send
         if (!template && company?.defaultLangCode) {
           template = slideshows.find(
-            (text) =>
-              text.tag === tag &&
-              text.langCode.includes(company?.defaultLangCode),
+            (slideshow) =>
+              slideshow.tag === tag &&
+              slideshow.langCode.includes(company?.defaultLangCode),
           );
 
           isExistOnDefaultLanguage = true;
@@ -116,14 +134,20 @@ export const TemplateShortcutPicker: React.FC = () => {
         break;
 
       case "Map":
-        template = maps.find((map) => map.tag === tag);
+        template = maps.find(
+          (map) =>
+            map.tag === tag &&
+            map.langCode.includes(
+              params.get("lang") || company?.defaultLangCode || "en",
+            ),
+        );
 
         // if not exist on the selected language try to find default language to send
         if (!template && company?.defaultLangCode) {
           template = maps.find(
-            (text) =>
-              text.tag === tag &&
-              text.langCode.includes(company?.defaultLangCode),
+            (map) =>
+              map.tag === tag &&
+              map.langCode.includes(company?.defaultLangCode),
           );
 
           isExistOnDefaultLanguage = true;
@@ -132,14 +156,20 @@ export const TemplateShortcutPicker: React.FC = () => {
         break;
 
       case "Website":
-        template = websites.find((website) => website.tag === tag);
+        template = websites.find(
+          (website) =>
+            website.tag === tag &&
+            website.langCode.includes(
+              params.get("lang") || company?.defaultLangCode || "en",
+            ),
+        );
 
         // if not exist on the selected language try to find default language to send
         if (!template && company?.defaultLangCode) {
           template = maps.find(
-            (text) =>
-              text.tag === tag &&
-              text.langCode.includes(company?.defaultLangCode),
+            (website) =>
+              website.tag === tag &&
+              website.langCode.includes(company?.defaultLangCode),
           );
 
           isExistOnDefaultLanguage = true;
