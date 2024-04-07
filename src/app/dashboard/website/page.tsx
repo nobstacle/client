@@ -162,9 +162,27 @@ export default function Dashboard() {
                             window.open(`${val.url}`);
                           }
                         }}
-                        className="absolute bottom-1 right-1 text-white"
+                        className="absolute bottom-0 right-0 text-white"
                       >
-                        <OpenLinkIcon />
+                        {val.langCode.includes(
+                          params.get("lang") ||
+                            companyData?.defaultLangCode ||
+                            "",
+                        ) ? (
+                          <span
+                            className="absolute bottom-0 right-0 h-0 w-0
+                 border-b-[15px] border-l-[15px]
+                 border-green-500
+                 border-l-transparent"
+                          />
+                        ) : (
+                          <span
+                            className="absolute bottom-0 right-0 h-0 w-0
+                 border-b-[15px] border-l-[15px]
+                 border-red-500
+                 border-l-transparent"
+                          />
+                        )}
                       </button>
                     ) : undefined
                   }
