@@ -95,6 +95,7 @@ export const Content: React.FC = () => {
           <video
             ref={videoElement}
             autoPlay
+            muted
             loop
             key={messageStore.receivedContent?.content ?? ""}
             playsInline
