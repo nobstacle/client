@@ -52,7 +52,6 @@ export const CompanyLogo: React.FC = () => {
           height: "100%",
           objectFit: "contain",
         }}
-        src={company?.logoUrl}
       />
     );
 
