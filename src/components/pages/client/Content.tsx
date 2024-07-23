@@ -7,7 +7,11 @@ import { ChatBox } from "../../ChatBox";
 import { useSocketContext } from "../../../context/SocketContextProvider";
 import { useSearchParams } from "next/navigation";
 import { useHasHydrated } from "../../../hooks/useHydrated";
-import { useCompanyControllerGetCompany } from "../../../lib/client/api";
+import {
+  getContentControllerGetDefaultSlideshowContentQueryKey,
+  useCompanyControllerGetCompany,
+  useContentControllerGetDefaultSlideshowContent,
+} from "../../../lib/client/api";
 import Slideshow from "./Slideshow";
 
 import React from "react";
@@ -15,11 +19,22 @@ import SimpleMap from "./Map";
 import SurveyAnswer from "./SurveyAnswer";
 
 export const Content: React.FC = () => {
+  const isFirstTimeOpen = useRef(true);
   const videoElement = React.useRef<HTMLVideoElement | null>(null);
   const company = useCompanyControllerGetCompany();
   const params = useSearchParams();
   const messageStore = useMessageStore();
   const hasHydrated = useHasHydrated();
+  const defaultSlideshowContent =
+    useContentControllerGetDefaultSlideshowContent({
+      query: {
+        staleTime: Infinity,
+        gcTime: Infinity,
+        refetchOnMount: false,
+        refetchOnWindowFocus: false,
+        queryKey: getContentControllerGetDefaultSlideshowContentQueryKey(),
+      },
+    });
 
   const chatBoxRef = useRef<HTMLDivElement | null>(null);
 
@@ -34,6 +49,12 @@ export const Content: React.FC = () => {
       }
     }
   }, [messageStore.receivedMessage.length, chatBoxRef.current]);
+
+  useEffect(() => {
+    if (messageStore.receivedType && isFirstTimeOpen.current === true) {
+      isFirstTimeOpen.current = false;
+    }
+  }, [messageStore.receivedType]);
 
   const { emitSendMessage } = useSocketContext();
 
@@ -150,6 +171,10 @@ export const Content: React.FC = () => {
       />
     );
   }
+  if (isFirstTimeOpen && defaultSlideshowContent.data)
+    return (
+      <Slideshow contents={defaultSlideshowContent.data?.contents ?? []} />
+    );
 
   return <div></div>;
 };
