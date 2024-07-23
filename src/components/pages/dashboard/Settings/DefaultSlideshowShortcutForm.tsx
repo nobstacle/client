@@ -7,10 +7,8 @@ import {
   useShortcutControllerPatchShortcut,
   useSlideshowTemplateControllerGetTextTags,
 } from "../../../../lib/client/api";
-import useCompanyStore from "../../../../lib/zustand/store/companyStore";
 import { Button } from "../../../Button";
 import useShortcutStore from "../../../../lib/zustand/store/shortcutStore";
-import useTemplateStore from "../../../../lib/zustand/store/templateStore";
 
 const schema = yup
   .object()
@@ -24,7 +22,6 @@ type FormValues = {
 };
 
 export const DefaultSlideshowShortcutForm: React.FC = () => {
-  const { company } = useCompanyStore();
   const { defaulSlideshowShortcut, setDefaultSlideshowShortcut } =
     useShortcutStore();
 
@@ -91,7 +88,6 @@ export const DefaultSlideshowShortcutForm: React.FC = () => {
 
   if (slideshowTags.data?.length === 0) return null;
   if (slideshowTags.isPending) return null;
-  if (!company?.logoUrl) return null;
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-2">
