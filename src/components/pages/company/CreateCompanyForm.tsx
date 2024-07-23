@@ -18,7 +18,6 @@ const schema = yup
     name: yup.string().required(),
     defaultLangCode: yup.string().required(),
     stationCount: yup.number().required(),
-    file: yup.mixed().optional(),
   })
   .required();
 
@@ -26,7 +25,6 @@ type FormValues = {
   name: string;
   defaultLangCode: string;
   stationCount: number;
-  file?: any;
 };
 
 export const CreateCompanyForm: React.FC = () => {
@@ -34,14 +32,6 @@ export const CreateCompanyForm: React.FC = () => {
   const navigate = useRouter();
   const session = useSession();
   const createCompany = useCompanyControllerCreateCompany({
-    request: {
-      headers: {
-        Authorization: `Bearer ${session.data?.user.backendTokens.at}`,
-      },
-    },
-  });
-
-  const uploadCompanyLogo = useUploadControllerUploadCompanyLogo({
     request: {
       headers: {
         Authorization: `Bearer ${session.data?.user.backendTokens.at}`,
@@ -66,23 +56,9 @@ export const CreateCompanyForm: React.FC = () => {
       },
       {
         onSuccess: async (company) => {
-          const file = data.file[0];
-          if (file) {
-            uploadCompanyLogo.mutate(
-              { data: { file } },
-              {
-                onSuccess: async (url) => {
-                  setCompany({ ...company, logoUrl: url.url });
-                  await session.update();
-                  navigate.push("/");
-                },
-              },
-            );
-          } else {
-            setCompany(company);
-            await session.update();
-            navigate.push("/");
-          }
+          setCompany(company);
+          await session.update();
+          navigate.push("/");
         },
       },
     );
@@ -104,19 +80,7 @@ export const CreateCompanyForm: React.FC = () => {
       {formState.errors.name && (
         <p className="text-xs text-rose-600">Company name is required</p>
       )}
-      <div className="mb-2 flex flex-col">
-        <label htmlFor="email" className="text-md text-gray-500">
-          Logo:
-        </label>
-        <Input
-          register={register}
-          name="file"
-          label=""
-          type="file"
-          required
-          accept="image/png, image/jpeg"
-        />
-      </div>
+      <div className="mb-2 flex flex-col"></div>
 
       <div className="flex w-full flex-col gap-5">
         <div className="flex flex-col">
@@ -162,14 +126,8 @@ export const CreateCompanyForm: React.FC = () => {
       <Button
         type="submit"
         className="mt-4 rounded-xl border-2 border-black bg-primary p-2 text-white"
-        disabled={
-          createCompany.status === "pending" ||
-          uploadCompanyLogo.status === "pending"
-        }
-        isLoading={
-          createCompany.status === "pending" ||
-          uploadCompanyLogo.status === "pending"
-        }
+        disabled={createCompany.status === "pending"}
+        isLoading={createCompany.status === "pending"}
       >
         Create Company
       </Button>
