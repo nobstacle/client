@@ -2,7 +2,6 @@
 import { ColorShortcutForm } from "../../../components/pages/dashboard/Settings/ColorShortcutForm";
 import { DefaultSlideshowShortcutForm } from "../../../components/pages/dashboard/Settings/DefaultSlideshowShortcutForm";
 import { LanguageShortcutForm } from "../../../components/pages/dashboard/Settings/LanguageShortcutForm";
-import { UpdateCompanyForm } from "../../../components/pages/dashboard/Settings/UpdateCompanyImageForm";
 import { UpdateCompanyUsers } from "../../../components/pages/dashboard/Settings/UpdateCompanyUsers";
 import { useHasHydrated } from "../../../hooks/useHydrated";
 
@@ -24,7 +23,6 @@ export default function SettingsPage() {
         >
           <div className="w-full">
             <div className="w-full p-1">
-              <UpdateCompanyForm />
               <UpdateCompanyUsers />
             </div>
           </div>
