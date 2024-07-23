@@ -46,6 +46,7 @@ export const CompanyLogo: React.FC = () => {
             );
           }
         }}
+        src="/nobstacle-logo.png"
         style={{
           cursor: template ? "pointer" : "default",
           width: "100%",
