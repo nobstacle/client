@@ -22,7 +22,17 @@ interface CreateImageTemplateFormFieldValues {
 
 const schema = yup.object().shape(
   {
-    file: yup.mixed().required("File is required"),
+    file: yup
+      .mixed()
+      .required("File is required")
+      .test(
+        "fileSize",
+        "Please upload a file that is 100 MB or smaller.",
+        (value: any) => {
+          console.log(value[0].size <= 100 * 1024, value[0].size, 576);
+          return value && value[0].size <= 100 * 1024 * 1024; // 100mb
+        },
+      ),
     langCode: yup.string().required(),
     tagSelect: yup.string().when("tagCreate", {
       is: (val: any) => val && val.length > 0,
@@ -151,7 +161,9 @@ export const CreateVideoTemplateForm: React.FC<{
 
         <div className="text-center">
           {errors.file && (
-            <p className="text-xs text-rose-600">File is required</p>
+            <p className="text-xs text-rose-600">
+              {errors.file?.message?.toString()}{" "}
+            </p>
           )}
           {(errors.tagCreate || errors.tagSelect) && (
             <p className="text-xs text-rose-600">Tag is required</p>
