@@ -33,7 +33,7 @@ export const ColorShortcutForm: React.FC = () => {
   const slideshowTags = useSlideshowTemplateControllerGetTextTags();
   const videoTags = useVideoTemplateControllerGetVideoTags();
   const mapTags = useMapTemplateControllerGetMapTags();
-  const websiteTags= useWebsiteTemplateControllerGetWebsiteTags();
+  const websiteTags = useWebsiteTemplateControllerGetWebsiteTags();
 
   React.useEffect(() => {
     const mappedInitial =
@@ -124,8 +124,8 @@ export const ColorShortcutForm: React.FC = () => {
       return isValid;
     }
 
-    if (currColors.length === 5) {
-      setError("You can't add more than 5 language shortcut");
+    if (currColors.length === 7) {
+      setError("You can't add more than 7 language shortcut");
       return isValid;
     }
 

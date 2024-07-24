@@ -81,8 +81,8 @@ export const LanguageShortcutForm: React.FC = () => {
 
     if (isInclude) return isValid;
 
-    if (currLanguages.length === 5) {
-      setError("You can't add more than 5 language shortcut");
+    if (currLanguages.length === 7) {
+      setError("You can't add more than 7 language shortcut");
       return isValid;
     }
 
