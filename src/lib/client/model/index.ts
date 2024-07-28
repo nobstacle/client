@@ -31,6 +31,7 @@ export * from './getWebsiteTemplateRes';
 export * from './getWebsiteTemplateTagRes';
 export * from './httpExceptionSchema';
 export * from './loginReq';
+export * from './patchImageTemplateOrderReq';
 export * from './patchImageTemplateReq';
 export * from './patchMapTemplateReq';
 export * from './patchSlideshowTemplateReq';

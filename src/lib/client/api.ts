@@ -39,6 +39,7 @@ import type {
   GetWebsiteTemplateTagRes,
   HttpExceptionSchema,
   LoginReq,
+  PatchImageTemplateOrderReq,
   PatchImageTemplateReq,
   PatchMapTemplateReq,
   PatchSlideshowTemplateReq,
@@ -976,6 +977,59 @@ const {mutation: mutationOptions, request: requestOptions} = options ?? {};
       > => {
 
       const mutationOptions = getImageTemplateControllerPatchImageTemplateOneMutationOptions(options);
+
+      return useMutation(mutationOptions);
+    }
+    
+export const imageTemplateControllerPatchImageTemplateOrder = (
+    id: number,
+    patchImageTemplateOrderReq: BodyType<PatchImageTemplateOrderReq>,
+ options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
+      
+      
+      return nobstacleBackendApiInstance<boolean>(
+      {url: `/api/v1/content/image/order/${id}`, method: 'PATCH',
+      headers: {'Content-Type': 'application/json', },
+      data: patchImageTemplateOrderReq
+    },
+      options);
+    }
+  
+
+
+export const getImageTemplateControllerPatchImageTemplateOrderMutationOptions = <TError = ErrorType<HttpExceptionSchema>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof imageTemplateControllerPatchImageTemplateOrder>>, TError,{id: number;data: BodyType<PatchImageTemplateOrderReq>}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof imageTemplateControllerPatchImageTemplateOrder>>, TError,{id: number;data: BodyType<PatchImageTemplateOrderReq>}, TContext> => {
+const {mutation: mutationOptions, request: requestOptions} = options ?? {};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof imageTemplateControllerPatchImageTemplateOrder>>, {id: number;data: BodyType<PatchImageTemplateOrderReq>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  imageTemplateControllerPatchImageTemplateOrder(id,data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ImageTemplateControllerPatchImageTemplateOrderMutationResult = NonNullable<Awaited<ReturnType<typeof imageTemplateControllerPatchImageTemplateOrder>>>
+    export type ImageTemplateControllerPatchImageTemplateOrderMutationBody = BodyType<PatchImageTemplateOrderReq>
+    export type ImageTemplateControllerPatchImageTemplateOrderMutationError = ErrorType<HttpExceptionSchema>
+
+    export const useImageTemplateControllerPatchImageTemplateOrder = <TError = ErrorType<HttpExceptionSchema>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof imageTemplateControllerPatchImageTemplateOrder>>, TError,{id: number;data: BodyType<PatchImageTemplateOrderReq>}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
+): UseMutationResult<
+        Awaited<ReturnType<typeof imageTemplateControllerPatchImageTemplateOrder>>,
+        TError,
+        {id: number;data: BodyType<PatchImageTemplateOrderReq>},
+        TContext
+      > => {
+
+      const mutationOptions = getImageTemplateControllerPatchImageTemplateOrderMutationOptions(options);
 
       return useMutation(mutationOptions);
     }

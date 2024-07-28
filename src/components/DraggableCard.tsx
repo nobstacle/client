@@ -28,7 +28,7 @@ import { DragIcon } from "./icons/DragIcon";
 import { GetTextTemplateRes } from "../lib/client/model/getTextTemplateRes";
 
 export const DraggableCardContainer: React.FC<{
-  items: GetTextTemplateRes[];
+  items: any[];
   sort: (item1: UniqueIdentifier, item2: UniqueIdentifier) => void;
   children: React.ReactNode;
 }> = ({ items, sort, children }) => {
