@@ -6,6 +6,7 @@ import { useDisclousure } from "../../../hooks/useDisclosure";
 import {
   useCompanyControllerGetCompany,
   useMapTemplateControllerDeleteMapTemplateOne,
+  useMapTemplateControllerPatchMapTemplateOrder,
 } from "../../../lib/client/api";
 import useTemplateStore from "../../../lib/zustand/store/templateStore";
 import { useSearchParams } from "next/navigation";
@@ -22,6 +23,12 @@ import { MapIcon } from "../../../components/icons/MapIcon";
 import { SearchTemplateForm } from "../../../components/pages/dashboard/SearchTemplateForm";
 import { UpdateMapTemplateForm } from "../../../components/pages/dashboard/UpdateMapTemplateForm";
 import { SendMapForm } from "../../../components/pages/dashboard/SendMapForm";
+import {
+  DraggableCardContainer,
+  DraggableCardItem,
+} from "../../../components/DraggableCard";
+import { UniqueIdentifier } from "@dnd-kit/core";
+import { arrayMove } from "@dnd-kit/sortable";
 
 export default function MapsDashboard() {
   const [editTemplate, setEditTemplate] = useState<null | GetMapTemplateRes>(
@@ -34,6 +41,8 @@ export default function MapsDashboard() {
   const { search } = useSearchTemplate(maps, setSearchMaps);
 
   const deleteMapTemplate = useMapTemplateControllerDeleteMapTemplateOne();
+  const updateMapTemplateOrder =
+    useMapTemplateControllerPatchMapTemplateOrder();
 
   const { handleClose, handleOpen, isOpen } = useDisclousure();
   const {
@@ -71,6 +80,26 @@ export default function MapsDashboard() {
   const onUpdateCard = (map: GetMapTemplateRes) => {
     setEditTemplate(map);
     updateHandleOpen();
+  };
+
+  const sortMaps = (item1: UniqueIdentifier, item2: UniqueIdentifier) => {
+    const setResource = searchMaps.length > 0 ? setSearchMaps : setMaps;
+    const mapsResource = searchMaps.length > 0 ? searchMaps : maps;
+
+    const oldIndex = mapsResource.findIndex((item) => item.id === item1);
+    const newIndex = mapsResource.findIndex((item) => item.id === item2);
+
+    let shallow = [...mapsResource];
+    shallow = arrayMove(mapsResource, oldIndex, newIndex);
+
+    shallow.forEach(({ id }, index) => {
+      updateMapTemplateOrder.mutate({
+        data: { order: index + 1 },
+        id,
+      });
+    });
+
+    setResource(shallow);
   };
 
   const sendMapTemplateMessage = (origin: string, destination: string) => {
@@ -128,9 +157,10 @@ export default function MapsDashboard() {
         )}
         <div id="card-wrapper" className="mt-5 flex h-full w-full   ">
           <div className="flex w-full flex-wrap content-start gap-4">
-            {mapsSource?.map((val) => (
-              <>
-                <Card
+            <DraggableCardContainer items={mapsSource} sort={sortMaps}>
+              {mapsSource?.map((val) => (
+                <DraggableCardItem
+                  id={val.id}
                   isAdmin={userData?.user.Roles?.includes("Admin")}
                   key={val.id}
                   tag={val.tag}
@@ -151,13 +181,14 @@ export default function MapsDashboard() {
                   isAvailable={val.langCode.includes(
                     params.get("lang") || companyData?.defaultLangCode || "",
                   )}
+                  isDraggable={searchMaps.length === 0}
                 >
                   <div className="flex w-full items-center justify-center">
                     <MapIcon />
                   </div>
-                </Card>
-              </>
-            ))}
+                </DraggableCardItem>
+              ))}
+            </DraggableCardContainer>
 
             {editTemplate && (
               <Modal

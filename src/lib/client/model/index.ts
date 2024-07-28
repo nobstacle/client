@@ -33,6 +33,7 @@ export * from './httpExceptionSchema';
 export * from './loginReq';
 export * from './patchImageTemplateOrderReq';
 export * from './patchImageTemplateReq';
+export * from './patchMapTemplateOrderReq';
 export * from './patchMapTemplateReq';
 export * from './patchSlideshowTemplateOrderReq';
 export * from './patchSlideshowTemplateReq';

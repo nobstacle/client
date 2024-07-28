@@ -41,6 +41,7 @@ import type {
   LoginReq,
   PatchImageTemplateOrderReq,
   PatchImageTemplateReq,
+  PatchMapTemplateOrderReq,
   PatchMapTemplateReq,
   PatchSlideshowTemplateOrderReq,
   PatchSlideshowTemplateReq,
@@ -2043,6 +2044,59 @@ const {mutation: mutationOptions, request: requestOptions} = options ?? {};
       > => {
 
       const mutationOptions = getMapTemplateControllerPatchMapTemplateOneMutationOptions(options);
+
+      return useMutation(mutationOptions);
+    }
+    
+export const mapTemplateControllerPatchMapTemplateOrder = (
+    id: number,
+    patchMapTemplateOrderReq: BodyType<PatchMapTemplateOrderReq>,
+ options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
+      
+      
+      return nobstacleBackendApiInstance<boolean>(
+      {url: `/api/v1/content/map/order/${id}`, method: 'PATCH',
+      headers: {'Content-Type': 'application/json', },
+      data: patchMapTemplateOrderReq
+    },
+      options);
+    }
+  
+
+
+export const getMapTemplateControllerPatchMapTemplateOrderMutationOptions = <TError = ErrorType<HttpExceptionSchema>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof mapTemplateControllerPatchMapTemplateOrder>>, TError,{id: number;data: BodyType<PatchMapTemplateOrderReq>}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof mapTemplateControllerPatchMapTemplateOrder>>, TError,{id: number;data: BodyType<PatchMapTemplateOrderReq>}, TContext> => {
+const {mutation: mutationOptions, request: requestOptions} = options ?? {};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof mapTemplateControllerPatchMapTemplateOrder>>, {id: number;data: BodyType<PatchMapTemplateOrderReq>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  mapTemplateControllerPatchMapTemplateOrder(id,data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type MapTemplateControllerPatchMapTemplateOrderMutationResult = NonNullable<Awaited<ReturnType<typeof mapTemplateControllerPatchMapTemplateOrder>>>
+    export type MapTemplateControllerPatchMapTemplateOrderMutationBody = BodyType<PatchMapTemplateOrderReq>
+    export type MapTemplateControllerPatchMapTemplateOrderMutationError = ErrorType<HttpExceptionSchema>
+
+    export const useMapTemplateControllerPatchMapTemplateOrder = <TError = ErrorType<HttpExceptionSchema>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof mapTemplateControllerPatchMapTemplateOrder>>, TError,{id: number;data: BodyType<PatchMapTemplateOrderReq>}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
+): UseMutationResult<
+        Awaited<ReturnType<typeof mapTemplateControllerPatchMapTemplateOrder>>,
+        TError,
+        {id: number;data: BodyType<PatchMapTemplateOrderReq>},
+        TContext
+      > => {
+
+      const mutationOptions = getMapTemplateControllerPatchMapTemplateOrderMutationOptions(options);
 
       return useMutation(mutationOptions);
     }
