@@ -50,6 +50,7 @@ import type {
   PatchUserReq,
   PatchVideoTemplateOrderReq,
   PatchVideoTemplateReq,
+  PatchWebsiteTemplateOrderReq,
   PatchWebsiteTemplateReq,
   PostCompanyReq,
   PostImageTemplateReq,
@@ -1508,6 +1509,59 @@ const {mutation: mutationOptions, request: requestOptions} = options ?? {};
       > => {
 
       const mutationOptions = getWebsiteTemplateControllerPatchWebsiteTemplateOneMutationOptions(options);
+
+      return useMutation(mutationOptions);
+    }
+    
+export const websiteTemplateControllerPatchWebsiteTemplateOrder = (
+    id: number,
+    patchWebsiteTemplateOrderReq: BodyType<PatchWebsiteTemplateOrderReq>,
+ options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
+      
+      
+      return nobstacleBackendApiInstance<boolean>(
+      {url: `/api/v1/content/website/order/${id}`, method: 'PATCH',
+      headers: {'Content-Type': 'application/json', },
+      data: patchWebsiteTemplateOrderReq
+    },
+      options);
+    }
+  
+
+
+export const getWebsiteTemplateControllerPatchWebsiteTemplateOrderMutationOptions = <TError = ErrorType<HttpExceptionSchema>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof websiteTemplateControllerPatchWebsiteTemplateOrder>>, TError,{id: number;data: BodyType<PatchWebsiteTemplateOrderReq>}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof websiteTemplateControllerPatchWebsiteTemplateOrder>>, TError,{id: number;data: BodyType<PatchWebsiteTemplateOrderReq>}, TContext> => {
+const {mutation: mutationOptions, request: requestOptions} = options ?? {};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof websiteTemplateControllerPatchWebsiteTemplateOrder>>, {id: number;data: BodyType<PatchWebsiteTemplateOrderReq>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  websiteTemplateControllerPatchWebsiteTemplateOrder(id,data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type WebsiteTemplateControllerPatchWebsiteTemplateOrderMutationResult = NonNullable<Awaited<ReturnType<typeof websiteTemplateControllerPatchWebsiteTemplateOrder>>>
+    export type WebsiteTemplateControllerPatchWebsiteTemplateOrderMutationBody = BodyType<PatchWebsiteTemplateOrderReq>
+    export type WebsiteTemplateControllerPatchWebsiteTemplateOrderMutationError = ErrorType<HttpExceptionSchema>
+
+    export const useWebsiteTemplateControllerPatchWebsiteTemplateOrder = <TError = ErrorType<HttpExceptionSchema>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof websiteTemplateControllerPatchWebsiteTemplateOrder>>, TError,{id: number;data: BodyType<PatchWebsiteTemplateOrderReq>}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
+): UseMutationResult<
+        Awaited<ReturnType<typeof websiteTemplateControllerPatchWebsiteTemplateOrder>>,
+        TError,
+        {id: number;data: BodyType<PatchWebsiteTemplateOrderReq>},
+        TContext
+      > => {
+
+      const mutationOptions = getWebsiteTemplateControllerPatchWebsiteTemplateOrderMutationOptions(options);
 
       return useMutation(mutationOptions);
     }

@@ -7,6 +7,7 @@ import { useDisclousure } from "../../../hooks/useDisclosure";
 import {
   useCompanyControllerGetCompany,
   useWebsiteTemplateControllerDeleteWebsiteTemplateOne,
+  useWebsiteTemplateControllerPatchWebsiteTemplateOrder,
 } from "../../../lib/client/api";
 import useTemplateStore from "../../../lib/zustand/store/templateStore";
 import { useSearchParams } from "next/navigation";
@@ -24,6 +25,12 @@ import { SearchTemplateForm } from "../../../components/pages/dashboard/SearchTe
 import { WebsiteIcon } from "../../../components/icons/sidebar/WebsiteIcon";
 import { SendWebsiteTemplateForm } from "../../../components/pages/dashboard/SendWebsiteTemplateForm";
 import { OpenLinkIcon } from "../../../components/icons/sidebar/OpenLinkIcon";
+import {
+  DraggableCardContainer,
+  DraggableCardItem,
+} from "../../../components/DraggableCard";
+import { UniqueIdentifier } from "@dnd-kit/core";
+import { arrayMove } from "@dnd-kit/sortable";
 
 export default function Dashboard() {
   const [editTemplate, setEditTemplate] =
@@ -37,6 +44,9 @@ export default function Dashboard() {
 
   const deleteWebsiteTemplate =
     useWebsiteTemplateControllerDeleteWebsiteTemplateOne();
+
+  const updateTextTemplateOrder =
+    useWebsiteTemplateControllerPatchWebsiteTemplateOrder();
 
   const { handleClose, handleOpen, isOpen } = useDisclousure();
   const {
@@ -74,6 +84,28 @@ export default function Dashboard() {
   const onUpdateCard = (Website: GetWebsiteTemplateRes) => {
     setEditTemplate(Website);
     updateHandleOpen();
+  };
+
+  const sortWebsites = (item1: UniqueIdentifier, item2: UniqueIdentifier) => {
+    const setResource =
+      searchWebsites.length > 0 ? setSearchWebsites : setWebsites;
+    const websitesResource =
+      searchWebsites.length > 0 ? searchWebsites : websites;
+
+    const oldIndex = websitesResource.findIndex((item) => item.id === item1);
+    const newIndex = websitesResource.findIndex((item) => item.id === item2);
+
+    let shallow = [...websitesResource];
+    shallow = arrayMove(websitesResource, oldIndex, newIndex);
+
+    shallow.forEach(({ id }, index) => {
+      updateTextTemplateOrder.mutate({
+        data: { order: index + 1 },
+        id,
+      });
+    });
+
+    setResource(shallow);
   };
 
   const sendWebsiteTemplateMessage = (url: string) => {
@@ -130,9 +162,10 @@ export default function Dashboard() {
         )}
         <div id="card-wrapper" className="flex h-full w-full">
           <div className="flex w-full flex-wrap content-start gap-4">
-            {websitesSource?.map((val) => (
-              <>
-                <Card
+            <DraggableCardContainer items={websitesSource} sort={sortWebsites}>
+              {websitesSource?.map((val) => (
+                <DraggableCardItem
+                  id={val.id}
                   isAdmin={userData?.user.Roles?.includes("Admin")}
                   key={val.id}
                   tag={val.tag}
@@ -186,13 +219,14 @@ export default function Dashboard() {
                       </button>
                     ) : undefined
                   }
+                  isDraggable={searchWebsites.length === 0}
                 >
                   <div className="flex w-full items-center justify-center">
                     <WebsiteIcon width="100px" height="100px" />
                   </div>
-                </Card>
-              </>
-            ))}
+                </DraggableCardItem>
+              ))}
+            </DraggableCardContainer>
 
             {editTemplate && (
               <Modal

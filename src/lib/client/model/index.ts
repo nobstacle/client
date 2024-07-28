@@ -43,6 +43,7 @@ export * from './patchUserReq';
 export * from './patchUserReqRoles';
 export * from './patchVideoTemplateOrderReq';
 export * from './patchVideoTemplateReq';
+export * from './patchWebsiteTemplateOrderReq';
 export * from './patchWebsiteTemplateReq';
 export * from './postCompanyReq';
 export * from './postImageTemplateReq';
