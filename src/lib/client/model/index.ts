@@ -34,6 +34,7 @@ export * from './loginReq';
 export * from './patchImageTemplateOrderReq';
 export * from './patchImageTemplateReq';
 export * from './patchMapTemplateReq';
+export * from './patchSlideshowTemplateOrderReq';
 export * from './patchSlideshowTemplateReq';
 export * from './patchTextTemplateOrderReq';
 export * from './patchTextTemplateReq';

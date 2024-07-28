@@ -42,6 +42,7 @@ import type {
   PatchImageTemplateOrderReq,
   PatchImageTemplateReq,
   PatchMapTemplateReq,
+  PatchSlideshowTemplateOrderReq,
   PatchSlideshowTemplateReq,
   PatchTextTemplateOrderReq,
   PatchTextTemplateReq,
@@ -1665,6 +1666,59 @@ const {mutation: mutationOptions, request: requestOptions} = options ?? {};
       > => {
 
       const mutationOptions = getSlideshowTemplateControllerPatchSlideshowTemplateOneMutationOptions(options);
+
+      return useMutation(mutationOptions);
+    }
+    
+export const slideshowTemplateControllerPatchSlideshowTemplateOrder = (
+    id: number,
+    patchSlideshowTemplateOrderReq: BodyType<PatchSlideshowTemplateOrderReq>,
+ options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
+      
+      
+      return nobstacleBackendApiInstance<boolean>(
+      {url: `/api/v1/content/slideshow/order/${id}`, method: 'PATCH',
+      headers: {'Content-Type': 'application/json', },
+      data: patchSlideshowTemplateOrderReq
+    },
+      options);
+    }
+  
+
+
+export const getSlideshowTemplateControllerPatchSlideshowTemplateOrderMutationOptions = <TError = ErrorType<HttpExceptionSchema>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof slideshowTemplateControllerPatchSlideshowTemplateOrder>>, TError,{id: number;data: BodyType<PatchSlideshowTemplateOrderReq>}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof slideshowTemplateControllerPatchSlideshowTemplateOrder>>, TError,{id: number;data: BodyType<PatchSlideshowTemplateOrderReq>}, TContext> => {
+const {mutation: mutationOptions, request: requestOptions} = options ?? {};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof slideshowTemplateControllerPatchSlideshowTemplateOrder>>, {id: number;data: BodyType<PatchSlideshowTemplateOrderReq>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  slideshowTemplateControllerPatchSlideshowTemplateOrder(id,data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SlideshowTemplateControllerPatchSlideshowTemplateOrderMutationResult = NonNullable<Awaited<ReturnType<typeof slideshowTemplateControllerPatchSlideshowTemplateOrder>>>
+    export type SlideshowTemplateControllerPatchSlideshowTemplateOrderMutationBody = BodyType<PatchSlideshowTemplateOrderReq>
+    export type SlideshowTemplateControllerPatchSlideshowTemplateOrderMutationError = ErrorType<HttpExceptionSchema>
+
+    export const useSlideshowTemplateControllerPatchSlideshowTemplateOrder = <TError = ErrorType<HttpExceptionSchema>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof slideshowTemplateControllerPatchSlideshowTemplateOrder>>, TError,{id: number;data: BodyType<PatchSlideshowTemplateOrderReq>}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
+): UseMutationResult<
+        Awaited<ReturnType<typeof slideshowTemplateControllerPatchSlideshowTemplateOrder>>,
+        TError,
+        {id: number;data: BodyType<PatchSlideshowTemplateOrderReq>},
+        TContext
+      > => {
+
+      const mutationOptions = getSlideshowTemplateControllerPatchSlideshowTemplateOrderMutationOptions(options);
 
       return useMutation(mutationOptions);
     }

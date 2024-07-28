@@ -8,6 +8,7 @@ import {
   getTemplateControllerGetSlideshowTemplatesQueryKey,
   useCompanyControllerGetCompany,
   useSlideshowTemplateControllerDeleteSlideshowTemplateOne,
+  useSlideshowTemplateControllerPatchSlideshowTemplateOrder,
   useTemplateControllerGetSlideshowTemplates,
 } from "../../../lib/client/api";
 import { Card } from "../../../components/Card";
@@ -28,6 +29,12 @@ import {
 } from "../../../lib/client/model";
 import { useSearchTemplate } from "../../../hooks/useSearchTemplate";
 import { SearchTemplateForm } from "../../../components/pages/dashboard/SearchTemplateForm";
+import {
+  DraggableCardContainer,
+  DraggableCardItem,
+} from "../../../components/DraggableCard";
+import { UniqueIdentifier } from "@dnd-kit/core";
+import { arrayMove } from "@dnd-kit/sortable";
 
 export default function SlideshowDashboard() {
   const [editTemplate, setEditTemplate] =
@@ -50,6 +57,9 @@ export default function SlideshowDashboard() {
 
   const deleteSlideshowTemplate =
     useSlideshowTemplateControllerDeleteSlideshowTemplateOne();
+
+  const updateSlideshowTemplateOrder =
+    useSlideshowTemplateControllerPatchSlideshowTemplateOrder();
 
   const { emitSendTemplate } = useSocketContext();
   const { data: companyData } = useCompanyControllerGetCompany();
@@ -83,6 +93,28 @@ export default function SlideshowDashboard() {
   const onUpdateCard = (slideshow: GetSlideshowTemplateRes) => {
     setEditTemplate(slideshow);
     updateHandleOpen();
+  };
+
+  const sortSlideshows = (item1: UniqueIdentifier, item2: UniqueIdentifier) => {
+    const setResource =
+      searchSlideshows.length > 0 ? setSearchSlideshows : setSlideshows;
+    const slideshowsResource =
+      searchSlideshows.length > 0 ? searchSlideshows : slideshows;
+
+    const oldIndex = slideshowsResource.findIndex((item) => item.id === item1);
+    const newIndex = slideshowsResource.findIndex((item) => item.id === item2);
+
+    let shallow = [...slideshowsResource];
+    shallow = arrayMove(slideshowsResource, oldIndex, newIndex);
+
+    shallow.forEach(({ id }, index) => {
+      updateSlideshowTemplateOrder.mutate({
+        data: { order: index + 1 },
+        id,
+      });
+    });
+
+    setResource(shallow);
   };
 
   const slideshowsSource =
@@ -135,34 +167,47 @@ export default function SlideshowDashboard() {
 
         <div id="card-wrapper" className="flex h-full w-full">
           <div className="flex w-full flex-wrap content-start gap-4">
-            {slideshowsSource.map((val) => (
-              <Card
-                tag={val.tag}
-                key={val.id}
-                onDelete={() => onDeleteCard(val.id)}
-                isAdmin={userData?.user.Roles?.includes("Admin")}
-                isAvailable={val.langCode.includes(
-                  params.get("lang") || companyData?.defaultLangCode || "",
-                )}
-                onUpdate={() => onUpdateCard(val)}
-                sendOnClick={() =>
-                  sendTemplate(
-                    val.id,
-                    val.langCode.includes(
-                      params.get("lang") || companyData?.defaultLangCode || "",
-                    ),
-                  )
-                }
-              >
-                <Image
-                  alt="template_image"
-                  width="250"
-                  height="100"
-                  style={{ objectFit: "cover", width: "100%", height: "100%" }}
-                  src={val.url as any}
-                />
-              </Card>
-            ))}
+            <DraggableCardContainer
+              items={slideshowsSource}
+              sort={sortSlideshows}
+            >
+              {slideshowsSource?.map((val) => (
+                <DraggableCardItem
+                  id={val.id}
+                  tag={val.tag}
+                  key={val.id}
+                  onDelete={() => onDeleteCard(val.id)}
+                  isAdmin={userData?.user.Roles?.includes("Admin")}
+                  isAvailable={val.langCode.includes(
+                    params.get("lang") || companyData?.defaultLangCode || "",
+                  )}
+                  onUpdate={() => onUpdateCard(val)}
+                  sendOnClick={() =>
+                    sendTemplate(
+                      val.id,
+                      val.langCode.includes(
+                        params.get("lang") ||
+                          companyData?.defaultLangCode ||
+                          "",
+                      ),
+                    )
+                  }
+                  isDraggable={searchSlideshows.length === 0}
+                >
+                  <Image
+                    alt="template_image"
+                    width="250"
+                    height="100"
+                    style={{
+                      objectFit: "cover",
+                      width: "100%",
+                      height: "100%",
+                    }}
+                    src={val.url as any}
+                  />
+                </DraggableCardItem>
+              ))}
+            </DraggableCardContainer>
           </div>
         </div>
         {userData?.user.Roles?.includes("Admin") && (
