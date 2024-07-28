@@ -5,6 +5,7 @@ import { useDisclousure } from "../../../hooks/useDisclosure";
 import {
   useCompanyControllerGetCompany,
   useVideoTemplateControllerDeleteVideoTemplateOne,
+  useVideoTemplateControllerPatchVideoTemplateOrder,
 } from "../../../lib/client/api";
 import { Card } from "../../../components/Card";
 import { useSearchParams } from "next/navigation";
@@ -20,6 +21,12 @@ import { GetVideoTemplateRes } from "../../../lib/client/model";
 import { UpdateVideoTemplateForm } from "../../../components/pages/dashboard/UpdateVideoTemplateForm";
 import { useSearchTemplate } from "../../../hooks/useSearchTemplate";
 import { SearchTemplateForm } from "../../../components/pages/dashboard/SearchTemplateForm";
+import {
+  DraggableCardContainer,
+  DraggableCardItem,
+} from "../../../components/DraggableCard";
+import { arrayMove } from "@dnd-kit/sortable";
+import { UniqueIdentifier } from "@dnd-kit/core";
 
 export default function VideoDashboard() {
   const [editTemplate, setEditTemplate] = useState<null | GetVideoTemplateRes>(
@@ -32,6 +39,10 @@ export default function VideoDashboard() {
   const { search } = useSearchTemplate(videos, setSearchVideos);
 
   const params = useSearchParams();
+
+  const updateVideoTemplateOrder =
+    useVideoTemplateControllerPatchVideoTemplateOrder();
+
   const { handleClose, handleOpen, isOpen } = useDisclousure();
   const {
     handleClose: updateHandleClose,
@@ -75,6 +86,26 @@ export default function VideoDashboard() {
     updateHandleOpen();
   };
 
+  const sortVideos = (item1: UniqueIdentifier, item2: UniqueIdentifier) => {
+    const setResource = searchVideos.length > 0 ? setSearchVideos : setVideos;
+    const videosResources = searchVideos.length > 0 ? searchVideos : videos;
+
+    const oldIndex = videosResources.findIndex((item) => item.id === item1);
+    const newIndex = videosResources.findIndex((item) => item.id === item2);
+
+    let shallow = [...videosResources];
+    shallow = arrayMove(videosResources, oldIndex, newIndex);
+
+    shallow.forEach(({ id }, index) => {
+      updateVideoTemplateOrder.mutate({
+        data: { order: index + 1 },
+        id,
+      });
+    });
+
+    setResource(shallow);
+  };
+
   const videosSource = searchVideos.length > 0 ? searchVideos : videos;
 
   if (isHydrated)
@@ -110,40 +141,46 @@ export default function VideoDashboard() {
         )}
         <div id="card-wrapper" className="flex h-full w-full">
           <div className="flex w-full flex-wrap content-start gap-4">
-            {videosSource?.map((val) => (
-              <Card
-                onDelete={() => onDeleteCard(val.id)}
-                isAdmin={userData?.user.Roles?.includes("Admin")}
-                onUpdate={() => onUpdateCard(val)}
-                key={val.id}
-                tag={val.tag}
-                isAvailable={val.langCode.includes(
-                  params.get("lang") || companyData?.defaultLangCode || "",
-                )}
-                sendOnClick={() =>
-                  sendTemplate(
-                    val.id,
-                    val.langCode.includes(
-                      params.get("lang") || companyData?.defaultLangCode || "",
-                    ),
-                    val.ext,
-                  )
-                }
-              >
-                <video
-                  key={val.url}
-                  controls
-                  width="250"
-                  height="100"
-                  style={{
-                    objectFit: "cover",
-                    width: "100%",
-                    height: "100%",
-                  }}
-                  src={val.url}
-                />
-              </Card>
-            ))}
+            <DraggableCardContainer items={videosSource} sort={sortVideos}>
+              {videosSource?.map((val) => (
+                <DraggableCardItem
+                  onDelete={() => onDeleteCard(val.id)}
+                  isAdmin={userData?.user.Roles?.includes("Admin")}
+                  onUpdate={() => onUpdateCard(val)}
+                  key={val.id}
+                  tag={val.tag}
+                  isAvailable={val.langCode.includes(
+                    params.get("lang") || companyData?.defaultLangCode || "",
+                  )}
+                  sendOnClick={() =>
+                    sendTemplate(
+                      val.id,
+                      val.langCode.includes(
+                        params.get("lang") ||
+                          companyData?.defaultLangCode ||
+                          "",
+                      ),
+                      val.ext,
+                    )
+                  }
+                  isDraggable={searchVideos.length === 0}
+                  id={val.id}
+                >
+                  <video
+                    key={val.url}
+                    controls
+                    width="250"
+                    height="100"
+                    style={{
+                      objectFit: "cover",
+                      width: "100%",
+                      height: "100%",
+                    }}
+                    src={val.url}
+                  />
+                </DraggableCardItem>
+              ))}
+            </DraggableCardContainer>
 
             {editTemplate && (
               <Modal

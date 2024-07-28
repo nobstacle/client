@@ -46,6 +46,7 @@ import type {
   PatchTextTemplateOrderReq,
   PatchTextTemplateReq,
   PatchUserReq,
+  PatchVideoTemplateOrderReq,
   PatchVideoTemplateReq,
   PatchWebsiteTemplateReq,
   PostCompanyReq,
@@ -1241,6 +1242,59 @@ const {mutation: mutationOptions, request: requestOptions} = options ?? {};
       > => {
 
       const mutationOptions = getVideoTemplateControllerPatchVideoTemplateOneMutationOptions(options);
+
+      return useMutation(mutationOptions);
+    }
+    
+export const videoTemplateControllerPatchVideoTemplateOrder = (
+    id: number,
+    patchVideoTemplateOrderReq: BodyType<PatchVideoTemplateOrderReq>,
+ options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
+      
+      
+      return nobstacleBackendApiInstance<boolean>(
+      {url: `/api/v1/content/video/order/${id}`, method: 'PATCH',
+      headers: {'Content-Type': 'application/json', },
+      data: patchVideoTemplateOrderReq
+    },
+      options);
+    }
+  
+
+
+export const getVideoTemplateControllerPatchVideoTemplateOrderMutationOptions = <TError = ErrorType<HttpExceptionSchema>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof videoTemplateControllerPatchVideoTemplateOrder>>, TError,{id: number;data: BodyType<PatchVideoTemplateOrderReq>}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof videoTemplateControllerPatchVideoTemplateOrder>>, TError,{id: number;data: BodyType<PatchVideoTemplateOrderReq>}, TContext> => {
+const {mutation: mutationOptions, request: requestOptions} = options ?? {};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof videoTemplateControllerPatchVideoTemplateOrder>>, {id: number;data: BodyType<PatchVideoTemplateOrderReq>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  videoTemplateControllerPatchVideoTemplateOrder(id,data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type VideoTemplateControllerPatchVideoTemplateOrderMutationResult = NonNullable<Awaited<ReturnType<typeof videoTemplateControllerPatchVideoTemplateOrder>>>
+    export type VideoTemplateControllerPatchVideoTemplateOrderMutationBody = BodyType<PatchVideoTemplateOrderReq>
+    export type VideoTemplateControllerPatchVideoTemplateOrderMutationError = ErrorType<HttpExceptionSchema>
+
+    export const useVideoTemplateControllerPatchVideoTemplateOrder = <TError = ErrorType<HttpExceptionSchema>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof videoTemplateControllerPatchVideoTemplateOrder>>, TError,{id: number;data: BodyType<PatchVideoTemplateOrderReq>}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
+): UseMutationResult<
+        Awaited<ReturnType<typeof videoTemplateControllerPatchVideoTemplateOrder>>,
+        TError,
+        {id: number;data: BodyType<PatchVideoTemplateOrderReq>},
+        TContext
+      > => {
+
+      const mutationOptions = getVideoTemplateControllerPatchVideoTemplateOrderMutationOptions(options);
 
       return useMutation(mutationOptions);
     }
