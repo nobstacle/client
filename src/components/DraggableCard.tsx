@@ -1,34 +1,116 @@
-import * as React from "react";
+import type {
+  DragStartEvent,
+  DragOverEvent,
+  UniqueIdentifier,
+} from "@dnd-kit/core";
+import {
+  useSensors,
+  useSensor,
+  PointerSensor,
+  TouchSensor,
+  KeyboardSensor,
+  DndContext,
+  closestCenter,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  horizontalListSortingStrategy,
+  sortableKeyboardCoordinates,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { Card, CardPropsI } from "./Card";
+import React from "react";
 import { Button } from "./Button";
 import { TrashIcon } from "./icons/TrashIcon";
 import { PencilIcon } from "./icons/PencilIcon";
+import { DragIcon } from "./icons/DragIcon";
+import { GetTextTemplateRes } from "../lib/client/model/getTextTemplateRes";
 
-export interface CardPropsI {
-  tag?: string;
-  isAvailable?: boolean;
-  sendOnClick?: () => void;
-  onDelete?: () => void;
-  onUpdate?: () => void;
-  isRecevied?: boolean;
-  isAdmin?: boolean;
-  icon?: JSX.Element;
-}
+export const DraggableCardContainer: React.FC<{
+  items: GetTextTemplateRes[];
+  sort: (item1: UniqueIdentifier, item2: UniqueIdentifier) => void;
+  children: React.ReactNode;
+}> = ({ items, sort, children }) => {
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(TouchSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
 
-export const Card: React.FC<React.PropsWithChildren<CardPropsI>> = ({
+  return (
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragOver={handleDragOver}
+      onDragStart={handleDragStart}
+    >
+      <SortableContext
+        items={items.map((item) => item.id)}
+        strategy={horizontalListSortingStrategy}
+      >
+        {children}
+      </SortableContext>
+    </DndContext>
+  );
+
+  function handleDragStart(event: DragStartEvent) {
+    const { active } = event;
+  }
+
+  function handleDragOver(event: DragOverEvent) {
+    // const activeContainerIndex = findContainerIndex(event.active.id);
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      sort(active.id, over.id);
+    }
+  }
+};
+
+export const DraggableCardItem: React.FC<
+  React.PropsWithChildren<CardPropsI & { id: number; isDraggable: boolean }>
+> = function ({
+  id,
+  children,
+  icon,
+  isAdmin,
+  isRecevied,
   isAvailable,
-  sendOnClick,
   onDelete,
   onUpdate,
-  isRecevied,
+  sendOnClick,
   tag,
-  children,
-  isAdmin,
-  icon,
-}) => {
+  isDraggable,
+}) {
   const [isHover, setIsHover] = React.useState(false);
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id });
+
+  const transformValues = transform
+    ? {
+        ...transform,
+        scaleX: isDragging ? 1.1 : 1.0,
+        scaleY: isDragging ? 1.1 : 1.0,
+      }
+    : null;
+
+  const style = {
+    transform: CSS.Transform.toString(transformValues),
+    transition,
+  };
 
   return (
     <div
+      ref={setNodeRef}
       onMouseOver={() => setIsHover(true)}
       onMouseLeave={() => setIsHover(false)}
       onClick={(e) => {
@@ -39,6 +121,11 @@ export const Card: React.FC<React.PropsWithChildren<CardPropsI>> = ({
       }}
       id="card-container"
       className="relative flex h-[166px] w-full max-w-[166px] cursor-pointer flex-col rounded-md bg-neutral-300 shadow-2xl"
+      style={{
+        ...style,
+        zIndex: isDragging ? 9999 : 1,
+        position: "relative",
+      }}
     >
       <div className="min-h-[118px] px-3 pt-3">{children}</div>
 
@@ -59,7 +146,7 @@ export const Card: React.FC<React.PropsWithChildren<CardPropsI>> = ({
         </div>
       )}
       {!isRecevied && isHover && isAdmin && (
-        <div className="absolute right-0 top-0 z-10 flex ">
+        <div className="absolute right-0 top-0 z-10 flex">
           <button
             className="rounded-t-r-md m-0 h-5 w-5 rounded-b-md    text-center text-danger"
             onClick={(e) => {
@@ -73,6 +160,17 @@ export const Card: React.FC<React.PropsWithChildren<CardPropsI>> = ({
           </button>
         </div>
       )}
+
+      {!isRecevied && isHover && isAdmin && isDraggable && (
+        <div
+          {...attributes}
+          {...listeners}
+          className="absolute bottom-0 left-0 z-10 flex cursor-move"
+        >
+          <DragIcon />
+        </div>
+      )}
+
       <div className="p-2"></div>
       <div className="h-full">
         <Button className="relative h-full w-full rounded-b-md bg-primary  text-sm text-white">
@@ -125,20 +223,4 @@ export const Card: React.FC<React.PropsWithChildren<CardPropsI>> = ({
       </div> */}
     </div>
   );
-  // return (
-  //   <div
-  //     className="relative h-full max-h-[166px] w-full max-w-[166px] cursor-pointer flex-col justify-between rounded-t-md bg-neutral-300"
-  //   >
-  //     <div className="h-full min-h-[126px] px-4 pt-4">
-  //       <div>{children}</div>
-  //     </div>
-  //     <div className="h-[40px]">
-  //     </div>
-  //     <div className="h-full w-full max-w-[200px] rounded-t-md bg-neutral-300 px-4 pt-4">
-  //       {children}
-  //     </div>
-
-  //      */}
-  //   </div>
-  // );
 };

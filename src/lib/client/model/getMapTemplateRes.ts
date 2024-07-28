@@ -9,6 +9,7 @@ export interface GetMapTemplateRes {
   destination: string;
   id: number;
   langCode: string[];
+  order: number;
   origin: string;
   tag: string;
   templateId: number;

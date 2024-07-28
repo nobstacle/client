@@ -42,6 +42,7 @@ import type {
   PatchImageTemplateReq,
   PatchMapTemplateReq,
   PatchSlideshowTemplateReq,
+  PatchTextTemplateOrderReq,
   PatchTextTemplateReq,
   PatchUserReq,
   PatchVideoTemplateReq,
@@ -711,6 +712,59 @@ const {mutation: mutationOptions, request: requestOptions} = options ?? {};
       > => {
 
       const mutationOptions = getTextTemplateControllerPatchTextTemplateOneMutationOptions(options);
+
+      return useMutation(mutationOptions);
+    }
+    
+export const textTemplateControllerPatchTextTemplateOrder = (
+    id: number,
+    patchTextTemplateOrderReq: BodyType<PatchTextTemplateOrderReq>,
+ options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
+      
+      
+      return nobstacleBackendApiInstance<boolean>(
+      {url: `/api/v1/content/text/order/${id}`, method: 'PATCH',
+      headers: {'Content-Type': 'application/json', },
+      data: patchTextTemplateOrderReq
+    },
+      options);
+    }
+  
+
+
+export const getTextTemplateControllerPatchTextTemplateOrderMutationOptions = <TError = ErrorType<HttpExceptionSchema>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof textTemplateControllerPatchTextTemplateOrder>>, TError,{id: number;data: BodyType<PatchTextTemplateOrderReq>}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof textTemplateControllerPatchTextTemplateOrder>>, TError,{id: number;data: BodyType<PatchTextTemplateOrderReq>}, TContext> => {
+const {mutation: mutationOptions, request: requestOptions} = options ?? {};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof textTemplateControllerPatchTextTemplateOrder>>, {id: number;data: BodyType<PatchTextTemplateOrderReq>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  textTemplateControllerPatchTextTemplateOrder(id,data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type TextTemplateControllerPatchTextTemplateOrderMutationResult = NonNullable<Awaited<ReturnType<typeof textTemplateControllerPatchTextTemplateOrder>>>
+    export type TextTemplateControllerPatchTextTemplateOrderMutationBody = BodyType<PatchTextTemplateOrderReq>
+    export type TextTemplateControllerPatchTextTemplateOrderMutationError = ErrorType<HttpExceptionSchema>
+
+    export const useTextTemplateControllerPatchTextTemplateOrder = <TError = ErrorType<HttpExceptionSchema>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof textTemplateControllerPatchTextTemplateOrder>>, TError,{id: number;data: BodyType<PatchTextTemplateOrderReq>}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
+): UseMutationResult<
+        Awaited<ReturnType<typeof textTemplateControllerPatchTextTemplateOrder>>,
+        TError,
+        {id: number;data: BodyType<PatchTextTemplateOrderReq>},
+        TContext
+      > => {
+
+      const mutationOptions = getTextTemplateControllerPatchTextTemplateOrderMutationOptions(options);
 
       return useMutation(mutationOptions);
     }

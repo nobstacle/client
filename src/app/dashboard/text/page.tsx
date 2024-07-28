@@ -7,6 +7,7 @@ import { useDisclousure } from "../../../hooks/useDisclosure";
 import {
   useCompanyControllerGetCompany,
   useTextTemplateControllerDeleteTextTemplateOne,
+  useTextTemplateControllerPatchTextTemplateOrder,
 } from "../../../lib/client/api";
 import useTemplateStore from "../../../lib/zustand/store/templateStore";
 import { useSearchParams } from "next/navigation";
@@ -21,6 +22,12 @@ import { UpdateTextTemplateForm } from "../../../components/pages/dashboard/Upda
 import { GetTextTemplateRes } from "../../../lib/client/model";
 import { useSearchTemplate } from "../../../hooks/useSearchTemplate";
 import { SearchTemplateForm } from "../../../components/pages/dashboard/SearchTemplateForm";
+import {
+  DraggableCardContainer,
+  DraggableCardItem,
+} from "../../../components/DraggableCard";
+import { UniqueIdentifier } from "@dnd-kit/core";
+import { arrayMove } from "@dnd-kit/sortable";
 
 export default function Dashboard() {
   const [editTemplate, setEditTemplate] = useState<null | GetTextTemplateRes>(
@@ -33,6 +40,8 @@ export default function Dashboard() {
   const { search } = useSearchTemplate(texts, setSearchTexts);
 
   const deleteTextTemplate = useTextTemplateControllerDeleteTextTemplateOne();
+  const updateTextTemplateOrder =
+    useTextTemplateControllerPatchTextTemplateOrder();
 
   const { handleClose, handleOpen, isOpen } = useDisclousure();
   const {
@@ -82,6 +91,26 @@ export default function Dashboard() {
     updateHandleOpen();
   };
 
+  const sortTexts = (item1: UniqueIdentifier, item2: UniqueIdentifier) => {
+    const setResource = searchTexts.length > 0 ? setSearchTexts : setTexts;
+    const textsResource = searchTexts.length > 0 ? searchTexts : texts;
+
+    const oldIndex = textsResource.findIndex((item) => item.id === item1);
+    const newIndex = textsResource.findIndex((item) => item.id === item2);
+
+    let shallow = [...textsResource];
+    shallow = arrayMove(textsResource, oldIndex, newIndex);
+
+    shallow.forEach(({ id }, index) => {
+      updateTextTemplateOrder.mutate({
+        data: { order: index + 1 },
+        id,
+      });
+    });
+
+    setResource(shallow);
+  };
+
   const textsSource = searchTexts.length > 0 ? searchTexts : texts;
 
   if (hasHydrated)
@@ -126,9 +155,10 @@ export default function Dashboard() {
           )}
           <div id="card-wrapper" className="mt-5 flex h-full w-full   ">
             <div className="flex w-full flex-wrap content-start gap-4">
-              {textsSource?.map((val) => (
-                <>
-                  <Card
+              <DraggableCardContainer items={textsSource} sort={sortTexts}>
+                {textsSource?.map((val) => (
+                  <DraggableCardItem
+                    id={val.id}
                     isAdmin={userData?.user.Roles?.includes("Admin")}
                     key={val.id}
                     tag={val.tag}
@@ -149,11 +179,12 @@ export default function Dashboard() {
                     isAvailable={val.langCode.includes(
                       params.get("lang") || companyData?.defaultLangCode || "",
                     )}
+                    isDraggable={searchTexts.length === 0}
                   >
                     <p className="line-clamp-6 text-sm ">{val.content ?? ""}</p>
-                  </Card>
-                </>
-              ))}
+                  </DraggableCardItem>
+                ))}
+              </DraggableCardContainer>
             </div>
 
             {editTemplate && (

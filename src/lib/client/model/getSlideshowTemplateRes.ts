@@ -8,6 +8,7 @@
 export interface GetSlideshowTemplateRes {
   id: number;
   langCode: string[];
+  order: number;
   tag: string;
   templateId: number;
   url: string[];

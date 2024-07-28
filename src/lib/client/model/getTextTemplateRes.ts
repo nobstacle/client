@@ -9,6 +9,7 @@ export interface GetTextTemplateRes {
   content: string;
   id: number;
   langCode: string[];
+  order: number;
   tag: string;
   templateId: number;
 }

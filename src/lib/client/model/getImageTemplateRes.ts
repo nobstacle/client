@@ -9,6 +9,7 @@ export interface GetImageTemplateRes {
   ext: string;
   id: number;
   langCode: string[];
+  order: number;
   tag: string;
   templateId: number;
   url: string;
