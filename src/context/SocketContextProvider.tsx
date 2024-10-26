@@ -12,6 +12,7 @@ import {
   SendSurveyMessagePayloadType,
   SendSurveyPayloadType,
   SendTemplatePayloadType,
+  SendLangCodeMessagePayloadType,
 } from "../constant/types";
 import { useMessageStore } from "../lib/zustand/store/messageStore";
 import useTemplateStore from "../lib/zustand/store/templateStore";
@@ -24,6 +25,7 @@ export const SocketContext = createContext<{
   emitLeaveChat: (data: CleanMessagesPayloadType) => void;
   emitSendSurveyAnswer: (data: SendSurveyMessagePayloadType) => void;
   emitSendSurvey: (data: SendSurveyPayloadType) => void;
+  emitSendLangCode: (data: SendLangCodeMessagePayloadType) => void;
   socketConnected: boolean;
 } | null>(null);
 
@@ -51,6 +53,7 @@ export const SocketContextProvider = ({
     setReceivedMessage,
     clearReceivedMessage,
     setReceivedSurvey,
+    setReceivedLangCode,
   } = useMessageStore();
 
   const { addSurveyAnswer } = useTemplateStore();
@@ -75,6 +78,7 @@ export const SocketContextProvider = ({
     socketClient?.on("received-clean-messages", onReceivedCleanMessages);
     socketClient?.on("received-survey", onReceivedSurvey);
     socketClient?.on("received-survey-answer", onReceivedSurveyAnswer);
+    socketClient?.on("received-lang-code", onReceivedLangCode);
 
     return () => {
       socketClient?.off("user-joined", onConnect);
@@ -83,6 +87,7 @@ export const SocketContextProvider = ({
       socketClient?.off("received-clean-messages", onReceivedCleanMessages);
       socketClient?.off("received-survey", onReceivedSurvey);
       socketClient?.off("received-survey-answer", onReceivedSurveyAnswer);
+      socketClient?.off("received-lang-code", onReceivedLangCode);
     };
   }, [socketClient]);
 
@@ -159,6 +164,17 @@ export const SocketContextProvider = ({
     setReceivedSurvey(parsedData);
   };
 
+  const onReceivedLangCode = (data: any) => {
+    const parsedRes = JSON.parse(data);
+    if (parsedRes.status === 400) return;
+    const parsedData = parsedRes.data as {
+      station: number;
+      langCode: string;
+    };
+
+    setReceivedLangCode(parsedData.langCode);
+  };
+
   const onReceivedCleanMessages = (data: any) => {
     const parsedData = JSON.parse(data).data as {
       station: number;
@@ -184,6 +200,10 @@ export const SocketContextProvider = ({
     socketClient?.emit("send-survey-answer", data);
   };
 
+  const emitSendLangCode = (data: SendLangCodeMessagePayloadType) => {
+    socketClient?.emit("send-lang-code", data);
+  };
+
   const emitClearMessage = (data: CleanMessagesPayloadType) => {
     socketClient?.emit("clear-messages", data);
   };
@@ -202,6 +222,7 @@ export const SocketContextProvider = ({
         emitLeaveChat,
         emitSendSurveyAnswer,
         emitSendSurvey,
+        emitSendLangCode,
         socketConnected,
       }}
     >

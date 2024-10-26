@@ -7,6 +7,7 @@ import { UseFormRegister } from "react-hook-form";
 import { useRouterWithQueryParams } from "../../../../hooks/useRouterWithQueryParams";
 import { useHasHydrated } from "../../../../hooks/useHydrated";
 import { Spinner } from "../../../Spinner";
+import { useSocketContext } from "../../../../context/SocketContextProvider";
 
 interface LanguagePickerPropsI {
   onChange?: (e: React.ChangeEvent<HTMLSelectElement>) => void;
@@ -47,6 +48,7 @@ export const HeaderLanguagePicker = () => {
   const isHydrated = useHasHydrated();
   const headerLangaugePickerDefault =
     params.get("lang") || data?.defaultLangCode || "en";
+  const { emitSendLangCode } = useSocketContext();
 
   if (!isHydrated) return null;
 
@@ -56,6 +58,11 @@ export const HeaderLanguagePicker = () => {
       defaultValue={headerLangaugePickerDefault}
       onChange={(e) => {
         router.push("lang", e.currentTarget.value);
+
+        emitSendLangCode({
+          langCode: e.currentTarget.value,
+          station: Number(params.get("station") ?? 1),
+        });
       }}
     />
   );

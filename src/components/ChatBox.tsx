@@ -11,6 +11,7 @@ import React from "react";
 import { Button } from "./Button";
 import { SendIcon } from "./icons/SendIcon";
 import { useSearchParams } from "next/navigation";
+import AudioRecorder from "./AudioRecorder";
 
 interface ChatBoxProps {
   sendMessage: (value: string) => void;
@@ -62,7 +63,7 @@ export const ChatBox = React.forwardRef<HTMLDivElement, ChatBoxProps>(
               placeholder="Type your message…"
             />
 
-            <div>
+            <div className="flex gap-2">
               <Button
                 className="border-1 flex justify-center rounded-md border-black  p-2 px-6 text-center text-white"
                 type="button"
@@ -73,6 +74,7 @@ export const ChatBox = React.forwardRef<HTMLDivElement, ChatBoxProps>(
               >
                 <SendIcon />
               </Button>
+              <AudioRecorder />
             </div>
           </div>
         </div>

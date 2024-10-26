@@ -8,6 +8,7 @@ import { ChatBox } from "../../../components/ChatBox";
 import { useHasHydrated } from "../../../hooks/useHydrated";
 import { useCompanyControllerGetCompany } from "../../../lib/client/api";
 import { EndChatIcon } from "../../../components/icons/EndChatIcon";
+import AudioRecorder from "../../../components/AudioRecorder";
 
 export default function Dashboard() {
   const chatBoxRef = useRef<HTMLDivElement | null>(null);
