@@ -13,8 +13,6 @@ import { useMessageStore } from "../lib/zustand/store/messageStore";
 
 const AudioRecorder: React.FC = () => {
   const [recording, setRecording] = useState(false);
-  const [audioUrl, setAudioUrl] = useState("");
-  const [transcription, setTranscription] = useState("");
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunks = useRef<Blob[]>([]);
   const speechToTextFileMutation = useUploadControllerUploadSpeechToTextFile();
@@ -29,11 +27,6 @@ const AudioRecorder: React.FC = () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
-      const audioContext = new window.AudioContext();
-      const source = audioContext.createMediaStreamSource(stream);
-      const sampleRate = audioContext.sampleRate;
-      console.log("sampleRate", sampleRate);
-
       mediaRecorderRef.current = new MediaRecorder(stream);
 
       mediaRecorderRef.current.ondataavailable = (event) => {
@@ -42,8 +35,6 @@ const AudioRecorder: React.FC = () => {
 
       mediaRecorderRef.current.onstop = async () => {
         const audioBlob = new Blob(audioChunks.current, { type: "audio/flac" });
-        const audioUrl = URL.createObjectURL(audioBlob);
-        setAudioUrl(audioUrl);
         audioChunks.current = []; // Clear recorded chunks
         await sendAudioToBackend(audioBlob);
       };
@@ -63,7 +54,6 @@ const AudioRecorder: React.FC = () => {
   const sendAudioToBackend = async (audioBlob: Blob) => {
     const formData = new FormData();
     formData.append("audio", audioBlob, "audio.flac");
-    console.log(formData.get("audio"));
     const isAdminOrStaff =
       userData?.user.Roles?.includes("Staff") ||
       userData?.user.Roles?.includes("Staff");
@@ -72,14 +62,11 @@ const AudioRecorder: React.FC = () => {
       ? companyData?.defaultLangCode || "en"
       : messageStore.receivedLangCode ?? "en";
 
-    console.log("lang code", langCode, messageStore.receivedLangCode);
-
     try {
       speechToTextFileMutation.mutate(
         { data: { file: audioBlob, langCode } },
         {
           onSuccess: (res) => {
-            setTranscription(res.transcription);
             sendMessage(res.transcription);
           },
         },
