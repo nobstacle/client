@@ -5,9 +5,7 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export type UploadControllerUploadCompanyFileBody = {
-  defaultLangCode: string;
+export type UploadControllerUploadSpeechToTextFileBody = {
   file: Blob;
   langCode: string;
-  tag: string;
 };

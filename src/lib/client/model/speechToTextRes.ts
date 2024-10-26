@@ -5,9 +5,6 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export type TemplateControllerGetWebsiteTemplatesParams = {
-/**
- * Filter by id
- */
-id?: number | null;
-};
+export interface SpeechToTextRes {
+  transcription: string;
+}
