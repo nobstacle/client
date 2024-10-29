@@ -55,7 +55,7 @@ const AudioRecorder: React.FC = () => {
     const formData = new FormData();
     formData.append("audio", audioBlob, "audio.flac");
     const isAdminOrStaff =
-      userData?.user.Roles?.includes("Staff") ||
+      userData?.user.Roles?.includes("Admin") ||
       userData?.user.Roles?.includes("Staff");
 
     const langCode = isAdminOrStaff
