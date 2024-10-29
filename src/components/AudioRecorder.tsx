@@ -92,6 +92,7 @@ const AudioRecorder: React.FC = () => {
       className="border-1 relative flex flex-col items-center justify-center rounded-md  border-black  px-6  text-center text-white"
       type="button"
       onClick={recording ? stopRecording : startRecording}
+      isLoading={speechToTextFileMutation.status === "pending"}
     >
       <AnimatedMicIcon loading={recording} />
     </Button>
