@@ -89,12 +89,22 @@ const AudioRecorder: React.FC = () => {
 
   return (
     <Button
-      className="border-1 flex justify-center rounded-md border-black  p-2 px-6 text-center text-white"
+      className="border-1 relative flex flex-col items-center justify-center rounded-md  border-black  px-6  text-center text-white"
       type="button"
       onClick={recording ? stopRecording : startRecording}
     >
-      <MicIcon fill={recording ? "#1acb38" : "#ffffff"} />
+      <AnimatedMicIcon loading={recording} />
     </Button>
+  );
+};
+
+const AnimatedMicIcon: React.FC<{ loading: boolean }> = ({ loading }) => {
+  const clx = loading ? "animate-breath text-green-400" : "text-white";
+
+  return (
+    <div className={clx}>
+      <MicIcon fill={"currentColor"} />
+    </div>
   );
 };
 

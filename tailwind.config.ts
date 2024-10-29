@@ -21,6 +21,15 @@ const config: Config = {
         danger: "#e52020",
         "danger-dark": "#d91100",
       },
+      animation: {
+        breath: "breath 1.5s ease-in-out infinite",
+      },
+      keyframes: {
+        breath: {
+          "0%, 100%": { transform: "scale(1)", opacity: "0.7" },
+          "50%": { transform: "scale(1.3)", opacity: "1" },
+        },
+      },
     },
   },
   plugins: [],
