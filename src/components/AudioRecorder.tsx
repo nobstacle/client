@@ -33,8 +33,12 @@ const AudioRecorder: React.FC = () => {
         audioChunks.current.push(event.data);
       };
 
+      console.log(mediaRecorderRef.current);
+
       mediaRecorderRef.current.onstop = async () => {
-        const audioBlob = new Blob(audioChunks.current, { type: "audio/flac" });
+        const audioBlob = new Blob(audioChunks.current, {
+          type: getSupportedMimeTypes()[0],
+        });
         audioChunks.current = []; // Clear recorded chunks
         await sendAudioToBackend(audioBlob);
       };
@@ -45,6 +49,16 @@ const AudioRecorder: React.FC = () => {
       console.error("Error accessing microphone:", error);
     }
   };
+
+  function getSupportedMimeTypes() {
+    const possibleTypes = [
+      "audio/webm;codecs=opus",
+      "audio/ogg;codecs=opus",
+      "audio/mp4", // Note: This may not work with MediaRecorder in most browsers
+    ];
+
+    return possibleTypes.filter((type) => MediaRecorder.isTypeSupported(type));
+  }
 
   const stopRecording = () => {
     mediaRecorderRef.current?.stop();
