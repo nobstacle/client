@@ -16,6 +16,8 @@ const TestAudioRecorder = () => {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       mediaRecorderRef.current = new MediaRecorder(stream);
 
+      console.log("MEDIA RECORDER: ", mediaRecorderRef.current);
+
       mediaRecorderRef.current.ondataavailable = (event) => {
         audioChunksRef.current.push(event.data);
       };
