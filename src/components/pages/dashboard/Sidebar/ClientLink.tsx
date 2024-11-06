@@ -11,6 +11,7 @@ import { MapsIcon } from "../../../icons/sidebar/MapsIcon";
 import { SurveyIcon } from "../../../icons/sidebar/SurveyIcon";
 import { SettingsIcon } from "../../../icons/sidebar/SettingsIcon";
 import { WebsiteIcon } from "../../../icons/sidebar/WebsiteIcon";
+import { MicIcon } from "../../../icons/MicIcon";
 
 export const ClientLink = ({
   href,
@@ -40,6 +41,7 @@ export const ClientLink = ({
         {title === "Survey" && <SurveyIcon />}
         {title === "Settings" && <SettingsIcon />}
         {title === "Website" && <WebsiteIcon />}
+        {title === "Test Mic" && <MicIcon fill="#ffffff" />}
       </div>
       <Link className="font-medium text-white" href={`${href}?${params}`}>
         {title}

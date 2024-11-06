@@ -91,6 +91,7 @@ const Sidebar = async () => {
           {user?.user.Roles?.includes("Admin") && (
             <ClientLink href="/dashboard/settings" title="Settings" />
           )}
+          <ClientLink href="/dashboard/test" title="Test Mic" />
         </ul>
         <ul className="w-full">
           <li className="flex gap-2 p-4">
