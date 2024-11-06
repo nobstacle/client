@@ -72,6 +72,7 @@ const TestAudioRecorder = () => {
           <audio controls src={audioURL}></audio>
         </div>
       )}
+      <div>Agent: {navigator.userAgent}</div>
     </div>
   );
 };
