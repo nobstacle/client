@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect } from "react";
 import { Content } from "../../components/pages/client/Content";
 import { StationPicker } from "../../components/pages/dashboard/Header/StationPicker";
 import { useMessageStore } from "../../lib/zustand/store/messageStore";
@@ -12,6 +12,7 @@ import { LogoutIcon } from "../../components/icons/sidebar/LogoutIcon";
 import { Logout } from "../../components/pages/dashboard/Header/Logout";
 import { signOut } from "next-auth/react";
 import { ErudaContainer } from "../../components/containers/ErudaContainer";
+import TestAudioRecorder from "../../components/TestAudioRecorder";
 
 export default function Client() {
   return (
@@ -68,7 +69,12 @@ const ClientStationPicker = () => {
           <LogoutIcon />
           <button onClick={handleLogout}>Logout</button>
         </div>
-        <ErudaContainer />
+        <hr />
+        <div className="mt-2">
+          <p>Mic test:</p>
+          <TestAudioRecorder />
+          <ErudaContainer />
+        </div>
       </Modal>
     </>
   );
