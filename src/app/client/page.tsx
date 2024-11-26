@@ -11,6 +11,7 @@ import { useDisclousure } from "../../hooks/useDisclosure";
 import { LogoutIcon } from "../../components/icons/sidebar/LogoutIcon";
 import { Logout } from "../../components/pages/dashboard/Header/Logout";
 import { signOut } from "next-auth/react";
+import { ErudaContainer } from "../../components/containers/ErudaContainer";
 
 export default function Client() {
   return (
@@ -67,6 +68,7 @@ const ClientStationPicker = () => {
           <LogoutIcon />
           <button onClick={handleLogout}>Logout</button>
         </div>
+        <ErudaContainer />
       </Modal>
     </>
   );
