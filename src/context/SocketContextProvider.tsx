@@ -173,6 +173,7 @@ export const SocketContextProvider = ({
     };
 
     setReceivedLangCode(parsedData.langCode);
+    localStorage.setItem("lang-code", parsedData.langCode);
   };
 
   const onReceivedCleanMessages = (data: any) => {
