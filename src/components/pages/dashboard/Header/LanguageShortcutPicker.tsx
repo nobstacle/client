@@ -8,6 +8,7 @@ import { useRouterWithQueryParams } from "../../../../hooks/useRouterWithQueryPa
 import { useSearchParams } from "next/navigation";
 import useCompanyStore from "../../../../lib/zustand/store/companyStore";
 import { Spinner } from "../../../Spinner";
+import { useSocketContext } from "../../../../context/SocketContextProvider";
 
 export const LanguageShortcutPicker: React.FC = () => {
   const { company } = useCompanyStore();
@@ -20,6 +21,7 @@ export const LanguageShortcutPicker: React.FC = () => {
     params.get("lang") || company?.defaultLangCode || "en";
 
   const { languagesShortcuts } = useShortcutStore();
+  const { emitSendLangCode } = useSocketContext();
 
   if (!isHydrated) return <Spinner />;
 
@@ -33,6 +35,11 @@ export const LanguageShortcutPicker: React.FC = () => {
             onClick={(value) => {
               setChecked(value);
               router.push("lang", value);
+
+              emitSendLangCode({
+                langCode: value,
+                station: Number(params.get("station") ?? 1),
+              });
             }}
             data={res}
             isChecked={
