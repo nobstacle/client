@@ -2,6 +2,7 @@
 
 import { create } from "zustand";
 import {
+  GetFormTemplateRes,
   GetImageTemplateRes,
   GetMapTemplateRes,
   GetSlideshowTemplateRes,
@@ -44,6 +45,10 @@ interface BearState {
   setSurveyAnswers: (surveys: GetSurveyAnswerTemplateRes[]) => void;
   surveysAnswer: GetSurveyAnswerTemplateRes[];
   addSurveyAnswer: (survey: GetSurveyAnswerTemplateRes) => void;
+  forms: GetFormTemplateRes[];
+  setForms: (forms: GetFormTemplateRes[]) => void;
+  searchForms: GetFormTemplateRes[];
+  setSearchForms: (Form: GetFormTemplateRes[]) => void;
 }
 
 const useTemplateStore = create<BearState>()(
@@ -83,6 +88,10 @@ const useTemplateStore = create<BearState>()(
       setWebsites: (websites) => set(() => ({ websites })),
       searchWebsites: [],
       setSearchWebsites: (searchWebsites) => set(() => ({ searchWebsites })),
+      forms: [],
+      setForms: (forms) => set(() => ({ forms })),
+      searchForms: [],
+      setSearchForms: (searchForms) => set(() => ({ searchForms })),
     }),
     {
       name: "templates-storage", // name of the item in the storage (must be unique)

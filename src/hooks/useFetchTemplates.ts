@@ -14,6 +14,8 @@ import {
   getSurveyAnswerControllerGetSurveyAnswersQueryKey,
   useTemplateControllerGetWebsiteTemplates,
   getTemplateControllerGetWebsiteTemplatesQueryKey,
+  useTemplateControllerGetFormTemplates,
+  getTemplateControllerGetFormTemplatesQueryKey,
 } from "../lib/client/api";
 import useTemplateStore from "../lib/zustand/store/templateStore";
 
@@ -26,6 +28,7 @@ export const useFetchTemplates = () => {
     setMaps,
     setSurveyAnswers,
     setWebsites,
+    setForms,
   } = useTemplateStore();
   const textTemplates = useTemplateControllerGetTextTemplates(
     {},
@@ -104,6 +107,18 @@ export const useFetchTemplates = () => {
     },
   );
 
+  const formTemplates = useTemplateControllerGetFormTemplates(
+    {},
+    {
+      query: {
+        staleTime: Infinity,
+        retry: 0,
+        queryKey: getTemplateControllerGetFormTemplatesQueryKey(),
+        gcTime: Infinity,
+      },
+    },
+  );
+
   useEffect(() => {
     if (textTemplates.isSuccess) {
       setTexts(textTemplates.data);
@@ -160,11 +175,18 @@ export const useFetchTemplates = () => {
     }
   }, [websiteTemplates.isSuccess]);
 
+  useEffect(() => {
+    if (formTemplates.isSuccess) {
+      setForms(formTemplates.data);
+    }
+  }, [formTemplates.isSuccess]);
+
   return {
     isTextTemplatesLoading: textTemplates.isLoading,
     isImageTemplatesLoading: imageTemplates.isLoading,
     isVideoTemplatesLoading: videoTemplates.isLoading,
     isSlideshowTemplatesLoading: slideshowTemplates.isLoading,
+    isFormTemplatesLoading: formTemplates.isLoading,
     refetchSlideshow: slideshowTemplates.refetch,
   };
 };

@@ -21,6 +21,8 @@ import type {
   ContentRes,
   DeleteUserAccountRes,
   GetCompanyRes,
+  GetFormTemplateRes,
+  GetFormTemplateTagRes,
   GetImageTemplateRes,
   GetImageTemplateTagRes,
   GetMapTemplateRes,
@@ -38,6 +40,8 @@ import type {
   GetWebsiteTemplateTagRes,
   HttpExceptionSchema,
   LoginReq,
+  PatchFormTemplateOrderReq,
+  PatchFormTemplateReq,
   PatchImageTemplateOrderReq,
   PatchImageTemplateReq,
   PatchMapTemplateOrderReq,
@@ -52,6 +56,7 @@ import type {
   PatchWebsiteTemplateOrderReq,
   PatchWebsiteTemplateReq,
   PostCompanyReq,
+  PostFormTemplateReq,
   PostImageTemplateReq,
   PostMapTemplateReq,
   PostShortcutManyReq,
@@ -64,6 +69,7 @@ import type {
   ShortcutControllerGetShortcutManyParams,
   ShortcutControllerGetShortcutOneParams,
   SpeechToTextRes,
+  TemplateControllerGetFormTemplatesParams,
   TemplateControllerGetImageTemplatesParams,
   TemplateControllerGetSlideshowTemplatesParams,
   TemplateControllerGetTextTemplatesParams,
@@ -2293,6 +2299,259 @@ export const getSurveyAnswerControllerDeleteSurveyAnswerMutationOptions = <TErro
       return useMutation(mutationOptions);
     }
     
+export const formTemplateControllerCreateFormTemplate = (
+    postFormTemplateReq: BodyType<PostFormTemplateReq>,
+ options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
+      
+      
+      return nobstacleBackendApiInstance<GetFormTemplateRes>(
+      {url: `/api/v1/content/form`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: postFormTemplateReq
+    },
+      options);
+    }
+  
+
+
+export const getFormTemplateControllerCreateFormTemplateMutationOptions = <TError = ErrorType<HttpExceptionSchema>,
+    
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof formTemplateControllerCreateFormTemplate>>, TError,{data: BodyType<PostFormTemplateReq>}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof formTemplateControllerCreateFormTemplate>>, TError,{data: BodyType<PostFormTemplateReq>}, TContext> => {
+ const {mutation: mutationOptions, request: requestOptions} = options ?? {};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof formTemplateControllerCreateFormTemplate>>, {data: BodyType<PostFormTemplateReq>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  formTemplateControllerCreateFormTemplate(data,requestOptions)
+        }
+
+        
+
+
+   return  { mutationFn, ...mutationOptions }}
+
+    export type FormTemplateControllerCreateFormTemplateMutationResult = NonNullable<Awaited<ReturnType<typeof formTemplateControllerCreateFormTemplate>>>
+    export type FormTemplateControllerCreateFormTemplateMutationBody = BodyType<PostFormTemplateReq>
+    export type FormTemplateControllerCreateFormTemplateMutationError = ErrorType<HttpExceptionSchema>
+
+    export const useFormTemplateControllerCreateFormTemplate = <TError = ErrorType<HttpExceptionSchema>,
+    
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof formTemplateControllerCreateFormTemplate>>, TError,{data: BodyType<PostFormTemplateReq>}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
+) => {
+
+      const mutationOptions = getFormTemplateControllerCreateFormTemplateMutationOptions(options);
+
+      return useMutation(mutationOptions);
+    }
+    
+export const formTemplateControllerPatchFormTemplateOne = (
+    tag: string,
+    patchFormTemplateReq: BodyType<PatchFormTemplateReq>,
+ options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
+      
+      
+      return nobstacleBackendApiInstance<GetFormTemplateRes>(
+      {url: `/api/v1/content/form/${tag}`, method: 'PATCH',
+      headers: {'Content-Type': 'application/json', },
+      data: patchFormTemplateReq
+    },
+      options);
+    }
+  
+
+
+export const getFormTemplateControllerPatchFormTemplateOneMutationOptions = <TError = ErrorType<HttpExceptionSchema>,
+    
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof formTemplateControllerPatchFormTemplateOne>>, TError,{tag: string;data: BodyType<PatchFormTemplateReq>}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof formTemplateControllerPatchFormTemplateOne>>, TError,{tag: string;data: BodyType<PatchFormTemplateReq>}, TContext> => {
+ const {mutation: mutationOptions, request: requestOptions} = options ?? {};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof formTemplateControllerPatchFormTemplateOne>>, {tag: string;data: BodyType<PatchFormTemplateReq>}> = (props) => {
+          const {tag,data} = props ?? {};
+
+          return  formTemplateControllerPatchFormTemplateOne(tag,data,requestOptions)
+        }
+
+        
+
+
+   return  { mutationFn, ...mutationOptions }}
+
+    export type FormTemplateControllerPatchFormTemplateOneMutationResult = NonNullable<Awaited<ReturnType<typeof formTemplateControllerPatchFormTemplateOne>>>
+    export type FormTemplateControllerPatchFormTemplateOneMutationBody = BodyType<PatchFormTemplateReq>
+    export type FormTemplateControllerPatchFormTemplateOneMutationError = ErrorType<HttpExceptionSchema>
+
+    export const useFormTemplateControllerPatchFormTemplateOne = <TError = ErrorType<HttpExceptionSchema>,
+    
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof formTemplateControllerPatchFormTemplateOne>>, TError,{tag: string;data: BodyType<PatchFormTemplateReq>}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
+) => {
+
+      const mutationOptions = getFormTemplateControllerPatchFormTemplateOneMutationOptions(options);
+
+      return useMutation(mutationOptions);
+    }
+    
+export const formTemplateControllerPatchFormTemplateOrder = (
+    id: number,
+    patchFormTemplateOrderReq: BodyType<PatchFormTemplateOrderReq>,
+ options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
+      
+      
+      return nobstacleBackendApiInstance<boolean>(
+      {url: `/api/v1/content/form/order/${id}`, method: 'PATCH',
+      headers: {'Content-Type': 'application/json', },
+      data: patchFormTemplateOrderReq
+    },
+      options);
+    }
+  
+
+
+export const getFormTemplateControllerPatchFormTemplateOrderMutationOptions = <TError = ErrorType<HttpExceptionSchema>,
+    
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof formTemplateControllerPatchFormTemplateOrder>>, TError,{id: number;data: BodyType<PatchFormTemplateOrderReq>}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof formTemplateControllerPatchFormTemplateOrder>>, TError,{id: number;data: BodyType<PatchFormTemplateOrderReq>}, TContext> => {
+ const {mutation: mutationOptions, request: requestOptions} = options ?? {};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof formTemplateControllerPatchFormTemplateOrder>>, {id: number;data: BodyType<PatchFormTemplateOrderReq>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  formTemplateControllerPatchFormTemplateOrder(id,data,requestOptions)
+        }
+
+        
+
+
+   return  { mutationFn, ...mutationOptions }}
+
+    export type FormTemplateControllerPatchFormTemplateOrderMutationResult = NonNullable<Awaited<ReturnType<typeof formTemplateControllerPatchFormTemplateOrder>>>
+    export type FormTemplateControllerPatchFormTemplateOrderMutationBody = BodyType<PatchFormTemplateOrderReq>
+    export type FormTemplateControllerPatchFormTemplateOrderMutationError = ErrorType<HttpExceptionSchema>
+
+    export const useFormTemplateControllerPatchFormTemplateOrder = <TError = ErrorType<HttpExceptionSchema>,
+    
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof formTemplateControllerPatchFormTemplateOrder>>, TError,{id: number;data: BodyType<PatchFormTemplateOrderReq>}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
+) => {
+
+      const mutationOptions = getFormTemplateControllerPatchFormTemplateOrderMutationOptions(options);
+
+      return useMutation(mutationOptions);
+    }
+    
+export const formTemplateControllerDeleteFormTemplateOne = (
+    id: number,
+ options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
+      
+      
+      return nobstacleBackendApiInstance<boolean>(
+      {url: `/api/v1/content/form/${id}`, method: 'DELETE'
+    },
+      options);
+    }
+  
+
+
+export const getFormTemplateControllerDeleteFormTemplateOneMutationOptions = <TError = ErrorType<HttpExceptionSchema>,
+    
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof formTemplateControllerDeleteFormTemplateOne>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof formTemplateControllerDeleteFormTemplateOne>>, TError,{id: number}, TContext> => {
+ const {mutation: mutationOptions, request: requestOptions} = options ?? {};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof formTemplateControllerDeleteFormTemplateOne>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  formTemplateControllerDeleteFormTemplateOne(id,requestOptions)
+        }
+
+        
+
+
+   return  { mutationFn, ...mutationOptions }}
+
+    export type FormTemplateControllerDeleteFormTemplateOneMutationResult = NonNullable<Awaited<ReturnType<typeof formTemplateControllerDeleteFormTemplateOne>>>
+    
+    export type FormTemplateControllerDeleteFormTemplateOneMutationError = ErrorType<HttpExceptionSchema>
+
+    export const useFormTemplateControllerDeleteFormTemplateOne = <TError = ErrorType<HttpExceptionSchema>,
+    
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof formTemplateControllerDeleteFormTemplateOne>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
+) => {
+
+      const mutationOptions = getFormTemplateControllerDeleteFormTemplateOneMutationOptions(options);
+
+      return useMutation(mutationOptions);
+    }
+    
+export const formTemplateControllerGetFormTags = (
+    
+ options?: SecondParameter<typeof nobstacleBackendApiInstance>,signal?: AbortSignal
+) => {
+      
+      
+      return nobstacleBackendApiInstance<GetFormTemplateTagRes[]>(
+      {url: `/api/v1/content/form/tags`, method: 'GET', signal
+    },
+      options);
+    }
+  
+
+export const getFormTemplateControllerGetFormTagsQueryKey = () => {
+    
+    return [`/api/v1/content/form/tags`] as const;
+    }
+
+    
+export const getFormTemplateControllerGetFormTagsQueryOptions = <TData = Awaited<ReturnType<typeof formTemplateControllerGetFormTags>>, TError = ErrorType<HttpExceptionSchema>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof formTemplateControllerGetFormTags>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getFormTemplateControllerGetFormTagsQueryKey();
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof formTemplateControllerGetFormTags>>> = ({ signal }) => formTemplateControllerGetFormTags(requestOptions, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof formTemplateControllerGetFormTags>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type FormTemplateControllerGetFormTagsQueryResult = NonNullable<Awaited<ReturnType<typeof formTemplateControllerGetFormTags>>>
+export type FormTemplateControllerGetFormTagsQueryError = ErrorType<HttpExceptionSchema>
+
+export const useFormTemplateControllerGetFormTags = <TData = Awaited<ReturnType<typeof formTemplateControllerGetFormTags>>, TError = ErrorType<HttpExceptionSchema>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof formTemplateControllerGetFormTags>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
+
+  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } => {
+
+  const queryOptions = getFormTemplateControllerGetFormTagsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
 export const companyControllerCreateCompany = (
     postCompanyReq: BodyType<PostCompanyReq>,
  options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
@@ -3000,6 +3259,64 @@ export const useTemplateControllerGetWebsiteTemplates = <TData = Awaited<ReturnT
   ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } => {
 
   const queryOptions = getTemplateControllerGetWebsiteTemplatesQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+export const templateControllerGetFormTemplates = (
+    params?: TemplateControllerGetFormTemplatesParams,
+ options?: SecondParameter<typeof nobstacleBackendApiInstance>,signal?: AbortSignal
+) => {
+      
+      
+      return nobstacleBackendApiInstance<GetFormTemplateRes[]>(
+      {url: `/api/v1/template/form`, method: 'GET',
+        params, signal
+    },
+      options);
+    }
+  
+
+export const getTemplateControllerGetFormTemplatesQueryKey = (params?: TemplateControllerGetFormTemplatesParams,) => {
+    
+    return [`/api/v1/template/form`, ...(params ? [params]: [])] as const;
+    }
+
+    
+export const getTemplateControllerGetFormTemplatesQueryOptions = <TData = Awaited<ReturnType<typeof templateControllerGetFormTemplates>>, TError = ErrorType<HttpExceptionSchema>>(params?: TemplateControllerGetFormTemplatesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof templateControllerGetFormTemplates>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getTemplateControllerGetFormTemplatesQueryKey(params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof templateControllerGetFormTemplates>>> = ({ signal }) => templateControllerGetFormTemplates(params, requestOptions, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof templateControllerGetFormTemplates>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type TemplateControllerGetFormTemplatesQueryResult = NonNullable<Awaited<ReturnType<typeof templateControllerGetFormTemplates>>>
+export type TemplateControllerGetFormTemplatesQueryError = ErrorType<HttpExceptionSchema>
+
+export const useTemplateControllerGetFormTemplates = <TData = Awaited<ReturnType<typeof templateControllerGetFormTemplates>>, TError = ErrorType<HttpExceptionSchema>>(
+ params?: TemplateControllerGetFormTemplatesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof templateControllerGetFormTemplates>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
+
+  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } => {
+
+  const queryOptions = getTemplateControllerGetFormTemplatesQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

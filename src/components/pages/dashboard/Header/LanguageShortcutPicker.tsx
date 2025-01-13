@@ -43,7 +43,9 @@ export const LanguageShortcutPicker: React.FC = () => {
             }}
             data={res}
             isChecked={
-              headerLangaugePickerDefault === res.value ?? checked === res.value
+              headerLangaugePickerDefault === res.value
+                ? headerLangaugePickerDefault === res.value
+                : checked === res.value
             }
           />
         ))}
