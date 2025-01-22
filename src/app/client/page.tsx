@@ -70,11 +70,14 @@ const ClientStationPicker = () => {
           <button onClick={handleLogout}>Logout</button>
         </div>
         <hr />
-        <div className="mt-2">
-          <p>Mic test:</p>
-          <TestAudioRecorder />
-          <ErudaContainer />
-        </div>
+
+        {process.env.VERCEL_ENV === "preview" && (
+          <div className="mt-2">
+            <p>Mic test:</p>
+            <TestAudioRecorder />
+            <ErudaContainer />
+          </div>
+        )}
       </Modal>
     </>
   );
