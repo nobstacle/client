@@ -6,7 +6,9 @@ import {
   authControllerSignAccessToken,
 } from "../../../../lib/client/api";
 
+console.log("authControllerLogin", "authControllerLogin");
 export const authOptions: AuthOptions = {
+  
   providers: [
     CredentialsProvider({
       name: "Credentials",
@@ -16,6 +18,7 @@ export const authOptions: AuthOptions = {
       },
       async authorize(credentials) {
         if (typeof credentials !== "undefined") {
+          console.log("IN--",);
           const res = await authControllerLogin({
             emailOrUsername: credentials.email,
             password: credentials.password,
@@ -27,6 +30,7 @@ export const authOptions: AuthOptions = {
             return null;
           }
         } else {
+          console.log("OUT",);
           return null;
         }
       },

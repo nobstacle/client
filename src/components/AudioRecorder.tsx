@@ -33,8 +33,6 @@ const AudioRecorder: React.FC = () => {
         audioChunks.current.push(event.data);
       };
 
-      console.log(mediaRecorderRef.current);
-
       mediaRecorderRef.current.onstop = async () => {
         const audioBlob = new Blob(audioChunks.current, {
           type: getSupportedMimeTypes()[0],

@@ -13,6 +13,7 @@ import {
   SendSurveyPayloadType,
   SendTemplatePayloadType,
   SendLangCodeMessagePayloadType,
+  SendJotFormTemplate,
 } from "../constant/types";
 import { useMessageStore } from "../lib/zustand/store/messageStore";
 import useTemplateStore from "../lib/zustand/store/templateStore";
@@ -20,6 +21,7 @@ import useTemplateStore from "../lib/zustand/store/templateStore";
 export const SocketContext = createContext<{
   socket: undefined | Socket<any, any>;
   emitSendTemplate: (data: SendTemplatePayloadType) => void;
+  emitSendJotForm: (data: SendJotFormTemplate, callback?: (response: any) => void) => void; 
   emitSendMessage: (data: SendMessagePayloadType) => void;
   emitClearMessage: (data: CleanMessagesPayloadType) => void;
   emitLeaveChat: (data: CleanMessagesPayloadType) => void;
@@ -79,6 +81,7 @@ export const SocketContextProvider = ({
     socketClient?.on("received-survey", onReceivedSurvey);
     socketClient?.on("received-survey-answer", onReceivedSurveyAnswer);
     socketClient?.on("received-lang-code", onReceivedLangCode);
+    socketClient?.on("jotForm-sent-successfully", onReceivedJotForm);
 
     return () => {
       socketClient?.off("user-joined", onConnect);
@@ -88,6 +91,7 @@ export const SocketContextProvider = ({
       socketClient?.off("received-survey", onReceivedSurvey);
       socketClient?.off("received-survey-answer", onReceivedSurveyAnswer);
       socketClient?.off("received-lang-code", onReceivedLangCode);
+      socketClient?.on("jotForm-sent-successfully", onReceivedJotForm);
     };
   }, [socketClient]);
 
@@ -117,6 +121,24 @@ export const SocketContextProvider = ({
     const parsedData = parsedRes.data as ReceivedTemplateContent;
     setReceivedContent(parsedData);
   };
+
+  useEffect(() => {
+    const handleResponse = (response: any) => {
+      console.log("Server Response:", response);
+      if (response?.success) {
+        alert("JotForm message sent successfully!");
+      } else {
+        alert("Failed to send JotForm message.");
+      }
+    };
+  
+    socketClient?.on("jotForm-sent-successfully", handleResponse);
+  
+    return () => {
+      socketClient?.off("jotForm-sent-successfully", handleResponse);
+    };
+  }, []);
+  
 
   const onReceivedMessage = (data: any) => {
     const parsedData = JSON.parse(data).data as ReceivedMessageContent;
@@ -185,10 +207,39 @@ export const SocketContextProvider = ({
     clearReceivedMessage(parsedData.station);
   };
 
+  const onReceivedJotForm = (data: any) => {
+    console.log("📩 Received JotForm data:", data);
+    
+    try {
+      const parsedRes = JSON.parse(data);
+      if (parsedRes.status === 400) {
+        console.warn("⚠️ JotForm response has error:", parsedRes);
+        return;
+      }
+  
+      const parsedData = parsedRes.data as ReceivedTemplateContent;
+      console.log("✅ Parsed JotForm Data:", parsedData);
+      
+      setReceivedContent(parsedData); // Store in Zustand for UI update
+  
+    } catch (error) {
+      console.error("❌ Error parsing JotForm response:", error);
+    }
+  };
+
   const emitSendTemplate = (data: SendTemplatePayloadType) => {
     socketClient?.emit("send-template", data);
   };
 
+  const emitSendJotForm = (data: SendJotFormTemplate, callback?: (response: any) => void) => {
+    console.log("Emitting send-jotForm event with data:", data);
+  
+    socketClient?.emit("send-jotForm", data, (response: any) => {
+      console.log("Received response from server for send-jotForm:", response);
+      if (callback) callback(response);
+    });
+  };  
+  
   const emitSendMessage = (data: SendMessagePayloadType) => {
     socketClient?.emit("send-message", data);
   };
@@ -218,6 +269,7 @@ export const SocketContextProvider = ({
       value={{
         socket: socketClient,
         emitSendTemplate,
+        emitSendJotForm,
         emitSendMessage,
         emitClearMessage,
         emitLeaveChat,

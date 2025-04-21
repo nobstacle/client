@@ -14,6 +14,8 @@ import {
   getSurveyAnswerControllerGetSurveyAnswersQueryKey,
   useTemplateControllerGetWebsiteTemplates,
   getTemplateControllerGetWebsiteTemplatesQueryKey,
+  useTemplateControllerGetJotformTemplates,
+  getTemplateControllerGetJotformTemplatesQueryKey,
 } from "../lib/client/api";
 import useTemplateStore from "../lib/zustand/store/templateStore";
 
@@ -104,6 +106,18 @@ export const useFetchTemplates = () => {
     },
   );
 
+  const jotformTemplates = useTemplateControllerGetJotformTemplates(
+    {},
+    {
+      query: {
+        staleTime: Infinity,
+        retry: 0,
+        queryKey: getTemplateControllerGetJotformTemplatesQueryKey(),
+        gcTime: Infinity,
+      },
+    },
+  );
+
   useEffect(() => {
     if (textTemplates.isSuccess) {
       setTexts(textTemplates.data);
@@ -159,6 +173,12 @@ export const useFetchTemplates = () => {
       setWebsites(websiteTemplates.data);
     }
   }, [websiteTemplates.isSuccess]);
+
+  useEffect(() => {
+    if (jotformTemplates.isSuccess) {
+      setWebsites(jotformTemplates.data);
+    }
+  }, [jotformTemplates.isSuccess]);
 
   return {
     isTextTemplatesLoading: textTemplates.isLoading,

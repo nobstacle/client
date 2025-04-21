@@ -9,6 +9,7 @@ export default withAuth(
     const isAdmin = req.nextauth.token?.user.Roles?.includes("Admin");
     const isStaff = req.nextauth.token?.user.Roles?.includes("Staff");
     const isUser = req.nextauth.token?.user.Roles?.includes("User");
+    const isSAdmin = req.nextauth.token?.user.Roles?.includes("SAdmin");
     const isCompanyExist = !!req.nextauth.token?.user.companyId;
 
     // rules for home page
@@ -18,9 +19,15 @@ export default withAuth(
         return NextResponse.redirect(url);
       }
 
+      if (isAuthenticated && isSAdmin) {
+        url.pathname = "/dashboard/superAdminDashboard";
+        return NextResponse.redirect(url);
+      }
+
       if (isAuthenticated && isUser) {
         url.pathname = "/client";
         url.searchParams.set("station", "1");
+
         return NextResponse.redirect(url);
       }
 
@@ -62,7 +69,7 @@ export default withAuth(
         }
       }
     }
-
+      
     // rules for onboard page
     if (url.pathname === "/onboard/create-company") {
       if (isAuthenticated && isCompanyExist) {

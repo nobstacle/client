@@ -23,7 +23,7 @@ import { useSearchTemplate } from "../../../hooks/useSearchTemplate";
 import { MapIcon } from "../../../components/icons/MapIcon";
 import { SearchTemplateForm } from "../../../components/pages/dashboard/SearchTemplateForm";
 import { WebsiteIcon } from "../../../components/icons/sidebar/WebsiteIcon";
-import { SendWebsiteTemplateForm } from "../../../components/pages/dashboard/SendWebsiteTemplateForm";
+import { SendJotFormTemplateForm } from "../../../components/pages/dashboard/SendJotFormTemplateForm";
 import { OpenLinkIcon } from "../../../components/icons/sidebar/OpenLinkIcon";
 import {
   DraggableCardContainer,
@@ -108,11 +108,11 @@ export default function Dashboard() {
     setResource(shallow);
   };
 
-  const sendWebsiteTemplateMessage = (url: string) => {
+  const sendJotFormTemplateMessage = (url: string) => {
     emitSendTemplate({
       refId: 1,
       langCode: params.get("lang") || companyData?.defaultLangCode || "en",
-      refType: "WebsiteTemplateMessage",
+      refType: "JotFormTemplateMessage",
       station: Number(params.get("station") ?? 1),
       directContent: url,
     });
@@ -125,7 +125,7 @@ export default function Dashboard() {
       <div className="flex h-full w-full flex-col justify-start gap-4 overflow-y-auto  p-6">
         <div className="flex w-full flex-col gap-4">
           <div className="flex w-full flex-col items-end gap-4 ">
-            <SendWebsiteTemplateForm onSend={sendWebsiteTemplateMessage} />
+            <SendJotFormTemplateForm onSend={sendJotFormTemplateMessage} />
           </div>
         </div>
         {websitesSource.length > 0 && (

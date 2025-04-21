@@ -20,7 +20,7 @@ function DashboardLayout({ children }: { children: React.ReactNode }) {
         <SocketContextProvider>
           <TemplateContextProvider>
             <Sidebar />
-            <div className="flex w-full flex-col">
+            <div className="flex w-full flex-col overflow-hidden">
               <Header />
               <Body>{children}</Body>
             </div>
@@ -79,6 +79,8 @@ const Sidebar = async () => {
 
       <div className="flex h-full w-full flex-col justify-between">
         <ul className="w-full">
+        {(user?.user.Roles?.includes("Admin") || user?.user.Roles?.includes("User") || user?.user.Roles?.includes("Staff")) && (
+          <>
           <ClientLink href="/dashboard/text" title="Text" />
           <ClientLink href="/dashboard/chat" title="Chat" />
           <ClientLink href="/dashboard/image" title="Image" />
@@ -87,6 +89,9 @@ const Sidebar = async () => {
           <ClientLink href="/dashboard/maps" title="Maps" />
           <ClientLink href="/dashboard/survey" title="Survey" />
           <ClientLink href="/dashboard/website" title="Website" />
+          <ClientLink href="/dashboard/jotform" title="Form" />
+          </>
+        )}
 
           {user?.user.Roles?.includes("Admin") && (
             <ClientLink href="/dashboard/settings" title="Settings" />
@@ -94,6 +99,14 @@ const Sidebar = async () => {
           {process.env.VERCEL_ENV === "preview" && (
             <ClientLink href="/dashboard/test" title="Test Mic" />
           )}
+
+          {user?.user.Roles?.includes("SAdmin") && (
+            <>
+            <ClientLink href="/dashboard/superAdminDashboard" title="Dashboard" />
+            <ClientLink href="/dashboard/asignForms" title="Asign Forms" />
+            </>
+          )} 
+
         </ul>
         <ul className="w-full">
           <li className="flex gap-2 p-4">

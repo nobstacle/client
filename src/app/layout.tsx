@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { ReactQueryContextProvider } from "../context/ReactQueryContextProvider";
 import { SessionContextProvider } from "../context/SessionContextProvider";
+import { ToastContainer, Bounce } from 'react-toastify';
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -17,6 +18,7 @@ interface RootLayourPropsI {
   session: any;
 }
 
+
 function RootLayout({ children, session }: RootLayourPropsI) {
   return (
     <html lang="en">
@@ -24,6 +26,19 @@ function RootLayout({ children, session }: RootLayourPropsI) {
         <ReactQueryContextProvider>
           <SessionContextProvider session={session}>
             <div>{children}</div>
+            <ToastContainer
+              position="top-right"
+              autoClose={5000}
+              hideProgressBar={false}
+              newestOnTop={false}
+              closeOnClick={false}
+              rtl={false}
+              pauseOnFocusLoss
+              draggable
+              pauseOnHover
+              theme="colored"
+              transition={Bounce}
+            />
           </SessionContextProvider>
         </ReactQueryContextProvider>
       </body>

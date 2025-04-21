@@ -13,7 +13,6 @@ import {
   useContentControllerGetDefaultSlideshowContent,
 } from "../../../lib/client/api";
 import Slideshow from "./Slideshow";
-
 import React from "react";
 import SimpleMap from "./Map";
 import SurveyAnswer from "./SurveyAnswer";
@@ -57,6 +56,7 @@ export const Content: React.FC = () => {
   }, [messageStore.receivedType]);
 
   const { emitSendMessage } = useSocketContext();
+  console.info("sdfsdfsdf", messageStore.receivedType);
 
   const sendMessage = (message: string) => {
     emitSendMessage({
@@ -162,7 +162,8 @@ export const Content: React.FC = () => {
 
   if (
     messageStore.receivedType === "Website" ||
-    messageStore.receivedType === "WebsiteTemplateMessage"
+    messageStore.receivedType === "WebsiteTemplateMessage" ||
+    messageStore.receivedType === "JotFormMessage"
   ) {
     return (
       <iframe

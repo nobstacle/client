@@ -6,6 +6,7 @@ export enum ChatType {
   Map = "Map",
   Survey = "Survey",
   Website = "Website",
+  Form = "Form",
 }
 
 export type ReceivedType =
@@ -14,9 +15,20 @@ export type ReceivedType =
   | "ChatMessage"
   | "MapTemplateMessage"
   | "Survey"
-  | "WebsiteTemplateMessage";
+  | "WebsiteTemplateMessage"
+  | "JotFormTemplateMessage";
 
 export interface SendTemplatePayloadType {
+  refId: number;
+  refType: ReceivedType;
+  station: number;
+  langCode: string;
+  directContent?: string;
+  contentExtra?: any;
+  self?: boolean;
+}
+
+export interface SendJotFormTemplate {
   refId: number;
   refType: ReceivedType;
   station: number;

@@ -23,6 +23,7 @@ type FormValues = {
 
 export const RegisterForm: React.FC = () => {
   const createUser = useUserControllerCreate();
+
   const { register, handleSubmit, formState } = useForm<FormValues>({
     resolver: yupResolver(schema),
     defaultValues: { email: "", password: "" },

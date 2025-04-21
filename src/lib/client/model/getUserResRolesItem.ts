@@ -13,4 +13,5 @@ export const GetUserResRolesItem = {
   Admin: 'Admin',
   Staff: 'Staff',
   User: 'User',
+  SAdmin: 'SAdmin',
 } as const;

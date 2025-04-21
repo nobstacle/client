@@ -5,3373 +5,3680 @@
  * OpenAPI spec version: 1.0.0
  */
 import {
-  useMutation,
-  useQuery
+	useMutation,
+	useQuery
 } from '@tanstack/react-query'
 import type {
-  MutationFunction,
-  QueryFunction,
-  QueryKey,
-  UseMutationOptions,
-  UseQueryOptions,
-  UseQueryResult
+	MutationFunction,
+	QueryFunction,
+	QueryKey,
+	UseMutationOptions,
+	UseQueryOptions,
+	UseQueryResult
 } from '@tanstack/react-query'
 import type {
-  ContentControllerFindOneParams,
-  ContentRes,
-  DeleteUserAccountRes,
-  GetCompanyRes,
-  GetImageTemplateRes,
-  GetImageTemplateTagRes,
-  GetMapTemplateRes,
-  GetMapTemplateTagRes,
-  GetShortcutRes,
-  GetSlideshowTemplateRes,
-  GetSurveyAnswerTemplateRes,
-  GetTextTemplateRes,
-  GetTextTemplateTagRes,
-  GetUploadUrlRes,
-  GetUserRes,
-  GetVideoTemplateRes,
-  GetVideoTemplateTagRes,
-  GetWebsiteTemplateRes,
-  GetWebsiteTemplateTagRes,
-  HttpExceptionSchema,
-  LoginReq,
-  PatchImageTemplateOrderReq,
-  PatchImageTemplateReq,
-  PatchMapTemplateOrderReq,
-  PatchMapTemplateReq,
-  PatchSlideshowTemplateOrderReq,
-  PatchSlideshowTemplateReq,
-  PatchTextTemplateOrderReq,
-  PatchTextTemplateReq,
-  PatchUserReq,
-  PatchVideoTemplateOrderReq,
-  PatchVideoTemplateReq,
-  PatchWebsiteTemplateOrderReq,
-  PatchWebsiteTemplateReq,
-  PostCompanyReq,
-  PostImageTemplateReq,
-  PostMapTemplateReq,
-  PostShortcutManyReq,
-  PostShortcutReq,
-  PostTextTemplateReq,
-  PostUserReq,
-  PostVideoTemplateReq,
-  PostWebsiteTemplateReq,
-  RefreshReq,
-  ShortcutControllerGetShortcutManyParams,
-  ShortcutControllerGetShortcutOneParams,
-  SpeechToTextRes,
-  TemplateControllerGetImageTemplatesParams,
-  TemplateControllerGetSlideshowTemplatesParams,
-  TemplateControllerGetTextTemplatesParams,
-  TemplateControllerGetVideoTemplatesParams,
-  TemplateControllerGetWebsiteTemplatesParams,
-  UploadControllerPatchCompanyFileManyBody,
-  UploadControllerUploadCompanyFileBody,
-  UploadControllerUploadCompanyFileManyBody,
-  UploadControllerUploadCompanyLogoBody,
-  UploadControllerUploadSpeechToTextFileBody,
-  UserControllerGetUsersParams
+	ContentControllerFindOneParams,
+	ContentRes,
+	DeleteUserAccountRes,
+	GetCompanyRes,
+	GetImageTemplateRes,
+	GetImageTemplateTagRes,
+	GetMapTemplateRes,
+	GetMapTemplateTagRes,
+	GetShortcutRes,
+	GetSlideshowTemplateRes,
+	GetSurveyAnswerTemplateRes,
+	GetTextTemplateRes,
+	GetTextTemplateTagRes,
+	GetUploadUrlRes,
+	GetUserRes,
+	GetVideoTemplateRes,
+	GetVideoTemplateTagRes,
+	GetWebsiteTemplateRes,
+	GetJotformTemplateRes,
+	GetWebsiteTemplateTagRes,
+	GetJotformTemplateTagRes,
+	HttpExceptionSchema,
+	LoginReq,
+	PatchImageTemplateOrderReq,
+	PatchImageTemplateReq,
+	PatchMapTemplateOrderReq,
+	PatchMapTemplateReq,
+	PatchSlideshowTemplateOrderReq,
+	PatchSlideshowTemplateReq,
+	PatchTextTemplateOrderReq,
+	PatchTextTemplateReq,
+	PatchUserReq,
+	PatchVideoTemplateOrderReq,
+	PatchVideoTemplateReq,
+	PatchWebsiteTemplateOrderReq,
+	PatchJotformTemplateOrderReq,
+	PatchWebsiteTemplateReq,
+	PatchJotformTemplateReq,
+	PostCompanyReq,
+	PostImageTemplateReq,
+	PostMapTemplateReq,
+	PostShortcutManyReq,
+	PostShortcutReq,
+	PostTextTemplateReq,
+	PostUserReq,
+	PostVideoTemplateReq,
+	PostWebsiteTemplateReq,
+	PostJotformTemplateReq,
+	RefreshReq,
+	ShortcutControllerGetShortcutManyParams,
+	ShortcutControllerGetShortcutOneParams,
+	SpeechToTextRes,
+	TemplateControllerGetImageTemplatesParams,
+	TemplateControllerGetSlideshowTemplatesParams,
+	TemplateControllerGetTextTemplatesParams,
+	TemplateControllerGetVideoTemplatesParams,
+	TemplateControllerGetWebsiteTemplatesParams,
+	TemplateControllerGetJotformTemplatesParams,
+	UploadControllerPatchCompanyFileManyBody,
+	UploadControllerUploadCompanyFileBody,
+	UploadControllerUploadCompanyFileManyBody,
+	UploadControllerUploadCompanyLogoBody,
+	UploadControllerUploadSpeechToTextFileBody,
+	UserControllerGetUsersParams
 } from './model'
 import { nobstacleBackendApiInstance } from '../custom-instance';
 import type { ErrorType, BodyType } from '../custom-instance';
 
 type AwaitedInput<T> = PromiseLike<T> | T;
 
-      type Awaited<O> = O extends AwaitedInput<infer T> ? T : never;
+type Awaited<O> = O extends AwaitedInput<infer T> ? T : never;
 
 
 // eslint-disable-next-line
-  type SecondParameter<T extends (...args: any) => any> = T extends (
-  config: any,
-  args: infer P,
+type SecondParameter<T extends (...args: any) => any> = T extends (
+	config: any,
+	args: infer P,
 ) => any
-  ? P
-  : never;
+	? P
+	: never;
 
 
 export const userControllerGetUsers = (
-    params?: UserControllerGetUsersParams,
- options?: SecondParameter<typeof nobstacleBackendApiInstance>,signal?: AbortSignal
+	params?: UserControllerGetUsersParams,
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>, signal?: AbortSignal
 ) => {
-      
-      
-      return nobstacleBackendApiInstance<GetUserRes[]>(
-      {url: `/api/v1/iam/user`, method: 'GET',
-        params, signal
-    },
-      options);
-    }
-  
+
+
+	return nobstacleBackendApiInstance<GetUserRes[]>(
+		{
+			url: `/api/v1/iam/user`, method: 'GET',
+			params, signal
+		},
+		options);
+}
+
 
 export const getUserControllerGetUsersQueryKey = (params?: UserControllerGetUsersParams,) => {
-    
-    return [`/api/v1/iam/user`, ...(params ? [params]: [])] as const;
-    }
 
-    
-export const getUserControllerGetUsersQueryOptions = <TData = Awaited<ReturnType<typeof userControllerGetUsers>>, TError = ErrorType<HttpExceptionSchema>>(params?: UserControllerGetUsersParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof userControllerGetUsers>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
+	return [`/api/v1/iam/user`, ...(params ? [params] : [])] as const;
+}
+
+
+export const getUserControllerGetUsersQueryOptions = <TData = Awaited<ReturnType<typeof userControllerGetUsers>>, TError = ErrorType<HttpExceptionSchema>>(params?: UserControllerGetUsersParams, options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof userControllerGetUsers>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+	const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getUserControllerGetUsersQueryKey(params);
+	const queryKey = queryOptions?.queryKey ?? getUserControllerGetUsersQueryKey(params);
 
-  
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof userControllerGetUsers>>> = ({ signal }) => userControllerGetUsers(params, requestOptions, signal);
 
-      
+	const queryFn: QueryFunction<Awaited<ReturnType<typeof userControllerGetUsers>>> = ({ signal }) => userControllerGetUsers(params, requestOptions, signal);
 
-      
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof userControllerGetUsers>>, TError, TData> & { queryKey: QueryKey }
+
+
+
+	return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<Awaited<ReturnType<typeof userControllerGetUsers>>, TError, TData> & { queryKey: QueryKey }
 }
 
 export type UserControllerGetUsersQueryResult = NonNullable<Awaited<ReturnType<typeof userControllerGetUsers>>>
 export type UserControllerGetUsersQueryError = ErrorType<HttpExceptionSchema>
 
 export const useUserControllerGetUsers = <TData = Awaited<ReturnType<typeof userControllerGetUsers>>, TError = ErrorType<HttpExceptionSchema>>(
- params?: UserControllerGetUsersParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof userControllerGetUsers>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
+	params?: UserControllerGetUsersParams, options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof userControllerGetUsers>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
 
-  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } => {
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } => {
 
-  const queryOptions = getUserControllerGetUsersQueryOptions(params,options)
+	const queryOptions = getUserControllerGetUsersQueryOptions(params, options)
 
-  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+	const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
-  query.queryKey = queryOptions.queryKey ;
+	query.queryKey = queryOptions.queryKey;
 
-  return query;
+	return query;
 }
 
 
 
 
 export const userControllerCreate = (
-    postUserReq: BodyType<PostUserReq>,
- options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
-      
-      
-      return nobstacleBackendApiInstance<GetUserRes>(
-      {url: `/api/v1/iam/user`, method: 'POST',
-      headers: {'Content-Type': 'application/json', },
-      data: postUserReq
-    },
-      options);
-    }
-  
+	postUserReq: BodyType<PostUserReq>,
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
+
+
+	return nobstacleBackendApiInstance<GetUserRes>(
+		{
+			url: `/api/v1/iam/user`, method: 'POST',
+			headers: { 'Content-Type': 'application/json', },
+			data: postUserReq
+		},
+		options);
+}
+
 
 
 export const getUserControllerCreateMutationOptions = <TError = ErrorType<HttpExceptionSchema>,
-    
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof userControllerCreate>>, TError,{data: BodyType<PostUserReq>}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof userControllerCreate>>, TError,{data: BodyType<PostUserReq>}, TContext> => {
- const {mutation: mutationOptions, request: requestOptions} = options ?? {};
 
-      
+	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof userControllerCreate>>, TError, { data: BodyType<PostUserReq> }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+	): UseMutationOptions<Awaited<ReturnType<typeof userControllerCreate>>, TError, { data: BodyType<PostUserReq> }, TContext> => {
+	const { mutation: mutationOptions, request: requestOptions } = options ?? {};
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof userControllerCreate>>, {data: BodyType<PostUserReq>}> = (props) => {
-          const {data} = props ?? {};
-
-          return  userControllerCreate(data,requestOptions)
-        }
-
-        
 
 
-   return  { mutationFn, ...mutationOptions }}
+	const mutationFn: MutationFunction<Awaited<ReturnType<typeof userControllerCreate>>, { data: BodyType<PostUserReq> }> = (props) => {
+		const { data } = props ?? {};
 
-    export type UserControllerCreateMutationResult = NonNullable<Awaited<ReturnType<typeof userControllerCreate>>>
-    export type UserControllerCreateMutationBody = BodyType<PostUserReq>
-    export type UserControllerCreateMutationError = ErrorType<HttpExceptionSchema>
+		return userControllerCreate(data, requestOptions)
+	}
 
-    export const useUserControllerCreate = <TError = ErrorType<HttpExceptionSchema>,
-    
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof userControllerCreate>>, TError,{data: BodyType<PostUserReq>}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
-) => {
 
-      const mutationOptions = getUserControllerCreateMutationOptions(options);
 
-      return useMutation(mutationOptions);
-    }
-    
+
+	return { mutationFn, ...mutationOptions }
+}
+
+export type UserControllerCreateMutationResult = NonNullable<Awaited<ReturnType<typeof userControllerCreate>>>
+export type UserControllerCreateMutationBody = BodyType<PostUserReq>
+export type UserControllerCreateMutationError = ErrorType<HttpExceptionSchema>
+
+export const useUserControllerCreate = <TError = ErrorType<HttpExceptionSchema>,
+
+	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof userControllerCreate>>, TError, { data: BodyType<PostUserReq> }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+	) => {
+
+	const mutationOptions = getUserControllerCreateMutationOptions(options);
+
+	return useMutation(mutationOptions);
+}
+
 export const userControllerCreateCompanyUser = (
-    postUserReq: BodyType<PostUserReq>,
- options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
-      
-      
-      return nobstacleBackendApiInstance<GetUserRes>(
-      {url: `/api/v1/iam/user/company`, method: 'POST',
-      headers: {'Content-Type': 'application/json', },
-      data: postUserReq
-    },
-      options);
-    }
-  
+	postUserReq: BodyType<PostUserReq>,
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
+
+
+	return nobstacleBackendApiInstance<GetUserRes>(
+		{
+			url: `/api/v1/iam/user/company`, method: 'POST',
+			headers: { 'Content-Type': 'application/json', },
+			data: postUserReq
+		},
+		options);
+}
+
 
 
 export const getUserControllerCreateCompanyUserMutationOptions = <TError = ErrorType<HttpExceptionSchema>,
-    
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof userControllerCreateCompanyUser>>, TError,{data: BodyType<PostUserReq>}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof userControllerCreateCompanyUser>>, TError,{data: BodyType<PostUserReq>}, TContext> => {
- const {mutation: mutationOptions, request: requestOptions} = options ?? {};
 
-      
+	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof userControllerCreateCompanyUser>>, TError, { data: BodyType<PostUserReq> }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+	): UseMutationOptions<Awaited<ReturnType<typeof userControllerCreateCompanyUser>>, TError, { data: BodyType<PostUserReq> }, TContext> => {
+	const { mutation: mutationOptions, request: requestOptions } = options ?? {};
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof userControllerCreateCompanyUser>>, {data: BodyType<PostUserReq>}> = (props) => {
-          const {data} = props ?? {};
-
-          return  userControllerCreateCompanyUser(data,requestOptions)
-        }
-
-        
 
 
-   return  { mutationFn, ...mutationOptions }}
+	const mutationFn: MutationFunction<Awaited<ReturnType<typeof userControllerCreateCompanyUser>>, { data: BodyType<PostUserReq> }> = (props) => {
+		const { data } = props ?? {};
 
-    export type UserControllerCreateCompanyUserMutationResult = NonNullable<Awaited<ReturnType<typeof userControllerCreateCompanyUser>>>
-    export type UserControllerCreateCompanyUserMutationBody = BodyType<PostUserReq>
-    export type UserControllerCreateCompanyUserMutationError = ErrorType<HttpExceptionSchema>
+		return userControllerCreateCompanyUser(data, requestOptions)
+	}
 
-    export const useUserControllerCreateCompanyUser = <TError = ErrorType<HttpExceptionSchema>,
-    
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof userControllerCreateCompanyUser>>, TError,{data: BodyType<PostUserReq>}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
-) => {
 
-      const mutationOptions = getUserControllerCreateCompanyUserMutationOptions(options);
 
-      return useMutation(mutationOptions);
-    }
-    
+
+	return { mutationFn, ...mutationOptions }
+}
+
+export type UserControllerCreateCompanyUserMutationResult = NonNullable<Awaited<ReturnType<typeof userControllerCreateCompanyUser>>>
+export type UserControllerCreateCompanyUserMutationBody = BodyType<PostUserReq>
+export type UserControllerCreateCompanyUserMutationError = ErrorType<HttpExceptionSchema>
+
+export const useUserControllerCreateCompanyUser = <TError = ErrorType<HttpExceptionSchema>,
+
+	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof userControllerCreateCompanyUser>>, TError, { data: BodyType<PostUserReq> }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+	) => {
+
+	const mutationOptions = getUserControllerCreateCompanyUserMutationOptions(options);
+
+	return useMutation(mutationOptions);
+}
+
 export const userControllerGetUser = (
-    id: number,
- options?: SecondParameter<typeof nobstacleBackendApiInstance>,signal?: AbortSignal
+	id: number,
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>, signal?: AbortSignal
 ) => {
-      
-      
-      return nobstacleBackendApiInstance<GetUserRes>(
-      {url: `/api/v1/iam/user/${id}`, method: 'GET', signal
-    },
-      options);
-    }
-  
+
+
+	return nobstacleBackendApiInstance<GetUserRes>(
+		{
+			url: `/api/v1/iam/user/${id}`, method: 'GET', signal
+		},
+		options);
+}
+
 
 export const getUserControllerGetUserQueryKey = (id: number,) => {
-    
-    return [`/api/v1/iam/user/${id}`] as const;
-    }
 
-    
-export const getUserControllerGetUserQueryOptions = <TData = Awaited<ReturnType<typeof userControllerGetUser>>, TError = ErrorType<HttpExceptionSchema>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof userControllerGetUser>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
+	return [`/api/v1/iam/user/${id}`] as const;
+}
+
+
+export const getUserControllerGetUserQueryOptions = <TData = Awaited<ReturnType<typeof userControllerGetUser>>, TError = ErrorType<HttpExceptionSchema>>(id: number, options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof userControllerGetUser>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+	const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getUserControllerGetUserQueryKey(id);
+	const queryKey = queryOptions?.queryKey ?? getUserControllerGetUserQueryKey(id);
 
-  
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof userControllerGetUser>>> = ({ signal }) => userControllerGetUser(id, requestOptions, signal);
 
-      
+	const queryFn: QueryFunction<Awaited<ReturnType<typeof userControllerGetUser>>> = ({ signal }) => userControllerGetUser(id, requestOptions, signal);
 
-      
 
-   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof userControllerGetUser>>, TError, TData> & { queryKey: QueryKey }
+
+
+
+	return { queryKey, queryFn, enabled: !!(id), ...queryOptions } as UseQueryOptions<Awaited<ReturnType<typeof userControllerGetUser>>, TError, TData> & { queryKey: QueryKey }
 }
 
 export type UserControllerGetUserQueryResult = NonNullable<Awaited<ReturnType<typeof userControllerGetUser>>>
 export type UserControllerGetUserQueryError = ErrorType<HttpExceptionSchema>
 
 export const useUserControllerGetUser = <TData = Awaited<ReturnType<typeof userControllerGetUser>>, TError = ErrorType<HttpExceptionSchema>>(
- id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof userControllerGetUser>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
+	id: number, options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof userControllerGetUser>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
 
-  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } => {
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } => {
 
-  const queryOptions = getUserControllerGetUserQueryOptions(id,options)
+	const queryOptions = getUserControllerGetUserQueryOptions(id, options)
 
-  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+	const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
-  query.queryKey = queryOptions.queryKey ;
+	query.queryKey = queryOptions.queryKey;
 
-  return query;
+	return query;
 }
 
 
 
 
 export const userControllerPatchOne = (
-    id: number,
-    patchUserReq: BodyType<PatchUserReq>,
- options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
-      
-      
-      return nobstacleBackendApiInstance<GetUserRes>(
-      {url: `/api/v1/iam/user/${id}`, method: 'PATCH',
-      headers: {'Content-Type': 'application/json', },
-      data: patchUserReq
-    },
-      options);
-    }
-  
+	id: number,
+	patchUserReq: BodyType<PatchUserReq>,
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
+
+
+	return nobstacleBackendApiInstance<GetUserRes>(
+		{
+			url: `/api/v1/iam/user/${id}`, method: 'PATCH',
+			headers: { 'Content-Type': 'application/json', },
+			data: patchUserReq
+		},
+		options);
+}
+
 
 
 export const getUserControllerPatchOneMutationOptions = <TError = ErrorType<HttpExceptionSchema>,
-    
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof userControllerPatchOne>>, TError,{id: number;data: BodyType<PatchUserReq>}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof userControllerPatchOne>>, TError,{id: number;data: BodyType<PatchUserReq>}, TContext> => {
- const {mutation: mutationOptions, request: requestOptions} = options ?? {};
 
-      
+	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof userControllerPatchOne>>, TError, { id: number; data: BodyType<PatchUserReq> }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+	): UseMutationOptions<Awaited<ReturnType<typeof userControllerPatchOne>>, TError, { id: number; data: BodyType<PatchUserReq> }, TContext> => {
+	const { mutation: mutationOptions, request: requestOptions } = options ?? {};
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof userControllerPatchOne>>, {id: number;data: BodyType<PatchUserReq>}> = (props) => {
-          const {id,data} = props ?? {};
-
-          return  userControllerPatchOne(id,data,requestOptions)
-        }
-
-        
 
 
-   return  { mutationFn, ...mutationOptions }}
+	const mutationFn: MutationFunction<Awaited<ReturnType<typeof userControllerPatchOne>>, { id: number; data: BodyType<PatchUserReq> }> = (props) => {
+		const { id, data } = props ?? {};
 
-    export type UserControllerPatchOneMutationResult = NonNullable<Awaited<ReturnType<typeof userControllerPatchOne>>>
-    export type UserControllerPatchOneMutationBody = BodyType<PatchUserReq>
-    export type UserControllerPatchOneMutationError = ErrorType<HttpExceptionSchema>
+		return userControllerPatchOne(id, data, requestOptions)
+	}
 
-    export const useUserControllerPatchOne = <TError = ErrorType<HttpExceptionSchema>,
-    
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof userControllerPatchOne>>, TError,{id: number;data: BodyType<PatchUserReq>}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
-) => {
 
-      const mutationOptions = getUserControllerPatchOneMutationOptions(options);
 
-      return useMutation(mutationOptions);
-    }
-    
+
+	return { mutationFn, ...mutationOptions }
+}
+
+export type UserControllerPatchOneMutationResult = NonNullable<Awaited<ReturnType<typeof userControllerPatchOne>>>
+export type UserControllerPatchOneMutationBody = BodyType<PatchUserReq>
+export type UserControllerPatchOneMutationError = ErrorType<HttpExceptionSchema>
+
+export const useUserControllerPatchOne = <TError = ErrorType<HttpExceptionSchema>,
+
+	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof userControllerPatchOne>>, TError, { id: number; data: BodyType<PatchUserReq> }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+	) => {
+
+	const mutationOptions = getUserControllerPatchOneMutationOptions(options);
+
+	return useMutation(mutationOptions);
+}
+
 export const userControllerDeleteUserAccount = (
-    id: number,
- options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
-      
-      
-      return nobstacleBackendApiInstance<DeleteUserAccountRes>(
-      {url: `/api/v1/iam/user/${id}`, method: 'DELETE'
-    },
-      options);
-    }
-  
+	id: number,
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
+
+
+	return nobstacleBackendApiInstance<DeleteUserAccountRes>(
+		{
+			url: `/api/v1/iam/user/${id}`, method: 'DELETE'
+		},
+		options);
+}
+
 
 
 export const getUserControllerDeleteUserAccountMutationOptions = <TError = ErrorType<HttpExceptionSchema>,
-    
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof userControllerDeleteUserAccount>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof userControllerDeleteUserAccount>>, TError,{id: number}, TContext> => {
- const {mutation: mutationOptions, request: requestOptions} = options ?? {};
 
-      
+	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof userControllerDeleteUserAccount>>, TError, { id: number }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+	): UseMutationOptions<Awaited<ReturnType<typeof userControllerDeleteUserAccount>>, TError, { id: number }, TContext> => {
+	const { mutation: mutationOptions, request: requestOptions } = options ?? {};
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof userControllerDeleteUserAccount>>, {id: number}> = (props) => {
-          const {id} = props ?? {};
-
-          return  userControllerDeleteUserAccount(id,requestOptions)
-        }
-
-        
 
 
-   return  { mutationFn, ...mutationOptions }}
+	const mutationFn: MutationFunction<Awaited<ReturnType<typeof userControllerDeleteUserAccount>>, { id: number }> = (props) => {
+		const { id } = props ?? {};
 
-    export type UserControllerDeleteUserAccountMutationResult = NonNullable<Awaited<ReturnType<typeof userControllerDeleteUserAccount>>>
-    
-    export type UserControllerDeleteUserAccountMutationError = ErrorType<HttpExceptionSchema>
+		return userControllerDeleteUserAccount(id, requestOptions)
+	}
 
-    export const useUserControllerDeleteUserAccount = <TError = ErrorType<HttpExceptionSchema>,
-    
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof userControllerDeleteUserAccount>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
-) => {
 
-      const mutationOptions = getUserControllerDeleteUserAccountMutationOptions(options);
 
-      return useMutation(mutationOptions);
-    }
-    
+
+	return { mutationFn, ...mutationOptions }
+}
+
+export type UserControllerDeleteUserAccountMutationResult = NonNullable<Awaited<ReturnType<typeof userControllerDeleteUserAccount>>>
+
+export type UserControllerDeleteUserAccountMutationError = ErrorType<HttpExceptionSchema>
+
+export const useUserControllerDeleteUserAccount = <TError = ErrorType<HttpExceptionSchema>,
+
+	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof userControllerDeleteUserAccount>>, TError, { id: number }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+	) => {
+
+	const mutationOptions = getUserControllerDeleteUserAccountMutationOptions(options);
+
+	return useMutation(mutationOptions);
+}
+
 export const userControllerGetUserInfo = (
-    id: number,
- options?: SecondParameter<typeof nobstacleBackendApiInstance>,signal?: AbortSignal
+	id: number,
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>, signal?: AbortSignal
 ) => {
-      
-      
-      return nobstacleBackendApiInstance<GetUserRes>(
-      {url: `/api/v1/iam/user/user-info/${id}`, method: 'GET', signal
-    },
-      options);
-    }
-  
+
+
+	return nobstacleBackendApiInstance<GetUserRes>(
+		{
+			url: `/api/v1/iam/user/user-info/${id}`, method: 'GET', signal
+		},
+		options);
+}
+
 
 export const getUserControllerGetUserInfoQueryKey = (id: number,) => {
-    
-    return [`/api/v1/iam/user/user-info/${id}`] as const;
-    }
 
-    
-export const getUserControllerGetUserInfoQueryOptions = <TData = Awaited<ReturnType<typeof userControllerGetUserInfo>>, TError = ErrorType<HttpExceptionSchema>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof userControllerGetUserInfo>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
+	return [`/api/v1/iam/user/user-info/${id}`] as const;
+}
+
+
+export const getUserControllerGetUserInfoQueryOptions = <TData = Awaited<ReturnType<typeof userControllerGetUserInfo>>, TError = ErrorType<HttpExceptionSchema>>(id: number, options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof userControllerGetUserInfo>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+	const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getUserControllerGetUserInfoQueryKey(id);
+	const queryKey = queryOptions?.queryKey ?? getUserControllerGetUserInfoQueryKey(id);
 
-  
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof userControllerGetUserInfo>>> = ({ signal }) => userControllerGetUserInfo(id, requestOptions, signal);
 
-      
+	const queryFn: QueryFunction<Awaited<ReturnType<typeof userControllerGetUserInfo>>> = ({ signal }) => userControllerGetUserInfo(id, requestOptions, signal);
 
-      
 
-   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof userControllerGetUserInfo>>, TError, TData> & { queryKey: QueryKey }
+
+
+
+	return { queryKey, queryFn, enabled: !!(id), ...queryOptions } as UseQueryOptions<Awaited<ReturnType<typeof userControllerGetUserInfo>>, TError, TData> & { queryKey: QueryKey }
 }
 
 export type UserControllerGetUserInfoQueryResult = NonNullable<Awaited<ReturnType<typeof userControllerGetUserInfo>>>
 export type UserControllerGetUserInfoQueryError = ErrorType<HttpExceptionSchema>
 
 export const useUserControllerGetUserInfo = <TData = Awaited<ReturnType<typeof userControllerGetUserInfo>>, TError = ErrorType<HttpExceptionSchema>>(
- id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof userControllerGetUserInfo>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
+	id: number, options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof userControllerGetUserInfo>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
 
-  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } => {
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } => {
 
-  const queryOptions = getUserControllerGetUserInfoQueryOptions(id,options)
+	const queryOptions = getUserControllerGetUserInfoQueryOptions(id, options)
 
-  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+	const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
-  query.queryKey = queryOptions.queryKey ;
+	query.queryKey = queryOptions.queryKey;
 
-  return query;
+	return query;
 }
 
 
 
 
 export const authControllerLogin = (
-    loginReq: BodyType<LoginReq>,
- options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
-      
-      
-      return nobstacleBackendApiInstance<GetUserRes>(
-      {url: `/api/v1/iam/auth/signin`, method: 'POST',
-      headers: {'Content-Type': 'application/json', },
-      data: loginReq
-    },
-      options);
-    }
-  
+	loginReq: BodyType<LoginReq>,
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
+
+	console.log()
+
+	return nobstacleBackendApiInstance<GetUserRes>(
+		{
+			url: `/api/v1/iam/auth/signin`, method: 'POST',
+			headers: { 'Content-Type': 'application/json', },
+			data: loginReq
+		},
+		options);
+}
+
 
 
 export const getAuthControllerLoginMutationOptions = <TError = ErrorType<HttpExceptionSchema>,
-    
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof authControllerLogin>>, TError,{data: BodyType<LoginReq>}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof authControllerLogin>>, TError,{data: BodyType<LoginReq>}, TContext> => {
- const {mutation: mutationOptions, request: requestOptions} = options ?? {};
 
-      
+	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof authControllerLogin>>, TError, { data: BodyType<LoginReq> }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+	): UseMutationOptions<Awaited<ReturnType<typeof authControllerLogin>>, TError, { data: BodyType<LoginReq> }, TContext> => {
+	const { mutation: mutationOptions, request: requestOptions } = options ?? {};
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof authControllerLogin>>, {data: BodyType<LoginReq>}> = (props) => {
-          const {data} = props ?? {};
-
-          return  authControllerLogin(data,requestOptions)
-        }
-
-        
 
 
-   return  { mutationFn, ...mutationOptions }}
+	const mutationFn: MutationFunction<Awaited<ReturnType<typeof authControllerLogin>>, { data: BodyType<LoginReq> }> = (props) => {
+		const { data } = props ?? {};
 
-    export type AuthControllerLoginMutationResult = NonNullable<Awaited<ReturnType<typeof authControllerLogin>>>
-    export type AuthControllerLoginMutationBody = BodyType<LoginReq>
-    export type AuthControllerLoginMutationError = ErrorType<HttpExceptionSchema>
+		return authControllerLogin(data, requestOptions)
+	}
 
-    export const useAuthControllerLogin = <TError = ErrorType<HttpExceptionSchema>,
-    
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof authControllerLogin>>, TError,{data: BodyType<LoginReq>}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
-) => {
 
-      const mutationOptions = getAuthControllerLoginMutationOptions(options);
 
-      return useMutation(mutationOptions);
-    }
-    
+
+	return { mutationFn, ...mutationOptions }
+}
+
+export type AuthControllerLoginMutationResult = NonNullable<Awaited<ReturnType<typeof authControllerLogin>>>
+export type AuthControllerLoginMutationBody = BodyType<LoginReq>
+export type AuthControllerLoginMutationError = ErrorType<HttpExceptionSchema>
+
+export const useAuthControllerLogin = <TError = ErrorType<HttpExceptionSchema>,
+
+	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof authControllerLogin>>, TError, { data: BodyType<LoginReq> }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+	) => {
+
+	const mutationOptions = getAuthControllerLoginMutationOptions(options);
+
+	return useMutation(mutationOptions);
+}
+
 export const authControllerLogout = (
-    
- options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
-      
-      
-      return nobstacleBackendApiInstance<void>(
-      {url: `/api/v1/iam/auth/signout`, method: 'POST'
-    },
-      options);
-    }
-  
+
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
+
+
+	return nobstacleBackendApiInstance<void>(
+		{
+			url: `/api/v1/iam/auth/signout`, method: 'POST'
+		},
+		options);
+}
+
 
 
 export const getAuthControllerLogoutMutationOptions = <TError = ErrorType<HttpExceptionSchema>,
-    TVariables = void,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof authControllerLogout>>, TError,TVariables, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof authControllerLogout>>, TError,TVariables, TContext> => {
- const {mutation: mutationOptions, request: requestOptions} = options ?? {};
-
-      
+	TVariables = void,
+	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof authControllerLogout>>, TError, TVariables, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+	): UseMutationOptions<Awaited<ReturnType<typeof authControllerLogout>>, TError, TVariables, TContext> => {
+	const { mutation: mutationOptions, request: requestOptions } = options ?? {};
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof authControllerLogout>>, TVariables> = () => {
-          
-
-          return  authControllerLogout(requestOptions)
-        }
-
-        
 
 
-   return  { mutationFn, ...mutationOptions }}
+	const mutationFn: MutationFunction<Awaited<ReturnType<typeof authControllerLogout>>, TVariables> = () => {
 
-    export type AuthControllerLogoutMutationResult = NonNullable<Awaited<ReturnType<typeof authControllerLogout>>>
-    
-    export type AuthControllerLogoutMutationError = ErrorType<HttpExceptionSchema>
 
-    export const useAuthControllerLogout = <TError = ErrorType<HttpExceptionSchema>,
-    TVariables = void,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof authControllerLogout>>, TError,TVariables, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
-) => {
+		return authControllerLogout(requestOptions)
+	}
 
-      const mutationOptions = getAuthControllerLogoutMutationOptions(options);
 
-      return useMutation(mutationOptions);
-    }
-    
+
+
+	return { mutationFn, ...mutationOptions }
+}
+
+export type AuthControllerLogoutMutationResult = NonNullable<Awaited<ReturnType<typeof authControllerLogout>>>
+
+export type AuthControllerLogoutMutationError = ErrorType<HttpExceptionSchema>
+
+export const useAuthControllerLogout = <TError = ErrorType<HttpExceptionSchema>,
+	TVariables = void,
+	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof authControllerLogout>>, TError, TVariables, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+	) => {
+
+	const mutationOptions = getAuthControllerLogoutMutationOptions(options);
+
+	return useMutation(mutationOptions);
+}
+
 export const authControllerSignAccessToken = (
-    refreshReq: BodyType<RefreshReq>,
- options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
-      
-      
-      return nobstacleBackendApiInstance<GetUserRes>(
-      {url: `/api/v1/iam/auth/refresh`, method: 'POST',
-      headers: {'Content-Type': 'application/json', },
-      data: refreshReq
-    },
-      options);
-    }
-  
+	refreshReq: BodyType<RefreshReq>,
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
+
+
+	return nobstacleBackendApiInstance<GetUserRes>(
+		{
+			url: `/api/v1/iam/auth/refresh`, method: 'POST',
+			headers: { 'Content-Type': 'application/json', },
+			data: refreshReq
+		},
+		options);
+}
+
 
 
 export const getAuthControllerSignAccessTokenMutationOptions = <TError = ErrorType<HttpExceptionSchema>,
-    
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof authControllerSignAccessToken>>, TError,{data: BodyType<RefreshReq>}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof authControllerSignAccessToken>>, TError,{data: BodyType<RefreshReq>}, TContext> => {
- const {mutation: mutationOptions, request: requestOptions} = options ?? {};
 
-      
+	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof authControllerSignAccessToken>>, TError, { data: BodyType<RefreshReq> }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+	): UseMutationOptions<Awaited<ReturnType<typeof authControllerSignAccessToken>>, TError, { data: BodyType<RefreshReq> }, TContext> => {
+	const { mutation: mutationOptions, request: requestOptions } = options ?? {};
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof authControllerSignAccessToken>>, {data: BodyType<RefreshReq>}> = (props) => {
-          const {data} = props ?? {};
-
-          return  authControllerSignAccessToken(data,requestOptions)
-        }
-
-        
 
 
-   return  { mutationFn, ...mutationOptions }}
+	const mutationFn: MutationFunction<Awaited<ReturnType<typeof authControllerSignAccessToken>>, { data: BodyType<RefreshReq> }> = (props) => {
+		const { data } = props ?? {};
 
-    export type AuthControllerSignAccessTokenMutationResult = NonNullable<Awaited<ReturnType<typeof authControllerSignAccessToken>>>
-    export type AuthControllerSignAccessTokenMutationBody = BodyType<RefreshReq>
-    export type AuthControllerSignAccessTokenMutationError = ErrorType<HttpExceptionSchema>
+		return authControllerSignAccessToken(data, requestOptions)
+	}
 
-    export const useAuthControllerSignAccessToken = <TError = ErrorType<HttpExceptionSchema>,
-    
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof authControllerSignAccessToken>>, TError,{data: BodyType<RefreshReq>}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
-) => {
 
-      const mutationOptions = getAuthControllerSignAccessTokenMutationOptions(options);
 
-      return useMutation(mutationOptions);
-    }
-    
+
+	return { mutationFn, ...mutationOptions }
+}
+
+export type AuthControllerSignAccessTokenMutationResult = NonNullable<Awaited<ReturnType<typeof authControllerSignAccessToken>>>
+export type AuthControllerSignAccessTokenMutationBody = BodyType<RefreshReq>
+export type AuthControllerSignAccessTokenMutationError = ErrorType<HttpExceptionSchema>
+
+export const useAuthControllerSignAccessToken = <TError = ErrorType<HttpExceptionSchema>,
+
+	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof authControllerSignAccessToken>>, TError, { data: BodyType<RefreshReq> }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+	) => {
+
+	const mutationOptions = getAuthControllerSignAccessTokenMutationOptions(options);
+
+	return useMutation(mutationOptions);
+}
+
 export const textTemplateControllerCreateTextTemplate = (
-    postTextTemplateReq: BodyType<PostTextTemplateReq>,
- options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
-      
-      
-      return nobstacleBackendApiInstance<GetTextTemplateRes>(
-      {url: `/api/v1/content/text`, method: 'POST',
-      headers: {'Content-Type': 'application/json', },
-      data: postTextTemplateReq
-    },
-      options);
-    }
-  
+	postTextTemplateReq: BodyType<PostTextTemplateReq>,
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
+
+
+	return nobstacleBackendApiInstance<GetTextTemplateRes>(
+		{
+			url: `/api/v1/content/text`, method: 'POST',
+			headers: { 'Content-Type': 'application/json', },
+			data: postTextTemplateReq
+		},
+		options);
+}
+
 
 
 export const getTextTemplateControllerCreateTextTemplateMutationOptions = <TError = ErrorType<HttpExceptionSchema>,
-    
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof textTemplateControllerCreateTextTemplate>>, TError,{data: BodyType<PostTextTemplateReq>}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof textTemplateControllerCreateTextTemplate>>, TError,{data: BodyType<PostTextTemplateReq>}, TContext> => {
- const {mutation: mutationOptions, request: requestOptions} = options ?? {};
 
-      
+	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof textTemplateControllerCreateTextTemplate>>, TError, { data: BodyType<PostTextTemplateReq> }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+	): UseMutationOptions<Awaited<ReturnType<typeof textTemplateControllerCreateTextTemplate>>, TError, { data: BodyType<PostTextTemplateReq> }, TContext> => {
+	const { mutation: mutationOptions, request: requestOptions } = options ?? {};
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof textTemplateControllerCreateTextTemplate>>, {data: BodyType<PostTextTemplateReq>}> = (props) => {
-          const {data} = props ?? {};
-
-          return  textTemplateControllerCreateTextTemplate(data,requestOptions)
-        }
-
-        
 
 
-   return  { mutationFn, ...mutationOptions }}
+	const mutationFn: MutationFunction<Awaited<ReturnType<typeof textTemplateControllerCreateTextTemplate>>, { data: BodyType<PostTextTemplateReq> }> = (props) => {
+		const { data } = props ?? {};
 
-    export type TextTemplateControllerCreateTextTemplateMutationResult = NonNullable<Awaited<ReturnType<typeof textTemplateControllerCreateTextTemplate>>>
-    export type TextTemplateControllerCreateTextTemplateMutationBody = BodyType<PostTextTemplateReq>
-    export type TextTemplateControllerCreateTextTemplateMutationError = ErrorType<HttpExceptionSchema>
+		return textTemplateControllerCreateTextTemplate(data, requestOptions)
+	}
 
-    export const useTextTemplateControllerCreateTextTemplate = <TError = ErrorType<HttpExceptionSchema>,
-    
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof textTemplateControllerCreateTextTemplate>>, TError,{data: BodyType<PostTextTemplateReq>}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
-) => {
 
-      const mutationOptions = getTextTemplateControllerCreateTextTemplateMutationOptions(options);
 
-      return useMutation(mutationOptions);
-    }
-    
+
+	return { mutationFn, ...mutationOptions }
+}
+
+export type TextTemplateControllerCreateTextTemplateMutationResult = NonNullable<Awaited<ReturnType<typeof textTemplateControllerCreateTextTemplate>>>
+export type TextTemplateControllerCreateTextTemplateMutationBody = BodyType<PostTextTemplateReq>
+export type TextTemplateControllerCreateTextTemplateMutationError = ErrorType<HttpExceptionSchema>
+
+export const useTextTemplateControllerCreateTextTemplate = <TError = ErrorType<HttpExceptionSchema>,
+
+	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof textTemplateControllerCreateTextTemplate>>, TError, { data: BodyType<PostTextTemplateReq> }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+	) => {
+
+	const mutationOptions = getTextTemplateControllerCreateTextTemplateMutationOptions(options);
+
+	return useMutation(mutationOptions);
+}
+
 export const textTemplateControllerPatchTextTemplateOne = (
-    tag: string,
-    patchTextTemplateReq: BodyType<PatchTextTemplateReq>,
- options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
-      
-      
-      return nobstacleBackendApiInstance<GetTextTemplateRes>(
-      {url: `/api/v1/content/text/${tag}`, method: 'PATCH',
-      headers: {'Content-Type': 'application/json', },
-      data: patchTextTemplateReq
-    },
-      options);
-    }
-  
+	tag: string,
+	patchTextTemplateReq: BodyType<PatchTextTemplateReq>,
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
+
+
+	return nobstacleBackendApiInstance<GetTextTemplateRes>(
+		{
+			url: `/api/v1/content/text/${tag}`, method: 'PATCH',
+			headers: { 'Content-Type': 'application/json', },
+			data: patchTextTemplateReq
+		},
+		options);
+}
+
 
 
 export const getTextTemplateControllerPatchTextTemplateOneMutationOptions = <TError = ErrorType<HttpExceptionSchema>,
-    
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof textTemplateControllerPatchTextTemplateOne>>, TError,{tag: string;data: BodyType<PatchTextTemplateReq>}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof textTemplateControllerPatchTextTemplateOne>>, TError,{tag: string;data: BodyType<PatchTextTemplateReq>}, TContext> => {
- const {mutation: mutationOptions, request: requestOptions} = options ?? {};
 
-      
+	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof textTemplateControllerPatchTextTemplateOne>>, TError, { tag: string; data: BodyType<PatchTextTemplateReq> }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+	): UseMutationOptions<Awaited<ReturnType<typeof textTemplateControllerPatchTextTemplateOne>>, TError, { tag: string; data: BodyType<PatchTextTemplateReq> }, TContext> => {
+	const { mutation: mutationOptions, request: requestOptions } = options ?? {};
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof textTemplateControllerPatchTextTemplateOne>>, {tag: string;data: BodyType<PatchTextTemplateReq>}> = (props) => {
-          const {tag,data} = props ?? {};
-
-          return  textTemplateControllerPatchTextTemplateOne(tag,data,requestOptions)
-        }
-
-        
 
 
-   return  { mutationFn, ...mutationOptions }}
+	const mutationFn: MutationFunction<Awaited<ReturnType<typeof textTemplateControllerPatchTextTemplateOne>>, { tag: string; data: BodyType<PatchTextTemplateReq> }> = (props) => {
+		const { tag, data } = props ?? {};
 
-    export type TextTemplateControllerPatchTextTemplateOneMutationResult = NonNullable<Awaited<ReturnType<typeof textTemplateControllerPatchTextTemplateOne>>>
-    export type TextTemplateControllerPatchTextTemplateOneMutationBody = BodyType<PatchTextTemplateReq>
-    export type TextTemplateControllerPatchTextTemplateOneMutationError = ErrorType<HttpExceptionSchema>
+		return textTemplateControllerPatchTextTemplateOne(tag, data, requestOptions)
+	}
 
-    export const useTextTemplateControllerPatchTextTemplateOne = <TError = ErrorType<HttpExceptionSchema>,
-    
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof textTemplateControllerPatchTextTemplateOne>>, TError,{tag: string;data: BodyType<PatchTextTemplateReq>}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
-) => {
 
-      const mutationOptions = getTextTemplateControllerPatchTextTemplateOneMutationOptions(options);
 
-      return useMutation(mutationOptions);
-    }
-    
+
+	return { mutationFn, ...mutationOptions }
+}
+
+export type TextTemplateControllerPatchTextTemplateOneMutationResult = NonNullable<Awaited<ReturnType<typeof textTemplateControllerPatchTextTemplateOne>>>
+export type TextTemplateControllerPatchTextTemplateOneMutationBody = BodyType<PatchTextTemplateReq>
+export type TextTemplateControllerPatchTextTemplateOneMutationError = ErrorType<HttpExceptionSchema>
+
+export const useTextTemplateControllerPatchTextTemplateOne = <TError = ErrorType<HttpExceptionSchema>,
+
+	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof textTemplateControllerPatchTextTemplateOne>>, TError, { tag: string; data: BodyType<PatchTextTemplateReq> }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+	) => {
+
+	const mutationOptions = getTextTemplateControllerPatchTextTemplateOneMutationOptions(options);
+
+	return useMutation(mutationOptions);
+}
+
 export const textTemplateControllerPatchTextTemplateOrder = (
-    id: number,
-    patchTextTemplateOrderReq: BodyType<PatchTextTemplateOrderReq>,
- options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
-      
-      
-      return nobstacleBackendApiInstance<boolean>(
-      {url: `/api/v1/content/text/order/${id}`, method: 'PATCH',
-      headers: {'Content-Type': 'application/json', },
-      data: patchTextTemplateOrderReq
-    },
-      options);
-    }
-  
+	id: number,
+	patchTextTemplateOrderReq: BodyType<PatchTextTemplateOrderReq>,
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
+
+
+	return nobstacleBackendApiInstance<boolean>(
+		{
+			url: `/api/v1/content/text/order/${id}`, method: 'PATCH',
+			headers: { 'Content-Type': 'application/json', },
+			data: patchTextTemplateOrderReq
+		},
+		options);
+}
+
 
 
 export const getTextTemplateControllerPatchTextTemplateOrderMutationOptions = <TError = ErrorType<HttpExceptionSchema>,
-    
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof textTemplateControllerPatchTextTemplateOrder>>, TError,{id: number;data: BodyType<PatchTextTemplateOrderReq>}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof textTemplateControllerPatchTextTemplateOrder>>, TError,{id: number;data: BodyType<PatchTextTemplateOrderReq>}, TContext> => {
- const {mutation: mutationOptions, request: requestOptions} = options ?? {};
 
-      
+	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof textTemplateControllerPatchTextTemplateOrder>>, TError, { id: number; data: BodyType<PatchTextTemplateOrderReq> }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+	): UseMutationOptions<Awaited<ReturnType<typeof textTemplateControllerPatchTextTemplateOrder>>, TError, { id: number; data: BodyType<PatchTextTemplateOrderReq> }, TContext> => {
+	const { mutation: mutationOptions, request: requestOptions } = options ?? {};
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof textTemplateControllerPatchTextTemplateOrder>>, {id: number;data: BodyType<PatchTextTemplateOrderReq>}> = (props) => {
-          const {id,data} = props ?? {};
-
-          return  textTemplateControllerPatchTextTemplateOrder(id,data,requestOptions)
-        }
-
-        
 
 
-   return  { mutationFn, ...mutationOptions }}
+	const mutationFn: MutationFunction<Awaited<ReturnType<typeof textTemplateControllerPatchTextTemplateOrder>>, { id: number; data: BodyType<PatchTextTemplateOrderReq> }> = (props) => {
+		const { id, data } = props ?? {};
 
-    export type TextTemplateControllerPatchTextTemplateOrderMutationResult = NonNullable<Awaited<ReturnType<typeof textTemplateControllerPatchTextTemplateOrder>>>
-    export type TextTemplateControllerPatchTextTemplateOrderMutationBody = BodyType<PatchTextTemplateOrderReq>
-    export type TextTemplateControllerPatchTextTemplateOrderMutationError = ErrorType<HttpExceptionSchema>
+		return textTemplateControllerPatchTextTemplateOrder(id, data, requestOptions)
+	}
 
-    export const useTextTemplateControllerPatchTextTemplateOrder = <TError = ErrorType<HttpExceptionSchema>,
-    
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof textTemplateControllerPatchTextTemplateOrder>>, TError,{id: number;data: BodyType<PatchTextTemplateOrderReq>}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
-) => {
 
-      const mutationOptions = getTextTemplateControllerPatchTextTemplateOrderMutationOptions(options);
 
-      return useMutation(mutationOptions);
-    }
-    
+
+	return { mutationFn, ...mutationOptions }
+}
+
+export type TextTemplateControllerPatchTextTemplateOrderMutationResult = NonNullable<Awaited<ReturnType<typeof textTemplateControllerPatchTextTemplateOrder>>>
+export type TextTemplateControllerPatchTextTemplateOrderMutationBody = BodyType<PatchTextTemplateOrderReq>
+export type TextTemplateControllerPatchTextTemplateOrderMutationError = ErrorType<HttpExceptionSchema>
+
+export const useTextTemplateControllerPatchTextTemplateOrder = <TError = ErrorType<HttpExceptionSchema>,
+
+	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof textTemplateControllerPatchTextTemplateOrder>>, TError, { id: number; data: BodyType<PatchTextTemplateOrderReq> }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+	) => {
+
+	const mutationOptions = getTextTemplateControllerPatchTextTemplateOrderMutationOptions(options);
+
+	return useMutation(mutationOptions);
+}
+
 export const textTemplateControllerDeleteTextTemplateOne = (
-    id: number,
- options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
-      
-      
-      return nobstacleBackendApiInstance<boolean>(
-      {url: `/api/v1/content/text/${id}`, method: 'DELETE'
-    },
-      options);
-    }
-  
+	id: number,
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
+
+
+	return nobstacleBackendApiInstance<boolean>(
+		{
+			url: `/api/v1/content/text/${id}`, method: 'DELETE'
+		},
+		options);
+}
+
 
 
 export const getTextTemplateControllerDeleteTextTemplateOneMutationOptions = <TError = ErrorType<HttpExceptionSchema>,
-    
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof textTemplateControllerDeleteTextTemplateOne>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof textTemplateControllerDeleteTextTemplateOne>>, TError,{id: number}, TContext> => {
- const {mutation: mutationOptions, request: requestOptions} = options ?? {};
 
-      
+	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof textTemplateControllerDeleteTextTemplateOne>>, TError, { id: number }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+	): UseMutationOptions<Awaited<ReturnType<typeof textTemplateControllerDeleteTextTemplateOne>>, TError, { id: number }, TContext> => {
+	const { mutation: mutationOptions, request: requestOptions } = options ?? {};
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof textTemplateControllerDeleteTextTemplateOne>>, {id: number}> = (props) => {
-          const {id} = props ?? {};
-
-          return  textTemplateControllerDeleteTextTemplateOne(id,requestOptions)
-        }
-
-        
 
 
-   return  { mutationFn, ...mutationOptions }}
+	const mutationFn: MutationFunction<Awaited<ReturnType<typeof textTemplateControllerDeleteTextTemplateOne>>, { id: number }> = (props) => {
+		const { id } = props ?? {};
 
-    export type TextTemplateControllerDeleteTextTemplateOneMutationResult = NonNullable<Awaited<ReturnType<typeof textTemplateControllerDeleteTextTemplateOne>>>
-    
-    export type TextTemplateControllerDeleteTextTemplateOneMutationError = ErrorType<HttpExceptionSchema>
+		return textTemplateControllerDeleteTextTemplateOne(id, requestOptions)
+	}
 
-    export const useTextTemplateControllerDeleteTextTemplateOne = <TError = ErrorType<HttpExceptionSchema>,
-    
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof textTemplateControllerDeleteTextTemplateOne>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
-) => {
 
-      const mutationOptions = getTextTemplateControllerDeleteTextTemplateOneMutationOptions(options);
 
-      return useMutation(mutationOptions);
-    }
-    
+
+	return { mutationFn, ...mutationOptions }
+}
+
+export type TextTemplateControllerDeleteTextTemplateOneMutationResult = NonNullable<Awaited<ReturnType<typeof textTemplateControllerDeleteTextTemplateOne>>>
+
+export type TextTemplateControllerDeleteTextTemplateOneMutationError = ErrorType<HttpExceptionSchema>
+
+export const useTextTemplateControllerDeleteTextTemplateOne = <TError = ErrorType<HttpExceptionSchema>,
+
+	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof textTemplateControllerDeleteTextTemplateOne>>, TError, { id: number }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+	) => {
+
+	const mutationOptions = getTextTemplateControllerDeleteTextTemplateOneMutationOptions(options);
+
+	return useMutation(mutationOptions);
+}
+
 export const textTemplateControllerGetTextTags = (
-    
- options?: SecondParameter<typeof nobstacleBackendApiInstance>,signal?: AbortSignal
+
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>, signal?: AbortSignal
 ) => {
-      
-      
-      return nobstacleBackendApiInstance<GetTextTemplateTagRes[]>(
-      {url: `/api/v1/content/text/tags`, method: 'GET', signal
-    },
-      options);
-    }
-  
+
+
+	return nobstacleBackendApiInstance<GetTextTemplateTagRes[]>(
+		{
+			url: `/api/v1/content/text/tags`, method: 'GET', signal
+		},
+		options);
+}
+
 
 export const getTextTemplateControllerGetTextTagsQueryKey = () => {
-    
-    return [`/api/v1/content/text/tags`] as const;
-    }
 
-    
-export const getTextTemplateControllerGetTextTagsQueryOptions = <TData = Awaited<ReturnType<typeof textTemplateControllerGetTextTags>>, TError = ErrorType<HttpExceptionSchema>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof textTemplateControllerGetTextTags>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
+	return [`/api/v1/content/text/tags`] as const;
+}
+
+
+export const getTextTemplateControllerGetTextTagsQueryOptions = <TData = Awaited<ReturnType<typeof textTemplateControllerGetTextTags>>, TError = ErrorType<HttpExceptionSchema>>(options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof textTemplateControllerGetTextTags>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+	const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getTextTemplateControllerGetTextTagsQueryKey();
+	const queryKey = queryOptions?.queryKey ?? getTextTemplateControllerGetTextTagsQueryKey();
 
-  
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof textTemplateControllerGetTextTags>>> = ({ signal }) => textTemplateControllerGetTextTags(requestOptions, signal);
 
-      
+	const queryFn: QueryFunction<Awaited<ReturnType<typeof textTemplateControllerGetTextTags>>> = ({ signal }) => textTemplateControllerGetTextTags(requestOptions, signal);
 
-      
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof textTemplateControllerGetTextTags>>, TError, TData> & { queryKey: QueryKey }
+
+
+
+	return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<Awaited<ReturnType<typeof textTemplateControllerGetTextTags>>, TError, TData> & { queryKey: QueryKey }
 }
 
 export type TextTemplateControllerGetTextTagsQueryResult = NonNullable<Awaited<ReturnType<typeof textTemplateControllerGetTextTags>>>
 export type TextTemplateControllerGetTextTagsQueryError = ErrorType<HttpExceptionSchema>
 
 export const useTextTemplateControllerGetTextTags = <TData = Awaited<ReturnType<typeof textTemplateControllerGetTextTags>>, TError = ErrorType<HttpExceptionSchema>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof textTemplateControllerGetTextTags>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
+	options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof textTemplateControllerGetTextTags>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
 
-  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } => {
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } => {
 
-  const queryOptions = getTextTemplateControllerGetTextTagsQueryOptions(options)
+	const queryOptions = getTextTemplateControllerGetTextTagsQueryOptions(options)
 
-  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+	const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
-  query.queryKey = queryOptions.queryKey ;
+	query.queryKey = queryOptions.queryKey;
 
-  return query;
+	return query;
 }
 
 
 
 
 export const imageTemplateControllerCreateImageTemplate = (
-    postImageTemplateReq: BodyType<PostImageTemplateReq>,
- options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
-      
-      
-      return nobstacleBackendApiInstance<GetImageTemplateRes>(
-      {url: `/api/v1/content/image`, method: 'POST',
-      headers: {'Content-Type': 'application/json', },
-      data: postImageTemplateReq
-    },
-      options);
-    }
-  
+	postImageTemplateReq: BodyType<PostImageTemplateReq>,
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
+
+
+	return nobstacleBackendApiInstance<GetImageTemplateRes>(
+		{
+			url: `/api/v1/content/image`, method: 'POST',
+			headers: { 'Content-Type': 'application/json', },
+			data: postImageTemplateReq
+		},
+		options);
+}
+
 
 
 export const getImageTemplateControllerCreateImageTemplateMutationOptions = <TError = ErrorType<HttpExceptionSchema>,
-    
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof imageTemplateControllerCreateImageTemplate>>, TError,{data: BodyType<PostImageTemplateReq>}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof imageTemplateControllerCreateImageTemplate>>, TError,{data: BodyType<PostImageTemplateReq>}, TContext> => {
- const {mutation: mutationOptions, request: requestOptions} = options ?? {};
 
-      
+	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof imageTemplateControllerCreateImageTemplate>>, TError, { data: BodyType<PostImageTemplateReq> }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+	): UseMutationOptions<Awaited<ReturnType<typeof imageTemplateControllerCreateImageTemplate>>, TError, { data: BodyType<PostImageTemplateReq> }, TContext> => {
+	const { mutation: mutationOptions, request: requestOptions } = options ?? {};
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof imageTemplateControllerCreateImageTemplate>>, {data: BodyType<PostImageTemplateReq>}> = (props) => {
-          const {data} = props ?? {};
-
-          return  imageTemplateControllerCreateImageTemplate(data,requestOptions)
-        }
-
-        
 
 
-   return  { mutationFn, ...mutationOptions }}
+	const mutationFn: MutationFunction<Awaited<ReturnType<typeof imageTemplateControllerCreateImageTemplate>>, { data: BodyType<PostImageTemplateReq> }> = (props) => {
+		const { data } = props ?? {};
 
-    export type ImageTemplateControllerCreateImageTemplateMutationResult = NonNullable<Awaited<ReturnType<typeof imageTemplateControllerCreateImageTemplate>>>
-    export type ImageTemplateControllerCreateImageTemplateMutationBody = BodyType<PostImageTemplateReq>
-    export type ImageTemplateControllerCreateImageTemplateMutationError = ErrorType<HttpExceptionSchema>
+		return imageTemplateControllerCreateImageTemplate(data, requestOptions)
+	}
 
-    export const useImageTemplateControllerCreateImageTemplate = <TError = ErrorType<HttpExceptionSchema>,
-    
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof imageTemplateControllerCreateImageTemplate>>, TError,{data: BodyType<PostImageTemplateReq>}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
-) => {
 
-      const mutationOptions = getImageTemplateControllerCreateImageTemplateMutationOptions(options);
 
-      return useMutation(mutationOptions);
-    }
-    
+
+	return { mutationFn, ...mutationOptions }
+}
+
+export type ImageTemplateControllerCreateImageTemplateMutationResult = NonNullable<Awaited<ReturnType<typeof imageTemplateControllerCreateImageTemplate>>>
+export type ImageTemplateControllerCreateImageTemplateMutationBody = BodyType<PostImageTemplateReq>
+export type ImageTemplateControllerCreateImageTemplateMutationError = ErrorType<HttpExceptionSchema>
+
+export const useImageTemplateControllerCreateImageTemplate = <TError = ErrorType<HttpExceptionSchema>,
+
+	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof imageTemplateControllerCreateImageTemplate>>, TError, { data: BodyType<PostImageTemplateReq> }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+	) => {
+
+	const mutationOptions = getImageTemplateControllerCreateImageTemplateMutationOptions(options);
+
+	return useMutation(mutationOptions);
+}
+
 export const imageTemplateControllerPatchImageTemplateOne = (
-    tag: string,
-    patchImageTemplateReq: BodyType<PatchImageTemplateReq>,
- options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
-      
-      
-      return nobstacleBackendApiInstance<GetImageTemplateRes>(
-      {url: `/api/v1/content/image/${tag}`, method: 'PATCH',
-      headers: {'Content-Type': 'application/json', },
-      data: patchImageTemplateReq
-    },
-      options);
-    }
-  
+	tag: string,
+	patchImageTemplateReq: BodyType<PatchImageTemplateReq>,
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
+
+
+	return nobstacleBackendApiInstance<GetImageTemplateRes>(
+		{
+			url: `/api/v1/content/image/${tag}`, method: 'PATCH',
+			headers: { 'Content-Type': 'application/json', },
+			data: patchImageTemplateReq
+		},
+		options);
+}
+
 
 
 export const getImageTemplateControllerPatchImageTemplateOneMutationOptions = <TError = ErrorType<HttpExceptionSchema>,
-    
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof imageTemplateControllerPatchImageTemplateOne>>, TError,{tag: string;data: BodyType<PatchImageTemplateReq>}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof imageTemplateControllerPatchImageTemplateOne>>, TError,{tag: string;data: BodyType<PatchImageTemplateReq>}, TContext> => {
- const {mutation: mutationOptions, request: requestOptions} = options ?? {};
 
-      
+	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof imageTemplateControllerPatchImageTemplateOne>>, TError, { tag: string; data: BodyType<PatchImageTemplateReq> }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+	): UseMutationOptions<Awaited<ReturnType<typeof imageTemplateControllerPatchImageTemplateOne>>, TError, { tag: string; data: BodyType<PatchImageTemplateReq> }, TContext> => {
+	const { mutation: mutationOptions, request: requestOptions } = options ?? {};
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof imageTemplateControllerPatchImageTemplateOne>>, {tag: string;data: BodyType<PatchImageTemplateReq>}> = (props) => {
-          const {tag,data} = props ?? {};
-
-          return  imageTemplateControllerPatchImageTemplateOne(tag,data,requestOptions)
-        }
-
-        
 
 
-   return  { mutationFn, ...mutationOptions }}
+	const mutationFn: MutationFunction<Awaited<ReturnType<typeof imageTemplateControllerPatchImageTemplateOne>>, { tag: string; data: BodyType<PatchImageTemplateReq> }> = (props) => {
+		const { tag, data } = props ?? {};
 
-    export type ImageTemplateControllerPatchImageTemplateOneMutationResult = NonNullable<Awaited<ReturnType<typeof imageTemplateControllerPatchImageTemplateOne>>>
-    export type ImageTemplateControllerPatchImageTemplateOneMutationBody = BodyType<PatchImageTemplateReq>
-    export type ImageTemplateControllerPatchImageTemplateOneMutationError = ErrorType<HttpExceptionSchema>
+		return imageTemplateControllerPatchImageTemplateOne(tag, data, requestOptions)
+	}
 
-    export const useImageTemplateControllerPatchImageTemplateOne = <TError = ErrorType<HttpExceptionSchema>,
-    
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof imageTemplateControllerPatchImageTemplateOne>>, TError,{tag: string;data: BodyType<PatchImageTemplateReq>}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
-) => {
 
-      const mutationOptions = getImageTemplateControllerPatchImageTemplateOneMutationOptions(options);
 
-      return useMutation(mutationOptions);
-    }
-    
+
+	return { mutationFn, ...mutationOptions }
+}
+
+export type ImageTemplateControllerPatchImageTemplateOneMutationResult = NonNullable<Awaited<ReturnType<typeof imageTemplateControllerPatchImageTemplateOne>>>
+export type ImageTemplateControllerPatchImageTemplateOneMutationBody = BodyType<PatchImageTemplateReq>
+export type ImageTemplateControllerPatchImageTemplateOneMutationError = ErrorType<HttpExceptionSchema>
+
+export const useImageTemplateControllerPatchImageTemplateOne = <TError = ErrorType<HttpExceptionSchema>,
+
+	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof imageTemplateControllerPatchImageTemplateOne>>, TError, { tag: string; data: BodyType<PatchImageTemplateReq> }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+	) => {
+
+	const mutationOptions = getImageTemplateControllerPatchImageTemplateOneMutationOptions(options);
+
+	return useMutation(mutationOptions);
+}
+
 export const imageTemplateControllerPatchImageTemplateOrder = (
-    id: number,
-    patchImageTemplateOrderReq: BodyType<PatchImageTemplateOrderReq>,
- options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
-      
-      
-      return nobstacleBackendApiInstance<boolean>(
-      {url: `/api/v1/content/image/order/${id}`, method: 'PATCH',
-      headers: {'Content-Type': 'application/json', },
-      data: patchImageTemplateOrderReq
-    },
-      options);
-    }
-  
+	id: number,
+	patchImageTemplateOrderReq: BodyType<PatchImageTemplateOrderReq>,
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
+
+
+	return nobstacleBackendApiInstance<boolean>(
+		{
+			url: `/api/v1/content/image/order/${id}`, method: 'PATCH',
+			headers: { 'Content-Type': 'application/json', },
+			data: patchImageTemplateOrderReq
+		},
+		options);
+}
+
 
 
 export const getImageTemplateControllerPatchImageTemplateOrderMutationOptions = <TError = ErrorType<HttpExceptionSchema>,
-    
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof imageTemplateControllerPatchImageTemplateOrder>>, TError,{id: number;data: BodyType<PatchImageTemplateOrderReq>}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof imageTemplateControllerPatchImageTemplateOrder>>, TError,{id: number;data: BodyType<PatchImageTemplateOrderReq>}, TContext> => {
- const {mutation: mutationOptions, request: requestOptions} = options ?? {};
 
-      
+	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof imageTemplateControllerPatchImageTemplateOrder>>, TError, { id: number; data: BodyType<PatchImageTemplateOrderReq> }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+	): UseMutationOptions<Awaited<ReturnType<typeof imageTemplateControllerPatchImageTemplateOrder>>, TError, { id: number; data: BodyType<PatchImageTemplateOrderReq> }, TContext> => {
+	const { mutation: mutationOptions, request: requestOptions } = options ?? {};
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof imageTemplateControllerPatchImageTemplateOrder>>, {id: number;data: BodyType<PatchImageTemplateOrderReq>}> = (props) => {
-          const {id,data} = props ?? {};
-
-          return  imageTemplateControllerPatchImageTemplateOrder(id,data,requestOptions)
-        }
-
-        
 
 
-   return  { mutationFn, ...mutationOptions }}
+	const mutationFn: MutationFunction<Awaited<ReturnType<typeof imageTemplateControllerPatchImageTemplateOrder>>, { id: number; data: BodyType<PatchImageTemplateOrderReq> }> = (props) => {
+		const { id, data } = props ?? {};
 
-    export type ImageTemplateControllerPatchImageTemplateOrderMutationResult = NonNullable<Awaited<ReturnType<typeof imageTemplateControllerPatchImageTemplateOrder>>>
-    export type ImageTemplateControllerPatchImageTemplateOrderMutationBody = BodyType<PatchImageTemplateOrderReq>
-    export type ImageTemplateControllerPatchImageTemplateOrderMutationError = ErrorType<HttpExceptionSchema>
+		return imageTemplateControllerPatchImageTemplateOrder(id, data, requestOptions)
+	}
 
-    export const useImageTemplateControllerPatchImageTemplateOrder = <TError = ErrorType<HttpExceptionSchema>,
-    
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof imageTemplateControllerPatchImageTemplateOrder>>, TError,{id: number;data: BodyType<PatchImageTemplateOrderReq>}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
-) => {
 
-      const mutationOptions = getImageTemplateControllerPatchImageTemplateOrderMutationOptions(options);
 
-      return useMutation(mutationOptions);
-    }
-    
+
+	return { mutationFn, ...mutationOptions }
+}
+
+export type ImageTemplateControllerPatchImageTemplateOrderMutationResult = NonNullable<Awaited<ReturnType<typeof imageTemplateControllerPatchImageTemplateOrder>>>
+export type ImageTemplateControllerPatchImageTemplateOrderMutationBody = BodyType<PatchImageTemplateOrderReq>
+export type ImageTemplateControllerPatchImageTemplateOrderMutationError = ErrorType<HttpExceptionSchema>
+
+export const useImageTemplateControllerPatchImageTemplateOrder = <TError = ErrorType<HttpExceptionSchema>,
+
+	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof imageTemplateControllerPatchImageTemplateOrder>>, TError, { id: number; data: BodyType<PatchImageTemplateOrderReq> }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+	) => {
+
+	const mutationOptions = getImageTemplateControllerPatchImageTemplateOrderMutationOptions(options);
+
+	return useMutation(mutationOptions);
+}
+
 export const imageTemplateControllerDeleteImageTemplateOne = (
-    id: number,
- options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
-      
-      
-      return nobstacleBackendApiInstance<boolean>(
-      {url: `/api/v1/content/image/${id}`, method: 'DELETE'
-    },
-      options);
-    }
-  
+	id: number,
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
+
+
+	return nobstacleBackendApiInstance<boolean>(
+		{
+			url: `/api/v1/content/image/${id}`, method: 'DELETE'
+		},
+		options);
+}
+
 
 
 export const getImageTemplateControllerDeleteImageTemplateOneMutationOptions = <TError = ErrorType<HttpExceptionSchema>,
-    
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof imageTemplateControllerDeleteImageTemplateOne>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof imageTemplateControllerDeleteImageTemplateOne>>, TError,{id: number}, TContext> => {
- const {mutation: mutationOptions, request: requestOptions} = options ?? {};
 
-      
+	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof imageTemplateControllerDeleteImageTemplateOne>>, TError, { id: number }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+	): UseMutationOptions<Awaited<ReturnType<typeof imageTemplateControllerDeleteImageTemplateOne>>, TError, { id: number }, TContext> => {
+	const { mutation: mutationOptions, request: requestOptions } = options ?? {};
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof imageTemplateControllerDeleteImageTemplateOne>>, {id: number}> = (props) => {
-          const {id} = props ?? {};
-
-          return  imageTemplateControllerDeleteImageTemplateOne(id,requestOptions)
-        }
-
-        
 
 
-   return  { mutationFn, ...mutationOptions }}
+	const mutationFn: MutationFunction<Awaited<ReturnType<typeof imageTemplateControllerDeleteImageTemplateOne>>, { id: number }> = (props) => {
+		const { id } = props ?? {};
 
-    export type ImageTemplateControllerDeleteImageTemplateOneMutationResult = NonNullable<Awaited<ReturnType<typeof imageTemplateControllerDeleteImageTemplateOne>>>
-    
-    export type ImageTemplateControllerDeleteImageTemplateOneMutationError = ErrorType<HttpExceptionSchema>
+		return imageTemplateControllerDeleteImageTemplateOne(id, requestOptions)
+	}
 
-    export const useImageTemplateControllerDeleteImageTemplateOne = <TError = ErrorType<HttpExceptionSchema>,
-    
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof imageTemplateControllerDeleteImageTemplateOne>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
-) => {
 
-      const mutationOptions = getImageTemplateControllerDeleteImageTemplateOneMutationOptions(options);
 
-      return useMutation(mutationOptions);
-    }
-    
+
+	return { mutationFn, ...mutationOptions }
+}
+
+export type ImageTemplateControllerDeleteImageTemplateOneMutationResult = NonNullable<Awaited<ReturnType<typeof imageTemplateControllerDeleteImageTemplateOne>>>
+
+export type ImageTemplateControllerDeleteImageTemplateOneMutationError = ErrorType<HttpExceptionSchema>
+
+export const useImageTemplateControllerDeleteImageTemplateOne = <TError = ErrorType<HttpExceptionSchema>,
+
+	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof imageTemplateControllerDeleteImageTemplateOne>>, TError, { id: number }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+	) => {
+
+	const mutationOptions = getImageTemplateControllerDeleteImageTemplateOneMutationOptions(options);
+
+	return useMutation(mutationOptions);
+}
+
 export const imageTemplateControllerGetImageTags = (
-    
- options?: SecondParameter<typeof nobstacleBackendApiInstance>,signal?: AbortSignal
+
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>, signal?: AbortSignal
 ) => {
-      
-      
-      return nobstacleBackendApiInstance<GetImageTemplateTagRes[]>(
-      {url: `/api/v1/content/image/tags`, method: 'GET', signal
-    },
-      options);
-    }
-  
+
+
+	return nobstacleBackendApiInstance<GetImageTemplateTagRes[]>(
+		{
+			url: `/api/v1/content/image/tags`, method: 'GET', signal
+		},
+		options);
+}
+
 
 export const getImageTemplateControllerGetImageTagsQueryKey = () => {
-    
-    return [`/api/v1/content/image/tags`] as const;
-    }
 
-    
-export const getImageTemplateControllerGetImageTagsQueryOptions = <TData = Awaited<ReturnType<typeof imageTemplateControllerGetImageTags>>, TError = ErrorType<HttpExceptionSchema>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof imageTemplateControllerGetImageTags>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
+	return [`/api/v1/content/image/tags`] as const;
+}
+
+
+export const getImageTemplateControllerGetImageTagsQueryOptions = <TData = Awaited<ReturnType<typeof imageTemplateControllerGetImageTags>>, TError = ErrorType<HttpExceptionSchema>>(options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof imageTemplateControllerGetImageTags>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+	const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getImageTemplateControllerGetImageTagsQueryKey();
+	const queryKey = queryOptions?.queryKey ?? getImageTemplateControllerGetImageTagsQueryKey();
 
-  
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof imageTemplateControllerGetImageTags>>> = ({ signal }) => imageTemplateControllerGetImageTags(requestOptions, signal);
 
-      
+	const queryFn: QueryFunction<Awaited<ReturnType<typeof imageTemplateControllerGetImageTags>>> = ({ signal }) => imageTemplateControllerGetImageTags(requestOptions, signal);
 
-      
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof imageTemplateControllerGetImageTags>>, TError, TData> & { queryKey: QueryKey }
+
+
+
+	return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<Awaited<ReturnType<typeof imageTemplateControllerGetImageTags>>, TError, TData> & { queryKey: QueryKey }
 }
 
 export type ImageTemplateControllerGetImageTagsQueryResult = NonNullable<Awaited<ReturnType<typeof imageTemplateControllerGetImageTags>>>
 export type ImageTemplateControllerGetImageTagsQueryError = ErrorType<HttpExceptionSchema>
 
 export const useImageTemplateControllerGetImageTags = <TData = Awaited<ReturnType<typeof imageTemplateControllerGetImageTags>>, TError = ErrorType<HttpExceptionSchema>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof imageTemplateControllerGetImageTags>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
+	options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof imageTemplateControllerGetImageTags>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
 
-  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } => {
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } => {
 
-  const queryOptions = getImageTemplateControllerGetImageTagsQueryOptions(options)
+	const queryOptions = getImageTemplateControllerGetImageTagsQueryOptions(options)
 
-  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+	const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
-  query.queryKey = queryOptions.queryKey ;
+	query.queryKey = queryOptions.queryKey;
 
-  return query;
+	return query;
 }
 
 
 
 
 export const videoTemplateControllerCreateVideoTemplate = (
-    postVideoTemplateReq: BodyType<PostVideoTemplateReq>,
- options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
-      
-      
-      return nobstacleBackendApiInstance<GetVideoTemplateRes>(
-      {url: `/api/v1/content/video`, method: 'POST',
-      headers: {'Content-Type': 'application/json', },
-      data: postVideoTemplateReq
-    },
-      options);
-    }
-  
+	postVideoTemplateReq: BodyType<PostVideoTemplateReq>,
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
+
+
+	return nobstacleBackendApiInstance<GetVideoTemplateRes>(
+		{
+			url: `/api/v1/content/video`, method: 'POST',
+			headers: { 'Content-Type': 'application/json', },
+			data: postVideoTemplateReq
+		},
+		options);
+}
+
 
 
 export const getVideoTemplateControllerCreateVideoTemplateMutationOptions = <TError = ErrorType<HttpExceptionSchema>,
-    
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof videoTemplateControllerCreateVideoTemplate>>, TError,{data: BodyType<PostVideoTemplateReq>}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof videoTemplateControllerCreateVideoTemplate>>, TError,{data: BodyType<PostVideoTemplateReq>}, TContext> => {
- const {mutation: mutationOptions, request: requestOptions} = options ?? {};
 
-      
+	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof videoTemplateControllerCreateVideoTemplate>>, TError, { data: BodyType<PostVideoTemplateReq> }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+	): UseMutationOptions<Awaited<ReturnType<typeof videoTemplateControllerCreateVideoTemplate>>, TError, { data: BodyType<PostVideoTemplateReq> }, TContext> => {
+	const { mutation: mutationOptions, request: requestOptions } = options ?? {};
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof videoTemplateControllerCreateVideoTemplate>>, {data: BodyType<PostVideoTemplateReq>}> = (props) => {
-          const {data} = props ?? {};
-
-          return  videoTemplateControllerCreateVideoTemplate(data,requestOptions)
-        }
-
-        
 
 
-   return  { mutationFn, ...mutationOptions }}
+	const mutationFn: MutationFunction<Awaited<ReturnType<typeof videoTemplateControllerCreateVideoTemplate>>, { data: BodyType<PostVideoTemplateReq> }> = (props) => {
+		const { data } = props ?? {};
 
-    export type VideoTemplateControllerCreateVideoTemplateMutationResult = NonNullable<Awaited<ReturnType<typeof videoTemplateControllerCreateVideoTemplate>>>
-    export type VideoTemplateControllerCreateVideoTemplateMutationBody = BodyType<PostVideoTemplateReq>
-    export type VideoTemplateControllerCreateVideoTemplateMutationError = ErrorType<HttpExceptionSchema>
+		return videoTemplateControllerCreateVideoTemplate(data, requestOptions)
+	}
 
-    export const useVideoTemplateControllerCreateVideoTemplate = <TError = ErrorType<HttpExceptionSchema>,
-    
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof videoTemplateControllerCreateVideoTemplate>>, TError,{data: BodyType<PostVideoTemplateReq>}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
-) => {
 
-      const mutationOptions = getVideoTemplateControllerCreateVideoTemplateMutationOptions(options);
 
-      return useMutation(mutationOptions);
-    }
-    
+
+	return { mutationFn, ...mutationOptions }
+}
+
+export type VideoTemplateControllerCreateVideoTemplateMutationResult = NonNullable<Awaited<ReturnType<typeof videoTemplateControllerCreateVideoTemplate>>>
+export type VideoTemplateControllerCreateVideoTemplateMutationBody = BodyType<PostVideoTemplateReq>
+export type VideoTemplateControllerCreateVideoTemplateMutationError = ErrorType<HttpExceptionSchema>
+
+export const useVideoTemplateControllerCreateVideoTemplate = <TError = ErrorType<HttpExceptionSchema>,
+
+	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof videoTemplateControllerCreateVideoTemplate>>, TError, { data: BodyType<PostVideoTemplateReq> }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+	) => {
+
+	const mutationOptions = getVideoTemplateControllerCreateVideoTemplateMutationOptions(options);
+
+	return useMutation(mutationOptions);
+}
+
 export const videoTemplateControllerPatchVideoTemplateOne = (
-    tag: string,
-    patchVideoTemplateReq: BodyType<PatchVideoTemplateReq>,
- options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
-      
-      
-      return nobstacleBackendApiInstance<GetVideoTemplateRes>(
-      {url: `/api/v1/content/video/${tag}`, method: 'PATCH',
-      headers: {'Content-Type': 'application/json', },
-      data: patchVideoTemplateReq
-    },
-      options);
-    }
-  
+	tag: string,
+	patchVideoTemplateReq: BodyType<PatchVideoTemplateReq>,
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
+
+
+	return nobstacleBackendApiInstance<GetVideoTemplateRes>(
+		{
+			url: `/api/v1/content/video/${tag}`, method: 'PATCH',
+			headers: { 'Content-Type': 'application/json', },
+			data: patchVideoTemplateReq
+		},
+		options);
+}
+
 
 
 export const getVideoTemplateControllerPatchVideoTemplateOneMutationOptions = <TError = ErrorType<HttpExceptionSchema>,
-    
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof videoTemplateControllerPatchVideoTemplateOne>>, TError,{tag: string;data: BodyType<PatchVideoTemplateReq>}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof videoTemplateControllerPatchVideoTemplateOne>>, TError,{tag: string;data: BodyType<PatchVideoTemplateReq>}, TContext> => {
- const {mutation: mutationOptions, request: requestOptions} = options ?? {};
 
-      
+	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof videoTemplateControllerPatchVideoTemplateOne>>, TError, { tag: string; data: BodyType<PatchVideoTemplateReq> }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+	): UseMutationOptions<Awaited<ReturnType<typeof videoTemplateControllerPatchVideoTemplateOne>>, TError, { tag: string; data: BodyType<PatchVideoTemplateReq> }, TContext> => {
+	const { mutation: mutationOptions, request: requestOptions } = options ?? {};
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof videoTemplateControllerPatchVideoTemplateOne>>, {tag: string;data: BodyType<PatchVideoTemplateReq>}> = (props) => {
-          const {tag,data} = props ?? {};
-
-          return  videoTemplateControllerPatchVideoTemplateOne(tag,data,requestOptions)
-        }
-
-        
 
 
-   return  { mutationFn, ...mutationOptions }}
+	const mutationFn: MutationFunction<Awaited<ReturnType<typeof videoTemplateControllerPatchVideoTemplateOne>>, { tag: string; data: BodyType<PatchVideoTemplateReq> }> = (props) => {
+		const { tag, data } = props ?? {};
 
-    export type VideoTemplateControllerPatchVideoTemplateOneMutationResult = NonNullable<Awaited<ReturnType<typeof videoTemplateControllerPatchVideoTemplateOne>>>
-    export type VideoTemplateControllerPatchVideoTemplateOneMutationBody = BodyType<PatchVideoTemplateReq>
-    export type VideoTemplateControllerPatchVideoTemplateOneMutationError = ErrorType<HttpExceptionSchema>
+		return videoTemplateControllerPatchVideoTemplateOne(tag, data, requestOptions)
+	}
 
-    export const useVideoTemplateControllerPatchVideoTemplateOne = <TError = ErrorType<HttpExceptionSchema>,
-    
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof videoTemplateControllerPatchVideoTemplateOne>>, TError,{tag: string;data: BodyType<PatchVideoTemplateReq>}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
-) => {
 
-      const mutationOptions = getVideoTemplateControllerPatchVideoTemplateOneMutationOptions(options);
 
-      return useMutation(mutationOptions);
-    }
-    
+
+	return { mutationFn, ...mutationOptions }
+}
+
+export type VideoTemplateControllerPatchVideoTemplateOneMutationResult = NonNullable<Awaited<ReturnType<typeof videoTemplateControllerPatchVideoTemplateOne>>>
+export type VideoTemplateControllerPatchVideoTemplateOneMutationBody = BodyType<PatchVideoTemplateReq>
+export type VideoTemplateControllerPatchVideoTemplateOneMutationError = ErrorType<HttpExceptionSchema>
+
+export const useVideoTemplateControllerPatchVideoTemplateOne = <TError = ErrorType<HttpExceptionSchema>,
+
+	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof videoTemplateControllerPatchVideoTemplateOne>>, TError, { tag: string; data: BodyType<PatchVideoTemplateReq> }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+	) => {
+
+	const mutationOptions = getVideoTemplateControllerPatchVideoTemplateOneMutationOptions(options);
+
+	return useMutation(mutationOptions);
+}
+
 export const videoTemplateControllerPatchVideoTemplateOrder = (
-    id: number,
-    patchVideoTemplateOrderReq: BodyType<PatchVideoTemplateOrderReq>,
- options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
-      
-      
-      return nobstacleBackendApiInstance<boolean>(
-      {url: `/api/v1/content/video/order/${id}`, method: 'PATCH',
-      headers: {'Content-Type': 'application/json', },
-      data: patchVideoTemplateOrderReq
-    },
-      options);
-    }
-  
+	id: number,
+	patchVideoTemplateOrderReq: BodyType<PatchVideoTemplateOrderReq>,
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
+
+
+	return nobstacleBackendApiInstance<boolean>(
+		{
+			url: `/api/v1/content/video/order/${id}`, method: 'PATCH',
+			headers: { 'Content-Type': 'application/json', },
+			data: patchVideoTemplateOrderReq
+		},
+		options);
+}
+
 
 
 export const getVideoTemplateControllerPatchVideoTemplateOrderMutationOptions = <TError = ErrorType<HttpExceptionSchema>,
-    
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof videoTemplateControllerPatchVideoTemplateOrder>>, TError,{id: number;data: BodyType<PatchVideoTemplateOrderReq>}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof videoTemplateControllerPatchVideoTemplateOrder>>, TError,{id: number;data: BodyType<PatchVideoTemplateOrderReq>}, TContext> => {
- const {mutation: mutationOptions, request: requestOptions} = options ?? {};
 
-      
+	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof videoTemplateControllerPatchVideoTemplateOrder>>, TError, { id: number; data: BodyType<PatchVideoTemplateOrderReq> }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+	): UseMutationOptions<Awaited<ReturnType<typeof videoTemplateControllerPatchVideoTemplateOrder>>, TError, { id: number; data: BodyType<PatchVideoTemplateOrderReq> }, TContext> => {
+	const { mutation: mutationOptions, request: requestOptions } = options ?? {};
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof videoTemplateControllerPatchVideoTemplateOrder>>, {id: number;data: BodyType<PatchVideoTemplateOrderReq>}> = (props) => {
-          const {id,data} = props ?? {};
-
-          return  videoTemplateControllerPatchVideoTemplateOrder(id,data,requestOptions)
-        }
-
-        
 
 
-   return  { mutationFn, ...mutationOptions }}
+	const mutationFn: MutationFunction<Awaited<ReturnType<typeof videoTemplateControllerPatchVideoTemplateOrder>>, { id: number; data: BodyType<PatchVideoTemplateOrderReq> }> = (props) => {
+		const { id, data } = props ?? {};
 
-    export type VideoTemplateControllerPatchVideoTemplateOrderMutationResult = NonNullable<Awaited<ReturnType<typeof videoTemplateControllerPatchVideoTemplateOrder>>>
-    export type VideoTemplateControllerPatchVideoTemplateOrderMutationBody = BodyType<PatchVideoTemplateOrderReq>
-    export type VideoTemplateControllerPatchVideoTemplateOrderMutationError = ErrorType<HttpExceptionSchema>
+		return videoTemplateControllerPatchVideoTemplateOrder(id, data, requestOptions)
+	}
 
-    export const useVideoTemplateControllerPatchVideoTemplateOrder = <TError = ErrorType<HttpExceptionSchema>,
-    
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof videoTemplateControllerPatchVideoTemplateOrder>>, TError,{id: number;data: BodyType<PatchVideoTemplateOrderReq>}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
-) => {
 
-      const mutationOptions = getVideoTemplateControllerPatchVideoTemplateOrderMutationOptions(options);
 
-      return useMutation(mutationOptions);
-    }
-    
+
+	return { mutationFn, ...mutationOptions }
+}
+
+export type VideoTemplateControllerPatchVideoTemplateOrderMutationResult = NonNullable<Awaited<ReturnType<typeof videoTemplateControllerPatchVideoTemplateOrder>>>
+export type VideoTemplateControllerPatchVideoTemplateOrderMutationBody = BodyType<PatchVideoTemplateOrderReq>
+export type VideoTemplateControllerPatchVideoTemplateOrderMutationError = ErrorType<HttpExceptionSchema>
+
+export const useVideoTemplateControllerPatchVideoTemplateOrder = <TError = ErrorType<HttpExceptionSchema>,
+
+	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof videoTemplateControllerPatchVideoTemplateOrder>>, TError, { id: number; data: BodyType<PatchVideoTemplateOrderReq> }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+	) => {
+
+	const mutationOptions = getVideoTemplateControllerPatchVideoTemplateOrderMutationOptions(options);
+
+	return useMutation(mutationOptions);
+}
+
 export const videoTemplateControllerDeleteVideoTemplateOne = (
-    id: number,
- options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
-      
-      
-      return nobstacleBackendApiInstance<boolean>(
-      {url: `/api/v1/content/video/${id}`, method: 'DELETE'
-    },
-      options);
-    }
-  
+	id: number,
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
+
+
+	return nobstacleBackendApiInstance<boolean>(
+		{
+			url: `/api/v1/content/video/${id}`, method: 'DELETE'
+		},
+		options);
+}
+
 
 
 export const getVideoTemplateControllerDeleteVideoTemplateOneMutationOptions = <TError = ErrorType<HttpExceptionSchema>,
-    
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof videoTemplateControllerDeleteVideoTemplateOne>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof videoTemplateControllerDeleteVideoTemplateOne>>, TError,{id: number}, TContext> => {
- const {mutation: mutationOptions, request: requestOptions} = options ?? {};
 
-      
+	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof videoTemplateControllerDeleteVideoTemplateOne>>, TError, { id: number }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+	): UseMutationOptions<Awaited<ReturnType<typeof videoTemplateControllerDeleteVideoTemplateOne>>, TError, { id: number }, TContext> => {
+	const { mutation: mutationOptions, request: requestOptions } = options ?? {};
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof videoTemplateControllerDeleteVideoTemplateOne>>, {id: number}> = (props) => {
-          const {id} = props ?? {};
-
-          return  videoTemplateControllerDeleteVideoTemplateOne(id,requestOptions)
-        }
-
-        
 
 
-   return  { mutationFn, ...mutationOptions }}
+	const mutationFn: MutationFunction<Awaited<ReturnType<typeof videoTemplateControllerDeleteVideoTemplateOne>>, { id: number }> = (props) => {
+		const { id } = props ?? {};
 
-    export type VideoTemplateControllerDeleteVideoTemplateOneMutationResult = NonNullable<Awaited<ReturnType<typeof videoTemplateControllerDeleteVideoTemplateOne>>>
-    
-    export type VideoTemplateControllerDeleteVideoTemplateOneMutationError = ErrorType<HttpExceptionSchema>
+		return videoTemplateControllerDeleteVideoTemplateOne(id, requestOptions)
+	}
 
-    export const useVideoTemplateControllerDeleteVideoTemplateOne = <TError = ErrorType<HttpExceptionSchema>,
-    
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof videoTemplateControllerDeleteVideoTemplateOne>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
-) => {
 
-      const mutationOptions = getVideoTemplateControllerDeleteVideoTemplateOneMutationOptions(options);
 
-      return useMutation(mutationOptions);
-    }
-    
+
+	return { mutationFn, ...mutationOptions }
+}
+
+export type VideoTemplateControllerDeleteVideoTemplateOneMutationResult = NonNullable<Awaited<ReturnType<typeof videoTemplateControllerDeleteVideoTemplateOne>>>
+
+export type VideoTemplateControllerDeleteVideoTemplateOneMutationError = ErrorType<HttpExceptionSchema>
+
+export const useVideoTemplateControllerDeleteVideoTemplateOne = <TError = ErrorType<HttpExceptionSchema>,
+
+	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof videoTemplateControllerDeleteVideoTemplateOne>>, TError, { id: number }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+	) => {
+
+	const mutationOptions = getVideoTemplateControllerDeleteVideoTemplateOneMutationOptions(options);
+
+	return useMutation(mutationOptions);
+}
+
 export const videoTemplateControllerGetVideoTags = (
-    
- options?: SecondParameter<typeof nobstacleBackendApiInstance>,signal?: AbortSignal
+
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>, signal?: AbortSignal
 ) => {
-      
-      
-      return nobstacleBackendApiInstance<GetVideoTemplateTagRes[]>(
-      {url: `/api/v1/content/video/tags`, method: 'GET', signal
-    },
-      options);
-    }
-  
+
+
+	return nobstacleBackendApiInstance<GetVideoTemplateTagRes[]>(
+		{
+			url: `/api/v1/content/video/tags`, method: 'GET', signal
+		},
+		options);
+}
+
 
 export const getVideoTemplateControllerGetVideoTagsQueryKey = () => {
-    
-    return [`/api/v1/content/video/tags`] as const;
-    }
 
-    
-export const getVideoTemplateControllerGetVideoTagsQueryOptions = <TData = Awaited<ReturnType<typeof videoTemplateControllerGetVideoTags>>, TError = ErrorType<HttpExceptionSchema>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof videoTemplateControllerGetVideoTags>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
+	return [`/api/v1/content/video/tags`] as const;
+}
+
+
+export const getVideoTemplateControllerGetVideoTagsQueryOptions = <TData = Awaited<ReturnType<typeof videoTemplateControllerGetVideoTags>>, TError = ErrorType<HttpExceptionSchema>>(options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof videoTemplateControllerGetVideoTags>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+	const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getVideoTemplateControllerGetVideoTagsQueryKey();
+	const queryKey = queryOptions?.queryKey ?? getVideoTemplateControllerGetVideoTagsQueryKey();
 
-  
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof videoTemplateControllerGetVideoTags>>> = ({ signal }) => videoTemplateControllerGetVideoTags(requestOptions, signal);
 
-      
+	const queryFn: QueryFunction<Awaited<ReturnType<typeof videoTemplateControllerGetVideoTags>>> = ({ signal }) => videoTemplateControllerGetVideoTags(requestOptions, signal);
 
-      
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof videoTemplateControllerGetVideoTags>>, TError, TData> & { queryKey: QueryKey }
+
+
+
+	return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<Awaited<ReturnType<typeof videoTemplateControllerGetVideoTags>>, TError, TData> & { queryKey: QueryKey }
 }
 
 export type VideoTemplateControllerGetVideoTagsQueryResult = NonNullable<Awaited<ReturnType<typeof videoTemplateControllerGetVideoTags>>>
 export type VideoTemplateControllerGetVideoTagsQueryError = ErrorType<HttpExceptionSchema>
 
 export const useVideoTemplateControllerGetVideoTags = <TData = Awaited<ReturnType<typeof videoTemplateControllerGetVideoTags>>, TError = ErrorType<HttpExceptionSchema>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof videoTemplateControllerGetVideoTags>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
+	options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof videoTemplateControllerGetVideoTags>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
 
-  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } => {
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } => {
 
-  const queryOptions = getVideoTemplateControllerGetVideoTagsQueryOptions(options)
+	const queryOptions = getVideoTemplateControllerGetVideoTagsQueryOptions(options)
 
-  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+	const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
-  query.queryKey = queryOptions.queryKey ;
+	query.queryKey = queryOptions.queryKey;
 
-  return query;
+	return query;
 }
 
 
 
 
 export const websiteTemplateControllerCreateWebsiteTemplate = (
-    postWebsiteTemplateReq: BodyType<PostWebsiteTemplateReq>,
- options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
-      
-      
-      return nobstacleBackendApiInstance<GetWebsiteTemplateRes>(
-      {url: `/api/v1/content/website`, method: 'POST',
-      headers: {'Content-Type': 'application/json', },
-      data: postWebsiteTemplateReq
-    },
-      options);
-    }
-  
+	postWebsiteTemplateReq: BodyType<PostWebsiteTemplateReq>,
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
+
+
+	return nobstacleBackendApiInstance<GetWebsiteTemplateRes>(
+		{
+			url: `/api/v1/content/website`, method: 'POST',
+			headers: { 'Content-Type': 'application/json', },
+			data: postWebsiteTemplateReq
+		},
+		options);
+}
+
+export const jotformTemplateControllerCreateJotFormTemplate = (
+	postJotformTemplateReq: BodyType<PostJotformTemplateReq>,
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
+
+
+	return nobstacleBackendApiInstance<GetJotformTemplateRes>(
+		{
+			url: `/api/v1/content/jotform`, method: 'POST',
+			headers: { 'Content-Type': 'application/json', },
+			data: postJotformTemplateReq
+		},
+		options);
+}
+
 
 
 export const getWebsiteTemplateControllerCreateWebsiteTemplateMutationOptions = <TError = ErrorType<HttpExceptionSchema>,
-    
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof websiteTemplateControllerCreateWebsiteTemplate>>, TError,{data: BodyType<PostWebsiteTemplateReq>}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof websiteTemplateControllerCreateWebsiteTemplate>>, TError,{data: BodyType<PostWebsiteTemplateReq>}, TContext> => {
- const {mutation: mutationOptions, request: requestOptions} = options ?? {};
 
-      
+	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof websiteTemplateControllerCreateWebsiteTemplate>>, TError, { data: BodyType<PostWebsiteTemplateReq> }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+	): UseMutationOptions<Awaited<ReturnType<typeof websiteTemplateControllerCreateWebsiteTemplate>>, TError, { data: BodyType<PostWebsiteTemplateReq> }, TContext> => {
+	const { mutation: mutationOptions, request: requestOptions } = options ?? {};
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof websiteTemplateControllerCreateWebsiteTemplate>>, {data: BodyType<PostWebsiteTemplateReq>}> = (props) => {
-          const {data} = props ?? {};
-
-          return  websiteTemplateControllerCreateWebsiteTemplate(data,requestOptions)
-        }
-
-        
 
 
-   return  { mutationFn, ...mutationOptions }}
+	const mutationFn: MutationFunction<Awaited<ReturnType<typeof websiteTemplateControllerCreateWebsiteTemplate>>, { data: BodyType<PostWebsiteTemplateReq> }> = (props) => {
+		const { data } = props ?? {};
 
-    export type WebsiteTemplateControllerCreateWebsiteTemplateMutationResult = NonNullable<Awaited<ReturnType<typeof websiteTemplateControllerCreateWebsiteTemplate>>>
-    export type WebsiteTemplateControllerCreateWebsiteTemplateMutationBody = BodyType<PostWebsiteTemplateReq>
-    export type WebsiteTemplateControllerCreateWebsiteTemplateMutationError = ErrorType<HttpExceptionSchema>
+		return websiteTemplateControllerCreateWebsiteTemplate(data, requestOptions)
+	}
 
-    export const useWebsiteTemplateControllerCreateWebsiteTemplate = <TError = ErrorType<HttpExceptionSchema>,
-    
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof websiteTemplateControllerCreateWebsiteTemplate>>, TError,{data: BodyType<PostWebsiteTemplateReq>}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
-) => {
 
-      const mutationOptions = getWebsiteTemplateControllerCreateWebsiteTemplateMutationOptions(options);
 
-      return useMutation(mutationOptions);
-    }
-    
+
+	return { mutationFn, ...mutationOptions }
+}
+
+export type WebsiteTemplateControllerCreateWebsiteTemplateMutationResult = NonNullable<Awaited<ReturnType<typeof websiteTemplateControllerCreateWebsiteTemplate>>>
+export type WebsiteTemplateControllerCreateWebsiteTemplateMutationBody = BodyType<PostWebsiteTemplateReq>
+export type WebsiteTemplateControllerCreateWebsiteTemplateMutationError = ErrorType<HttpExceptionSchema>
+
+export const useWebsiteTemplateControllerCreateWebsiteTemplate = <TError = ErrorType<HttpExceptionSchema>,
+
+	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof websiteTemplateControllerCreateWebsiteTemplate>>, TError, { data: BodyType<PostWebsiteTemplateReq> }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+	) => {
+
+	const mutationOptions = getWebsiteTemplateControllerCreateWebsiteTemplateMutationOptions(options);
+
+	return useMutation(mutationOptions);
+}
+
 export const websiteTemplateControllerPatchWebsiteTemplateOne = (
-    tag: string,
-    patchWebsiteTemplateReq: BodyType<PatchWebsiteTemplateReq>,
- options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
-      
-      
-      return nobstacleBackendApiInstance<GetWebsiteTemplateRes>(
-      {url: `/api/v1/content/website/${tag}`, method: 'PATCH',
-      headers: {'Content-Type': 'application/json', },
-      data: patchWebsiteTemplateReq
-    },
-      options);
-    }
-  
+	tag: string,
+	patchJotformTemplateReq: BodyType<PatchWebsiteTemplateReq>,
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
 
 
-export const getWebsiteTemplateControllerPatchWebsiteTemplateOneMutationOptions = <TError = ErrorType<HttpExceptionSchema>,
-    
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof websiteTemplateControllerPatchWebsiteTemplateOne>>, TError,{tag: string;data: BodyType<PatchWebsiteTemplateReq>}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof websiteTemplateControllerPatchWebsiteTemplateOne>>, TError,{tag: string;data: BodyType<PatchWebsiteTemplateReq>}, TContext> => {
- const {mutation: mutationOptions, request: requestOptions} = options ?? {};
+	return nobstacleBackendApiInstance<GetJotformTemplateRes>(
+		{
+			url: `/api/v1/content/jotform/${tag}`, method: 'PATCH',
+			headers: { 'Content-Type': 'application/json', },
+			data: patchJotformTemplateReq
+		},
+		options);
+}
 
-      
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof websiteTemplateControllerPatchWebsiteTemplateOne>>, {tag: string;data: BodyType<PatchWebsiteTemplateReq>}> = (props) => {
-          const {tag,data} = props ?? {};
-
-          return  websiteTemplateControllerPatchWebsiteTemplateOne(tag,data,requestOptions)
-        }
-
-        
+export const websiteTemplateControllerPatchJotformTemplateOne = (
+	tag: string,
+	patchJotformTemplateReq: BodyType<PatchJotformTemplateReq>,
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
 
 
-   return  { mutationFn, ...mutationOptions }}
+	return nobstacleBackendApiInstance<GetJotformTemplateRes>(
+		{
+			url: `/api/v1/content/jotform/${tag}`, method: 'PATCH',
+			headers: { 'Content-Type': 'application/json', },
+			data: patchJotformTemplateReq
+		},
+		options);
+}
 
-    export type WebsiteTemplateControllerPatchWebsiteTemplateOneMutationResult = NonNullable<Awaited<ReturnType<typeof websiteTemplateControllerPatchWebsiteTemplateOne>>>
-    export type WebsiteTemplateControllerPatchWebsiteTemplateOneMutationBody = BodyType<PatchWebsiteTemplateReq>
-    export type WebsiteTemplateControllerPatchWebsiteTemplateOneMutationError = ErrorType<HttpExceptionSchema>
 
-    export const useWebsiteTemplateControllerPatchWebsiteTemplateOne = <TError = ErrorType<HttpExceptionSchema>,
-    
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof websiteTemplateControllerPatchWebsiteTemplateOne>>, TError,{tag: string;data: BodyType<PatchWebsiteTemplateReq>}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
-) => {
 
-      const mutationOptions = getWebsiteTemplateControllerPatchWebsiteTemplateOneMutationOptions(options);
+export const getWebsiteTemplateControllerPatchWebsiteTemplateOneMutationOptions = <
+	TError = ErrorType<HttpExceptionSchema>,
+	TContext = unknown
+>(
+	options?: {
+		mutation?: UseMutationOptions<
+			Awaited<ReturnType<typeof websiteTemplateControllerPatchWebsiteTemplateOne>>,
+			TError,
+			{ tag: string; data: BodyType<PatchWebsiteTemplateReq> },
+			TContext
+		>;
+		request?: SecondParameter<typeof nobstacleBackendApiInstance>;
+	}
+): UseMutationOptions<
+	Awaited<ReturnType<typeof websiteTemplateControllerPatchWebsiteTemplateOne>>,
+	TError,
+	{ tag: string; data: BodyType<PatchWebsiteTemplateReq> },
+	TContext
+> => {
+	const { mutation: mutationOptions, request: requestOptions } = options ?? {};
 
-      return useMutation(mutationOptions);
-    }
-    
+	const mutationFn: MutationFunction<
+		Awaited<ReturnType<typeof websiteTemplateControllerPatchWebsiteTemplateOne>>,
+		{ tag: string; data: BodyType<PatchWebsiteTemplateReq> }
+	> = (props) => {
+		const { tag, data } = props ?? {};
+		return websiteTemplateControllerPatchWebsiteTemplateOne(tag, data, requestOptions);
+	};
+
+	return { mutationFn, ...mutationOptions };
+};
+
+// ✅ Jotform mutation function is now separate
+export const getJotformTemplateControllerPatchJotformTemplateOneMutationOptions = <
+	TError = ErrorType<HttpExceptionSchema>,
+	TContext = unknown
+>(
+	options?: {
+		mutation?: UseMutationOptions<
+			Awaited<ReturnType<typeof jotformTemplateControllerPatchJotformTemplateOne>>,
+			TError,
+			{ tag: string; data: BodyType<PatchJotformTemplateReq> },
+			TContext
+		>;
+		request?: SecondParameter<typeof nobstacleBackendApiInstance>;
+	}
+): UseMutationOptions<
+	Awaited<ReturnType<typeof jotformTemplateControllerPatchJotformTemplateOne>>,
+	TError,
+	{ tag: string; data: BodyType<PatchJotformTemplateReq> },
+	TContext
+> => {
+	const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+
+	const mutationFn: MutationFunction<
+		Awaited<ReturnType<typeof jotformTemplateControllerPatchJotformTemplateOne>>,
+		{ tag: string; data: BodyType<PatchJotformTemplateReq> }
+	> = (props) => {
+		const { tag, data } = props ?? {};
+		return jotformTemplateControllerPatchJotformTemplateOne(tag, data, requestOptions); // ✅ Fixed incorrect function call
+	};
+
+	return { mutationFn, ...mutationOptions }; // ✅ Return statement added
+};
+
+
+
+export type WebsiteTemplateControllerPatchWebsiteTemplateOneMutationResult = NonNullable<Awaited<ReturnType<typeof websiteTemplateControllerPatchWebsiteTemplateOne>>>
+export type WebsiteTemplateControllerPatchWebsiteTemplateOneMutationBody = BodyType<PatchJotformTemplateReq>
+export type WebsiteTemplateControllerPatchWebsiteTemplateOneMutationError = ErrorType<HttpExceptionSchema>
+
+export const useWebsiteTemplateControllerPatchWebsiteTemplateOne = <TError = ErrorType<HttpExceptionSchema>,
+
+	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof websiteTemplateControllerPatchWebsiteTemplateOne>>, TError, { tag: string; data: BodyType<PatchWebsiteTemplateReq> }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+	) => {
+
+	const mutationOptions = getWebsiteTemplateControllerPatchWebsiteTemplateOneMutationOptions(options);
+
+	return useMutation(mutationOptions);
+}
+
 export const websiteTemplateControllerPatchWebsiteTemplateOrder = (
-    id: number,
-    patchWebsiteTemplateOrderReq: BodyType<PatchWebsiteTemplateOrderReq>,
- options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
-      
-      
-      return nobstacleBackendApiInstance<boolean>(
-      {url: `/api/v1/content/website/order/${id}`, method: 'PATCH',
-      headers: {'Content-Type': 'application/json', },
-      data: patchWebsiteTemplateOrderReq
-    },
-      options);
-    }
-  
+	id: number,
+	patchWebsiteTemplateOrderReq: BodyType<PatchWebsiteTemplateOrderReq>,
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
+
+
+	return nobstacleBackendApiInstance<boolean>(
+		{
+			url: `/api/v1/content/website/order/${id}`, method: 'PATCH',
+			headers: { 'Content-Type': 'application/json', },
+			data: patchWebsiteTemplateOrderReq
+		},
+		options);
+}
+
+
+export const websiteTemplateControllerPatchJotformTemplateOrder = (
+	id: number,
+	patchJotformTemplateOrderReq: BodyType<PatchJotformTemplateOrderReq>,
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
+
+
+	return nobstacleBackendApiInstance<boolean>(
+		{
+			url: `/api/v1/content/website/order/${id}`, method: 'PATCH',
+			headers: { 'Content-Type': 'application/json', },
+			data: patchJotformTemplateOrderReq
+		},
+		options);
+}
+
 
 
 export const getWebsiteTemplateControllerPatchWebsiteTemplateOrderMutationOptions = <TError = ErrorType<HttpExceptionSchema>,
-    
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof websiteTemplateControllerPatchWebsiteTemplateOrder>>, TError,{id: number;data: BodyType<PatchWebsiteTemplateOrderReq>}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof websiteTemplateControllerPatchWebsiteTemplateOrder>>, TError,{id: number;data: BodyType<PatchWebsiteTemplateOrderReq>}, TContext> => {
- const {mutation: mutationOptions, request: requestOptions} = options ?? {};
 
-      
+	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof websiteTemplateControllerPatchWebsiteTemplateOrder>>, TError, { id: number; data: BodyType<PatchWebsiteTemplateOrderReq> }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+	): UseMutationOptions<Awaited<ReturnType<typeof websiteTemplateControllerPatchWebsiteTemplateOrder>>, TError, { id: number; data: BodyType<PatchWebsiteTemplateOrderReq> }, TContext> => {
+	const { mutation: mutationOptions, request: requestOptions } = options ?? {};
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof websiteTemplateControllerPatchWebsiteTemplateOrder>>, {id: number;data: BodyType<PatchWebsiteTemplateOrderReq>}> = (props) => {
-          const {id,data} = props ?? {};
-
-          return  websiteTemplateControllerPatchWebsiteTemplateOrder(id,data,requestOptions)
-        }
-
-        
 
 
-   return  { mutationFn, ...mutationOptions }}
+	const mutationFn: MutationFunction<Awaited<ReturnType<typeof websiteTemplateControllerPatchWebsiteTemplateOrder>>, { id: number; data: BodyType<PatchWebsiteTemplateOrderReq> }> = (props) => {
+		const { id, data } = props ?? {};
 
-    export type WebsiteTemplateControllerPatchWebsiteTemplateOrderMutationResult = NonNullable<Awaited<ReturnType<typeof websiteTemplateControllerPatchWebsiteTemplateOrder>>>
-    export type WebsiteTemplateControllerPatchWebsiteTemplateOrderMutationBody = BodyType<PatchWebsiteTemplateOrderReq>
-    export type WebsiteTemplateControllerPatchWebsiteTemplateOrderMutationError = ErrorType<HttpExceptionSchema>
+		return websiteTemplateControllerPatchWebsiteTemplateOrder(id, data, requestOptions)
+	}
 
-    export const useWebsiteTemplateControllerPatchWebsiteTemplateOrder = <TError = ErrorType<HttpExceptionSchema>,
-    
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof websiteTemplateControllerPatchWebsiteTemplateOrder>>, TError,{id: number;data: BodyType<PatchWebsiteTemplateOrderReq>}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
-) => {
 
-      const mutationOptions = getWebsiteTemplateControllerPatchWebsiteTemplateOrderMutationOptions(options);
 
-      return useMutation(mutationOptions);
-    }
-    
+
+	return { mutationFn, ...mutationOptions }
+}
+
+export type WebsiteTemplateControllerPatchWebsiteTemplateOrderMutationResult = NonNullable<Awaited<ReturnType<typeof websiteTemplateControllerPatchWebsiteTemplateOrder>>>
+export type WebsiteTemplateControllerPatchWebsiteTemplateOrderMutationBody = BodyType<PatchWebsiteTemplateOrderReq>
+export type WebsiteTemplateControllerPatchWebsiteTemplateOrderMutationError = ErrorType<HttpExceptionSchema>
+
+export const useWebsiteTemplateControllerPatchWebsiteTemplateOrder = <TError = ErrorType<HttpExceptionSchema>,
+
+	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof websiteTemplateControllerPatchWebsiteTemplateOrder>>, TError, { id: number; data: BodyType<PatchWebsiteTemplateOrderReq> }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+	) => {
+
+	const mutationOptions = getWebsiteTemplateControllerPatchWebsiteTemplateOrderMutationOptions(options);
+
+	return useMutation(mutationOptions);
+}
+
 export const websiteTemplateControllerDeleteWebsiteTemplateOne = (
-    id: number,
- options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
-      
-      
-      return nobstacleBackendApiInstance<boolean>(
-      {url: `/api/v1/content/website/${id}`, method: 'DELETE'
-    },
-      options);
-    }
-  
+	id: number,
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
+
+
+	return nobstacleBackendApiInstance<boolean>(
+		{
+			url: `/api/v1/content/website/${id}`, method: 'DELETE'
+		},
+		options);
+}
+
 
 
 export const getWebsiteTemplateControllerDeleteWebsiteTemplateOneMutationOptions = <TError = ErrorType<HttpExceptionSchema>,
-    
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof websiteTemplateControllerDeleteWebsiteTemplateOne>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof websiteTemplateControllerDeleteWebsiteTemplateOne>>, TError,{id: number}, TContext> => {
- const {mutation: mutationOptions, request: requestOptions} = options ?? {};
 
-      
+	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof websiteTemplateControllerDeleteWebsiteTemplateOne>>, TError, { id: number }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+	): UseMutationOptions<Awaited<ReturnType<typeof websiteTemplateControllerDeleteWebsiteTemplateOne>>, TError, { id: number }, TContext> => {
+	const { mutation: mutationOptions, request: requestOptions } = options ?? {};
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof websiteTemplateControllerDeleteWebsiteTemplateOne>>, {id: number}> = (props) => {
-          const {id} = props ?? {};
-
-          return  websiteTemplateControllerDeleteWebsiteTemplateOne(id,requestOptions)
-        }
-
-        
 
 
-   return  { mutationFn, ...mutationOptions }}
+	const mutationFn: MutationFunction<Awaited<ReturnType<typeof websiteTemplateControllerDeleteWebsiteTemplateOne>>, { id: number }> = (props) => {
+		const { id } = props ?? {};
 
-    export type WebsiteTemplateControllerDeleteWebsiteTemplateOneMutationResult = NonNullable<Awaited<ReturnType<typeof websiteTemplateControllerDeleteWebsiteTemplateOne>>>
-    
-    export type WebsiteTemplateControllerDeleteWebsiteTemplateOneMutationError = ErrorType<HttpExceptionSchema>
+		return websiteTemplateControllerDeleteWebsiteTemplateOne(id, requestOptions)
+	}
 
-    export const useWebsiteTemplateControllerDeleteWebsiteTemplateOne = <TError = ErrorType<HttpExceptionSchema>,
-    
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof websiteTemplateControllerDeleteWebsiteTemplateOne>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
-) => {
 
-      const mutationOptions = getWebsiteTemplateControllerDeleteWebsiteTemplateOneMutationOptions(options);
 
-      return useMutation(mutationOptions);
-    }
-    
+
+	return { mutationFn, ...mutationOptions }
+}
+
+export type WebsiteTemplateControllerDeleteWebsiteTemplateOneMutationResult = NonNullable<Awaited<ReturnType<typeof websiteTemplateControllerDeleteWebsiteTemplateOne>>>
+
+export type WebsiteTemplateControllerDeleteWebsiteTemplateOneMutationError = ErrorType<HttpExceptionSchema>
+
+export const useWebsiteTemplateControllerDeleteWebsiteTemplateOne = <TError = ErrorType<HttpExceptionSchema>,
+
+	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof websiteTemplateControllerDeleteWebsiteTemplateOne>>, TError, { id: number }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+	) => {
+
+	const mutationOptions = getWebsiteTemplateControllerDeleteWebsiteTemplateOneMutationOptions(options);
+
+	return useMutation(mutationOptions);
+}
+
 export const websiteTemplateControllerGetWebsiteTags = (
-    
- options?: SecondParameter<typeof nobstacleBackendApiInstance>,signal?: AbortSignal
+
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>, signal?: AbortSignal
 ) => {
-      
-      
-      return nobstacleBackendApiInstance<GetWebsiteTemplateTagRes[]>(
-      {url: `/api/v1/content/website/tags`, method: 'GET', signal
-    },
-      options);
-    }
-  
+
+
+	return nobstacleBackendApiInstance<GetWebsiteTemplateTagRes[]>(
+		{
+			url: `/api/v1/content/website/tags`, method: 'GET', signal
+		},
+		options);
+}
+
+export const jotformTemplateControllerGetJotformTags = (
+
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>, signal?: AbortSignal
+) => {
+
+
+	return nobstacleBackendApiInstance<GetJotformTemplateTagRes[]>(
+		{
+			url: `/api/v1/content/website/tags`, method: 'GET', signal
+		},
+		options);
+}
+
 
 export const getWebsiteTemplateControllerGetWebsiteTagsQueryKey = () => {
-    
-    return [`/api/v1/content/website/tags`] as const;
-    }
 
-    
-export const getWebsiteTemplateControllerGetWebsiteTagsQueryOptions = <TData = Awaited<ReturnType<typeof websiteTemplateControllerGetWebsiteTags>>, TError = ErrorType<HttpExceptionSchema>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof websiteTemplateControllerGetWebsiteTags>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
+	return [`/api/v1/content/website/tags`] as const;
+}
+
+
+export const getWebsiteTemplateControllerGetWebsiteTagsQueryOptions = <TData = Awaited<ReturnType<typeof websiteTemplateControllerGetWebsiteTags>>, TError = ErrorType<HttpExceptionSchema>>(options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof websiteTemplateControllerGetWebsiteTags>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+	const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getWebsiteTemplateControllerGetWebsiteTagsQueryKey();
+	const queryKey = queryOptions?.queryKey ?? getWebsiteTemplateControllerGetWebsiteTagsQueryKey();
 
-  
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof websiteTemplateControllerGetWebsiteTags>>> = ({ signal }) => websiteTemplateControllerGetWebsiteTags(requestOptions, signal);
 
-      
+	const queryFn: QueryFunction<Awaited<ReturnType<typeof websiteTemplateControllerGetWebsiteTags>>> = ({ signal }) => websiteTemplateControllerGetWebsiteTags(requestOptions, signal);
 
-      
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof websiteTemplateControllerGetWebsiteTags>>, TError, TData> & { queryKey: QueryKey }
+
+
+
+	return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<Awaited<ReturnType<typeof websiteTemplateControllerGetWebsiteTags>>, TError, TData> & { queryKey: QueryKey }
 }
 
 export type WebsiteTemplateControllerGetWebsiteTagsQueryResult = NonNullable<Awaited<ReturnType<typeof websiteTemplateControllerGetWebsiteTags>>>
 export type WebsiteTemplateControllerGetWebsiteTagsQueryError = ErrorType<HttpExceptionSchema>
 
 export const useWebsiteTemplateControllerGetWebsiteTags = <TData = Awaited<ReturnType<typeof websiteTemplateControllerGetWebsiteTags>>, TError = ErrorType<HttpExceptionSchema>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof websiteTemplateControllerGetWebsiteTags>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
+	options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof websiteTemplateControllerGetWebsiteTags>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
 
-  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } => {
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } => {
 
-  const queryOptions = getWebsiteTemplateControllerGetWebsiteTagsQueryOptions(options)
+	const queryOptions = getWebsiteTemplateControllerGetWebsiteTagsQueryOptions(options)
 
-  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+	const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
-  query.queryKey = queryOptions.queryKey ;
+	query.queryKey = queryOptions.queryKey;
 
-  return query;
+	return query;
 }
 
 
 
 
 export const slideshowTemplateControllerPatchSlideshowTemplateOne = (
-    tag: string,
-    patchSlideshowTemplateReq: BodyType<PatchSlideshowTemplateReq>,
- options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
-      
-      
-      return nobstacleBackendApiInstance<GetSlideshowTemplateRes>(
-      {url: `/api/v1/content/slideshow/${tag}`, method: 'PATCH',
-      headers: {'Content-Type': 'application/json', },
-      data: patchSlideshowTemplateReq
-    },
-      options);
-    }
-  
+	tag: string,
+	patchSlideshowTemplateReq: BodyType<PatchSlideshowTemplateReq>,
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
+
+
+	return nobstacleBackendApiInstance<GetSlideshowTemplateRes>(
+		{
+			url: `/api/v1/content/slideshow/${tag}`, method: 'PATCH',
+			headers: { 'Content-Type': 'application/json', },
+			data: patchSlideshowTemplateReq
+		},
+		options);
+}
+
 
 
 export const getSlideshowTemplateControllerPatchSlideshowTemplateOneMutationOptions = <TError = ErrorType<HttpExceptionSchema>,
-    
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof slideshowTemplateControllerPatchSlideshowTemplateOne>>, TError,{tag: string;data: BodyType<PatchSlideshowTemplateReq>}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof slideshowTemplateControllerPatchSlideshowTemplateOne>>, TError,{tag: string;data: BodyType<PatchSlideshowTemplateReq>}, TContext> => {
- const {mutation: mutationOptions, request: requestOptions} = options ?? {};
 
-      
+	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof slideshowTemplateControllerPatchSlideshowTemplateOne>>, TError, { tag: string; data: BodyType<PatchSlideshowTemplateReq> }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+	): UseMutationOptions<Awaited<ReturnType<typeof slideshowTemplateControllerPatchSlideshowTemplateOne>>, TError, { tag: string; data: BodyType<PatchSlideshowTemplateReq> }, TContext> => {
+	const { mutation: mutationOptions, request: requestOptions } = options ?? {};
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof slideshowTemplateControllerPatchSlideshowTemplateOne>>, {tag: string;data: BodyType<PatchSlideshowTemplateReq>}> = (props) => {
-          const {tag,data} = props ?? {};
-
-          return  slideshowTemplateControllerPatchSlideshowTemplateOne(tag,data,requestOptions)
-        }
-
-        
 
 
-   return  { mutationFn, ...mutationOptions }}
+	const mutationFn: MutationFunction<Awaited<ReturnType<typeof slideshowTemplateControllerPatchSlideshowTemplateOne>>, { tag: string; data: BodyType<PatchSlideshowTemplateReq> }> = (props) => {
+		const { tag, data } = props ?? {};
 
-    export type SlideshowTemplateControllerPatchSlideshowTemplateOneMutationResult = NonNullable<Awaited<ReturnType<typeof slideshowTemplateControllerPatchSlideshowTemplateOne>>>
-    export type SlideshowTemplateControllerPatchSlideshowTemplateOneMutationBody = BodyType<PatchSlideshowTemplateReq>
-    export type SlideshowTemplateControllerPatchSlideshowTemplateOneMutationError = ErrorType<HttpExceptionSchema>
+		return slideshowTemplateControllerPatchSlideshowTemplateOne(tag, data, requestOptions)
+	}
 
-    export const useSlideshowTemplateControllerPatchSlideshowTemplateOne = <TError = ErrorType<HttpExceptionSchema>,
-    
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof slideshowTemplateControllerPatchSlideshowTemplateOne>>, TError,{tag: string;data: BodyType<PatchSlideshowTemplateReq>}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
-) => {
 
-      const mutationOptions = getSlideshowTemplateControllerPatchSlideshowTemplateOneMutationOptions(options);
 
-      return useMutation(mutationOptions);
-    }
-    
+
+	return { mutationFn, ...mutationOptions }
+}
+
+export type SlideshowTemplateControllerPatchSlideshowTemplateOneMutationResult = NonNullable<Awaited<ReturnType<typeof slideshowTemplateControllerPatchSlideshowTemplateOne>>>
+export type SlideshowTemplateControllerPatchSlideshowTemplateOneMutationBody = BodyType<PatchSlideshowTemplateReq>
+export type SlideshowTemplateControllerPatchSlideshowTemplateOneMutationError = ErrorType<HttpExceptionSchema>
+
+export const useSlideshowTemplateControllerPatchSlideshowTemplateOne = <TError = ErrorType<HttpExceptionSchema>,
+
+	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof slideshowTemplateControllerPatchSlideshowTemplateOne>>, TError, { tag: string; data: BodyType<PatchSlideshowTemplateReq> }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+	) => {
+
+	const mutationOptions = getSlideshowTemplateControllerPatchSlideshowTemplateOneMutationOptions(options);
+
+	return useMutation(mutationOptions);
+}
+
 export const slideshowTemplateControllerPatchSlideshowTemplateOrder = (
-    id: number,
-    patchSlideshowTemplateOrderReq: BodyType<PatchSlideshowTemplateOrderReq>,
- options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
-      
-      
-      return nobstacleBackendApiInstance<boolean>(
-      {url: `/api/v1/content/slideshow/order/${id}`, method: 'PATCH',
-      headers: {'Content-Type': 'application/json', },
-      data: patchSlideshowTemplateOrderReq
-    },
-      options);
-    }
-  
+	id: number,
+	patchSlideshowTemplateOrderReq: BodyType<PatchSlideshowTemplateOrderReq>,
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
+
+
+	return nobstacleBackendApiInstance<boolean>(
+		{
+			url: `/api/v1/content/slideshow/order/${id}`, method: 'PATCH',
+			headers: { 'Content-Type': 'application/json', },
+			data: patchSlideshowTemplateOrderReq
+		},
+		options);
+}
+
 
 
 export const getSlideshowTemplateControllerPatchSlideshowTemplateOrderMutationOptions = <TError = ErrorType<HttpExceptionSchema>,
-    
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof slideshowTemplateControllerPatchSlideshowTemplateOrder>>, TError,{id: number;data: BodyType<PatchSlideshowTemplateOrderReq>}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof slideshowTemplateControllerPatchSlideshowTemplateOrder>>, TError,{id: number;data: BodyType<PatchSlideshowTemplateOrderReq>}, TContext> => {
- const {mutation: mutationOptions, request: requestOptions} = options ?? {};
 
-      
+	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof slideshowTemplateControllerPatchSlideshowTemplateOrder>>, TError, { id: number; data: BodyType<PatchSlideshowTemplateOrderReq> }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+	): UseMutationOptions<Awaited<ReturnType<typeof slideshowTemplateControllerPatchSlideshowTemplateOrder>>, TError, { id: number; data: BodyType<PatchSlideshowTemplateOrderReq> }, TContext> => {
+	const { mutation: mutationOptions, request: requestOptions } = options ?? {};
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof slideshowTemplateControllerPatchSlideshowTemplateOrder>>, {id: number;data: BodyType<PatchSlideshowTemplateOrderReq>}> = (props) => {
-          const {id,data} = props ?? {};
-
-          return  slideshowTemplateControllerPatchSlideshowTemplateOrder(id,data,requestOptions)
-        }
-
-        
 
 
-   return  { mutationFn, ...mutationOptions }}
+	const mutationFn: MutationFunction<Awaited<ReturnType<typeof slideshowTemplateControllerPatchSlideshowTemplateOrder>>, { id: number; data: BodyType<PatchSlideshowTemplateOrderReq> }> = (props) => {
+		const { id, data } = props ?? {};
 
-    export type SlideshowTemplateControllerPatchSlideshowTemplateOrderMutationResult = NonNullable<Awaited<ReturnType<typeof slideshowTemplateControllerPatchSlideshowTemplateOrder>>>
-    export type SlideshowTemplateControllerPatchSlideshowTemplateOrderMutationBody = BodyType<PatchSlideshowTemplateOrderReq>
-    export type SlideshowTemplateControllerPatchSlideshowTemplateOrderMutationError = ErrorType<HttpExceptionSchema>
+		return slideshowTemplateControllerPatchSlideshowTemplateOrder(id, data, requestOptions)
+	}
 
-    export const useSlideshowTemplateControllerPatchSlideshowTemplateOrder = <TError = ErrorType<HttpExceptionSchema>,
-    
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof slideshowTemplateControllerPatchSlideshowTemplateOrder>>, TError,{id: number;data: BodyType<PatchSlideshowTemplateOrderReq>}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
-) => {
 
-      const mutationOptions = getSlideshowTemplateControllerPatchSlideshowTemplateOrderMutationOptions(options);
 
-      return useMutation(mutationOptions);
-    }
-    
+
+	return { mutationFn, ...mutationOptions }
+}
+
+export type SlideshowTemplateControllerPatchSlideshowTemplateOrderMutationResult = NonNullable<Awaited<ReturnType<typeof slideshowTemplateControllerPatchSlideshowTemplateOrder>>>
+export type SlideshowTemplateControllerPatchSlideshowTemplateOrderMutationBody = BodyType<PatchSlideshowTemplateOrderReq>
+export type SlideshowTemplateControllerPatchSlideshowTemplateOrderMutationError = ErrorType<HttpExceptionSchema>
+
+export const useSlideshowTemplateControllerPatchSlideshowTemplateOrder = <TError = ErrorType<HttpExceptionSchema>,
+
+	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof slideshowTemplateControllerPatchSlideshowTemplateOrder>>, TError, { id: number; data: BodyType<PatchSlideshowTemplateOrderReq> }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+	) => {
+
+	const mutationOptions = getSlideshowTemplateControllerPatchSlideshowTemplateOrderMutationOptions(options);
+
+	return useMutation(mutationOptions);
+}
+
 export const slideshowTemplateControllerDeleteSlideshowTemplateOne = (
-    id: number,
- options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
-      
-      
-      return nobstacleBackendApiInstance<boolean>(
-      {url: `/api/v1/content/slideshow/${id}`, method: 'DELETE'
-    },
-      options);
-    }
-  
+	id: number,
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
+
+
+	return nobstacleBackendApiInstance<boolean>(
+		{
+			url: `/api/v1/content/slideshow/${id}`, method: 'DELETE'
+		},
+		options);
+}
+
 
 
 export const getSlideshowTemplateControllerDeleteSlideshowTemplateOneMutationOptions = <TError = ErrorType<HttpExceptionSchema>,
-    
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof slideshowTemplateControllerDeleteSlideshowTemplateOne>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof slideshowTemplateControllerDeleteSlideshowTemplateOne>>, TError,{id: number}, TContext> => {
- const {mutation: mutationOptions, request: requestOptions} = options ?? {};
 
-      
+	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof slideshowTemplateControllerDeleteSlideshowTemplateOne>>, TError, { id: number }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+	): UseMutationOptions<Awaited<ReturnType<typeof slideshowTemplateControllerDeleteSlideshowTemplateOne>>, TError, { id: number }, TContext> => {
+	const { mutation: mutationOptions, request: requestOptions } = options ?? {};
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof slideshowTemplateControllerDeleteSlideshowTemplateOne>>, {id: number}> = (props) => {
-          const {id} = props ?? {};
-
-          return  slideshowTemplateControllerDeleteSlideshowTemplateOne(id,requestOptions)
-        }
-
-        
 
 
-   return  { mutationFn, ...mutationOptions }}
+	const mutationFn: MutationFunction<Awaited<ReturnType<typeof slideshowTemplateControllerDeleteSlideshowTemplateOne>>, { id: number }> = (props) => {
+		const { id } = props ?? {};
 
-    export type SlideshowTemplateControllerDeleteSlideshowTemplateOneMutationResult = NonNullable<Awaited<ReturnType<typeof slideshowTemplateControllerDeleteSlideshowTemplateOne>>>
-    
-    export type SlideshowTemplateControllerDeleteSlideshowTemplateOneMutationError = ErrorType<HttpExceptionSchema>
+		return slideshowTemplateControllerDeleteSlideshowTemplateOne(id, requestOptions)
+	}
 
-    export const useSlideshowTemplateControllerDeleteSlideshowTemplateOne = <TError = ErrorType<HttpExceptionSchema>,
-    
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof slideshowTemplateControllerDeleteSlideshowTemplateOne>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
-) => {
 
-      const mutationOptions = getSlideshowTemplateControllerDeleteSlideshowTemplateOneMutationOptions(options);
 
-      return useMutation(mutationOptions);
-    }
-    
+
+	return { mutationFn, ...mutationOptions }
+}
+
+export type SlideshowTemplateControllerDeleteSlideshowTemplateOneMutationResult = NonNullable<Awaited<ReturnType<typeof slideshowTemplateControllerDeleteSlideshowTemplateOne>>>
+
+export type SlideshowTemplateControllerDeleteSlideshowTemplateOneMutationError = ErrorType<HttpExceptionSchema>
+
+export const useSlideshowTemplateControllerDeleteSlideshowTemplateOne = <TError = ErrorType<HttpExceptionSchema>,
+
+	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof slideshowTemplateControllerDeleteSlideshowTemplateOne>>, TError, { id: number }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+	) => {
+
+	const mutationOptions = getSlideshowTemplateControllerDeleteSlideshowTemplateOneMutationOptions(options);
+
+	return useMutation(mutationOptions);
+}
+
 export const slideshowTemplateControllerGetTextTags = (
-    
- options?: SecondParameter<typeof nobstacleBackendApiInstance>,signal?: AbortSignal
+
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>, signal?: AbortSignal
 ) => {
-      
-      
-      return nobstacleBackendApiInstance<GetSlideshowTemplateRes[]>(
-      {url: `/api/v1/content/slideshow/tags`, method: 'GET', signal
-    },
-      options);
-    }
-  
+
+
+	return nobstacleBackendApiInstance<GetSlideshowTemplateRes[]>(
+		{
+			url: `/api/v1/content/slideshow/tags`, method: 'GET', signal
+		},
+		options);
+}
+
 
 export const getSlideshowTemplateControllerGetTextTagsQueryKey = () => {
-    
-    return [`/api/v1/content/slideshow/tags`] as const;
-    }
 
-    
-export const getSlideshowTemplateControllerGetTextTagsQueryOptions = <TData = Awaited<ReturnType<typeof slideshowTemplateControllerGetTextTags>>, TError = ErrorType<HttpExceptionSchema>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof slideshowTemplateControllerGetTextTags>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
+	return [`/api/v1/content/slideshow/tags`] as const;
+}
+
+
+export const getSlideshowTemplateControllerGetTextTagsQueryOptions = <TData = Awaited<ReturnType<typeof slideshowTemplateControllerGetTextTags>>, TError = ErrorType<HttpExceptionSchema>>(options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof slideshowTemplateControllerGetTextTags>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+	const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getSlideshowTemplateControllerGetTextTagsQueryKey();
+	const queryKey = queryOptions?.queryKey ?? getSlideshowTemplateControllerGetTextTagsQueryKey();
 
-  
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof slideshowTemplateControllerGetTextTags>>> = ({ signal }) => slideshowTemplateControllerGetTextTags(requestOptions, signal);
 
-      
+	const queryFn: QueryFunction<Awaited<ReturnType<typeof slideshowTemplateControllerGetTextTags>>> = ({ signal }) => slideshowTemplateControllerGetTextTags(requestOptions, signal);
 
-      
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof slideshowTemplateControllerGetTextTags>>, TError, TData> & { queryKey: QueryKey }
+
+
+
+	return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<Awaited<ReturnType<typeof slideshowTemplateControllerGetTextTags>>, TError, TData> & { queryKey: QueryKey }
 }
 
 export type SlideshowTemplateControllerGetTextTagsQueryResult = NonNullable<Awaited<ReturnType<typeof slideshowTemplateControllerGetTextTags>>>
 export type SlideshowTemplateControllerGetTextTagsQueryError = ErrorType<HttpExceptionSchema>
 
 export const useSlideshowTemplateControllerGetTextTags = <TData = Awaited<ReturnType<typeof slideshowTemplateControllerGetTextTags>>, TError = ErrorType<HttpExceptionSchema>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof slideshowTemplateControllerGetTextTags>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
+	options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof slideshowTemplateControllerGetTextTags>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
 
-  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } => {
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } => {
 
-  const queryOptions = getSlideshowTemplateControllerGetTextTagsQueryOptions(options)
+	const queryOptions = getSlideshowTemplateControllerGetTextTagsQueryOptions(options)
 
-  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+	const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
-  query.queryKey = queryOptions.queryKey ;
+	query.queryKey = queryOptions.queryKey;
 
-  return query;
+	return query;
 }
 
 
 
 
 export const contentControllerFindOne = (
-    params: ContentControllerFindOneParams,
- options?: SecondParameter<typeof nobstacleBackendApiInstance>,signal?: AbortSignal
+	params: ContentControllerFindOneParams,
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>, signal?: AbortSignal
 ) => {
-      
-      
-      return nobstacleBackendApiInstance<ContentRes>(
-      {url: `/api/v1/content`, method: 'GET',
-        params, signal
-    },
-      options);
-    }
-  
+
+
+	return nobstacleBackendApiInstance<ContentRes>(
+		{
+			url: `/api/v1/content`, method: 'GET',
+			params, signal
+		},
+		options);
+}
+
 
 export const getContentControllerFindOneQueryKey = (params: ContentControllerFindOneParams,) => {
-    
-    return [`/api/v1/content`, ...(params ? [params]: [])] as const;
-    }
 
-    
-export const getContentControllerFindOneQueryOptions = <TData = Awaited<ReturnType<typeof contentControllerFindOne>>, TError = ErrorType<HttpExceptionSchema>>(params: ContentControllerFindOneParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof contentControllerFindOne>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
+	return [`/api/v1/content`, ...(params ? [params] : [])] as const;
+}
+
+
+export const getContentControllerFindOneQueryOptions = <TData = Awaited<ReturnType<typeof contentControllerFindOne>>, TError = ErrorType<HttpExceptionSchema>>(params: ContentControllerFindOneParams, options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof contentControllerFindOne>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+	const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getContentControllerFindOneQueryKey(params);
+	const queryKey = queryOptions?.queryKey ?? getContentControllerFindOneQueryKey(params);
 
-  
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof contentControllerFindOne>>> = ({ signal }) => contentControllerFindOne(params, requestOptions, signal);
 
-      
+	const queryFn: QueryFunction<Awaited<ReturnType<typeof contentControllerFindOne>>> = ({ signal }) => contentControllerFindOne(params, requestOptions, signal);
 
-      
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof contentControllerFindOne>>, TError, TData> & { queryKey: QueryKey }
+
+
+
+	return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<Awaited<ReturnType<typeof contentControllerFindOne>>, TError, TData> & { queryKey: QueryKey }
 }
 
 export type ContentControllerFindOneQueryResult = NonNullable<Awaited<ReturnType<typeof contentControllerFindOne>>>
 export type ContentControllerFindOneQueryError = ErrorType<HttpExceptionSchema>
 
 export const useContentControllerFindOne = <TData = Awaited<ReturnType<typeof contentControllerFindOne>>, TError = ErrorType<HttpExceptionSchema>>(
- params: ContentControllerFindOneParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof contentControllerFindOne>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
+	params: ContentControllerFindOneParams, options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof contentControllerFindOne>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
 
-  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } => {
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } => {
 
-  const queryOptions = getContentControllerFindOneQueryOptions(params,options)
+	const queryOptions = getContentControllerFindOneQueryOptions(params, options)
 
-  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+	const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
-  query.queryKey = queryOptions.queryKey ;
+	query.queryKey = queryOptions.queryKey;
 
-  return query;
+	return query;
 }
 
 
 
 
 export const contentControllerGetDefaultSlideshowContent = (
-    
- options?: SecondParameter<typeof nobstacleBackendApiInstance>,signal?: AbortSignal
+
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>, signal?: AbortSignal
 ) => {
-      
-      
-      return nobstacleBackendApiInstance<ContentRes>(
-      {url: `/api/v1/content/default-slideshow`, method: 'GET', signal
-    },
-      options);
-    }
-  
+
+
+	return nobstacleBackendApiInstance<ContentRes>(
+		{
+			url: `/api/v1/content/default-slideshow`, method: 'GET', signal
+		},
+		options);
+}
+
 
 export const getContentControllerGetDefaultSlideshowContentQueryKey = () => {
-    
-    return [`/api/v1/content/default-slideshow`] as const;
-    }
 
-    
-export const getContentControllerGetDefaultSlideshowContentQueryOptions = <TData = Awaited<ReturnType<typeof contentControllerGetDefaultSlideshowContent>>, TError = ErrorType<HttpExceptionSchema>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof contentControllerGetDefaultSlideshowContent>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
+	return [`/api/v1/content/default-slideshow`] as const;
+}
+
+
+export const getContentControllerGetDefaultSlideshowContentQueryOptions = <TData = Awaited<ReturnType<typeof contentControllerGetDefaultSlideshowContent>>, TError = ErrorType<HttpExceptionSchema>>(options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof contentControllerGetDefaultSlideshowContent>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+	const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getContentControllerGetDefaultSlideshowContentQueryKey();
+	const queryKey = queryOptions?.queryKey ?? getContentControllerGetDefaultSlideshowContentQueryKey();
 
-  
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof contentControllerGetDefaultSlideshowContent>>> = ({ signal }) => contentControllerGetDefaultSlideshowContent(requestOptions, signal);
 
-      
+	const queryFn: QueryFunction<Awaited<ReturnType<typeof contentControllerGetDefaultSlideshowContent>>> = ({ signal }) => contentControllerGetDefaultSlideshowContent(requestOptions, signal);
 
-      
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof contentControllerGetDefaultSlideshowContent>>, TError, TData> & { queryKey: QueryKey }
+
+
+
+	return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<Awaited<ReturnType<typeof contentControllerGetDefaultSlideshowContent>>, TError, TData> & { queryKey: QueryKey }
 }
 
 export type ContentControllerGetDefaultSlideshowContentQueryResult = NonNullable<Awaited<ReturnType<typeof contentControllerGetDefaultSlideshowContent>>>
 export type ContentControllerGetDefaultSlideshowContentQueryError = ErrorType<HttpExceptionSchema>
 
 export const useContentControllerGetDefaultSlideshowContent = <TData = Awaited<ReturnType<typeof contentControllerGetDefaultSlideshowContent>>, TError = ErrorType<HttpExceptionSchema>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof contentControllerGetDefaultSlideshowContent>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
+	options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof contentControllerGetDefaultSlideshowContent>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
 
-  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } => {
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } => {
 
-  const queryOptions = getContentControllerGetDefaultSlideshowContentQueryOptions(options)
+	const queryOptions = getContentControllerGetDefaultSlideshowContentQueryOptions(options)
 
-  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+	const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
-  query.queryKey = queryOptions.queryKey ;
+	query.queryKey = queryOptions.queryKey;
 
-  return query;
+	return query;
 }
 
 
 
 
 export const mapTemplateControllerCreateMapTemplate = (
-    postMapTemplateReq: BodyType<PostMapTemplateReq>,
- options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
-      
-      
-      return nobstacleBackendApiInstance<GetMapTemplateRes>(
-      {url: `/api/v1/content/map`, method: 'POST',
-      headers: {'Content-Type': 'application/json', },
-      data: postMapTemplateReq
-    },
-      options);
-    }
-  
+	postMapTemplateReq: BodyType<PostMapTemplateReq>,
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
+
+
+	return nobstacleBackendApiInstance<GetMapTemplateRes>(
+		{
+			url: `/api/v1/content/map`, method: 'POST',
+			headers: { 'Content-Type': 'application/json', },
+			data: postMapTemplateReq
+		},
+		options);
+}
+
 
 
 export const getMapTemplateControllerCreateMapTemplateMutationOptions = <TError = ErrorType<HttpExceptionSchema>,
-    
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof mapTemplateControllerCreateMapTemplate>>, TError,{data: BodyType<PostMapTemplateReq>}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof mapTemplateControllerCreateMapTemplate>>, TError,{data: BodyType<PostMapTemplateReq>}, TContext> => {
- const {mutation: mutationOptions, request: requestOptions} = options ?? {};
 
-      
+	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof mapTemplateControllerCreateMapTemplate>>, TError, { data: BodyType<PostMapTemplateReq> }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+	): UseMutationOptions<Awaited<ReturnType<typeof mapTemplateControllerCreateMapTemplate>>, TError, { data: BodyType<PostMapTemplateReq> }, TContext> => {
+	const { mutation: mutationOptions, request: requestOptions } = options ?? {};
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof mapTemplateControllerCreateMapTemplate>>, {data: BodyType<PostMapTemplateReq>}> = (props) => {
-          const {data} = props ?? {};
-
-          return  mapTemplateControllerCreateMapTemplate(data,requestOptions)
-        }
-
-        
 
 
-   return  { mutationFn, ...mutationOptions }}
+	const mutationFn: MutationFunction<Awaited<ReturnType<typeof mapTemplateControllerCreateMapTemplate>>, { data: BodyType<PostMapTemplateReq> }> = (props) => {
+		const { data } = props ?? {};
 
-    export type MapTemplateControllerCreateMapTemplateMutationResult = NonNullable<Awaited<ReturnType<typeof mapTemplateControllerCreateMapTemplate>>>
-    export type MapTemplateControllerCreateMapTemplateMutationBody = BodyType<PostMapTemplateReq>
-    export type MapTemplateControllerCreateMapTemplateMutationError = ErrorType<HttpExceptionSchema>
+		return mapTemplateControllerCreateMapTemplate(data, requestOptions)
+	}
 
-    export const useMapTemplateControllerCreateMapTemplate = <TError = ErrorType<HttpExceptionSchema>,
-    
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof mapTemplateControllerCreateMapTemplate>>, TError,{data: BodyType<PostMapTemplateReq>}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
-) => {
 
-      const mutationOptions = getMapTemplateControllerCreateMapTemplateMutationOptions(options);
 
-      return useMutation(mutationOptions);
-    }
-    
+
+	return { mutationFn, ...mutationOptions }
+}
+
+export type MapTemplateControllerCreateMapTemplateMutationResult = NonNullable<Awaited<ReturnType<typeof mapTemplateControllerCreateMapTemplate>>>
+export type MapTemplateControllerCreateMapTemplateMutationBody = BodyType<PostMapTemplateReq>
+export type MapTemplateControllerCreateMapTemplateMutationError = ErrorType<HttpExceptionSchema>
+
+export const useMapTemplateControllerCreateMapTemplate = <TError = ErrorType<HttpExceptionSchema>,
+
+	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof mapTemplateControllerCreateMapTemplate>>, TError, { data: BodyType<PostMapTemplateReq> }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+	) => {
+
+	const mutationOptions = getMapTemplateControllerCreateMapTemplateMutationOptions(options);
+
+	return useMutation(mutationOptions);
+}
+
 export const mapTemplateControllerPatchMapTemplateOne = (
-    tag: string,
-    patchMapTemplateReq: BodyType<PatchMapTemplateReq>,
- options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
-      
-      
-      return nobstacleBackendApiInstance<GetMapTemplateRes>(
-      {url: `/api/v1/content/map/${tag}`, method: 'PATCH',
-      headers: {'Content-Type': 'application/json', },
-      data: patchMapTemplateReq
-    },
-      options);
-    }
-  
+	tag: string,
+	patchMapTemplateReq: BodyType<PatchMapTemplateReq>,
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
+
+
+	return nobstacleBackendApiInstance<GetMapTemplateRes>(
+		{
+			url: `/api/v1/content/map/${tag}`, method: 'PATCH',
+			headers: { 'Content-Type': 'application/json', },
+			data: patchMapTemplateReq
+		},
+		options);
+}
+
 
 
 export const getMapTemplateControllerPatchMapTemplateOneMutationOptions = <TError = ErrorType<HttpExceptionSchema>,
-    
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof mapTemplateControllerPatchMapTemplateOne>>, TError,{tag: string;data: BodyType<PatchMapTemplateReq>}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof mapTemplateControllerPatchMapTemplateOne>>, TError,{tag: string;data: BodyType<PatchMapTemplateReq>}, TContext> => {
- const {mutation: mutationOptions, request: requestOptions} = options ?? {};
 
-      
+	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof mapTemplateControllerPatchMapTemplateOne>>, TError, { tag: string; data: BodyType<PatchMapTemplateReq> }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+	): UseMutationOptions<Awaited<ReturnType<typeof mapTemplateControllerPatchMapTemplateOne>>, TError, { tag: string; data: BodyType<PatchMapTemplateReq> }, TContext> => {
+	const { mutation: mutationOptions, request: requestOptions } = options ?? {};
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof mapTemplateControllerPatchMapTemplateOne>>, {tag: string;data: BodyType<PatchMapTemplateReq>}> = (props) => {
-          const {tag,data} = props ?? {};
-
-          return  mapTemplateControllerPatchMapTemplateOne(tag,data,requestOptions)
-        }
-
-        
 
 
-   return  { mutationFn, ...mutationOptions }}
+	const mutationFn: MutationFunction<Awaited<ReturnType<typeof mapTemplateControllerPatchMapTemplateOne>>, { tag: string; data: BodyType<PatchMapTemplateReq> }> = (props) => {
+		const { tag, data } = props ?? {};
 
-    export type MapTemplateControllerPatchMapTemplateOneMutationResult = NonNullable<Awaited<ReturnType<typeof mapTemplateControllerPatchMapTemplateOne>>>
-    export type MapTemplateControllerPatchMapTemplateOneMutationBody = BodyType<PatchMapTemplateReq>
-    export type MapTemplateControllerPatchMapTemplateOneMutationError = ErrorType<HttpExceptionSchema>
+		return mapTemplateControllerPatchMapTemplateOne(tag, data, requestOptions)
+	}
 
-    export const useMapTemplateControllerPatchMapTemplateOne = <TError = ErrorType<HttpExceptionSchema>,
-    
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof mapTemplateControllerPatchMapTemplateOne>>, TError,{tag: string;data: BodyType<PatchMapTemplateReq>}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
-) => {
 
-      const mutationOptions = getMapTemplateControllerPatchMapTemplateOneMutationOptions(options);
 
-      return useMutation(mutationOptions);
-    }
-    
+
+	return { mutationFn, ...mutationOptions }
+}
+
+export type MapTemplateControllerPatchMapTemplateOneMutationResult = NonNullable<Awaited<ReturnType<typeof mapTemplateControllerPatchMapTemplateOne>>>
+export type MapTemplateControllerPatchMapTemplateOneMutationBody = BodyType<PatchMapTemplateReq>
+export type MapTemplateControllerPatchMapTemplateOneMutationError = ErrorType<HttpExceptionSchema>
+
+export const useMapTemplateControllerPatchMapTemplateOne = <TError = ErrorType<HttpExceptionSchema>,
+
+	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof mapTemplateControllerPatchMapTemplateOne>>, TError, { tag: string; data: BodyType<PatchMapTemplateReq> }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+	) => {
+
+	const mutationOptions = getMapTemplateControllerPatchMapTemplateOneMutationOptions(options);
+
+	return useMutation(mutationOptions);
+}
+
 export const mapTemplateControllerPatchMapTemplateOrder = (
-    id: number,
-    patchMapTemplateOrderReq: BodyType<PatchMapTemplateOrderReq>,
- options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
-      
-      
-      return nobstacleBackendApiInstance<boolean>(
-      {url: `/api/v1/content/map/order/${id}`, method: 'PATCH',
-      headers: {'Content-Type': 'application/json', },
-      data: patchMapTemplateOrderReq
-    },
-      options);
-    }
-  
+	id: number,
+	patchMapTemplateOrderReq: BodyType<PatchMapTemplateOrderReq>,
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
+
+
+	return nobstacleBackendApiInstance<boolean>(
+		{
+			url: `/api/v1/content/map/order/${id}`, method: 'PATCH',
+			headers: { 'Content-Type': 'application/json', },
+			data: patchMapTemplateOrderReq
+		},
+		options);
+}
+
 
 
 export const getMapTemplateControllerPatchMapTemplateOrderMutationOptions = <TError = ErrorType<HttpExceptionSchema>,
-    
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof mapTemplateControllerPatchMapTemplateOrder>>, TError,{id: number;data: BodyType<PatchMapTemplateOrderReq>}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof mapTemplateControllerPatchMapTemplateOrder>>, TError,{id: number;data: BodyType<PatchMapTemplateOrderReq>}, TContext> => {
- const {mutation: mutationOptions, request: requestOptions} = options ?? {};
 
-      
+	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof mapTemplateControllerPatchMapTemplateOrder>>, TError, { id: number; data: BodyType<PatchMapTemplateOrderReq> }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+	): UseMutationOptions<Awaited<ReturnType<typeof mapTemplateControllerPatchMapTemplateOrder>>, TError, { id: number; data: BodyType<PatchMapTemplateOrderReq> }, TContext> => {
+	const { mutation: mutationOptions, request: requestOptions } = options ?? {};
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof mapTemplateControllerPatchMapTemplateOrder>>, {id: number;data: BodyType<PatchMapTemplateOrderReq>}> = (props) => {
-          const {id,data} = props ?? {};
-
-          return  mapTemplateControllerPatchMapTemplateOrder(id,data,requestOptions)
-        }
-
-        
 
 
-   return  { mutationFn, ...mutationOptions }}
+	const mutationFn: MutationFunction<Awaited<ReturnType<typeof mapTemplateControllerPatchMapTemplateOrder>>, { id: number; data: BodyType<PatchMapTemplateOrderReq> }> = (props) => {
+		const { id, data } = props ?? {};
 
-    export type MapTemplateControllerPatchMapTemplateOrderMutationResult = NonNullable<Awaited<ReturnType<typeof mapTemplateControllerPatchMapTemplateOrder>>>
-    export type MapTemplateControllerPatchMapTemplateOrderMutationBody = BodyType<PatchMapTemplateOrderReq>
-    export type MapTemplateControllerPatchMapTemplateOrderMutationError = ErrorType<HttpExceptionSchema>
+		return mapTemplateControllerPatchMapTemplateOrder(id, data, requestOptions)
+	}
 
-    export const useMapTemplateControllerPatchMapTemplateOrder = <TError = ErrorType<HttpExceptionSchema>,
-    
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof mapTemplateControllerPatchMapTemplateOrder>>, TError,{id: number;data: BodyType<PatchMapTemplateOrderReq>}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
-) => {
 
-      const mutationOptions = getMapTemplateControllerPatchMapTemplateOrderMutationOptions(options);
 
-      return useMutation(mutationOptions);
-    }
-    
+
+	return { mutationFn, ...mutationOptions }
+}
+
+export type MapTemplateControllerPatchMapTemplateOrderMutationResult = NonNullable<Awaited<ReturnType<typeof mapTemplateControllerPatchMapTemplateOrder>>>
+export type MapTemplateControllerPatchMapTemplateOrderMutationBody = BodyType<PatchMapTemplateOrderReq>
+export type MapTemplateControllerPatchMapTemplateOrderMutationError = ErrorType<HttpExceptionSchema>
+
+export const useMapTemplateControllerPatchMapTemplateOrder = <TError = ErrorType<HttpExceptionSchema>,
+
+	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof mapTemplateControllerPatchMapTemplateOrder>>, TError, { id: number; data: BodyType<PatchMapTemplateOrderReq> }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+	) => {
+
+	const mutationOptions = getMapTemplateControllerPatchMapTemplateOrderMutationOptions(options);
+
+	return useMutation(mutationOptions);
+}
+
 export const mapTemplateControllerDeleteMapTemplateOne = (
-    id: number,
- options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
-      
-      
-      return nobstacleBackendApiInstance<boolean>(
-      {url: `/api/v1/content/map/${id}`, method: 'DELETE'
-    },
-      options);
-    }
-  
+	id: number,
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
+
+
+	return nobstacleBackendApiInstance<boolean>(
+		{
+			url: `/api/v1/content/map/${id}`, method: 'DELETE'
+		},
+		options);
+}
+
 
 
 export const getMapTemplateControllerDeleteMapTemplateOneMutationOptions = <TError = ErrorType<HttpExceptionSchema>,
-    
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof mapTemplateControllerDeleteMapTemplateOne>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof mapTemplateControllerDeleteMapTemplateOne>>, TError,{id: number}, TContext> => {
- const {mutation: mutationOptions, request: requestOptions} = options ?? {};
 
-      
+	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof mapTemplateControllerDeleteMapTemplateOne>>, TError, { id: number }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+	): UseMutationOptions<Awaited<ReturnType<typeof mapTemplateControllerDeleteMapTemplateOne>>, TError, { id: number }, TContext> => {
+	const { mutation: mutationOptions, request: requestOptions } = options ?? {};
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof mapTemplateControllerDeleteMapTemplateOne>>, {id: number}> = (props) => {
-          const {id} = props ?? {};
-
-          return  mapTemplateControllerDeleteMapTemplateOne(id,requestOptions)
-        }
-
-        
 
 
-   return  { mutationFn, ...mutationOptions }}
+	const mutationFn: MutationFunction<Awaited<ReturnType<typeof mapTemplateControllerDeleteMapTemplateOne>>, { id: number }> = (props) => {
+		const { id } = props ?? {};
 
-    export type MapTemplateControllerDeleteMapTemplateOneMutationResult = NonNullable<Awaited<ReturnType<typeof mapTemplateControllerDeleteMapTemplateOne>>>
-    
-    export type MapTemplateControllerDeleteMapTemplateOneMutationError = ErrorType<HttpExceptionSchema>
+		return mapTemplateControllerDeleteMapTemplateOne(id, requestOptions)
+	}
 
-    export const useMapTemplateControllerDeleteMapTemplateOne = <TError = ErrorType<HttpExceptionSchema>,
-    
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof mapTemplateControllerDeleteMapTemplateOne>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
-) => {
 
-      const mutationOptions = getMapTemplateControllerDeleteMapTemplateOneMutationOptions(options);
 
-      return useMutation(mutationOptions);
-    }
-    
+
+	return { mutationFn, ...mutationOptions }
+}
+
+export type MapTemplateControllerDeleteMapTemplateOneMutationResult = NonNullable<Awaited<ReturnType<typeof mapTemplateControllerDeleteMapTemplateOne>>>
+
+export type MapTemplateControllerDeleteMapTemplateOneMutationError = ErrorType<HttpExceptionSchema>
+
+export const useMapTemplateControllerDeleteMapTemplateOne = <TError = ErrorType<HttpExceptionSchema>,
+
+	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof mapTemplateControllerDeleteMapTemplateOne>>, TError, { id: number }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+	) => {
+
+	const mutationOptions = getMapTemplateControllerDeleteMapTemplateOneMutationOptions(options);
+
+	return useMutation(mutationOptions);
+}
+
 export const mapTemplateControllerGetMapTags = (
-    
- options?: SecondParameter<typeof nobstacleBackendApiInstance>,signal?: AbortSignal
+
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>, signal?: AbortSignal
 ) => {
-      
-      
-      return nobstacleBackendApiInstance<GetMapTemplateTagRes[]>(
-      {url: `/api/v1/content/map/tags`, method: 'GET', signal
-    },
-      options);
-    }
-  
+
+
+	return nobstacleBackendApiInstance<GetMapTemplateTagRes[]>(
+		{
+			url: `/api/v1/content/map/tags`, method: 'GET', signal
+		},
+		options);
+}
+
 
 export const getMapTemplateControllerGetMapTagsQueryKey = () => {
-    
-    return [`/api/v1/content/map/tags`] as const;
-    }
 
-    
-export const getMapTemplateControllerGetMapTagsQueryOptions = <TData = Awaited<ReturnType<typeof mapTemplateControllerGetMapTags>>, TError = ErrorType<HttpExceptionSchema>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof mapTemplateControllerGetMapTags>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
+	return [`/api/v1/content/map/tags`] as const;
+}
+
+
+export const getMapTemplateControllerGetMapTagsQueryOptions = <TData = Awaited<ReturnType<typeof mapTemplateControllerGetMapTags>>, TError = ErrorType<HttpExceptionSchema>>(options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof mapTemplateControllerGetMapTags>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+	const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getMapTemplateControllerGetMapTagsQueryKey();
+	const queryKey = queryOptions?.queryKey ?? getMapTemplateControllerGetMapTagsQueryKey();
 
-  
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof mapTemplateControllerGetMapTags>>> = ({ signal }) => mapTemplateControllerGetMapTags(requestOptions, signal);
 
-      
+	const queryFn: QueryFunction<Awaited<ReturnType<typeof mapTemplateControllerGetMapTags>>> = ({ signal }) => mapTemplateControllerGetMapTags(requestOptions, signal);
 
-      
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof mapTemplateControllerGetMapTags>>, TError, TData> & { queryKey: QueryKey }
+
+
+
+	return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<Awaited<ReturnType<typeof mapTemplateControllerGetMapTags>>, TError, TData> & { queryKey: QueryKey }
 }
 
 export type MapTemplateControllerGetMapTagsQueryResult = NonNullable<Awaited<ReturnType<typeof mapTemplateControllerGetMapTags>>>
 export type MapTemplateControllerGetMapTagsQueryError = ErrorType<HttpExceptionSchema>
 
 export const useMapTemplateControllerGetMapTags = <TData = Awaited<ReturnType<typeof mapTemplateControllerGetMapTags>>, TError = ErrorType<HttpExceptionSchema>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof mapTemplateControllerGetMapTags>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
+	options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof mapTemplateControllerGetMapTags>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
 
-  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } => {
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } => {
 
-  const queryOptions = getMapTemplateControllerGetMapTagsQueryOptions(options)
+	const queryOptions = getMapTemplateControllerGetMapTagsQueryOptions(options)
 
-  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+	const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
-  query.queryKey = queryOptions.queryKey ;
+	query.queryKey = queryOptions.queryKey;
 
-  return query;
+	return query;
 }
 
 
 
 
 export const surveyAnswerControllerGetSurveyAnswers = (
-    
- options?: SecondParameter<typeof nobstacleBackendApiInstance>,signal?: AbortSignal
+
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>, signal?: AbortSignal
 ) => {
-      
-      
-      return nobstacleBackendApiInstance<GetSurveyAnswerTemplateRes[]>(
-      {url: `/api/v1/content/survey-answer`, method: 'GET', signal
-    },
-      options);
-    }
-  
+
+
+	return nobstacleBackendApiInstance<GetSurveyAnswerTemplateRes[]>(
+		{
+			url: `/api/v1/content/survey-answer`, method: 'GET', signal
+		},
+		options);
+}
+
 
 export const getSurveyAnswerControllerGetSurveyAnswersQueryKey = () => {
-    
-    return [`/api/v1/content/survey-answer`] as const;
-    }
 
-    
-export const getSurveyAnswerControllerGetSurveyAnswersQueryOptions = <TData = Awaited<ReturnType<typeof surveyAnswerControllerGetSurveyAnswers>>, TError = ErrorType<HttpExceptionSchema>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof surveyAnswerControllerGetSurveyAnswers>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
+	return [`/api/v1/content/survey-answer`] as const;
+}
+
+
+export const getSurveyAnswerControllerGetSurveyAnswersQueryOptions = <TData = Awaited<ReturnType<typeof surveyAnswerControllerGetSurveyAnswers>>, TError = ErrorType<HttpExceptionSchema>>(options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof surveyAnswerControllerGetSurveyAnswers>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+	const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getSurveyAnswerControllerGetSurveyAnswersQueryKey();
+	const queryKey = queryOptions?.queryKey ?? getSurveyAnswerControllerGetSurveyAnswersQueryKey();
 
-  
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof surveyAnswerControllerGetSurveyAnswers>>> = ({ signal }) => surveyAnswerControllerGetSurveyAnswers(requestOptions, signal);
 
-      
+	const queryFn: QueryFunction<Awaited<ReturnType<typeof surveyAnswerControllerGetSurveyAnswers>>> = ({ signal }) => surveyAnswerControllerGetSurveyAnswers(requestOptions, signal);
 
-      
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof surveyAnswerControllerGetSurveyAnswers>>, TError, TData> & { queryKey: QueryKey }
+
+
+
+	return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<Awaited<ReturnType<typeof surveyAnswerControllerGetSurveyAnswers>>, TError, TData> & { queryKey: QueryKey }
 }
 
 export type SurveyAnswerControllerGetSurveyAnswersQueryResult = NonNullable<Awaited<ReturnType<typeof surveyAnswerControllerGetSurveyAnswers>>>
 export type SurveyAnswerControllerGetSurveyAnswersQueryError = ErrorType<HttpExceptionSchema>
 
 export const useSurveyAnswerControllerGetSurveyAnswers = <TData = Awaited<ReturnType<typeof surveyAnswerControllerGetSurveyAnswers>>, TError = ErrorType<HttpExceptionSchema>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof surveyAnswerControllerGetSurveyAnswers>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
+	options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof surveyAnswerControllerGetSurveyAnswers>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
 
-  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } => {
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } => {
 
-  const queryOptions = getSurveyAnswerControllerGetSurveyAnswersQueryOptions(options)
+	const queryOptions = getSurveyAnswerControllerGetSurveyAnswersQueryOptions(options)
 
-  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+	const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
-  query.queryKey = queryOptions.queryKey ;
+	query.queryKey = queryOptions.queryKey;
 
-  return query;
+	return query;
 }
 
 
 
 
 export const surveyAnswerControllerDeleteSurveyAnswer = (
-    id: number,
- options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
-      
-      
-      return nobstacleBackendApiInstance<boolean>(
-      {url: `/api/v1/content/survey-answer/${id}`, method: 'DELETE'
-    },
-      options);
-    }
-  
+	id: number,
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
+
+
+	return nobstacleBackendApiInstance<boolean>(
+		{
+			url: `/api/v1/content/survey-answer/${id}`, method: 'DELETE'
+		},
+		options);
+}
+
 
 
 export const getSurveyAnswerControllerDeleteSurveyAnswerMutationOptions = <TError = ErrorType<HttpExceptionSchema>,
-    
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof surveyAnswerControllerDeleteSurveyAnswer>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof surveyAnswerControllerDeleteSurveyAnswer>>, TError,{id: number}, TContext> => {
- const {mutation: mutationOptions, request: requestOptions} = options ?? {};
 
-      
+	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof surveyAnswerControllerDeleteSurveyAnswer>>, TError, { id: number }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+	): UseMutationOptions<Awaited<ReturnType<typeof surveyAnswerControllerDeleteSurveyAnswer>>, TError, { id: number }, TContext> => {
+	const { mutation: mutationOptions, request: requestOptions } = options ?? {};
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof surveyAnswerControllerDeleteSurveyAnswer>>, {id: number}> = (props) => {
-          const {id} = props ?? {};
-
-          return  surveyAnswerControllerDeleteSurveyAnswer(id,requestOptions)
-        }
-
-        
 
 
-   return  { mutationFn, ...mutationOptions }}
+	const mutationFn: MutationFunction<Awaited<ReturnType<typeof surveyAnswerControllerDeleteSurveyAnswer>>, { id: number }> = (props) => {
+		const { id } = props ?? {};
 
-    export type SurveyAnswerControllerDeleteSurveyAnswerMutationResult = NonNullable<Awaited<ReturnType<typeof surveyAnswerControllerDeleteSurveyAnswer>>>
-    
-    export type SurveyAnswerControllerDeleteSurveyAnswerMutationError = ErrorType<HttpExceptionSchema>
+		return surveyAnswerControllerDeleteSurveyAnswer(id, requestOptions)
+	}
 
-    export const useSurveyAnswerControllerDeleteSurveyAnswer = <TError = ErrorType<HttpExceptionSchema>,
-    
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof surveyAnswerControllerDeleteSurveyAnswer>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
-) => {
 
-      const mutationOptions = getSurveyAnswerControllerDeleteSurveyAnswerMutationOptions(options);
 
-      return useMutation(mutationOptions);
-    }
-    
-export const companyControllerCreateCompany = (
-    postCompanyReq: BodyType<PostCompanyReq>,
- options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
-      
-      
-      return nobstacleBackendApiInstance<GetCompanyRes>(
-      {url: `/api/v1/company`, method: 'POST',
-      headers: {'Content-Type': 'application/json', },
-      data: postCompanyReq
-    },
-      options);
-    }
+
+	return { mutationFn, ...mutationOptions }
+}
+
+export type SurveyAnswerControllerDeleteSurveyAnswerMutationResult = NonNullable<Awaited<ReturnType<typeof surveyAnswerControllerDeleteSurveyAnswer>>>
+
+export type SurveyAnswerControllerDeleteSurveyAnswerMutationError = ErrorType<HttpExceptionSchema>
+
+export const useSurveyAnswerControllerDeleteSurveyAnswer = <TError = ErrorType<HttpExceptionSchema>,
+
+	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof surveyAnswerControllerDeleteSurveyAnswer>>, TError, { id: number }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+	) => {
+
+	const mutationOptions = getSurveyAnswerControllerDeleteSurveyAnswerMutationOptions(options);
+
+	return useMutation(mutationOptions);
+}
+
+export const companyControllerGetAllCompanies = (
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>, signal?: AbortSignal
+  ) => {
+	return nobstacleBackendApiInstance<GetCompanyRes[]>(
+	  {
+		url: `/api/v1/company/all`,
+		method: 'GET',
+		headers: {
+		  'Accept': 'application/json, text/plain, */*',
+		  'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjEsIlJvbGVzIjpbIlNBZG1pbiJdLCJjb21wYW55SWQiOjEsImlhdCI6MTc0MjQ2NzY5NCwiZXhwIjoxNzQ2MDY3Njk0fQ.KJPy-F_0fD6BzpMl0I0qvXYaA8odvHgoiUEC-hZwUog'
+		},
+		signal
+	  },
+	  options
+	);
+  };
   
+  export const getCompanyControllerGetAllCompaniesQueryKey = () => {
+	return [`/api/v1/company/all`] as const;
+  };
+  
+  export const getCompanyControllerGetAllCompaniesQueryOptions = <TData = Awaited<ReturnType<typeof companyControllerGetAllCompanies>>, TError = ErrorType<HttpExceptionSchema>>(options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof companyControllerGetAllCompanies>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+  ) => {
+	const { query: queryOptions, request: requestOptions } = options ?? {};
+  
+	const queryKey = queryOptions?.queryKey ?? getCompanyControllerGetAllCompaniesQueryKey();
+  
+	const queryFn: QueryFunction<Awaited<ReturnType<typeof companyControllerGetAllCompanies>>> = ({ signal }) => companyControllerGetAllCompanies(requestOptions, signal);
+  
+	return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<Awaited<ReturnType<typeof companyControllerGetAllCompanies>>, TError, TData> & { queryKey: QueryKey };
+  };
+  
+  export type CompanyControllerGetAllCompaniesQueryResult = NonNullable<Awaited<ReturnType<typeof companyControllerGetAllCompanies>>>;
+  export type CompanyControllerGetAllCompaniesQueryError = ErrorType<HttpExceptionSchema>;
+  
+  export const useCompanyControllerGetAllCompanies = <TData = Awaited<ReturnType<typeof companyControllerGetAllCompanies>>, TError = ErrorType<HttpExceptionSchema>>(
+	options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof companyControllerGetAllCompanies>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+  ): UseQueryResult<TData, TError> & { queryKey: QueryKey } => {
+	const queryOptions = getCompanyControllerGetAllCompaniesQueryOptions(options);
+  
+	const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
+  
+	query.queryKey = queryOptions.queryKey;
+  
+	return query;
+  };
+
+export const companyControllerCreateCompany = (
+	postCompanyReq: BodyType<PostCompanyReq>,
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
+
+
+	return nobstacleBackendApiInstance<GetCompanyRes>(
+		{
+			url: `/api/v1/company`, method: 'POST',
+			headers: { 'Content-Type': 'application/json', },
+			data: postCompanyReq
+		},
+		options);
+}
+
 
 
 export const getCompanyControllerCreateCompanyMutationOptions = <TError = ErrorType<HttpExceptionSchema>,
-    
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof companyControllerCreateCompany>>, TError,{data: BodyType<PostCompanyReq>}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof companyControllerCreateCompany>>, TError,{data: BodyType<PostCompanyReq>}, TContext> => {
- const {mutation: mutationOptions, request: requestOptions} = options ?? {};
 
-      
+	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof companyControllerCreateCompany>>, TError, { data: BodyType<PostCompanyReq> }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+	): UseMutationOptions<Awaited<ReturnType<typeof companyControllerCreateCompany>>, TError, { data: BodyType<PostCompanyReq> }, TContext> => {
+	const { mutation: mutationOptions, request: requestOptions } = options ?? {};
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof companyControllerCreateCompany>>, {data: BodyType<PostCompanyReq>}> = (props) => {
-          const {data} = props ?? {};
-
-          return  companyControllerCreateCompany(data,requestOptions)
-        }
-
-        
 
 
-   return  { mutationFn, ...mutationOptions }}
+	const mutationFn: MutationFunction<Awaited<ReturnType<typeof companyControllerCreateCompany>>, { data: BodyType<PostCompanyReq> }> = (props) => {
+		const { data } = props ?? {};
 
-    export type CompanyControllerCreateCompanyMutationResult = NonNullable<Awaited<ReturnType<typeof companyControllerCreateCompany>>>
-    export type CompanyControllerCreateCompanyMutationBody = BodyType<PostCompanyReq>
-    export type CompanyControllerCreateCompanyMutationError = ErrorType<HttpExceptionSchema>
+		return companyControllerCreateCompany(data, requestOptions)
+	}
 
-    export const useCompanyControllerCreateCompany = <TError = ErrorType<HttpExceptionSchema>,
-    
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof companyControllerCreateCompany>>, TError,{data: BodyType<PostCompanyReq>}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
-) => {
 
-      const mutationOptions = getCompanyControllerCreateCompanyMutationOptions(options);
 
-      return useMutation(mutationOptions);
-    }
-    
+
+	return { mutationFn, ...mutationOptions }
+}
+
+export type CompanyControllerCreateCompanyMutationResult = NonNullable<Awaited<ReturnType<typeof companyControllerCreateCompany>>>
+export type CompanyControllerCreateCompanyMutationBody = BodyType<PostCompanyReq>
+export type CompanyControllerCreateCompanyMutationError = ErrorType<HttpExceptionSchema>
+
+export const useCompanyControllerCreateCompany = <TError = ErrorType<HttpExceptionSchema>,
+
+	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof companyControllerCreateCompany>>, TError, { data: BodyType<PostCompanyReq> }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+	) => {
+
+	const mutationOptions = getCompanyControllerCreateCompanyMutationOptions(options);
+
+	return useMutation(mutationOptions);
+}
+
 export const companyControllerGetCompany = (
-    
- options?: SecondParameter<typeof nobstacleBackendApiInstance>,signal?: AbortSignal
+
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>, signal?: AbortSignal
 ) => {
-      
-      
-      return nobstacleBackendApiInstance<GetCompanyRes>(
-      {url: `/api/v1/company`, method: 'GET', signal
-    },
-      options);
-    }
-  
+
+
+	return nobstacleBackendApiInstance<GetCompanyRes>(
+		{
+			url: `/api/v1/company`, method: 'GET', signal
+		},
+		options);
+}
+
 
 export const getCompanyControllerGetCompanyQueryKey = () => {
-    
-    return [`/api/v1/company`] as const;
-    }
 
-    
-export const getCompanyControllerGetCompanyQueryOptions = <TData = Awaited<ReturnType<typeof companyControllerGetCompany>>, TError = ErrorType<HttpExceptionSchema>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof companyControllerGetCompany>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
+	return [`/api/v1/company`] as const;
+}
+
+
+export const getCompanyControllerGetCompanyQueryOptions = <TData = Awaited<ReturnType<typeof companyControllerGetCompany>>, TError = ErrorType<HttpExceptionSchema>>(options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof companyControllerGetCompany>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+	const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getCompanyControllerGetCompanyQueryKey();
+	const queryKey = queryOptions?.queryKey ?? getCompanyControllerGetCompanyQueryKey();
 
-  
+	const queryFn: QueryFunction<Awaited<ReturnType<typeof companyControllerGetCompany>>> = ({ signal }) => companyControllerGetCompany(requestOptions, signal);
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof companyControllerGetCompany>>> = ({ signal }) => companyControllerGetCompany(requestOptions, signal);
-
-      
-
-      
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof companyControllerGetCompany>>, TError, TData> & { queryKey: QueryKey }
+	return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<Awaited<ReturnType<typeof companyControllerGetCompany>>, TError, TData> & { queryKey: QueryKey }
 }
 
 export type CompanyControllerGetCompanyQueryResult = NonNullable<Awaited<ReturnType<typeof companyControllerGetCompany>>>
 export type CompanyControllerGetCompanyQueryError = ErrorType<HttpExceptionSchema>
 
 export const useCompanyControllerGetCompany = <TData = Awaited<ReturnType<typeof companyControllerGetCompany>>, TError = ErrorType<HttpExceptionSchema>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof companyControllerGetCompany>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
+	options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof companyControllerGetCompany>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
 
-  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } => {
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } => {
 
-  const queryOptions = getCompanyControllerGetCompanyQueryOptions(options)
+	const queryOptions = getCompanyControllerGetCompanyQueryOptions(options)
 
-  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+	const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
-  query.queryKey = queryOptions.queryKey ;
+	query.queryKey = queryOptions.queryKey;
 
-  return query;
+	return query;
+}
+
+export const uploadControllerUploadCompanyFile = (
+	uploadControllerUploadCompanyFileBody: BodyType<UploadControllerUploadCompanyFileBody>,
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
+
+	const formData = new FormData();
+	formData.append('file', uploadControllerUploadCompanyFileBody.file)
+	formData.append('tag', uploadControllerUploadCompanyFileBody.tag)
+	formData.append('langCode', uploadControllerUploadCompanyFileBody.langCode)
+	formData.append('defaultLangCode', uploadControllerUploadCompanyFileBody.defaultLangCode)
+
+	return nobstacleBackendApiInstance<GetUploadUrlRes>(
+		{
+			url: `/api/v1/uploads/company-file`, method: 'POST',
+			headers: { 'Content-Type': 'multipart/form-data', },
+			data: formData
+		},
+		options);
 }
 
 
 
-
-export const uploadControllerUploadCompanyFile = (
-    uploadControllerUploadCompanyFileBody: BodyType<UploadControllerUploadCompanyFileBody>,
- options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
-      
-      const formData = new FormData();
-formData.append('file', uploadControllerUploadCompanyFileBody.file)
-formData.append('tag', uploadControllerUploadCompanyFileBody.tag)
-formData.append('langCode', uploadControllerUploadCompanyFileBody.langCode)
-formData.append('defaultLangCode', uploadControllerUploadCompanyFileBody.defaultLangCode)
-
-      return nobstacleBackendApiInstance<GetUploadUrlRes>(
-      {url: `/api/v1/uploads/company-file`, method: 'POST',
-      headers: {'Content-Type': 'multipart/form-data', },
-       data: formData
-    },
-      options);
-    }
-  
-
-
 export const getUploadControllerUploadCompanyFileMutationOptions = <TError = ErrorType<HttpExceptionSchema>,
-    
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof uploadControllerUploadCompanyFile>>, TError,{data: BodyType<UploadControllerUploadCompanyFileBody>}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof uploadControllerUploadCompanyFile>>, TError,{data: BodyType<UploadControllerUploadCompanyFileBody>}, TContext> => {
- const {mutation: mutationOptions, request: requestOptions} = options ?? {};
 
-      
+	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof uploadControllerUploadCompanyFile>>, TError, { data: BodyType<UploadControllerUploadCompanyFileBody> }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+	): UseMutationOptions<Awaited<ReturnType<typeof uploadControllerUploadCompanyFile>>, TError, { data: BodyType<UploadControllerUploadCompanyFileBody> }, TContext> => {
+	const { mutation: mutationOptions, request: requestOptions } = options ?? {};
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof uploadControllerUploadCompanyFile>>, {data: BodyType<UploadControllerUploadCompanyFileBody>}> = (props) => {
-          const {data} = props ?? {};
-
-          return  uploadControllerUploadCompanyFile(data,requestOptions)
-        }
-
-        
 
 
-   return  { mutationFn, ...mutationOptions }}
+	const mutationFn: MutationFunction<Awaited<ReturnType<typeof uploadControllerUploadCompanyFile>>, { data: BodyType<UploadControllerUploadCompanyFileBody> }> = (props) => {
+		const { data } = props ?? {};
 
-    export type UploadControllerUploadCompanyFileMutationResult = NonNullable<Awaited<ReturnType<typeof uploadControllerUploadCompanyFile>>>
-    export type UploadControllerUploadCompanyFileMutationBody = BodyType<UploadControllerUploadCompanyFileBody>
-    export type UploadControllerUploadCompanyFileMutationError = ErrorType<HttpExceptionSchema>
+		return uploadControllerUploadCompanyFile(data, requestOptions)
+	}
 
-    export const useUploadControllerUploadCompanyFile = <TError = ErrorType<HttpExceptionSchema>,
-    
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof uploadControllerUploadCompanyFile>>, TError,{data: BodyType<UploadControllerUploadCompanyFileBody>}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
-) => {
 
-      const mutationOptions = getUploadControllerUploadCompanyFileMutationOptions(options);
 
-      return useMutation(mutationOptions);
-    }
-    
+
+	return { mutationFn, ...mutationOptions }
+}
+
+export type UploadControllerUploadCompanyFileMutationResult = NonNullable<Awaited<ReturnType<typeof uploadControllerUploadCompanyFile>>>
+export type UploadControllerUploadCompanyFileMutationBody = BodyType<UploadControllerUploadCompanyFileBody>
+export type UploadControllerUploadCompanyFileMutationError = ErrorType<HttpExceptionSchema>
+
+export const useUploadControllerUploadCompanyFile = <TError = ErrorType<HttpExceptionSchema>,
+
+	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof uploadControllerUploadCompanyFile>>, TError, { data: BodyType<UploadControllerUploadCompanyFileBody> }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+	) => {
+
+	const mutationOptions = getUploadControllerUploadCompanyFileMutationOptions(options);
+
+	return useMutation(mutationOptions);
+}
+
 export const uploadControllerUploadCompanyFileMany = (
-    uploadControllerUploadCompanyFileManyBody: BodyType<UploadControllerUploadCompanyFileManyBody>,
- options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
-      
-      const formData = new FormData();
-uploadControllerUploadCompanyFileManyBody.file.forEach(value => formData.append('file', value));
-formData.append('tag', uploadControllerUploadCompanyFileManyBody.tag)
-formData.append('langCode', uploadControllerUploadCompanyFileManyBody.langCode)
-formData.append('defaultLangCode', uploadControllerUploadCompanyFileManyBody.defaultLangCode)
+	uploadControllerUploadCompanyFileManyBody: BodyType<UploadControllerUploadCompanyFileManyBody>,
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
 
-      return nobstacleBackendApiInstance<GetUploadUrlRes>(
-      {url: `/api/v1/uploads/company-file-many`, method: 'POST',
-      headers: {'Content-Type': 'multipart/form-data', },
-       data: formData
-    },
-      options);
-    }
-  
+	const formData = new FormData();
+	uploadControllerUploadCompanyFileManyBody.file.forEach(value => formData.append('file', value));
+	formData.append('tag', uploadControllerUploadCompanyFileManyBody.tag)
+	formData.append('langCode', uploadControllerUploadCompanyFileManyBody.langCode)
+	formData.append('defaultLangCode', uploadControllerUploadCompanyFileManyBody.defaultLangCode)
+
+	return nobstacleBackendApiInstance<GetUploadUrlRes>(
+		{
+			url: `/api/v1/uploads/company-file-many`, method: 'POST',
+			headers: { 'Content-Type': 'multipart/form-data', },
+			data: formData
+		},
+		options);
+}
+
 
 
 export const getUploadControllerUploadCompanyFileManyMutationOptions = <TError = ErrorType<HttpExceptionSchema>,
-    
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof uploadControllerUploadCompanyFileMany>>, TError,{data: BodyType<UploadControllerUploadCompanyFileManyBody>}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof uploadControllerUploadCompanyFileMany>>, TError,{data: BodyType<UploadControllerUploadCompanyFileManyBody>}, TContext> => {
- const {mutation: mutationOptions, request: requestOptions} = options ?? {};
 
-      
+	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof uploadControllerUploadCompanyFileMany>>, TError, { data: BodyType<UploadControllerUploadCompanyFileManyBody> }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+	): UseMutationOptions<Awaited<ReturnType<typeof uploadControllerUploadCompanyFileMany>>, TError, { data: BodyType<UploadControllerUploadCompanyFileManyBody> }, TContext> => {
+	const { mutation: mutationOptions, request: requestOptions } = options ?? {};
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof uploadControllerUploadCompanyFileMany>>, {data: BodyType<UploadControllerUploadCompanyFileManyBody>}> = (props) => {
-          const {data} = props ?? {};
-
-          return  uploadControllerUploadCompanyFileMany(data,requestOptions)
-        }
-
-        
 
 
-   return  { mutationFn, ...mutationOptions }}
+	const mutationFn: MutationFunction<Awaited<ReturnType<typeof uploadControllerUploadCompanyFileMany>>, { data: BodyType<UploadControllerUploadCompanyFileManyBody> }> = (props) => {
+		const { data } = props ?? {};
 
-    export type UploadControllerUploadCompanyFileManyMutationResult = NonNullable<Awaited<ReturnType<typeof uploadControllerUploadCompanyFileMany>>>
-    export type UploadControllerUploadCompanyFileManyMutationBody = BodyType<UploadControllerUploadCompanyFileManyBody>
-    export type UploadControllerUploadCompanyFileManyMutationError = ErrorType<HttpExceptionSchema>
+		return uploadControllerUploadCompanyFileMany(data, requestOptions)
+	}
 
-    export const useUploadControllerUploadCompanyFileMany = <TError = ErrorType<HttpExceptionSchema>,
-    
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof uploadControllerUploadCompanyFileMany>>, TError,{data: BodyType<UploadControllerUploadCompanyFileManyBody>}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
-) => {
 
-      const mutationOptions = getUploadControllerUploadCompanyFileManyMutationOptions(options);
 
-      return useMutation(mutationOptions);
-    }
-    
+
+	return { mutationFn, ...mutationOptions }
+}
+
+export type UploadControllerUploadCompanyFileManyMutationResult = NonNullable<Awaited<ReturnType<typeof uploadControllerUploadCompanyFileMany>>>
+export type UploadControllerUploadCompanyFileManyMutationBody = BodyType<UploadControllerUploadCompanyFileManyBody>
+export type UploadControllerUploadCompanyFileManyMutationError = ErrorType<HttpExceptionSchema>
+
+export const useUploadControllerUploadCompanyFileMany = <TError = ErrorType<HttpExceptionSchema>,
+
+	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof uploadControllerUploadCompanyFileMany>>, TError, { data: BodyType<UploadControllerUploadCompanyFileManyBody> }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+	) => {
+
+	const mutationOptions = getUploadControllerUploadCompanyFileManyMutationOptions(options);
+
+	return useMutation(mutationOptions);
+}
+
 export const uploadControllerPatchCompanyFileMany = (
-    uploadControllerPatchCompanyFileManyBody: BodyType<UploadControllerPatchCompanyFileManyBody>,
- options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
-      
-      const formData = new FormData();
-uploadControllerPatchCompanyFileManyBody.file.forEach(value => formData.append('file', value));
-formData.append('tag', uploadControllerPatchCompanyFileManyBody.tag)
-formData.append('langCode', uploadControllerPatchCompanyFileManyBody.langCode)
-formData.append('defaultLangCode', uploadControllerPatchCompanyFileManyBody.defaultLangCode)
+	uploadControllerPatchCompanyFileManyBody: BodyType<UploadControllerPatchCompanyFileManyBody>,
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
 
-      return nobstacleBackendApiInstance<GetUploadUrlRes>(
-      {url: `/api/v1/uploads/company-file-many`, method: 'PATCH',
-      headers: {'Content-Type': 'multipart/form-data', },
-       data: formData
-    },
-      options);
-    }
-  
+	const formData = new FormData();
+	uploadControllerPatchCompanyFileManyBody.file.forEach(value => formData.append('file', value));
+	formData.append('tag', uploadControllerPatchCompanyFileManyBody.tag)
+	formData.append('langCode', uploadControllerPatchCompanyFileManyBody.langCode)
+	formData.append('defaultLangCode', uploadControllerPatchCompanyFileManyBody.defaultLangCode)
+
+	return nobstacleBackendApiInstance<GetUploadUrlRes>(
+		{
+			url: `/api/v1/uploads/company-file-many`, method: 'PATCH',
+			headers: { 'Content-Type': 'multipart/form-data', },
+			data: formData
+		},
+		options);
+}
+
 
 
 export const getUploadControllerPatchCompanyFileManyMutationOptions = <TError = ErrorType<HttpExceptionSchema>,
-    
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof uploadControllerPatchCompanyFileMany>>, TError,{data: BodyType<UploadControllerPatchCompanyFileManyBody>}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof uploadControllerPatchCompanyFileMany>>, TError,{data: BodyType<UploadControllerPatchCompanyFileManyBody>}, TContext> => {
- const {mutation: mutationOptions, request: requestOptions} = options ?? {};
 
-      
+	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof uploadControllerPatchCompanyFileMany>>, TError, { data: BodyType<UploadControllerPatchCompanyFileManyBody> }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+	): UseMutationOptions<Awaited<ReturnType<typeof uploadControllerPatchCompanyFileMany>>, TError, { data: BodyType<UploadControllerPatchCompanyFileManyBody> }, TContext> => {
+	const { mutation: mutationOptions, request: requestOptions } = options ?? {};
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof uploadControllerPatchCompanyFileMany>>, {data: BodyType<UploadControllerPatchCompanyFileManyBody>}> = (props) => {
-          const {data} = props ?? {};
-
-          return  uploadControllerPatchCompanyFileMany(data,requestOptions)
-        }
-
-        
 
 
-   return  { mutationFn, ...mutationOptions }}
+	const mutationFn: MutationFunction<Awaited<ReturnType<typeof uploadControllerPatchCompanyFileMany>>, { data: BodyType<UploadControllerPatchCompanyFileManyBody> }> = (props) => {
+		const { data } = props ?? {};
 
-    export type UploadControllerPatchCompanyFileManyMutationResult = NonNullable<Awaited<ReturnType<typeof uploadControllerPatchCompanyFileMany>>>
-    export type UploadControllerPatchCompanyFileManyMutationBody = BodyType<UploadControllerPatchCompanyFileManyBody>
-    export type UploadControllerPatchCompanyFileManyMutationError = ErrorType<HttpExceptionSchema>
+		return uploadControllerPatchCompanyFileMany(data, requestOptions)
+	}
 
-    export const useUploadControllerPatchCompanyFileMany = <TError = ErrorType<HttpExceptionSchema>,
-    
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof uploadControllerPatchCompanyFileMany>>, TError,{data: BodyType<UploadControllerPatchCompanyFileManyBody>}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
-) => {
 
-      const mutationOptions = getUploadControllerPatchCompanyFileManyMutationOptions(options);
 
-      return useMutation(mutationOptions);
-    }
-    
+
+	return { mutationFn, ...mutationOptions }
+}
+
+export type UploadControllerPatchCompanyFileManyMutationResult = NonNullable<Awaited<ReturnType<typeof uploadControllerPatchCompanyFileMany>>>
+export type UploadControllerPatchCompanyFileManyMutationBody = BodyType<UploadControllerPatchCompanyFileManyBody>
+export type UploadControllerPatchCompanyFileManyMutationError = ErrorType<HttpExceptionSchema>
+
+export const useUploadControllerPatchCompanyFileMany = <TError = ErrorType<HttpExceptionSchema>,
+
+	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof uploadControllerPatchCompanyFileMany>>, TError, { data: BodyType<UploadControllerPatchCompanyFileManyBody> }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+	) => {
+
+	const mutationOptions = getUploadControllerPatchCompanyFileManyMutationOptions(options);
+
+	return useMutation(mutationOptions);
+}
+
 export const uploadControllerUploadCompanyLogo = (
-    uploadControllerUploadCompanyLogoBody: BodyType<UploadControllerUploadCompanyLogoBody>,
- options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
-      
-      const formData = new FormData();
-formData.append('file', uploadControllerUploadCompanyLogoBody.file)
+	uploadControllerUploadCompanyLogoBody: BodyType<UploadControllerUploadCompanyLogoBody>,
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
 
-      return nobstacleBackendApiInstance<GetUploadUrlRes>(
-      {url: `/api/v1/uploads/company-logo`, method: 'POST',
-      headers: {'Content-Type': 'multipart/form-data', },
-       data: formData
-    },
-      options);
-    }
-  
+	const formData = new FormData();
+	formData.append('file', uploadControllerUploadCompanyLogoBody.file)
+
+	return nobstacleBackendApiInstance<GetUploadUrlRes>(
+		{
+			url: `/api/v1/uploads/company-logo`, method: 'POST',
+			headers: { 'Content-Type': 'multipart/form-data', },
+			data: formData
+		},
+		options);
+}
+
 
 
 export const getUploadControllerUploadCompanyLogoMutationOptions = <TError = ErrorType<HttpExceptionSchema>,
-    
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof uploadControllerUploadCompanyLogo>>, TError,{data: BodyType<UploadControllerUploadCompanyLogoBody>}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof uploadControllerUploadCompanyLogo>>, TError,{data: BodyType<UploadControllerUploadCompanyLogoBody>}, TContext> => {
- const {mutation: mutationOptions, request: requestOptions} = options ?? {};
 
-      
+	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof uploadControllerUploadCompanyLogo>>, TError, { data: BodyType<UploadControllerUploadCompanyLogoBody> }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+	): UseMutationOptions<Awaited<ReturnType<typeof uploadControllerUploadCompanyLogo>>, TError, { data: BodyType<UploadControllerUploadCompanyLogoBody> }, TContext> => {
+	const { mutation: mutationOptions, request: requestOptions } = options ?? {};
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof uploadControllerUploadCompanyLogo>>, {data: BodyType<UploadControllerUploadCompanyLogoBody>}> = (props) => {
-          const {data} = props ?? {};
-
-          return  uploadControllerUploadCompanyLogo(data,requestOptions)
-        }
-
-        
 
 
-   return  { mutationFn, ...mutationOptions }}
+	const mutationFn: MutationFunction<Awaited<ReturnType<typeof uploadControllerUploadCompanyLogo>>, { data: BodyType<UploadControllerUploadCompanyLogoBody> }> = (props) => {
+		const { data } = props ?? {};
 
-    export type UploadControllerUploadCompanyLogoMutationResult = NonNullable<Awaited<ReturnType<typeof uploadControllerUploadCompanyLogo>>>
-    export type UploadControllerUploadCompanyLogoMutationBody = BodyType<UploadControllerUploadCompanyLogoBody>
-    export type UploadControllerUploadCompanyLogoMutationError = ErrorType<HttpExceptionSchema>
+		return uploadControllerUploadCompanyLogo(data, requestOptions)
+	}
 
-    export const useUploadControllerUploadCompanyLogo = <TError = ErrorType<HttpExceptionSchema>,
-    
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof uploadControllerUploadCompanyLogo>>, TError,{data: BodyType<UploadControllerUploadCompanyLogoBody>}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
-) => {
 
-      const mutationOptions = getUploadControllerUploadCompanyLogoMutationOptions(options);
 
-      return useMutation(mutationOptions);
-    }
-    
+
+	return { mutationFn, ...mutationOptions }
+}
+
+export type UploadControllerUploadCompanyLogoMutationResult = NonNullable<Awaited<ReturnType<typeof uploadControllerUploadCompanyLogo>>>
+export type UploadControllerUploadCompanyLogoMutationBody = BodyType<UploadControllerUploadCompanyLogoBody>
+export type UploadControllerUploadCompanyLogoMutationError = ErrorType<HttpExceptionSchema>
+
+export const useUploadControllerUploadCompanyLogo = <TError = ErrorType<HttpExceptionSchema>,
+
+	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof uploadControllerUploadCompanyLogo>>, TError, { data: BodyType<UploadControllerUploadCompanyLogoBody> }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+	) => {
+
+	const mutationOptions = getUploadControllerUploadCompanyLogoMutationOptions(options);
+
+	return useMutation(mutationOptions);
+}
+
 export const uploadControllerUploadSpeechToTextFile = (
-    uploadControllerUploadSpeechToTextFileBody: BodyType<UploadControllerUploadSpeechToTextFileBody>,
- options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
-      
-      const formData = new FormData();
-formData.append('file', uploadControllerUploadSpeechToTextFileBody.file)
-formData.append('langCode', uploadControllerUploadSpeechToTextFileBody.langCode)
+	uploadControllerUploadSpeechToTextFileBody: BodyType<UploadControllerUploadSpeechToTextFileBody>,
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
 
-      return nobstacleBackendApiInstance<SpeechToTextRes>(
-      {url: `/api/v1/uploads/speech-to-text`, method: 'POST',
-      headers: {'Content-Type': 'multipart/form-data', },
-       data: formData
-    },
-      options);
-    }
-  
+	const formData = new FormData();
+	formData.append('file', uploadControllerUploadSpeechToTextFileBody.file)
+	formData.append('langCode', uploadControllerUploadSpeechToTextFileBody.langCode)
+
+	return nobstacleBackendApiInstance<SpeechToTextRes>(
+		{
+			url: `/api/v1/uploads/speech-to-text`, method: 'POST',
+			headers: { 'Content-Type': 'multipart/form-data', },
+			data: formData
+		},
+		options);
+}
+
 
 
 export const getUploadControllerUploadSpeechToTextFileMutationOptions = <TError = ErrorType<HttpExceptionSchema>,
-    
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof uploadControllerUploadSpeechToTextFile>>, TError,{data: BodyType<UploadControllerUploadSpeechToTextFileBody>}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof uploadControllerUploadSpeechToTextFile>>, TError,{data: BodyType<UploadControllerUploadSpeechToTextFileBody>}, TContext> => {
- const {mutation: mutationOptions, request: requestOptions} = options ?? {};
 
-      
+	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof uploadControllerUploadSpeechToTextFile>>, TError, { data: BodyType<UploadControllerUploadSpeechToTextFileBody> }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+	): UseMutationOptions<Awaited<ReturnType<typeof uploadControllerUploadSpeechToTextFile>>, TError, { data: BodyType<UploadControllerUploadSpeechToTextFileBody> }, TContext> => {
+	const { mutation: mutationOptions, request: requestOptions } = options ?? {};
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof uploadControllerUploadSpeechToTextFile>>, {data: BodyType<UploadControllerUploadSpeechToTextFileBody>}> = (props) => {
-          const {data} = props ?? {};
-
-          return  uploadControllerUploadSpeechToTextFile(data,requestOptions)
-        }
-
-        
 
 
-   return  { mutationFn, ...mutationOptions }}
+	const mutationFn: MutationFunction<Awaited<ReturnType<typeof uploadControllerUploadSpeechToTextFile>>, { data: BodyType<UploadControllerUploadSpeechToTextFileBody> }> = (props) => {
+		const { data } = props ?? {};
 
-    export type UploadControllerUploadSpeechToTextFileMutationResult = NonNullable<Awaited<ReturnType<typeof uploadControllerUploadSpeechToTextFile>>>
-    export type UploadControllerUploadSpeechToTextFileMutationBody = BodyType<UploadControllerUploadSpeechToTextFileBody>
-    export type UploadControllerUploadSpeechToTextFileMutationError = ErrorType<HttpExceptionSchema>
+		return uploadControllerUploadSpeechToTextFile(data, requestOptions)
+	}
 
-    export const useUploadControllerUploadSpeechToTextFile = <TError = ErrorType<HttpExceptionSchema>,
-    
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof uploadControllerUploadSpeechToTextFile>>, TError,{data: BodyType<UploadControllerUploadSpeechToTextFileBody>}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
-) => {
 
-      const mutationOptions = getUploadControllerUploadSpeechToTextFileMutationOptions(options);
 
-      return useMutation(mutationOptions);
-    }
-    
+
+	return { mutationFn, ...mutationOptions }
+}
+
+export type UploadControllerUploadSpeechToTextFileMutationResult = NonNullable<Awaited<ReturnType<typeof uploadControllerUploadSpeechToTextFile>>>
+export type UploadControllerUploadSpeechToTextFileMutationBody = BodyType<UploadControllerUploadSpeechToTextFileBody>
+export type UploadControllerUploadSpeechToTextFileMutationError = ErrorType<HttpExceptionSchema>
+
+export const useUploadControllerUploadSpeechToTextFile = <TError = ErrorType<HttpExceptionSchema>,
+
+	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof uploadControllerUploadSpeechToTextFile>>, TError, { data: BodyType<UploadControllerUploadSpeechToTextFileBody> }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+	) => {
+
+	const mutationOptions = getUploadControllerUploadSpeechToTextFileMutationOptions(options);
+
+	return useMutation(mutationOptions);
+}
+
 export const templateControllerGetTextTemplates = (
-    params?: TemplateControllerGetTextTemplatesParams,
- options?: SecondParameter<typeof nobstacleBackendApiInstance>,signal?: AbortSignal
+	params?: TemplateControllerGetTextTemplatesParams,
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>, signal?: AbortSignal
 ) => {
-      
-      
-      return nobstacleBackendApiInstance<GetTextTemplateRes[]>(
-      {url: `/api/v1/template/texts`, method: 'GET',
-        params, signal
-    },
-      options);
-    }
-  
+
+
+	return nobstacleBackendApiInstance<GetTextTemplateRes[]>(
+		{
+			url: `/api/v1/template/texts`, method: 'GET',
+			params, signal
+		},
+		options);
+}
+
 
 export const getTemplateControllerGetTextTemplatesQueryKey = (params?: TemplateControllerGetTextTemplatesParams,) => {
-    
-    return [`/api/v1/template/texts`, ...(params ? [params]: [])] as const;
-    }
 
-    
-export const getTemplateControllerGetTextTemplatesQueryOptions = <TData = Awaited<ReturnType<typeof templateControllerGetTextTemplates>>, TError = ErrorType<HttpExceptionSchema>>(params?: TemplateControllerGetTextTemplatesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof templateControllerGetTextTemplates>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
+	return [`/api/v1/template/texts`, ...(params ? [params] : [])] as const;
+}
+
+
+export const getTemplateControllerGetTextTemplatesQueryOptions = <TData = Awaited<ReturnType<typeof templateControllerGetTextTemplates>>, TError = ErrorType<HttpExceptionSchema>>(params?: TemplateControllerGetTextTemplatesParams, options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof templateControllerGetTextTemplates>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+	const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getTemplateControllerGetTextTemplatesQueryKey(params);
+	const queryKey = queryOptions?.queryKey ?? getTemplateControllerGetTextTemplatesQueryKey(params);
 
-  
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof templateControllerGetTextTemplates>>> = ({ signal }) => templateControllerGetTextTemplates(params, requestOptions, signal);
 
-      
+	const queryFn: QueryFunction<Awaited<ReturnType<typeof templateControllerGetTextTemplates>>> = ({ signal }) => templateControllerGetTextTemplates(params, requestOptions, signal);
 
-      
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof templateControllerGetTextTemplates>>, TError, TData> & { queryKey: QueryKey }
+
+
+
+	return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<Awaited<ReturnType<typeof templateControllerGetTextTemplates>>, TError, TData> & { queryKey: QueryKey }
 }
 
 export type TemplateControllerGetTextTemplatesQueryResult = NonNullable<Awaited<ReturnType<typeof templateControllerGetTextTemplates>>>
 export type TemplateControllerGetTextTemplatesQueryError = ErrorType<HttpExceptionSchema>
 
 export const useTemplateControllerGetTextTemplates = <TData = Awaited<ReturnType<typeof templateControllerGetTextTemplates>>, TError = ErrorType<HttpExceptionSchema>>(
- params?: TemplateControllerGetTextTemplatesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof templateControllerGetTextTemplates>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
+	params?: TemplateControllerGetTextTemplatesParams, options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof templateControllerGetTextTemplates>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
 
-  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } => {
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } => {
 
-  const queryOptions = getTemplateControllerGetTextTemplatesQueryOptions(params,options)
+	const queryOptions = getTemplateControllerGetTextTemplatesQueryOptions(params, options)
 
-  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+	const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
-  query.queryKey = queryOptions.queryKey ;
+	query.queryKey = queryOptions.queryKey;
 
-  return query;
+	return query;
 }
 
 
 
 
 export const templateControllerGetImageTemplates = (
-    params?: TemplateControllerGetImageTemplatesParams,
- options?: SecondParameter<typeof nobstacleBackendApiInstance>,signal?: AbortSignal
+	params?: TemplateControllerGetImageTemplatesParams,
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>, signal?: AbortSignal
 ) => {
-      
-      
-      return nobstacleBackendApiInstance<GetImageTemplateRes[]>(
-      {url: `/api/v1/template/images`, method: 'GET',
-        params, signal
-    },
-      options);
-    }
-  
+
+
+	return nobstacleBackendApiInstance<GetImageTemplateRes[]>(
+		{
+			url: `/api/v1/template/images`, method: 'GET',
+			params, signal
+		},
+		options);
+}
+
 
 export const getTemplateControllerGetImageTemplatesQueryKey = (params?: TemplateControllerGetImageTemplatesParams,) => {
-    
-    return [`/api/v1/template/images`, ...(params ? [params]: [])] as const;
-    }
 
-    
-export const getTemplateControllerGetImageTemplatesQueryOptions = <TData = Awaited<ReturnType<typeof templateControllerGetImageTemplates>>, TError = ErrorType<HttpExceptionSchema>>(params?: TemplateControllerGetImageTemplatesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof templateControllerGetImageTemplates>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
+	return [`/api/v1/template/images`, ...(params ? [params] : [])] as const;
+}
+
+
+export const getTemplateControllerGetImageTemplatesQueryOptions = <TData = Awaited<ReturnType<typeof templateControllerGetImageTemplates>>, TError = ErrorType<HttpExceptionSchema>>(params?: TemplateControllerGetImageTemplatesParams, options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof templateControllerGetImageTemplates>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+	const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getTemplateControllerGetImageTemplatesQueryKey(params);
+	const queryKey = queryOptions?.queryKey ?? getTemplateControllerGetImageTemplatesQueryKey(params);
 
-  
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof templateControllerGetImageTemplates>>> = ({ signal }) => templateControllerGetImageTemplates(params, requestOptions, signal);
 
-      
+	const queryFn: QueryFunction<Awaited<ReturnType<typeof templateControllerGetImageTemplates>>> = ({ signal }) => templateControllerGetImageTemplates(params, requestOptions, signal);
 
-      
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof templateControllerGetImageTemplates>>, TError, TData> & { queryKey: QueryKey }
+
+
+
+	return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<Awaited<ReturnType<typeof templateControllerGetImageTemplates>>, TError, TData> & { queryKey: QueryKey }
 }
 
 export type TemplateControllerGetImageTemplatesQueryResult = NonNullable<Awaited<ReturnType<typeof templateControllerGetImageTemplates>>>
 export type TemplateControllerGetImageTemplatesQueryError = ErrorType<HttpExceptionSchema>
 
 export const useTemplateControllerGetImageTemplates = <TData = Awaited<ReturnType<typeof templateControllerGetImageTemplates>>, TError = ErrorType<HttpExceptionSchema>>(
- params?: TemplateControllerGetImageTemplatesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof templateControllerGetImageTemplates>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
+	params?: TemplateControllerGetImageTemplatesParams, options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof templateControllerGetImageTemplates>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
 
-  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } => {
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } => {
 
-  const queryOptions = getTemplateControllerGetImageTemplatesQueryOptions(params,options)
+	const queryOptions = getTemplateControllerGetImageTemplatesQueryOptions(params, options)
 
-  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+	const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
-  query.queryKey = queryOptions.queryKey ;
+	query.queryKey = queryOptions.queryKey;
 
-  return query;
+	return query;
 }
 
 
 
 
 export const templateControllerGetVideoTemplates = (
-    params?: TemplateControllerGetVideoTemplatesParams,
- options?: SecondParameter<typeof nobstacleBackendApiInstance>,signal?: AbortSignal
+	params?: TemplateControllerGetVideoTemplatesParams,
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>, signal?: AbortSignal
 ) => {
-      
-      
-      return nobstacleBackendApiInstance<GetVideoTemplateRes[]>(
-      {url: `/api/v1/template/videos`, method: 'GET',
-        params, signal
-    },
-      options);
-    }
-  
+
+
+	return nobstacleBackendApiInstance<GetVideoTemplateRes[]>(
+		{
+			url: `/api/v1/template/videos`, method: 'GET',
+			params, signal
+		},
+		options);
+}
+
 
 export const getTemplateControllerGetVideoTemplatesQueryKey = (params?: TemplateControllerGetVideoTemplatesParams,) => {
-    
-    return [`/api/v1/template/videos`, ...(params ? [params]: [])] as const;
-    }
 
-    
-export const getTemplateControllerGetVideoTemplatesQueryOptions = <TData = Awaited<ReturnType<typeof templateControllerGetVideoTemplates>>, TError = ErrorType<HttpExceptionSchema>>(params?: TemplateControllerGetVideoTemplatesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof templateControllerGetVideoTemplates>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
+	return [`/api/v1/template/videos`, ...(params ? [params] : [])] as const;
+}
+
+
+export const getTemplateControllerGetVideoTemplatesQueryOptions = <TData = Awaited<ReturnType<typeof templateControllerGetVideoTemplates>>, TError = ErrorType<HttpExceptionSchema>>(params?: TemplateControllerGetVideoTemplatesParams, options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof templateControllerGetVideoTemplates>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+	const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getTemplateControllerGetVideoTemplatesQueryKey(params);
+	const queryKey = queryOptions?.queryKey ?? getTemplateControllerGetVideoTemplatesQueryKey(params);
 
-  
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof templateControllerGetVideoTemplates>>> = ({ signal }) => templateControllerGetVideoTemplates(params, requestOptions, signal);
 
-      
+	const queryFn: QueryFunction<Awaited<ReturnType<typeof templateControllerGetVideoTemplates>>> = ({ signal }) => templateControllerGetVideoTemplates(params, requestOptions, signal);
 
-      
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof templateControllerGetVideoTemplates>>, TError, TData> & { queryKey: QueryKey }
+
+
+
+	return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<Awaited<ReturnType<typeof templateControllerGetVideoTemplates>>, TError, TData> & { queryKey: QueryKey }
 }
 
 export type TemplateControllerGetVideoTemplatesQueryResult = NonNullable<Awaited<ReturnType<typeof templateControllerGetVideoTemplates>>>
 export type TemplateControllerGetVideoTemplatesQueryError = ErrorType<HttpExceptionSchema>
 
 export const useTemplateControllerGetVideoTemplates = <TData = Awaited<ReturnType<typeof templateControllerGetVideoTemplates>>, TError = ErrorType<HttpExceptionSchema>>(
- params?: TemplateControllerGetVideoTemplatesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof templateControllerGetVideoTemplates>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
+	params?: TemplateControllerGetVideoTemplatesParams, options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof templateControllerGetVideoTemplates>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
 
-  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } => {
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } => {
 
-  const queryOptions = getTemplateControllerGetVideoTemplatesQueryOptions(params,options)
+	const queryOptions = getTemplateControllerGetVideoTemplatesQueryOptions(params, options)
 
-  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+	const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
-  query.queryKey = queryOptions.queryKey ;
+	query.queryKey = queryOptions.queryKey;
 
-  return query;
+	return query;
 }
 
 
 
 
 export const templateControllerGetSlideshowTemplates = (
-    params?: TemplateControllerGetSlideshowTemplatesParams,
- options?: SecondParameter<typeof nobstacleBackendApiInstance>,signal?: AbortSignal
+	params?: TemplateControllerGetSlideshowTemplatesParams,
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>, signal?: AbortSignal
 ) => {
-      
-      
-      return nobstacleBackendApiInstance<GetSlideshowTemplateRes[]>(
-      {url: `/api/v1/template/slideshows`, method: 'GET',
-        params, signal
-    },
-      options);
-    }
-  
+
+
+	return nobstacleBackendApiInstance<GetSlideshowTemplateRes[]>(
+		{
+			url: `/api/v1/template/slideshows`, method: 'GET',
+			params, signal
+		},
+		options);
+}
+
 
 export const getTemplateControllerGetSlideshowTemplatesQueryKey = (params?: TemplateControllerGetSlideshowTemplatesParams,) => {
-    
-    return [`/api/v1/template/slideshows`, ...(params ? [params]: [])] as const;
-    }
 
-    
-export const getTemplateControllerGetSlideshowTemplatesQueryOptions = <TData = Awaited<ReturnType<typeof templateControllerGetSlideshowTemplates>>, TError = ErrorType<HttpExceptionSchema>>(params?: TemplateControllerGetSlideshowTemplatesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof templateControllerGetSlideshowTemplates>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
+	return [`/api/v1/template/slideshows`, ...(params ? [params] : [])] as const;
+}
+
+
+export const getTemplateControllerGetSlideshowTemplatesQueryOptions = <TData = Awaited<ReturnType<typeof templateControllerGetSlideshowTemplates>>, TError = ErrorType<HttpExceptionSchema>>(params?: TemplateControllerGetSlideshowTemplatesParams, options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof templateControllerGetSlideshowTemplates>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+	const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getTemplateControllerGetSlideshowTemplatesQueryKey(params);
+	const queryKey = queryOptions?.queryKey ?? getTemplateControllerGetSlideshowTemplatesQueryKey(params);
 
-  
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof templateControllerGetSlideshowTemplates>>> = ({ signal }) => templateControllerGetSlideshowTemplates(params, requestOptions, signal);
 
-      
+	const queryFn: QueryFunction<Awaited<ReturnType<typeof templateControllerGetSlideshowTemplates>>> = ({ signal }) => templateControllerGetSlideshowTemplates(params, requestOptions, signal);
 
-      
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof templateControllerGetSlideshowTemplates>>, TError, TData> & { queryKey: QueryKey }
+
+
+
+	return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<Awaited<ReturnType<typeof templateControllerGetSlideshowTemplates>>, TError, TData> & { queryKey: QueryKey }
 }
 
 export type TemplateControllerGetSlideshowTemplatesQueryResult = NonNullable<Awaited<ReturnType<typeof templateControllerGetSlideshowTemplates>>>
 export type TemplateControllerGetSlideshowTemplatesQueryError = ErrorType<HttpExceptionSchema>
 
 export const useTemplateControllerGetSlideshowTemplates = <TData = Awaited<ReturnType<typeof templateControllerGetSlideshowTemplates>>, TError = ErrorType<HttpExceptionSchema>>(
- params?: TemplateControllerGetSlideshowTemplatesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof templateControllerGetSlideshowTemplates>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
+	params?: TemplateControllerGetSlideshowTemplatesParams, options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof templateControllerGetSlideshowTemplates>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
 
-  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } => {
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } => {
 
-  const queryOptions = getTemplateControllerGetSlideshowTemplatesQueryOptions(params,options)
+	const queryOptions = getTemplateControllerGetSlideshowTemplatesQueryOptions(params, options)
 
-  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+	const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
-  query.queryKey = queryOptions.queryKey ;
+	query.queryKey = queryOptions.queryKey;
 
-  return query;
+	return query;
 }
 
 
 
 
 export const templateControllerGetMapTemplates = (
-    
- options?: SecondParameter<typeof nobstacleBackendApiInstance>,signal?: AbortSignal
+
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>, signal?: AbortSignal
 ) => {
-      
-      
-      return nobstacleBackendApiInstance<GetMapTemplateRes[]>(
-      {url: `/api/v1/template/maps`, method: 'GET', signal
-    },
-      options);
-    }
-  
+
+
+	return nobstacleBackendApiInstance<GetMapTemplateRes[]>(
+		{
+			url: `/api/v1/template/maps`, method: 'GET', signal
+		},
+		options);
+}
+
 
 export const getTemplateControllerGetMapTemplatesQueryKey = () => {
-    
-    return [`/api/v1/template/maps`] as const;
-    }
 
-    
-export const getTemplateControllerGetMapTemplatesQueryOptions = <TData = Awaited<ReturnType<typeof templateControllerGetMapTemplates>>, TError = ErrorType<HttpExceptionSchema>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof templateControllerGetMapTemplates>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
+	return [`/api/v1/template/maps`] as const;
+}
+
+
+export const getTemplateControllerGetMapTemplatesQueryOptions = <TData = Awaited<ReturnType<typeof templateControllerGetMapTemplates>>, TError = ErrorType<HttpExceptionSchema>>(options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof templateControllerGetMapTemplates>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+	const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getTemplateControllerGetMapTemplatesQueryKey();
+	const queryKey = queryOptions?.queryKey ?? getTemplateControllerGetMapTemplatesQueryKey();
 
-  
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof templateControllerGetMapTemplates>>> = ({ signal }) => templateControllerGetMapTemplates(requestOptions, signal);
 
-      
+	const queryFn: QueryFunction<Awaited<ReturnType<typeof templateControllerGetMapTemplates>>> = ({ signal }) => templateControllerGetMapTemplates(requestOptions, signal);
 
-      
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof templateControllerGetMapTemplates>>, TError, TData> & { queryKey: QueryKey }
+
+
+
+	return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<Awaited<ReturnType<typeof templateControllerGetMapTemplates>>, TError, TData> & { queryKey: QueryKey }
 }
 
 export type TemplateControllerGetMapTemplatesQueryResult = NonNullable<Awaited<ReturnType<typeof templateControllerGetMapTemplates>>>
 export type TemplateControllerGetMapTemplatesQueryError = ErrorType<HttpExceptionSchema>
 
 export const useTemplateControllerGetMapTemplates = <TData = Awaited<ReturnType<typeof templateControllerGetMapTemplates>>, TError = ErrorType<HttpExceptionSchema>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof templateControllerGetMapTemplates>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
+	options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof templateControllerGetMapTemplates>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
 
-  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } => {
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } => {
 
-  const queryOptions = getTemplateControllerGetMapTemplatesQueryOptions(options)
+	const queryOptions = getTemplateControllerGetMapTemplatesQueryOptions(options)
 
-  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+	const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
-  query.queryKey = queryOptions.queryKey ;
+	query.queryKey = queryOptions.queryKey;
 
-  return query;
+	return query;
 }
 
 
 
 
 export const templateControllerGetWebsiteTemplates = (
-    params?: TemplateControllerGetWebsiteTemplatesParams,
- options?: SecondParameter<typeof nobstacleBackendApiInstance>,signal?: AbortSignal
+	params?: TemplateControllerGetWebsiteTemplatesParams,
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>, signal?: AbortSignal
 ) => {
-      
-      
-      return nobstacleBackendApiInstance<GetWebsiteTemplateRes[]>(
-      {url: `/api/v1/template/websites`, method: 'GET',
-        params, signal
-    },
-      options);
-    }
-  
+
+
+	return nobstacleBackendApiInstance<GetWebsiteTemplateRes[]>(
+		{
+			url: `/api/v1/template/websites`, method: 'GET',
+			params, signal
+		},
+		options);
+}
+
+export const templateControllerGetJotformTemplates = (
+	params?: TemplateControllerGetJotformTemplatesParams,
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>, signal?: AbortSignal
+) => {
+
+
+	return nobstacleBackendApiInstance<GetJotformTemplateRes[]>(
+		{
+			url: `/api/v1/template/jotforms`, method: 'GET',
+			params, signal
+		},
+		options);
+}
+
 
 export const getTemplateControllerGetWebsiteTemplatesQueryKey = (params?: TemplateControllerGetWebsiteTemplatesParams,) => {
-    
-    return [`/api/v1/template/websites`, ...(params ? [params]: [])] as const;
-    }
 
-    
-export const getTemplateControllerGetWebsiteTemplatesQueryOptions = <TData = Awaited<ReturnType<typeof templateControllerGetWebsiteTemplates>>, TError = ErrorType<HttpExceptionSchema>>(params?: TemplateControllerGetWebsiteTemplatesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof templateControllerGetWebsiteTemplates>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
+	return [`/api/v1/template/websites`, ...(params ? [params] : [])] as const;
+}
+
+export const getTemplateControllerGetJotformTemplatesQueryKey = (params?: TemplateControllerGetJotformTemplatesParams,) => {
+
+	return [`/api/v1/template/websites`, ...(params ? [params] : [])] as const;
+}
+
+
+export const getTemplateControllerGetWebsiteTemplatesQueryOptions = <TData = Awaited<ReturnType<typeof templateControllerGetWebsiteTemplates>>, TError = ErrorType<HttpExceptionSchema>>(params?: TemplateControllerGetWebsiteTemplatesParams, options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof templateControllerGetWebsiteTemplates>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+	const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getTemplateControllerGetWebsiteTemplatesQueryKey(params);
+	const queryKey = queryOptions?.queryKey ?? getTemplateControllerGetWebsiteTemplatesQueryKey(params);
 
-  
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof templateControllerGetWebsiteTemplates>>> = ({ signal }) => templateControllerGetWebsiteTemplates(params, requestOptions, signal);
 
-      
+	const queryFn: QueryFunction<Awaited<ReturnType<typeof templateControllerGetWebsiteTemplates>>> = ({ signal }) => templateControllerGetWebsiteTemplates(params, requestOptions, signal);
 
-      
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof templateControllerGetWebsiteTemplates>>, TError, TData> & { queryKey: QueryKey }
+
+
+
+	return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<Awaited<ReturnType<typeof templateControllerGetWebsiteTemplates>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export const getTemplateControllerGetJotformTemplatesQueryOptions = <TData = Awaited<ReturnType<typeof templateControllerGetJotformTemplates>>, TError = ErrorType<HttpExceptionSchema>>(params?: TemplateControllerGetJotformTemplatesParams, options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof templateControllerGetJotformTemplates>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+) => {
+
+	const { query: queryOptions, request: requestOptions } = options ?? {};
+
+	const queryKey = queryOptions?.queryKey ?? getTemplateControllerGetJotformTemplatesQueryKey(params);
+
+
+
+	const queryFn: QueryFunction<Awaited<ReturnType<typeof templateControllerGetJotformTemplates>>> = ({ signal }) => templateControllerGetJotformTemplates(params, requestOptions, signal);
+
+
+
+
+
+	return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<Awaited<ReturnType<typeof templateControllerGetJotformTemplates>>, TError, TData> & { queryKey: QueryKey }
 }
 
 export type TemplateControllerGetWebsiteTemplatesQueryResult = NonNullable<Awaited<ReturnType<typeof templateControllerGetWebsiteTemplates>>>
 export type TemplateControllerGetWebsiteTemplatesQueryError = ErrorType<HttpExceptionSchema>
 
+export type TemplateControllerGetJotformTemplatesQueryResult = NonNullable<Awaited<ReturnType<typeof templateControllerGetJotformTemplates>>>
+export type TemplateControllerGetJotformTemplatesQueryError = ErrorType<HttpExceptionSchema>
+
 export const useTemplateControllerGetWebsiteTemplates = <TData = Awaited<ReturnType<typeof templateControllerGetWebsiteTemplates>>, TError = ErrorType<HttpExceptionSchema>>(
- params?: TemplateControllerGetWebsiteTemplatesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof templateControllerGetWebsiteTemplates>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
+	params?: TemplateControllerGetWebsiteTemplatesParams, options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof templateControllerGetWebsiteTemplates>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
 
-  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } => {
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } => {
 
-  const queryOptions = getTemplateControllerGetWebsiteTemplatesQueryOptions(params,options)
+	const queryOptions = getTemplateControllerGetWebsiteTemplatesQueryOptions(params, options)
 
-  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+	const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
-  query.queryKey = queryOptions.queryKey ;
+	query.queryKey = queryOptions.queryKey;
 
-  return query;
+	return query;
+}
+
+export const useTemplateControllerGetJotformTemplates = <TData = Awaited<ReturnType<typeof templateControllerGetJotformTemplates>>, TError = ErrorType<HttpExceptionSchema>>(
+	params?: TemplateControllerGetJotformTemplatesParams, options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof templateControllerGetJotformTemplates>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } => {
+
+	const queryOptions = getTemplateControllerGetJotformTemplatesQueryOptions(params, options)
+
+	const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+	query.queryKey = queryOptions.queryKey;
+
+	return query;
 }
 
 
 
 
 export const shortcutControllerCreateShortcutMany = (
-    postShortcutManyReq: BodyType<PostShortcutManyReq>,
- options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
-      
-      
-      return nobstacleBackendApiInstance<GetShortcutRes[]>(
-      {url: `/api/v1/shortcut`, method: 'POST',
-      headers: {'Content-Type': 'application/json', },
-      data: postShortcutManyReq
-    },
-      options);
-    }
-  
+	postShortcutManyReq: BodyType<PostShortcutManyReq>,
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
+
+
+	return nobstacleBackendApiInstance<GetShortcutRes[]>(
+		{
+			url: `/api/v1/shortcut`, method: 'POST',
+			headers: { 'Content-Type': 'application/json', },
+			data: postShortcutManyReq
+		},
+		options);
+}
+
 
 
 export const getShortcutControllerCreateShortcutManyMutationOptions = <TError = ErrorType<HttpExceptionSchema>,
-    
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof shortcutControllerCreateShortcutMany>>, TError,{data: BodyType<PostShortcutManyReq>}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof shortcutControllerCreateShortcutMany>>, TError,{data: BodyType<PostShortcutManyReq>}, TContext> => {
- const {mutation: mutationOptions, request: requestOptions} = options ?? {};
 
-      
+	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof shortcutControllerCreateShortcutMany>>, TError, { data: BodyType<PostShortcutManyReq> }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+	): UseMutationOptions<Awaited<ReturnType<typeof shortcutControllerCreateShortcutMany>>, TError, { data: BodyType<PostShortcutManyReq> }, TContext> => {
+	const { mutation: mutationOptions, request: requestOptions } = options ?? {};
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof shortcutControllerCreateShortcutMany>>, {data: BodyType<PostShortcutManyReq>}> = (props) => {
-          const {data} = props ?? {};
-
-          return  shortcutControllerCreateShortcutMany(data,requestOptions)
-        }
-
-        
 
 
-   return  { mutationFn, ...mutationOptions }}
+	const mutationFn: MutationFunction<Awaited<ReturnType<typeof shortcutControllerCreateShortcutMany>>, { data: BodyType<PostShortcutManyReq> }> = (props) => {
+		const { data } = props ?? {};
 
-    export type ShortcutControllerCreateShortcutManyMutationResult = NonNullable<Awaited<ReturnType<typeof shortcutControllerCreateShortcutMany>>>
-    export type ShortcutControllerCreateShortcutManyMutationBody = BodyType<PostShortcutManyReq>
-    export type ShortcutControllerCreateShortcutManyMutationError = ErrorType<HttpExceptionSchema>
+		return shortcutControllerCreateShortcutMany(data, requestOptions)
+	}
 
-    export const useShortcutControllerCreateShortcutMany = <TError = ErrorType<HttpExceptionSchema>,
-    
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof shortcutControllerCreateShortcutMany>>, TError,{data: BodyType<PostShortcutManyReq>}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
-) => {
 
-      const mutationOptions = getShortcutControllerCreateShortcutManyMutationOptions(options);
 
-      return useMutation(mutationOptions);
-    }
-    
+
+	return { mutationFn, ...mutationOptions }
+}
+
+export type ShortcutControllerCreateShortcutManyMutationResult = NonNullable<Awaited<ReturnType<typeof shortcutControllerCreateShortcutMany>>>
+export type ShortcutControllerCreateShortcutManyMutationBody = BodyType<PostShortcutManyReq>
+export type ShortcutControllerCreateShortcutManyMutationError = ErrorType<HttpExceptionSchema>
+
+export const useShortcutControllerCreateShortcutMany = <TError = ErrorType<HttpExceptionSchema>,
+
+	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof shortcutControllerCreateShortcutMany>>, TError, { data: BodyType<PostShortcutManyReq> }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+	) => {
+
+	const mutationOptions = getShortcutControllerCreateShortcutManyMutationOptions(options);
+
+	return useMutation(mutationOptions);
+}
+
 export const shortcutControllerGetShortcutOne = (
-    params?: ShortcutControllerGetShortcutOneParams,
- options?: SecondParameter<typeof nobstacleBackendApiInstance>,signal?: AbortSignal
+	params?: ShortcutControllerGetShortcutOneParams,
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>, signal?: AbortSignal
 ) => {
-      
-      
-      return nobstacleBackendApiInstance<GetShortcutRes>(
-      {url: `/api/v1/shortcut`, method: 'GET',
-        params, signal
-    },
-      options);
-    }
-  
+
+
+	return nobstacleBackendApiInstance<GetShortcutRes>(
+		{
+			url: `/api/v1/shortcut`, method: 'GET',
+			params, signal
+		},
+		options);
+}
+
 
 export const getShortcutControllerGetShortcutOneQueryKey = (params?: ShortcutControllerGetShortcutOneParams,) => {
-    
-    return [`/api/v1/shortcut`, ...(params ? [params]: [])] as const;
-    }
 
-    
-export const getShortcutControllerGetShortcutOneQueryOptions = <TData = Awaited<ReturnType<typeof shortcutControllerGetShortcutOne>>, TError = ErrorType<HttpExceptionSchema>>(params?: ShortcutControllerGetShortcutOneParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof shortcutControllerGetShortcutOne>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
+	return [`/api/v1/shortcut`, ...(params ? [params] : [])] as const;
+}
+
+
+export const getShortcutControllerGetShortcutOneQueryOptions = <TData = Awaited<ReturnType<typeof shortcutControllerGetShortcutOne>>, TError = ErrorType<HttpExceptionSchema>>(params?: ShortcutControllerGetShortcutOneParams, options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof shortcutControllerGetShortcutOne>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+	const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getShortcutControllerGetShortcutOneQueryKey(params);
+	const queryKey = queryOptions?.queryKey ?? getShortcutControllerGetShortcutOneQueryKey(params);
 
-  
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof shortcutControllerGetShortcutOne>>> = ({ signal }) => shortcutControllerGetShortcutOne(params, requestOptions, signal);
 
-      
+	const queryFn: QueryFunction<Awaited<ReturnType<typeof shortcutControllerGetShortcutOne>>> = ({ signal }) => shortcutControllerGetShortcutOne(params, requestOptions, signal);
 
-      
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof shortcutControllerGetShortcutOne>>, TError, TData> & { queryKey: QueryKey }
+
+
+
+	return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<Awaited<ReturnType<typeof shortcutControllerGetShortcutOne>>, TError, TData> & { queryKey: QueryKey }
 }
 
 export type ShortcutControllerGetShortcutOneQueryResult = NonNullable<Awaited<ReturnType<typeof shortcutControllerGetShortcutOne>>>
 export type ShortcutControllerGetShortcutOneQueryError = ErrorType<HttpExceptionSchema>
 
 export const useShortcutControllerGetShortcutOne = <TData = Awaited<ReturnType<typeof shortcutControllerGetShortcutOne>>, TError = ErrorType<HttpExceptionSchema>>(
- params?: ShortcutControllerGetShortcutOneParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof shortcutControllerGetShortcutOne>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
+	params?: ShortcutControllerGetShortcutOneParams, options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof shortcutControllerGetShortcutOne>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
 
-  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } => {
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } => {
 
-  const queryOptions = getShortcutControllerGetShortcutOneQueryOptions(params,options)
+	const queryOptions = getShortcutControllerGetShortcutOneQueryOptions(params, options)
 
-  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+	const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
-  query.queryKey = queryOptions.queryKey ;
+	query.queryKey = queryOptions.queryKey;
 
-  return query;
+	return query;
 }
 
 
 
 
 export const shortcutControllerGetShortcutMany = (
-    params?: ShortcutControllerGetShortcutManyParams,
- options?: SecondParameter<typeof nobstacleBackendApiInstance>,signal?: AbortSignal
+	params?: ShortcutControllerGetShortcutManyParams,
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>, signal?: AbortSignal
 ) => {
-      
-      
-      return nobstacleBackendApiInstance<GetShortcutRes[]>(
-      {url: `/api/v1/shortcut/many`, method: 'GET',
-        params, signal
-    },
-      options);
-    }
-  
+
+
+	return nobstacleBackendApiInstance<GetShortcutRes[]>(
+		{
+			url: `/api/v1/shortcut/many`, method: 'GET',
+			params, signal
+		},
+		options);
+}
+
 
 export const getShortcutControllerGetShortcutManyQueryKey = (params?: ShortcutControllerGetShortcutManyParams,) => {
-    
-    return [`/api/v1/shortcut/many`, ...(params ? [params]: [])] as const;
-    }
 
-    
-export const getShortcutControllerGetShortcutManyQueryOptions = <TData = Awaited<ReturnType<typeof shortcutControllerGetShortcutMany>>, TError = ErrorType<HttpExceptionSchema>>(params?: ShortcutControllerGetShortcutManyParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof shortcutControllerGetShortcutMany>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
+	return [`/api/v1/shortcut/many`, ...(params ? [params] : [])] as const;
+}
+
+
+export const getShortcutControllerGetShortcutManyQueryOptions = <TData = Awaited<ReturnType<typeof shortcutControllerGetShortcutMany>>, TError = ErrorType<HttpExceptionSchema>>(params?: ShortcutControllerGetShortcutManyParams, options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof shortcutControllerGetShortcutMany>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+	const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getShortcutControllerGetShortcutManyQueryKey(params);
+	const queryKey = queryOptions?.queryKey ?? getShortcutControllerGetShortcutManyQueryKey(params);
 
-  
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof shortcutControllerGetShortcutMany>>> = ({ signal }) => shortcutControllerGetShortcutMany(params, requestOptions, signal);
 
-      
+	const queryFn: QueryFunction<Awaited<ReturnType<typeof shortcutControllerGetShortcutMany>>> = ({ signal }) => shortcutControllerGetShortcutMany(params, requestOptions, signal);
 
-      
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof shortcutControllerGetShortcutMany>>, TError, TData> & { queryKey: QueryKey }
+
+
+
+	return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<Awaited<ReturnType<typeof shortcutControllerGetShortcutMany>>, TError, TData> & { queryKey: QueryKey }
 }
 
 export type ShortcutControllerGetShortcutManyQueryResult = NonNullable<Awaited<ReturnType<typeof shortcutControllerGetShortcutMany>>>
 export type ShortcutControllerGetShortcutManyQueryError = ErrorType<HttpExceptionSchema>
 
 export const useShortcutControllerGetShortcutMany = <TData = Awaited<ReturnType<typeof shortcutControllerGetShortcutMany>>, TError = ErrorType<HttpExceptionSchema>>(
- params?: ShortcutControllerGetShortcutManyParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof shortcutControllerGetShortcutMany>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
+	params?: ShortcutControllerGetShortcutManyParams, options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof shortcutControllerGetShortcutMany>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
 
-  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } => {
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } => {
 
-  const queryOptions = getShortcutControllerGetShortcutManyQueryOptions(params,options)
+	const queryOptions = getShortcutControllerGetShortcutManyQueryOptions(params, options)
 
-  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+	const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
-  query.queryKey = queryOptions.queryKey ;
+	query.queryKey = queryOptions.queryKey;
 
-  return query;
+	return query;
 }
 
 
 
 
 export const shortcutControllerPatchShortcut = (
-    id: number,
-    postShortcutReq: BodyType<PostShortcutReq>,
- options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
-      
-      
-      return nobstacleBackendApiInstance<GetShortcutRes>(
-      {url: `/api/v1/shortcut/${id}`, method: 'PATCH',
-      headers: {'Content-Type': 'application/json', },
-      data: postShortcutReq
-    },
-      options);
-    }
-  
+	id: number,
+	postShortcutReq: BodyType<PostShortcutReq>,
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
+
+
+	return nobstacleBackendApiInstance<GetShortcutRes>(
+		{
+			url: `/api/v1/shortcut/${id}`, method: 'PATCH',
+			headers: { 'Content-Type': 'application/json', },
+			data: postShortcutReq
+		},
+		options);
+}
+
 
 
 export const getShortcutControllerPatchShortcutMutationOptions = <TError = ErrorType<HttpExceptionSchema>,
-    
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof shortcutControllerPatchShortcut>>, TError,{id: number;data: BodyType<PostShortcutReq>}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof shortcutControllerPatchShortcut>>, TError,{id: number;data: BodyType<PostShortcutReq>}, TContext> => {
- const {mutation: mutationOptions, request: requestOptions} = options ?? {};
 
-      
+	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof shortcutControllerPatchShortcut>>, TError, { id: number; data: BodyType<PostShortcutReq> }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+	): UseMutationOptions<Awaited<ReturnType<typeof shortcutControllerPatchShortcut>>, TError, { id: number; data: BodyType<PostShortcutReq> }, TContext> => {
+	const { mutation: mutationOptions, request: requestOptions } = options ?? {};
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof shortcutControllerPatchShortcut>>, {id: number;data: BodyType<PostShortcutReq>}> = (props) => {
-          const {id,data} = props ?? {};
-
-          return  shortcutControllerPatchShortcut(id,data,requestOptions)
-        }
-
-        
 
 
-   return  { mutationFn, ...mutationOptions }}
+	const mutationFn: MutationFunction<Awaited<ReturnType<typeof shortcutControllerPatchShortcut>>, { id: number; data: BodyType<PostShortcutReq> }> = (props) => {
+		const { id, data } = props ?? {};
 
-    export type ShortcutControllerPatchShortcutMutationResult = NonNullable<Awaited<ReturnType<typeof shortcutControllerPatchShortcut>>>
-    export type ShortcutControllerPatchShortcutMutationBody = BodyType<PostShortcutReq>
-    export type ShortcutControllerPatchShortcutMutationError = ErrorType<HttpExceptionSchema>
+		return shortcutControllerPatchShortcut(id, data, requestOptions)
+	}
 
-    export const useShortcutControllerPatchShortcut = <TError = ErrorType<HttpExceptionSchema>,
-    
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof shortcutControllerPatchShortcut>>, TError,{id: number;data: BodyType<PostShortcutReq>}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
-) => {
 
-      const mutationOptions = getShortcutControllerPatchShortcutMutationOptions(options);
 
-      return useMutation(mutationOptions);
-    }
-    
+
+	return { mutationFn, ...mutationOptions }
+}
+
+export type ShortcutControllerPatchShortcutMutationResult = NonNullable<Awaited<ReturnType<typeof shortcutControllerPatchShortcut>>>
+export type ShortcutControllerPatchShortcutMutationBody = BodyType<PostShortcutReq>
+export type ShortcutControllerPatchShortcutMutationError = ErrorType<HttpExceptionSchema>
+
+export const useShortcutControllerPatchShortcut = <TError = ErrorType<HttpExceptionSchema>,
+
+	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof shortcutControllerPatchShortcut>>, TError, { id: number; data: BodyType<PostShortcutReq> }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+	) => {
+
+	const mutationOptions = getShortcutControllerPatchShortcutMutationOptions(options);
+
+	return useMutation(mutationOptions);
+}
+
 export const shortcutControllerDeleteShortcutById = (
-    id: number,
- options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
-      
-      
-      return nobstacleBackendApiInstance<GetShortcutRes>(
-      {url: `/api/v1/shortcut/${id}`, method: 'DELETE'
-    },
-      options);
-    }
-  
+	id: number,
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
+
+
+	return nobstacleBackendApiInstance<GetShortcutRes>(
+		{
+			url: `/api/v1/shortcut/${id}`, method: 'DELETE'
+		},
+		options);
+}
+
 
 
 export const getShortcutControllerDeleteShortcutByIdMutationOptions = <TError = ErrorType<HttpExceptionSchema>,
-    
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof shortcutControllerDeleteShortcutById>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof shortcutControllerDeleteShortcutById>>, TError,{id: number}, TContext> => {
- const {mutation: mutationOptions, request: requestOptions} = options ?? {};
 
-      
+	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof shortcutControllerDeleteShortcutById>>, TError, { id: number }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+	): UseMutationOptions<Awaited<ReturnType<typeof shortcutControllerDeleteShortcutById>>, TError, { id: number }, TContext> => {
+	const { mutation: mutationOptions, request: requestOptions } = options ?? {};
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof shortcutControllerDeleteShortcutById>>, {id: number}> = (props) => {
-          const {id} = props ?? {};
-
-          return  shortcutControllerDeleteShortcutById(id,requestOptions)
-        }
-
-        
 
 
-   return  { mutationFn, ...mutationOptions }}
+	const mutationFn: MutationFunction<Awaited<ReturnType<typeof shortcutControllerDeleteShortcutById>>, { id: number }> = (props) => {
+		const { id } = props ?? {};
 
-    export type ShortcutControllerDeleteShortcutByIdMutationResult = NonNullable<Awaited<ReturnType<typeof shortcutControllerDeleteShortcutById>>>
-    
-    export type ShortcutControllerDeleteShortcutByIdMutationError = ErrorType<HttpExceptionSchema>
+		return shortcutControllerDeleteShortcutById(id, requestOptions)
+	}
 
-    export const useShortcutControllerDeleteShortcutById = <TError = ErrorType<HttpExceptionSchema>,
-    
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof shortcutControllerDeleteShortcutById>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
-) => {
 
-      const mutationOptions = getShortcutControllerDeleteShortcutByIdMutationOptions(options);
 
-      return useMutation(mutationOptions);
-    }
-    
+
+	return { mutationFn, ...mutationOptions }
+}
+
+export type ShortcutControllerDeleteShortcutByIdMutationResult = NonNullable<Awaited<ReturnType<typeof shortcutControllerDeleteShortcutById>>>
+
+export type ShortcutControllerDeleteShortcutByIdMutationError = ErrorType<HttpExceptionSchema>
+
+export const useShortcutControllerDeleteShortcutById = <TError = ErrorType<HttpExceptionSchema>,
+
+	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof shortcutControllerDeleteShortcutById>>, TError, { id: number }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+	) => {
+
+	const mutationOptions = getShortcutControllerDeleteShortcutByIdMutationOptions(options);
+
+	return useMutation(mutationOptions);
+}
+
 export const shortcutControllerDeleteByType = (
-    type: 'Template' | 'Language' | 'DefaultSlideshow',
- options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
-      
-      
-      return nobstacleBackendApiInstance<GetShortcutRes>(
-      {url: `/api/v1/shortcut/byType/${type}`, method: 'DELETE'
-    },
-      options);
-    }
-  
+	type: 'Template' | 'Language' | 'DefaultSlideshow',
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
+
+
+	return nobstacleBackendApiInstance<GetShortcutRes>(
+		{
+			url: `/api/v1/shortcut/byType/${type}`, method: 'DELETE'
+		},
+		options);
+}
+
 
 
 export const getShortcutControllerDeleteByTypeMutationOptions = <TError = ErrorType<HttpExceptionSchema>,
-    
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof shortcutControllerDeleteByType>>, TError,{type: 'Template' | 'Language' | 'DefaultSlideshow'}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof shortcutControllerDeleteByType>>, TError,{type: 'Template' | 'Language' | 'DefaultSlideshow'}, TContext> => {
- const {mutation: mutationOptions, request: requestOptions} = options ?? {};
 
-      
+	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof shortcutControllerDeleteByType>>, TError, { type: 'Template' | 'Language' | 'DefaultSlideshow' }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+	): UseMutationOptions<Awaited<ReturnType<typeof shortcutControllerDeleteByType>>, TError, { type: 'Template' | 'Language' | 'DefaultSlideshow' }, TContext> => {
+	const { mutation: mutationOptions, request: requestOptions } = options ?? {};
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof shortcutControllerDeleteByType>>, {type: 'Template' | 'Language' | 'DefaultSlideshow'}> = (props) => {
-          const {type} = props ?? {};
-
-          return  shortcutControllerDeleteByType(type,requestOptions)
-        }
-
-        
 
 
-   return  { mutationFn, ...mutationOptions }}
+	const mutationFn: MutationFunction<Awaited<ReturnType<typeof shortcutControllerDeleteByType>>, { type: 'Template' | 'Language' | 'DefaultSlideshow' }> = (props) => {
+		const { type } = props ?? {};
 
-    export type ShortcutControllerDeleteByTypeMutationResult = NonNullable<Awaited<ReturnType<typeof shortcutControllerDeleteByType>>>
-    
-    export type ShortcutControllerDeleteByTypeMutationError = ErrorType<HttpExceptionSchema>
+		return shortcutControllerDeleteByType(type, requestOptions)
+	}
 
-    export const useShortcutControllerDeleteByType = <TError = ErrorType<HttpExceptionSchema>,
-    
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof shortcutControllerDeleteByType>>, TError,{type: 'Template' | 'Language' | 'DefaultSlideshow'}, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
-) => {
 
-      const mutationOptions = getShortcutControllerDeleteByTypeMutationOptions(options);
 
-      return useMutation(mutationOptions);
-    }
-    
+
+	return { mutationFn, ...mutationOptions }
+}
+
+export type ShortcutControllerDeleteByTypeMutationResult = NonNullable<Awaited<ReturnType<typeof shortcutControllerDeleteByType>>>
+
+export type ShortcutControllerDeleteByTypeMutationError = ErrorType<HttpExceptionSchema>
+
+export const useShortcutControllerDeleteByType = <TError = ErrorType<HttpExceptionSchema>,
+
+	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof shortcutControllerDeleteByType>>, TError, { type: 'Template' | 'Language' | 'DefaultSlideshow' }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+	) => {
+
+	const mutationOptions = getShortcutControllerDeleteByTypeMutationOptions(options);
+
+	return useMutation(mutationOptions);
+}
+
 export const appControllerHealthz = (
-    
- options?: SecondParameter<typeof nobstacleBackendApiInstance>,signal?: AbortSignal
+
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>, signal?: AbortSignal
 ) => {
-      
-      
-      return nobstacleBackendApiInstance<void>(
-      {url: `/api`, method: 'GET', signal
-    },
-      options);
-    }
-  
+
+
+	return nobstacleBackendApiInstance<void>(
+		{
+			url: `/api`, method: 'GET', signal
+		},
+		options);
+}
+
 
 export const getAppControllerHealthzQueryKey = () => {
-    
-    return [`/api`] as const;
-    }
 
-    
-export const getAppControllerHealthzQueryOptions = <TData = Awaited<ReturnType<typeof appControllerHealthz>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof appControllerHealthz>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
+	return [`/api`] as const;
+}
+
+
+export const getAppControllerHealthzQueryOptions = <TData = Awaited<ReturnType<typeof appControllerHealthz>>, TError = ErrorType<unknown>>(options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof appControllerHealthz>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
 ) => {
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+	const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getAppControllerHealthzQueryKey();
+	const queryKey = queryOptions?.queryKey ?? getAppControllerHealthzQueryKey();
 
-  
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof appControllerHealthz>>> = ({ signal }) => appControllerHealthz(requestOptions, signal);
 
-      
+	const queryFn: QueryFunction<Awaited<ReturnType<typeof appControllerHealthz>>> = ({ signal }) => appControllerHealthz(requestOptions, signal);
 
-      
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof appControllerHealthz>>, TError, TData> & { queryKey: QueryKey }
+
+
+
+	return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<Awaited<ReturnType<typeof appControllerHealthz>>, TError, TData> & { queryKey: QueryKey }
 }
 
 export type AppControllerHealthzQueryResult = NonNullable<Awaited<ReturnType<typeof appControllerHealthz>>>
 export type AppControllerHealthzQueryError = ErrorType<unknown>
 
 export const useAppControllerHealthz = <TData = Awaited<ReturnType<typeof appControllerHealthz>>, TError = ErrorType<unknown>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof appControllerHealthz>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance>}
+	options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof appControllerHealthz>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
 
-  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } => {
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } => {
 
-  const queryOptions = getAppControllerHealthzQueryOptions(options)
+	const queryOptions = getAppControllerHealthzQueryOptions(options)
 
-  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+	const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
-  query.queryKey = queryOptions.queryKey ;
+	query.queryKey = queryOptions.queryKey;
 
-  return query;
+	return query;
 }
 
 
