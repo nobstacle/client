@@ -1,5 +1,5 @@
 import { yupResolver } from "@hookform/resolvers/yup";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { SubmitHandler, useForm } from "react-hook-form";
 import * as yup from "yup";
 import { Button } from "../../Button";
@@ -247,6 +247,15 @@ const customStyles = {
 		overflowY: "auto",
 		borderRadius: "10px",
 		padding: "20px",
+		height: '100%',
+		maxHeight: '60vh'
+	},
+	overlay: {
+		backgroundColor: 'rgba(0, 0, 0, 0.75)',
+		zIndex: 1000,
+		display: 'flex',
+		alignItems: 'center',
+		justifyContent: 'center'
 	},
 };
 
@@ -258,6 +267,7 @@ export const SendJotFormTemplateForm: React.FC = () => {
 	const [currentPage, setCurrentPage] = useState(1);
 	const [totalPages, setTotalPages] = useState(0);
 	const itemsPerPage = 5;
+	const formRef = useRef(null);
 
 	const handlePageChange = (pageNumber: number) => {
 		setCurrentPage(pageNumber);
@@ -315,16 +325,18 @@ export const SendJotFormTemplateForm: React.FC = () => {
 	}
 
 	useEffect(() => {
-
 		if (selectedForm) {
 			getTableResponse(selectedForm, currentPage, itemsPerPage);
 		}
-
 	}, [currentPage])
 
 	useEffect(() => {
 		if (assignedForms.length === 0) {
 			setSelectedForm(assignedForms[0]?.form_id || null)
+		} else {
+			if (selectedForm === null) {
+				setSelectedForm(assignedForms[0].form_id);
+			}
 		}
 	}, [assignedForms])
 
@@ -457,52 +469,77 @@ export const SendJotFormTemplateForm: React.FC = () => {
 		return `${BASE_URL}?${params.toString()}`;
 	};
 
-	const getTableResponse = async (form_id: string | null, page: number, limit: number = 5, search: string = "") => {
+	const getTableResponse = async (form_id: string | null, page: number, limit: number = 5, search: any = "") => {
 		let API_URL = `http://localhost:3001/api/jotform/responses/${form_id}?page=${page}&limit=${limit}`;
+		console.info("search", search);
+		if (search && (typeof search === 'string' ? search !== "" : search.length > 0)) {
+			let searchArray = search;
 
-		if (search !== "") {
-		  // Assuming search is an array of objects like [{ label: "Full Name", value: "Vaibhav" }]
-		  const encodedSearch = encodeURIComponent(JSON.stringify(search)); // JSON.stringify to make sure the array is properly serialized
-		  API_URL += `&search=${encodedSearch}`;
+			if (typeof search === 'string') {
+				searchArray = [{ label: "", value: search }];
+			}
+
+			else if (!Array.isArray(search) && typeof search === 'object') {
+				searchArray = [search];
+			}
+
+			const encodedSearch = encodeURIComponent(JSON.stringify(searchArray));
+			API_URL += `&search=${encodedSearch}`;
 		}
-
-
 		try {
 			const response = await axios.get(API_URL);
+
 			if (response.status === 200) {
 				const data = response.data.items ? response.data.items : response.data;
-
-				console.info({ response })
 
 				setTotalPages(response.data.totalPages);
 
 				if (data && data.length > 0) {
 					const tableData = data.map((item: any) => {
-						let prettyData;
+						let prettyData: Record<string, any> = {};
+
 						if (item.submissionId === null) {
+							// Handle non-JotForm data
 							const parsedData = JSON.parse(item.data);
 							prettyData = Object.entries(parsedData).reduce((acc: any, [key, value]: [string, any]) => {
 								acc[key.trim()] = String(value).trim();
 								return acc;
 							}, {});
 						} else {
+							// Handle JotForm data with "pretty" format
 							const parsedData = JSON.parse(item.data);
-							prettyData = parsedData.pretty?.split(', ').reduce((acc: any, curr: any) => {
-								const [key, value] = curr?.split(':');
-								acc[key.trim()] = value.trim();
-								return acc;
-							}, {});
+
+							if (parsedData.pretty) {
+								const pairs = parsedData.pretty.split(', ');
+								pairs.forEach((pair: string) => {
+									const separatorIndex = pair.indexOf(':');
+									if (separatorIndex > 0) {
+										const key = pair.substring(0, separatorIndex).trim();
+										const value = pair.substring(separatorIndex + 1).trim();
+										prettyData[key] = value;
+									}
+								});
+							} else {
+								// If no pretty format, use the parsed data directly
+								prettyData = { ...parsedData };
+							}
 						}
 
+						// Add form metadata
 						prettyData.formData = {
 							submission_id: item?.submissionId,
 							form_id: item?.formId,
 							url: item?.normalUrl,
 						};
+
 						return prettyData;
 					});
 
-					const uniqueKeys: string[] = Array.from(new Set(tableData.flatMap((obj: any) => Object.keys(obj))));
+					// Extract all unique keys across all objects
+					const uniqueKeys: string[] = Array.from(
+						new Set(tableData.flatMap((obj: any) => Object.keys(obj)))
+					);
+
 					setTableResponse({ data: tableData, uniqueKeys });
 				} else {
 					setTableResponse({ data: [], uniqueKeys: [] });
@@ -513,7 +550,7 @@ export const SendJotFormTemplateForm: React.FC = () => {
 			}
 		} catch (error: any) {
 			setTableResponse({ data: [], uniqueKeys: [] });
-			console.error('Error fetching assigned form data:', error);
+			console.error('Error fetching form data:', error);
 		}
 	};
 
@@ -619,23 +656,20 @@ export const SendJotFormTemplateForm: React.FC = () => {
 		const formData = new FormData(e.currentTarget);
 		const searchValues = Object.fromEntries(formData.entries());
 
-		console.info("Input values on search:", searchValues);
-
 		const searchParams = Object.entries(searchValues)
 			.filter(([_, value]) => value !== "")
 			.map(([label, value]) => `{label:${label},value:${value}}`)
 			.join(',');
-		let finalSearch ="";
+		let finalSearch = "";
 
-		if(searchParams!==""){
-             finalSearch = `${searchParams}`
+		if (searchParams !== "") {
+			finalSearch = `${searchParams}`
 		}
 
-		setCurrentPage(1)
-		getTableResponse(selectedForm,1,5,finalSearch)
+		setCurrentPage(1);
+		console.info("SUBMIT")
+		getTableResponse(selectedForm, 1, 5, finalSearch)
 	};
-
-
 
 	const handleSampleCSVDownload = () => {
 		if (
@@ -671,11 +705,15 @@ export const SendJotFormTemplateForm: React.FC = () => {
 		}
 	};
 
+	const resetFilters = () => {
+		getTableResponse(selectedForm, 1, 5, "");
+		formRef.current.reset();
+	}
 
 	return (
 		<div className="bg-gray-50 p-6 rounded-lg shadow-md w-full mx-auto">
-			<div className="flex justify-between items-start mb-4">
-				<div className="flex flex-col space-y-2" style={{ width: "35%" }}>
+			<div className="flex justify-between items-start mb-4" style={{ paddingLeft: '0.6rem' }}>
+				<div className="flex flex-col space-y-2" style={{ width: '100%', maxWidth: '20vw' }}>
 					<select
 						className="border p-3 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
 						onChange={(e) => hanldeFormChange(e)}
@@ -727,7 +765,7 @@ export const SendJotFormTemplateForm: React.FC = () => {
 				</div>)}
 			</div>
 
-			<form onSubmit={onSearchSubmit}>
+			<form ref={formRef} onSubmit={onSearchSubmit}>
 				<div className="flex w-full items-end justify-between gap-3">
 					<div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-4 gap-4">
 						{selectedFormFields?.content &&
@@ -739,7 +777,7 @@ export const SendJotFormTemplateForm: React.FC = () => {
 											<div key={item.qid} className="p-2">
 												<input
 													name={item?.text}
-
+													placeholder={item.text}
 													type={item?.type || "text"}
 													className="w-full rounded-md border-2 p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
 												/>
@@ -754,14 +792,27 @@ export const SendJotFormTemplateForm: React.FC = () => {
 						Object?.values(selectedFormFields?.content).filter((item) =>
 							item?.name?.includes("search")
 						)?.length > 0 && (
-							<div className="w-100 flex justify-end items-center mb-3">
-								<Button
-									className="border-1 flex justify-center rounded-md border-black p-2 px-6 text-center text-white items-center bg-blue-600 hover:bg-blue-700"
-									type="submit"
-								>
-									<FaSearch /> <span className="ml-2">Search</span>
-								</Button>
-							</div>
+							<>
+								<div className="buttonsWrapperSection">
+									<div className="left">
+										<Button
+											className="border-1 flex justify-center rounded-md border-black p-2 px-6 text-center text-white items-center bg-blue-600 hover:bg-blue-700"
+											type="submit"
+										>
+											<FaSearch /> <span className="ml-2">Search</span>
+										</Button>
+									</div>
+									<div className="right">
+										<Button
+											type="button"
+											className="border-1 flex justify-center rounded-md border-black p-2 px-6 text-center text-white items-center bg-blue-600 hover:bg-blue-700"
+											onClick={() => resetFilters()}
+										>
+											Reset
+										</Button>
+									</div>
+								</div>
+							</>
 						)}
 				</div>
 			</form>
@@ -824,11 +875,13 @@ export const SendJotFormTemplateForm: React.FC = () => {
 				onRequestClose={closeModal}
 				style={customStyles}
 				contentLabel="Manual Upload Modal"
+				ariaHideApp={false}
 			>
 				<div className="fixed top-0 left-0 w-full h-full bg-opacity-50 z-40">
-					<div className="relative">
+					<div className="relative" style={{ padding: '2rem' }}>
 						<h2 className="text-lg font-bold mb-4">Manual Upload</h2>
-						<div className="space-y-4">
+						<hr />
+						<div className="space-y-4 mt-4">
 							{selectedFormFields?.content &&
 								Object.values(selectedFormFields.content)
 									.filter(
