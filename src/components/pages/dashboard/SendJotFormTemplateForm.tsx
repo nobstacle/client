@@ -10,7 +10,7 @@ import { useSession } from "next-auth/react";
 import axios from 'axios';
 import { FormEvent } from 'react';
 import { io, Socket } from "socket.io-client";
-import Modal from "react-modal";
+import Modal, { Styles } from 'react-modal';
 import { FaFileDownload, FaFileUpload, FaCopy, FaFilePdf, FaSearch } from "react-icons/fa";
 import { LuListPlus } from "react-icons/lu";
 import { toast, Bounce } from 'react-toastify';
@@ -36,8 +36,12 @@ interface TableComponentProps {
 	uniqueKeys: string[];
 	currentPage: number;
 	itemsPerPage: number;
-	onPageChange: (page: number) => void;
+	onPageChange: (pageNumber: number) => void;
+	totalPages: number
+	setCurrentPage: React.Dispatch<React.SetStateAction<number>>;
+	selectedFormFields: any[];
 }
+
 
 const TableComponent: React.FC<TableComponentProps> = ({ tableData, uniqueKeys, currentPage, totalPages, setCurrentPage, selectedFormFields }) => {
 	const [downloadingPDF, setDownloadingPDF] = useState<number | null>(null);
@@ -106,7 +110,7 @@ const TableComponent: React.FC<TableComponentProps> = ({ tableData, uniqueKeys, 
 		}, 2500);
 	};
 
-	const handleClick = (page) => {
+	const handleClick = (page: any) => {
 		if (page >= 1 && page <= totalPages) {
 			setCurrentPage(page);
 		}
@@ -180,7 +184,7 @@ const TableComponent: React.FC<TableComponentProps> = ({ tableData, uniqueKeys, 
 											className="flex items-center justify-center text-white rounded-md hover:bg-red-600 transition-all w-24 mr-3"
 											type="submit"
 										>
-											<span className="ml-2"><FaCopy size={20}/></span>
+											<span className="ml-2"><FaCopy size={20} /></span>
 										</Button>
 
 										{item?.formData?.submission_id ? (
@@ -229,7 +233,7 @@ const TableComponent: React.FC<TableComponentProps> = ({ tableData, uniqueKeys, 
 										) : (
 											<div className="relative group">
 												<Button
-												    title="Send Form"
+													title="Send Form"
 													className="border-1 flex justify-center rounded-md border-black px-6 text-center text-white mt-5"
 													type="submit"
 												>
@@ -263,20 +267,20 @@ const TableComponent: React.FC<TableComponentProps> = ({ tableData, uniqueKeys, 
 	);
 };
 
-const customStyles = {
+const customStyles: Styles = {
 	content: {
-		top: "50%",
-		left: "50%",
-		right: "auto",
-		bottom: "auto",
-		marginRight: "-50%",
-		transform: "translate(-50%, -50%)",
-		width: "35%",
+		top: "20%",
+		left: "20%",
+		right: "20%",
+		bottom: "20%",
+		marginRight: "auto",
+		transform: "translate(-20%, -20%)",
+		width: "60%",
 		overflowY: "auto",
 		borderRadius: "10px",
 		padding: "20px",
-		height: '100%',
-		maxHeight: '60vh'
+		height: "80%",
+		maxHeight: "90%",
 	},
 	overlay: {
 		backgroundColor: 'rgba(0, 0, 0, 0.75)',
@@ -287,17 +291,24 @@ const customStyles = {
 	},
 };
 
+interface ManualInputValues {
+	[key: string]: string;
+}
 
-  export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => void }) => {
+interface InputValues {
+	[key: string]: string;
+}
+
+export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => void }) => {
 
 	const [isModalOpen, setIsModalOpen] = useState(false);
 	const [isSendModalOpen, setIsSendModalOpen] = useState(false);
-	const [manualInputValues, setManualInputValues] = useState({});
+	const [manualInputValues, setManualInputValues] = useState<ManualInputValues>({});
 	const [searchQuery, setSearchQuery] = useState("");
 	const [currentPage, setCurrentPage] = useState(1);
 	const [totalPages, setTotalPages] = useState(0);
 	const itemsPerPage = 5;
-	const formRef = useRef(null);
+	const formRef = useRef<HTMLFormElement>(null);
 
 	const handlePageChange = (pageNumber: number) => {
 		setCurrentPage(pageNumber);
@@ -328,7 +339,7 @@ const customStyles = {
 		socket.on("dataSaved", (data) => {
 			console.log("WebSocket Event Received:", data);
 			if (data?.formId) {
-				getTableResponse(data.formId);
+				getTableResponse(data.formId, 1, 5, "");
 			}
 		});
 	};
@@ -343,14 +354,22 @@ const customStyles = {
 		};
 	}, []);
 
+	type AssignedForm = {
+		id: number;
+		form_id: string;
+		form_name: string;
+		assigned_companies: string[];
+		createdAt: string;
+		updatedAt: string;
+	};
 
 	const { data: userData } = useSession();
 	const { emitSendJotForm } = useSocketContext();
 	const params = new URLSearchParams(window.location.search);
 	const companyData = { defaultLangCode: "en" };
-	const [assignedForms, setAssignedForms] = useState([]);
+	const [assignedForms, setAssignedForms] = useState<AssignedForm[]>([]);
 	const [selectedForm, setSelectedForm] = useState<string | null>(null)
-	const [inputValues, setInputValues] = useState({});
+	const [inputValues, setInputValues] = useState<InputValues>({});
 	const [tableResponse, setTableResponse] = useState<{ data: string | any[]; uniqueKeys?: string[] } | null>(null);
 	interface FormFields {
 		content: any[];
@@ -399,6 +418,8 @@ const customStyles = {
 		content: any[];
 	}
 	const [selectedFormFields, setSelectedFormFields] = useState<FormFields | null>(null);
+
+	console.info("assignedFormsassignedForms", assignedForms);
 
 	const getAssignedFormByID = async (company_id: number) => {
 		const API_URL = `http://localhost:3001/api/assigned-form/${company_id}`;
@@ -593,12 +614,19 @@ const customStyles = {
 		getTableResponse(value || null, 1, 5, "");
 	}
 
-	async function onSubmit(event: FormEvent<HTMLFormElement>) {
-		event.preventDefault()
+	async function onSubmit(event: React.MouseEvent<HTMLButtonElement, MouseEvent>) {
+		event.preventDefault();
+
+		if (!selectedForm) {
+			toast.error("Please select a form before submitting.");
+			return;
+		}
+
 		const dynamicUrl = buildUrl(selectedForm, inputValues);
 		sendJotFormMessage(dynamicUrl);
 		reset();
-		toast.success('Form sent successsfully!', {
+
+		toast.success('Form sent successfully!', {
 			position: "bottom-right",
 			autoClose: 5000,
 			hideProgressBar: false,
@@ -610,6 +638,7 @@ const customStyles = {
 			transition: Bounce,
 		});
 	}
+
 
 	const handleManualInputChange = (text: string, value: string) => {
 		setManualInputValues((prev) => ({
@@ -792,8 +821,10 @@ const customStyles = {
 
 	const resetFilters = () => {
 		getTableResponse(selectedForm, 1, 5, "");
-		formRef.current.reset();
-	}
+		if (formRef.current) {
+			formRef.current?.reset();
+		}
+	};
 
 	return (
 		<div className="bg-gray-50 p-6 rounded-lg shadow-md w-full mx-auto">
@@ -949,15 +980,16 @@ const customStyles = {
 
 				<>
 					<TableComponent
-						tableData={tableResponse.data}
-						uniqueKeys={tableResponse.uniqueKeys}
+						tableData={Array.isArray(tableResponse.data) ? tableResponse.data : []}
+						uniqueKeys={Array.isArray(tableResponse.uniqueKeys) ? tableResponse.uniqueKeys : []}
 						currentPage={currentPage}
 						itemsPerPage={itemsPerPage}
 						onPageChange={handlePageChange}
 						totalPages={totalPages}
 						setCurrentPage={setCurrentPage}
-						selectedFormFields={selectedFormFields?.content}
+						selectedFormFields={Array.isArray(selectedFormFields?.content) ? selectedFormFields.content : []}
 					/>
+
 				</>
 
 			) : <></>}
@@ -1041,12 +1073,7 @@ const customStyles = {
 												type="text"
 												className="border p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
 												value={inputValues[item.name] || ""}
-												onChange={(e) =>
-													handleChange(
-														item.name,
-														e.target.value
-													)
-												}
+												onChange={(e) => handleChange(item.name, e.target.value)}
 											/>
 										</div>
 									))}

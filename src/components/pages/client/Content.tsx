@@ -163,7 +163,7 @@ export const Content: React.FC = () => {
   if (
     messageStore.receivedType === "Website" ||
     messageStore.receivedType === "WebsiteTemplateMessage" ||
-    messageStore.receivedType === "JotFormMessage"
+    messageStore.receivedType === ("JotFormMessage" as any) 
   ) {
     return (
       <iframe
@@ -172,6 +172,7 @@ export const Content: React.FC = () => {
       />
     );
   }
+  
   if (isFirstTimeOpen && defaultSlideshowContent.data)
     return (
       <Slideshow contents={defaultSlideshowContent.data?.contents ?? []} />
