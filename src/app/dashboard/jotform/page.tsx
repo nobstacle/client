@@ -37,6 +37,7 @@ export default function Dashboard() {
     useState<null | GetWebsiteTemplateRes>(null);
   const hasHydrated = useHasHydrated();
 
+  
   const params = useSearchParams();
   const { setWebsites, websites, searchWebsites, setSearchWebsites } =
     useTemplateStore();

@@ -287,7 +287,8 @@ const customStyles = {
 	},
 };
 
-export const SendJotFormTemplateForm: React.FC = () => {
+
+  export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => void }) => {
 
 	const [isModalOpen, setIsModalOpen] = useState(false);
 	const [isSendModalOpen, setIsSendModalOpen] = useState(false);
