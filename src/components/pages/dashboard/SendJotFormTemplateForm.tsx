@@ -1,10 +1,9 @@
 import { yupResolver } from "@hookform/resolvers/yup";
 import React, { useEffect, useState, useRef } from "react";
-import { SubmitHandler, useForm } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import * as yup from "yup";
 import { Button } from "../../Button";
 import { SendIcon } from "../../icons/SendIcon";
-import Input from "../../Input";
 import { useSocketContext } from "../../../context/SocketContextProvider";
 import "../../../styles/base.css";
 import { useSession } from "next-auth/react";
@@ -15,6 +14,8 @@ import Modal from "react-modal";
 import { FaFileDownload, FaFileUpload, FaCopy, FaFilePdf, FaSearch } from "react-icons/fa";
 import { LuListPlus } from "react-icons/lu";
 import { toast, Bounce } from 'react-toastify';
+import { BsFillSendPlusFill } from "react-icons/bs";
+import { RiUploadCloudFill } from "react-icons/ri";
 
 const SOCKET_URL = "http://localhost:3001";
 
@@ -38,7 +39,7 @@ interface TableComponentProps {
 	onPageChange: (page: number) => void;
 }
 
-const TableComponent: React.FC<TableComponentProps> = ({ tableData, uniqueKeys, currentPage, totalPages, setCurrentPage }) => {
+const TableComponent: React.FC<TableComponentProps> = ({ tableData, uniqueKeys, currentPage, totalPages, setCurrentPage, selectedFormFields }) => {
 	const [downloadingPDF, setDownloadingPDF] = useState<number | null>(null);
 
 	const handlePageChange = (newPage: number) => {
@@ -48,29 +49,31 @@ const TableComponent: React.FC<TableComponentProps> = ({ tableData, uniqueKeys, 
 	};
 
 	if (!tableData || tableData.length === 0) {
-		return <div className="grid gap-4 w-100">
-			<svg className="mx-auto" xmlns="http://www.w3.org/2000/svg" width="154" height="161" viewBox="0 0 154 161" fill="none">
-				<path d="M0.0616455 84.4268C0.0616455 42.0213 34.435 7.83765 76.6507 7.83765C118.803 7.83765 153.224 42.0055 153.224 84.4268C153.224 102.42 147.026 118.974 136.622 132.034C122.282 150.138 100.367 161 76.6507 161C52.7759 161 30.9882 150.059 16.6633 132.034C6.25961 118.974 0.0616455 102.42 0.0616455 84.4268Z" fill="#EEF2FF" />
-				<path d="M96.8189 0.632498L96.8189 0.632384L96.8083 0.630954C96.2034 0.549581 95.5931 0.5 94.9787 0.5H29.338C22.7112 0.5 17.3394 5.84455 17.3394 12.4473V142.715C17.3394 149.318 22.7112 154.662 29.338 154.662H123.948C130.591 154.662 135.946 149.317 135.946 142.715V38.9309C135.946 38.0244 135.847 37.1334 135.648 36.2586L135.648 36.2584C135.117 33.9309 133.874 31.7686 132.066 30.1333C132.066 30.1331 132.065 30.1329 132.065 30.1327L103.068 3.65203C103.068 3.6519 103.067 3.65177 103.067 3.65164C101.311 2.03526 99.1396 0.995552 96.8189 0.632498Z" fill="white" stroke="#E5E7EB" />
-				<ellipse cx="80.0618" cy="81" rx="28.0342" ry="28.0342" fill="#EEF2FF" />
-				<path d="M99.2393 61.3061L99.2391 61.3058C88.498 50.5808 71.1092 50.5804 60.3835 61.3061C49.6423 72.0316 49.6422 89.4361 60.3832 100.162C71.109 110.903 88.4982 110.903 99.2393 100.162C109.965 89.4363 109.965 72.0317 99.2393 61.3061ZM105.863 54.6832C120.249 69.0695 120.249 92.3985 105.863 106.785C91.4605 121.171 68.1468 121.171 53.7446 106.785C39.3582 92.3987 39.3582 69.0693 53.7446 54.683C68.1468 40.2965 91.4605 40.2966 105.863 54.6832Z" stroke="#E5E7EB" />
-				<path d="M110.782 119.267L102.016 110.492C104.888 108.267 107.476 105.651 109.564 102.955L118.329 111.729L110.782 119.267Z" stroke="#E5E7EB" />
-				<path d="M139.122 125.781L139.122 125.78L123.313 109.988C123.313 109.987 123.313 109.987 123.312 109.986C121.996 108.653 119.849 108.657 118.521 109.985L118.871 110.335L118.521 109.985L109.047 119.459C107.731 120.775 107.735 122.918 109.044 124.247L109.047 124.249L124.858 140.06C128.789 143.992 135.191 143.992 139.122 140.06C143.069 136.113 143.069 129.728 139.122 125.781Z" fill="#A5B4FC" stroke="#818CF8" />
-				<path d="M83.185 87.2285C82.5387 87.2285 82.0027 86.6926 82.0027 86.0305C82.0027 83.3821 77.9987 83.3821 77.9987 86.0305C77.9987 86.6926 77.4627 87.2285 76.8006 87.2285C76.1543 87.2285 75.6183 86.6926 75.6183 86.0305C75.6183 80.2294 84.3831 80.2451 84.3831 86.0305C84.3831 86.6926 83.8471 87.2285 83.185 87.2285Z" fill="#4F46E5" />
-				<path d="M93.3528 77.0926H88.403C87.7409 77.0926 87.2049 76.5567 87.2049 75.8946C87.2049 75.2483 87.7409 74.7123 88.403 74.7123H93.3528C94.0149 74.7123 94.5509 75.2483 94.5509 75.8946C94.5509 76.5567 94.0149 77.0926 93.3528 77.0926Z" fill="#4F46E5" />
-				<path d="M71.5987 77.0925H66.6488C65.9867 77.0925 65.4507 76.5565 65.4507 75.8945C65.4507 75.2481 65.9867 74.7122 66.6488 74.7122H71.5987C72.245 74.7122 72.781 75.2481 72.781 75.8945C72.781 76.5565 72.245 77.0925 71.5987 77.0925Z" fill="#4F46E5" />
-				<rect x="38.3522" y="21.5128" width="41.0256" height="2.73504" rx="1.36752" fill="#4F46E5" />
-				<rect x="38.3522" y="133.65" width="54.7009" height="5.47009" rx="2.73504" fill="#A5B4FC" />
-				<rect x="38.3522" y="29.7179" width="13.6752" height="2.73504" rx="1.36752" fill="#4F46E5" />
-				<circle cx="56.13" cy="31.0854" r="1.36752" fill="#4F46E5" />
-				<circle cx="61.6001" cy="31.0854" r="1.36752" fill="#4F46E5" />
-				<circle cx="67.0702" cy="31.0854" r="1.36752" fill="#4F46E5" />
-			</svg>
-			<div>
-				<h2 className="text-center text-black text-xl font-semibold leading-loose pb-2">There is no response available.</h2>
-				<p className="text-center text-black text-base font-normal leading-relaxed pb-4">Please select form to see the responses.</p>
+		return (
+			<div className="grid gap-4 w-100">
+				<svg className="mx-auto" xmlns="http://www.w3.org/2000/svg" width="154" height="161" viewBox="0 0 154 161" fill="none">
+					<path d="M0.0616455 84.4268C0.0616455 42.0213 34.435 7.83765 76.6507 7.83765C118.803 7.83765 153.224 42.0055 153.224 84.4268C153.224 102.42 147.026 118.974 136.622 132.034C122.282 150.138 100.367 161 76.6507 161C52.7759 161 30.9882 150.059 16.6633 132.034C6.25961 118.974 0.0616455 102.42 0.0616455 84.4268Z" fill="#EEF2FF" />
+					<path d="M96.8189 0.632498L96.8189 0.632384L96.8083 0.630954C96.2034 0.549581 95.5931 0.5 94.9787 0.5H29.338C22.7112 0.5 17.3394 5.84455 17.3394 12.4473V142.715C17.3394 149.318 22.7112 154.662 29.338 154.662H123.948C130.591 154.662 135.946 149.317 135.946 142.715V38.9309C135.946 38.0244 135.847 37.1334 135.648 36.2586L135.648 36.2584C135.117 33.9309 133.874 31.7686 132.066 30.1333C132.066 30.1331 132.065 30.1329 132.065 30.1327L103.068 3.65203C103.068 3.6519 103.067 3.65177 103.067 3.65164C101.311 2.03526 99.1396 0.995552 96.8189 0.632498Z" fill="white" stroke="#E5E7EB" />
+					<ellipse cx="80.0618" cy="81" rx="28.0342" ry="28.0342" fill="#EEF2FF" />
+					<path d="M99.2393 61.3061L99.2391 61.3058C88.498 50.5808 71.1092 50.5804 60.3835 61.3061C49.6423 72.0316 49.6422 89.4361 60.3832 100.162C71.109 110.903 88.4982 110.903 99.2393 100.162C109.965 89.4363 109.965 72.0317 99.2393 61.3061ZM105.863 54.6832C120.249 69.0695 120.249 92.3985 105.863 106.785C91.4605 121.171 68.1468 121.171 53.7446 106.785C39.3582 92.3987 39.3582 69.0693 53.7446 54.683C68.1468 40.2965 91.4605 40.2966 105.863 54.6832Z" stroke="#E5E7EB" />
+					<path d="M110.782 119.267L102.016 110.492C104.888 108.267 107.476 105.651 109.564 102.955L118.329 111.729L110.782 119.267Z" stroke="#E5E7EB" />
+					<path d="M139.122 125.781L139.122 125.78L123.313 109.988C123.313 109.987 123.313 109.987 123.312 109.986C121.996 108.653 119.849 108.657 118.521 109.985L118.871 110.335L118.521 109.985L109.047 119.459C107.731 120.775 107.735 122.918 109.044 124.247L109.047 124.249L124.858 140.06C128.789 143.992 135.191 143.992 139.122 140.06C143.069 136.113 143.069 129.728 139.122 125.781Z" fill="#A5B4FC" stroke="#818CF8" />
+					<path d="M83.185 87.2285C82.5387 87.2285 82.0027 86.6926 82.0027 86.0305C82.0027 83.3821 77.9987 83.3821 77.9987 86.0305C77.9987 86.6926 77.4627 87.2285 76.8006 87.2285C76.1543 87.2285 75.6183 86.6926 75.6183 86.0305C75.6183 80.2294 84.3831 80.2451 84.3831 86.0305C84.3831 86.6926 83.8471 87.2285 83.185 87.2285Z" fill="#4F46E5" />
+					<path d="M93.3528 77.0926H88.403C87.7409 77.0926 87.2049 76.5567 87.2049 75.8946C87.2049 75.2483 87.7409 74.7123 88.403 74.7123H93.3528C94.0149 74.7123 94.5509 75.2483 94.5509 75.8946C94.5509 76.5567 94.0149 77.0926 93.3528 77.0926Z" fill="#4F46E5" />
+					<path d="M71.5987 77.0925H66.6488C65.9867 77.0925 65.4507 76.5565 65.4507 75.8945C65.4507 75.2481 65.9867 74.7122 66.6488 74.7122H71.5987C72.245 74.7122 72.781 75.2481 72.781 75.8945C72.781 76.5565 72.245 77.0925 71.5987 77.0925Z" fill="#4F46E5" />
+					<rect x="38.3522" y="21.5128" width="41.0256" height="2.73504" rx="1.36752" fill="#4F46E5" />
+					<rect x="38.3522" y="133.65" width="54.7009" height="5.47009" rx="2.73504" fill="#A5B4FC" />
+					<rect x="38.3522" y="29.7179" width="13.6752" height="2.73504" rx="1.36752" fill="#4F46E5" />
+					<circle cx="56.13" cy="31.0854" r="1.36752" fill="#4F46E5" />
+					<circle cx="61.6001" cy="31.0854" r="1.36752" fill="#4F46E5" />
+					<circle cx="67.0702" cy="31.0854" r="1.36752" fill="#4F46E5" />
+				</svg>
+				<div>
+					<h2 className="text-center text-black text-xl font-semibold leading-loose pb-2">There is no response available.</h2>
+					<p className="text-center text-black text-base font-normal leading-relaxed pb-4">Please select form to see the responses.</p>
+				</div>
 			</div>
-		</div>;
+		);
 	}
 
 	const handlePDFDownload = async (form_id: string, submission_id: string, rowIndex: number) => {
@@ -88,6 +91,17 @@ const TableComponent: React.FC<TableComponentProps> = ({ tableData, uniqueKeys, 
 		document.body.removeChild(a);
 
 		setTimeout(() => {
+			toast.success('PDF downloaded successsfully!', {
+				position: "bottom-right",
+				autoClose: 5000,
+				hideProgressBar: false,
+				closeOnClick: false,
+				pauseOnHover: true,
+				draggable: true,
+				progress: undefined,
+				theme: "colored",
+				transition: Bounce,
+			});
 			setDownloadingPDF(null);
 		}, 2500);
 	};
@@ -106,7 +120,7 @@ const TableComponent: React.FC<TableComponentProps> = ({ tableData, uniqueKeys, 
 					<button
 						onClick={() => handleClick(i)}
 						className={`flex items-center justify-center px-4 h-10 leading-tight border border-blue-200 
-				  ${currentPage === i
+                            ${currentPage === i
 								? 'text-blue-900 bg-blue-50 hover:bg-blue-100 hover:text-blue-900 dark:bg-blue-900 dark:text-white'
 								: 'text-blue-900 bg-white hover:bg-blue-100 hover:text-blue-900 dark:hover:bg-blue-900 dark:hover:text-white'}`}
 					>
@@ -117,7 +131,13 @@ const TableComponent: React.FC<TableComponentProps> = ({ tableData, uniqueKeys, 
 		}
 		return pages;
 	};
-
+	const filteredKeys = uniqueKeys.filter(key => {
+		console.warn({ selectedFormFields })
+		const matchingField = Object.values(selectedFormFields).find((field: any) =>
+			field.name.includes('listable') && field.text === key
+		);
+		return matchingField !== undefined;
+	});
 
 	return (
 		<div className="mt-6 p-4 bg-white shadow-md rounded-lg customTableWrapper">
@@ -125,16 +145,16 @@ const TableComponent: React.FC<TableComponentProps> = ({ tableData, uniqueKeys, 
 				<table className="min-w-[1000px] max-h-[500px] table-auto border-collapse border border-gray-300 customTable">
 					<thead>
 						<tr className="bg-gray-200 text-gray-700 text-left">
-							{uniqueKeys?.filter(key => key !== "formData").map((key: string, index: number) => (
+							{filteredKeys.map((key: string, index: number) => (
 								<th key={index} className="border border-gray-300 px-4 py-4">{key}</th>
 							))}
-							<th className="border border-gray-300 px-4 py-2">PDF</th>
+							<th className="border border-gray-300 px-4 py-2">Action</th>
 						</tr>
 					</thead>
 					<tbody>
 						{tableData.map((item: any, rowIndex: number) => (
 							<tr key={rowIndex} className="text-center hover:bg-gray-100 transition-all">
-								{uniqueKeys?.filter(key => key !== "formData").map((key: string, colIndex: number) => (
+								{filteredKeys.map((key: string, colIndex: number) => (
 									<td key={colIndex} className="border border-gray-300 px-4 py-2 text-left table-content">
 										{(item as any)[key] || 'N/A'}
 									</td>
@@ -144,19 +164,28 @@ const TableComponent: React.FC<TableComponentProps> = ({ tableData, uniqueKeys, 
 										<Button
 											title="Copy URL"
 											onClick={() => {
-												navigator.clipboard.writeText(item?.formData?.url)
-												alert("URL copied to clipboard!");
+												navigator.clipboard.writeText(item?.formData?.url);
+												toast.success('URL coppied to clipboard!', {
+													position: "bottom-right",
+													autoClose: 5000,
+													hideProgressBar: false,
+													closeOnClick: false,
+													pauseOnHover: true,
+													draggable: true,
+													progress: undefined,
+													theme: "colored",
+													transition: Bounce,
+												});
 											}}
 											className="flex items-center justify-center text-white rounded-md hover:bg-red-600 transition-all w-24 mr-3"
 											type="submit"
 										>
-											<span className="ml-2"><FaCopy /></span>
+											<span className="ml-2"><FaCopy size={20}/></span>
 										</Button>
 
 										{item?.formData?.submission_id ? (
 											<div className="relative group">
 												<button
-
 													title="Download PDF Response"
 													onClick={() =>
 														handlePDFDownload(
@@ -189,31 +218,30 @@ const TableComponent: React.FC<TableComponentProps> = ({ tableData, uniqueKeys, 
 															/>
 														</svg>
 													) : (
-														<FaFilePdf />
+														<FaFilePdf size={20} />
 													)}
 												</button>
 												<div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 min-w-[140px] text-center text-white text-xs bg-black px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity
-      before:content-[''] before:absolute before:top-full before:left-1/2 before:-translate-x-1/2 before:border-8 before:border-transparent before:border-t-black">
+                                                    before:content-[''] before:absolute before:top-full before:left-1/2 before:-translate-x-1/2 before:border-8 before:border-transparent before:border-t-black">
 													Download PDF
 												</div>
 											</div>
 										) : (
 											<div className="relative group">
 												<Button
+												    title="Send Form"
 													className="border-1 flex justify-center rounded-md border-black px-6 text-center text-white mt-5"
 													type="submit"
 												>
-													<SendIcon /> <span className="ml-2">Send</span>
+													<SendIcon />
 												</Button>
 												<div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 min-w-[100px] text-center text-white text-xs bg-black px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity
-      before:content-[''] before:absolute before:top-full before:left-1/2 before:-translate-x-1/2 before:border-8 before:border-transparent before:border-t-black">
+                                                    before:content-[''] before:absolute before:top-full before:left-1/2 before:-translate-x-1/2 before:border-8 before:border-transparent before:border-t-black">
 													Send Form
 												</div>
 											</div>
 										)}
-
 									</div>
-
 								</td>
 							</tr>
 						))}
@@ -223,11 +251,11 @@ const TableComponent: React.FC<TableComponentProps> = ({ tableData, uniqueKeys, 
 			<nav aria-label="Page navigation" className="flex justify-center mt-6">
 				<ul className="inline-flex -space-x-px text-base h-10">
 					<li onClick={() => handlePageChange(currentPage === 1 ? 1 : currentPage - 1)}>
-						<a href="#" className="flex items-center justify-center px-4 h-10 ms-0 leading-tight text-gray-500 bg-white border border-e-0 border-gray-300 rounded-s-lg hover:bg-gray-100 hover:text-blue-900  dark:hover:bg-blue-900 dark:hover:text-white">Previous</a>
+						<a href="#" className="flex items-center justify-center px-4 h-10 ms-0 leading-tight text-gray-500 bg-white border border-e-0 border-gray-300 rounded-s-lg hover:bg-gray-100 hover:text-blue-900 dark:hover:bg-blue-900 dark:hover:text-white">Previous</a>
 					</li>
 					{renderPages()}
 					<li onClick={() => handlePageChange(currentPage === totalPages ? totalPages : currentPage + 1)}>
-						<a href="#" className="flex items-center justify-center px-4 h-10 leading-tight text-gray-500 bg-white border border-gray-300 rounded-e-lg hover:bg-gray-100 hover:text-gray-900  dark:hover:bg-blue-900 dark:hover:text-white">Next</a>
+						<a href="#" className="flex items-center justify-center px-4 h-10 leading-tight text-gray-500 bg-white border border-gray-300 rounded-e-lg hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-blue-900 dark:hover:text-white">Next</a>
 					</li>
 				</ul>
 			</nav>
@@ -243,7 +271,7 @@ const customStyles = {
 		bottom: "auto",
 		marginRight: "-50%",
 		transform: "translate(-50%, -50%)",
-		width: "50%",
+		width: "35%",
 		overflowY: "auto",
 		borderRadius: "10px",
 		padding: "20px",
@@ -262,6 +290,7 @@ const customStyles = {
 export const SendJotFormTemplateForm: React.FC = () => {
 
 	const [isModalOpen, setIsModalOpen] = useState(false);
+	const [isSendModalOpen, setIsSendModalOpen] = useState(false);
 	const [manualInputValues, setManualInputValues] = useState({});
 	const [searchQuery, setSearchQuery] = useState("");
 	const [currentPage, setCurrentPage] = useState(1);
@@ -274,7 +303,9 @@ export const SendJotFormTemplateForm: React.FC = () => {
 	};
 
 	const openModal = () => setIsModalOpen(true);
+	const openSendModal = () => setIsSendModalOpen(true);
 	const closeModal = () => setIsModalOpen(false);
+	const closeSendModal = () => setIsSendModalOpen(false);
 
 	const handleSocketEvents = () => {
 		// Handle successful connection
@@ -353,9 +384,8 @@ export const SendJotFormTemplateForm: React.FC = () => {
 		});
 
 		socket.on("dataSaved", (data) => {
-			console.log("WebSocket Event Received:", data);
 			if (data?.formId) {
-				getTableResponse(data.formId);
+				getTableResponse(data.formId, 1, 5, "");
 			}
 		});
 
@@ -369,8 +399,8 @@ export const SendJotFormTemplateForm: React.FC = () => {
 	}
 	const [selectedFormFields, setSelectedFormFields] = useState<FormFields | null>(null);
 
-	const getAssignedFormByID = async (id: number) => {
-		const API_URL = `http://localhost:3001/api/assigned-form/1`;
+	const getAssignedFormByID = async (company_id: number) => {
+		const API_URL = `http://localhost:3001/api/assigned-form/${company_id}`;
 
 		try {
 			const response = await axios.get(API_URL);
@@ -412,9 +442,9 @@ export const SendJotFormTemplateForm: React.FC = () => {
 
 	useEffect(() => {
 		if (searchQuery) {
-			getTableResponse(selectedForm || null, searchQuery);
+			getTableResponse(selectedForm || null, 1, 5, searchQuery);
 		} else {
-			getTableResponse(selectedForm || null, "");
+			getTableResponse(selectedForm || null, 1, 5, "");
 		}
 	}, [searchQuery, selectedForm]);
 
@@ -422,7 +452,7 @@ export const SendJotFormTemplateForm: React.FC = () => {
 	useEffect(() => {
 
 		if (userData?.user?.id) {
-			getAssignedFormByID(userData?.user?.id)
+			getAssignedFormByID(userData?.user?.companyId)
 		}
 
 	}, [userData])
@@ -471,7 +501,6 @@ export const SendJotFormTemplateForm: React.FC = () => {
 
 	const getTableResponse = async (form_id: string | null, page: number, limit: number = 5, search: any = "") => {
 		let API_URL = `http://localhost:3001/api/jotform/responses/${form_id}?page=${page}&limit=${limit}`;
-		console.info("search", search);
 		if (search && (typeof search === 'string' ? search !== "" : search.length > 0)) {
 			let searchArray = search;
 
@@ -499,7 +528,6 @@ export const SendJotFormTemplateForm: React.FC = () => {
 						let prettyData: Record<string, any> = {};
 
 						if (item.submissionId === null) {
-							// Handle non-JotForm data
 							const parsedData = JSON.parse(item.data);
 							prettyData = Object.entries(parsedData).reduce((acc: any, [key, value]: [string, any]) => {
 								acc[key.trim()] = String(value).trim();
@@ -560,7 +588,8 @@ export const SendJotFormTemplateForm: React.FC = () => {
 		let value = (e.target as HTMLSelectElement).value;
 		setValue("url", value);
 		setSelectedForm(value);
-		getTableResponse(value || null, "");
+		setCurrentPage(1)
+		getTableResponse(value || null, 1, 5, "");
 	}
 
 	async function onSubmit(event: FormEvent<HTMLFormElement>) {
@@ -568,21 +597,77 @@ export const SendJotFormTemplateForm: React.FC = () => {
 		const dynamicUrl = buildUrl(selectedForm, inputValues);
 		sendJotFormMessage(dynamicUrl);
 		reset();
+		toast.success('Form sent successsfully!', {
+			position: "bottom-right",
+			autoClose: 5000,
+			hideProgressBar: false,
+			closeOnClick: false,
+			pauseOnHover: true,
+			draggable: true,
+			progress: undefined,
+			theme: "colored",
+			transition: Bounce,
+		});
 	}
 
-	const handleManualInputChange = (name: string, value: string) => {
+	const handleManualInputChange = (text: string, value: string) => {
 		setManualInputValues((prev) => ({
 			...prev,
-			[name]: value,
+			[text]: value,
 		}));
 	};
 
-	const handleManualUpload = (value: any) => {
+	const handleManualUpload = async (value: any) => {
 		let formData = {
 			formId: selectedForm,
 			data: manualInputValues
 		}
-		alert("Manual upload submitted!");
+		const uploadURL = "http://localhost:3001/api/jotform/manual-upload"
+		try {
+			const response = await axios.post(uploadURL, formData);
+
+			getTableResponse(selectedForm || null, 1, 5, "");
+
+			if (response.status === 201) {
+				toast.success('Response uploaded successsfully!', {
+					position: "bottom-right",
+					autoClose: 5000,
+					hideProgressBar: false,
+					closeOnClick: false,
+					pauseOnHover: true,
+					draggable: true,
+					progress: undefined,
+					theme: "colored",
+					transition: Bounce,
+				});
+			} else {
+				console.error("Unexpected response status:", response.status);
+				toast.error('Unable to upload response.', {
+					position: "bottom-right",
+					autoClose: 5000,
+					hideProgressBar: false,
+					closeOnClick: false,
+					pauseOnHover: true,
+					draggable: true,
+					progress: undefined,
+					theme: "colored",
+					transition: Bounce,
+				});
+			}
+		} catch (error) {
+			console.error("Error uploading file:", error);
+			toast.error('Unable to upload response.', {
+				position: "bottom-right",
+				autoClose: 5000,
+				hideProgressBar: false,
+				closeOnClick: false,
+				pauseOnHover: true,
+				draggable: true,
+				progress: undefined,
+				theme: "colored",
+				transition: Bounce,
+			});
+		}
 		closeModal();
 	};
 
@@ -605,8 +690,8 @@ export const SendJotFormTemplateForm: React.FC = () => {
 					"Content-Type": "multipart/form-data",
 				},
 			});
-
-			getTableResponse(selectedForm || null, "");
+			setCurrentPage(1)
+			getTableResponse(selectedForm || null, 1, 5, "");
 
 			if (response.status === 201) {
 				toast.success('Response uploaded successsfully!', {
@@ -667,7 +752,6 @@ export const SendJotFormTemplateForm: React.FC = () => {
 		}
 
 		setCurrentPage(1);
-		console.info("SUBMIT")
 		getTableResponse(selectedForm, 1, 5, finalSearch)
 	};
 
@@ -726,6 +810,15 @@ export const SendJotFormTemplateForm: React.FC = () => {
 				{selectedForm && (<div className="flex items-end justify-end space-x-2" style={{ width: "30%" }}>
 					<div className="flex items-start space-x-5">
 						<div className="relative group">
+							<button onClick={() => openSendModal()}>
+								<BsFillSendPlusFill size={40} color="#3b5998" />
+							</button>
+							<div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 min-w-[120px] text-center px-2 py-1 bg-black text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity
+      before:content-[''] before:absolute before:top-full before:left-1/2 before:-translate-x-1/2 before:border-8 before:border-transparent before:border-t-black">
+								Send Form
+							</div>
+						</div>
+						<div className="relative group">
 							<button onClick={handleSampleCSVDownload}>
 								<FaFileDownload size={40} color="#3b5998" />
 							</button>
@@ -735,7 +828,7 @@ export const SendJotFormTemplateForm: React.FC = () => {
 							</div>
 						</div>
 						<div className="relative group cursor-pointer">
-							<label htmlFor="file-upload">
+							<label htmlFor="file-upload" style={{ cursor: "pointer" }}>
 								<FaFileUpload size={40} color="#3b5998" />
 							</label>
 							<input
@@ -756,7 +849,7 @@ export const SendJotFormTemplateForm: React.FC = () => {
 							</button>
 							<div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 min-w-[120px] text-center px-2 py-1 bg-black text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity
       before:content-[''] before:absolute before:top-full before:left-1/2 before:-translate-x-1/2 before:border-8 before:border-transparent before:border-t-black">
-								Add New Entry
+								Add New Response (Manually)
 							</div>
 						</div>
 					</div>
@@ -851,24 +944,22 @@ export const SendJotFormTemplateForm: React.FC = () => {
 			</div>
 
 
-			{tableResponse ? (
-				tableResponse ? (
+			{tableResponse && selectedFormFields?.content ? (
 
-					<>
-						<TableComponent
-							tableData={tableResponse.data}
-							uniqueKeys={tableResponse.uniqueKeys}
-							currentPage={currentPage}
-							itemsPerPage={itemsPerPage}
-							onPageChange={handlePageChange}
-							totalPages={totalPages}
-							setCurrentPage={setCurrentPage}
-						/>
-					</>
-				) : (
-					<></>
-				)
-			) : null}
+				<>
+					<TableComponent
+						tableData={tableResponse.data}
+						uniqueKeys={tableResponse.uniqueKeys}
+						currentPage={currentPage}
+						itemsPerPage={itemsPerPage}
+						onPageChange={handlePageChange}
+						totalPages={totalPages}
+						setCurrentPage={setCurrentPage}
+						selectedFormFields={selectedFormFields?.content}
+					/>
+				</>
+
+			) : <></>}
 
 			<Modal
 				isOpen={isModalOpen}
@@ -894,10 +985,10 @@ export const SendJotFormTemplateForm: React.FC = () => {
 											<input
 												type="text"
 												className="border p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-												value={manualInputValues[item.name] || ""}
+												value={manualInputValues[item.text] || ""}
 												onChange={(e) =>
 													handleManualInputChange(
-														item.name,
+														item.text,
 														e.target.value
 													)
 												}
@@ -908,12 +999,66 @@ export const SendJotFormTemplateForm: React.FC = () => {
 						<div className="flex justify-end mt-6">
 							<Button
 								onClick={handleManualUpload}
-								className="bg-blue-500 text-white px-6 py-2 rounded-md hover:bg-blue-600"
+								className="bg-blue-500 text-white px-6 py-2 rounded-md hover:bg-blue-600 flex gap-2"
 							>
-								Upload
+								Upload <RiUploadCloudFill size={25} />
 							</Button>
 							<Button
 								onClick={closeModal}
+								style={{ backgroundColor: "#DC2626" }}
+								className="ml-4 bg-gray-300 text-white px-6 py-2 rounded-md hover:bg-gray-400"
+							>
+								Cancel
+							</Button>
+						</div>
+					</div>
+				</div>
+			</Modal>
+
+			<Modal
+				isOpen={isSendModalOpen}
+				onRequestClose={closeSendModal}
+				style={customStyles}
+				contentLabel="Send Form"
+				ariaHideApp={false}
+			>
+				<div className="fixed top-0 left-0 w-full h-full bg-opacity-50 z-40">
+					<div className="relative" style={{ padding: '2rem' }}>
+						<h2 className="text-lg font-bold mb-4">Send Form</h2>
+						<hr />
+						<div className="space-y-4 mt-4">
+							{selectedFormFields?.content &&
+								Object.values(selectedFormFields.content)
+									.filter(
+										(item) => item?.name?.includes("prefillable"))
+									.map((item) => (
+										<div key={item.qid} className="flex flex-col space-y-2">
+											<label className="text-gray-700 font-medium">
+												{item?.text}
+											</label>
+											<input
+												type="text"
+												className="border p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+												value={inputValues[item.name] || ""}
+												onChange={(e) =>
+													handleChange(
+														item.name,
+														e.target.value
+													)
+												}
+											/>
+										</div>
+									))}
+						</div>
+						<div className="flex justify-end mt-6">
+							<Button
+								onClick={onSubmit}
+								className="bg-blue-500 text-white px-6 py-2 rounded-md hover:bg-blue-600 flex gap-2"
+							>
+								Send <SendIcon />
+							</Button>
+							<Button
+								onClick={closeSendModal}
 								style={{ backgroundColor: "#DC2626" }}
 								className="ml-4 bg-gray-300 text-white px-6 py-2 rounded-md hover:bg-gray-400"
 							>
