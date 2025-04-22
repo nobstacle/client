@@ -7,9 +7,8 @@ import { saveFormData } from "./util";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/assigned-form';
 
-
 interface Company {
-	id: string;
+	id: number;
 	name: string;
 }
 
@@ -17,7 +16,7 @@ interface FormData {
 	form_id: string;
 	form_name: string;
 	assigned_companies: string[];
-	companies?: string[]; // Optional for displaying assigned companies
+	companies?: string[];
 }
 
 const AsignForms: React.FC = () => {
@@ -135,14 +134,17 @@ const AsignForms: React.FC = () => {
 						{companies?.map((company: Company) => (
 							<div
 								key={company.id}
-								onClick={() => handleSelectChange(company.id)}
-								className={`flex items-center justify-between p-2 cursor-pointer rounded-md hover:bg-gray-200 ${formData.assigned_companies.includes(company.id) ? "bg-blue-100 font-semibold" : ""
+								onClick={() => handleSelectChange(company.id.toString())}
+								className={`flex items-center justify-between p-2 cursor-pointer rounded-md hover:bg-gray-200 ${formData.assigned_companies.includes(company.id.toString()) ? "bg-blue-100 font-semibold" : ""
 									}`}
 							>
 								<span>{company.name}</span>
-								{formData.assigned_companies.includes((company.id).toString()) && <span className="text-blue-500 font-bold">✔</span>}
+								{formData.assigned_companies.includes(company.id.toString()) && (
+									<span className="text-blue-500 font-bold">✔</span>
+								)}
 							</div>
 						))}
+
 					</div>
 				</div>
 				<div className="flex justify-center items-center">
