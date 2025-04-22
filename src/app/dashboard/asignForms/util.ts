@@ -1,6 +1,7 @@
 import axios from 'axios';
+let Url = process.env.NEXT_PUBLIC_BACKEND_URL;
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/assigned-form';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || Url + '/api/assigned-form';
 
 export const saveFormData = async (formDataObject: { form_id: string; form_name: string; assigned_companies: string[] }) => {
     try {

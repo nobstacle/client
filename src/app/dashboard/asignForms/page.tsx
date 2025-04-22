@@ -4,8 +4,9 @@ import { useCompanyControllerGetAllCompanies } from "../../../lib/client/api";
 import axios from 'axios';
 import { useSession } from "next-auth/react";
 import { saveFormData } from "./util";
+let Url = process.env.NEXT_PUBLIC_BACKEND_URL;
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/assigned-form';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || Url + '/api/assigned-form';
 
 interface Company {
 	id: number;

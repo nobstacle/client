@@ -17,7 +17,8 @@ import { toast, Bounce } from 'react-toastify';
 import { BsFillSendPlusFill } from "react-icons/bs";
 import { RiUploadCloudFill } from "react-icons/ri";
 
-const SOCKET_URL = "http://localhost:3001";
+let Url = process.env.NEXT_PUBLIC_BACKEND_URL;
+const SOCKET_URL = Url;
 
 const socket: Socket = io(SOCKET_URL, {
 	transports: ["websocket", "polling"],
@@ -422,7 +423,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 	console.info("assignedFormsassignedForms", assignedForms);
 
 	const getAssignedFormByID = async (company_id: number) => {
-		const API_URL = `http://localhost:3001/api/assigned-form/${company_id}`;
+		const API_URL = Url + `/api/assigned-form/${company_id}`;
 
 		try {
 			const response = await axios.get(API_URL);
@@ -522,7 +523,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 	};
 
 	const getTableResponse = async (form_id: string | null, page: number, limit: number = 5, search: any = "") => {
-		let API_URL = `http://localhost:3001/api/jotform/responses/${form_id}?page=${page}&limit=${limit}`;
+		let API_URL =  Url +`/api/jotform/responses/${form_id}?page=${page}&limit=${limit}`;
 		if (search && (typeof search === 'string' ? search !== "" : search.length > 0)) {
 			let searchArray = search;
 
@@ -652,7 +653,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 			formId: selectedForm,
 			data: manualInputValues
 		}
-		const uploadURL = "http://localhost:3001/api/jotform/manual-upload"
+		const uploadURL =  Url + "/api/jotform/manual-upload";
 		try {
 			const response = await axios.post(uploadURL, formData);
 
@@ -708,7 +709,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 		}
 
 		const file = e.target.files[0];
-		const API_URL = `http://localhost:3001/api/jotform/upload/${selectedForm || ""}`;
+		const API_URL =  Url + `/api/jotform/upload/${selectedForm || ""}`;
 
 		const formData = new FormData();
 		formData.append("formId", selectedForm || "");
