@@ -3,6 +3,7 @@
 import { RegisterForm } from "../../../../components/pages/register/RegisterForm";
 
 export default function RegisterPage() {
+
   return (
     <main className="flex h-screen w-screen items-center justify-center bg-primary">
       <div

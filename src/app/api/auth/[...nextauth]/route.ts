@@ -7,16 +7,17 @@ import {
 } from "../../../../lib/client/api";
 
 console.log("authControllerLogin", "authControllerLogin");
+
 export const authOptions: AuthOptions = {
-  
   providers: [
     CredentialsProvider({
       name: "Credentials",
       credentials: {
-        email: { label: "Email", type: "text" },
+        email: { label: "Testing Email", type: "text" },
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
+        
         if (typeof credentials !== "undefined") {
           console.log("IN--",);
           const res = await authControllerLogin({
