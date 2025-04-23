@@ -1,11 +1,12 @@
 "use client";
 import React, { useEffect, useState } from "react";
+let Url = process.env.NEXT_PUBLIC_BACKEND_URL;
 
 const JotFormResponse = () => {
   const [responses, setResponses] = useState([]);
 
   useEffect(() => {
-    fetch("http://localhost:3001/api/jotform/responses")
+    fetch(Url + "/api/jotform/responses")
       .then((response) => response.json())
       .then((data) => setResponses(data))
       .catch((error) => console.error("Error fetching data:", error));

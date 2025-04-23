@@ -7,7 +7,6 @@ import {
 } from "../../../../lib/client/api";
 
 export const authOptions: AuthOptions = {
-  
   providers: [
     CredentialsProvider({
       name: "Credentials",
@@ -16,6 +15,7 @@ export const authOptions: AuthOptions = {
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
+        
         if (typeof credentials !== "undefined") {
           console.log("IN--",);
           const res = await authControllerLogin({
