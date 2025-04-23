@@ -137,7 +137,6 @@ const TableComponent: React.FC<TableComponentProps> = ({ tableData, uniqueKeys, 
 		return pages;
 	};
 	const filteredKeys = uniqueKeys.filter(key => {
-		console.warn({ selectedFormFields })
 		const matchingField = Object.values(selectedFormFields).find((field: any) =>
 			field.name.includes('listable') && field.text === key
 		);
@@ -420,8 +419,6 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 	}
 	const [selectedFormFields, setSelectedFormFields] = useState<FormFields | null>(null);
 
-	console.info("assignedFormsassignedForms", assignedForms);
-
 	const getAssignedFormByID = async (company_id: number) => {
 		const API_URL = Url + `/api/assigned-form/${company_id}`;
 
@@ -459,7 +456,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 
 	useEffect(() => {
 		if (selectedForm) {
-			fetchFormQuestions(selectedForm);
+				fetchFormQuestions(selectedForm);
 		}
 	}, [selectedForm]);
 
@@ -468,9 +465,6 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 			getTableResponse(selectedForm || null, 1, 5, "");
 		}
 	}, [selectedForm]);
-
-	console.info({selectedForm})
-
 
 	useEffect(() => {
 
@@ -988,7 +982,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 						onPageChange={handlePageChange}
 						totalPages={totalPages}
 						setCurrentPage={setCurrentPage}
-						selectedFormFields={Array.isArray(selectedFormFields?.content) ? selectedFormFields.content : []}
+						selectedFormFields={selectedFormFields?.content ? selectedFormFields.content : []}
 					/>
 
 				</>
