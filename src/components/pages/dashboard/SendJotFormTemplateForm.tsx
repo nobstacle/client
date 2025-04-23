@@ -321,27 +321,27 @@ const TableComponent: React.FC<TableComponentProps> = ({ tableData, uniqueKeys, 
 
 const customStyles: Styles = {
 	content: {
-		top: "20%",
-		left: "20%",
-		right: "20%",
-		bottom: "20%",
-		marginRight: "auto",
-		transform: "translate(-20%, -20%)",
-		width: "60%",
-		overflowY: "auto",
-		borderRadius: "10px",
-		padding: "20px",
-		height: "80%",
-		maxHeight: "90%",
+	  top: "50%",
+	  left: "50%",
+	  right: "auto",
+	  bottom: "auto",
+	  marginRight: "-50%",
+	  transform: "translate(-50%, -50%)",
+	  width: "60%",
+	  overflowY: "auto",
+	  borderRadius: "10px",
+	  padding: "20px",
+	  maxHeight: "90%",
+	  height:'60vh'
 	},
 	overlay: {
-		backgroundColor: 'rgba(0, 0, 0, 0.75)',
-		zIndex: 1000,
-		display: 'flex',
-		alignItems: 'center',
-		justifyContent: 'center'
+	  backgroundColor: 'rgba(0, 0, 0, 0.75)',
+	  zIndex: 1000,
+	  display: 'flex',
+	  alignItems: 'center',
+	  justifyContent: 'center'
 	},
-};
+  };
 
 interface ManualInputValues {
 	[key: string]: string;
@@ -880,7 +880,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 					<select
 						className="border p-3 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
 						onChange={(e) => hanldeFormChange(e)}
-						style={{ minWidth: '200px' }}
+						style={{ minWidth: '13.5vw' }}
 					>
 						{assignedForms.map((assignedForm) => (
 							<option key={assignedForm?.form_id} value={assignedForm?.form_id}>{assignedForm?.form_name}</option>
@@ -940,10 +940,11 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 
 			<form ref={formRef} onSubmit={onSearchSubmit}>
 				<div className="flex w-full items-center justify-between gap-3">
-					<div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-4 gap-1">
+						<div className="card searchCards shadow-md rounded flex bg-white ">
 						{selectedFormFields?.content &&
 							Object.keys(selectedFormFields.content).length > 0 && (
 								<>
+								  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
 									{Object.values(selectedFormFields.content)
 										.filter((item) => item?.name?.includes("search"))
 										.map((item) => (
@@ -952,13 +953,15 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 													name={item?.text}
 													placeholder={item.text}
 													type={item?.type || "text"}
-													className="w-full rounded-md border-2 p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+								             className="w-full rounded-md border-2 p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+													style={{ width: '10vw'}}
 												/>
 											</div>
 										))}
+								</div>
 								</>
 							)}
-					</div>
+							</div>
 
 					{selectedForm &&
 						selectedFormFields?.content &&
