@@ -56,7 +56,6 @@ export const Content: React.FC = () => {
   }, [messageStore.receivedType]);
 
   const { emitSendMessage } = useSocketContext();
-  console.info("sdfsdfsdf", messageStore.receivedType);
 
   const sendMessage = (message: string) => {
     emitSendMessage({

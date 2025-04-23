@@ -129,7 +129,7 @@ export default function Dashboard() {
             <SendJotFormTemplateForm onSend={sendJotFormTemplateMessage} />
           </div>
         </div>
-        {websitesSource.length > 0 && (
+        {/* {websitesSource.length > 0 && (
           <div className="w-50">
             <SearchTemplateForm searchOnChange={search} />
           </div>
@@ -159,8 +159,8 @@ export default function Dashboard() {
               }}
             />
           </Modal>
-        )}
-        <div id="card-wrapper" className="flex h-full w-full">
+        )} */}
+        {/* <div id="card-wrapper" className="flex h-full w-full">
           <div className="flex w-full flex-wrap content-start gap-4">
             <DraggableCardContainer items={websitesSource} sort={sortWebsites}>
               {websitesSource?.map((val) => (
@@ -254,15 +254,15 @@ export default function Dashboard() {
               </Modal>
             )}
           </div>
-        </div>
+        </div> */}
 
-        {userData?.user.Roles?.includes("Admin") && (
+        {/* {userData?.user.Roles?.includes("Admin") && (
           <div className="fixed bottom-0 right-0 p-4">
             <button onClick={handleOpen}>
               <PlusIcon />
             </button>
           </div>
-        )}
+        )} */}
       </div>
     );
 
