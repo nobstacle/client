@@ -121,6 +121,8 @@ export default function Dashboard() {
 
   const websitesSource = searchWebsites.length > 0 ? searchWebsites : websites;
 
+  console.info("websitesSource",websitesSource);
+  
   if (hasHydrated)
     return (
       <div className="flex h-full w-full flex-col justify-start gap-4 overflow-y-auto  p-6">
@@ -129,12 +131,12 @@ export default function Dashboard() {
             <SendJotFormTemplateForm onSend={sendJotFormTemplateMessage} />
           </div>
         </div>
-        {/* {websitesSource.length > 0 && (
+        {websitesSource.length > 0 && (
           <div className="w-50">
             <SearchTemplateForm searchOnChange={search} />
           </div>
         )}
-        {userData?.user.Roles?.includes("Admin") && (
+        {/* {userData?.user.Roles?.includes("Admin") && (
           <Modal
             title="Create template"
             closeModal={handleClose}
@@ -158,7 +160,7 @@ export default function Dashboard() {
                 }
               }}
             />
-          </Modal>
+          </Modal> 
         )} */}
         {/* <div id="card-wrapper" className="flex h-full w-full">
           <div className="flex w-full flex-wrap content-start gap-4">
