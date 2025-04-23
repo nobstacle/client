@@ -16,6 +16,7 @@ import { LuListPlus } from "react-icons/lu";
 import { toast, Bounce } from 'react-toastify';
 import { BsFillSendPlusFill } from "react-icons/bs";
 import { RiUploadCloudFill } from "react-icons/ri";
+import { FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 
 let Url = process.env.NEXT_PUBLIC_BACKEND_URL;
 const SOCKET_URL = Url;
@@ -144,115 +145,133 @@ const TableComponent: React.FC<TableComponentProps> = ({ tableData, uniqueKeys, 
 	});
 
 	return (
-		<div className="mt-6 p-4 bg-white shadow-md rounded-lg customTableWrapper">
-			<div className="w-full overflow-x-auto relative shadow-md sm:rounded-lg">
-				<table className="min-w-[1000px] max-h-[500px] table-auto border-collapse border border-gray-300 customTable">
-					<thead>
-						<tr className="bg-gray-200 text-gray-700 text-left">
-							{filteredKeys.map((key: string, index: number) => (
-								<th key={index} className="border border-gray-300 px-4 py-4">{key}</th>
-							))}
-							<th className="border border-gray-300 px-4 py-2">Action</th>
-						</tr>
-					</thead>
-					<tbody>
-						{tableData.map((item: any, rowIndex: number) => (
-							<tr key={rowIndex} className="text-center hover:bg-gray-100 transition-all">
-								{filteredKeys.map((key: string, colIndex: number) => (
-									<td key={colIndex} className="border border-gray-300 px-4 py-2 text-left table-content">
-										{(item as any)[key] || 'N/A'}
-									</td>
-								))}
-								<td className="border border-gray-300 p-3">
-									<div className="button-wrapper">
-										<Button
-											title="Copy URL"
-											onClick={() => {
-												navigator.clipboard.writeText(item?.formData?.url);
-												toast.success('URL coppied to clipboard!', {
-													position: "bottom-right",
-													autoClose: 5000,
-													hideProgressBar: false,
-													closeOnClick: false,
-													pauseOnHover: true,
-													draggable: true,
-													progress: undefined,
-													theme: "colored",
-													transition: Bounce,
-												});
-											}}
-											className="flex items-center justify-center text-white rounded-md hover:bg-red-600 transition-all w-24 mr-3"
-											type="submit"
-										>
-											<span className="ml-2"><FaCopy size={20} /></span>
-										</Button>
+		<div className="mt-3 p-4 bg-white shadow-md rounded-lg customTableWrapper">
+			{/* Responsive table container with horizontal scroll */}
+<div className="w-full overflow-x-auto rounded-lg shadow">
+  <table className="w-full table-auto border-collapse border border-gray-300">
+    <thead>
+      <tr className="bg-gray-200 text-gray-700 text-left">
+        {filteredKeys.map((key: string, index: number) => (
+          <th 
+            key={index} 
+            className="border border-gray-300 px-4 py-3 font-semibold"
+            style={{ width: `${100 / (filteredKeys.length + 1)}%` }}
+          >
+            {key}
+          </th>
+        ))}
+        <th 
+          className="border border-gray-300 px-4 py-3 font-semibold"
+          style={{ width: `${100 / (filteredKeys.length + 1)}%` }}
+        >
+          Action
+        </th>
+      </tr>
+    </thead>
+    <tbody>
+      {tableData.map((item: any, rowIndex: number) => (
+        <tr key={rowIndex} className="hover:bg-gray-100 transition-all">
+          {filteredKeys.map((key: string, colIndex: number) => (
+            <td 
+              key={colIndex} 
+              className="border border-gray-300 px-4 py-3 text-left align-middle truncate"
+              style={{ width: `${100 / (filteredKeys.length + 1)}%` }} 
+            >
+              <div className="max-w-full overflow-hidden text-ellipsis whitespace-nowrap">
+                {(item as any)[key] || 'N/A'}
+              </div>
+            </td>
+          ))}
+          <td className="border border-gray-300 p-3">
+            <div className="flex flex-wrap gap-2 justify-center items-center">
+              <Button
+                title="Copy URL"
+                onClick={() => {
+                  navigator.clipboard.writeText(item?.formData?.url);
+                  toast.success('URL copied to clipboard!', {
+                    position: "bottom-right",
+                    autoClose: 5000,
+                    hideProgressBar: false,
+                    closeOnClick: false,
+                    pauseOnHover: true,
+                    draggable: true,
+                    progress: undefined,
+                    theme: "colored",
+                    transition: Bounce,
+                  });
+                }}
+                className="flex items-center justify-center text-white rounded-md hover:bg-red-600 transition-all p-2"
+                type="submit"
+              >
+                <FaCopy size={18} />
+              </Button>
 
-										{item?.formData?.submission_id ? (
-											<div className="relative group">
-												<button
-													title="Download PDF Response"
-													onClick={() =>
-														handlePDFDownload(
-															item?.formData?.form_id,
-															item?.formData?.submission_id,
-															rowIndex
-														)
-													}
-													className="flex items-center justify-center bg-red-500 text-white rounded-md hover:bg-red-600 transition-all w-24"
-													disabled={downloadingPDF === rowIndex}
-												>
-													{downloadingPDF === rowIndex ? (
-														<svg
-															className="animate-spin h-5 w-5 text-white"
-															viewBox="0 0 24 24"
-															fill="none"
-														>
-															<circle
-																className="opacity-25"
-																cx="12"
-																cy="12"
-																r="10"
-																stroke="currentColor"
-																strokeWidth="4"
-															/>
-															<path
-																className="opacity-75"
-																fill="currentColor"
-																d="M4 12a8 8 0 018-8v8H4z"
-															/>
-														</svg>
-													) : (
-														<FaFilePdf size={20} />
-													)}
-												</button>
-												<div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 min-w-[140px] text-center text-white text-xs bg-black px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity
-                                                    before:content-[''] before:absolute before:top-full before:left-1/2 before:-translate-x-1/2 before:border-8 before:border-transparent before:border-t-black">
-													Download PDF
-												</div>
-											</div>
-										) : (
-											<div className="relative group">
-												<Button
-													title="Send Form"
-													className="border-1 flex justify-center rounded-md border-black px-6 text-center text-white mt-5"
-													type="submit"
-												>
-													<SendIcon />
-												</Button>
-												<div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 min-w-[100px] text-center text-white text-xs bg-black px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity
-                                                    before:content-[''] before:absolute before:top-full before:left-1/2 before:-translate-x-1/2 before:border-8 before:border-transparent before:border-t-black">
-													Send Form
-												</div>
-											</div>
-										)}
-									</div>
-								</td>
-							</tr>
-						))}
-					</tbody>
-				</table>
-			</div>
-			<nav aria-label="Page navigation" className="flex justify-center mt-6">
+              {item?.formData?.submission_id ? (
+                <div className="relative group">
+                  <button
+                    title="Download PDF Response"
+                    onClick={() =>
+                      handlePDFDownload(
+                        item?.formData?.form_id,
+                        item?.formData?.submission_id,
+                        rowIndex
+                      )
+                    }
+                    className="flex items-center justify-center bg-red-500 text-white rounded-md hover:bg-red-600 transition-all p-2"
+                    disabled={downloadingPDF === rowIndex}
+                  >
+                    {downloadingPDF === rowIndex ? (
+                      <svg
+                        className="animate-spin h-5 w-5 text-white"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        />
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8v8H4z"
+                        />
+                      </svg>
+                    ) : (
+                      <FaFilePdf size={18} />
+                    )}
+                  </button>
+                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 min-w-[140px] text-center text-white text-xs bg-black px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity z-10
+                    before:content-[''] before:absolute before:top-full before:left-1/2 before:-translate-x-1/2 before:border-8 before:border-transparent before:border-t-black">
+                    Download PDF
+                  </div>
+                </div>
+              ) : (
+                <div className="relative group">
+                  <Button
+                    title="Send Form"
+                    className="flex items-center justify-center bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-all p-2"
+                    type="submit"
+                  >
+                    <SendIcon size={18} />
+                  </Button>
+                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 min-w-[100px] text-center text-white text-xs bg-black px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity z-10
+                    before:content-[''] before:absolute before:top-full before:left-1/2 before:-translate-x-1/2 before:border-8 before:border-transparent before:border-t-black">
+                    Send Form
+                  </div>
+                </div>
+              )}
+            </div>
+          </td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+</div>
+			{/* <nav aria-label="Page navigation" className="flex justify-center mt-6">
 				<ul className="inline-flex -space-x-px text-base h-10">
 					<li onClick={() => handlePageChange(currentPage === 1 ? 1 : currentPage - 1)}>
 						<a href="#" className="flex items-center justify-center px-4 h-10 ms-0 leading-tight text-gray-500 bg-white border border-e-0 border-gray-300 rounded-s-lg hover:bg-gray-100 hover:text-blue-900 dark:hover:bg-blue-900 dark:hover:text-white">Previous</a>
@@ -262,7 +281,42 @@ const TableComponent: React.FC<TableComponentProps> = ({ tableData, uniqueKeys, 
 						<a href="#" className="flex items-center justify-center px-4 h-10 leading-tight text-gray-500 bg-white border border-gray-300 rounded-e-lg hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-blue-900 dark:hover:text-white">Next</a>
 					</li>
 				</ul>
-			</nav>
+			</nav> */}
+			<nav aria-label="Pagination" className="flex justify-center mt-6">
+				<div className="inline-flex items-center rounded-md shadow-sm">
+					<button
+					onClick={() => handlePageChange(currentPage - 1)}
+					disabled={currentPage === 1}
+					className={`flex items-center justify-center px-3 h-10 text-sm font-medium rounded-l-md border border-r-0 ${
+						currentPage === 1
+						? 'text-gray-400 bg-gray-100 border-gray-300 cursor-not-allowed'
+						: 'text-gray-700 bg-white border-gray-300 hover:bg-gray-100'
+					}`}
+					aria-label="Previous page"
+					>
+					<FaChevronLeft className="w-4 h-4" />
+					<span className="ml-1 hidden sm:inline">Previous</span>
+					</button>
+					
+					<ul className="inline-flex">
+					{renderPages()}
+					</ul>
+					
+					<button
+					onClick={() => handlePageChange(currentPage + 1)}
+					disabled={currentPage === totalPages}
+					className={`flex items-center justify-center px-3 h-10 text-sm font-medium rounded-r-md border border-l-0 ${
+						currentPage === totalPages
+						? 'text-gray-400 bg-gray-100 border-gray-300 cursor-not-allowed'
+						: 'text-gray-700 bg-white border-gray-300 hover:bg-gray-100'
+					}`}
+					aria-label="Next page"
+					>
+					<span className="mr-1 hidden sm:inline">Next</span>
+					<FaChevronRight className="w-4 h-4" />
+					</button>
+				</div>
+				</nav>
 		</div>
 	);
 };
@@ -886,7 +940,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 			</div>
 
 			<form ref={formRef} onSubmit={onSearchSubmit}>
-				<div className="flex w-full items-end justify-between gap-3">
+				<div className="flex w-full items-center justify-between gap-3">
 					<div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-4 gap-1">
 						{selectedFormFields?.content &&
 							Object.keys(selectedFormFields.content).length > 0 && (
@@ -937,7 +991,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 				</div>
 			</form>
 
-			<div className="flex space-x-4 flex justify-start align-center mb-5" style={{ marginTop: "1.3rem" }}>
+			<div className="flex space-x-4 flex justify-start align-center mb-2" style={{ marginTop: "0.6rem" }}>
 				<div className="mr-3">
 					<input
 						id="all"
