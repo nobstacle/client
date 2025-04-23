@@ -467,7 +467,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 		if(selectedForm){
 			getTableResponse(selectedForm || null, 1, 5, "");
 		}
-	}, [searchQuery, selectedForm]);
+	}, [selectedForm]);
 
 	console.info({selectedForm})
 
