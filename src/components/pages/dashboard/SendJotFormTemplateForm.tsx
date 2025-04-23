@@ -464,9 +464,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 	}, [selectedForm]);
 
 	useEffect(() => {
-		if (searchQuery) {
-			getTableResponse(selectedForm || null, 1, 5, searchQuery);
-		} else {
+		if(selectedForm){
 			getTableResponse(selectedForm || null, 1, 5, "");
 		}
 	}, [searchQuery, selectedForm]);
