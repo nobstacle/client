@@ -471,6 +471,8 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 		}
 	}, [searchQuery, selectedForm]);
 
+	console.info({selectedForm})
+
 
 	useEffect(() => {
 
