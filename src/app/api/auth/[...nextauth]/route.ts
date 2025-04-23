@@ -6,7 +6,6 @@ import {
   authControllerSignAccessToken,
 } from "../../../../lib/client/api";
 
-console.log("authControllerLogin", "authControllerLogin");
 export const authOptions: AuthOptions = {
   
   providers: [

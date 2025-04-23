@@ -12,6 +12,33 @@ export default withAuth(
     const isSAdmin = req.nextauth.token?.user.Roles?.includes("SAdmin");
     const isCompanyExist = !!req.nextauth.token?.user.companyId;
 
+   if (req.nextUrl.pathname.startsWith("/dashboard/superAdminDashboard") ||
+      req.nextUrl.pathname.startsWith("/dashboard/asignForms")) {
+      if (isAdmin ===null || isAdmin === undefined || isStaff ===null || isStaff === undefined) {
+        return NextResponse.redirect(new URL("/dashboard/text", req.nextUrl));
+      }
+
+      if (isUser===null || isUser === undefined) {
+        return NextResponse.redirect(new URL("/client", req.nextUrl));
+      }
+       if (!(isSAdmin)) {
+          return NextResponse.redirect(new URL("/", req.nextUrl));
+        
+       }
+    }
+
+   if (req.nextUrl.pathname.startsWith("/dashboard/settings")) {
+      if (isSAdmin) {
+        return NextResponse.redirect(new URL("/dashboard/asignForms", req.nextUrl));
+      } else if (isStaff===null || isStaff=== undefined) {
+        return NextResponse.redirect(new URL("/dashboard/text", req.nextUrl));
+      } else if (isUser) {
+        return NextResponse.redirect(new URL("/client", req.nextUrl));
+      } else {
+        return NextResponse.redirect(new URL("/", req.nextUrl));
+      }
+    }
+
     // rules for home page
     if (url.pathname === "/") {
       if (isAuthenticated && !isCompanyExist) {
@@ -20,8 +47,11 @@ export default withAuth(
       }
 
       if (isAuthenticated && isSAdmin) {
-        url.pathname = "/dashboard/superAdminDashboard";
-        return NextResponse.redirect(url);
+        if (url.pathname === "/") {
+          url.pathname = "/dashboard/superAdminDashboard";
+          return NextResponse.redirect(url);
+        }
+       
       }
 
       if (isAuthenticated && isUser) {

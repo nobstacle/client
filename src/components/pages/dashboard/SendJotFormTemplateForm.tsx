@@ -180,7 +180,7 @@ const TableComponent: React.FC<TableComponentProps> = ({ tableData, uniqueKeys, 
 											className="flex items-center justify-center text-white rounded-md hover:bg-red-600 transition-all w-24 mr-3"
 											type="submit"
 										>
-											<span className="ml-2"><FaCopy size={20}/></span>
+											<span className="ml-2"><FaCopy size={20} /></span>
 										</Button>
 
 										{item?.formData?.submission_id ? (
@@ -229,7 +229,7 @@ const TableComponent: React.FC<TableComponentProps> = ({ tableData, uniqueKeys, 
 										) : (
 											<div className="relative group">
 												<Button
-												    title="Send Form"
+													title="Send Form"
 													className="border-1 flex justify-center rounded-md border-black px-6 text-center text-white mt-5"
 													type="submit"
 												>
@@ -796,8 +796,8 @@ export const SendJotFormTemplateForm: React.FC = () => {
 
 	return (
 		<div className="bg-gray-50 p-6 rounded-lg shadow-md w-full mx-auto">
-			<div className="flex justify-between items-start mb-4" style={{ paddingLeft: '0.6rem' }}>
-				<div className="flex flex-col space-y-2" style={{ width: '100%', maxWidth: '20vw' }}>
+			<div className="flex justify-between items-end mb-4" style={{ paddingLeft: '0.6rem' }}>
+				<div className="flex flex items-end gap-4" style={{ width: '100%', maxWidth: '30vw' }}>
 					<select
 						className="border p-3 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
 						onChange={(e) => hanldeFormChange(e)}
@@ -806,21 +806,21 @@ export const SendJotFormTemplateForm: React.FC = () => {
 							<option key={assignedForm?.form_id} value={assignedForm?.form_id}>{assignedForm?.form_name}</option>
 						))}
 					</select>
-				</div>
-				{selectedForm && (<div className="flex items-end justify-end space-x-2" style={{ width: "30%" }}>
-					<div className="flex items-start space-x-5">
-						<div className="relative group">
+					<div className="relative group">
 							<button onClick={() => openSendModal()}>
-								<BsFillSendPlusFill size={40} color="#3b5998" />
+								<BsFillSendPlusFill size={25} color="#3b5998" />
 							</button>
 							<div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 min-w-[120px] text-center px-2 py-1 bg-black text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity
       before:content-[''] before:absolute before:top-full before:left-1/2 before:-translate-x-1/2 before:border-8 before:border-transparent before:border-t-black">
 								Send Form
 							</div>
 						</div>
+				</div>
+				{selectedForm && (<div className="flex items-end justify-end space-x-2" style={{ width: "30%" }}>
+					<div className="flex items-start space-x-5">
 						<div className="relative group">
 							<button onClick={handleSampleCSVDownload}>
-								<FaFileDownload size={40} color="#3b5998" />
+								<FaFileDownload size={25} color="#3b5998" />
 							</button>
 							<div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 min-w-[120px] text-center px-2 py-1 bg-black text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity
       before:content-[''] before:absolute before:top-full before:left-1/2 before:-translate-x-1/2 before:border-8 before:border-transparent before:border-t-black">
@@ -829,7 +829,7 @@ export const SendJotFormTemplateForm: React.FC = () => {
 						</div>
 						<div className="relative group cursor-pointer">
 							<label htmlFor="file-upload" style={{ cursor: "pointer" }}>
-								<FaFileUpload size={40} color="#3b5998" />
+								<FaFileUpload size={25} color="#3b5998" />
 							</label>
 							<input
 								id="file-upload"
@@ -845,7 +845,7 @@ export const SendJotFormTemplateForm: React.FC = () => {
 						</div>
 						<div className="relative group">
 							<button onClick={() => openModal()}>
-								<LuListPlus size={40} color="#3b5998" />
+								<LuListPlus size={25} color="#3b5998" />
 							</button>
 							<div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 min-w-[120px] text-center px-2 py-1 bg-black text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity
       before:content-[''] before:absolute before:top-full before:left-1/2 before:-translate-x-1/2 before:border-8 before:border-transparent before:border-t-black">
@@ -860,7 +860,7 @@ export const SendJotFormTemplateForm: React.FC = () => {
 
 			<form ref={formRef} onSubmit={onSearchSubmit}>
 				<div className="flex w-full items-end justify-between gap-3">
-					<div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-4 gap-4">
+					<div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-4 gap-1">
 						{selectedFormFields?.content &&
 							Object.keys(selectedFormFields.content).length > 0 && (
 								<>
@@ -895,7 +895,7 @@ export const SendJotFormTemplateForm: React.FC = () => {
 											<FaSearch /> <span className="ml-2">Search</span>
 										</Button>
 									</div>
-									<div className="right">
+									{/* <div className="right">
 										<Button
 											type="button"
 											className="border-1 flex justify-center rounded-md border-black p-2 px-6 text-center text-white items-center bg-blue-600 hover:bg-blue-700"
@@ -903,7 +903,7 @@ export const SendJotFormTemplateForm: React.FC = () => {
 										>
 											Reset
 										</Button>
-									</div>
+									</div> */}
 								</div>
 							</>
 						)}
