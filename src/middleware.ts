@@ -12,25 +12,27 @@ export default withAuth(
     const isSAdmin = req.nextauth.token?.user.Roles?.includes("SAdmin");
     const isCompanyExist = !!req.nextauth.token?.user.companyId;
 
-   if (req.nextUrl.pathname.startsWith("/dashboard/superAdminDashboard") ||
-      req.nextUrl.pathname.startsWith("/dashboard/asignForms")) {
-      if (isAdmin ===null || isAdmin === undefined || isStaff ===null || isStaff === undefined) {
-        return NextResponse.redirect(new URL("/dashboard/text", req.nextUrl));
-      }
 
-      if (isUser===null || isUser === undefined) {
-        return NextResponse.redirect(new URL("/client", req.nextUrl));
-      }
-       if (!(isSAdmin)) {
-          return NextResponse.redirect(new URL("/", req.nextUrl));
-        
-       }
-    }
+    // if (req.nextUrl.pathname.startsWith("/dashboard/superAdminDashboard") ||
+    //   req.nextUrl.pathname.startsWith("/dashboard/asignForms")) {
 
-   if (req.nextUrl.pathname.startsWith("/dashboard/settings")) {
+    //   if (!isAdmin && !isStaff) {
+    //     return NextResponse.redirect(new URL("/dashboard/text", req.nextUrl));
+    //   }
+
+    //   if (isUser === null || isUser === undefined) {
+    //     return NextResponse.redirect(new URL("/client", req.nextUrl));
+    //   }
+    //   if (!(isSAdmin)) {
+    //     return NextResponse.redirect(new URL("/", req.nextUrl));
+
+    //   }
+    // }
+
+    if (req.nextUrl.pathname.startsWith("/dashboard/settings")) {
       if (isSAdmin) {
         return NextResponse.redirect(new URL("/dashboard/asignForms", req.nextUrl));
-      } else if (isStaff===null || isStaff=== undefined) {
+      } else if (isStaff === null || isStaff === undefined) {
         return NextResponse.redirect(new URL("/dashboard/text", req.nextUrl));
       } else if (isUser) {
         return NextResponse.redirect(new URL("/client", req.nextUrl));
@@ -51,7 +53,7 @@ export default withAuth(
           url.pathname = "/dashboard/superAdminDashboard";
           return NextResponse.redirect(url);
         }
-       
+
       }
 
       if (isAuthenticated && isUser) {
@@ -99,7 +101,7 @@ export default withAuth(
         }
       }
     }
-      
+
     // rules for onboard page
     if (url.pathname === "/onboard/create-company") {
       if (isAuthenticated && isCompanyExist) {

@@ -4,6 +4,11 @@ import { useCompanyControllerGetAllCompanies } from "../../../lib/client/api";
 import axios from 'axios';
 import { useSession } from "next-auth/react";
 import { saveFormData } from "./util";
+import { FaTrash } from "react-icons/fa";
+import Swal from 'sweetalert2'
+import Select from 'react-select';
+import "../../../styles/base.css";
+
 let Url = process.env.NEXT_PUBLIC_BACKEND_URL;
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || Url + '/api/assigned-form';
@@ -103,6 +108,39 @@ const AsignForms: React.FC = () => {
 		return <div className="text-center text-red-500 py-4">Error: {error.message}</div>;
 	}
 
+	const deleteForm = (form: any) => {
+		Swal.fire({
+			title: "Are you sure?",
+			text: "You won't be able to revert this!",
+			icon: "warning",
+			showCancelButton: true,
+			confirmButtonText: "Yes, delete it!",
+			cancelButtonText: "Cancel",
+			reverseButtons: true,
+		}).then((result) => {
+			if (result.isConfirmed) {
+				Swal.fire({
+					title: "Deleted!",
+					text: "Form Deleted!",
+					icon: "success",
+					confirmButtonColor: "#2563eb"
+				});
+			}
+		});
+	};
+
+
+	const companyOptions = companies.map((company) => ({
+		value: company.id.toString(),
+		label: company.name,
+	}));
+
+	const handleCompanyChange = (selectedOptions: any) => {
+		const selectedIds = selectedOptions.map((option: any) => option.value);
+		setFormData({ ...formData, assigned_companies: selectedIds });
+	};
+
+
 	return (
 		<div className="mx-auto mt-6 p-6 bg-white shadow-lg rounded-lg">
 			<h2 className="text-xl font-semibold text-gray-700 mb-4">Assign Forms</h2>
@@ -131,8 +169,18 @@ const AsignForms: React.FC = () => {
 				</div>
 				<div>
 					<label className="block text-gray-600 mb-1">Select Companies:</label>
-					<div className="w-full p-2 border rounded-md focus:outline-none focus:ring focus:ring-blue-300 h-32 overflow-auto bg-white">
-						{companies?.map((company: Company) => (
+					<div className="w-full bg-white">
+						<Select
+							isMulti
+							options={companyOptions}
+							value={companyOptions.filter((option) =>
+								formData.assigned_companies.includes(option.value)
+							)}
+							onChange={handleCompanyChange}
+							className="react-select-container"
+							classNamePrefix="react-select customReactSelect"
+						/>
+						{/* {companies?.map((company: Company) => (
 							<div
 								key={company.id}
 								onClick={() => handleSelectChange(company.id.toString())}
@@ -144,8 +192,7 @@ const AsignForms: React.FC = () => {
 									<span className="text-blue-500 font-bold">✔</span>
 								)}
 							</div>
-						))}
-
+						))} */}
 					</div>
 				</div>
 				<div className="flex justify-center items-center">
@@ -166,6 +213,7 @@ const AsignForms: React.FC = () => {
 									<th className="border border-gray-300 px-4 py-2">Form ID</th>
 									<th className="border border-gray-300 px-4 py-2">Form Name</th>
 									<th className="border border-gray-300 px-4 py-2">Assigned Companies</th>
+									<th className="border border-gray-300 px-4 py-2">Action</th>
 								</tr>
 							</thead>
 							<tbody>
@@ -175,6 +223,14 @@ const AsignForms: React.FC = () => {
 										<td className="border border-gray-300 px-4 py-2">{form.form_name}</td>
 										<td className="border border-gray-300 px-4 py-2">
 											{form.companies?.join(', ')}
+										</td>
+										<td className="border border-gray-300 px-4 py-2 text-center">
+											<button
+												onClick={() => deleteForm(form)}
+												className="inline-flex items-center justify-center gap-2 text-red-600 hover:text-red-800 font-medium transition-colors"
+											>
+												<FaTrash className="text-red-500" />
+											</button>
 										</td>
 									</tr>
 								))}

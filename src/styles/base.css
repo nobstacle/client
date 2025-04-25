@@ -12,6 +12,7 @@
       width: 100%;
       white-space: nowrap;
     }
+
     td {
       width: 100%;
       white-space: nowrap;
@@ -29,6 +30,7 @@
   display: flex;
   justify-items: center;
   align-items: center;
+
   button {
     width: fit-content;
     padding: 0.3rem 0.6rem;
@@ -43,7 +45,24 @@
 
 
 .buttonsWrapperSection {
-display: flex;
-justify-content: flex-start;
-gap: 10px;
+  display: flex;
+  justify-content: flex-start;
+  gap: 10px;
+}
+
+
+.react-select-container {
+  .react-select {
+    padding: 0.15rem !important;
+  }
+}
+
+.swal2-cancel {
+  background-color: red !important;
+  color: white !important;
+}
+
+.swal2-confirm {
+  background-color: blue !important;
+  color: white !important;
 }

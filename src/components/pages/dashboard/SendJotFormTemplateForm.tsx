@@ -145,7 +145,7 @@ const TableComponent: React.FC<TableComponentProps> = ({ tableData, uniqueKeys, 
 	});
 
 	return (
-		<div className="mt-3 p-4 bg-white shadow-md rounded-lg customTableWrapper">
+		<div className="p-4 bg-white shadow-md rounded-lg customTableWrapper">
 			{/* Responsive table container with horizontal scroll */}
 			<div className="w-full overflow-x-auto rounded-lg shadow">
 				<table className="w-full table-auto border-collapse border border-gray-300">
@@ -177,7 +177,7 @@ const TableComponent: React.FC<TableComponentProps> = ({ tableData, uniqueKeys, 
 										className="border border-gray-300 px-4 py-3 text-left align-middle truncate"
 										style={{ width: `${100 / (filteredKeys.length + 1)}%` }}
 									>
-										<div className="max-w-full overflow-hidden text-ellipsis whitespace-nowrap">
+										<div className="max-w-[200px] overflow-hidden text-ellipsis whitespace-nowrap">
 											{(item as any)[key] || 'N/A'}
 										</div>
 									</td>
@@ -271,25 +271,14 @@ const TableComponent: React.FC<TableComponentProps> = ({ tableData, uniqueKeys, 
 					</tbody>
 				</table>
 			</div>
-			{/* <nav aria-label="Page navigation" className="flex justify-center mt-6">
-				<ul className="inline-flex -space-x-px text-base h-10">
-					<li onClick={() => handlePageChange(currentPage === 1 ? 1 : currentPage - 1)}>
-						<a href="#" className="flex items-center justify-center px-4 h-10 ms-0 leading-tight text-gray-500 bg-white border border-e-0 border-gray-300 rounded-s-lg hover:bg-gray-100 hover:text-blue-900 dark:hover:bg-blue-900 dark:hover:text-white">Previous</a>
-					</li>
-					{renderPages()}
-					<li onClick={() => handlePageChange(currentPage === totalPages ? totalPages : currentPage + 1)}>
-						<a href="#" className="flex items-center justify-center px-4 h-10 leading-tight text-gray-500 bg-white border border-gray-300 rounded-e-lg hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-blue-900 dark:hover:text-white">Next</a>
-					</li>
-				</ul>
-			</nav> */}
 			<nav aria-label="Pagination" className="flex justify-center mt-6">
 				<div className="inline-flex items-center rounded-md shadow-sm">
 					<button
 						onClick={() => handlePageChange(currentPage - 1)}
 						disabled={currentPage === 1}
 						className={`flex items-center justify-center px-3 h-10 text-sm font-medium rounded-l-md border border-r-0 ${currentPage === 1
-								? 'text-gray-400 bg-gray-100 border-gray-300 cursor-not-allowed'
-								: 'text-gray-700 bg-white border-gray-300 hover:bg-gray-100'
+							? 'text-gray-400 bg-gray-100 border-gray-300 cursor-not-allowed'
+							: 'text-gray-700 bg-white border-gray-300 hover:bg-gray-100'
 							}`}
 						aria-label="Previous page"
 					>
@@ -305,8 +294,8 @@ const TableComponent: React.FC<TableComponentProps> = ({ tableData, uniqueKeys, 
 						onClick={() => handlePageChange(currentPage + 1)}
 						disabled={currentPage === totalPages}
 						className={`flex items-center justify-center px-3 h-10 text-sm font-medium rounded-r-md border border-l-0 ${currentPage === totalPages
-								? 'text-gray-400 bg-gray-100 border-gray-300 cursor-not-allowed'
-								: 'text-gray-700 bg-white border-gray-300 hover:bg-gray-100'
+							? 'text-gray-400 bg-gray-100 border-gray-300 cursor-not-allowed'
+							: 'text-gray-700 bg-white border-gray-300 hover:bg-gray-100'
 							}`}
 						aria-label="Next page"
 					>
@@ -321,27 +310,27 @@ const TableComponent: React.FC<TableComponentProps> = ({ tableData, uniqueKeys, 
 
 const customStyles: Styles = {
 	content: {
-	  top: "50%",
-	  left: "50%",
-	  right: "auto",
-	  bottom: "auto",
-	  marginRight: "-50%",
-	  transform: "translate(-50%, -50%)",
-	  width: "60%",
-	  overflowY: "auto",
-	  borderRadius: "10px",
-	  padding: "20px",
-	  maxHeight: "90%",
-	  height:'60vh'
+		top: "50%",
+		left: "50%",
+		right: "auto",
+		bottom: "auto",
+		marginRight: "-50%",
+		transform: "translate(-50%, -50%)",
+		width: "60%",
+		overflowY: "auto",
+		borderRadius: "10px",
+		padding: "20px",
+		maxHeight: "90%",
+		height: '60vh'
 	},
 	overlay: {
-	  backgroundColor: 'rgba(0, 0, 0, 0.75)',
-	  zIndex: 1000,
-	  display: 'flex',
-	  alignItems: 'center',
-	  justifyContent: 'center'
+		backgroundColor: 'rgba(0, 0, 0, 0.75)',
+		zIndex: 1000,
+		display: 'flex',
+		alignItems: 'center',
+		justifyContent: 'center'
 	},
-  };
+};
 
 interface ManualInputValues {
 	[key: string]: string;
@@ -359,6 +348,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 	const [searchQuery, setSearchQuery] = useState("");
 	const [currentPage, setCurrentPage] = useState(1);
 	const [totalPages, setTotalPages] = useState(0);
+	const [filteredTableData, setFilteredTableData] = useState([]);
 	const itemsPerPage = 5;
 	const formRef = useRef<HTMLFormElement>(null);
 
@@ -866,16 +856,28 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 		}
 	};
 
-	const resetFilters = () => {
-		getTableResponse(selectedForm, 1, 5, "");
-		if (formRef.current) {
-			formRef.current?.reset();
+	const handleFilterChange = (value: any) => {
+		if (value === 'completed') {
+			let filterData = tableResponse.data?.filter((item: any) => {
+				return item.formData["submission_id"] !== null;
+			});
+			setFilteredTableData(filterData);
+		} else if (value === "all") {
+			let filterData = tableResponse.data?.filter((item: any) => {
+				return item;
+			});
+			setFilteredTableData(filterData);
+		} else {
+			let filterData = tableResponse.data?.filter((item: any) => {
+				return item.formData["submission_id"] === null;
+			});
+			setFilteredTableData(filterData);
 		}
-	};
+	}
 
 	return (
 		<div className="bg-gray-50 p-6 rounded-lg shadow-md w-full mx-auto">
-			<div className="flex justify-between items-end mb-4" style={{ paddingLeft: '0.6rem' }}>
+			<div className="flex justify-between items-end mb-4">
 				<div className="flex flex items-end gap-4" style={{ width: '100%', maxWidth: '30vw' }}>
 					<select
 						className="border p-3 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -939,111 +941,81 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 			</div>
 
 			<form ref={formRef} onSubmit={onSearchSubmit}>
-				<div className="flex w-full items-center justify-between gap-3">
-						<div className="card searchCards shadow-md rounded flex bg-white ">
-						{selectedFormFields?.content &&
-							Object.keys(selectedFormFields.content).length > 0 && (
-								<>
-								  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+				{selectedFormFields?.content && Object.keys(selectedFormFields.content).length > 0 && (
+					<div className="w-full p-4 bg-white rounded-lg shadow-md">
+						<div className="grid grid-cols-12 gap-4 items-end">
+							<div className="col-span-12 lg:col-span-10 space-y-4">
+								<div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-2">
 									{Object.values(selectedFormFields.content)
 										.filter((item) => item?.name?.includes("search"))
+										.sort((a, b) => {
+											const firstLetterA = a.name[0].toLowerCase();
+											const firstLetterB = b.name[0].toLowerCase();
+											return firstLetterA.localeCompare(firstLetterB);
+										})
 										.map((item) => (
-											<div key={item.qid} className="p-2">
-												<input
-													name={item?.text}
-													placeholder={item.text}
-													type={item?.type || "text"}
-								             className="w-full rounded-md border-2 p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-													style={{ width: '10vw'}}
-												/>
-											</div>
+											<input
+												key={item.qid}
+												name={item?.text}
+												placeholder={item.text}
+												type={item?.type || "text"}
+												className="w-full rounded-md border border-gray-300 p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+											/>
 										))}
 								</div>
-								</>
-							)}
 							</div>
 
-					{selectedForm &&
-						selectedFormFields?.content &&
-						Object?.values(selectedFormFields?.content).filter((item) =>
-							item?.name?.includes("search")
-						)?.length > 0 && (
-							<>
-								<div className="buttonsWrapperSection">
-									<div className="left">
+							{selectedForm &&
+								Object.values(selectedFormFields.content).some((item) => item?.name?.includes("search")) && (
+									<div className="col-span-12 lg:col-span-2 flex justify-end">
 										<Button
-											className="border-1 flex justify-center rounded-md border-black p-2 px-6 text-center text-white items-center bg-blue-600 hover:bg-blue-700"
 											type="submit"
+											className="flex items-center gap-2 w-full lg:w-auto rounded-md bg-blue-600 px-6 py-2 text-white hover:bg-blue-700 transition"
 										>
-											<FaSearch /> <span className="ml-2">Search</span>
+											<FaSearch />
+											<span>Search</span>
 										</Button>
 									</div>
-									{/* <div className="right">
-										<Button
-											type="button"
-											className="border-1 flex justify-center rounded-md border-black p-2 px-6 text-center text-white items-center bg-blue-600 hover:bg-blue-700"
-											onClick={() => resetFilters()}
-										>
-											Reset
-										</Button>
-									</div> */}
-								</div>
-							</>
-						)}
-				</div>
+								)}
+						</div>
+					</div>
+				)}
 			</form>
 
-			<div className="flex space-x-4 flex justify-start align-center mb-2" style={{ marginTop: "0.6rem" }}>
-				<div className="mr-3">
-					<input
-						id="all"
-						name="status"
-						type="radio"
-						value="all"
-						className="me-2"
-					/>
-					<label htmlFor="all" className="text-gray-700 font-medium">All</label>
-				</div>
-				<div className="mr-3">
-					<input
-						id="completed"
-						name="status"
-						type="radio"
-						value="completed"
-						className="me-2"
-					/>
-					<label htmlFor="completed" className="text-gray-700 font-medium">Completed</label>
-				</div>
-				<div>
-					<input
-						id="pending"
-						name="status"
-						type="radio"
-						value="pending"
-						className="me-2"
-					/>
-					<label htmlFor="pending" className="text-gray-700 font-medium">Pending</label>
-				</div>
-			</div>
-
-
 			{tableResponse && selectedFormFields?.content ? (
+				<div className="card mt-5 bg-white rounded">
+					<div className="flex flex-wrap items-center gap-4" style={{ padding: '0.5rem 0 0 1rem' }}>
+						{["all", "completed", "pending"].map((status) => (
+							<label
+								key={status}
+								htmlFor={status}
+								className="inline-flex items-center space-x-2 px-4 py-2 bg-gray-100 rounded-md cursor-pointer hover:bg-gray-200 transition"
+							>
+								<input
+									id={status}
+									name="status"
+									type="radio"
+									value={status}
+									className="form-radio text-blue-600 focus:ring-0"
+									onChange={() => handleFilterChange(status)}
+								/>
+								<span className="capitalize text-gray-700 font-medium">{status}</span>
+							</label>
+						))}
+					</div>
 
-				<>
 					<TableComponent
-						tableData={Array.isArray(tableResponse.data) ? tableResponse.data : []}
+						tableData={filteredTableData?.length > 0 ? filteredTableData : Array.isArray(tableResponse.data) ? tableResponse.data : []}
 						uniqueKeys={Array.isArray(tableResponse.uniqueKeys) ? tableResponse.uniqueKeys : []}
 						currentPage={currentPage}
 						itemsPerPage={itemsPerPage}
 						onPageChange={handlePageChange}
 						totalPages={totalPages}
 						setCurrentPage={setCurrentPage}
-						selectedFormFields={selectedFormFields?.content ? selectedFormFields.content : []}
+						selectedFormFields={selectedFormFields?.content || []}
 					/>
-
-				</>
-
-			) : <></>}
+				</div>
+			) : null}
 
 			<Modal
 				isOpen={isModalOpen}
