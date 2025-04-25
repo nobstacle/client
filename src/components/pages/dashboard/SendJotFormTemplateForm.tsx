@@ -45,7 +45,7 @@ interface TableComponentProps {
 }
 
 
-const TableComponent: React.FC<TableComponentProps> = ({ tableData, uniqueKeys, currentPage, totalPages, setCurrentPage, selectedFormFields }) => {
+const TableComponent: React.FC<TableComponentProps> = ({ tableData, uniqueKeys, currentPage, totalPages, setCurrentPage, selectedFormFields, TableKey }) => {
 	const [downloadingPDF, setDownloadingPDF] = useState<number | null>(null);
 
 	const handlePageChange = (newPage: number) => {
@@ -75,8 +75,8 @@ const TableComponent: React.FC<TableComponentProps> = ({ tableData, uniqueKeys, 
 					<circle cx="67.0702" cy="31.0854" r="1.36752" fill="#4F46E5" />
 				</svg>
 				<div>
-					<h2 className="text-center text-black text-xl font-semibold leading-loose pb-2">There is no response available.</h2>
-					<p className="text-center text-black text-base font-normal leading-relaxed pb-4">Please select form to see the responses.</p>
+					<h2 className="text-center text-black text-xl font-semibold leading-loose pb-2">No response available.</h2>
+					{/* <p className="text-center text-black text-base font-normal leading-relaxed pb-4">Please select form to see the responses.</p> */}
 				</div>
 			</div>
 		);
@@ -148,7 +148,7 @@ const TableComponent: React.FC<TableComponentProps> = ({ tableData, uniqueKeys, 
 		<div className="p-4 bg-white shadow-md rounded-lg customTableWrapper">
 			{/* Responsive table container with horizontal scroll */}
 			<div className="w-full overflow-x-auto rounded-lg shadow">
-				<table className="w-full table-auto border-collapse border border-gray-300">
+				<table className="w-full table-auto border-collapse border border-gray-300" key={TableKey}>
 					<thead>
 						<tr className="bg-gray-200 text-gray-700 text-left">
 							{filteredKeys.map((key: string, index: number) => (
@@ -177,7 +177,7 @@ const TableComponent: React.FC<TableComponentProps> = ({ tableData, uniqueKeys, 
 										className="border border-gray-300 px-4 py-3 text-left align-middle truncate"
 										style={{ width: `${100 / (filteredKeys.length + 1)}%` }}
 									>
-										<div className="max-w-[200px] overflow-hidden text-ellipsis whitespace-nowrap">
+										<div className="max-w-[200px] overflow-hidden text-ellipsis whitespace-nowrap min-w-[160px]">
 											{(item as any)[key] || 'N/A'}
 										</div>
 									</td>
@@ -286,9 +286,15 @@ const TableComponent: React.FC<TableComponentProps> = ({ tableData, uniqueKeys, 
 						<span className="ml-1 hidden sm:inline">Previous</span>
 					</button>
 
-					<ul className="inline-flex">
+					{totalPages > 1 && (
+						<ul className="inline-flex">
+							{renderPages()}
+						</ul>
+					)}
+
+					{/* <ul className="inline-flex">
 						{renderPages()}
-					</ul>
+					</ul> */}
 
 					<button
 						onClick={() => handlePageChange(currentPage + 1)}
@@ -341,14 +347,14 @@ interface InputValues {
 }
 
 export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => void }) => {
-
 	const [isModalOpen, setIsModalOpen] = useState(false);
 	const [isSendModalOpen, setIsSendModalOpen] = useState(false);
 	const [manualInputValues, setManualInputValues] = useState<ManualInputValues>({});
-	const [searchQuery, setSearchQuery] = useState("");
 	const [currentPage, setCurrentPage] = useState(1);
+	const [lastSearchedValue, setLastSearchedValue] = useState("");
 	const [totalPages, setTotalPages] = useState(0);
-	const [filteredTableData, setFilteredTableData] = useState([]);
+	const [selectedFilter, setSelectedFilter] = useState(null);
+	const [TableKey, setTableKey] = useState(0);
 	const itemsPerPage = 5;
 	const formRef = useRef<HTMLFormElement>(null);
 
@@ -381,7 +387,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 		socket.on("dataSaved", (data) => {
 			console.log("WebSocket Event Received:", data);
 			if (data?.formId) {
-				getTableResponse(data.formId, 1, 5, "");
+				getTableResponse(data.formId, 1, 5, lastSearchedValue, selectedFilter);
 			}
 		});
 	};
@@ -419,7 +425,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 
 	useEffect(() => {
 		if (selectedForm) {
-			getTableResponse(selectedForm, currentPage, itemsPerPage);
+			getTableResponse(selectedForm, currentPage, itemsPerPage, lastSearchedValue, selectedFilter);
 		}
 	}, [currentPage])
 
@@ -447,7 +453,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 
 		socket.on("dataSaved", (data) => {
 			if (data?.formId) {
-				getTableResponse(data.formId, 1, 5, "");
+				getTableResponse(data.formId, 1, 5, lastSearchedValue, selectedFilter);
 			}
 		});
 
@@ -504,7 +510,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 
 	useEffect(() => {
 		if (selectedForm) {
-			getTableResponse(selectedForm || null, 1, 5, "");
+			getTableResponse(selectedForm || null, 1, 5, lastSearchedValue, selectedFilter);
 		}
 	}, [selectedForm]);
 
@@ -558,7 +564,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 		return `${BASE_URL}?${params.toString()}`;
 	};
 
-	const getTableResponse = async (form_id: string | null, page: number, limit: number = 5, search: any = "") => {
+	const getTableResponse = async (form_id: string | null, page: number, limit: number = 5, search: any = "", filter: string) => {
 		let API_URL = Url + `/api/jotform/responses/${form_id}?page=${page}&limit=${limit}`;
 		if (search && (typeof search === 'string' ? search !== "" : search.length > 0)) {
 			let searchArray = search;
@@ -574,6 +580,10 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 			const encodedSearch = encodeURIComponent(JSON.stringify(searchArray));
 			API_URL += `&search=${encodedSearch}`;
 		}
+		if (filter) {
+			API_URL += `&filter=${filter}`;
+		}
+
 		try {
 			const response = await axios.get(API_URL);
 
@@ -648,7 +658,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 		setValue("url", value);
 		setSelectedForm(value);
 		setCurrentPage(1)
-		getTableResponse(value || null, 1, 5, "");
+		getTableResponse(value || null, 1, 5, lastSearchedValue, selectedFilter);
 	}
 
 	async function onSubmit(event: React.MouseEvent<HTMLButtonElement, MouseEvent>) {
@@ -693,7 +703,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 		try {
 			const response = await axios.post(uploadURL, formData);
 
-			getTableResponse(selectedForm || null, 1, 5, "");
+			getTableResponse(selectedForm || null, 1, 5, lastSearchedValue, selectedFilter);
 
 			if (response.status === 201) {
 				toast.success('Response uploaded successsfully!', {
@@ -758,7 +768,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 				},
 			});
 			setCurrentPage(1)
-			getTableResponse(selectedForm || null, 1, 5, "");
+			getTableResponse(selectedForm || null, 1, 5, lastSearchedValue, selectedFilter);
 
 			if (response.status === 201) {
 				toast.success('Response uploaded successsfully!', {
@@ -819,7 +829,8 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 		}
 
 		setCurrentPage(1);
-		getTableResponse(selectedForm, 1, 5, finalSearch)
+		setLastSearchedValue(finalSearch);
+		getTableResponse(selectedForm, 1, 5, finalSearch, selectedFilter)
 	};
 
 	const handleSampleCSVDownload = () => {
@@ -856,24 +867,23 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 		}
 	};
 
-	const handleFilterChange = (value: any) => {
+	const handleFilterChange = (value: string) => {
+		let filterData = [];
+
 		if (value === 'completed') {
-			let filterData = tableResponse.data?.filter((item: any) => {
-				return item.formData["submission_id"] !== null;
-			});
-			setFilteredTableData(filterData);
-		} else if (value === "all") {
-			let filterData = tableResponse.data?.filter((item: any) => {
-				return item;
-			});
-			setFilteredTableData(filterData);
+			filterData = tableResponse.data?.filter(item => item.formData["submission_id"] !== null);
+		} else if (value === 'pending') {
+			filterData = tableResponse.data?.filter(item => item.formData["submission_id"] === null);
 		} else {
-			let filterData = tableResponse.data?.filter((item: any) => {
-				return item.formData["submission_id"] === null;
-			});
-			setFilteredTableData(filterData);
+			filterData = tableResponse.data || [];
 		}
-	}
+
+		setSelectedFilter(value);
+		setCurrentPage(1);
+		setTableKey((prev) => prev + 1);
+		getTableResponse(selectedForm || null, 1, 5, lastSearchedValue, value);
+	};
+
 
 	return (
 		<div className="bg-gray-50 p-6 rounded-lg shadow-md w-full mx-auto">
@@ -1003,9 +1013,9 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 							</label>
 						))}
 					</div>
-
 					<TableComponent
-						tableData={filteredTableData?.length > 0 ? filteredTableData : Array.isArray(tableResponse.data) ? tableResponse.data : []}
+						key={TableKey}
+						tableData={Array.isArray(tableResponse.data) ? tableResponse.data : []}
 						uniqueKeys={Array.isArray(tableResponse.uniqueKeys) ? tableResponse.uniqueKeys : []}
 						currentPage={currentPage}
 						itemsPerPage={itemsPerPage}
