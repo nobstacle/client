@@ -12,7 +12,6 @@ export default withAuth(
     const isSAdmin = req.nextauth.token?.user.Roles?.includes("SAdmin");
     const isCompanyExist = !!req.nextauth.token?.user.companyId;
 
-
     // if (req.nextUrl.pathname.startsWith("/dashboard/superAdminDashboard") ||
     //   req.nextUrl.pathname.startsWith("/dashboard/asignForms")) {
 
@@ -28,6 +27,14 @@ export default withAuth(
 
     //   }
     // }
+
+    if(req.nextUrl.pathname.startsWith("/dashboard/asignForms")) {
+      if (isSAdmin) {
+        return NextResponse.redirect(new URL("/dashboard/asignForms", req.nextUrl));
+      } else {
+        return NextResponse.redirect(new URL("/dashboard/text", req.nextUrl));
+      }
+    }
 
     if (req.nextUrl.pathname.startsWith("/dashboard/settings")) {
       if (isSAdmin) {
