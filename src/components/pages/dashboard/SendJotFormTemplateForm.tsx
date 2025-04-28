@@ -147,9 +147,8 @@ const TableComponent: React.FC<TableComponentProps> = ({ tableData, uniqueKeys, 
 
 	return (
 		<div className="p-4 bg-white shadow-md rounded-lg customTableWrapper">
-			{/* Responsive table container with horizontal scroll */}
 			<div className="w-full overflow-x-auto rounded-lg shadow">
-				<table className="w-100 table-auto border-collapse border border-gray-300" key={TableKey}>
+				<table className="w-100 table-auto border-collapse border border-gray-300" key={TableKey} style={{ width: '100%' }}>
 					<thead>
 						<tr className="bg-gray-200 text-gray-700 text-left">
 							{filteredKeys.map((key: string, index: number) => (
@@ -162,10 +161,12 @@ const TableComponent: React.FC<TableComponentProps> = ({ tableData, uniqueKeys, 
 								</th>
 							))}
 							<th
-								className="border border-gray-300 px-4 py-3 font-semibold sticky-last-column"
+								className="border border-gray-300 px-4 py-3 font-semibold sticky-last-column-header"
 								style={{ width: `${100 / (filteredKeys.length + 1)}%` }}
 							>
+								<div>
 								Action
+								</div>
 							</th>
 						</tr>
 					</thead>
