@@ -8,7 +8,7 @@ import { useSocketContext } from "../../../context/SocketContextProvider";
 import "../../../styles/base.css";
 import { useSession } from "next-auth/react";
 import axios from 'axios';
-import { FormEvent } from 'react';
+// import { FormEvent } from 'react';
 import { io, Socket } from "socket.io-client";
 import Modal, { Styles } from 'react-modal';
 import { FaFileDownload, FaFileUpload, FaCopy, FaFilePdf, FaSearch } from "react-icons/fa";
@@ -137,6 +137,7 @@ const TableComponent: React.FC<TableComponentProps> = ({ tableData, uniqueKeys, 
 		}
 		return pages;
 	};
+
 	const filteredKeys = uniqueKeys.filter(key => {
 		const matchingField = Object.values(selectedFormFields).find((field: any) =>
 			field.name.includes('listable') && field.text === key
@@ -148,7 +149,7 @@ const TableComponent: React.FC<TableComponentProps> = ({ tableData, uniqueKeys, 
 		<div className="p-4 bg-white shadow-md rounded-lg customTableWrapper">
 			{/* Responsive table container with horizontal scroll */}
 			<div className="w-full overflow-x-auto rounded-lg shadow">
-				<table className="w-full table-auto border-collapse border border-gray-300" key={TableKey}>
+				<table className="w-100 table-auto border-collapse border border-gray-300" key={TableKey}>
 					<thead>
 						<tr className="bg-gray-200 text-gray-700 text-left">
 							{filteredKeys.map((key: string, index: number) => (
@@ -161,7 +162,7 @@ const TableComponent: React.FC<TableComponentProps> = ({ tableData, uniqueKeys, 
 								</th>
 							))}
 							<th
-								className="border border-gray-300 px-4 py-3 font-semibold"
+								className="border border-gray-300 px-4 py-3 font-semibold sticky-last-column"
 								style={{ width: `${100 / (filteredKeys.length + 1)}%` }}
 							>
 								Action
@@ -174,7 +175,7 @@ const TableComponent: React.FC<TableComponentProps> = ({ tableData, uniqueKeys, 
 								{filteredKeys.map((key: string, colIndex: number) => (
 									<td
 										key={colIndex}
-										className="border border-gray-300 px-4 py-3 text-left align-middle truncate"
+										className="border border-gray-300 px-4 text-left align-middle truncate"
 										style={{ width: `${100 / (filteredKeys.length + 1)}%` }}
 									>
 										<div className="max-w-[200px] overflow-hidden text-ellipsis whitespace-nowrap min-w-[160px]">
@@ -182,7 +183,7 @@ const TableComponent: React.FC<TableComponentProps> = ({ tableData, uniqueKeys, 
 										</div>
 									</td>
 								))}
-								<td className="border border-gray-300 p-3">
+								<td className="border border-gray-300 p-3 sticky-last-column">
 									<div className="flex flex-wrap gap-2 justify-center items-center">
 										<Button
 											title="Copy URL"
@@ -355,6 +356,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 	const [totalPages, setTotalPages] = useState(0);
 	const [selectedFilter, setSelectedFilter] = useState(null);
 	const [TableKey, setTableKey] = useState(0);
+	const [loader, setLoader] = useState(false);
 	const itemsPerPage = 5;
 	const formRef = useRef<HTMLFormElement>(null);
 
@@ -418,7 +420,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 	const [assignedForms, setAssignedForms] = useState<AssignedForm[]>([]);
 	const [selectedForm, setSelectedForm] = useState<string | null>(null)
 	const [inputValues, setInputValues] = useState<InputValues>({});
-	const [tableResponse, setTableResponse] = useState<{ data: string | any[]; uniqueKeys?: string[] } | null>(null);
+	const [tableResponse, setTableResponse] = useState<{ data: string | any[]; uniqueKeys?: [] } | null>(null);
 	interface FormFields {
 		content: any[];
 	}
@@ -552,8 +554,6 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 		);
 	};
 
-
-
 	const buildUrl = (formId: string, inputValues: any) => {
 		const BASE_URL = `https://form.jotform.com/${formId}`;
 		for (const [key, value] of Object.entries(inputValues)) {
@@ -632,21 +632,24 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 						return prettyData;
 					});
 
-					// Extract all unique keys across all objects
-					const uniqueKeys: string[] = Array.from(
-						new Set(tableData.flatMap((obj: any) => Object.keys(obj)))
-					);
+					let sortColumns = response.data.allFieldNames.sort((a, b) => {
+						return a.localeCompare(b);
+					});
 
-					setTableResponse({ data: tableData, uniqueKeys });
+					setTableResponse({ data: tableData, sortColumns });
+					setLoader(false);
 				} else {
 					setTableResponse({ data: [], uniqueKeys: [] });
+					setLoader(false);
 				}
 			} else {
 				setTableResponse({ data: [], uniqueKeys: [] });
+				setLoader(false);
 				console.error('Unexpected response status:', response.status);
 			}
 		} catch (error: any) {
 			setTableResponse({ data: [], uniqueKeys: [] });
+			setLoader(false);
 			console.error('Error fetching form data:', error);
 		}
 	};
@@ -654,6 +657,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 
 
 	const hanldeFormChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+		setLoader(true);
 		let value = (e.target as HTMLSelectElement).value;
 		setValue("url", value);
 		setSelectedForm(value);
@@ -718,7 +722,6 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 					transition: Bounce,
 				});
 			} else {
-				console.error("Unexpected response status:", response.status);
 				toast.error('Unable to upload response.', {
 					position: "bottom-right",
 					autoClose: 5000,
@@ -732,7 +735,6 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 				});
 			}
 		} catch (error) {
-			console.error("Error uploading file:", error);
 			toast.error('Unable to upload response.', {
 				position: "bottom-right",
 				autoClose: 5000,
@@ -783,7 +785,6 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 					transition: Bounce,
 				});
 			} else {
-				console.error("Unexpected response status:", response.status);
 				toast.error('Unable to upload response.', {
 					position: "bottom-right",
 					autoClose: 5000,
@@ -797,7 +798,6 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 				});
 			}
 		} catch (error) {
-			console.error("Error uploading file:", error);
 			toast.error('Unable to upload response.', {
 				position: "bottom-right",
 				autoClose: 5000,
@@ -868,6 +868,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 	};
 
 	const handleFilterChange = (value: string) => {
+		setLoader(true);
 		let filterData = [];
 
 		if (value === 'completed') {
@@ -1013,17 +1014,23 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 							</label>
 						))}
 					</div>
-					<TableComponent
-						key={TableKey}
-						tableData={Array.isArray(tableResponse.data) ? tableResponse.data : []}
-						uniqueKeys={Array.isArray(tableResponse.uniqueKeys) ? tableResponse.uniqueKeys : []}
-						currentPage={currentPage}
-						itemsPerPage={itemsPerPage}
-						onPageChange={handlePageChange}
-						totalPages={totalPages}
-						setCurrentPage={setCurrentPage}
-						selectedFormFields={selectedFormFields?.content || []}
-					/>
+					{loader ? (
+						<div className="flex items-center justify-center py-10">
+							<p className="text-gray-500 text-lg">Loading...</p>
+						</div>
+					) : (
+						<TableComponent
+							key={TableKey}
+							tableData={Array.isArray(tableResponse.data) ? tableResponse.data : []}
+							uniqueKeys={Array.isArray(tableResponse.sortColumns) ? tableResponse.sortColumns : []}
+							currentPage={currentPage}
+							itemsPerPage={itemsPerPage}
+							onPageChange={handlePageChange}
+							totalPages={totalPages}
+							setCurrentPage={setCurrentPage}
+							selectedFormFields={selectedFormFields?.content || []}
+						/>
+					)}
 				</div>
 			) : null}
 

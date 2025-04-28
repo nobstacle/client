@@ -66,3 +66,37 @@
   background-color: blue !important;
   color: white !important;
 }
+
+
+.customTableWrapper {
+  thead {
+    th {
+      white-space: nowrap;
+    }
+  }
+
+  tr {
+    td {
+      padding: 0.4rem 1rem;
+    }
+  }
+
+  .sticky-last-column {
+    position: sticky;
+    right: 0;
+    background: white;
+    z-index: 2;
+    width: 100%;
+    min-width: 8vw;
+    --tw-border-opacity: 1;
+    border-color: rgb(209 213 219 / var(--tw-border-opacity));
+  }
+}
+
+.loaderWrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  min-height: 40vh;
+}
