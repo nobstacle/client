@@ -919,9 +919,11 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 									{Object.values(selectedFormFields.content)
 										.filter((item) => item?.name?.includes("search"))
 										.sort((a, b) => {
-											const firstLetterA = a.name[0].toLowerCase();
-											const firstLetterB = b.name[0].toLowerCase();
-											return firstLetterA.localeCompare(firstLetterB);
+											const nameA = a.name.toLowerCase();
+											const nameB = b.name.toLowerCase();
+											if (nameA < nameB) return -1;
+											if (nameA > nameB) return 1;
+											return 0;
 										})
 										.map((item) => (
 											<input
