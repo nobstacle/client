@@ -2,22 +2,20 @@ import { yupResolver } from "@hookform/resolvers/yup";
 import React, { useEffect, useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import * as yup from "yup";
-// import { Button } from "../../Button";
-import { SendIcon } from "../../icons/SendIcon";
 import { useSocketContext } from "../../../context/SocketContextProvider";
 import "../../../styles/base.css";
 import { useSession } from "next-auth/react";
 import axios from 'axios';
-// import { FormEvent } from 'react';
 import { io, Socket } from "socket.io-client";
 import Modal, { Styles } from 'react-modal';
-import { FaFileDownload, FaFileUpload, FaCopy, FaFilePdf, FaSearch } from "react-icons/fa";
+import { FaFileDownload, FaFileUpload, FaCopy, FaFilePdf, FaSearch, FaTrash } from "react-icons/fa";
 import { LuListPlus } from "react-icons/lu";
 import { toast, Bounce } from 'react-toastify';
 import { BsFillSendPlusFill } from "react-icons/bs";
 import { RiUploadCloudFill } from "react-icons/ri";
-import { FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 import { Table, Button, Pagination } from 'antd';
+import { FiSend } from "react-icons/fi";
+import { IoWarningOutline } from "react-icons/io5";
 
 let Url = process.env.NEXT_PUBLIC_BACKEND_URL;
 const SOCKET_URL = Url;
@@ -33,182 +31,6 @@ const schema = yup
 	.object({
 		url: yup.string().url("Invalid URL format"),
 	})
-
-interface TableComponentProps {
-	tableData: any[];
-	uniqueKeys: string[];
-	currentPage: number;
-	itemsPerPage: number;
-	onPageChange: (pageNumber: number) => void;
-	totalPages: number
-	setCurrentPage: React.Dispatch<React.SetStateAction<number>>;
-	selectedFormFields: any[];
-}
-
-const TableComponent: React.FC<TableComponentProps> = ({ tableData, uniqueKeys, currentPage, totalPages, setCurrentPage, selectedFormFields }) => {
-	const [downloadingPDF, setDownloadingPDF] = useState<number | null>(null);
-
-	const handlePageChange = (page: number) => {
-		if (page > 0 && page <= totalPages) {
-			setCurrentPage(page);
-		}
-	};
-
-	if (!tableData || tableData.length === 0) {
-		return (
-			<div className="grid gap-4 w-100">
-				{/* Your "No response available" SVG and message */}
-			</div>
-		);
-	}
-
-	const handlePDFDownload = async (form_id: string, submission_id: string, rowIndex: number) => {
-		setDownloadingPDF(rowIndex);
-
-		const api_key = process.env.NEXT_PUBLIC_JOTFORM_API_KEY;
-
-		const pdfUrl = `https://www.jotform.com/server.php?action=getSubmissionPDF&sid=${submission_id}&formID=${form_id}&apikey=${api_key}`;
-
-		const a = document.createElement("a");
-		a.href = pdfUrl;
-		a.download = "JotForm_Submission.pdf";
-		document.body.appendChild(a);
-		a.click();
-		document.body.removeChild(a);
-
-		setTimeout(() => {
-			toast.success('PDF downloaded successfully!', {
-				position: "bottom-right",
-				autoClose: 5000,
-				hideProgressBar: false,
-				closeOnClick: false,
-				pauseOnHover: true,
-				draggable: true,
-				progress: undefined,
-				theme: "colored",
-			});
-			setDownloadingPDF(null);
-		}, 2500);
-	};
-
-	const listableFields = selectedFormFields !== undefined && Object.values(selectedFormFields).filter(field =>
-		field.name.includes('listable')
-	);
-
-	const sortedListableFields = listableFields.filter(field =>
-		uniqueKeys.includes(field.text)
-	).sort((a, b) => a.name.localeCompare(b.name));
-
-	const filteredKeys = sortedListableFields.map(field => field.text);
-
-	const columns = filteredKeys.map(key => ({
-		title: key,
-		dataIndex: key,
-		key,
-		render: (text: any) => (
-			<div className="max-w-[200px] overflow-hidden text-ellipsis whitespace-nowrap min-w-[160px]">
-				{text || 'N/A'}
-			</div>
-		),
-	}));
-
-	columns.push({
-		title: 'Action',
-		key: 'action',
-		fixed: 'right',
-		render: (_: any, item: any, rowIndex: number) => (
-			<div className="flex flex-wrap gap-2 justify-center items-center">
-				<Button
-					title="Copy URL"
-					onClick={() => {
-						navigator.clipboard.writeText(item?.formData?.url);
-						toast.success('URL copied to clipboard!', {
-							position: "bottom-right",
-							autoClose: 5000,
-							hideProgressBar: false,
-							closeOnClick: false,
-							pauseOnHover: true,
-							draggable: true,
-							progress: undefined,
-							theme: "colored",
-						});
-					}}
-					className="flex items-center justify-center text-white rounded-md bg-red-600 transition-all p-2"
-				>
-					<FaCopy size={18} />
-				</Button>
-
-				{item?.formData?.submission_id ? (
-					<div className="relative group">
-						<button
-							title="Download PDF Response"
-							onClick={() =>
-								handlePDFDownload(item?.formData?.form_id, item?.formData?.submission_id, rowIndex)
-							}
-							className="flex items-center justify-center bg-red-500 text-white rounded-md hover:bg-red-600 transition-all p-2"
-							disabled={downloadingPDF === rowIndex}
-						>
-							{downloadingPDF === rowIndex ? (
-								<svg
-									className="animate-spin h-5 w-5 text-white"
-									viewBox="0 0 24 24"
-									fill="none"
-								>
-									<circle
-										className="opacity-25"
-										cx="12"
-										cy="12"
-										r="10"
-										stroke="currentColor"
-										strokeWidth="4"
-									/>
-									<path
-										className="opacity-75"
-										fill="currentColor"
-										d="M4 12a8 8 0 018-8v8H4z"
-									/>
-								</svg>
-							) : (
-								<FaFilePdf size={18} />
-							)}
-						</button>
-					</div>
-				) : (
-					<Button
-						title="Send Form"
-						className="flex items-center justify-center bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-all p-2"
-						type="submit"
-					>
-						<SendIcon size={18} />
-					</Button>
-				)}
-			</div>
-		),
-	});
-
-	return (
-		<div className="p-4 bg-white shadow-md rounded-lg customTableWrapper">
-			<Table
-				columns={columns}
-				dataSource={tableData}
-				rowKey="qid" // or another unique key
-				pagination={false}
-				scroll={{ x: 'max-content', y: 400 }} // for fixed right column
-				sticky
-			/>
-			{/* Pagination Component */}
-			<div className="flex justify-center mt-6">
-				<Pagination
-					current={currentPage}
-					total={totalPages}
-					pageSize={1} // You can customize this based on your needs
-					onChange={handlePageChange}
-				/>
-			</div>
-		</div>
-	);
-};
-
 
 const customStyles: Styles = {
 	content: {
@@ -234,6 +56,36 @@ const customStyles: Styles = {
 	},
 };
 
+const customDeleteStyles: Styles = {
+	content: {
+		top: "50%",
+		left: "50%",
+		right: "auto",
+		bottom: "auto",
+		marginRight: "-50%",
+		transform: "translate(-50%, -50%)",
+		width: "50%",
+		maxWidth: "500px",
+		overflowY: "auto",
+		borderRadius: "10px",
+		padding: "20px",
+		height: "auto",
+		display: "flex",
+		flexDirection: "column",
+		justifyContent: "center",
+		alignItems: "center",
+		boxShadow: "0px 5px 20px rgba(0, 0, 0, 0.1)",
+	},
+	overlay: {
+		backgroundColor: 'rgba(0, 0, 0, 0.75)',
+		zIndex: 1000,
+		display: 'flex',
+		alignItems: 'center',
+		justifyContent: 'center'
+	},
+};
+
+
 interface ManualInputValues {
 	[key: string]: string;
 }
@@ -245,6 +97,8 @@ interface InputValues {
 export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => void }) => {
 	const [isModalOpen, setIsModalOpen] = useState(false);
 	const [isSendModalOpen, setIsSendModalOpen] = useState(false);
+	const [isDeleteModal, setIsDeleteModal] = useState(false);
+	const [RecordData, SetRecordData] = useState(null);
 	const [manualInputValues, setManualInputValues] = useState<ManualInputValues>({});
 	const [currentPage, setCurrentPage] = useState(1);
 	const [lastSearchedValue, setLastSearchedValue] = useState("");
@@ -262,6 +116,11 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 	const openModal = () => setIsModalOpen(true);
 	const closeModal = () => setIsModalOpen(false);
 	const closeSendModal = () => setIsSendModalOpen(false);
+
+	const closeDeleteModal = () => {
+		setIsDeleteModal(false);
+		SetRecordData(null);
+	}
 
 	const handleSocketEvents = () => {
 		// Handle successful connection
@@ -334,6 +193,211 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 			}
 		}
 	}, [assignedForms])
+
+	interface TableComponentProps {
+		tableData: any[];
+		uniqueKeys: string[];
+		currentPage: number;
+		itemsPerPage: number;
+		onPageChange: (pageNumber: number) => void;
+		totalPages: number
+		setCurrentPage: React.Dispatch<React.SetStateAction<number>>;
+		selectedFormFields: any[];
+	}
+
+	async function deleteWithPathParam(id) {
+		const response = await fetch(Url + `/api/jotform/responses/${id}`, {
+			method: 'DELETE',
+		});
+		return await response.json();
+	}
+
+	const deleteRecordSubmit = async () => {
+		setLoader(true);
+		let ID = RecordData?.formData?.submission_id ? RecordData?.formData?.submission_id : RecordData?.formData?.form_id;
+		try {
+			await deleteWithPathParam(ID);
+			toast.success('Record Deleted!');
+			setIsDeleteModal(false);
+			getTableResponse(selectedForm, currentPage, itemsPerPage, lastSearchedValue, selectedFilter);
+		} catch (error) {
+			console.error('Error deleting record:', error);
+			setLoader(false);
+		}
+	}
+
+	const TableComponent: React.FC<TableComponentProps> = ({ tableData, uniqueKeys, currentPage, totalPages, setCurrentPage, selectedFormFields }) => {
+		const [downloadingPDF, setDownloadingPDF] = useState<number | null>(null);
+
+		const handlePageChange = (page: number) => {
+			if (page > 0 && page <= totalPages) {
+				setCurrentPage(page);
+			}
+		};
+
+		if (!tableData || tableData.length === 0) {
+			return (
+				<div className="grid gap-4 w-100">
+					{/* Your "No response available" SVG and message */}
+				</div>
+			);
+		}
+
+		const handlePDFDownload = async (form_id: string, submission_id: string, rowIndex: number) => {
+			setDownloadingPDF(rowIndex);
+
+			const api_key = process.env.NEXT_PUBLIC_JOTFORM_API_KEY;
+
+			const pdfUrl = `https://www.jotform.com/server.php?action=getSubmissionPDF&sid=${submission_id}&formID=${form_id}&apikey=${api_key}`;
+
+			const a = document.createElement("a");
+			a.href = pdfUrl;
+			a.download = "JotForm_Submission.pdf";
+			document.body.appendChild(a);
+			a.click();
+			document.body.removeChild(a);
+
+			setTimeout(() => {
+				toast.success('PDF downloaded successfully!', {
+					position: "bottom-right",
+					autoClose: 5000,
+					hideProgressBar: false,
+					closeOnClick: false,
+					pauseOnHover: true,
+					draggable: true,
+					progress: undefined,
+					theme: "colored",
+				});
+				setDownloadingPDF(null);
+			}, 2500);
+		};
+
+
+		const deleteRecord = async (data: any) => {
+			setIsDeleteModal(true);
+			SetRecordData(data);
+		}
+
+		const listableFields = selectedFormFields !== undefined && Object.values(selectedFormFields).filter(field =>
+			field.name.includes('listable')
+		);
+
+		const sortedListableFields = listableFields.filter(field =>
+			uniqueKeys.includes(field.text)
+		).sort((a, b) => a.name.localeCompare(b.name));
+
+		const filteredKeys = sortedListableFields.map(field => field.text);
+
+		const columns = filteredKeys.map(key => ({
+			title: key,
+			dataIndex: key,
+			key,
+			render: (text: any) => (
+				<div className="max-w-[200px] overflow-hidden text-ellipsis whitespace-nowrap min-w-[160px]">
+					{text || 'N/A'}
+				</div>
+			),
+		}));
+
+		columns.push({
+			title: 'Action',
+			key: 'action',
+			fixed: 'right',
+			render: (_: any, item: any, rowIndex: number) => (
+				<div className="flex flex-wrap gap-2 justify-center items-center">
+					<button
+						title="Copy URL"
+						onClick={() => {
+							navigator.clipboard.writeText(item?.formData?.url);
+							toast.success('URL copied to clipboard!', {
+								position: "bottom-right",
+								autoClose: 5000,
+								hideProgressBar: false,
+								closeOnClick: false,
+								pauseOnHover: true,
+								draggable: true,
+								progress: undefined,
+								theme: "colored",
+							});
+						}}
+						className="text-gray-900 hover:text-white border border-gray-800 hover:bg-gray-900 focus:ring-4 focus:outline-none focus:ring-gray-300 font-medium rounded-lg text-sm px-2 py-2 text-center me-2 mb-2 dark:border-gray-600 dark:text-gray-600 dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-gray-800"
+					>
+						<FaCopy size={18} />
+					</button>
+
+					{item?.formData?.submission_id ? (
+						<div className="relative group">
+							<button
+								title="Download PDF Response"
+								onClick={() =>
+									handlePDFDownload(item?.formData?.form_id, item?.formData?.submission_id, rowIndex)
+								}
+								className="text-blue-700 hover:text-white border border-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-2 py-2 text-center me-2 mb-2 dark:border-blue-500 dark:text-blue-500 dark:hover:text-white dark:hover:bg-blue-500 dark:focus:ring-blue-800"
+								disabled={downloadingPDF === rowIndex}
+							>
+								{downloadingPDF === rowIndex ? (
+									<svg
+										className="animate-spin h-5 w-5"
+										viewBox="0 0 24 24"
+										fill="none"
+									>
+										<circle
+											className="opacity-25"
+											cx="12"
+											cy="12"
+											r="10"
+											stroke="currentColor"
+											strokeWidth="4"
+										/>
+										<path
+											className="opacity-75"
+											fill="currentColor"
+											d="M4 12a8 8 0 018-8v8H4z"
+										/>
+									</svg>
+								) : (
+									<FaFilePdf size={18} />
+								)}
+							</button>
+						</div>
+					) : (
+						<button
+							title="Send Form"
+							className="text-blue-700 hover:text-white border border-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-2 py-2 text-center me-2 mb-2 dark:border-blue-500 dark:text-blue-500 dark:hover:text-white dark:hover:bg-blue-500 dark:focus:ring-blue-800"
+						>
+							<FiSend size={18} />
+						</button>
+					)}
+
+					<button onClick={() => deleteRecord(item)} className="text-red-700 hover:text-white border border-red-700 hover:bg-red-800 focus:ring-4 focus:outline-none focus:ring-red-300 font-medium rounded-lg text-sm px-2 py-2 text-center me-2 mb-2 dark:border-red-500 dark:text-red-500 dark:hover:text-white dark:hover:bg-red-600 dark:focus:ring-red-900">
+						<FaTrash size={18} />
+					</button>
+				</div>
+			),
+		});
+
+		return (
+			<div className="p-4 bg-white shadow-md rounded-lg customTableWrapper">
+				<Table
+					columns={columns}
+					dataSource={tableData}
+					rowKey="qid"
+					pagination={false}
+					scroll={{ x: 'max-content', y: 400 }}
+					sticky
+				/>
+				{/* Pagination Component */}
+				<div className="flex justify-center mt-6">
+					<Pagination
+						current={currentPage}
+						total={totalPages}
+						pageSize={1}
+						onChange={handlePageChange}
+					/>
+				</div>
+			</div>
+		);
+	};
 
 	const handleChange = (name: string, value: any) => {
 		setInputValues((prev: any) => ({
@@ -876,7 +940,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 									<div className="col-span-12 lg:col-span-2 flex justify-end">
 										<Button
 											className="flex items-center gap-2 w-full lg:w-auto rounded-md px-6 py-2 text-white transition"
-											style={{background:'#3b5998'}}
+											style={{ background: '#3b5998' }}
 										>
 											<FaSearch />
 											<span>Search</span>
@@ -983,7 +1047,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 								onClick={onSubmit}
 								className="ml-4 bg-blue-500 text-white px-6 py-2 rounded-md hover:bg-blue-600 flex gap-2"
 							>
-								Send <SendIcon />
+								Send <FiSend />
 							</Button>
 							<Button
 								onClick={closeModal}
@@ -1039,7 +1103,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 								onClick={onSubmit}
 								className="bg-blue-500 text-white px-6 py-2 rounded-md hover:bg-blue-600 flex gap-2"
 							>
-								Send <SendIcon />
+								Send <FiSend />
 							</Button>
 							<Button
 								onClick={closeSendModal}
@@ -1053,6 +1117,35 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 				</div>
 			</Modal>
 
+			<Modal
+				isOpen={isDeleteModal}
+				onRequestClose={closeDeleteModal}
+				style={customDeleteStyles}
+				contentLabel="Delete Record"
+				ariaHideApp={false}
+			>
+				<div className="p-3 flex flex-col items-center" >
+					<div className="flex items-center justify-center mb-4" style={{ flexDirection: 'column' }}>
+						<IoWarningOutline size={80} className="text-yellow-500 mr-3" />
+						<h2 className="text-xl font-semibold text-gray-700 mt-2">Are you sure you want to delete this record?</h2>
+					</div>
+					<div className="modalActions flex justify-center gap-6 mt-2">
+						<Button
+							onClick={deleteRecordSubmit}
+							className="px-6 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-all"
+							disabled={loader}
+						>
+							{loader ? "Deleting..." : "Yes, Delete"}
+						</Button>
+						<Button
+							onClick={closeDeleteModal}
+							className="px-6 py-2 bg-gray-400 text-white rounded-md hover:bg-gray-500 transition-all"
+						>
+							Cancel
+						</Button>
+					</div>
+				</div>
+			</Modal>
 		</div>
 	);
 };
