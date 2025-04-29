@@ -90,6 +90,7 @@
     min-width: 8vw;
     --tw-border-opacity: 1;
     border-color: rgb(209 213 219 / var(--tw-border-opacity));
+    box-sizing: border-box;
   }
 
   .sticky-last-column-header {
@@ -100,6 +101,8 @@
     width: 100%;
     min-width: 8vw;
     border-bottom: 1px solid #cecece;
+    box-sizing: border-box;
+
   }
 }
 
@@ -109,4 +112,32 @@
   align-items: center;
   height: 100%;
   min-height: 40vh;
+}
+
+th,
+td {
+  box-sizing: border-box;
+}
+
+.customButtonWrapper {
+  display: flex;
+  width: 100%;
+  justify-content: center;
+  align-items: center;
+}
+
+.ant-table {
+  .ant-table-thead {
+    tr {
+      .ant-table-cell {
+        background: #3b5998;
+        color: white;
+      }
+    }
+  }
+
+  .ant-table-body {
+    overflow: hidden;
+    overflow-x: scroll;
+  }
 }

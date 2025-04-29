@@ -16,6 +16,7 @@
     "@hookform/resolvers": "^3.3.2",
     "@react-google-maps/api": "^2.19.2",
     "@tanstack/react-query": "^5.9.0",
+    "antd": "^5.24.9",
     "axios": "^1.6.2",
     "eruda": "^3.4.0",
     "next": "14.0.3",

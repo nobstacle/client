@@ -28,13 +28,13 @@ export default withAuth(
     //   }
     // }
 
-    if(req.nextUrl.pathname.startsWith("/dashboard/asignForms")) {
-      if (isSAdmin) {
-        return NextResponse.redirect(new URL("/dashboard/asignForms", req.nextUrl));
-      } else {
-        return NextResponse.redirect(new URL("/dashboard/text", req.nextUrl));
-      }
-    }
+    // if(req.nextUrl.pathname.startsWith("/dashboard/asignForms")) {
+    //   if (isSAdmin) {
+    //     return NextResponse.redirect(new URL("/dashboard/asignForms", req.nextUrl));
+    //   } else {
+    //     return NextResponse.redirect(new URL("/dashboard/text", req.nextUrl));
+    //   }
+    // }
 
     if (req.nextUrl.pathname.startsWith("/dashboard/settings")) {
       if (isSAdmin) {
