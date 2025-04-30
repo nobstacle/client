@@ -6,17 +6,13 @@ import { useSession } from "next-auth/react";
 import { saveFormData } from "./util";
 import { FaTrash } from "react-icons/fa";
 import Swal from 'sweetalert2'
-import Select from 'react-select';
 import "../../../styles/base.css";
+import { Table, Button, Card, Row, Col, Input, Select, Form } from 'antd';
+import 'sweetalert2/dist/sweetalert2.min.css';
 
 let Url = process.env.NEXT_PUBLIC_BACKEND_URL;
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || Url + '/api/assigned-form';
-
-interface Company {
-	id: number;
-	name: string;
-}
 
 interface FormData {
 	form_id: string;
@@ -36,6 +32,10 @@ const AsignForms: React.FC = () => {
 	});
 
 	const getAssignedFormData = async () => {
+		if (!companies) {
+			return; // Wait for companies to be loaded before fetching form data
+		}
+
 		try {
 			const response = await axios.get(API_URL);
 			if (response.status === 200) {
@@ -46,6 +46,7 @@ const AsignForms: React.FC = () => {
 						return company ? company.name : null;
 					}).filter((name): name is string => name !== null),
 				}));
+				console.info("REPSO", response.data);
 				setAssignedForms(formsWithCompanies);
 			} else {
 				console.error('Unexpected response status:', response.status);
@@ -56,51 +57,51 @@ const AsignForms: React.FC = () => {
 	};
 
 	useEffect(() => {
-		if (userData?.user?.companyId) {
-			getAssignedFormData();
+		if (userData?.user?.companyId && companies) {
+			getAssignedFormData(); // Fetch assigned form data once companies are loaded
 		}
-	}, [userData]);
+	}, [userData, companies]); // Depend on both userData and companies
 
-	const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-		const { name, value } = e.target;
-		setFormData((prev) => ({ ...prev, [name]: value }));
-	};
+	// const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+	// 	const { name, value } = e.target;
+	// 	setFormData((prev) => ({ ...prev, [name]: value }));
+	// };
 
-	const handleSelectChange = (companyId: string) => {
-		setFormData((prev) => {
-			const isSelected = prev.assigned_companies.includes(companyId.toString());
-			const newCompanies = isSelected
-				? prev.assigned_companies.filter((id) => id.toString() !== companyId.toString())
-				: [...prev.assigned_companies, companyId.toString()];
-			return { ...prev, assigned_companies: newCompanies };
-		});
-	};
+	// const handleSelectChange = (companyId: string) => {
+	// 	setFormData((prev) => {
+	// 		const isSelected = prev.assigned_companies.includes(companyId.toString());
+	// 		const newCompanies = isSelected
+	// 			? prev.assigned_companies.filter((id) => id.toString() !== companyId.toString())
+	// 			: [...prev.assigned_companies, companyId.toString()];
+	// 		return { ...prev, assigned_companies: newCompanies };
+	// 	});
+	// };
 
-	const handleSubmit = async (e: React.FormEvent) => {
-		e.preventDefault();
+	const handleSubmit = async (values: any) => {
+		const { form_id, form_name, assigned_companies } = values;
 
-		if (!formData.form_id || !formData.form_name || formData.assigned_companies.length === 0) {
+		if (!form_id || !form_name || assigned_companies.length === 0) {
 			alert("All fields are required");
 			return;
 		}
 
 		const formDataObject = {
-			form_id: formData.form_id,
-			form_name: formData.form_name,
-			assigned_companies: formData.assigned_companies,
+			form_id,
+			form_name,
+			assigned_companies,
 		};
 
 		try {
 			const result = await saveFormData(formDataObject);
 			console.log('Form data saved successfully:', result);
-			getAssignedFormData(); // Refresh the assigned forms
+			getAssignedFormData();
 			setFormData({ form_id: "", form_name: "", assigned_companies: [] }); // Reset form
 		} catch (error) {
 			alert('Failed to save form data');
 		}
 	};
 
-	if (isLoading) {
+	if (isLoading || !companies) {
 		return <div className="text-center py-4">Loading...</div>;
 	}
 
@@ -108,27 +109,76 @@ const AsignForms: React.FC = () => {
 		return <div className="text-center text-red-500 py-4">Error: {error.message}</div>;
 	}
 
-	const deleteForm = (form: any) => {
+	async function deleteWithBody(formData: any) {
+		const response = await fetch(Url + '/api/jotform/delete-assigned-form', {
+			method: 'DELETE',
+			headers: {
+				'Content-Type': 'application/json',
+			},
+			body: JSON.stringify(formData),
+		});
+
+		return response;
+	}
+
+	const deleteForm = (data: any) => {
 		Swal.fire({
 			title: "Are you sure?",
 			text: "You won't be able to revert this!",
 			icon: "warning",
 			showCancelButton: true,
-			confirmButtonText: "Yes, delete it!",
+			confirmButtonText: "Delete",
 			cancelButtonText: "Cancel",
-			reverseButtons: true,
-		}).then((result) => {
+			reverseButtons: false,
+			customClass: {
+				confirmButton: 'confirm-btn',
+				cancelButton: 'cancel-btn',
+			},
+		}).then(async (result) => {
 			if (result.isConfirmed) {
-				Swal.fire({
-					title: "Deleted!",
-					text: "Form Deleted!",
-					icon: "success",
-					confirmButtonColor: "#2563eb"
-				});
+				const formData = {
+					formId: data.form_id,
+					companyId: data.assigned_companies,
+				};
+
+				try {
+					const response = await deleteWithBody(formData);
+					if (response.ok) {
+						Swal.fire({
+							title: "Deleted!",
+							text: "Form has been successfully deleted.",
+							icon: "success",
+							customClass: {
+								confirmButton: 'confirm-btn',
+							},
+						});
+						getAssignedFormData();
+					} else {
+						// Handle failure if response is not ok
+						const errorResponse = await response.json();
+						Swal.fire({
+							title: "Error!",
+							text: errorResponse.message || "An error occurred while deleting the form.",
+							icon: "error",
+							customClass: {
+								confirmButton: 'confirm-btn',
+							},
+						});
+					}
+				} catch (error) {
+					console.error('Error deleting form:', error);
+					Swal.fire({
+						title: "Error!",
+						text: "There was an error while deleting the form.",
+						icon: "error",
+						customClass: {
+							confirmButton: 'confirm-btn',
+						},
+					});
+				}
 			}
 		});
 	};
-
 
 	const companyOptions = companies.map((company) => ({
 		value: company.id.toString(),
@@ -140,105 +190,124 @@ const AsignForms: React.FC = () => {
 		setFormData({ ...formData, assigned_companies: selectedIds });
 	};
 
+	const columns = [
+		{
+		  title: 'Serial No.',
+		  key: 'serial_no',
+		  render: (text, record, index) => index + 1, 
+		  align: 'center',
+		},
+		{
+		  title: 'Form ID',
+		  dataIndex: 'form_id',
+		  key: 'form_id',
+		  align: 'center',
+		},
+		{
+		  title: 'Form Name',
+		  dataIndex: 'form_name',
+		  key: 'form_name',
+		  align: 'center',
+		},
+		{
+		  title: 'Assigned Companies',
+		  dataIndex: 'companies',
+		  key: 'companies',
+		  render: (companies) => companies?.join(', '),
+		  align: 'center',
+		},
+		{
+		  title: 'Action',
+		  key: 'action',
+		  render: (text, record) => (
+			<Button type="link" onClick={() => deleteForm(record)} className="redIcon" icon={<FaTrash />} />
+		  ),
+		  align: 'center',
+		},
+	  ];
+	  
+
+	console.info("assignedForms", assignedForms);
 
 	return (
-		<div className="mx-auto mt-6 p-6 bg-white shadow-lg rounded-lg">
-			<h2 className="text-xl font-semibold text-gray-700 mb-4">Assign Forms</h2>
-			<form onSubmit={handleSubmit} className="space-y-4">
-				<div>
-					<label className="block text-gray-600 mb-1">Form ID:</label>
-					<input
-						type="text"
-						name="form_id"
-						value={formData.form_id}
-						onChange={handleChange}
-						className="w-full p-2 border rounded-md focus:outline-none focus:ring focus:ring-blue-300"
-						required
-					/>
-				</div>
-				<div>
-					<label className="block text-gray-600 mb-1">Form Name:</label>
-					<input
-						type="text"
-						name="form_name"
-						value={formData.form_name}
-						onChange={handleChange}
-						className="w-full p-2 border rounded-md focus:outline-none focus:ring focus:ring-blue-300"
-						required
-					/>
-				</div>
-				<div>
-					<label className="block text-gray-600 mb-1">Select Companies:</label>
-					<div className="w-full bg-white">
-						<Select
-							isMulti
-							options={companyOptions}
-							value={companyOptions.filter((option) =>
-								formData.assigned_companies.includes(option.value)
-							)}
-							onChange={handleCompanyChange}
-							className="react-select-container"
-							classNamePrefix="react-select customReactSelect"
-						/>
-						{/* {companies?.map((company: Company) => (
-							<div
-								key={company.id}
-								onClick={() => handleSelectChange(company.id.toString())}
-								className={`flex items-center justify-between p-2 cursor-pointer rounded-md hover:bg-gray-200 ${formData.assigned_companies.includes(company.id.toString()) ? "bg-blue-100 font-semibold" : ""
-									}`}
-							>
-								<span>{company.name}</span>
-								{formData.assigned_companies.includes(company.id.toString()) && (
-									<span className="text-blue-500 font-bold">✔</span>
-								)}
-							</div>
-						))} */}
-					</div>
-				</div>
-				<div className="flex justify-center items-center">
-					<button style={{ maxWidth: "20%" }} type="submit" className="w-full bg-blue-500 text-white py-2 rounded-md hover:bg-blue-600 transition">
-						Assign
-					</button>
-				</div>
-			</form>
+		<div className="mx-auto mt-2 p-6 bg-white shadow-lg rounded-lg">
+			<Card className="p-2 mb-6">
+				<h2 className="text-xl font-semibold text-gray-700 mb-4">Assign Forms</h2>
+				<hr />
+				<div className="mt-4">
+					<Form
+						onFinish={handleSubmit}
+						initialValues={{
+							form_id: formData.form_id,
+							form_name: formData.form_name,
+							assigned_companies: formData.assigned_companies,
+						}}
+						layout="vertical"
+					>
+						<Row gutter={16}>
+							<Col md={12} xs={24}>
+								<Form.Item
+									label="Form ID"
+									name="form_id"
+									rules={[{ required: true, message: "Form ID is required" }]}
+								>
+									<Input
+										value={formData.form_id}
+										onChange={(e) => setFormData({ ...formData, form_id: e.target.value })}
+										className="w-full"
+									/>
+								</Form.Item>
+							</Col>
+							<Col md={12} xs={24}>
+								<Form.Item
+									label="Form Name"
+									name="form_name"
+									rules={[{ required: true, message: "Form Name is required" }]}
+								>
+									<Input
+										value={formData.form_name}
+										onChange={(e) => setFormData({ ...formData, form_name: e.target.value })}
+										className="w-full"
+									/>
+								</Form.Item>
+							</Col>
+						</Row>
 
-			{/* Table Displaying Assigned Forms */}
-			{assignedForms.length > 0 && (
-				<div className="mt-6">
-					<h3 className="text-lg font-semibold mb-2">Assigned Forms</h3>
-					<div className="overflow-x-auto">
-						<table className="w-full border-collapse border border-gray-300">
-							<thead>
-								<tr className="bg-gray-100">
-									<th className="border border-gray-300 px-4 py-2">Form ID</th>
-									<th className="border border-gray-300 px-4 py-2">Form Name</th>
-									<th className="border border-gray-300 px-4 py-2">Assigned Companies</th>
-									<th className="border border-gray-300 px-4 py-2">Action</th>
-								</tr>
-							</thead>
-							<tbody>
-								{assignedForms.map((form, index) => (
-									<tr key={form.form_id} className="text-center">
-										<td className="border border-gray-300 px-4 py-2">{form.form_id}</td>
-										<td className="border border-gray-300 px-4 py-2">{form.form_name}</td>
-										<td className="border border-gray-300 px-4 py-2">
-											{form.companies?.join(', ')}
-										</td>
-										<td className="border border-gray-300 px-4 py-2 text-center">
-											<button
-												onClick={() => deleteForm(form)}
-												className="inline-flex items-center justify-center gap-2 text-red-600 hover:text-red-800 font-medium transition-colors"
-											>
-												<FaTrash className="text-red-500" />
-											</button>
-										</td>
-									</tr>
-								))}
-							</tbody>
-						</table>
-					</div>
+						<Form.Item
+							label="Assigned Companies"
+							name="assigned_companies"
+							rules={[{ required: true, message: "Please select companies" }]}
+						>
+							<Select
+								mode="multiple"
+								placeholder="Select companies"
+								value={formData.assigned_companies}
+								onChange={handleCompanyChange}
+								options={companyOptions}
+							/>
+						</Form.Item>
+
+						<div className="flex justify-center items-center">
+							<Form.Item>
+								<Button type="primary" htmlType="submit" className="text-white py-3 rounded-md transition" style={{ background: '#3b5998' }}>
+									Assign
+								</Button>
+
+							</Form.Item>
+						</div>
+
+					</Form>
 				</div>
-			)}
+			</Card>
+
+			<div className="mt-4">
+				<Table
+					columns={columns}
+					dataSource={assignedForms}
+					rowKey="form_id"
+					pagination={{ pageSize: 5 }}
+				/>
+			</div>
 		</div>
 	);
 };

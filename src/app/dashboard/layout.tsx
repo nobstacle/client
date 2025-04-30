@@ -123,7 +123,7 @@ const Body: React.FC<PropsWithChildren> = ({ children }) => {
   return (
     <div
       id="child3"
-      className="h-[calc(100vh-6rem)] w-full flex-col items-stretch justify-stretch overflow-hidden overflow-x-hidden bg-white"
+      className="h-[calc(100vh-6rem)] w-full flex-col items-stretch justify-stretch overflow-x-hidden bg-white"
     >
       {children}
     </div>

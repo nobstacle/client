@@ -7,15 +7,15 @@ import "../../../styles/base.css";
 import { useSession } from "next-auth/react";
 import axios from 'axios';
 import { io, Socket } from "socket.io-client";
-import Modal, { Styles } from 'react-modal';
 import { FaFileDownload, FaFileUpload, FaCopy, FaFilePdf, FaSearch, FaTrash } from "react-icons/fa";
 import { LuListPlus } from "react-icons/lu";
 import { toast, Bounce } from 'react-toastify';
 import { BsFillSendPlusFill } from "react-icons/bs";
 import { RiUploadCloudFill } from "react-icons/ri";
-import { Table, Button, Pagination } from 'antd';
+import { Table, Button, Pagination, Row, Col, Modal, Select, Tooltip } from 'antd';
 import { FiSend } from "react-icons/fi";
-import { IoWarningOutline } from "react-icons/io5";
+import Swal from 'sweetalert2';
+import { SendIcon } from "../../icons/SendIcon";
 
 let Url = process.env.NEXT_PUBLIC_BACKEND_URL;
 const SOCKET_URL = Url;
@@ -44,8 +44,9 @@ const customStyles: Styles = {
 		overflowY: "auto",
 		borderRadius: "10px",
 		padding: "20px",
-		maxHeight: "90%",
-		height: '70vh'
+		maxHeight: "70vh",
+		height: 'auto',
+		minHeight: '50vh'
 	},
 	overlay: {
 		backgroundColor: 'rgba(0, 0, 0, 0.75)',
@@ -55,36 +56,6 @@ const customStyles: Styles = {
 		justifyContent: 'center'
 	},
 };
-
-const customDeleteStyles: Styles = {
-	content: {
-		top: "50%",
-		left: "50%",
-		right: "auto",
-		bottom: "auto",
-		marginRight: "-50%",
-		transform: "translate(-50%, -50%)",
-		width: "50%",
-		maxWidth: "500px",
-		overflowY: "auto",
-		borderRadius: "10px",
-		padding: "20px",
-		height: "auto",
-		display: "flex",
-		flexDirection: "column",
-		justifyContent: "center",
-		alignItems: "center",
-		boxShadow: "0px 5px 20px rgba(0, 0, 0, 0.1)",
-	},
-	overlay: {
-		backgroundColor: 'rgba(0, 0, 0, 0.75)',
-		zIndex: 1000,
-		display: 'flex',
-		alignItems: 'center',
-		justifyContent: 'center'
-	},
-};
-
 
 interface ManualInputValues {
 	[key: string]: string;
@@ -97,8 +68,6 @@ interface InputValues {
 export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => void }) => {
 	const [isModalOpen, setIsModalOpen] = useState(false);
 	const [isSendModalOpen, setIsSendModalOpen] = useState(false);
-	const [isDeleteModal, setIsDeleteModal] = useState(false);
-	const [RecordData, SetRecordData] = useState(null);
 	const [manualInputValues, setManualInputValues] = useState<ManualInputValues>({});
 	const [currentPage, setCurrentPage] = useState(1);
 	const [lastSearchedValue, setLastSearchedValue] = useState("");
@@ -184,16 +153,6 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 		}
 	}, [currentPage])
 
-	useEffect(() => {
-		if (assignedForms.length === 0) {
-			setSelectedForm(assignedForms[0]?.form_id || null)
-		} else {
-			if (selectedForm === null) {
-				setSelectedForm(assignedForms[0].form_id);
-			}
-		}
-	}, [assignedForms])
-
 	interface TableComponentProps {
 		tableData: any[];
 		uniqueKeys: string[];
@@ -212,192 +171,222 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 		return await response.json();
 	}
 
-	const deleteRecordSubmit = async () => {
-		setLoader(true);
-		let ID = RecordData?.formData?.submission_id ? RecordData?.formData?.submission_id : RecordData?.formData?.form_id;
-		try {
-			await deleteWithPathParam(ID);
-			toast.success('Record Deleted!');
-			setIsDeleteModal(false);
-			getTableResponse(selectedForm, currentPage, itemsPerPage, lastSearchedValue, selectedFilter);
-		} catch (error) {
-			console.error('Error deleting record:', error);
-			setLoader(false);
-		}
+	const deleteRecord = async (data: any) => {
+		Swal.fire({
+			title: "Are you sure?",
+			text: "You won't be able to revert this!",
+			icon: "warning",
+			showCancelButton: true,
+			confirmButtonText: "Delete",
+			cancelButtonText: "Cancel",
+			confirmButtonColor: '#3b5998',
+			reverseButtons: false,
+		}).then(async (result) => {
+			if (result.isConfirmed) {
+				setLoader(true);
+				let ID = data?.formData?.submission_id ? data?.formData?.submission_id : data?.formData?.form_id;
+				try {
+					await deleteWithPathParam(ID);
+					toast.success('Record Deleted!');
+					getTableResponse(selectedForm, currentPage, itemsPerPage, lastSearchedValue, selectedFilter);
+				} catch (error) {
+					console.error('Error deleting record:', error);
+					setLoader(false);
+				}
+			}
+		});
 	}
 
-	const TableComponent: React.FC<TableComponentProps> = ({ tableData, uniqueKeys, currentPage, totalPages, setCurrentPage, selectedFormFields }) => {
+
+	const TableComponent: React.FC<TableComponentProps> = ({
+		tableData,
+		uniqueKeys,
+		currentPage,
+		totalPages,
+		setCurrentPage,
+		selectedFormFields,
+	  }) => {
 		const [downloadingPDF, setDownloadingPDF] = useState<number | null>(null);
-
+	  
 		const handlePageChange = (page: number) => {
-			if (page > 0 && page <= totalPages) {
-				setCurrentPage(page);
-			}
+		  if (page > 0 && page <= totalPages) {
+			setCurrentPage(page);
+		  }
 		};
-
+	  
 		if (!tableData || tableData.length === 0) {
-			return (
-				<div className="grid gap-4 w-100">
-					{/* Your "No response available" SVG and message */}
-				</div>
-			);
+		  return (
+			<div className="grid gap-4 w-100">
+			  {/* Your "No response available" SVG and message */}
+			</div>
+		  );
 		}
-
+	  
 		const handlePDFDownload = async (form_id: string, submission_id: string, rowIndex: number) => {
-			setDownloadingPDF(rowIndex);
-
-			const api_key = process.env.NEXT_PUBLIC_JOTFORM_API_KEY;
-
-			const pdfUrl = `https://www.jotform.com/server.php?action=getSubmissionPDF&sid=${submission_id}&formID=${form_id}&apikey=${api_key}`;
-
-			const a = document.createElement("a");
-			a.href = pdfUrl;
-			a.download = "JotForm_Submission.pdf";
-			document.body.appendChild(a);
-			a.click();
-			document.body.removeChild(a);
-
-			setTimeout(() => {
-				toast.success('PDF downloaded successfully!', {
-					position: "bottom-right",
-					autoClose: 5000,
-					hideProgressBar: false,
-					closeOnClick: false,
-					pauseOnHover: true,
-					draggable: true,
-					progress: undefined,
-					theme: "colored",
-				});
-				setDownloadingPDF(null);
-			}, 2500);
+		  setDownloadingPDF(rowIndex);
+	  
+		  const api_key = process.env.NEXT_PUBLIC_JOTFORM_API_KEY;
+	  
+		  const pdfUrl = `https://www.jotform.com/server.php?action=getSubmissionPDF&sid=${submission_id}&formID=${form_id}&apikey=${api_key}`;
+	  
+		  const a = document.createElement("a");
+		  a.href = pdfUrl;
+		  a.download = "JotForm_Submission.pdf";
+		  document.body.appendChild(a);
+		  a.click();
+		  document.body.removeChild(a);
+	  
+		  setTimeout(() => {
+			toast.success('PDF downloaded successfully!', {
+			  position: "bottom-right",
+			  autoClose: 5000,
+			  hideProgressBar: false,
+			  closeOnClick: false,
+			  pauseOnHover: true,
+			  draggable: true,
+			  progress: undefined,
+			  theme: "colored",
+			});
+			setDownloadingPDF(null);
+		  }, 2500);
 		};
-
-
-		const deleteRecord = async (data: any) => {
-			setIsDeleteModal(true);
-			SetRecordData(data);
-		}
-
+	  
 		const listableFields = selectedFormFields !== undefined && Object.values(selectedFormFields).filter(field =>
-			field.name.includes('listable')
+		  field.name.includes('listable')
 		);
-
+	  
 		const sortedListableFields = listableFields.filter(field =>
-			uniqueKeys.includes(field.text)
+		  uniqueKeys.includes(field.text)
 		).sort((a, b) => a.name.localeCompare(b.name));
-
+	  
 		const filteredKeys = sortedListableFields.map(field => field.text);
-
-		const columns = filteredKeys.map(key => ({
+	  
+		const columns = [
+		  {
+			title: 'S.No',
+			key: 'serial_no',
+			render: (_: any, record: any, index: number) => {
+			  const serialNumber = (currentPage - 1) * 5 + (index + 1); 
+			  return serialNumber;
+			},
+			align: 'center',
+			width:100,
+		  },
+		  ...filteredKeys.map(key => ({
 			title: key,
 			dataIndex: key,
 			key,
 			render: (text: any) => (
-				<div className="max-w-[200px] overflow-hidden text-ellipsis whitespace-nowrap min-w-[160px]">
-					{text || 'N/A'}
-				</div>
+			  <div className="max-w-[200px] overflow-hidden text-ellipsis whitespace-nowrap min-w-[160px]">
+				{text || 'N/A'}
+			  </div>
 			),
-		}));
-
-		columns.push({
+			ellipsis: true,
+		  })),
+		  {
 			title: 'Action',
 			key: 'action',
 			fixed: 'right',
 			render: (_: any, item: any, rowIndex: number) => (
-				<div className="flex flex-wrap gap-2 justify-center items-center">
+			  <div className="flex flex-wrap gap-2 justify-center items-center">
+				<button
+				  title="Copy URL"
+				  onClick={() => {
+					navigator.clipboard.writeText(item?.formData?.url);
+					toast.success('URL copied to clipboard!', {
+					  position: "bottom-right",
+					  autoClose: 5000,
+					  hideProgressBar: false,
+					  closeOnClick: false,
+					  pauseOnHover: true,
+					  draggable: true,
+					  progress: undefined,
+					  theme: "colored",
+					});
+				  }}
+				  className="text-white bg-green-700 hover:bg-green-800 focus:outline-none focus:ring-4 focus:ring-green-300 font-medium rounded-full text-sm px-2 py-2 text-center me-2 mb-2 dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-green-800"
+				  style={{ background: '#008080' }}
+				>
+				  <FaCopy size={18} />
+				</button>
+	  
+				{item?.formData?.submission_id ? (
+				  <div className="relative group">
 					<button
-						title="Copy URL"
-						onClick={() => {
-							navigator.clipboard.writeText(item?.formData?.url);
-							toast.success('URL copied to clipboard!', {
-								position: "bottom-right",
-								autoClose: 5000,
-								hideProgressBar: false,
-								closeOnClick: false,
-								pauseOnHover: true,
-								draggable: true,
-								progress: undefined,
-								theme: "colored",
-							});
-						}}
-						className="text-gray-900 hover:text-white border border-gray-800 hover:bg-gray-900 focus:ring-4 focus:outline-none focus:ring-gray-300 font-medium rounded-lg text-sm px-2 py-2 text-center me-2 mb-2 dark:border-gray-600 dark:text-gray-600 dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-gray-800"
+					  title="Download PDF Response"
+					  onClick={() =>
+						handlePDFDownload(item?.formData?.form_id, item?.formData?.submission_id, rowIndex)
+					  }
+					  className="text-white hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300 font-medium rounded-full text-sm px-2 py-2 text-center me-2 mb-2 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
+					  style={{ backgroundColor: '#3b5998' }}
+					  disabled={downloadingPDF === rowIndex}
 					>
-						<FaCopy size={18} />
-					</button>
-
-					{item?.formData?.submission_id ? (
-						<div className="relative group">
-							<button
-								title="Download PDF Response"
-								onClick={() =>
-									handlePDFDownload(item?.formData?.form_id, item?.formData?.submission_id, rowIndex)
-								}
-								className="text-blue-700 hover:text-white border border-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-2 py-2 text-center me-2 mb-2 dark:border-blue-500 dark:text-blue-500 dark:hover:text-white dark:hover:bg-blue-500 dark:focus:ring-blue-800"
-								disabled={downloadingPDF === rowIndex}
-							>
-								{downloadingPDF === rowIndex ? (
-									<svg
-										className="animate-spin h-5 w-5"
-										viewBox="0 0 24 24"
-										fill="none"
-									>
-										<circle
-											className="opacity-25"
-											cx="12"
-											cy="12"
-											r="10"
-											stroke="currentColor"
-											strokeWidth="4"
-										/>
-										<path
-											className="opacity-75"
-											fill="currentColor"
-											d="M4 12a8 8 0 018-8v8H4z"
-										/>
-									</svg>
-								) : (
-									<FaFilePdf size={18} />
-								)}
-							</button>
-						</div>
-					) : (
-						<button
-							title="Send Form"
-							className="text-blue-700 hover:text-white border border-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-2 py-2 text-center me-2 mb-2 dark:border-blue-500 dark:text-blue-500 dark:hover:text-white dark:hover:bg-blue-500 dark:focus:ring-blue-800"
+					  {downloadingPDF === rowIndex ? (
+						<svg
+						  className="animate-spin h-5 w-5"
+						  viewBox="0 0 24 24"
+						  fill="none"
 						>
-							<FiSend size={18} />
-						</button>
-					)}
-
-					<button onClick={() => deleteRecord(item)} className="text-red-700 hover:text-white border border-red-700 hover:bg-red-800 focus:ring-4 focus:outline-none focus:ring-red-300 font-medium rounded-lg text-sm px-2 py-2 text-center me-2 mb-2 dark:border-red-500 dark:text-red-500 dark:hover:text-white dark:hover:bg-red-600 dark:focus:ring-red-900">
-						<FaTrash size={18} />
+						  <circle
+							className="opacity-25"
+							cx="12"
+							cy="12"
+							r="10"
+							stroke="currentColor"
+							strokeWidth="4"
+						  />
+						  <path
+							className="opacity-75"
+							fill="currentColor"
+							d="M4 12a8 8 0 018-8v8H4z"
+						  />
+						</svg>
+					  ) : (
+						<FaFilePdf size={18} />
+					  )}
 					</button>
-				</div>
+				  </div>
+				) : (
+				  <button
+					title="Send Form"
+					className="text-white hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300 font-medium rounded-full text-sm px-2 py-2 text-center me-2 mb-2 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
+					style={{ backgroundColor: '#3b5998' }}
+				  >
+					<FiSend size={18} />
+				  </button>
+				)}
+	  
+				<button onClick={() => deleteRecord(item)} className="text-white bg-red-700 hover:bg-red-800 focus:outline-none focus:ring-4 focus:ring-red-300 font-medium rounded-full text-sm px-2 py-2 text-center me-2 mb-2 dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-red-900">
+				  <FaTrash size={18} />
+				</button>
+			  </div>
 			),
-		});
-
+		  },
+		];
+	  
 		return (
-			<div className="p-4 bg-white shadow-md rounded-lg customTableWrapper">
-				<Table
-					columns={columns}
-					dataSource={tableData}
-					rowKey="qid"
-					pagination={false}
-					scroll={{ x: 'max-content', y: 400 }}
-					sticky
-				/>
-				{/* Pagination Component */}
-				<div className="flex justify-center mt-6">
-					<Pagination
-						current={currentPage}
-						total={totalPages}
-						pageSize={1}
-						onChange={handlePageChange}
-					/>
-				</div>
+		  <div className="p-4 bg-white shadow-md rounded-lg customTableWrapper">
+			<Table
+			  columns={columns}
+			  dataSource={tableData}
+			  rowKey="qid"
+			  pagination={false}
+			  scroll={{ x: 'max-content', y: 400 }}
+			  sticky
+			/>
+			{/* Pagination Component */}
+			<div className="flex justify-center mt-6">
+			  <Pagination
+				current={currentPage}
+				total={totalPages}
+				pageSize={10} // Adjust this according to the page size
+				onChange={handlePageChange}
+			  />
 			</div>
+		  </div>
 		);
-	};
+	  };
+	  
 
 	const handleChange = (name: string, value: any) => {
 		setInputValues((prev: any) => ({
@@ -433,7 +422,10 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 		try {
 			const response = await axios.get(API_URL);
 			if (response.status === 200) {
-				setAssignedForms(response?.data)
+				setAssignedForms(response?.data);
+				if (selectedForm === null) {
+					setSelectedForm(response?.data[0]?.form_id || null)
+				}
 			} else {
 				console.error('Unexpected response status:', response.status);
 			}
@@ -475,11 +467,9 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 	}, [selectedForm]);
 
 	useEffect(() => {
-
 		if (userData?.user?.id) {
 			getAssignedFormByID(userData?.user?.companyId)
 		}
-
 	}, [userData])
 
 	type FormValues = {
@@ -612,16 +602,13 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 		}
 	};
 
-
-
-	const hanldeFormChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+	const handleFormChange = (value: string) => {
 		setLoader(true);
-		let value = (e.target as HTMLSelectElement).value;
 		setValue("url", value);
 		setSelectedForm(value);
-		setCurrentPage(1)
+		setCurrentPage(1);
 		getTableResponse(value || null, 1, 5, lastSearchedValue, selectedFilter);
-	}
+	};
 
 	async function onSubmit(event: React.MouseEvent<HTMLButtonElement, MouseEvent>) {
 		event.preventDefault();
@@ -709,69 +696,70 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 		closeModal();
 	};
 
-	const handleBulkUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-		if (!e.target.files || e.target.files.length === 0) {
-			console.error("No file selected");
-			return;
-		}
+	// const handleBulkUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+	// 	if (!e.target.files || e.target.files.length === 0) {
+	// 		console.error("No file selected");
+	// 		return;
+	// 	}
 
-		const file = e.target.files[0];
-		const API_URL = Url + `/api/jotform/upload/${selectedForm || ""}`;
+	// 	const file = e.target.files[0];
+	// 	const API_URL = Url + `/api/jotform/upload/${selectedForm || ""}`;
 
-		const formData = new FormData();
-		formData.append("formId", selectedForm || "");
-		formData.append("data", file);
+	// 	const formData = new FormData();
+	// 	formData.append("formId", selectedForm || "");
+	// 	formData.append("data", file);
 
-		try {
-			const response = await axios.post(API_URL, formData, {
-				headers: {
-					"Content-Type": "multipart/form-data",
-				},
-			});
-			setCurrentPage(1)
-			getTableResponse(selectedForm || null, 1, 5, lastSearchedValue, selectedFilter);
+	// 	try {
+	// 		const response = await axios.post(API_URL, formData, {
+	// 			headers: {
+	// 				"Content-Type": "multipart/form-data",
+	// 			},
+	// 		});
+	// 		setCurrentPage(1)
+	// 		getTableResponse(selectedForm || null, 1, 5, lastSearchedValue, selectedFilter);
 
-			if (response.status === 201) {
-				toast.success('Response uploaded successsfully!', {
-					position: "bottom-right",
-					autoClose: 5000,
-					hideProgressBar: false,
-					closeOnClick: false,
-					pauseOnHover: true,
-					draggable: true,
-					progress: undefined,
-					theme: "colored",
-					transition: Bounce,
-				});
-			} else {
-				toast.error('Unable to upload response.', {
-					position: "bottom-right",
-					autoClose: 5000,
-					hideProgressBar: false,
-					closeOnClick: false,
-					pauseOnHover: true,
-					draggable: true,
-					progress: undefined,
-					theme: "colored",
-					transition: Bounce,
-				});
-			}
-		} catch (error) {
-			toast.error('Unable to upload response.', {
-				position: "bottom-right",
-				autoClose: 5000,
-				hideProgressBar: false,
-				closeOnClick: false,
-				pauseOnHover: true,
-				draggable: true,
-				progress: undefined,
-				theme: "colored",
-				transition: Bounce,
-			});
-		}
-	};
+	// 		if (response.status === 201) {
+	// 			toast.success('Response uploaded successsfully!', {
+	// 				position: "bottom-right",
+	// 				autoClose: 5000,
+	// 				hideProgressBar: false,
+	// 				closeOnClick: false,
+	// 				pauseOnHover: true,
+	// 				draggable: true,
+	// 				progress: undefined,
+	// 				theme: "colored",
+	// 				transition: Bounce,
+	// 			});
+	// 		} else {
+	// 			toast.error('Unable to upload response.', {
+	// 				position: "bottom-right",
+	// 				autoClose: 5000,
+	// 				hideProgressBar: false,
+	// 				closeOnClick: false,
+	// 				pauseOnHover: true,
+	// 				draggable: true,
+	// 				progress: undefined,
+	// 				theme: "colored",
+	// 				transition: Bounce,
+	// 			});
+	// 		}
+	// 	} catch (error) {
+	// 		toast.error('Unable to upload response.', {
+	// 			position: "bottom-right",
+	// 			autoClose: 5000,
+	// 			hideProgressBar: false,
+	// 			closeOnClick: false,
+	// 			pauseOnHover: true,
+	// 			draggable: true,
+	// 			progress: undefined,
+	// 			theme: "colored",
+	// 			transition: Bounce,
+	// 		});
+	// 	}
+	// };
 
 	const onSearchSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+		setLoader(true);
 		e.preventDefault();
 
 		const formData = new FormData(e.currentTarget);
@@ -844,70 +832,109 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 		getTableResponse(selectedForm || null, 1, 5, lastSearchedValue, value);
 	};
 
+	const handleFileClick = () => {
+		const fileInput = document.getElementById('file-upload') as HTMLInputElement;
+		fileInput?.click();
+	};
+
+	const handleBulkUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+		if (!e.target.files || e.target.files.length === 0) {
+			console.error("No file selected");
+			return;
+		}
+
+		const file = e.target.files[0];
+		const API_URL = `${Url}/api/jotform/upload/${selectedForm || ""}`;
+
+		const formData = new FormData();
+		formData.append("formId", selectedForm || "");
+		formData.append("data", file);
+
+		try {
+			const response = await axios.post(API_URL, formData, {
+				headers: {
+					"Content-Type": "multipart/form-data",
+				},
+			});
+			setCurrentPage(1);
+			getTableResponse(selectedForm || null, 1, 5, lastSearchedValue, selectedFilter);
+
+			if (response.status === 201) {
+				toast.success('Response uploaded successfully!', {
+					position: "bottom-right",
+					autoClose: 5000,
+					hideProgressBar: false,
+					closeOnClick: false,
+					pauseOnHover: true,
+					draggable: true,
+					progress: undefined,
+					theme: "colored",
+					transition: Bounce,
+				});
+			} else {
+				toast.error('Unable to upload response.', {
+					position: "bottom-right",
+					autoClose: 5000,
+					hideProgressBar: false,
+					closeOnClick: false,
+					pauseOnHover: true,
+					draggable: true,
+					progress: undefined,
+					theme: "colored",
+					transition: Bounce,
+				});
+			}
+		} catch (error) {
+			toast.error('Unable to upload response.', {
+				position: "bottom-right",
+				autoClose: 5000,
+				hideProgressBar: false,
+				closeOnClick: false,
+				pauseOnHover: true,
+				draggable: true,
+				progress: undefined,
+				theme: "colored",
+				transition: Bounce,
+			});
+		}
+	};
 
 	return (
 		<div className="bg-gray-50 p-6 rounded-lg shadow-md w-full mx-auto">
 			<div className="flex justify-between items-end mb-4">
-				<div className="flex flex items-end gap-4" style={{ width: '100%', maxWidth: '30vw' }}>
-					<select
-						className="border p-3 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-						onChange={(e) => hanldeFormChange(e)}
+				<div className="flex items-end gap-4" style={{ width: '100%', maxWidth: '30vw' }}>
+					<Select
+						className="w-full"
+						onChange={handleFormChange}
 						style={{ minWidth: '13.5vw' }}
+						placeholder="Select Form"
+						value={selectedForm}
 					>
 						{assignedForms.map((assignedForm) => (
-							<option key={assignedForm?.form_id} value={assignedForm?.form_id}>{assignedForm?.form_name}</option>
+							<Option key={assignedForm?.form_id} value={assignedForm?.form_id}>
+								{assignedForm?.form_name}
+							</Option>
 						))}
-					</select>
-					<div className="relative group">
-						<button onClick={onSubmit}>
-							<BsFillSendPlusFill size={25} color="#3b5998" />
-						</button>
-						<div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 min-w-[120px] text-center px-2 py-1 bg-black text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity
-      before:content-[''] before:absolute before:top-full before:left-1/2 before:-translate-x-1/2 before:border-8 before:border-transparent before:border-t-black">
-							Send Form
-						</div>
-					</div>
+					</Select>
+
+					<Tooltip title="Send Form">
+						<Button
+							onClick={onSubmit}
+							icon={<SendIcon />}
+							type="primary"
+							className="headerButton"
+						/>
+					</Tooltip>
+
+					<Tooltip title="Prefill or upload">
+						<Button
+							onClick={openModal}
+							icon={<BsFillSendPlusFill size={20} color="#fff" />}
+							type="primary"
+							className="headerButton"
+						/>
+					</Tooltip>
 				</div>
-				{selectedForm && (<div className="flex items-end justify-end space-x-2" style={{ width: "30%" }}>
-					<div className="flex items-start space-x-5">
-						<div className="relative group">
-							<button onClick={handleSampleCSVDownload}>
-								<FaFileDownload size={25} color="#3b5998" />
-							</button>
-							<div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 min-w-[120px] text-center px-2 py-1 bg-black text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity
-      before:content-[''] before:absolute before:top-full before:left-1/2 before:-translate-x-1/2 before:border-8 before:border-transparent before:border-t-black">
-								Download Sample CSV
-							</div>
-						</div>
-						<div className="relative group cursor-pointer">
-							<label htmlFor="file-upload" style={{ cursor: "pointer" }}>
-								<FaFileUpload size={25} color="#3b5998" />
-							</label>
-							<input
-								id="file-upload"
-								type="file"
-								accept=".csv, .xlsx, .xls"
-								onChange={handleBulkUpload}
-								className="hidden"
-							/>
-							<div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 min-w-[120px] text-center px-2 py-1 bg-black text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity
-      before:content-[''] before:absolute before:top-full before:left-1/2 before:-translate-x-1/2 before:border-8 before:border-transparent before:border-t-black">
-								Upload File
-							</div>
-						</div>
-						<div className="relative group">
-							<button onClick={() => openModal()}>
-								<LuListPlus size={25} color="#3b5998" />
-							</button>
-							<div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 min-w-[120px] text-center px-2 py-1 bg-black text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity
-      before:content-[''] before:absolute before:top-full before:left-1/2 before:-translate-x-1/2 before:border-8 before:border-transparent before:border-t-black">
-								Add New Response (Manually)
-							</div>
-						</div>
-					</div>
-
-
-				</div>)}
 			</div>
 
 			<form ref={formRef} onSubmit={onSearchSubmit}>
@@ -943,6 +970,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 										<Button
 											className="flex items-center gap-2 w-full lg:w-auto rounded-md px-6 py-2 text-white transition"
 											style={{ background: '#3b5998' }}
+											htmlType="submit"
 										>
 											<FaSearch />
 											<span>Search</span>
@@ -956,24 +984,64 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 
 			{tableResponse && selectedFormFields?.content ? (
 				<div className="card mt-5 bg-white rounded">
-					<div className="flex flex-wrap items-center gap-4" style={{ padding: '0.5rem 0 0 1rem' }}>
-						{["all", "completed", "pending"].map((status) => (
-							<label
-								key={status}
-								htmlFor={status}
-								className="inline-flex items-center space-x-2 px-4 py-2 bg-gray-100 rounded-md cursor-pointer hover:bg-gray-200 transition"
-							>
-								<input
-									id={status}
-									name="status"
-									type="radio"
-									value={status}
-									className="form-radio text-blue-600 focus:ring-0"
-									onChange={() => handleFilterChange(status)}
-								/>
-								<span className="capitalize text-gray-700 font-medium">{status}</span>
-							</label>
-						))}
+					<div className="flex flex-wrap items-center gap-4 tableDataWrapper" style={{ padding: '0.5rem 1rem 0 1rem' }}>
+						<div className="formFilters">
+							{["all", "completed", "pending"].map((status) => (
+								<label
+									key={status}
+									htmlFor={status}
+									className="inline-flex items-center space-x-2 px-4 py-2 bg-gray-100 rounded-md cursor-pointer hover:bg-gray-200 transition"
+								>
+									<input
+										id={status}
+										name="status"
+										type="radio"
+										value={status}
+										className="form-radio text-blue-600 focus:ring-0"
+										onChange={() => handleFilterChange(status)}
+									/>
+									<span className="capitalize text-gray-700 font-medium">{status}</span>
+								</label>
+							))}
+						</div>
+						<div className="formActions">
+							{selectedForm && (
+								<div className="flex items-end justify-end space-x-2" >
+									<div className="flex items-start space-x-5">
+										<Tooltip title="Download Sample CSV">
+											<Button
+												onClick={handleSampleCSVDownload}
+												icon={<FaFileDownload size={20} color="#fff" />}
+												style={{
+													backgroundColor: '#3b5998',
+													borderColor: '#3b5998',
+												}}
+												className="customTableButtons text-white hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300 font-medium rounded-md text-sm px-4 py-2"
+											>Sample</Button>
+										</Tooltip>
+										<Tooltip title="Upload File">
+											<Button
+												icon={<FaFileUpload size={20} color="#fff" />}
+												style={{
+													backgroundColor: '#3b5998',
+													borderColor: '#3b5998',
+												}}
+												onClick={handleFileClick}
+												className="customTableButtons text-white hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300 font-medium rounded-md text-sm px-4 py-2"
+											>Upload</Button>
+										</Tooltip>
+										<input
+											id="file-upload"
+											type="file"
+											accept=".csv, .xlsx, .xls"
+											onChange={handleBulkUpload}
+											className="hidden"
+										/>
+									</div>
+								</div>
+							)}
+						</div>
+
 					</div>
 					{loader ? (
 						<div className="flex items-center justify-center py-10">
@@ -996,156 +1064,104 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 			) : null}
 
 			<Modal
-				isOpen={isModalOpen}
-				onRequestClose={closeModal}
-				style={customStyles}
-				contentLabel="Manual Upload Modal"
-				ariaHideApp={false}
+				open={isModalOpen}
+				onCancel={closeModal}
+				footer={null}
+				width="60%"
+				centered
+				closable
+				title="Prefill and Display OR Upload"
 			>
-				<div className="fixed top-0 left-0 w-full h-full bg-opacity-50 z-40">
-					<div className="relative" style={{ padding: '2rem' }}>
-						<h2 className="text-lg font-bold mb-4">Manual Upload</h2>
-						<hr />
-						<div className="space-y-4 mt-4">
-							{selectedFormFields?.content &&
-								Object.values(selectedFormFields.content)
-									.filter(
-										(item) => item?.name?.includes("prefillable"))
-									.sort((a, b) => {
-										const nameA = a.name.toLowerCase();
-										const nameB = b.name.toLowerCase();
-										if (nameA < nameB) return -1;
-										if (nameA > nameB) return 1;
-										return 0;
-									})
-									.map((item) => (
-										<div key={item.qid} className="flex flex-col space-y-2">
-											<label className="text-gray-700 font-medium">
-												{item?.text}
-											</label>
+				<hr />
+				<div className="space-y-4 mt-4">
+					<Row gutter={16}>
+						{selectedFormFields?.content &&
+							Object.values(selectedFormFields.content)
+								.filter((item) => item?.name?.includes('prefillable'))
+								.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()))
+								.map((item) => (
+									<Col md={12} xs={24} key={item.qid} className="mt-2">
+										<div className="flex flex-col space-y-2">
+											<label className="text-gray-700 font-medium">{item?.text}</label>
 											<input
 												type="text"
 												className="border p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-												value={manualInputValues[item.text] || ""}
+												value={manualInputValues[item.text] || ''}
 												onChange={(e) => {
-													handleManualInputChange(
-														item.text,
-														e.target.value
-													);
+													handleManualInputChange(item.text, e.target.value);
 													handleChange(item.name, e.target.value);
 												}}
 											/>
 										</div>
-									))}
-						</div>
-						<div className="flex justify-end mt-6 customButtonWrapper">
-							<Button
-								onClick={handleManualUpload}
-								className="bg-blue-500 text-white px-6 py-2 rounded-md hover:bg-blue-600 flex gap-2"
-							>
-								Upload <RiUploadCloudFill size={25} />
-							</Button>
-							<Button
-								onClick={onSubmit}
-								className="ml-4 bg-blue-500 text-white px-6 py-2 rounded-md hover:bg-blue-600 flex gap-2"
-							>
-								Send <FiSend />
-							</Button>
-							<Button
-								onClick={closeModal}
-								style={{ backgroundColor: "#DC2626" }}
-								className="ml-4 bg-gray-300 text-white px-6 py-2 rounded-md hover:bg-gray-400"
-							>
-								Cancel
-							</Button>
-						</div>
-					</div>
+									</Col>
+								))}
+					</Row>
+				</div>
+				<div className="flex justify-end mt-6 customButtonWrapper">
+					<Button
+						onClick={handleManualUpload}
+						className="blueButtons text-white px-6 py-2 rounded-md flex gap-2"
+					>
+						Upload <RiUploadCloudFill size={25} />
+					</Button>
+					<Button
+						onClick={onSubmit}
+						className="blueButtons ml-4 text-white px-6 py-2 rounded-md flex gap-2"
+					>
+						Send <FiSend />
+					</Button>
+					<Button
+						onClick={closeModal}
+						style={{ backgroundColor: '#DC2626' }}
+						className="ml-4 bg-gray-300 text-white px-6 py-2 rounded-md hover:bg-gray-400 cancelButton"
+					>
+						Cancel
+					</Button>
 				</div>
 			</Modal>
 
 			<Modal
-				isOpen={isSendModalOpen}
-				onRequestClose={closeSendModal}
-				style={customStyles}
-				contentLabel="Send Form"
-				ariaHideApp={false}
+				open={isSendModalOpen}
+				onCancel={closeSendModal}
+				footer={null}
+				width="60%"
+				centered
+				closable
+				title="Send Form"
 			>
-				<div className="fixed top-0 left-0 w-full h-full bg-opacity-50 z-40">
-					<div className="relative" style={{ padding: '2rem' }}>
-						<h2 className="text-lg font-bold mb-4">Send Form</h2>
-						<hr />
-						<div className="space-y-4 mt-4">
-							{selectedFormFields?.content &&
-								Object.values(selectedFormFields.content)
-									.filter(
-										(item) => item?.name?.includes("prefillable"))
-									.sort((a, b) => {
-										const nameA = a.name.toLowerCase();
-										const nameB = b.name.toLowerCase();
-										if (nameA < nameB) return -1;
-										if (nameA > nameB) return 1;
-										return 0;
-									})
-									.map((item) => (
-										<div key={item.qid} className="flex flex-col space-y-2">
-											<label className="text-gray-700 font-medium">
-												{item?.text}
-											</label>
-											<input
-												type="text"
-												className="border p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-												value={inputValues[item.name] || ""}
-												onChange={(e) => handleChange(item.name, e.target.value)}
-											/>
-										</div>
-									))}
-						</div>
-						<div className="flex justify-end mt-6">
-							<Button
-								onClick={onSubmit}
-								className="bg-blue-500 text-white px-6 py-2 rounded-md hover:bg-blue-600 flex gap-2"
-							>
-								Send <FiSend />
-							</Button>
-							<Button
-								onClick={closeSendModal}
-								style={{ backgroundColor: "#DC2626" }}
-								className="ml-4 bg-gray-300 text-white px-6 py-2 rounded-md hover:bg-gray-400"
-							>
-								Cancel
-							</Button>
-						</div>
-					</div>
+				<h2 className="text-lg font-bold mb-4">Send Form</h2>
+				<hr />
+				<div className="space-y-4 mt-4">
+					{selectedFormFields?.content &&
+						Object.values(selectedFormFields.content)
+							.filter((item) => item?.name?.includes('prefillable'))
+							.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()))
+							.map((item) => (
+								<div key={item.qid} className="flex flex-col space-y-2">
+									<label className="text-gray-700 font-medium">{item?.text}</label>
+									<input
+										type="text"
+										className="border p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+										value={inputValues[item.name] || ''}
+										onChange={(e) => handleChange(item.name, e.target.value)}
+									/>
+								</div>
+							))}
 				</div>
-			</Modal>
-
-			<Modal
-				isOpen={isDeleteModal}
-				onRequestClose={closeDeleteModal}
-				style={customDeleteStyles}
-				contentLabel="Delete Record"
-				ariaHideApp={false}
-			>
-				<div className="p-3 flex flex-col items-center" >
-					<div className="flex items-center justify-center mb-4" style={{ flexDirection: 'column' }}>
-						<IoWarningOutline size={80} className="text-yellow-500 mr-3" />
-						<h2 className="text-xl font-semibold text-gray-700 mt-2">Are you sure you want to delete this record?</h2>
-					</div>
-					<div className="modalActions flex justify-center gap-6 mt-2">
-						<Button
-							onClick={deleteRecordSubmit}
-							className="px-6 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-all"
-							disabled={loader}
-						>
-							{loader ? "Deleting..." : "Yes, Delete"}
-						</Button>
-						<Button
-							onClick={closeDeleteModal}
-							className="px-6 py-2 bg-gray-400 text-white rounded-md hover:bg-gray-500 transition-all"
-						>
-							Cancel
-						</Button>
-					</div>
+				<div className="flex justify-end mt-6">
+					<Button
+						onClick={onSubmit}
+						className="bg-blue-500 text-white px-6 py-2 rounded-md hover:bg-blue-600 flex gap-2"
+					>
+						Send <FiSend />
+					</Button>
+					<Button
+						onClick={closeSendModal}
+						style={{ backgroundColor: '#DC2626' }}
+						className="ml-4 bg-gray-300 text-white px-6 py-2 rounded-md hover:bg-gray-400"
+					>
+						Cancel
+					</Button>
 				</div>
 			</Modal>
 		</div>

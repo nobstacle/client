@@ -1,6 +1,8 @@
 .btnWrapper {
   button {
     margin-bottom: 0.2rem;
+    font-family: '__Inter_d65c78', '__Inter_Fallback_d65c78';
+    font-style: normal;
   }
 }
 
@@ -11,6 +13,8 @@
     th {
       width: 100%;
       white-space: nowrap;
+      font-family: '__Inter_d65c78', '__Inter_Fallback_d65c78';
+      font-style: normal;
     }
 
     td {
@@ -22,6 +26,8 @@
       padding: 0 1rem;
       min-width: 100%;
       text-align: left;
+      font-family: '__Inter_d65c78', '__Inter_Fallback_d65c78';
+      font-style: normal;
     }
   }
 }
@@ -35,6 +41,8 @@
     width: fit-content;
     padding: 0.3rem 0.6rem;
     margin: 0.8rem 0;
+    font-family: '__Inter_d65c78', '__Inter_Fallback_d65c78';
+    font-style: normal;
 
     &:first-child {
       margin-right: 0.5rem;
@@ -48,36 +56,54 @@
   display: flex;
   justify-content: flex-start;
   gap: 10px;
+  font-family: '__Inter_d65c78', '__Inter_Fallback_d65c78';
+  font-style: normal;
 }
 
 
 .react-select-container {
+  font-family: '__Inter_d65c78', '__Inter_Fallback_d65c78';
+  font-style: normal;
+
   .react-select {
     padding: 0.15rem !important;
+    font-family: '__Inter_d65c78', '__Inter_Fallback_d65c78';
+    font-style: normal;
   }
 }
 
 .swal2-cancel {
   background-color: red !important;
   color: white !important;
+  font-family: '__Inter_d65c78', '__Inter_Fallback_d65c78';
+  font-style: normal;
 }
 
 .swal2-confirm {
   background-color: blue !important;
   color: white !important;
+  font-family: '__Inter_d65c78', '__Inter_Fallback_d65c78';
+  font-style: normal;
 }
 
 
 .customTableWrapper {
+  font-family: '__Inter_d65c78', '__Inter_Fallback_d65c78';
+  font-style: normal;
+
   thead {
     th {
       white-space: nowrap;
+      font-family: '__Inter_d65c78', '__Inter_Fallback_d65c78';
+      font-style: normal;
     }
   }
 
   tr {
     td {
       padding: 0.4rem 1rem;
+      font-family: '__Inter_d65c78', '__Inter_Fallback_d65c78';
+      font-style: normal;
     }
   }
 
@@ -91,6 +117,8 @@
     --tw-border-opacity: 1;
     border-color: rgb(209 213 219 / var(--tw-border-opacity));
     box-sizing: border-box;
+    font-family: '__Inter_d65c78', '__Inter_Fallback_d65c78';
+    font-style: normal;
   }
 
   .sticky-last-column-header {
@@ -102,6 +130,8 @@
     min-width: 8vw;
     border-bottom: 1px solid #cecece;
     box-sizing: border-box;
+    font-family: '__Inter_d65c78', '__Inter_Fallback_d65c78';
+    font-style: normal;
 
   }
 }
@@ -112,11 +142,15 @@
   align-items: center;
   height: 100%;
   min-height: 40vh;
+  font-family: '__Inter_d65c78', '__Inter_Fallback_d65c78';
+  font-style: normal;
 }
 
 th,
 td {
   box-sizing: border-box;
+  font-family: '__Inter_d65c78', '__Inter_Fallback_d65c78';
+  font-style: normal;
 }
 
 .customButtonWrapper {
@@ -124,6 +158,21 @@ td {
   width: 100%;
   justify-content: center;
   align-items: center;
+  font-family: '__Inter_d65c78', '__Inter_Fallback_d65c78';
+  font-style: normal;
+}
+
+.customButtonWrapper .blueButtons {
+  background: #3b5998;
+  color: white;
+  font-family: '__Inter_d65c78', '__Inter_Fallback_d65c78';
+  font-style: normal;
+}
+
+.customButtonWrapper .cancelButton:hover {
+  color: red !important;
+  border: 1px solid red !important;
+  background: white !important;
 }
 
 .ant-table {
@@ -132,6 +181,8 @@ td {
       .ant-table-cell {
         background: #3b5998;
         color: white;
+        font-family: '__Inter_d65c78', '__Inter_Fallback_d65c78';
+        font-style: normal;
       }
     }
   }
@@ -139,5 +190,107 @@ td {
   .ant-table-body {
     overflow: hidden;
     overflow-x: scroll;
+    font-family: '__Inter_d65c78', '__Inter_Fallback_d65c78';
+    font-style: normal;
   }
+}
+
+.assignFormTable {
+  .ant-table-tbody {
+    .ant-table-cell {
+      padding: 0.4rem 1rem !important;
+      font-family: '__Inter_d65c78', '__Inter_Fallback_d65c78';
+      font-style: normal;
+    }
+  }
+}
+
+.redIcon {
+  color: red !important;
+}
+
+/* Custom styles for SweetAlert2 buttons */
+.confirm-btn {
+  background-color: #3b5998 !important;
+  border-color: #3b5998 !important;
+  font-family: '__Inter_d65c78', '__Inter_Fallback_d65c78';
+  font-style: normal;
+}
+
+.cancel-btn {
+  background-color: #f0f0f0 !important;
+  border-color: #dcdcdc !important;
+  font-family: '__Inter_d65c78', '__Inter_Fallback_d65c78';
+  font-style: normal;
+}
+
+.ant-modal input {
+  font-family: '__Inter_d65c78', '__Inter_Fallback_d65c78';
+  font-style: normal;
+}
+
+.ant-modal label {
+  font-family: '__Inter_d65c78', '__Inter_Fallback_d65c78';
+  font-style: normal;
+}
+
+.ant-modal .ant-modal-title {
+  font-family: '__Inter_d65c78', '__Inter_Fallback_d65c78';
+  font-style: normal;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p,
+span,
+label,
+input,
+button {
+  font-family: '__Inter_d65c78', '__Inter_Fallback_d65c78';
+  font-style: normal;
+}
+
+.headerButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  background: #3b5998;
+  color: white;
+  padding: 0.3rem 1rem;
+  width: 55px !important;
+}
+
+.headerButton .ant-btn-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
+.ant-pagination-item.ant-pagination-item-active {
+  background-color: #3b5998;
+  color: white;
+}
+
+.ant-pagination-item.ant-pagination-item-active a {
+  color: white;
+}
+
+.tableDataWrapper {
+  display: flex;
+  justify-content: space-between;
+
+  .formFilters {
+    display: flex;
+    gap: 5px;
+  }
+}
+
+.customTableButtons:hover {
+  color: white !important;
 }
