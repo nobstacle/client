@@ -169,17 +169,11 @@ td {
   font-style: normal;
 }
 
-.customButtonWrapper .cancelButton:hover {
-  color: red !important;
-  border: 1px solid red !important;
-  background: white !important;
-}
-
 .ant-table {
   .ant-table-thead {
     tr {
       .ant-table-cell {
-        background: #3b5998;
+        background: #9ca3af;
         color: white;
         font-family: '__Inter_d65c78', '__Inter_Fallback_d65c78';
         font-style: normal;
@@ -192,6 +186,10 @@ td {
     overflow-x: scroll;
     font-family: '__Inter_d65c78', '__Inter_Fallback_d65c78';
     font-style: normal;
+
+    td {
+      padding: 3px 16px !important;
+    }
   }
 }
 
@@ -265,11 +263,21 @@ button {
   width: 55px !important;
 }
 
+.headerButton:hover {
+  background: #2d4373 !important;
+}
+
 .headerButton .ant-btn-icon {
   display: flex;
   align-items: center;
   justify-content: center;
   height: 100%;
+}
+
+.ant-pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .ant-pagination-item.ant-pagination-item-active {
@@ -293,4 +301,40 @@ button {
 
 .customTableButtons:hover {
   color: white !important;
+}
+
+.customWidth {
+  width: 7vw;
+  height: 100%;
+}
+
+.customSearchButton {
+  background: #3b5998 !important;
+  color: white !important;
+  border: none;
+
+}
+
+.customSearchButton:hover {
+  background: #2d4373 !important;
+  color: white !important;
+  border: none;
+}
+
+.customRedButton {
+  background: #DC2626 !important;
+  color: white !important;
+  border: none;
+}
+
+.customRedButton:hover {
+  background: #ad1d1d !important;
+  color: white !important;
+  border: none;
+}
+
+.superAdminTable .ant-pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }

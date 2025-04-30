@@ -192,42 +192,36 @@ const AsignForms: React.FC = () => {
 
 	const columns = [
 		{
-		  title: 'Serial No.',
-		  key: 'serial_no',
-		  render: (text, record, index) => index + 1, 
-		  align: 'center',
+			title: 'Form ID',
+			dataIndex: 'form_id',
+			key: 'form_id',
+			align: 'center',
 		},
 		{
-		  title: 'Form ID',
-		  dataIndex: 'form_id',
-		  key: 'form_id',
-		  align: 'center',
+			title: 'Form Name',
+			dataIndex: 'form_name',
+			key: 'form_name',
+			align: 'center',
 		},
 		{
-		  title: 'Form Name',
-		  dataIndex: 'form_name',
-		  key: 'form_name',
-		  align: 'center',
+			title: 'Assigned Companies',
+			dataIndex: 'companies',
+			key: 'companies',
+			render: (companies) => companies?.join(', '),
+			align: 'center',
 		},
 		{
-		  title: 'Assigned Companies',
-		  dataIndex: 'companies',
-		  key: 'companies',
-		  render: (companies) => companies?.join(', '),
-		  align: 'center',
+			title: 'Action',
+			key: 'action',
+			render: (text, record) => (
+				<button onClick={() => deleteForm(record)} className="text-white bg-red-700 hover:bg-red-800 focus:outline-none focus:ring-4 focus:ring-red-300 font-medium rounded-full text-sm px-2 py-2 text-center me-2 mb-2 dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-red-900">
+					<FaTrash size={18} />
+				</button>
+			),
+			align: 'center',
 		},
-		{
-		  title: 'Action',
-		  key: 'action',
-		  render: (text, record) => (
-			<Button type="link" onClick={() => deleteForm(record)} className="redIcon" icon={<FaTrash />} />
-		  ),
-		  align: 'center',
-		},
-	  ];
-	  
+	];
 
-	console.info("assignedForms", assignedForms);
 
 	return (
 		<div className="mx-auto mt-2 p-6 bg-white shadow-lg rounded-lg">
@@ -288,11 +282,10 @@ const AsignForms: React.FC = () => {
 						</Form.Item>
 
 						<div className="flex justify-center items-center">
-							<Form.Item>
+							<Form.Item className="mb-0">
 								<Button type="primary" htmlType="submit" className="text-white py-3 rounded-md transition" style={{ background: '#3b5998' }}>
 									Assign
 								</Button>
-
 							</Form.Item>
 						</div>
 
@@ -305,7 +298,8 @@ const AsignForms: React.FC = () => {
 					columns={columns}
 					dataSource={assignedForms}
 					rowKey="form_id"
-					pagination={{ pageSize: 5 }}
+					pagination={{ pageSize: 8 }}
+					className="superAdminTable"
 				/>
 			</div>
 		</div>

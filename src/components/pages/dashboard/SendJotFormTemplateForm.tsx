@@ -75,7 +75,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 	const [selectedFilter, setSelectedFilter] = useState(null);
 	const [TableKey, setTableKey] = useState(0);
 	const [loader, setLoader] = useState(false);
-	const itemsPerPage = 5;
+	const itemsPerPage = 8;
 	const formRef = useRef<HTMLFormElement>(null);
 
 	const handlePageChange = (pageNumber: number) => {
@@ -83,13 +83,16 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 	};
 
 	const openModal = () => setIsModalOpen(true);
-	const closeModal = () => setIsModalOpen(false);
+	const closeModal = () => {
+		setIsModalOpen(false);
+		setManualInputValues({});
+	}
 	const closeSendModal = () => setIsSendModalOpen(false);
 
-	const closeDeleteModal = () => {
-		setIsDeleteModal(false);
-		SetRecordData(null);
-	}
+	// const closeDeleteModal = () => {
+	// 	setIsDeleteModal(false);
+	// 	SetRecordData(null);
+	// }
 
 	const handleSocketEvents = () => {
 		// Handle successful connection
@@ -205,188 +208,176 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 		totalPages,
 		setCurrentPage,
 		selectedFormFields,
-	  }) => {
+	}) => {
 		const [downloadingPDF, setDownloadingPDF] = useState<number | null>(null);
-	  
+
 		const handlePageChange = (page: number) => {
-		  if (page > 0 && page <= totalPages) {
-			setCurrentPage(page);
-		  }
+			if (page > 0 && page <= totalPages) {
+				setCurrentPage(page);
+			}
 		};
-	  
+
 		if (!tableData || tableData.length === 0) {
-		  return (
-			<div className="grid gap-4 w-100">
-			  {/* Your "No response available" SVG and message */}
-			</div>
-		  );
+			return (
+				<div className="grid gap-4 w-100">
+					{/* Your "No response available" SVG and message */}
+				</div>
+			);
 		}
-	  
+
 		const handlePDFDownload = async (form_id: string, submission_id: string, rowIndex: number) => {
-		  setDownloadingPDF(rowIndex);
-	  
-		  const api_key = process.env.NEXT_PUBLIC_JOTFORM_API_KEY;
-	  
-		  const pdfUrl = `https://www.jotform.com/server.php?action=getSubmissionPDF&sid=${submission_id}&formID=${form_id}&apikey=${api_key}`;
-	  
-		  const a = document.createElement("a");
-		  a.href = pdfUrl;
-		  a.download = "JotForm_Submission.pdf";
-		  document.body.appendChild(a);
-		  a.click();
-		  document.body.removeChild(a);
-	  
-		  setTimeout(() => {
-			toast.success('PDF downloaded successfully!', {
-			  position: "bottom-right",
-			  autoClose: 5000,
-			  hideProgressBar: false,
-			  closeOnClick: false,
-			  pauseOnHover: true,
-			  draggable: true,
-			  progress: undefined,
-			  theme: "colored",
-			});
-			setDownloadingPDF(null);
-		  }, 2500);
+			setDownloadingPDF(rowIndex);
+
+			const api_key = process.env.NEXT_PUBLIC_JOTFORM_API_KEY;
+
+			const pdfUrl = `https://www.jotform.com/server.php?action=getSubmissionPDF&sid=${submission_id}&formID=${form_id}&apikey=${api_key}`;
+
+			const a = document.createElement("a");
+			a.href = pdfUrl;
+			a.download = "JotForm_Submission.pdf";
+			document.body.appendChild(a);
+			a.click();
+			document.body.removeChild(a);
+
+			setTimeout(() => {
+				toast.success('PDF downloaded successfully!', {
+					position: "bottom-right",
+					autoClose: 5000,
+					hideProgressBar: false,
+					closeOnClick: false,
+					pauseOnHover: true,
+					draggable: true,
+					progress: undefined,
+					theme: "colored",
+				});
+				setDownloadingPDF(null);
+			}, 2500);
 		};
-	  
+
 		const listableFields = selectedFormFields !== undefined && Object.values(selectedFormFields).filter(field =>
-		  field.name.includes('listable')
+			field.name.includes('listable')
 		);
-	  
+
 		const sortedListableFields = listableFields.filter(field =>
-		  uniqueKeys.includes(field.text)
+			uniqueKeys.includes(field.text)
 		).sort((a, b) => a.name.localeCompare(b.name));
-	  
+
 		const filteredKeys = sortedListableFields.map(field => field.text);
-	  
+
 		const columns = [
-		  {
-			title: 'S.No',
-			key: 'serial_no',
-			render: (_: any, record: any, index: number) => {
-			  const serialNumber = (currentPage - 1) * 5 + (index + 1); 
-			  return serialNumber;
-			},
-			align: 'center',
-			width:100,
-		  },
-		  ...filteredKeys.map(key => ({
-			title: key,
-			dataIndex: key,
-			key,
-			render: (text: any) => (
-			  <div className="max-w-[200px] overflow-hidden text-ellipsis whitespace-nowrap min-w-[160px]">
-				{text || 'N/A'}
-			  </div>
-			),
-			ellipsis: true,
-		  })),
-		  {
-			title: 'Action',
-			key: 'action',
-			fixed: 'right',
-			render: (_: any, item: any, rowIndex: number) => (
-			  <div className="flex flex-wrap gap-2 justify-center items-center">
-				<button
-				  title="Copy URL"
-				  onClick={() => {
-					navigator.clipboard.writeText(item?.formData?.url);
-					toast.success('URL copied to clipboard!', {
-					  position: "bottom-right",
-					  autoClose: 5000,
-					  hideProgressBar: false,
-					  closeOnClick: false,
-					  pauseOnHover: true,
-					  draggable: true,
-					  progress: undefined,
-					  theme: "colored",
-					});
-				  }}
-				  className="text-white bg-green-700 hover:bg-green-800 focus:outline-none focus:ring-4 focus:ring-green-300 font-medium rounded-full text-sm px-2 py-2 text-center me-2 mb-2 dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-green-800"
-				  style={{ background: '#008080' }}
-				>
-				  <FaCopy size={18} />
-				</button>
-	  
-				{item?.formData?.submission_id ? (
-				  <div className="relative group">
-					<button
-					  title="Download PDF Response"
-					  onClick={() =>
-						handlePDFDownload(item?.formData?.form_id, item?.formData?.submission_id, rowIndex)
-					  }
-					  className="text-white hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300 font-medium rounded-full text-sm px-2 py-2 text-center me-2 mb-2 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
-					  style={{ backgroundColor: '#3b5998' }}
-					  disabled={downloadingPDF === rowIndex}
-					>
-					  {downloadingPDF === rowIndex ? (
-						<svg
-						  className="animate-spin h-5 w-5"
-						  viewBox="0 0 24 24"
-						  fill="none"
+			...filteredKeys.map(key => ({
+				title: key,
+				dataIndex: key,
+				key,
+				render: (text: any) => (
+					<div className="max-w-[200px] overflow-hidden text-ellipsis whitespace-nowrap min-w-[160px]">
+						{text || 'N/A'}
+					</div>
+				),
+				ellipsis: true,
+			})),
+			{
+				title: 'Action',
+				key: 'action',
+				fixed: 'right',
+				render: (_: any, item: any, rowIndex: number) => (
+					<div className="flex flex-wrap gap-2 justify-center items-center">
+						<button
+							title="Copy URL"
+							onClick={() => {
+								navigator.clipboard.writeText(item?.formData?.url);
+								toast.success('URL copied to clipboard!', {
+									position: "bottom-right",
+									autoClose: 5000,
+									hideProgressBar: false,
+									closeOnClick: false,
+									pauseOnHover: true,
+									draggable: true,
+									progress: undefined,
+									theme: "colored",
+								});
+							}}
+							className="text-white bg-green-700 hover:bg-green-800 focus:outline-none focus:ring-4 focus:ring-green-300 font-medium rounded-full text-sm px-2 py-2 text-center me-2 mb-2 dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-green-800"
+							style={{ background: '#008080' }}
 						>
-						  <circle
-							className="opacity-25"
-							cx="12"
-							cy="12"
-							r="10"
-							stroke="currentColor"
-							strokeWidth="4"
-						  />
-						  <path
-							className="opacity-75"
-							fill="currentColor"
-							d="M4 12a8 8 0 018-8v8H4z"
-						  />
-						</svg>
-					  ) : (
-						<FaFilePdf size={18} />
-					  )}
-					</button>
-				  </div>
-				) : (
-				  <button
-					title="Send Form"
-					className="text-white hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300 font-medium rounded-full text-sm px-2 py-2 text-center me-2 mb-2 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
-					style={{ backgroundColor: '#3b5998' }}
-				  >
-					<FiSend size={18} />
-				  </button>
-				)}
-	  
-				<button onClick={() => deleteRecord(item)} className="text-white bg-red-700 hover:bg-red-800 focus:outline-none focus:ring-4 focus:ring-red-300 font-medium rounded-full text-sm px-2 py-2 text-center me-2 mb-2 dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-red-900">
-				  <FaTrash size={18} />
-				</button>
-			  </div>
-			),
-		  },
+							<FaCopy size={18} />
+						</button>
+
+						{item?.formData?.submission_id ? (
+							<div className="relative group">
+								<button
+									title="Download PDF Response"
+									onClick={() =>
+										handlePDFDownload(item?.formData?.form_id, item?.formData?.submission_id, rowIndex)
+									}
+									className="customSearchButton text-white hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300 font-medium rounded-full text-sm px-2 py-2 text-center me-2 mb-2 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
+									disabled={downloadingPDF === rowIndex}
+								>
+									{downloadingPDF === rowIndex ? (
+										<svg
+											className="animate-spin h-5 w-5"
+											viewBox="0 0 24 24"
+											fill="none"
+										>
+											<circle
+												className="opacity-25"
+												cx="12"
+												cy="12"
+												r="10"
+												stroke="currentColor"
+												strokeWidth="4"
+											/>
+											<path
+												className="opacity-75"
+												fill="currentColor"
+												d="M4 12a8 8 0 018-8v8H4z"
+											/>
+										</svg>
+									) : (
+										<FaFilePdf size={18} />
+									)}
+								</button>
+							</div>
+						) : (
+							<button
+								title="Send Form"
+								className="customSearchButton text-white hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300 font-medium rounded-full text-sm px-2 py-2 text-center me-2 mb-2 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
+							>
+								<FiSend size={18} />
+							</button>
+						)}
+
+						<button onClick={() => deleteRecord(item)} className="text-white bg-red-700 hover:bg-red-800 focus:outline-none focus:ring-4 focus:ring-red-300 font-medium rounded-full text-sm px-2 py-2 text-center me-2 mb-2 dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-red-900">
+							<FaTrash size={18} />
+						</button>
+					</div>
+				),
+			},
 		];
-	  
+
 		return (
-		  <div className="p-4 bg-white shadow-md rounded-lg customTableWrapper">
-			<Table
-			  columns={columns}
-			  dataSource={tableData}
-			  rowKey="qid"
-			  pagination={false}
-			  scroll={{ x: 'max-content', y: 400 }}
-			  sticky
-			/>
-			{/* Pagination Component */}
-			<div className="flex justify-center mt-6">
-			  <Pagination
-				current={currentPage}
-				total={totalPages}
-				pageSize={10} // Adjust this according to the page size
-				onChange={handlePageChange}
-			  />
+			<div className="p-4 bg-white shadow-md rounded-lg customTableWrapper">
+				<Table
+					columns={columns}
+					dataSource={tableData}
+					rowKey="qid"
+					pagination={false}
+					scroll={{ x: 'max-content', y: 400 }}
+					sticky
+				/>
+				{/* Pagination Component */}
+				<div className="flex justify-center mt-6">
+					<Pagination
+						current={currentPage}
+						total={totalPages}
+						pageSize={10} 
+						onChange={handlePageChange}
+					/>
+				</div>
 			</div>
-		  </div>
 		);
-	  };
-	  
+	};
+
 
 	const handleChange = (name: string, value: any) => {
 		setInputValues((prev: any) => ({
@@ -635,6 +626,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 		});
 		closeModal();
 		closeSendModal();
+		setManualInputValues({});
 	}
 
 	const handleManualInputChange = (text: string, value: string) => {
@@ -644,57 +636,65 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 		}));
 	};
 
-	const handleManualUpload = async (value: any) => {
-		let formData = {
-			formId: selectedForm,
-			data: manualInputValues
-		}
-		const uploadURL = Url + "/api/jotform/manual-upload";
+	const handleManualUpload = async () => {
+		const formData = {
+		  formId: selectedForm,
+		  data: manualInputValues
+		};
+		
+		const uploadURL = Url + `/api/jotform/upload/${selectedForm || ""}`;
+		
 		try {
-			const response = await axios.post(uploadURL, formData);
-
-			getTableResponse(selectedForm || null, 1, 5, lastSearchedValue, selectedFilter);
-
-			if (response.status === 201) {
-				toast.success('Response uploaded successsfully!', {
-					position: "bottom-right",
-					autoClose: 5000,
-					hideProgressBar: false,
-					closeOnClick: false,
-					pauseOnHover: true,
-					draggable: true,
-					progress: undefined,
-					theme: "colored",
-					transition: Bounce,
-				});
-			} else {
-				toast.error('Unable to upload response.', {
-					position: "bottom-right",
-					autoClose: 5000,
-					hideProgressBar: false,
-					closeOnClick: false,
-					pauseOnHover: true,
-					draggable: true,
-					progress: undefined,
-					theme: "colored",
-					transition: Bounce,
-				});
+		  const response = await axios.post(uploadURL, formData, {
+			headers: {
+			  'Content-Type': 'application/json'
 			}
-		} catch (error) {
-			toast.error('Unable to upload response.', {
-				position: "bottom-right",
-				autoClose: 5000,
-				hideProgressBar: false,
-				closeOnClick: false,
-				pauseOnHover: true,
-				draggable: true,
-				progress: undefined,
-				theme: "colored",
-				transition: Bounce,
+		  });
+	  
+		  getTableResponse(selectedForm || null, 1, 5, lastSearchedValue, selectedFilter);
+
+		  if (response.data.success) {
+			toast.success('Response uploaded successfully!', {
+			  position: "bottom-right",
+			  autoClose: 5000,
+			  hideProgressBar: false,
+			  closeOnClick: false,
+			  pauseOnHover: true,
+			  draggable: true,
+			  progress: undefined,
+			  theme: "colored",
+			  transition: Bounce,
 			});
+			setManualInputValues({});
+		  } else {
+			toast.error(response.data.message || 'Unable to upload response.', {
+			  position: "bottom-right",
+			  autoClose: 5000,
+			  hideProgressBar: false,
+			  closeOnClick: false,
+			  pauseOnHover: true,
+			  draggable: true,
+			  progress: undefined,
+			  theme: "colored",
+			  transition: Bounce,
+			});
+		  }
+		} catch (error) {
+		  console.error('Upload error:', error);
+		  toast.error('Unable to upload response. Please try again.', {
+			position: "bottom-right",
+			autoClose: 5000,
+			hideProgressBar: false,
+			closeOnClick: false,
+			pauseOnHover: true,
+			draggable: true,
+			progress: undefined,
+			theme: "colored",
+			transition: Bounce,
+		  });
 		}
 		closeModal();
-	};
+	  };
 
 	// const handleBulkUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
 	// 	if (!e.target.files || e.target.files.length === 0) {
@@ -968,8 +968,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 								Object.values(selectedFormFields.content).some((item) => item?.name?.includes("search")) && (
 									<div className="col-span-12 lg:col-span-2 flex justify-end">
 										<Button
-											className="flex items-center gap-2 w-full lg:w-auto rounded-md px-6 py-2 text-white transition"
-											style={{ background: '#3b5998' }}
+											className="flex items-center gap-2 w-full lg:w-auto rounded-md px-6 py-2 text-white transition customSearchButton customWidth"
 											htmlType="submit"
 										>
 											<FaSearch />
@@ -1016,7 +1015,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 													backgroundColor: '#3b5998',
 													borderColor: '#3b5998',
 												}}
-												className="customTableButtons text-white hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300 font-medium rounded-md text-sm px-4 py-2"
+												className="customWidth customSearchButton customTableButtons text-white hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300 font-medium rounded-md text-sm px-4 py-2"
 											>Sample</Button>
 										</Tooltip>
 										<Tooltip title="Upload File">
@@ -1027,7 +1026,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 													borderColor: '#3b5998',
 												}}
 												onClick={handleFileClick}
-												className="customTableButtons text-white hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300 font-medium rounded-md text-sm px-4 py-2"
+												className="customWidth customSearchButton customTableButtons text-white hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300 font-medium rounded-md text-sm px-4 py-2"
 											>Upload</Button>
 										</Tooltip>
 										<input
@@ -1089,7 +1088,6 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 												value={manualInputValues[item.text] || ''}
 												onChange={(e) => {
 													handleManualInputChange(item.text, e.target.value);
-													handleChange(item.name, e.target.value);
 												}}
 											/>
 										</div>
@@ -1100,20 +1098,20 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 				<div className="flex justify-end mt-6 customButtonWrapper">
 					<Button
 						onClick={handleManualUpload}
-						className="blueButtons text-white px-6 py-2 rounded-md flex gap-2"
+						className="customSearchButton text-white px-6 py-2 rounded-md flex gap-2"
 					>
 						Upload <RiUploadCloudFill size={25} />
 					</Button>
 					<Button
 						onClick={onSubmit}
-						className="blueButtons ml-4 text-white px-6 py-2 rounded-md flex gap-2"
+						className="customSearchButton ml-4 text-white px-6 py-2 rounded-md flex gap-2"
 					>
 						Send <FiSend />
 					</Button>
 					<Button
 						onClick={closeModal}
 						style={{ backgroundColor: '#DC2626' }}
-						className="ml-4 bg-gray-300 text-white px-6 py-2 rounded-md hover:bg-gray-400 cancelButton"
+						className="customRedButton ml-4  text-white px-6 py-2 rounded-md "
 					>
 						Cancel
 					</Button>
