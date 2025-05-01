@@ -285,6 +285,15 @@ button {
   color: white;
 }
 
+.ant-pagination-item.ant-pagination-item-active:hover {
+  background: #2d4373 !important;
+  color: white !important;
+}
+
+.ant-pagination-item.ant-pagination-item-active:hover a {
+  color: white !important;
+}
+
 .ant-pagination-item.ant-pagination-item-active a {
   color: white;
 }
@@ -337,4 +346,25 @@ button {
   display: flex;
   justify-content: center;
   align-items: center;
+}
+
+.jotFormTable .ant-table-body {
+  max-height: 450px !important;
+  overflow: hidden !important;
+  overflow-x: scroll;
+}
+
+.jotFormTable .ant-table-thead th {
+  white-space: normal;
+  line-height: 1.5;
+  max-height: 3em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.jotFormTable .ant-table-thead th span {
+  display: block;
+  max-height: 3em;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
