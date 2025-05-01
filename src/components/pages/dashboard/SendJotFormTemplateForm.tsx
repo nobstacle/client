@@ -190,6 +190,7 @@ const TableComponent: React.FC<TableComponentProps> = ({
   const [downloadingPDF, setDownloadingPDF] = useState<number | null>(null);
 
   const handlePageChange = (page: number) => {
+	setLoader(true);
 	if (page > 0 && page <= totalPages) {
 	  setCurrentPage(page);
 	}
