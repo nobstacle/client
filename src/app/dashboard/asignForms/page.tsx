@@ -29,11 +29,12 @@ const AsignForms: React.FC = () => {
 		form_id: "",
 		form_name: "",
 		assigned_companies: [],
+		report_link: ""
 	});
 
 	const getAssignedFormData = async () => {
 		if (!companies) {
-			return; // Wait for companies to be loaded before fetching form data
+			return;
 		}
 
 		try {
@@ -52,15 +53,17 @@ const AsignForms: React.FC = () => {
 				console.error('Unexpected response status:', response.status);
 			}
 		} catch (error) {
+			console.info("EROROROR", error);
 			console.error('Error fetching assigned form data:', error);
 		}
 	};
 
 	useEffect(() => {
-		if (userData?.user?.companyId && companies) {
-			getAssignedFormData(); // Fetch assigned form data once companies are loaded
+		if (userData?.user?.companyId && companies !== undefined) {
+			getAssignedFormData();
 		}
-	}, [userData, companies]); // Depend on both userData and companies
+		console.info("companies", userData);
+	}, [userData, companies]);
 
 	// const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 	// 	const { name, value } = e.target;
@@ -78,7 +81,7 @@ const AsignForms: React.FC = () => {
 	// };
 
 	const handleSubmit = async (values: any) => {
-		const { form_id, form_name, assigned_companies } = values;
+		const { form_id, form_name, assigned_companies, report_link } = values;
 
 		if (!form_id || !form_name || assigned_companies.length === 0) {
 			alert("All fields are required");
@@ -89,13 +92,14 @@ const AsignForms: React.FC = () => {
 			form_id,
 			form_name,
 			assigned_companies,
+			report_link
 		};
 
 		try {
 			const result = await saveFormData(formDataObject);
 			console.log('Form data saved successfully:', result);
 			getAssignedFormData();
-			setFormData({ form_id: "", form_name: "", assigned_companies: [] }); // Reset form
+			setFormData({ form_id: "", form_name: "", assigned_companies: [], report_link: "" });
 		} catch (error) {
 			alert('Failed to save form data');
 		}
@@ -235,6 +239,7 @@ const AsignForms: React.FC = () => {
 							form_id: formData.form_id,
 							form_name: formData.form_name,
 							assigned_companies: formData.assigned_companies,
+							report_link: ""
 						}}
 						layout="vertical"
 					>
@@ -267,23 +272,36 @@ const AsignForms: React.FC = () => {
 							</Col>
 						</Row>
 
-						<Form.Item
-							label="Assigned Companies"
-							name="assigned_companies"
-							rules={[{ required: true, message: "Please select companies" }]}
-						>
-							<Select
-								mode="multiple"
-								placeholder="Select companies"
-								value={formData.assigned_companies}
-								onChange={handleCompanyChange}
-								options={companyOptions}
-							/>
-						</Form.Item>
+						<Row gutter={16}>
+							<Col md={12} xs={24}>
+								<Form.Item
+									label="Assigned Companies"
+									name="assigned_companies"
+									rules={[{ required: true, message: "Please select companies" }]}
+								>
+									<Select
+										mode="multiple"
+										placeholder="Select companies"
+										value={formData.assigned_companies}
+										onChange={handleCompanyChange}
+										options={companyOptions}
+									/>
+								</Form.Item></Col>
+							<Col md={12} xs={24}>
+								<Form.Item
+									label="Report Graphs"
+									name="report_link"
+									rules={[{ required: true, message: "Please select companies" }]}
+								>
+									<Input placeholder="Enter report URl here" />
+								</Form.Item>
+							</Col>
+						</Row>
+
 
 						<div className="flex justify-center items-center">
 							<Form.Item className="mb-0">
-								<Button type="primary" htmlType="submit" className="text-white py-3 rounded-md transition" style={{ background: '#3b5998' }}>
+								<Button type="primary" htmlType="submit" className="customSearchButton  text-white py-3 rounded-md transition" style={{ background: '#3b5998' }}>
 									Assign
 								</Button>
 							</Form.Item>
