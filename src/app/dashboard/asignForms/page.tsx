@@ -87,7 +87,7 @@ const AsignForms: React.FC = () => {
 		}
 	};
 
-	const companyOptions = companies.map((company) => ({
+	const companyOptions = companies?.length > 0 && companies.map((company) => ({
 		value: company.id.toString(),
 		label: company.name,
 	}));
