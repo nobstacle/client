@@ -183,7 +183,6 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 		});
 	}
 
-
 	const TableComponent: React.FC<TableComponentProps> = ({
 		tableData,
 		uniqueKeys,
@@ -247,20 +246,126 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 		);
 
 		const sortedListableFields = listableFields
-		.filter(field =>
-		  uniqueKeys.some(key => key.toLowerCase() === field.name.toLowerCase())
-		)
-		.sort((a, b) => a.name.localeCompare(b.name));
-	   
+			.filter(field =>
+				uniqueKeys.some(key => key.toLowerCase() === field.name.toLowerCase())
+			)
+			.sort((a, b) => a.name.localeCompare(b.name));
 
-		const filteredKeys = sortedListableFields.map(field => field.text);
+		// const filteredKeys = sortedListableFields.map(field => field.text);
 
-		// Columns definition
+		const normalizeTableData = (data:any, labelFields:any) => {
+			const fieldLabelMap = {}; 
+			labelFields.forEach(field => {
+				fieldLabelMap[field.name] = field.text;
+			});
+
+			return data.map(entry => {
+				const normalized = {};
+				for (let key in entry) {
+					if (key === "formData") {
+						normalized.formData = entry.formData;
+						continue;
+					}
+
+					const mappedKey = fieldLabelMap[key] || key; 
+					let value = entry[key];
+
+					// Try parsing widget metadata
+					try {
+						if (typeof value === "string" && value.includes("widget_metadata")) {
+							value = JSON.parse(value);
+						}
+					} catch (e) {
+						console.warn("Invalid JSON for key:", key);
+					}
+
+					normalized[mappedKey] = value;
+				}
+				return normalized;
+			});
+		};
+
+		const cleanTableData = normalizeTableData(tableData, listableFields);
+
+		const handleUploadedSend = (data:any) => {
+			const result = {};
+		  
+			listableFields.forEach((field) => {
+			  const label = field.text;
+			  const key = field.name;
+
+			  if (data[label] !== undefined) {
+				result[key] = data[label];
+			  }
+			});
+		  
+			const dynamicUrl = buildUrl(selectedForm, result);
+			console.info("dynamicUrl",dynamicUrl)
+			sendJotFormMessage(dynamicUrl);
+
+			toast.success('Form sent successfully!', {
+				position: "bottom-right",
+				autoClose: 5000,
+				hideProgressBar: false,
+				closeOnClick: false,
+				pauseOnHover: true,
+				draggable: true,
+				progress: undefined,
+				theme: "colored",
+				transition: Bounce,
+			});
+			closeModal();
+			closeSendModal();
+			reset();
+			setManualInputValues({});
+		  };  
+
+		  const copyFormUrl = (data: any) => {
+			let url = "";
+		  
+			if (data?.formData?.url !== null) {
+			  url = data.formData.url;
+			} else {
+			  const result: Record<string, any> = {};
+		  
+			  listableFields.forEach((field) => {
+				const label = field.text;
+				const key = field.name;
+		  
+				if (data[label] !== undefined) {
+				  result[key] = data[label];
+				}
+			  });
+		  
+			  url = buildUrl(selectedForm, result);
+			}
+
+			if (url) {
+			  navigator.clipboard
+				.writeText(url)
+				.then(() => {
+					toast.success('URL copied to clipboard!', {
+						position: "bottom-right",
+						autoClose: 5000,
+						hideProgressBar: false,
+						closeOnClick: false,
+						pauseOnHover: true,
+						draggable: true,
+						progress: undefined,
+						theme: "colored",
+						transition: Bounce,
+					});
+				})
+				.catch((err) => console.error("Failed to copy URL:", err));
+			}
+		  };
+		  
+
 		const columns = [
-			...filteredKeys.map(key => ({
-				title: key,
-				dataIndex: key,
-				key,
+			...listableFields.map(field => ({
+				title: field.text,
+				dataIndex: field.text, 
+				key: field.text,
 				render: (text: any) => (
 					<div className="max-w-[200px] overflow-hidden text-ellipsis whitespace-nowrap min-w-[160px]">
 						{text || 'N/A'}
@@ -276,19 +381,20 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 					<div className="flex flex-wrap gap-2 justify-center items-center">
 						<button
 							title="Copy URL"
-							onClick={() => {
-								navigator.clipboard.writeText(item?.formData?.url);
-								toast.success('URL copied to clipboard!', {
-									position: "bottom-right",
-									autoClose: 5000,
-									hideProgressBar: false,
-									closeOnClick: false,
-									pauseOnHover: true,
-									draggable: true,
-									progress: undefined,
-									theme: "colored",
-								});
-							}}
+							onClick={() => copyFormUrl(item)}
+							// onClick={() => {
+							// 	navigator.clipboard.writeText(item?.formData?.url);
+							// 	toast.success('URL copied to clipboard!', {
+							// 		position: "bottom-right",
+							// 		autoClose: 5000,
+							// 		hideProgressBar: false,
+							// 		closeOnClick: false,
+							// 		pauseOnHover: true,
+							// 		draggable: true,
+							// 		progress: undefined,
+							// 		theme: "colored",
+							// 	});
+							// }}
 							className="text-white bg-green-700 hover:bg-green-800 focus:outline-none focus:ring-4 focus:ring-green-300 font-medium rounded-full text-sm px-2 py-2 text-center me-2 mb-2 dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-green-800"
 							style={{ background: '#008080' }}
 						>
@@ -333,6 +439,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 						) : (
 							<button
 								title="Send Form"
+								onClick={() => handleUploadedSend(item)}
 								className="customSearchButton text-white hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300 font-medium rounded-full text-sm px-2 py-2 text-center me-2 mb-2 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
 							>
 								<FiSend size={18} />
@@ -347,17 +454,14 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 			},
 		];
 
-		// Paginated data (slicing the data based on current page)
-		const startIdx = (currentPage - 1) * 10;
-		const endIdx = currentPage * 10;
 		const calculatedTotalPages = Math.ceil(totalItems / 10);
 
 		return (
-			<div className="p-4 bg-white shadow-md rounded-lg customTableWrapper">
+			<div className="p-4 bg-white shadow-md rounded-lg customTableWrapper overflow-x-auto">
 				<Table
 					columns={columns}
-					dataSource={tableData}
-					rowKey="qid"
+					dataSource={cleanTableData}
+					rowKey={(record, index) => record?.formData?.submission_id || index}
 					pagination={false}
 					scroll={{ x: 'max-content', y: 400 }}
 					sticky
@@ -477,9 +581,6 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 	});
 
 	const sendJotFormMessage = (content: string) => {
-
-		console.info("content", content);
-
 		emitSendJotForm(
 			{
 				refId: 1,
@@ -911,7 +1012,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 		let reportId = reportIdMatch ? reportIdMatch[1] : null;
 
 		if (!reportId) {
-			return <span>Reports aren't available</span>;
+			return <span>No report available for selected form.</span>;
 		}
 
 		return (

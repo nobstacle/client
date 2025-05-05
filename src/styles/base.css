@@ -351,8 +351,8 @@ button {
 
 .jotFormTable .ant-table-body {
   max-height: 450px !important;
-  overflow: hidden !important;
-  overflow-x: scroll;
+  /* overflow: hidden !important;
+  overflow-x: scroll ; */
 }
 
 .jotFormTable .ant-table-thead th {
