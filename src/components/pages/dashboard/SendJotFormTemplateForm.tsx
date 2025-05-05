@@ -7,7 +7,7 @@ import "../../../styles/base.css";
 import { useSession } from "next-auth/react";
 import axios from 'axios';
 import { io, Socket } from "socket.io-client";
-import { FaFileDownload, FaFileUpload, FaCopy, FaFilePdf, FaSearch, FaTrash } from "react-icons/fa";
+import { FaFileDownload, FaFileUpload, FaCopy, FaFilePdf, FaSearch, FaTrash, FaSleigh } from "react-icons/fa";
 import { LuListPlus } from "react-icons/lu";
 import { toast, Bounce } from 'react-toastify';
 import { BsFillSendPlusFill } from "react-icons/bs";
@@ -940,6 +940,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 	};
 
 	const handleBulkUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+		setLoader(true);
 		if (!e.target.files || e.target.files.length === 0) {
 			console.error("No file selected");
 			return;
