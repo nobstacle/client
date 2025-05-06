@@ -8,7 +8,7 @@ import { useSession } from "next-auth/react";
 import axios from 'axios';
 import { io, Socket } from "socket.io-client";
 import { FaFileDownload, FaFileUpload, FaCopy, FaFilePdf, FaSearch, FaTrash, FaSleigh } from "react-icons/fa";
-import { LuListPlus } from "react-icons/lu";
+// import { LuListPlus } from "react-icons/lu";
 import { toast, Bounce } from 'react-toastify';
 import { BsFillSendPlusFill } from "react-icons/bs";
 import { RiUploadCloudFill } from "react-icons/ri";
@@ -17,6 +17,8 @@ import { FiSend } from "react-icons/fi";
 import Swal from 'sweetalert2';
 import { SendIcon } from "../../icons/SendIcon";
 import { FaChartBar } from "react-icons/fa";
+import { DatePicker, Input } from 'antd';
+import dayjs from 'dayjs';
 
 let Url = process.env.NEXT_PUBLIC_BACKEND_URL;
 const SOCKET_URL = Url;
@@ -253,8 +255,8 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 
 		// const filteredKeys = sortedListableFields.map(field => field.text);
 
-		const normalizeTableData = (data:any, labelFields:any) => {
-			const fieldLabelMap = {}; 
+		const normalizeTableData = (data: any, labelFields: any) => {
+			const fieldLabelMap = {};
 			labelFields.forEach(field => {
 				fieldLabelMap[field.name] = field.text;
 			});
@@ -267,7 +269,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 						continue;
 					}
 
-					const mappedKey = fieldLabelMap[key] || key; 
+					const mappedKey = fieldLabelMap[key] || key;
 					let value = entry[key];
 
 					// Try parsing widget metadata
@@ -287,20 +289,20 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 
 		const cleanTableData = normalizeTableData(tableData, listableFields);
 
-		const handleUploadedSend = (data:any) => {
+		const handleUploadedSend = (data: any) => {
 			const result = {};
-		  
-			listableFields.forEach((field) => {
-			  const label = field.text;
-			  const key = field.name;
 
-			  if (data[label] !== undefined) {
-				result[key] = data[label];
-			  }
+			listableFields.forEach((field) => {
+				const label = field.text;
+				const key = field.name;
+
+				if (data[label] !== undefined) {
+					result[key] = data[label];
+				}
 			});
-		  
+
 			const dynamicUrl = buildUrl(selectedForm, result);
-			console.info("dynamicUrl",dynamicUrl)
+			console.info("dynamicUrl", dynamicUrl)
 			sendJotFormMessage(dynamicUrl);
 
 			toast.success('Form sent successfully!', {
@@ -318,53 +320,53 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 			closeSendModal();
 			reset();
 			setManualInputValues({});
-		  };  
+		};
 
-		  const copyFormUrl = (data: any) => {
+		const copyFormUrl = (data: any) => {
 			let url = "";
-		  
+
 			if (data?.formData?.url !== null) {
-			  url = data.formData.url;
+				url = data.formData.url;
 			} else {
-			  const result: Record<string, any> = {};
-		  
-			  listableFields.forEach((field) => {
-				const label = field.text;
-				const key = field.name;
-		  
-				if (data[label] !== undefined) {
-				  result[key] = data[label];
-				}
-			  });
-		  
-			  url = buildUrl(selectedForm, result);
+				const result: Record<string, any> = {};
+
+				listableFields.forEach((field) => {
+					const label = field.text;
+					const key = field.name;
+
+					if (data[label] !== undefined) {
+						result[key] = data[label];
+					}
+				});
+
+				url = buildUrl(selectedForm, result);
 			}
 
 			if (url) {
-			  navigator.clipboard
-				.writeText(url)
-				.then(() => {
-					toast.success('URL copied to clipboard!', {
-						position: "bottom-right",
-						autoClose: 5000,
-						hideProgressBar: false,
-						closeOnClick: false,
-						pauseOnHover: true,
-						draggable: true,
-						progress: undefined,
-						theme: "colored",
-						transition: Bounce,
-					});
-				})
-				.catch((err) => console.error("Failed to copy URL:", err));
+				navigator.clipboard
+					.writeText(url)
+					.then(() => {
+						toast.success('URL copied to clipboard!', {
+							position: "bottom-right",
+							autoClose: 5000,
+							hideProgressBar: false,
+							closeOnClick: false,
+							pauseOnHover: true,
+							draggable: true,
+							progress: undefined,
+							theme: "colored",
+							transition: Bounce,
+						});
+					})
+					.catch((err) => console.error("Failed to copy URL:", err));
 			}
-		  };
-		  
+		};
+
 
 		const columns = [
 			...listableFields.map(field => ({
 				title: field.text,
-				dataIndex: field.text, 
+				dataIndex: field.text,
 				key: field.text,
 				render: (text: any) => (
 					<div className="max-w-[200px] overflow-hidden text-ellipsis whitespace-nowrap min-w-[160px]">
@@ -1013,7 +1015,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 		let reportId = reportIdMatch ? reportIdMatch[1] : null;
 
 		if (!reportId) {
-			return <span>No report available for selected form.</span>;
+			return <span className="mt-4">No report available for selected form.</span>;
 		}
 
 		return (
@@ -1223,25 +1225,35 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 			>
 				<hr />
 				<div className="space-y-4 mt-4">
+
 					<Row gutter={16}>
 						{selectedFormFields?.content &&
 							Object.values(selectedFormFields.content)
 								.filter((item) => item?.name?.includes('prefillable'))
 								.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()))
 								.map((item) => (
-									<Col md={12} xs={24} key={item.qid} className="mt-2">
-										<div className="flex flex-col space-y-2">
-											<label className="text-gray-700 font-medium">{item?.text}</label>
-											<input
-												type="text"
-												className="border p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-												value={manualInputValues[item.name] || ''}
-												onChange={(e) => {
-													handleManualInputChange(item.name, e.target.value);
-												}}
-											/>
-										</div>
-									</Col>
+									<>
+										<Col md={12} xs={24} key={item.qid} className="mt-2">
+											<div className="flex flex-col space-y-2">
+												<label className="text-gray-700 font-medium">{item?.text}</label>
+												{item?.type === 'control_widget' ? (
+													<DatePicker
+														className="w-full"
+														value={manualInputValues[item.name] ? dayjs(manualInputValues[item.name]) : null}
+														onChange={(date, dateString) => {
+															handleManualInputChange(item.name, dateString);
+														}}
+													/>
+												) : (
+													<Input
+														value={manualInputValues[item.name] || ''}
+														onChange={(e) => handleManualInputChange(item.name, e.target.value)}
+													/>
+												)}
+											</div>
+
+										</Col>
+									</>
 								))}
 					</Row>
 				</div>
