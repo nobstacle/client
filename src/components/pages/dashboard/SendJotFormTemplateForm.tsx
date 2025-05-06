@@ -23,6 +23,8 @@ import dayjs from 'dayjs';
 let Url = process.env.NEXT_PUBLIC_BACKEND_URL;
 const SOCKET_URL = Url;
 
+const dateFormat = 'DD/MM/YYYY';
+
 const socket: Socket = io(SOCKET_URL, {
 	transports: ["websocket", "polling"],
 	reconnection: true,
@@ -77,6 +79,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 	const closeReportModal = () => {
 		setIsReportModal(false);
 	}
+
 	const handleSocketEvents = () => {
 		// Handle successful connection
 		socket.on("connect", () => {
@@ -1236,10 +1239,15 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 										<Col md={12} xs={24} key={item.qid} className="mt-2">
 											<div className="flex flex-col space-y-2">
 												<label className="text-gray-700 font-medium">{item?.text}</label>
-												{item?.type === 'control_widget' ? (
+												{item?.type === 'control_widget' ||  item.type.includes("date") ? (
 													<DatePicker
 														className="w-full"
-														value={manualInputValues[item.name] ? dayjs(manualInputValues[item.name]) : null}
+														format={dateFormat}
+														value={
+															manualInputValues[item.name]
+																? dayjs(manualInputValues[item.name], dateFormat)
+																: null
+														}
 														onChange={(date, dateString) => {
 															handleManualInputChange(item.name, dateString);
 														}}
@@ -1251,7 +1259,6 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 													/>
 												)}
 											</div>
-
 										</Col>
 									</>
 								))}
