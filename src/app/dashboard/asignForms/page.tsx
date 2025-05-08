@@ -18,7 +18,10 @@ interface FormData {
 	form_name: string;
 	assigned_companies: string[];
 	companies?: string[];
-	report_link?: string;
+	previous_year_url?: string;
+	this_month_url?: string;
+	this_year_url?: string;
+	previous_month_url?: string;
 }
 
 const AsignForms: React.FC = () => {
@@ -30,7 +33,10 @@ const AsignForms: React.FC = () => {
 		form_id: "",
 		form_name: "",
 		assigned_companies: [],
-		report_link: ""
+		previous_year_url: "",
+		this_month_url: "",
+		this_year_url: "",
+		previous_month_url: ""
 	});
 
 	const [form] = Form.useForm(); // Ant Design's form instance
@@ -63,7 +69,7 @@ const AsignForms: React.FC = () => {
 	}, [userData, companies]);
 
 	const handleSubmit = async (values: any) => {
-		const { form_id, form_name, assigned_companies, report_link } = values;
+		const { form_id, form_name, assigned_companies, previous_year_url, this_month_url, this_year_url, previous_month_url } = values;
 		if (!form_id || !form_name || assigned_companies.length === 0) {
 			alert("All fields are required");
 			return;
@@ -73,15 +79,18 @@ const AsignForms: React.FC = () => {
 			form_id,
 			form_name,
 			assigned_companies,
-			report_link
+			previous_year_url,
+			this_month_url,
+			this_year_url,
+			previous_month_url
 		};
 
 		try {
 			const result = await saveFormData(formDataObject);
 			console.log('Form data saved successfully:', result);
 			getAssignedFormData();
-			form.resetFields(); // Reset the form
-			setFormData({ form_id: "", form_name: "", assigned_companies: [], report_link: "" }); // Clear the formData state as well
+			form.resetFields();
+			setFormData({ form_id: "", form_name: "", assigned_companies: [], previous_year_url: "", this_month_url: "", this_year_url: "", previous_month_url: "" }); // Clear the formData state as well
 		} catch (error) {
 			alert('Failed to save form data');
 		}
@@ -196,20 +205,17 @@ const AsignForms: React.FC = () => {
 						layout="vertical"
 					>
 						<Row gutter={16}>
-							<Col md={12} xs={24}>
+							<Col md={8} xs={24}>
 								<Form.Item label="Form ID" name="form_id" rules={[{ required: true, message: "Form ID is required" }]}>
 									<Input />
 								</Form.Item>
 							</Col>
-							<Col md={12} xs={24}>
+							<Col md={8} xs={24}>
 								<Form.Item label="Form Name" name="form_name" rules={[{ required: true, message: "Form Name is required" }]}>
 									<Input />
 								</Form.Item>
 							</Col>
-						</Row>
-
-						<Row gutter={16}>
-							<Col md={12} xs={24}>
+							<Col md={8} xs={24}>
 								<Form.Item label="Assigned Companies" name="assigned_companies" rules={[{ required: true, message: "Please select companies" }]}>
 									<Select
 										mode="multiple"
@@ -220,9 +226,27 @@ const AsignForms: React.FC = () => {
 									/>
 								</Form.Item>
 							</Col>
-							<Col md={12} xs={24}>
-								<Form.Item label="Report Graphs" name="report_link">
-									<Input placeholder="Enter report URL here" />
+						</Row>
+
+						<Row gutter={16}>
+							<Col md={8} xs={24}>
+								<Form.Item label="Previous year Report URL" name="previous_year_url">
+									<Input placeholder="Enter previous year's report URL here" />
+								</Form.Item>
+							</Col>
+							<Col md={8} xs={24}>
+								<Form.Item label="This year Report URL" name="this_year_url">
+									<Input placeholder="Enter this year's report URL here" />
+								</Form.Item>
+							</Col>
+							<Col md={8} xs={24}>
+								<Form.Item label="This month Report URL" name="this_month_url">
+									<Input placeholder="Enter this month's report URL here" />
+								</Form.Item>
+							</Col>
+							<Col md={8} xs={24}>
+								<Form.Item label="Previous month Report URL" name="previous_month_url">
+									<Input placeholder="Enter previous month's report URL here" />
 								</Form.Item>
 							</Col>
 						</Row>

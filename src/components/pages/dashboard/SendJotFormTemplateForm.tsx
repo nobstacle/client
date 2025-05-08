@@ -7,8 +7,7 @@ import "../../../styles/base.css";
 import { useSession } from "next-auth/react";
 import axios from 'axios';
 import { io, Socket } from "socket.io-client";
-import { FaFileDownload, FaFileUpload, FaCopy, FaFilePdf, FaSearch, FaTrash, FaSleigh } from "react-icons/fa";
-// import { LuListPlus } from "react-icons/lu";
+import { FaFileDownload, FaFileUpload, FaCopy, FaFilePdf, FaSearch, FaTrash } from "react-icons/fa";
 import { toast, Bounce } from 'react-toastify';
 import { BsFillSendPlusFill } from "react-icons/bs";
 import { RiUploadCloudFill } from "react-icons/ri";
@@ -17,7 +16,7 @@ import { FiSend } from "react-icons/fi";
 import Swal from 'sweetalert2';
 import { SendIcon } from "../../icons/SendIcon";
 import { FaChartBar } from "react-icons/fa";
-import { DatePicker, Input } from 'antd';
+import { DatePicker, Input, Form } from 'antd';
 import dayjs from 'dayjs';
 
 let Url = process.env.NEXT_PUBLIC_BACKEND_URL;
@@ -57,8 +56,9 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 	const [TableKey, setTableKey] = useState(0);
 	const [loader, setLoader] = useState(false);
 	const itemsPerPage = 8;
-	const formRef = useRef<HTMLFormElement>(null);
+	const [selectedReportFilter, setSelectedReportFilter] = useState("last30Days");
 	const [isIframeLoading, setIsIframeLoading] = useState(true);
+	const [form] = Form.useForm();
 
 	const handlePageChange = (pageNumber: number) => {
 		setCurrentPage(pageNumber);
@@ -136,6 +136,8 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 	interface FormFields {
 		content: any[];
 	}
+
+	console.info("selectedForm", selectedForm);
 
 	useEffect(() => {
 		if (selectedForm) {
@@ -512,6 +514,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 	interface FormFields {
 		content: any[];
 	}
+
 	const [selectedFormFields, setSelectedFormFields] = useState<FormFields | null>(null);
 
 	const getAssignedFormByID = async (company_id: number) => {
@@ -522,6 +525,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 			if (response.status === 200) {
 				setAssignedForms(response?.data);
 				if (selectedForm === null) {
+					console.info("response?.data", response?.data);
 					setSelectedForm(response?.data[0]?.form_id || null)
 				}
 			} else {
@@ -550,7 +554,6 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 			setSelectedFormFields({ content: [] });
 		}
 	};
-
 
 	useEffect(() => {
 		if (selectedForm) {
@@ -701,6 +704,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 	};
 
 	const handleFormChange = (value: string) => {
+		console.info("valuevaluevaluevalue", value);
 		setLoader(true);
 		setValue("url", value);
 		setSelectedForm(value);
@@ -865,13 +869,38 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 	// 	}
 	// };
 
+	const onFinish = (values: any) => {
+		setLoader(true);
+		console.info("valuesvalues", values);
+		const filteredValues = Object.entries(values)
+			.filter(([_, val]) => val !== undefined && val !== "" && val !== null)
+			.map(([key, val]) => {
+				let value = val;
+				if (typeof val === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(val)) {
+					value = dayjs(val).format("DD/MM/YYYY");
+				}
+				return { label: key, value };
+			});
+
+		const searchParams = filteredValues
+			.map(({ label, value }) => `{label:${label},value:${value}}`)
+			.join(',');
+
+		const finalSearch = searchParams !== "" ? searchParams : "";
+
+		setCurrentPage(1);
+		setLastSearchedValue(finalSearch);
+		getTableResponse(selectedForm, 1, 8, finalSearch, selectedFilter);
+	};
+
+
 	const onSearchSubmit = (e: React.FormEvent<HTMLFormElement>) => {
 		setLoader(true);
 		e.preventDefault();
 
 		const formData = new FormData(e.currentTarget);
 		const searchValues = Object.fromEntries(formData.entries());
-
+		console.info("searchValues", searchValues)
 		const searchParams = Object.entries(searchValues)
 			.filter(([_, value]) => value !== "")
 			.map(([label, value]) => `{label:${label},value:${value}}`)
@@ -1012,17 +1041,61 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 	}
 
 	const renderReport = () => {
-		let findReportData = assignedForms?.find((item) => item?.form_id === selectedForm);
-		let reportLink = findReportData?.report_link || null;
-		let reportIdMatch = reportLink?.match(/data-id="(\d+)"/);
-		let reportId = reportIdMatch ? reportIdMatch[1] : null;
-
-		if (!reportId) {
+		const findReportData = assignedForms?.find((item) => item?.form_id === selectedForm);
+		if (!findReportData) {
 			return <span className="mt-4">No report available for selected form.</span>;
 		}
 
+		// Helper to extract report ID from the script string
+		const extractReportId = (htmlString) => {
+			const match = htmlString?.match(/data-id="(\d+)"/);
+			return match?.[1] || null;
+		};
+
+		// Map filter to report IDs
+		const reportIds = {
+			last30Days: extractReportId(findReportData?.this_month_url),
+			prevMonth: extractReportId(findReportData?.previous_month_url),
+			thisYear: extractReportId(findReportData?.this_year_url),
+			prevYear: extractReportId(findReportData?.previous_year_url),
+		};
+
+		const selectedReportId = reportIds[selectedReportFilter];
+
+		if (!selectedReportId) {
+			return <span className="mt-4">No valid report ID found for the selected filter.</span>;
+		}
+
+		// Construct clean embed URL
+		const selectedReportUrl = `https://www.jotform.com/report/${selectedReportId}`;
+
 		return (
 			<>
+				<div className="reportFilterWrapper mb-4 flex gap-2" style={{
+					display: 'flex',
+					justifyContent: 'center',
+					alignItems: 'center',
+					padding: '1rem 0'
+				}}>
+					{[
+						{ key: "last30Days", label: "Last 30 Days" },
+						{ key: "prevMonth", label: "Previous Month" },
+						{ key: "thisYear", label: "This Year" },
+						{ key: "prevYear", label: "Previous Year" },
+					].map(({ key, label }) => (
+						<Button
+							key={key}
+							className={`btn ${selectedReportFilter === key ? 'ActiveReportBUtton' : 'btn-outline'}`}
+							onClick={() => {
+								setSelectedReportFilter(key);
+								setIsIframeLoading(true);
+							}}
+						>
+							{label}
+						</Button>
+					))}
+				</div>
+
 				{isIframeLoading && (
 					<div style={{ textAlign: 'center', marginTop: '20px' }}>
 						<div className="flex items-center justify-center py-10">
@@ -1030,8 +1103,9 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 						</div>
 					</div>
 				)}
+
 				<iframe
-					src={`https://www.jotform.com/report/${reportId}`}
+					src={selectedReportUrl}
 					width="100%"
 					height="600px"
 					frameBorder="0"
@@ -1042,6 +1116,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 			</>
 		);
 	};
+
 
 	return (
 		<div className="bg-gray-50 p-6 rounded-lg shadow-md w-full mx-auto">
@@ -1088,7 +1163,58 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 				</div>
 			</div>
 
-			<form ref={formRef} onSubmit={onSearchSubmit}>
+			<Form form={form} onFinish={onFinish}>
+				{selectedFormFields?.content && Object.keys(selectedFormFields.content).length > 0 && (
+					<div className="w-full p-4 bg-white rounded-lg shadow-md">
+						<div className="grid grid-cols-12 gap-4 items-end">
+							<div className="col-span-12 lg:col-span-10 space-y-4">
+								<div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-2">
+									{Object.values(selectedFormFields.content)
+										.filter((item) => item?.name?.includes("search"))
+										.sort((a, b) => a.name.localeCompare(b.name))
+										.map((item) => (
+											<Form.Item
+												key={item.qid}
+												name={item.text}
+											>
+												{item?.type === 'control_widget' || item.type.includes("date") ? (
+													<DatePicker
+														className="w-full"
+														format="DD/MM/YYYY"
+														placeholder={item.text}
+													/>
+												) : (
+													<Input
+														placeholder={item.text}
+														type={item?.type || "text"}
+														className="w-full"
+													/>
+												)}
+											</Form.Item>
+										))}
+								</div>
+							</div>
+
+							{selectedForm &&
+								Object.values(selectedFormFields.content).some((item) => item?.name?.includes("search")) && (
+									<div className="col-span-12 lg:col-span-2 flex justify-end ">
+										<Button
+											className="flex items-center gap-2 w-full lg:w-auto rounded-md text-white transition customSearchButton "
+											htmlType="submit"
+											style={{ padding: '0.2rem 0.6rem' }}
+										>
+											<FaSearch size={18} />
+											{/* <span>Search</span> */}
+										</Button>
+									</div>
+								)}
+						</div>
+					</div>
+				)}
+			</Form>
+
+
+			{/* <form ref={formRef} onSubmit={onSearchSubmit}>
 				{selectedFormFields?.content && Object.keys(selectedFormFields.content).length > 0 && (
 					<div className="w-full p-4 bg-white rounded-lg shadow-md">
 						<div className="grid grid-cols-12 gap-4 items-end">
@@ -1104,13 +1230,24 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 											return 0;
 										})
 										.map((item) => (
-											<input
-												key={item.qid}
-												name={item?.text}
-												placeholder={item.text}
-												type={item?.type || "text"}
-												className="w-full rounded-md border border-gray-300 p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-											/>
+											<>
+												{item?.type === 'control_widget' || item.type.includes("date") ? (
+												<DatePicker
+													key={item.qid}
+													className="w-full"
+													format={dateFormat}
+													placeholder={item.text}
+												/>
+												) : (
+												<Input
+													key={item.qid}
+													name={item?.text}
+													placeholder={item.text}
+													type={item?.type || "text"}
+													className="w-full"
+												/>
+												)}
+											</>
 										))}
 								</div>
 							</div>
@@ -1130,10 +1267,10 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 						</div>
 					</div>
 				)}
-			</form>
+			</form> */}
 
 			{tableResponse && selectedFormFields?.content ? (
-				<div className="card mt-5 bg-white rounded">
+				<div className="card mt-5 bg-white rounded" style={{ position: 'relative' }}>
 					<div className="flex flex-wrap items-center gap-4 tableDataWrapper" style={{ padding: '0.5rem 1rem 0 1rem' }}>
 						<div className="formFilters">
 							{["all", "completed", "pending"].map((status) => (
@@ -1168,9 +1305,10 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 												style={{
 													backgroundColor: '#3b5998',
 													borderColor: '#3b5998',
+													padding: '0.3rem 1.1rem'
 												}}
-												className="customWidth customSearchButton customTableButtons text-white hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300 font-medium rounded-md text-sm px-4 py-2"
-											>Sample</Button>
+												className="customWidth customSearchButton customTableButtons text-white hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300 font-medium rounded-md text-sm"
+											/>
 										</Tooltip>
 										<Tooltip title="Upload File">
 											<Button
@@ -1178,10 +1316,11 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 												style={{
 													backgroundColor: '#3b5998',
 													borderColor: '#3b5998',
+													padding: '0.3rem 1.1rem'
 												}}
 												onClick={handleFileClick}
-												className="customWidth customSearchButton customTableButtons text-white hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300 font-medium rounded-md text-sm px-4 py-2"
-											>Upload</Button>
+												className="customWidth customSearchButton customTableButtons text-white hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300 font-medium rounded-md text-sm"
+											/>
 										</Tooltip>
 										<input
 											id="file-upload"
@@ -1239,10 +1378,10 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 										<Col md={12} xs={24} key={item.qid} className="mt-2">
 											<div className="flex flex-col space-y-2">
 												<label className="text-gray-700 font-medium">{item?.text}</label>
-												{item?.type === 'control_widget' ||  item.type.includes("date") ? (
+												{item?.type === 'control_widget' || item.type.includes("date") ? (
 													<DatePicker
 														className="w-full"
-														format={dateFormat}
+														format="DD/MM/YYYY"
 														value={
 															manualInputValues[item.name]
 																? dayjs(manualInputValues[item.name], dateFormat)
@@ -1336,7 +1475,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 				open={isReportModal}
 				onCancel={closeReportModal}
 				footer={null}
-				width="60%"
+				width="75%"
 				centered
 				closable
 				title="Form Report"

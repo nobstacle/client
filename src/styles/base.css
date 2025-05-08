@@ -178,6 +178,7 @@ td {
         font-family: '__Inter_d65c78', '__Inter_Fallback_d65c78';
         font-style: normal;
         color: black;
+        padding: 10px 16px;
       }
     }
   }
@@ -368,4 +369,17 @@ button {
   max-height: 3em;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.formFilters span {
+  font-size: 14px !important;
+}
+
+.jNewHeader {
+  display: none;
+}
+
+.ActiveReportBUtton {
+  background: #3b5998;
+  color: white;
 }
