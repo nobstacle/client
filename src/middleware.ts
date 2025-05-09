@@ -158,7 +158,7 @@ export default withAuth(
     const isUser = req.nextauth.token?.user.Roles?.includes("User");
     const isCompanyExist = !!req.nextauth.token?.user.companyId;
     const isSAdmin = req.nextauth.token?.user.Roles?.includes("SAdmin");
-    
+
     // rules for home page
     if (url.pathname === "/") {
       if (isAuthenticated && !isCompanyExist) {
@@ -166,7 +166,7 @@ export default withAuth(
         return NextResponse.redirect(url);
       }
 
-      
+
       if (isAuthenticated && isSAdmin) {
         if (url.pathname === "/") {
           url.pathname = "/dashboard/superAdminDashboard";
@@ -240,16 +240,8 @@ export default withAuth(
   },
 );
 
-// specify on which routes you want to run the middleware
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - api (API routes)
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     */
-    "/((?!api|_next/static|_next/image|favicon.ico|manifest.json).*)",
+    "/((?!api|_next/static|_next/image|favicon.ico|manifest.json|forms).*)",
   ],
 };
