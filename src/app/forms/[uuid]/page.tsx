@@ -92,7 +92,7 @@ const FormByUUID = () => {
     <div style={{ background: 'white', height: '100vh', width: '100%' }}>
       {error ? (
         <p style={{ color: 'red' }}>Error: {error}</p>
-      ) : formData ? (
+      ) : !formData ? (
         <div style={{ width: '100%', height: '100vh' }}>
           {formUrl && (
             <iframe
@@ -107,7 +107,9 @@ const FormByUUID = () => {
           )}
         </div>
       ) : (
-        <p>Loading form data...</p>
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+          <p>Loading...</p>
+        </div>
       )}
     </div>
   );
