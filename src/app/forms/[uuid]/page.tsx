@@ -89,22 +89,21 @@ const FormByUUID = () => {
   }, [formId]);
 
   return (
-    <div style={{ background: 'white' }}>
+    <div style={{ background: 'white', height: '100vh', width: '100%' }}>
       {error ? (
         <p style={{ color: 'red' }}>Error: {error}</p>
       ) : formData ? (
-        <div>
+        <div style={{ width: '100%', height: '100vh' }}>
           {formUrl && (
-            <div >
-              <iframe
-                title="JotForm"
-                src={formUrl}
-                width="100%"
-                height="800px"
-                frameBorder="0"
-                allowFullScreen
-              ></iframe>
-            </div>
+            <iframe
+              title="JotForm"
+              src={formUrl}
+              width="100%"
+              height="100%"
+              frameBorder="0"
+              allowFullScreen
+            >
+            </iframe>
           )}
         </div>
       ) : (
