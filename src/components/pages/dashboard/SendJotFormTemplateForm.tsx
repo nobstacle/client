@@ -252,11 +252,11 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 			field.name.includes('listable')
 		);
 
-		const sortedListableFields = listableFields
-			.filter(field =>
-				uniqueKeys.some(key => key.toLowerCase() === field.name.toLowerCase())
-			)
-			.sort((a, b) => a.name.localeCompare(b.name));
+		// const sortedListableFields = listableFields
+		// 	.filter(field =>
+		// 		uniqueKeys.some(key => key.toLowerCase() === field.name.toLowerCase())
+		// 	)
+		// 	.sort((a, b) => a.name.localeCompare(b.name));
 
 		// const filteredKeys = sortedListableFields.map(field => field.text);
 
@@ -329,9 +329,13 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 
 		const copyFormUrl = (data: any) => {
 			let url = "";
+			const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ? process.env.NEXT_PUBLIC_BASE_URL  : 'https://www.nobstacle.com';
 
-			if (data?.formData?.url !== null) {
-				url = data.formData.url;
+			console.info("data", data);
+			console.info("baseUrl", baseUrl);
+
+			if (data?.formData?.uuid) {
+				url = `${baseUrl}/forms/${data.formData.uuid}`;
 			} else {
 				const result: Record<string, any> = {};
 
@@ -344,6 +348,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 					}
 				});
 
+				// Preserving fallback behavior
 				url = buildUrl(selectedForm, result);
 			}
 
@@ -389,19 +394,6 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 						<button
 							title="Copy URL"
 							onClick={() => copyFormUrl(item)}
-							// onClick={() => {
-							// 	navigator.clipboard.writeText(item?.formData?.url);
-							// 	toast.success('URL copied to clipboard!', {
-							// 		position: "bottom-right",
-							// 		autoClose: 5000,
-							// 		hideProgressBar: false,
-							// 		closeOnClick: false,
-							// 		pauseOnHover: true,
-							// 		draggable: true,
-							// 		progress: undefined,
-							// 		theme: "colored",
-							// 	});
-							// }}
 							className="text-white bg-green-700 hover:bg-green-800 focus:outline-none focus:ring-4 focus:ring-green-300 font-medium rounded-full text-sm px-2 py-2 text-center me-2 mb-2 dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-green-800"
 							style={{ background: '#008080' }}
 						>
@@ -676,6 +668,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 							submission_id: item?.submissionId,
 							form_id: item?.formId,
 							url: item?.normalUrl,
+							uuid: item?.uuid
 						};
 
 						return prettyData;

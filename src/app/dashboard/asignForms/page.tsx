@@ -240,7 +240,7 @@ const AsignForms: React.FC = () => {
 								</Form.Item>
 							</Col>
 							<Col md={8} xs={24}>
-								<Form.Item label="This month Report URL" name="this_month_url">
+								<Form.Item label="Last 30 days Report URL" name="this_month_url">
 									<Input placeholder="Enter this month's report URL here" />
 								</Form.Item>
 							</Col>
