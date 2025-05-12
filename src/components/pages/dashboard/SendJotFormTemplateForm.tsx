@@ -157,38 +157,52 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 		totalItems: number;
 	}
 
-	async function deleteWithPathParam(id) {
-		const response = await fetch(Url + `/api/jotform/responses/${id}`, {
-			method: 'DELETE',
-		});
-		return await response.json();
-	}
+async function deleteWithPathParam(id: any, UUID?: any) {
+  const url = UUID 
+    ? `${Url}/api/jotform/responses/${id}/${UUID}`
+    : `${Url}/api/jotform/responses/${id}`;
 
-	const deleteRecord = async (data: any) => {
-		Swal.fire({
-			title: "Are you sure?",
-			text: "You won't be able to revert this!",
-			icon: "warning",
-			showCancelButton: true,
-			confirmButtonText: "Delete",
-			cancelButtonText: "Cancel",
-			confirmButtonColor: '#3b5998',
-			reverseButtons: false,
-		}).then(async (result) => {
-			if (result.isConfirmed) {
-				setLoader(true);
-				let ID = data?.formData?.submission_id ? data?.formData?.submission_id : data?.formData?.form_id;
-				try {
-					await deleteWithPathParam(ID);
-					toast.success('Record Deleted!');
-					getTableResponse(selectedForm, currentPage, itemsPerPage, lastSearchedValue, selectedFilter);
-				} catch (error) {
-					console.error('Error deleting record:', error);
-					setLoader(false);
-				}
-			}
-		});
-	}
+  const response = await fetch(url, {
+    method: 'DELETE',
+  });
+
+  return await response.json();
+}
+
+const deleteRecord = async (data: any) => {
+	console.info("data",data);
+  Swal.fire({
+    title: "Are you sure?",
+    text: "You won't be able to revert this!",
+    icon: "warning",
+    showCancelButton: true,
+    confirmButtonText: "Delete",
+    cancelButtonText: "Cancel",
+    confirmButtonColor: '#3b5998',
+    reverseButtons: false,
+  }).then(async (result) => {
+    if (result.isConfirmed) {
+      setLoader(true);
+      
+      const ID = data?.formData?.submission_id || data?.formData?.form_id;
+      const uuid = data?.formData?.uuid;
+
+      try {
+        if (uuid) {
+          await deleteWithPathParam(ID, uuid); 
+        } else {
+          await deleteWithPathParam(ID); 
+        }
+
+        toast.success('Record Deleted!');
+        getTableResponse(selectedForm, currentPage, itemsPerPage, lastSearchedValue, selectedFilter);
+      } catch (error) {
+        console.error('Error deleting record:', error);
+        setLoader(false);
+      }
+    }
+  });
+};
 
 	const TableComponent: React.FC<TableComponentProps> = ({
 		tableData,

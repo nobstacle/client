@@ -37,6 +37,14 @@ const FormByUUID = () => {
     const BASE_URL = `https://form.jotform.com/${formId}`;
     const params = new URLSearchParams();
 
+    const currentUrl = window.location.href;
+    const uuidMatch = currentUrl.match(/forms\/([a-f0-9-]+)/i);
+    const uuid = uuidMatch ? uuidMatch[1] : null;
+
+    if (uuid) {
+      params.append('uuid', uuid);
+    }
+
     const answers =
       typeof formData?.data?.data === 'string' ? JSON.parse(formData?.data?.data) : formData?.data?.data;
 
@@ -79,6 +87,7 @@ const FormByUUID = () => {
         });
 
         let url = buildUrl(result);
+        console.info("urlurlurl",url);
         setFormUrl(url);
       } catch (error: any) {
         console.error({ error });
@@ -87,6 +96,8 @@ const FormByUUID = () => {
 
     fetchFormFields();
   }, [formId]);
+
+
 
   return (
     <div style={{ background: 'white', height: '100vh', width: '100%' }}>
