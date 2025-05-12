@@ -33,12 +33,12 @@ const FormByUUID = () => {
     }
   }, [uuid]);
 
-  const buildUrl = (formData: any, inputValues: any) => {
+  const buildUrl = (inputValues: any) => {
     const BASE_URL = `https://form.jotform.com/${formId}`;
     const params = new URLSearchParams();
 
     const answers =
-      typeof formData === 'string' ? JSON.parse(formData) : formData;
+      typeof formData?.data?.data === 'string' ? JSON.parse(formData?.data?.data) : formData?.data?.data;
 
     for (const [key, value] of Object.entries(answers || {})) {
       const questionLabel = inputValues[key];
@@ -78,7 +78,7 @@ const FormByUUID = () => {
           }
         });
 
-        let url = buildUrl(data.data, result);
+        let url = buildUrl(result);
         setFormUrl(url);
       } catch (error: any) {
         console.error({ error });
