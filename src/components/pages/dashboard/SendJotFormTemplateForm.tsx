@@ -403,10 +403,10 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 							onClick={() => copyFormUrl(item)}
 							disabled={!!item?.formData?.submission_id}
 							className={`group flex items-center justify-center w-10 h-10 text-white font-medium rounded-full text-sm text-center
-    ${item?.formData?.submission_id
+    						${item?.formData?.submission_id
 									? 'bg-[#005d4d] cursor-not-allowed'
 									: 'bg-green-700 hover:bg-green-800 focus:outline-none focus:ring-4 focus:ring-green-300 dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-green-800'}
-  `}
+  							`}
 							style={{
 								background: item?.formData?.submission_id ? '#005d4d' : '#008080',
 								padding: 0,
@@ -419,21 +419,26 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 							/>
 						</Button>
 
-
 						{item?.formData?.submission_id ? (
 							<button
 								title="Download PDF Response"
 								onClick={() =>
 									handlePDFDownload(item?.formData?.form_id, item?.formData?.submission_id, rowIndex)
 								}
-								className="
-        w-10 h-10 
-        flex items-center justify-center 
-        text-white 
-        bg-blue-600 
-        hover:bg-blue-700 
-        focus:ring-4 focus:ring-blue-300 
-        font-medium rounded-full text-sm"
+								className={`
+      w-10 h-10 
+      flex items-center justify-center 
+      text-white 
+      bg-[#3b5998] 
+      hover:bg-[#2d4373] 
+      focus:ring-0 
+      border-none 
+      font-medium 
+      rounded-full 
+      text-sm
+      disabled:opacity-70
+      disabled:cursor-not-allowed
+    `}
 								disabled={downloadingPDF === rowIndex}
 							>
 								{downloadingPDF === rowIndex ? (
@@ -464,35 +469,38 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 							<button
 								title="Send Form"
 								onClick={() => handleUploadedSend(item)}
-								className="
-        w-10 h-10 
-        flex items-center justify-center 
-        text-white 
-        bg-blue-600 
-        hover:bg-blue-700 
-        focus:ring-4 focus:ring-blue-300 
-        font-medium rounded-full text-sm"
+								className={`
+      w-10 h-10 
+      flex items-center justify-center 
+      text-white 
+      bg-[#3b5998] 
+      hover:bg-[#2d4373] 
+      focus:ring-0 
+      border-none 
+      font-medium 
+      rounded-full 
+      text-sm
+    `}
 							>
 								<SendIcon />
-								{/* <FiSend size={18} /> */}
 							</button>
 						)}
+
 
 						<button
 							onClick={() => deleteRecord(item)}
 							className="
-      w-10 h-10 
-      flex items-center justify-center 
-      text-white 
-      bg-red-700 
-      hover:bg-red-800 
-      focus:ring-4 focus:ring-red-300 
-      font-medium rounded-full text-sm"
+							w-10 h-10 
+							flex items-center justify-center 
+							text-white 
+							bg-red-700 
+							hover:bg-red-800 
+							focus:ring-4 focus:ring-red-300 
+							font-medium rounded-full text-sm"
 						>
 							<FaTrash size={18} />
 						</button>
 					</div>
-
 				),
 			},
 		];

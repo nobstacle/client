@@ -173,7 +173,7 @@ td {
   .ant-table-thead {
     tr {
       .ant-table-cell {
-        background: #9ca3af;
+        background: #d1d5db;
         color: white;
         font-family: '__Inter_d65c78', '__Inter_Fallback_d65c78';
         font-style: normal;
@@ -391,4 +391,21 @@ button {
 
 .uniformButton {
   @apply h-10 w-10 flex items-center justify-center rounded-md text-white text-sm;
+}
+
+.ant-btn:hover,
+.ant-btn:focus,
+.ant-btn:active {
+  color: white !important;
+  border-color: inherit !important;
+  box-shadow: none !important;
+}
+
+.ant-btn[disabled]:hover,
+.ant-btn[disabled]:focus {
+  color: #bfbfbf !important;
+  background-color: #f5f5f5 !important;
+  border-color: #d9d9d9 !important;
+  box-shadow: none !important;
+  cursor: not-allowed !important;
 }
