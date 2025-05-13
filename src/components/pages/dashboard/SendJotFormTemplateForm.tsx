@@ -402,75 +402,97 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 							title="Copy URL"
 							onClick={() => copyFormUrl(item)}
 							disabled={!!item?.formData?.submission_id}
-							className={`group customHoverbutton text-white font-medium rounded-full text-sm px-2 py-2 text-center me-2 mb-2
+							className={`group flex items-center justify-center w-10 h-10 text-white font-medium rounded-full text-sm text-center
     ${item?.formData?.submission_id
 									? 'bg-[#005d4d] cursor-not-allowed'
 									: 'bg-green-700 hover:bg-green-800 focus:outline-none focus:ring-4 focus:ring-green-300 dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-green-800'}
   `}
 							style={{
 								background: item?.formData?.submission_id ? '#005d4d' : '#008080',
+								padding: 0,
 							}}
 						>
 							<FaCopy
 								size={18}
-								className={`transition-colors duration-200 ${!item?.formData?.submission_id
-									? 'group-hover:text-white'
-									: 'text-gray-400'
+								className={`transition-colors duration-200 ${!item?.formData?.submission_id ? 'group-hover:text-white' : 'text-gray-400'
 									}`}
 							/>
 						</Button>
 
 
-
 						{item?.formData?.submission_id ? (
-							<div className="relative group">
-								<button
-									title="Download PDF Response"
-									onClick={() =>
-										handlePDFDownload(item?.formData?.form_id, item?.formData?.submission_id, rowIndex)
-									}
-									className="customSearchButton text-white hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300 font-medium rounded-full text-sm px-2 py-2 text-center me-2 mb-2 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
-									disabled={downloadingPDF === rowIndex}
-								>
-									{downloadingPDF === rowIndex ? (
-										<svg
-											className="animate-spin h-5 w-5"
-											viewBox="0 0 24 24"
-											fill="none"
-										>
-											<circle
-												className="opacity-25"
-												cx="12"
-												cy="12"
-												r="10"
-												stroke="currentColor"
-												strokeWidth="4"
-											/>
-											<path
-												className="opacity-75"
-												fill="currentColor"
-												d="M4 12a8 8 0 018-8v8H4z"
-											/>
-										</svg>
-									) : (
-										<FaFilePdf size={18} />
-									)}
-								</button>
-							</div>
+							<button
+								title="Download PDF Response"
+								onClick={() =>
+									handlePDFDownload(item?.formData?.form_id, item?.formData?.submission_id, rowIndex)
+								}
+								className="
+        w-10 h-10 
+        flex items-center justify-center 
+        text-white 
+        bg-blue-600 
+        hover:bg-blue-700 
+        focus:ring-4 focus:ring-blue-300 
+        font-medium rounded-full text-sm"
+								disabled={downloadingPDF === rowIndex}
+							>
+								{downloadingPDF === rowIndex ? (
+									<svg
+										className="animate-spin h-5 w-5"
+										viewBox="0 0 24 24"
+										fill="none"
+									>
+										<circle
+											className="opacity-25"
+											cx="12"
+											cy="12"
+											r="10"
+											stroke="currentColor"
+											strokeWidth="4"
+										/>
+										<path
+											className="opacity-75"
+											fill="currentColor"
+											d="M4 12a8 8 0 018-8v8H4z"
+										/>
+									</svg>
+								) : (
+									<FaFilePdf size={18} />
+								)}
+							</button>
 						) : (
 							<button
 								title="Send Form"
 								onClick={() => handleUploadedSend(item)}
-								className="customSearchButton text-white hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300 font-medium rounded-full text-sm px-2 py-2 text-center me-2 mb-2 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
+								className="
+        w-10 h-10 
+        flex items-center justify-center 
+        text-white 
+        bg-blue-600 
+        hover:bg-blue-700 
+        focus:ring-4 focus:ring-blue-300 
+        font-medium rounded-full text-sm"
 							>
-								<FiSend size={18} />
+								<SendIcon />
+								{/* <FiSend size={18} /> */}
 							</button>
 						)}
 
-						<button onClick={() => deleteRecord(item)} className="text-white bg-red-700 hover:bg-red-800 focus:outline-none focus:ring-4 focus:ring-red-300 font-medium rounded-full text-sm px-2 py-2 text-center me-2 mb-2 dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-red-900">
+						<button
+							onClick={() => deleteRecord(item)}
+							className="
+      w-10 h-10 
+      flex items-center justify-center 
+      text-white 
+      bg-red-700 
+      hover:bg-red-800 
+      focus:ring-4 focus:ring-red-300 
+      font-medium rounded-full text-sm"
+						>
 							<FaTrash size={18} />
 						</button>
 					</div>
+
 				),
 			},
 		];
@@ -1166,11 +1188,11 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 	return (
 		<div className="bg-gray-50 p-6 rounded-lg shadow-md w-full mx-auto">
 			<div className="flex justify-between items-end mb-4">
-				<div className="flex items-end gap-4" style={{ width: '100%', maxWidth: '30vw' }}>
+				<div className="flex items-end gap-2" style={{ width: '100%', maxWidth: '40vw' }}>
 					<Select
 						className="w-full"
 						onChange={handleFormChange}
-						style={{ minWidth: '13.5vw' }}
+						style={{ minWidth: '30%', maxWidth: '35%' }}
 						placeholder="Select Form"
 						value={selectedForm}
 					>
@@ -1206,49 +1228,37 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 							className="headerButton"
 						/>
 					</Tooltip>
-					<div className="formActions">
-						{selectedForm && (
-							<div className="flex items-end justify-end space-x-2" >
-								<div className="flex items-start space-x-5">
-									<Tooltip title="Download Sample CSV">
-										<Button
-											onClick={handleSampleCSVDownload}
-											icon={<FaFileDownload size={20} color="#fff" />}
-											style={{
-												backgroundColor: '#3b5998',
-												borderColor: '#3b5998',
-												padding: '0.3rem 1.1rem'
-											}}
-											className="customWidth customSearchButton customTableButtons text-white hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300 font-medium rounded-md text-sm"
-										/>
-									</Tooltip>
-									<Tooltip title="Upload File">
-										<Button
-											icon={<FaFileUpload size={20} color="#fff" />}
-											style={{
-												backgroundColor: '#3b5998',
-												borderColor: '#3b5998',
-												padding: '0.3rem 1.1rem'
-											}}
-											onClick={handleFileClick}
-											className="customWidth customSearchButton customTableButtons text-white hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300 font-medium rounded-md text-sm"
-										/>
-									</Tooltip>
-									<input
-										id="file-upload"
-										type="file"
-										accept=".csv, .xlsx, .xls"
-										onChange={handleBulkUpload}
-										className="hidden"
-									/>
-								</div>
-							</div>
-						)}
-					</div>
+					{selectedForm && (
+						<>
+							<Tooltip title="Download Sample CSV">
+								<Button
+									onClick={handleSampleCSVDownload}
+									icon={<FaFileDownload size={20} color="#fff" />}
+									type="primary"
+									className="headerButton"
+								/>
+							</Tooltip>
+							<Tooltip title="Upload File">
+								<Button
+									icon={<FaFileUpload size={20} color="#fff" />}
+									type="primary"
+									onClick={handleFileClick}
+									className="headerButton"
+								/>
+							</Tooltip>
+							<input
+								id="file-upload"
+								type="file"
+								accept=".csv, .xlsx, .xls"
+								onChange={handleBulkUpload}
+								className="hidden"
+							/>
+						</>
+					)}
 				</div>
 				<div>
 					<Button
-						className="flex items-center gap-2 w-full lg:w-auto rounded-md px-6 py-2 text-white transition customSearchButton customWidth"
+						className="flex items-center gap-2 w-full lg:w-auto rounded-md px-6 py-2 text-white transition customSearchButton"
 						onClick={() => openReportModel()} >  <FaChartBar />
 						<span>Report</span>
 					</Button>
@@ -1291,9 +1301,9 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 								Object.values(selectedFormFields.content).some((item) => item?.name?.includes("search")) && (
 									<div className="col-span-12 lg:col-span-2 flex justify-end" style={{ height: "100%" }}>
 										<Button
-											className="flex items-center gap-2 w-full lg:w-auto rounded-md text-white transition customSearchButton"
+											className="flex items-center gap-2 w-full lg:w-auto rounded-md text-white transition headerButton"
 											htmlType="submit"
-											style={{ padding: "0.2rem 0.6rem" }}
+										// style={{ padding: "0.2rem 0.6rem" }}
 										>
 											<FaSearch size={18} />
 										</Button>
