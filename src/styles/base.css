@@ -383,3 +383,6 @@ button {
   background: #3b5998;
   color: white;
 }
+.customHoverbutton:hover {
+  color: white !important;
+}

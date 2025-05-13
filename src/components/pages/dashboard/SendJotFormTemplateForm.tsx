@@ -18,6 +18,7 @@ import { SendIcon } from "../../icons/SendIcon";
 import { FaChartBar } from "react-icons/fa";
 import { DatePicker, Input, Form } from 'antd';
 import dayjs from 'dayjs';
+import { IoQrCode } from "react-icons/io5";
 
 let Url = process.env.NEXT_PUBLIC_BACKEND_URL;
 const SOCKET_URL = Url;
@@ -58,6 +59,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 	const itemsPerPage = 8;
 	const [selectedReportFilter, setSelectedReportFilter] = useState("last30Days");
 	const [isIframeLoading, setIsIframeLoading] = useState(true);
+	const [newRecordData, setNewRecordData] = useState(null);
 	const [form] = Form.useForm();
 
 	const handlePageChange = (pageNumber: number) => {
@@ -98,7 +100,6 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 
 		// Listen for custom events
 		socket.on("dataSaved", (data) => {
-			console.log("WebSocket Event Received:", data);
 			if (data?.formId) {
 				getTableResponse(data.formId, 1, 8, lastSearchedValue, selectedFilter);
 			}
@@ -137,8 +138,6 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 		content: any[];
 	}
 
-	console.info("selectedForm", selectedForm);
-
 	useEffect(() => {
 		if (selectedForm) {
 			getTableResponse(selectedForm, currentPage, itemsPerPage, lastSearchedValue, selectedFilter);
@@ -157,52 +156,51 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 		totalItems: number;
 	}
 
-async function deleteWithPathParam(id: any, UUID?: any) {
-  const url = UUID 
-    ? `${Url}/api/jotform/responses/${id}/${UUID}`
-    : `${Url}/api/jotform/responses/${id}`;
+	async function deleteWithPathParam(id: any, UUID?: any) {
+		const url = UUID
+			? `${Url}/api/jotform/responses/${id}/${UUID}`
+			: `${Url}/api/jotform/responses/${id}`;
 
-  const response = await fetch(url, {
-    method: 'DELETE',
-  });
+		const response = await fetch(url, {
+			method: 'DELETE',
+		});
 
-  return await response.json();
-}
+		return await response.json();
+	}
 
-const deleteRecord = async (data: any) => {
-	console.info("data",data);
-  Swal.fire({
-    title: "Are you sure?",
-    text: "You won't be able to revert this!",
-    icon: "warning",
-    showCancelButton: true,
-    confirmButtonText: "Delete",
-    cancelButtonText: "Cancel",
-    confirmButtonColor: '#3b5998',
-    reverseButtons: false,
-  }).then(async (result) => {
-    if (result.isConfirmed) {
-      setLoader(true);
-      
-      const ID = data?.formData?.submission_id || data?.formData?.form_id;
-      const uuid = data?.formData?.uuid;
+	const deleteRecord = async (data: any) => {
+		Swal.fire({
+			title: "Are you sure?",
+			text: "You won't be able to revert this!",
+			icon: "warning",
+			showCancelButton: true,
+			confirmButtonText: "Delete",
+			cancelButtonText: "Cancel",
+			confirmButtonColor: '#3b5998',
+			reverseButtons: false,
+		}).then(async (result) => {
+			if (result.isConfirmed) {
+				setLoader(true);
 
-      try {
-        if (uuid) {
-          await deleteWithPathParam(ID, uuid); 
-        } else {
-          await deleteWithPathParam(ID); 
-        }
+				const ID = data?.formData?.submission_id || data?.formData?.form_id;
+				const uuid = data?.formData?.uuid;
 
-        toast.success('Record Deleted!');
-        getTableResponse(selectedForm, currentPage, itemsPerPage, lastSearchedValue, selectedFilter);
-      } catch (error) {
-        console.error('Error deleting record:', error);
-        setLoader(false);
-      }
-    }
-  });
-};
+				try {
+					if (uuid) {
+						await deleteWithPathParam(ID, uuid);
+					} else {
+						await deleteWithPathParam(ID);
+					}
+
+					toast.success('Record Deleted!');
+					getTableResponse(selectedForm, currentPage, itemsPerPage, lastSearchedValue, selectedFilter);
+				} catch (error) {
+					console.error('Error deleting record:', error);
+					setLoader(false);
+				}
+			}
+		});
+	};
 
 	const TableComponent: React.FC<TableComponentProps> = ({
 		tableData,
@@ -321,7 +319,6 @@ const deleteRecord = async (data: any) => {
 			});
 
 			const dynamicUrl = buildUrl(selectedForm, result);
-			console.info("dynamicUrl", dynamicUrl)
 			sendJotFormMessage(dynamicUrl);
 
 			toast.success('Form sent successfully!', {
@@ -343,10 +340,7 @@ const deleteRecord = async (data: any) => {
 
 		const copyFormUrl = (data: any) => {
 			let url = "";
-			const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ? process.env.NEXT_PUBLIC_BASE_URL  : 'https://www.nobstacle.com';
-
-			console.info("data", data);
-			console.info("baseUrl", baseUrl);
+			const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ? process.env.NEXT_PUBLIC_BASE_URL : 'https://www.nobstacle.com';
 
 			if (data?.formData?.uuid) {
 				url = `${baseUrl}/forms/${data.formData.uuid}`;
@@ -386,7 +380,6 @@ const deleteRecord = async (data: any) => {
 			}
 		};
 
-
 		const columns = [
 			...listableFields.map(field => ({
 				title: field.text,
@@ -405,14 +398,29 @@ const deleteRecord = async (data: any) => {
 				fixed: 'right',
 				render: (_: any, item: any, rowIndex: number) => (
 					<div className="flex flex-wrap gap-2 justify-center items-center">
-						<button
+						<Button
 							title="Copy URL"
 							onClick={() => copyFormUrl(item)}
-							className="text-white bg-green-700 hover:bg-green-800 focus:outline-none focus:ring-4 focus:ring-green-300 font-medium rounded-full text-sm px-2 py-2 text-center me-2 mb-2 dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-green-800"
-							style={{ background: '#008080' }}
+							disabled={!!item?.formData?.submission_id}
+							className={`group customHoverbutton text-white font-medium rounded-full text-sm px-2 py-2 text-center me-2 mb-2
+    ${item?.formData?.submission_id
+									? 'bg-[#005d4d] cursor-not-allowed'
+									: 'bg-green-700 hover:bg-green-800 focus:outline-none focus:ring-4 focus:ring-green-300 dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-green-800'}
+  `}
+							style={{
+								background: item?.formData?.submission_id ? '#005d4d' : '#008080',
+							}}
 						>
-							<FaCopy size={18} />
-						</button>
+							<FaCopy
+								size={18}
+								className={`transition-colors duration-200 ${!item?.formData?.submission_id
+									? 'group-hover:text-white'
+									: 'text-gray-400'
+									}`}
+							/>
+						</Button>
+
+
 
 						{item?.formData?.submission_id ? (
 							<div className="relative group">
@@ -531,7 +539,6 @@ const deleteRecord = async (data: any) => {
 			if (response.status === 200) {
 				setAssignedForms(response?.data);
 				if (selectedForm === null) {
-					console.info("response?.data", response?.data);
 					setSelectedForm(response?.data[0]?.form_id || null)
 				}
 			} else {
@@ -711,7 +718,6 @@ const deleteRecord = async (data: any) => {
 	};
 
 	const handleFormChange = (value: string) => {
-		console.info("valuevaluevaluevalue", value);
 		setLoader(true);
 		setValue("url", value);
 		setSelectedForm(value);
@@ -754,7 +760,7 @@ const deleteRecord = async (data: any) => {
 		}));
 	};
 
-	const handleManualUpload = async () => {
+	const handleManualUpload = async (show: any) => {
 		const formData = {
 			formId: selectedForm,
 			data: manualInputValues
@@ -772,18 +778,22 @@ const deleteRecord = async (data: any) => {
 			getTableResponse(selectedForm || null, 1, 8, lastSearchedValue, selectedFilter);
 
 			if (response.status === 201) {
-				toast.success('Response uploaded successfully!', {
-					position: "bottom-right",
-					autoClose: 5000,
-					hideProgressBar: false,
-					closeOnClick: false,
-					pauseOnHover: true,
-					draggable: true,
-					progress: undefined,
-					theme: "colored",
-					transition: Bounce,
-				});
+				if (show === 'true') {
+					toast.success('Response uploaded successfully!', {
+						position: "bottom-right",
+						autoClose: 5000,
+						hideProgressBar: false,
+						closeOnClick: false,
+						pauseOnHover: true,
+						draggable: true,
+						progress: undefined,
+						theme: "colored",
+						transition: Bounce,
+					});
+				}
 				setManualInputValues({});
+				closeModal();
+				return response?.data?.data;
 			} else {
 				toast.error(response.data.message || 'Unable to upload response.', {
 					position: "bottom-right",
@@ -796,6 +806,7 @@ const deleteRecord = async (data: any) => {
 					theme: "colored",
 					transition: Bounce,
 				});
+				closeModal();
 			}
 		} catch (error) {
 			console.error('Upload error:', error);
@@ -811,7 +822,6 @@ const deleteRecord = async (data: any) => {
 				transition: Bounce,
 			});
 		}
-		closeModal();
 	};
 
 	// const handleBulkUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -878,7 +888,6 @@ const deleteRecord = async (data: any) => {
 
 	const onFinish = (values: any) => {
 		setLoader(true);
-		console.info("valuesvalues", values);
 		const filteredValues = Object.entries(values)
 			.filter(([_, val]) => val !== undefined && val !== "" && val !== null)
 			.map(([key, val]) => {
@@ -900,14 +909,12 @@ const deleteRecord = async (data: any) => {
 		getTableResponse(selectedForm, 1, 8, finalSearch, selectedFilter);
 	};
 
-
 	const onSearchSubmit = (e: React.FormEvent<HTMLFormElement>) => {
 		setLoader(true);
 		e.preventDefault();
 
 		const formData = new FormData(e.currentTarget);
 		const searchValues = Object.fromEntries(formData.entries());
-		console.info("searchValues", searchValues)
 		const searchParams = Object.entries(searchValues)
 			.filter(([_, value]) => value !== "")
 			.map(([label, value]) => `{label:${label},value:${value}}`)
@@ -1124,6 +1131,37 @@ const deleteRecord = async (data: any) => {
 		);
 	};
 
+	const sendBlankForm = async () => {
+		let uploadBlankRecord = await handleManualUpload('false');
+		if (uploadBlankRecord) {
+			let uuid = uploadBlankRecord?.uuid;
+			let url = "";
+			const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ? process.env.NEXT_PUBLIC_BASE_URL : 'https://www.nobstacle.com';
+
+			if (uuid) {
+				url = `${baseUrl}/forms/${uuid}`;
+			}
+			if (url) {
+				navigator.clipboard
+					.writeText(url)
+					.then(() => {
+						toast.success('URL copied to clipboard!', {
+							position: "bottom-right",
+							autoClose: 5000,
+							hideProgressBar: false,
+							closeOnClick: false,
+							pauseOnHover: true,
+							draggable: true,
+							progress: undefined,
+							theme: "colored",
+							transition: Bounce,
+						});
+					})
+					.catch((err) => console.error("Failed to copy URL:", err));
+			}
+
+		}
+	}
 
 	return (
 		<div className="bg-gray-50 p-6 rounded-lg shadow-md w-full mx-auto">
@@ -1160,6 +1198,53 @@ const deleteRecord = async (data: any) => {
 							className="headerButton"
 						/>
 					</Tooltip>
+					<Tooltip title="Blank Form">
+						<Button
+							onClick={sendBlankForm}
+							icon={<IoQrCode size={20} color="#fff" />}
+							type="primary"
+							className="headerButton"
+						/>
+					</Tooltip>
+					<div className="formActions">
+						{selectedForm && (
+							<div className="flex items-end justify-end space-x-2" >
+								<div className="flex items-start space-x-5">
+									<Tooltip title="Download Sample CSV">
+										<Button
+											onClick={handleSampleCSVDownload}
+											icon={<FaFileDownload size={20} color="#fff" />}
+											style={{
+												backgroundColor: '#3b5998',
+												borderColor: '#3b5998',
+												padding: '0.3rem 1.1rem'
+											}}
+											className="customWidth customSearchButton customTableButtons text-white hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300 font-medium rounded-md text-sm"
+										/>
+									</Tooltip>
+									<Tooltip title="Upload File">
+										<Button
+											icon={<FaFileUpload size={20} color="#fff" />}
+											style={{
+												backgroundColor: '#3b5998',
+												borderColor: '#3b5998',
+												padding: '0.3rem 1.1rem'
+											}}
+											onClick={handleFileClick}
+											className="customWidth customSearchButton customTableButtons text-white hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300 font-medium rounded-md text-sm"
+										/>
+									</Tooltip>
+									<input
+										id="file-upload"
+										type="file"
+										accept=".csv, .xlsx, .xls"
+										onChange={handleBulkUpload}
+										className="hidden"
+									/>
+								</div>
+							</div>
+						)}
+					</div>
 				</div>
 				<div>
 					<Button
@@ -1169,7 +1254,6 @@ const deleteRecord = async (data: any) => {
 					</Button>
 				</div>
 			</div>
-
 			<Form form={form} onFinish={onFinish}>
 				{selectedFormFields?.content && Object.keys(selectedFormFields.content).length > 0 && (
 					<div className="w-full p-4 bg-white rounded-lg shadow-md">
@@ -1179,12 +1263,13 @@ const deleteRecord = async (data: any) => {
 									{Object.values(selectedFormFields.content)
 										.filter((item) => item?.name?.includes("search"))
 										.sort((a, b) => a.name.localeCompare(b.name))
-										.map((item) => (
+										.map((item, idx, arr) => (
 											<Form.Item
 												key={item.qid}
 												name={item.text}
+												className={arr.length > 5 ? "mb-2" : "mb-0"}
 											>
-												{item?.type === 'control_widget' || item.type.includes("date") ? (
+												{item?.type === "control_widget" || item.type.includes("date") ? (
 													<DatePicker
 														className="w-full"
 														format="DD/MM/YYYY"
@@ -1204,14 +1289,13 @@ const deleteRecord = async (data: any) => {
 
 							{selectedForm &&
 								Object.values(selectedFormFields.content).some((item) => item?.name?.includes("search")) && (
-									<div className="col-span-12 lg:col-span-2 flex justify-end ">
+									<div className="col-span-12 lg:col-span-2 flex justify-end" style={{ height: "100%" }}>
 										<Button
-											className="flex items-center gap-2 w-full lg:w-auto rounded-md text-white transition customSearchButton "
+											className="flex items-center gap-2 w-full lg:w-auto rounded-md text-white transition customSearchButton"
 											htmlType="submit"
-											style={{ padding: '0.2rem 0.6rem' }}
+											style={{ padding: "0.2rem 0.6rem" }}
 										>
 											<FaSearch size={18} />
-											{/* <span>Search</span> */}
 										</Button>
 									</div>
 								)}
@@ -1220,61 +1304,6 @@ const deleteRecord = async (data: any) => {
 				)}
 			</Form>
 
-
-			{/* <form ref={formRef} onSubmit={onSearchSubmit}>
-				{selectedFormFields?.content && Object.keys(selectedFormFields.content).length > 0 && (
-					<div className="w-full p-4 bg-white rounded-lg shadow-md">
-						<div className="grid grid-cols-12 gap-4 items-end">
-							<div className="col-span-12 lg:col-span-10 space-y-4">
-								<div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-2">
-									{Object.values(selectedFormFields.content)
-										.filter((item) => item?.name?.includes("search"))
-										.sort((a, b) => {
-											const nameA = a.name.toLowerCase();
-											const nameB = b.name.toLowerCase();
-											if (nameA < nameB) return -1;
-											if (nameA > nameB) return 1;
-											return 0;
-										})
-										.map((item) => (
-											<>
-												{item?.type === 'control_widget' || item.type.includes("date") ? (
-												<DatePicker
-													key={item.qid}
-													className="w-full"
-													format={dateFormat}
-													placeholder={item.text}
-												/>
-												) : (
-												<Input
-													key={item.qid}
-													name={item?.text}
-													placeholder={item.text}
-													type={item?.type || "text"}
-													className="w-full"
-												/>
-												)}
-											</>
-										))}
-								</div>
-							</div>
-
-							{selectedForm &&
-								Object.values(selectedFormFields.content).some((item) => item?.name?.includes("search")) && (
-									<div className="col-span-12 lg:col-span-2 flex justify-end">
-										<Button
-											className="flex items-center gap-2 w-full lg:w-auto rounded-md px-6 py-2 text-white transition customSearchButton customWidth"
-											htmlType="submit"
-										>
-											<FaSearch />
-											<span>Search</span>
-										</Button>
-									</div>
-								)}
-						</div>
-					</div>
-				)}
-			</form> */}
 
 			{tableResponse && selectedFormFields?.content ? (
 				<div className="card mt-5 bg-white rounded" style={{ position: 'relative' }}>
@@ -1298,47 +1327,6 @@ const deleteRecord = async (data: any) => {
 									<span className="capitalize text-gray-700 font-medium">{status}</span>
 								</label>
 							))}
-
-
-						</div>
-						<div className="formActions">
-							{selectedForm && (
-								<div className="flex items-end justify-end space-x-2" >
-									<div className="flex items-start space-x-5">
-										<Tooltip title="Download Sample CSV">
-											<Button
-												onClick={handleSampleCSVDownload}
-												icon={<FaFileDownload size={20} color="#fff" />}
-												style={{
-													backgroundColor: '#3b5998',
-													borderColor: '#3b5998',
-													padding: '0.3rem 1.1rem'
-												}}
-												className="customWidth customSearchButton customTableButtons text-white hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300 font-medium rounded-md text-sm"
-											/>
-										</Tooltip>
-										<Tooltip title="Upload File">
-											<Button
-												icon={<FaFileUpload size={20} color="#fff" />}
-												style={{
-													backgroundColor: '#3b5998',
-													borderColor: '#3b5998',
-													padding: '0.3rem 1.1rem'
-												}}
-												onClick={handleFileClick}
-												className="customWidth customSearchButton customTableButtons text-white hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300 font-medium rounded-md text-sm"
-											/>
-										</Tooltip>
-										<input
-											id="file-upload"
-											type="file"
-											accept=".csv, .xlsx, .xls"
-											onChange={handleBulkUpload}
-											className="hidden"
-										/>
-									</div>
-								</div>
-							)}
 						</div>
 
 					</div>
@@ -1412,7 +1400,7 @@ const deleteRecord = async (data: any) => {
 				</div>
 				<div className="flex justify-end mt-6 customButtonWrapper">
 					<Button
-						onClick={handleManualUpload}
+						onClick={() => handleManualUpload('true')}
 						className="customSearchButton text-white px-6 py-2 rounded-md flex gap-2"
 					>
 						Upload <RiUploadCloudFill size={25} />
