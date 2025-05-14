@@ -396,112 +396,115 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 				title: 'Action',
 				key: 'action',
 				fixed: 'right',
-				render: (_: any, item: any, rowIndex: number) => (
-					<div className="flex flex-wrap gap-2 justify-center items-center">
-						<Button
-							title="Copy URL"
-							onClick={() => copyFormUrl(item)}
-							disabled={!!item?.formData?.submission_id}
-							className={`group flex items-center justify-center w-10 h-10 text-white font-medium rounded-full text-sm text-center
-    						${item?.formData?.submission_id
-									? 'bg-[#005d4d] cursor-not-allowed'
-									: 'bg-green-700 hover:bg-green-800 focus:outline-none focus:ring-4 focus:ring-green-300 dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-green-800'}
-  							`}
-							style={{
-								background: item?.formData?.submission_id ? '#005d4d' : '#008080',
-								padding: 0,
-							}}
-						>
-							<FaCopy
-								size={18}
-								className={`transition-colors duration-200 ${!item?.formData?.submission_id ? 'group-hover:text-white' : 'text-gray-400'
-									}`}
-							/>
-						</Button>
+			render: (_: any, item: any, rowIndex: number) => (
+  <div className="flex flex-wrap gap-2 justify-center items-center">
+    <Button
+      title="Copy URL"
+      onClick={() => copyFormUrl(item)}
+      disabled={!!item?.formData?.submission_id}
+      className={`group flex items-center justify-center w-8 h-8 text-white font-medium rounded-full text-xs text-center
+        ${item?.formData?.submission_id
+          ? 'bg-[#005d4d] cursor-not-allowed'
+          : 'bg-green-700 hover:bg-green-800 focus:outline-none focus:ring-4 focus:ring-green-300 dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-green-800'}
+      `}
+      style={{
+        background: item?.formData?.submission_id ? '#005d4d' : '#008080',
+        padding: 0,
+      }}
+    >
+      <FaCopy
+        size={14}
+        className={`transition-colors duration-200 ${!item?.formData?.submission_id ? 'group-hover:text-white' : 'text-gray-400'
+          }`}
+      />
+    </Button>
 
-						{item?.formData?.submission_id ? (
-							<button
-								title="Download PDF Response"
-								onClick={() =>
-									handlePDFDownload(item?.formData?.form_id, item?.formData?.submission_id, rowIndex)
-								}
-								className={`
-      w-10 h-10 
-      flex items-center justify-center 
-      text-white 
-      bg-[#3b5998] 
-      hover:bg-[#2d4373] 
-      focus:ring-0 
-      border-none 
-      font-medium 
-      rounded-full 
-      text-sm
-      disabled:opacity-70
-      disabled:cursor-not-allowed
-    `}
-								disabled={downloadingPDF === rowIndex}
-							>
-								{downloadingPDF === rowIndex ? (
-									<svg
-										className="animate-spin h-5 w-5"
-										viewBox="0 0 24 24"
-										fill="none"
-									>
-										<circle
-											className="opacity-25"
-											cx="12"
-											cy="12"
-											r="10"
-											stroke="currentColor"
-											strokeWidth="4"
-										/>
-										<path
-											className="opacity-75"
-											fill="currentColor"
-											d="M4 12a8 8 0 018-8v8H4z"
-										/>
-									</svg>
-								) : (
-									<FaFilePdf size={18} />
-								)}
-							</button>
-						) : (
-							<button
-								title="Send Form"
-								onClick={() => handleUploadedSend(item)}
-								className={`
-      w-10 h-10 
-      flex items-center justify-center 
-      text-white 
-      bg-[#3b5998] 
-      hover:bg-[#2d4373] 
-      focus:ring-0 
-      border-none 
-      font-medium 
-      rounded-full 
-      text-sm
-    `}
-							>
-								<SendIcon />
-							</button>
-						)}
+    {item?.formData?.submission_id ? (
+      <button
+        title="Download PDF Response"
+        onClick={() =>
+          handlePDFDownload(item?.formData?.form_id, item?.formData?.submission_id, rowIndex)
+        }
+        className={`
+          w-8 h-8 
+          flex items-center justify-center 
+          text-white 
+          bg-[#3b5998] 
+          hover:bg-[#2d4373] 
+          focus:ring-0 
+          border-none 
+          font-medium 
+          rounded-full 
+          text-xs
+          disabled:opacity-70
+          disabled:cursor-not-allowed
+        `}
+        disabled={downloadingPDF === rowIndex}
+      >
+        {downloadingPDF === rowIndex ? (
+          <svg
+            className="animate-spin h-3.5 w-3.5"
+            viewBox="0 0 24 24"
+            fill="none"
+          >
+            <circle
+              className="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              strokeWidth="4"
+            />
+            <path
+              className="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8v8H4z"
+            />
+          </svg>
+        ) : (
+          <FaFilePdf size={14} />
+        )}
+      </button>
+    ) : (
+      <button
+        title="Send Form"
+        onClick={() => handleUploadedSend(item)}
+        className={`
+          w-8 h-8 
+          flex items-center justify-center 
+          text-white 
+          bg-[#3b5998] 
+          hover:bg-[#2d4373] 
+          focus:ring-0 
+          border-none 
+          font-medium 
+          rounded-full 
+          text-xs
+        `}
+      >
+        <SendIcon size={14} />
+      </button>
+    )}
 
+    <button
+      onClick={() => deleteRecord(item)}
+      className="
+        w-8 h-8 
+        flex items-center justify-center 
+        text-white 
+        bg-red-700 
+        hover:bg-red-800 
+        focus:ring-4 focus:ring-red-300 
+        font-medium 
+        rounded-full 
+        text-xs
+      "
+    >
+      <FaTrash size={12} />
+    </button>
+  </div>
+),
 
-						<button
-							onClick={() => deleteRecord(item)}
-							className="
-							w-10 h-10 
-							flex items-center justify-center 
-							text-white 
-							bg-red-700 
-							hover:bg-red-800 
-							focus:ring-4 focus:ring-red-300 
-							font-medium rounded-full text-sm"
-						>
-							<FaTrash size={18} />
-						</button>
-					</div>
-				),
 			},
 		];
 
@@ -918,47 +921,63 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 
 	const onFinish = (values: any) => {
 		setLoader(true);
-		const filteredValues = Object.entries(values)
-			.filter(([_, val]) => val !== undefined && val !== "" && val !== null)
-			.map(([key, val]) => {
-				let value = val;
-				if (typeof val === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(val)) {
-					value = dayjs(val).format("DD/MM/YYYY");
+
+		const formattedData = [];
+
+		const formFields = selectedFormFields?.content || {};
+
+		Object.entries(values).forEach(([key, val]) => {
+			if (val !== undefined && val !== "" && val !== null) {
+				const fieldItem = Object.values(formFields).find(item => item.text === key);
+
+				if (fieldItem) {
+					let processedValue = val;
+
+					if (typeof val === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(val)) {
+						processedValue = dayjs(val).format("DD/MM/YYYY");
+					}
+					if (dayjs.isDayjs(val)) {
+						processedValue = val.format("DD/MM/YYYY");
+					}
+
+					formattedData.push({
+						text: fieldItem.text,
+						name: fieldItem.name,
+						value: processedValue
+					});
 				}
-				return { label: key, value };
-			});
+			}
+		});
 
-		const searchParams = filteredValues
-			.map(({ label, value }) => `{label:${label},value:${value}}`)
-			.join(',');
-
-		const finalSearch = searchParams !== "" ? searchParams : "";
+		const searchParams = formattedData.length > 0
+			? JSON.stringify(formattedData)
+			: "";
 
 		setCurrentPage(1);
-		setLastSearchedValue(finalSearch);
-		getTableResponse(selectedForm, 1, 8, finalSearch, selectedFilter);
+		setLastSearchedValue(searchParams);
+		getTableResponse(selectedForm, 1, 8, searchParams, selectedFilter);
 	};
 
-	const onSearchSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-		setLoader(true);
-		e.preventDefault();
+	// const onSearchSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+	// 	setLoader(true);
+	// 	e.preventDefault();
 
-		const formData = new FormData(e.currentTarget);
-		const searchValues = Object.fromEntries(formData.entries());
-		const searchParams = Object.entries(searchValues)
-			.filter(([_, value]) => value !== "")
-			.map(([label, value]) => `{label:${label},value:${value}}`)
-			.join(',');
-		let finalSearch = "";
+	// 	const formData = new FormData(e.currentTarget);
+	// 	const searchValues = Object.fromEntries(formData.entries());
+	// 	const searchParams = Object.entries(searchValues)
+	// 		.filter(([_, value]) => value !== "")
+	// 		.map(([label, value]) => `{label:${label},value:${value}}`)
+	// 		.join(',');
+	// 	let finalSearch = "";
 
-		if (searchParams !== "") {
-			finalSearch = `${searchParams}`
-		}
+	// 	if (searchParams !== "") {
+	// 		finalSearch = `${searchParams}`
+	// 	}
 
-		setCurrentPage(1);
-		setLastSearchedValue(finalSearch);
-		getTableResponse(selectedForm, 1, 8, finalSearch, selectedFilter)
-	};
+	// 	setCurrentPage(1);
+	// 	setLastSearchedValue(finalSearch);
+	// 	getTableResponse(selectedForm, 1, 8, finalSearch, selectedFilter)
+	// };
 
 	const handleSampleCSVDownload = () => {
 		if (
@@ -1272,6 +1291,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 					</Button>
 				</div>
 			</div>
+
 			<Form form={form} onFinish={onFinish}>
 				{selectedFormFields?.content && Object.keys(selectedFormFields.content).length > 0 && (
 					<div className="w-full p-4 bg-white rounded-lg shadow-md">
@@ -1282,25 +1302,33 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 										.filter((item) => item?.name?.includes("search"))
 										.sort((a, b) => a.name.localeCompare(b.name))
 										.map((item, idx, arr) => (
-											<Form.Item
-												key={item.qid}
-												name={item.text}
-												className={arr.length > 5 ? "mb-2" : "mb-0"}
-											>
+											<>
 												{item?.type === "control_widget" || item.type.includes("date") ? (
-													<DatePicker
-														className="w-full"
-														format="DD/MM/YYYY"
-														placeholder={item.text}
-													/>
+													<Form.Item
+														key={item.qid}
+														name={item.text}
+														className={arr.length > 5 ? "mb-2" : "mb-0"}
+													>
+														<DatePicker
+															className="w-full"
+															format="DD/MM/YYYY"
+															placeholder={item.text}
+														/>
+													</Form.Item>
 												) : (
-													<Input
-														placeholder={item.text}
-														type={item?.type || "text"}
-														className="w-full"
-													/>
+													<Form.Item
+														key={item.qid}
+														name={item.text}
+														className={arr.length > 5 ? "mb-2" : "mb-0"}
+													>
+														<Input
+															placeholder={item.text}
+															type={item?.type || "text"}
+															className="w-full"
+														/>
+													</Form.Item>
 												)}
-											</Form.Item>
+											</>
 										))}
 								</div>
 							</div>
@@ -1311,7 +1339,6 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 										<Button
 											className="flex items-center gap-2 w-full lg:w-auto rounded-md text-white transition headerButton"
 											htmlType="submit"
-										// style={{ padding: "0.2rem 0.6rem" }}
 										>
 											<FaSearch size={18} />
 										</Button>
@@ -1321,7 +1348,6 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 					</div>
 				)}
 			</Form>
-
 
 			{tableResponse && selectedFormFields?.content ? (
 				<div className="card mt-5 bg-white rounded" style={{ position: 'relative' }}>
