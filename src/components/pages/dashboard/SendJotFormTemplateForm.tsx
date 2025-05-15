@@ -380,8 +380,12 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 			}
 		};
 
+		const sortedListableFields = [...listableFields].sort((a, b) =>
+		a.name.localeCompare(b.name)
+		);
+		
 		const columns = [
-			...listableFields.map(field => ({
+			...sortedListableFields.map(field => ({
 				title: field.text,
 				dataIndex: field.text,
 				key: field.text,
