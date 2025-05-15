@@ -21,16 +21,8 @@ import dayjs from 'dayjs';
 import { IoQrCode } from "react-icons/io5";
 
 let Url = process.env.NEXT_PUBLIC_BACKEND_URL;
-const SOCKET_URL = Url;
 
 const dateFormat = 'DD/MM/YYYY';
-
-const socket: Socket = io(SOCKET_URL, {
-	transports: ["websocket", "polling"],
-	reconnection: true,
-	reconnectionAttempts: 5,
-	reconnectionDelay: 1000,
-});
 
 const schema = yup
 	.object({
@@ -59,7 +51,6 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 	const itemsPerPage = 8;
 	const [selectedReportFilter, setSelectedReportFilter] = useState("last30Days");
 	const [isIframeLoading, setIsIframeLoading] = useState(true);
-	const [newRecordData, setNewRecordData] = useState(null);
 	const { emitSendJotForm } = useSocketContext();
 	const params = new URLSearchParams(window.location.search);
 	const companyData = { defaultLangCode: "en" };
@@ -71,14 +62,15 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 	const [form] = Form.useForm();
 	const { data: userData } = useSession();
 	const lastSearchRef = useRef(lastSearchedValue);
-	const filterRef     = useRef(selectedFilter);
+	const filterRef = useRef(selectedFilter);
+	const { socket } = useSocketContext();
 
 	useEffect(() => {
-	lastSearchRef.current = lastSearchedValue;
+		lastSearchRef.current = lastSearchedValue;
 	}, [lastSearchedValue]);
 
 	useEffect(() => {
-	filterRef.current = selectedFilter;
+		filterRef.current = selectedFilter;
 	}, [selectedFilter]);
 
 	const handlePageChange = (pageNumber: number) => {
@@ -97,61 +89,44 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 		setIsReportModal(false);
 	}
 
-	// const handleSocketEvents = () => {
-	// 	// Handle successful connection
-	// 	socket.on("connect", () => {
-	// 		console.log("Connected to Socket.IO server:", socket.id);
-	// 	});
-
-	// 	// Handle disconnection
-	// 	socket.on("disconnect", (reason) => {
-	// 		console.warn("Disconnected from Socket.IO server:", reason);
-	// 	});
-
-	// 	// Handle connection errors
-	// 	socket.on("connect_error", (error) => {
-	// 		console.error("Socket.IO connection error:", error);
-	// 	});
-
-	// 	// Listen for custom events
-	// 	socket.on("dataSaved", (data) => {
-	// 		console.info("datadatadatadata",data);
-	// 		if (data?.formId) {
-	// 			getTableResponse(data.formId, 1, 8, lastSearchedValue, selectedFilter);
-	// 		}
-	// 	});
-	// };
-
 	useEffect(() => {
-	socket.on("connect", () => {
-		console.log("Socket connected:", socket.id);
-	});
-	socket.on("disconnect", (reason) => {
-		console.warn("Socket disconnected:", reason);
-	});
-	socket.on("connect_error", (err) => {
-		console.error("Socket error:", err);
-	});
+		if (!socket) return;
 
-	socket.on("dataSaved", ({ formId }) => {
-		console.info("THIS IS RUNNING!!!!!");
-		getTableResponse(
-		formId,
-		1,
-		itemsPerPage,
-		lastSearchRef.current,
-		filterRef.current
-		);
-	});
+		const handleConnect = () => {
+			console.log("Socket connected:", socket.id);
+		};
 
-	return () => {
-		socket.off("connect");
-		socket.off("disconnect");
-		socket.off("connect_error");
-		socket.off("dataSaved");
-		socket.disconnect();
-	};
-	}, []);
+		const handleDisconnect = (reason: string) => {
+			console.warn("Socket disconnected:", reason);
+		};
+
+		const handleError = (err: any) => {
+			console.error("Socket error:", err);
+		};
+
+		const handleDataSaved = ({ formId }: { formId: string }) => {
+			console.info("📦 Table will refresh due to dataSaved");
+			getTableResponse(
+				formId,
+				1,
+				itemsPerPage,
+				lastSearchRef.current,
+				filterRef.current
+			);
+		};
+
+		socket.on("connect", handleConnect);
+		socket.on("disconnect", handleDisconnect);
+		socket.on("connect_error", handleError);
+		socket.on("dataSaved", handleDataSaved);
+
+		return () => {
+			socket.off("connect", handleConnect);
+			socket.off("disconnect", handleDisconnect);
+			socket.off("connect_error", handleError);
+			socket.off("dataSaved", handleDataSaved);
+		};
+	}, [socket]);
 
 	type AssignedForm = {
 		id: number;
@@ -300,13 +275,15 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 		// const filteredKeys = sortedListableFields.map(field => field.text);
 
 		const normalizeTableData = (data: any, labelFields: any) => {
-			const fieldLabelMap = {};
+			const fieldLabelMap: Record<string, string> = {};
 			labelFields.forEach(field => {
 				fieldLabelMap[field.name] = field.text;
 			});
 
-			return data.map(entry => {
-				const normalized = {};
+			// Normalize entries
+			const normalizedData = data.map(entry => {
+				const normalized: Record<string, any> = {};
+
 				for (let key in entry) {
 					if (key === "formData") {
 						normalized.formData = entry.formData;
@@ -327,9 +304,18 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 
 					normalized[mappedKey] = value;
 				}
+
 				return normalized;
 			});
+
+			// Filter out entries that only have 'formData' key and no other keys
+			return normalizedData.filter(item => {
+				const keys = Object.keys(item);
+				// Keep only those entries with keys besides 'formData'
+				return keys.length > 1 || (keys.length === 1 && keys[0] !== 'formData');
+			});
 		};
+
 
 		const cleanTableData = normalizeTableData(tableData, listableFields);
 
@@ -408,9 +394,9 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 		};
 
 		const sortedListableFields = [...listableFields].sort((a, b) =>
-		a.name.localeCompare(b.name)
+			a.name.localeCompare(b.name)
 		);
-		
+
 		const columns = [
 			...sortedListableFields.map(field => ({
 				title: field.text,
@@ -427,36 +413,36 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 				title: 'Action',
 				key: 'action',
 				fixed: 'right',
-			render: (_: any, item: any, rowIndex: number) => (
-  <div className="flex flex-wrap gap-2 justify-center items-center">
-    <Button
-      title="Copy URL"
-      onClick={() => copyFormUrl(item)}
-      disabled={!!item?.formData?.submission_id}
-      className={`group flex items-center justify-center w-8 h-8 text-white font-medium rounded-full text-xs text-center
+				render: (_: any, item: any, rowIndex: number) => (
+					<div className="flex flex-wrap gap-2 justify-center items-center">
+						<Button
+							title="Copy URL"
+							onClick={() => copyFormUrl(item)}
+							disabled={!!item?.formData?.submission_id}
+							className={`group flex items-center justify-center w-8 h-8 text-white font-medium rounded-full text-xs text-center
         ${item?.formData?.submission_id
-          ? 'bg-[#005d4d] cursor-not-allowed'
-          : 'bg-green-700 hover:bg-green-800 focus:outline-none focus:ring-4 focus:ring-green-300 dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-green-800'}
+									? 'bg-[#005d4d] cursor-not-allowed'
+									: 'bg-green-700 hover:bg-green-800 focus:outline-none focus:ring-4 focus:ring-green-300 dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-green-800'}
       `}
-      style={{
-        background: item?.formData?.submission_id ? '#005d4d' : '#008080',
-        padding: 0,
-      }}
-    >
-      <FaCopy
-        size={14}
-        className={`transition-colors duration-200 ${!item?.formData?.submission_id ? 'group-hover:text-white' : 'text-gray-400'
-          }`}
-      />
-    </Button>
+							style={{
+								background: item?.formData?.submission_id ? '#005d4d' : '#008080',
+								padding: 0,
+							}}
+						>
+							<FaCopy
+								size={14}
+								className={`transition-colors duration-200 ${!item?.formData?.submission_id ? 'group-hover:text-white' : 'text-gray-400'
+									}`}
+							/>
+						</Button>
 
-    {item?.formData?.submission_id ? (
-      <button
-        title="Download PDF Response"
-        onClick={() =>
-          handlePDFDownload(item?.formData?.form_id, item?.formData?.submission_id, rowIndex)
-        }
-        className={`
+						{item?.formData?.submission_id ? (
+							<button
+								title="Download PDF Response"
+								onClick={() =>
+									handlePDFDownload(item?.formData?.form_id, item?.formData?.submission_id, rowIndex)
+								}
+								className={`
           w-8 h-8 
           flex items-center justify-center 
           text-white 
@@ -470,37 +456,37 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
           disabled:opacity-70
           disabled:cursor-not-allowed
         `}
-        disabled={downloadingPDF === rowIndex}
-      >
-        {downloadingPDF === rowIndex ? (
-          <svg
-            className="animate-spin h-3.5 w-3.5"
-            viewBox="0 0 24 24"
-            fill="none"
-          >
-            <circle
-              className="opacity-25"
-              cx="12"
-              cy="12"
-              r="10"
-              stroke="currentColor"
-              strokeWidth="4"
-            />
-            <path
-              className="opacity-75"
-              fill="currentColor"
-              d="M4 12a8 8 0 018-8v8H4z"
-            />
-          </svg>
-        ) : (
-          <FaFilePdf size={14} />
-        )}
-      </button>
-    ) : (
-      <button
-        title="Send Form"
-        onClick={() => handleUploadedSend(item)}
-        className={`
+								disabled={downloadingPDF === rowIndex}
+							>
+								{downloadingPDF === rowIndex ? (
+									<svg
+										className="animate-spin h-3.5 w-3.5"
+										viewBox="0 0 24 24"
+										fill="none"
+									>
+										<circle
+											className="opacity-25"
+											cx="12"
+											cy="12"
+											r="10"
+											stroke="currentColor"
+											strokeWidth="4"
+										/>
+										<path
+											className="opacity-75"
+											fill="currentColor"
+											d="M4 12a8 8 0 018-8v8H4z"
+										/>
+									</svg>
+								) : (
+									<FaFilePdf size={14} />
+								)}
+							</button>
+						) : (
+							<button
+								title="Send Form"
+								onClick={() => handleUploadedSend(item)}
+								className={`
           w-8 h-8 
           flex items-center justify-center 
           text-white 
@@ -512,14 +498,14 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
           rounded-full 
           text-xs
         `}
-      >
-        <SendIcon size={14} />
-      </button>
-    )}
+							>
+								<SendIcon size={14} />
+							</button>
+						)}
 
-    <button
-      onClick={() => deleteRecord(item)}
-      className="
+						<button
+							onClick={() => deleteRecord(item)}
+							className="
         w-8 h-8 
         flex items-center justify-center 
         text-white 
@@ -530,11 +516,11 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
         rounded-full 
         text-xs
       "
-    >
-      <FaTrash size={12} />
-    </button>
-  </div>
-),
+						>
+							<FaTrash size={12} />
+						</button>
+					</div>
+				),
 
 			},
 		];
@@ -572,23 +558,6 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 			[name]: value,
 		}));
 	};
-
-	useEffect(() => {
-		socket.on("connect", () => {
-			console.info("Connected to Socket.IO server");
-		});
-
-		socket.on("dataSaved", (data) => {
-				console.info("Connected to Socket.IO server");
-			if (data?.formId) {
-				getTableResponse(data.formId, 1, 8, lastSearchedValue, selectedFilter);
-			}
-		});
-
-		return () => {
-			socket.off("dataSaved");
-		};
-	}, [selectedForm]);
 
 	interface FormFields {
 		content: any[];

@@ -82,3 +82,11 @@ export interface SendLangCodeMessagePayloadType {
   station: number;
   langCode: string;
 }
+
+export interface ReceivedResponseType {
+  id: number | string;
+  station: number;
+  responseData: any; 
+  submittedAt?: string;
+  source?: "Form" | "Survey" | "API" | string;
+}

@@ -5,6 +5,7 @@ import {
   ReceivedMessageContent,
   ReceivedTemplateContent,
   ReceivedType,
+  ReceivedResponseType
 } from "../../../constant/types";
 
 interface MessageState {
@@ -16,50 +17,63 @@ interface MessageState {
     station: number;
   } | null;
   receivedLangCode: string | null;
+  receivedResponse: ReceivedResponseType | null;
   setReceivedContent: (content: ReceivedTemplateContent) => void;
   setReceivedMessage: (content: ReceivedMessageContent) => void;
-  setReceivedSurvey: ({
-    tag,
-    station,
-  }: {
-    tag: string;
-    station: number;
-  }) => void;
+  setReceivedSurvey: (survey: { tag: string; station: number }) => void;
   setReceivedLangCode: (langCode: string) => void;
-  clearReceivedMessage: (id: number) => void;
+  setReceivedResponse: (response: ReceivedResponseType) => void;
+  clearReceivedMessage: (station: number) => void;
   clearReceivedContent: () => void;
+  clearReceivedResponse: () => void;
 }
 
 export const useMessageStore = create<MessageState>((set, get) => ({
   receivedType: null,
   receivedContent: null,
+  receivedMessage: [],
   receivedSurvey: null,
   receivedLangCode: null,
+  receivedResponse: null,
+
   setReceivedContent: (receivedContent) =>
     set({ receivedContent, receivedType: receivedContent.type }),
-  receivedMessage: [],
+
   setReceivedMessage: (receivedMessage) =>
     set({
       receivedMessage: [...get().receivedMessage, receivedMessage],
       receivedType: receivedMessage.type,
     }),
+
   setReceivedSurvey: (receivedSurvey) =>
     set({
-      receivedSurvey: receivedSurvey,
+      receivedSurvey,
       receivedType: "Survey",
     }),
-  clearReceivedMessage: (station: number) => {
-    set({
-      receivedMessage: get().receivedMessage.filter(
-        (id) => id.station !== station,
-      ),
-    });
-  },
-  clearReceivedContent: () => {
-    set({ receivedContent: null });
-  },
+
   setReceivedLangCode: (langCode) =>
     set({
       receivedLangCode: langCode,
     }),
+
+  setReceivedResponse: (receivedResponse) =>
+    set({
+      receivedResponse,
+    }),
+
+  clearReceivedMessage: (station: number) => {
+    set({
+      receivedMessage: get().receivedMessage.filter(
+        (msg) => msg.station !== station
+      ),
+    });
+  },
+
+  clearReceivedContent: () => {
+    set({ receivedContent: null });
+  },
+
+  clearReceivedResponse: () => {
+    set({ receivedResponse: null });
+  },
 }));

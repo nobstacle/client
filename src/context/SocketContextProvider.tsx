@@ -14,6 +14,7 @@ import {
   SendTemplatePayloadType,
   SendLangCodeMessagePayloadType,
   SendJotFormTemplate,
+  ReceivedResponseType
 } from "../constant/types";
 import { useMessageStore } from "../lib/zustand/store/messageStore";
 import useTemplateStore from "../lib/zustand/store/templateStore";
@@ -21,7 +22,7 @@ import useTemplateStore from "../lib/zustand/store/templateStore";
 export const SocketContext = createContext<{
   socket: undefined | Socket<any, any>;
   emitSendTemplate: (data: SendTemplatePayloadType) => void;
-  emitSendJotForm: (data: SendJotFormTemplate, callback?: (response: any) => void) => void; 
+  emitSendJotForm: (data: SendJotFormTemplate, callback?: (response: any) => void) => void;
   emitSendMessage: (data: SendMessagePayloadType) => void;
   emitClearMessage: (data: CleanMessagesPayloadType) => void;
   emitLeaveChat: (data: CleanMessagesPayloadType) => void;
@@ -56,6 +57,7 @@ export const SocketContextProvider = ({
     clearReceivedMessage,
     setReceivedSurvey,
     setReceivedLangCode,
+    setReceivedResponse
   } = useMessageStore();
 
   const { addSurveyAnswer } = useTemplateStore();
@@ -82,6 +84,7 @@ export const SocketContextProvider = ({
     socketClient?.on("received-survey-answer", onReceivedSurveyAnswer);
     socketClient?.on("received-lang-code", onReceivedLangCode);
     socketClient?.on("jotForm-sent-successfully", onReceivedJotForm);
+    socketClient?.on("dataSaved", onDataSubmitted);
 
     return () => {
       socketClient?.off("user-joined", onConnect);
@@ -92,6 +95,7 @@ export const SocketContextProvider = ({
       socketClient?.off("received-survey-answer", onReceivedSurveyAnswer);
       socketClient?.off("received-lang-code", onReceivedLangCode);
       socketClient?.on("jotForm-sent-successfully", onReceivedJotForm);
+      socketClient?.on("dataSaved", onDataSubmitted);
     };
   }, [socketClient]);
 
@@ -131,14 +135,14 @@ export const SocketContextProvider = ({
         alert("Failed to send JotForm message.");
       }
     };
-  
+
     socketClient?.on("jotForm-sent-successfully", handleResponse);
-  
+
     return () => {
       socketClient?.off("jotForm-sent-successfully", handleResponse);
     };
   }, []);
-  
+
 
   const onReceivedMessage = (data: any) => {
     const parsedData = JSON.parse(data).data as ReceivedMessageContent;
@@ -148,7 +152,7 @@ export const SocketContextProvider = ({
         ...parsedData,
         message:
           session.data?.user.Roles?.includes("Admin") ||
-          session.data?.user.Roles?.includes("Staff")
+            session.data?.user.Roles?.includes("Staff")
             ? parsedData.originalMessage
             : parsedData.message,
       });
@@ -208,22 +212,40 @@ export const SocketContextProvider = ({
   };
 
   const onReceivedJotForm = (data: any) => {
-    console.log("📩 Received JotForm data:", data);
-    
+    console.log("📩 Received JotForm Submission:", data);
+
     try {
       const parsedRes = JSON.parse(data);
       if (parsedRes.status === 400) {
         console.warn("⚠️ JotForm response has error:", parsedRes);
         return;
       }
-  
+
       const parsedData = parsedRes.data as ReceivedTemplateContent;
       console.log("✅ Parsed JotForm Data:", parsedData);
-      
+
       setReceivedContent(parsedData); // Store in Zustand for UI update
-  
+
     } catch (error) {
       console.error("❌ Error parsing JotForm response:", error);
+    }
+  };
+
+  const onDataSubmitted = (data: any) => {
+    console.log("📩 Received JotForm data:", data);
+
+    try {
+      const parsedRes = JSON.parse(data);
+      if (parsedRes.status === 400) {
+        console.warn("⚠️ JotForm data error:", parsedRes);
+        return;
+      }
+
+      const parsedData = parsedRes.data as ReceivedResponseType;
+      setReceivedResponse(parsedData);
+
+    } catch (error) {
+      console.error("❌ Failed to parse JotForm data:", error);
     }
   };
 
@@ -233,13 +255,13 @@ export const SocketContextProvider = ({
 
   const emitSendJotForm = (data: SendJotFormTemplate, callback?: (response: any) => void) => {
     console.log("Emitting send-jotForm event with data:", data);
-  
+
     socketClient?.emit("send-jotForm", data, (response: any) => {
       console.log("Received response from server for send-jotForm:", response);
       if (callback) callback(response);
     });
-  };  
-  
+  };
+
   const emitSendMessage = (data: SendMessagePayloadType) => {
     socketClient?.emit("send-message", data);
   };
