@@ -409,3 +409,11 @@ button {
   box-shadow: none !important;
   cursor: not-allowed !important;
 }
+
+.customSidebar li {
+  font-size: clamp(0.7rem, 1vw, 1.2rem);
+}
+
+/* .customSidebar li {
+  font-size: 0.9rem;
+} */

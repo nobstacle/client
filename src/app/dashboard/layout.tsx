@@ -60,8 +60,8 @@ const Sidebar = async () => {
   return (
     <div
       id="child2"
-      className="flex h-full  flex-col bg-primary"
-      style={{ width: "10%" }}
+      className="flex h-full  flex-col bg-primary customSidebar"
+      style={{ width: "11.5%" }}
     >
       <div
         style={{
@@ -79,19 +79,19 @@ const Sidebar = async () => {
 
       <div className="flex h-full w-full flex-col justify-between">
         <ul className="w-full">
-        {(user?.user.Roles?.includes("Admin") || user?.user.Roles?.includes("User") || user?.user.Roles?.includes("Staff")) && (
-          <>
-          <ClientLink href="/dashboard/text" title="Text" />
-          <ClientLink href="/dashboard/chat" title="Chat" />
-          <ClientLink href="/dashboard/image" title="Image" />
-          <ClientLink href="/dashboard/video" title="Video" />
-          <ClientLink href="/dashboard/slideshow" title="Slideshow" />
-          <ClientLink href="/dashboard/maps" title="Maps" />
-          <ClientLink href="/dashboard/survey" title="Survey" />
-          <ClientLink href="/dashboard/website" title="Website" />
-          <ClientLink href="/dashboard/form" title="Form" />
-          </>
-        )}
+          {(user?.user.Roles?.includes("Admin") || user?.user.Roles?.includes("User") || user?.user.Roles?.includes("Staff")) && (
+            <>
+              <ClientLink href="/dashboard/text" title="Text" />
+              <ClientLink href="/dashboard/chat" title="Chat" />
+              <ClientLink href="/dashboard/image" title="Image" />
+              <ClientLink href="/dashboard/video" title="Video" />
+              <ClientLink href="/dashboard/slideshow" title="Slideshow" />
+              <ClientLink href="/dashboard/maps" title="Maps" />
+              <ClientLink href="/dashboard/survey" title="Survey" />
+              <ClientLink href="/dashboard/website" title="Website" />
+              <ClientLink href="/dashboard/form" title="Form" />
+            </>
+          )}
 
           {user?.user.Roles?.includes("Admin") && (
             <ClientLink href="/dashboard/settings" title="Settings" />
@@ -102,10 +102,10 @@ const Sidebar = async () => {
 
           {user?.user.Roles?.includes("SAdmin") && (
             <>
-            {/* <ClientLink href="/dashboard/superAdminDashboard" title="Dashboard" /> */}
-            <ClientLink href="/dashboard/asignForms" title="Asign Forms" />
+              {/* <ClientLink href="/dashboard/superAdminDashboard" title="Dashboard" /> */}
+              <ClientLink href="/dashboard/asignForms" title="Asign Forms" />
             </>
-          )} 
+          )}
 
         </ul>
         <ul className="w-full">
