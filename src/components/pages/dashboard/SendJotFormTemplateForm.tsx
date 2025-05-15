@@ -6,7 +6,7 @@ import { useSocketContext } from "../../../context/SocketContextProvider";
 import "../../../styles/base.css";
 import { useSession } from "next-auth/react";
 import axios from 'axios';
-import { io, Socket } from "socket.io-client";
+// import { io, Socket } from "socket.io-client";
 import { FaFileDownload, FaFileUpload, FaCopy, FaFilePdf, FaSearch, FaTrash } from "react-icons/fa";
 import { toast, Bounce } from 'react-toastify';
 import { BsFillSendPlusFill } from "react-icons/bs";
@@ -308,12 +308,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 				return normalized;
 			});
 
-			// Filter out entries that only have 'formData' key and no other keys
-			return normalizedData.filter(item => {
-				const keys = Object.keys(item);
-				// Keep only those entries with keys besides 'formData'
-				return keys.length > 1 || (keys.length === 1 && keys[0] !== 'formData');
-			});
+			return normalizedData;
 		};
 
 

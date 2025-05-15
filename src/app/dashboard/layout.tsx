@@ -60,8 +60,8 @@ const Sidebar = async () => {
   return (
     <div
       id="child2"
-      className="flex h-full  flex-col bg-primary customSidebar"
-      style={{ width: "11.5%" }}
+  className="flex h-full flex-col bg-primary customSidebar 
+             w-[18%] sm:w-[16%] md:w-[13%] lg:w-[11.5%] xl:w-[10%]"
     >
       <div
         style={{
