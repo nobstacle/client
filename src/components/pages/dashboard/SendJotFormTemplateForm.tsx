@@ -60,7 +60,26 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 	const [selectedReportFilter, setSelectedReportFilter] = useState("last30Days");
 	const [isIframeLoading, setIsIframeLoading] = useState(true);
 	const [newRecordData, setNewRecordData] = useState(null);
+	const { emitSendJotForm } = useSocketContext();
+	const params = new URLSearchParams(window.location.search);
+	const companyData = { defaultLangCode: "en" };
+	const [assignedForms, setAssignedForms] = useState<AssignedForm[]>([]);
+	const [selectedForm, setSelectedForm] = useState<string | null>(null)
+	const [inputValues, setInputValues] = useState<InputValues>({});
+	const [isReportModal, setIsReportModal] = useState(false);
+	const [tableResponse, setTableResponse] = useState<{ data: string | any[]; uniqueKeys?: [] } | null>(null);
 	const [form] = Form.useForm();
+	const { data: userData } = useSession();
+	const lastSearchRef = useRef(lastSearchedValue);
+	const filterRef     = useRef(selectedFilter);
+
+	useEffect(() => {
+	lastSearchRef.current = lastSearchedValue;
+	}, [lastSearchedValue]);
+
+	useEffect(() => {
+	filterRef.current = selectedFilter;
+	}, [selectedFilter]);
 
 	const handlePageChange = (pageNumber: number) => {
 		setCurrentPage(pageNumber);
@@ -73,47 +92,65 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 	}
 	const closeSendModal = () => setIsSendModalOpen(false);
 
-	// const closeDeleteModal = () => {
-	// 	setIsDeleteModal(false);
-	// 	SetRecordData(null);
-	// }
 
 	const closeReportModal = () => {
 		setIsReportModal(false);
 	}
 
-	const handleSocketEvents = () => {
-		// Handle successful connection
-		socket.on("connect", () => {
-			console.log("Connected to Socket.IO server:", socket.id);
-		});
+	// const handleSocketEvents = () => {
+	// 	// Handle successful connection
+	// 	socket.on("connect", () => {
+	// 		console.log("Connected to Socket.IO server:", socket.id);
+	// 	});
 
-		// Handle disconnection
-		socket.on("disconnect", (reason) => {
-			console.warn("Disconnected from Socket.IO server:", reason);
-		});
+	// 	// Handle disconnection
+	// 	socket.on("disconnect", (reason) => {
+	// 		console.warn("Disconnected from Socket.IO server:", reason);
+	// 	});
 
-		// Handle connection errors
-		socket.on("connect_error", (error) => {
-			console.error("Socket.IO connection error:", error);
-		});
+	// 	// Handle connection errors
+	// 	socket.on("connect_error", (error) => {
+	// 		console.error("Socket.IO connection error:", error);
+	// 	});
 
-		// Listen for custom events
-		socket.on("dataSaved", (data) => {
-			if (data?.formId) {
-				getTableResponse(data.formId, 1, 8, lastSearchedValue, selectedFilter);
-			}
-		});
-	};
+	// 	// Listen for custom events
+	// 	socket.on("dataSaved", (data) => {
+	// 		console.info("datadatadatadata",data);
+	// 		if (data?.formId) {
+	// 			getTableResponse(data.formId, 1, 8, lastSearchedValue, selectedFilter);
+	// 		}
+	// 	});
+	// };
 
 	useEffect(() => {
-		handleSocketEvents();
-		return () => {
-			socket.off("connect");
-			socket.off("disconnect");
-			socket.off("connect_error");
-			socket.off("dataSaved");
-		};
+	socket.on("connect", () => {
+		console.log("Socket connected:", socket.id);
+	});
+	socket.on("disconnect", (reason) => {
+		console.warn("Socket disconnected:", reason);
+	});
+	socket.on("connect_error", (err) => {
+		console.error("Socket error:", err);
+	});
+
+	socket.on("dataSaved", ({ formId }) => {
+		console.info("THIS IS RUNNING!!!!!");
+		getTableResponse(
+		formId,
+		1,
+		itemsPerPage,
+		lastSearchRef.current,
+		filterRef.current
+		);
+	});
+
+	return () => {
+		socket.off("connect");
+		socket.off("disconnect");
+		socket.off("connect_error");
+		socket.off("dataSaved");
+		socket.disconnect();
+	};
 	}, []);
 
 	type AssignedForm = {
@@ -124,16 +161,6 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 		createdAt: string;
 		updatedAt: string;
 	};
-
-	const { data: userData } = useSession();
-	const { emitSendJotForm } = useSocketContext();
-	const params = new URLSearchParams(window.location.search);
-	const companyData = { defaultLangCode: "en" };
-	const [assignedForms, setAssignedForms] = useState<AssignedForm[]>([]);
-	const [selectedForm, setSelectedForm] = useState<string | null>(null)
-	const [inputValues, setInputValues] = useState<InputValues>({});
-	const [isReportModal, setIsReportModal] = useState(false);
-	const [tableResponse, setTableResponse] = useState<{ data: string | any[]; uniqueKeys?: [] } | null>(null);
 	interface FormFields {
 		content: any[];
 	}
@@ -548,10 +575,11 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 
 	useEffect(() => {
 		socket.on("connect", () => {
-			console.log("Connected to Socket.IO server");
+			console.info("Connected to Socket.IO server");
 		});
 
 		socket.on("dataSaved", (data) => {
+				console.info("Connected to Socket.IO server");
 			if (data?.formId) {
 				getTableResponse(data.formId, 1, 8, lastSearchedValue, selectedFilter);
 			}
@@ -560,7 +588,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 		return () => {
 			socket.off("dataSaved");
 		};
-	}, []);
+	}, [selectedForm]);
 
 	interface FormFields {
 		content: any[];
