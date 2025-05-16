@@ -43,6 +43,7 @@ export interface SendMessagePayloadType {
   station: number;
   refType: ReceivedType;
   langCode: string;
+    uuid?: boolean;
 }
 
 export type ReceivedTemplateContent = {

@@ -164,6 +164,9 @@ export const Content: React.FC = () => {
     messageStore.receivedType === "WebsiteTemplateMessage" ||
     messageStore.receivedType === ("JotFormMessage" as any) 
   ) {
+    // let mainUrl = messageStore.receivedContent?.content;
+    // console.info("{messageStore.receivedContent?.content"mainUrl);
+
     return (
       <iframe
         className="h-full w-full"

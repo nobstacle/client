@@ -6,7 +6,6 @@ import { useSocketContext } from "../../../context/SocketContextProvider";
 import "../../../styles/base.css";
 import { useSession } from "next-auth/react";
 import axios from 'axios';
-// import { io, Socket } from "socket.io-client";
 import { FaFileDownload, FaFileUpload, FaCopy, FaFilePdf, FaSearch, FaTrash } from "react-icons/fa";
 import { toast, Bounce } from 'react-toastify';
 import { BsFillSendPlusFill } from "react-icons/bs";
@@ -27,7 +26,7 @@ const dateFormat = 'DD/MM/YYYY';
 const schema = yup
 	.object({
 		url: yup.string().url("Invalid URL format"),
-	})
+	});
 
 interface ManualInputValues {
 	[key: string]: string;
@@ -316,6 +315,9 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 
 		const handleUploadedSend = (data: any) => {
 			const result = {};
+			console.info("datadata", data)
+
+			let UUID = data?.formData?.uuid;
 
 			listableFields.forEach((field) => {
 				const label = field.text;
@@ -326,8 +328,8 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 				}
 			});
 
-			const dynamicUrl = buildUrl(selectedForm, result);
-			sendJotFormMessage(dynamicUrl);
+			const dynamicUrl = buildUrl(selectedForm, result, UUID);
+			sendJotFormMessage(dynamicUrl, data?.formData?.uuid);
 
 			toast.success('Form sent successfully!', {
 				position: "bottom-right",
@@ -630,7 +632,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 		resolver: yupResolver(schema),
 	});
 
-	const sendJotFormMessage = (content: string) => {
+	const sendJotFormMessage = (content: string, uuid: string) => {
 		emitSendJotForm(
 			{
 				refId: 1,
@@ -638,6 +640,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 				refType: "TextTemplateMessage",
 				station: Number(params.get("station") ?? 1),
 				directContent: content,
+				uuid: uuid,
 			},
 			(response) => {
 				alert(response?.success ? "JotForm message sent successfully!" : "Failed to send JotForm message.");
@@ -645,15 +648,19 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 		);
 	};
 
-	const buildUrl = (formId: string, inputValues: any) => {
-		const BASE_URL = `https://form.jotform.com/${formId}`;
-		for (const [key, value] of Object.entries(inputValues)) {
-			if (typeof value === 'string') {
-				params.append(key, value);
-			}
+const buildUrl = (formId: string, inputValues: any, UUID: any) => {
+	const params = new URLSearchParams();
+	params.append("uuid", UUID);
+	for (const [key, value] of Object.entries(inputValues)) {
+		if (typeof value === 'string') {
+			params.append(key, value);
 		}
-		return `${BASE_URL}?${params.toString()}`;
-	};
+	}
+
+	const url = `https://form.jotform.com/${formId}?${params.toString()}`;
+	console.info("Generated JotForm URL:", url);
+	return url;
+};
 
 	const getTableResponse = async (form_id: string | null, page: number, limit: number = 8, search: any = "", filter: string) => {
 		let API_URL = Url + `/api/jotform/responses/${form_id}?page=${page}&limit=${limit}`;
