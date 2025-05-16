@@ -47,7 +47,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 	const [selectedFilter, setSelectedFilter] = useState('all');
 	const [TableKey, setTableKey] = useState(0);
 	const [loader, setLoader] = useState(false);
-	const itemsPerPage = 8;
+	const itemsPerPage = 10;
 	const [selectedReportFilter, setSelectedReportFilter] = useState("last30Days");
 	const [isIframeLoading, setIsIframeLoading] = useState(true);
 	const { emitSendJotForm } = useSocketContext();
@@ -63,6 +63,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 	const lastSearchRef = useRef(lastSearchedValue);
 	const filterRef = useRef(selectedFilter);
 	const { socket } = useSocketContext();
+	let userROle = userData?.user?.Roles[0];
 
 	useEffect(() => {
 		lastSearchRef.current = lastSearchedValue;
@@ -401,7 +402,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 				key: field.text,
 				render: (text: any) => (
 					<div className="max-w-[200px] overflow-hidden text-ellipsis whitespace-nowrap min-w-[160px]">
-						{text || 'N/A'}
+						{text || '-'}
 					</div>
 				),
 				ellipsis: true,
@@ -411,7 +412,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 				key: 'action',
 				fixed: 'right',
 				render: (_: any, item: any, rowIndex: number) => (
-					<div className="flex flex-wrap gap-2 justify-center items-center">
+					<div className="flex flex-wrap gap-2  items-center">
 						<Button
 							title="Copy URL"
 							onClick={() => copyFormUrl(item)}
@@ -502,6 +503,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 
 						<button
 							onClick={() => deleteRecord(item)}
+							disabled={userROle !== 'Admin' ? true : false}
 							className="
         w-8 h-8 
         flex items-center justify-center 
@@ -512,6 +514,8 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
         font-medium 
         rounded-full 
         text-xs
+		disabled:opacity-80
+        disabled:cursor-not-allowed
       "
 						>
 							<FaTrash size={12} />
@@ -540,7 +544,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 					<Pagination
 						current={currentPage}
 						total={totalItems}
-						pageSize={8}
+						pageSize={10}
 						onChange={handlePageChange}
 						pageCount={calculatedTotalPages}
 					/>
@@ -607,7 +611,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 
 	useEffect(() => {
 		if (selectedForm) {
-			getTableResponse(selectedForm || null, 1, 8, lastSearchedValue, selectedFilter);
+			getTableResponse(selectedForm || null, 1, 10, lastSearchedValue, selectedFilter);
 		}
 	}, [selectedForm]);
 
@@ -648,21 +652,21 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 		);
 	};
 
-const buildUrl = (formId: string, inputValues: any, UUID: any) => {
-	const params = new URLSearchParams();
-	params.append("uuid", UUID);
-	for (const [key, value] of Object.entries(inputValues)) {
-		if (typeof value === 'string') {
-			params.append(key, value);
+	const buildUrl = (formId: string, inputValues: any, UUID: any) => {
+		const params = new URLSearchParams();
+		params.append("uuid", UUID);
+		for (const [key, value] of Object.entries(inputValues)) {
+			if (typeof value === 'string') {
+				params.append(key, value);
+			}
 		}
-	}
 
-	const url = `https://form.jotform.com/${formId}?${params.toString()}`;
-	console.info("Generated JotForm URL:", url);
-	return url;
-};
+		const url = `https://form.jotform.com/${formId}?${params.toString()}`;
+		console.info("Generated JotForm URL:", url);
+		return url;
+	};
 
-	const getTableResponse = async (form_id: string | null, page: number, limit: number = 8, search: any = "", filter: string) => {
+	const getTableResponse = async (form_id: string | null, page: number, limit: number = 10, search: any = "", filter: string) => {
 		let API_URL = Url + `/api/jotform/responses/${form_id}?page=${page}&limit=${limit}`;
 		if (search && (typeof search === 'string' ? search !== "" : search.length > 0)) {
 			let searchArray = search;
@@ -758,7 +762,7 @@ const buildUrl = (formId: string, inputValues: any, UUID: any) => {
 		setValue("url", value);
 		setSelectedForm(value);
 		setCurrentPage(1);
-		getTableResponse(value || null, 1, 8, lastSearchedValue, selectedFilter);
+		getTableResponse(value || null, 1, 10, lastSearchedValue, selectedFilter);
 	};
 
 	async function onSubmit(event: React.MouseEvent<HTMLButtonElement, MouseEvent>) {
@@ -811,7 +815,7 @@ const buildUrl = (formId: string, inputValues: any, UUID: any) => {
 				}
 			});
 
-			getTableResponse(selectedForm || null, 1, 8, lastSearchedValue, selectedFilter);
+			getTableResponse(selectedForm || null, 1, 10, lastSearchedValue, selectedFilter);
 
 			if (response.status === 201) {
 				if (show === 'true') {
@@ -958,7 +962,7 @@ const buildUrl = (formId: string, inputValues: any, UUID: any) => {
 
 		setCurrentPage(1);
 		setLastSearchedValue(searchParams);
-		getTableResponse(selectedForm, 1, 8, searchParams, selectedFilter);
+		getTableResponse(selectedForm, 1, 10, searchParams, selectedFilter);
 	};
 
 	// const onSearchSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -1031,7 +1035,7 @@ const buildUrl = (formId: string, inputValues: any, UUID: any) => {
 		setSelectedFilter(value);
 		setCurrentPage(1);
 		setTableKey((prev) => prev + 1);
-		getTableResponse(selectedForm || null, 1, 8, lastSearchedValue, value);
+		getTableResponse(selectedForm || null, 1, 10, lastSearchedValue, value);
 	};
 
 	const handleFileClick = () => {
@@ -1060,7 +1064,7 @@ const buildUrl = (formId: string, inputValues: any, UUID: any) => {
 				},
 			});
 			setCurrentPage(1);
-			getTableResponse(selectedForm || null, 1, 8, lastSearchedValue, selectedFilter);
+			getTableResponse(selectedForm || null, 1, 10, lastSearchedValue, selectedFilter);
 
 			if (response.status === 201) {
 				toast.success('Response uploaded successfully!', {

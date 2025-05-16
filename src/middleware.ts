@@ -172,7 +172,6 @@ export default withAuth(
           url.pathname = "/dashboard/superAdminDashboard";
           return NextResponse.redirect(url);
         }
-
       }
 
       if (isAuthenticated && isUser) {

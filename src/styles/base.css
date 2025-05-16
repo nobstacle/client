@@ -417,3 +417,30 @@ button {
 /* .customSidebar li {
   font-size: 0.9rem;
 } */
+
+
+.btn-teal {
+  background-color: #008080 !important;
+  border-color: #008080 !important;
+  color: white !important;
+}
+.btn-teal:hover {
+  background-color: #006666 !important; /* darker teal */
+}
+
+.btn-blue {
+  background-color: #3b5998 !important;
+  color: white !important;
+  border: none !important;
+}
+.btn-blue:hover {
+  background-color: #2d4373 !important;
+}
+
+.btn-red {
+  background-color: #b91c1c !important;
+  color: white !important;
+}
+.btn-red:hover {
+  background-color: #991b1b !important;
+}
