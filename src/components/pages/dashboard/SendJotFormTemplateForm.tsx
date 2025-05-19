@@ -105,6 +105,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 		};
 
 		const handleDataSaved = ({ formId }: { formId: string }) => {
+			setCurrentPage(1);
 			console.info("📦 Table will refresh due to dataSaved");
 			getTableResponse(
 				formId,
