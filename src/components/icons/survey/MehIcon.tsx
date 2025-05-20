@@ -1,4 +1,4 @@
-export const MehIcon = () => {
+export const MehIcon = ({ className = "" }) => {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -8,6 +8,7 @@ export const MehIcon = () => {
       xmlSpace="preserve"
       version="1.1"
       viewBox="0 0 500 500"
+         className={className}
     >
       <image
         width="500"

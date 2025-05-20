@@ -444,3 +444,10 @@ button {
 .btn-red:hover {
   background-color: #991b1b !important;
 }
+
+@media screen and (max-width:1300px) {
+.emoticonWrapper svg{
+width:500px !important;
+height:500px !important;
+}
+}

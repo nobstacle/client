@@ -1,6 +1,5 @@
 import * as React from "react";
 import { useSocketContext } from "../../../context/SocketContextProvider";
-
 import { useSearchParams } from "next/navigation";
 import {
   getShortcutControllerGetShortcutOneQueryKey,
@@ -15,6 +14,44 @@ import { MehIcon } from "../../icons/survey/MehIcon";
 import { NotBadIcon } from "../../icons/survey/NotBadIcon";
 import { VeryNiceIcon } from "../../icons/survey/VeryNiceIcon";
 import { GoodIcon } from "../../icons/survey/GoodIcon";
+
+// Add CSS to your global stylesheet or component styles
+const responsiveStyles = `
+  @media (max-width: 640px) {
+    .emoticonWrapper .icon-container {
+      width: 60px !important;
+      height: 60px !important;
+    }
+  }
+  
+  @media (min-width: 641px) and (max-width: 768px) {
+    .emoticonWrapper .icon-container {
+      width: 80px !important;
+      height: 80px !important;
+    }
+  }
+  
+  @media (min-width: 769px) and (max-width: 1024px) {
+    .emoticonWrapper .icon-container {
+      width: 100px !important;
+      height: 100px !important;
+    }
+  }
+  
+  @media (min-width: 1025px) and (max-width: 1300px){
+    .emoticonWrapper .icon-container {
+      width: 130px !important;
+      height: 130px !important;
+    }
+  }
+     @media (min-width: 1301px) {
+    .emoticonWrapper .icon-container {
+      width: 220px !important;
+      height: 220px !important;
+    }
+  }
+`;
+
 const SurveyAnswer: React.FC<{ tag: string }> = ({ tag }) => {
   const [emptyDefaultSlideshow, setEmptySlideshow] = React.useState(false);
   const [selectedVal, setSelectedVal] = React.useState<number>();
@@ -57,6 +94,7 @@ const SurveyAnswer: React.FC<{ tag: string }> = ({ tag }) => {
   const { company } = useCompanyStore();
 
   const sendSurveyAnswer = (value: number) => {
+    setSelectedVal(value);
     emitSendSurveyAnswer({
       tag,
       station: Number(params.get("station") ?? 1),
@@ -84,58 +122,43 @@ const SurveyAnswer: React.FC<{ tag: string }> = ({ tag }) => {
     }
   };
 
-  if (emptyDefaultSlideshow) return <div>Thank you for feedback!</div>;
+  if (emptyDefaultSlideshow) {
+    return (
+      <div className="text-center text-lg md:text-xl lg:text-2xl font-medium">
+        Thank you for your feedback!
+      </div>
+    );
+  }
 
   return (
-    <div className="flex flex-col gap-8">
-      <div className="flex gap-4">
-        {[1, 2, 3, 4, 5].map((val) => (
-          <button
-            key={val.toString()}
-            className="p-4"
-            style={{
-              border: selectedVal === val ? "4px solid rgb(59, 89, 152)" : 0,
-            }}
-            onClick={(e) => {
-              if (e.currentTarget.value) {
-                sendSurveyAnswer(parseInt(e.currentTarget.value, 10));
-              }
-            }}
-            value={val}
-          >
-            {val === 1 && (
-              <div>
-                <AngryIcon />
+    <>
+      <style jsx>{responsiveStyles}</style>
+      <div className="flex flex-col gap-4 md:gap-6 lg:gap-8 emoticonWrapper">
+        <div className="flex flex-wrap justify-center gap-3 md:gap-4 lg:gap-5">
+          {[1, 2, 3, 4, 5].map((val) => (
+            <button
+              key={val.toString()}
+              className="p-2 sm:p-3 md:p-4 transition-all duration-200"
+              style={{
+                border: selectedVal === val ? "4px solid rgb(59, 89, 152)" : "none",
+                borderRadius: "12px",
+                transform: selectedVal === val ? "scale(1.05)" : "scale(1)",
+              }}
+              onClick={() => sendSurveyAnswer(val)}
+              value={val}
+            >
+              <div className="icon-container">
+                {val === 1 && <AngryIcon className="icon w-full h-full" />}
+                {val === 2 && <MehIcon className="icon w-full h-full" />}
+                {val === 3 && <NotBadIcon className="icon w-full h-full" />}
+                {val === 4 && <GoodIcon className="icon w-full h-full" />}
+                {val === 5 && <VeryNiceIcon className="icon w-full h-full" />}
               </div>
-            )}
-
-            {val === 2 && (
-              <div>
-                <MehIcon />
-              </div>
-            )}
-
-            {val === 3 && (
-              <div>
-                <NotBadIcon />
-              </div>
-            )}
-
-            {val === 4 && (
-              <div>
-                <GoodIcon />
-              </div>
-            )}
-
-            {val === 5 && (
-              <div>
-                <VeryNiceIcon />
-              </div>
-            )}
-          </button>
-        ))}
+            </button>
+          ))}
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 

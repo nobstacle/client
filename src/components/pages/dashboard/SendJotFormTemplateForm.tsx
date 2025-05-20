@@ -867,6 +867,50 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 		}
 	};
 
+const handleBlankUpload = async () => {
+  const uploadURL = Url + `/api/jotform/upload-blank-record/${selectedForm || ""}`;
+
+  try {
+    const response = await axios.post(uploadURL, {}, {
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (response.status === 201) {
+      getTableResponse(selectedForm || null, 1, 10, lastSearchedValue, selectedFilter);
+      closeModal();
+      return response?.data?.data;
+    } else {
+      toast.error(response.data.message || 'Unable to create blank record.', {
+        position: "bottom-right",
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: false,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+        theme: "colored",
+        transition: Bounce,
+      });
+      closeModal();
+    }
+  } catch (error) {
+    console.error('Upload error:', error);
+    toast.error('Unable to create blank record. Please try again.', {
+      position: "bottom-right",
+      autoClose: 5000,
+      hideProgressBar: false,
+      closeOnClick: false,
+      pauseOnHover: true,
+      draggable: true,
+      progress: undefined,
+      theme: "colored",
+      transition: Bounce,
+    });
+  }
+};
+
 	// const handleBulkUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
 	// 	if (!e.target.files || e.target.files.length === 0) {
 	// 		console.error("No file selected");
@@ -1185,7 +1229,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 	};
 
 	const sendBlankForm = async () => {
-		let uploadBlankRecord = await handleManualUpload('false');
+		let uploadBlankRecord = await handleBlankUpload();
 		if (uploadBlankRecord) {
 			let uuid = uploadBlankRecord?.uuid;
 			let url = "";
@@ -1212,7 +1256,6 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 					})
 					.catch((err) => console.error("Failed to copy URL:", err));
 			}
-
 		}
 	}
 
