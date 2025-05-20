@@ -33,25 +33,31 @@ const FormByUUID = () => {
     }
   }, [uuid]);
 
-  const buildUrl = (inputValues: any) => {
+  const buildUrl = (inputValues: Record<string, string>) => {
     const BASE_URL = `https://form.jotform.com/${formId}`;
     const params = new URLSearchParams();
 
-    const currentUrl = window.location.href;
-    const uuidMatch = currentUrl.match(/forms\/([a-f0-9-]+)/i);
-    const uuid = uuidMatch ? uuidMatch[1] : null;
+    const uuidMatch = window.location.href.match(/forms\/([a-f0-9-]+)/i);
+    if (uuidMatch) params.append("uuid", uuidMatch[1]);
 
-    if (uuid) {
-      params.append('uuid', uuid);
-    }
+    const rawData = formData?.data?.data;
+    const answers: Record<string, any> =
+      typeof rawData === "string" ? JSON.parse(rawData) : (rawData || {});
 
-    const answers =
-      typeof formData?.data?.data === 'string' ? JSON.parse(formData?.data?.data) : formData?.data?.data;
+    for (const [answerKey, answerValue] of Object.entries(answers)) {
+      let paramName = inputValues[answerKey];
 
-    for (const [key, value] of Object.entries(answers || {})) {
-      const questionLabel = inputValues[key];
-      if (questionLabel && value !== undefined && value !== null) {
-        params.append(key, value);
+      if (!paramName) {
+        const match = Object.entries(inputValues)
+          .find(([_mapKey, mapVal]) => mapVal === answerKey);
+        if (match) {
+          const [mapKey] = match;
+          paramName = mapKey;
+        }
+      }
+
+      if (paramName && answerValue != null) {
+        params.append(paramName, String(answerValue));
       }
     }
 
@@ -87,7 +93,6 @@ const FormByUUID = () => {
         });
 
         let url = buildUrl(result);
-        console.info("urlurlurl",url);
         setFormUrl(url);
       } catch (error: any) {
         console.error({ error });
@@ -96,8 +101,6 @@ const FormByUUID = () => {
 
     fetchFormFields();
   }, [formId]);
-
-
 
   return (
     <div style={{ background: 'white', height: '100vh', width: '100%' }}>

@@ -18,6 +18,7 @@ import { FaChartBar } from "react-icons/fa";
 import { DatePicker, Input, Form } from 'antd';
 import dayjs from 'dayjs';
 import { IoQrCode } from "react-icons/io5";
+import Papa from 'papaparse';
 
 let Url = process.env.NEXT_PUBLIC_BACKEND_URL;
 
@@ -667,6 +668,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 		return url;
 	};
 
+
 	const getTableResponse = async (form_id: string | null, page: number, limit: number = 10, search: any = "", filter: string) => {
 		let API_URL = Url + `/api/jotform/responses/${form_id}?page=${page}&limit=${limit}`;
 		if (search && (typeof search === 'string' ? search !== "" : search.length > 0)) {
@@ -1046,65 +1048,59 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 
 	const handleBulkUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
 		setLoader(true);
-		if (!e.target.files || e.target.files.length === 0) {
-			console.error("No file selected");
+
+		const file = e.target.files?.[0];
+		if (!file) {
+			toast.error("No file selected");
+			setLoader(false);
 			return;
 		}
 
-		const file = e.target.files[0];
-		const API_URL = `${Url}/api/jotform/upload/${selectedForm || ""}`;
+		Papa.parse(file, {
+			header: true,
+			skipEmptyLines: true,
+			complete: async ({ data, errors }) => {
+				if (errors.length > 0) {
+					console.error("CSV parse errors:", errors);
+					errors.forEach(err =>
+						console.warn(`Row ${err.row}: ${err.code} — ${err.message}`)
+					);
+					toast.error(`CSV parse error on row ${errors[0].row}: ${errors[0].message}`);
+					setLoader(false);
+					return;
+				}
 
-		const formData = new FormData();
-		formData.append("formId", selectedForm || "");
-		formData.append("data", file);
+				const payload = { data };
+				try {
+					const response = await axios.post(
+						`${Url}/api/jotform/upload/${selectedForm}`,
+						payload,
+						{ headers: { "Content-Type": "application/json" } }
+					);
 
-		try {
-			const response = await axios.post(API_URL, formData, {
-				headers: {
-					"Content-Type": "multipart/form-data",
-				},
-			});
-			setCurrentPage(1);
-			getTableResponse(selectedForm || null, 1, 10, lastSearchedValue, selectedFilter);
-
-			if (response.status === 201) {
-				toast.success('Response uploaded successfully!', {
-					position: "bottom-right",
-					autoClose: 5000,
-					hideProgressBar: false,
-					closeOnClick: false,
-					pauseOnHover: true,
-					draggable: true,
-					progress: undefined,
-					theme: "colored",
-					transition: Bounce,
-				});
-			} else {
-				toast.error('Unable to upload response.', {
-					position: "bottom-right",
-					autoClose: 5000,
-					hideProgressBar: false,
-					closeOnClick: false,
-					pauseOnHover: true,
-					draggable: true,
-					progress: undefined,
-					theme: "colored",
-					transition: Bounce,
-				});
-			}
-		} catch (error) {
-			toast.error('Unable to upload response.', {
-				position: "bottom-right",
-				autoClose: 5000,
-				hideProgressBar: false,
-				closeOnClick: false,
-				pauseOnHover: true,
-				draggable: true,
-				progress: undefined,
-				theme: "colored",
-				transition: Bounce,
-			});
-		}
+					if (response.status === 201) {
+						toast.success("Bulk data uploaded successfully!", {
+							position: "bottom-right",
+							autoClose: 5000,
+							theme: "colored",
+						});
+						getTableResponse(selectedForm, 1, 10, lastSearchedValue, selectedFilter);
+					} else {
+						toast.error("Upload failed: server returned " + response.status);
+					}
+				} catch (uploadErr: any) {
+					console.error("Upload error:", uploadErr);
+					toast.error("Upload failed: " + (uploadErr.message || "Unknown error"));
+				} finally {
+					setLoader(false);
+				}
+			},
+			error: (err) => {
+				console.error("Papa Parse fatal error:", err);
+				toast.error("Error parsing CSV: " + err.message);
+				setLoader(false);
+			},
+		});
 	};
 
 	const openReportModel = () => {
