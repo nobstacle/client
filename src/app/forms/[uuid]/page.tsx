@@ -33,37 +33,63 @@ const FormByUUID = () => {
     }
   }, [uuid]);
 
-  const buildUrl = (inputValues: Record<string, string>) => {
-    const BASE_URL = `https://form.jotform.com/${formId}`;
-    const params = new URLSearchParams();
+const buildUrl = (
+  inputValues: Record<string, string>
+): string => {
+  const BASE_URL = `https://form.jotform.com/${formId}`;
+  const params = new URLSearchParams();
 
-    const uuidMatch = window.location.href.match(/forms\/([a-f0-9-]+)/i);
-    if (uuidMatch) params.append("uuid", uuidMatch[1]);
+  // Handle UUID from URL
+  const uuidMatch = window.location.href.match(/forms\/([a-f0-9-]+)/i);
+  if (uuidMatch) {
+    params.append("uuid", uuidMatch[1]);
+  }
 
-    const rawData = formData?.data?.data;
-    const answers: Record<string, any> =
-      typeof rawData === "string" ? JSON.parse(rawData) : (rawData || {});
+  const rawData = formData?.data?.data;
+  const answers: Record<string, any> =
+    typeof rawData === "string" ? JSON.parse(rawData) : rawData || {};
 
-    for (const [answerKey, answerValue] of Object.entries(answers)) {
-      let paramName = inputValues[answerKey];
+  // Create a mapping from labels to parameter keys
+  const labelToParamKey: Record<string, string> = {};
+  Object.entries(inputValues).forEach(([paramKey, label]) => {
+    if (label && typeof label === 'string') {
+      const normLabel = label.toLowerCase().trim();
+      labelToParamKey[normLabel] = paramKey;
+    }
+  });
 
-      if (!paramName) {
-        const match = Object.entries(inputValues)
-          .find(([_mapKey, mapVal]) => mapVal === answerKey);
-        if (match) {
-          const [mapKey] = match;
-          paramName = mapKey;
+  // For each answer in the form data
+  Object.entries(answers).forEach(([answerKey, answerValue]) => {
+    if (answerValue == null) return;
+
+    // Find the matching parameter key from inputValues
+    let paramKey = null;
+    
+    // First, check if the answer key directly matches a key in inputValues
+    if (inputValues[answerKey] !== undefined) {
+      paramKey = answerKey;
+    } else {
+      // Try to match based on the label
+      const normAnswerKey = answerKey.toLowerCase().trim();
+      
+      // Try to find a match by label
+      for (const [key, label] of Object.entries(inputValues)) {
+        const normLabel = label.toLowerCase().trim();
+        if (normLabel === normAnswerKey) {
+          paramKey = key;
+          break;
         }
-      }
-
-      if (paramName && answerValue != null) {
-        params.append(paramName, String(answerValue));
       }
     }
 
-    return `${BASE_URL}?${params.toString()}`;
-  };
+    // If we found a matching parameter key, add it to the URL params
+    if (paramKey) {
+      params.append(paramKey, String(answerValue));
+    }
+  });
 
+  return `${BASE_URL}?${params.toString()}`;
+};
   useEffect(() => {
     const fetchFormFields = async () => {
       if (!formId) return;
@@ -93,6 +119,7 @@ const FormByUUID = () => {
         });
 
         let url = buildUrl(result);
+        console.info("CHECK THE UKLR", url)
         setFormUrl(url);
       } catch (error: any) {
         console.error({ error });
