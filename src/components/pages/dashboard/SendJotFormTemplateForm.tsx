@@ -148,6 +148,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 			getTableResponse(selectedForm, currentPage, pageSize, lastSearchedValue, selectedFilter);
 		}
 	}, [currentPage, pageSize, selectedForm]);
+
 	interface TableComponentProps {
 		tableData: any[];
 		uniqueKeys: string[];
@@ -318,7 +319,6 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 
 			return normalizedData;
 		};
-
 
 		const cleanTableData = normalizeTableData(tableData, listableFields);
 
@@ -673,7 +673,6 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 		return url;
 	};
 
-
 	const getTableResponse = async (form_id: string | null, page: number, limit: number = 10, search: any = "", filter: string) => {
 		let API_URL = Url + `/api/jotform/responses/${form_id}?page=${page}&limit=${limit}`;
 		if (search && (typeof search === 'string' ? search !== "" : search.length > 0)) {
@@ -814,7 +813,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 			data: manualInputValues
 		};
 
-		const uploadURL = Url + `/api/jotform/upload/${selectedForm || ""}`;
+		const uploadURL = `${Url}/api/jotform/upload-single-record/${selectedForm || ""}`;
 
 		try {
 			const response = await axios.post(uploadURL, formData, {
