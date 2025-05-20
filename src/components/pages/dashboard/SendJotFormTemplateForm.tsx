@@ -1503,7 +1503,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 						onClick={onSubmit}
 						className="customSearchButton ml-4 text-white px-6 py-2 rounded-md flex gap-2"
 					>
-						Send <FiSend />
+						Send <SendIcon />
 					</Button>
 					<Button
 						onClick={closeModal}
