@@ -48,7 +48,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 	const [selectedFilter, setSelectedFilter] = useState('all');
 	const [TableKey, setTableKey] = useState(0);
 	const [loader, setLoader] = useState(false);
-	const itemsPerPage = 10;
+	const [itemsPerPage, setitemsPerPage] = useState(10);
 	const [selectedReportFilter, setSelectedReportFilter] = useState("last30Days");
 	const [isIframeLoading, setIsIframeLoading] = useState(true);
 	const { emitSendJotForm } = useSocketContext();
@@ -64,6 +64,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 	const lastSearchRef = useRef(lastSearchedValue);
 	const filterRef = useRef(selectedFilter);
 	const { socket } = useSocketContext();
+	const [pageSize, setPageSize] = useState(10);
 	let userROle = userData?.user?.Roles[0];
 
 	useEffect(() => {
@@ -144,10 +145,9 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 
 	useEffect(() => {
 		if (selectedForm) {
-			getTableResponse(selectedForm, currentPage, itemsPerPage, lastSearchedValue, selectedFilter);
+			getTableResponse(selectedForm, currentPage, pageSize, lastSearchedValue, selectedFilter);
 		}
-	}, [currentPage])
-
+	}, [currentPage, pageSize, selectedForm]);
 	interface TableComponentProps {
 		tableData: any[];
 		uniqueKeys: string[];
@@ -217,18 +217,24 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 	}) => {
 		const [downloadingPDF, setDownloadingPDF] = useState<number | null>(null);
 
-		const handlePageChange = (page: number) => {
+		const handlePageChange = (page: number, size?: number) => {
 			setLoader(true);
-			if (page > 0 && page <= totalPages) {
-				setCurrentPage(page);
+			if (size && size !== pageSize) {
+				setPageSize(size);
+				page = 1;
 			}
+			setCurrentPage(page);
+		};
+
+		const handlePageSizeChange = (current, size) => {
+			setitemsPerPage(size);
+			setCurrentPage(1);
 		};
 
 		// If no data is available
 		if (!tableData || tableData.length === 0) {
 			return (
 				<div className="grid gap-4 w-100">
-					{/* Your "No response available" SVG and message */}
 				</div>
 			);
 		}
@@ -318,7 +324,6 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 
 		const handleUploadedSend = (data: any) => {
 			const result = {};
-			console.info("datadata", data)
 
 			let UUID = data?.formData?.uuid;
 
@@ -546,9 +551,10 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 					<Pagination
 						current={currentPage}
 						total={totalItems}
-						pageSize={10}
+						pageSize={pageSize}
 						onChange={handlePageChange}
-						pageCount={calculatedTotalPages}
+						showSizeChanger
+						pageSizeOptions={['10', '20', '50', '100']}
 					/>
 				</div>
 			</div>
@@ -664,7 +670,6 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 		}
 
 		const url = `https://form.jotform.com/${formId}?${params.toString()}`;
-		console.info("Generated JotForm URL:", url);
 		return url;
 	};
 
@@ -867,49 +872,49 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 		}
 	};
 
-const handleBlankUpload = async () => {
-  const uploadURL = Url + `/api/jotform/upload-blank-record/${selectedForm || ""}`;
+	const handleBlankUpload = async () => {
+		const uploadURL = Url + `/api/jotform/upload-blank-record/${selectedForm || ""}`;
 
-  try {
-    const response = await axios.post(uploadURL, {}, {
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    });
+		try {
+			const response = await axios.post(uploadURL, {}, {
+				headers: {
+					'Content-Type': 'application/json'
+				}
+			});
 
-    if (response.status === 201) {
-      getTableResponse(selectedForm || null, 1, 10, lastSearchedValue, selectedFilter);
-      closeModal();
-      return response?.data?.data;
-    } else {
-      toast.error(response.data.message || 'Unable to create blank record.', {
-        position: "bottom-right",
-        autoClose: 5000,
-        hideProgressBar: false,
-        closeOnClick: false,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
-        theme: "colored",
-        transition: Bounce,
-      });
-      closeModal();
-    }
-  } catch (error) {
-    console.error('Upload error:', error);
-    toast.error('Unable to create blank record. Please try again.', {
-      position: "bottom-right",
-      autoClose: 5000,
-      hideProgressBar: false,
-      closeOnClick: false,
-      pauseOnHover: true,
-      draggable: true,
-      progress: undefined,
-      theme: "colored",
-      transition: Bounce,
-    });
-  }
-};
+			if (response.status === 201) {
+				getTableResponse(selectedForm || null, 1, 10, lastSearchedValue, selectedFilter);
+				closeModal();
+				return response?.data?.data;
+			} else {
+				toast.error(response.data.message || 'Unable to create blank record.', {
+					position: "bottom-right",
+					autoClose: 5000,
+					hideProgressBar: false,
+					closeOnClick: false,
+					pauseOnHover: true,
+					draggable: true,
+					progress: undefined,
+					theme: "colored",
+					transition: Bounce,
+				});
+				closeModal();
+			}
+		} catch (error) {
+			console.error('Upload error:', error);
+			toast.error('Unable to create blank record. Please try again.', {
+				position: "bottom-right",
+				autoClose: 5000,
+				hideProgressBar: false,
+				closeOnClick: false,
+				pauseOnHover: true,
+				draggable: true,
+				progress: undefined,
+				theme: "colored",
+				transition: Bounce,
+			});
+		}
+	};
 
 	// const handleBulkUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
 	// 	if (!e.target.files || e.target.files.length === 0) {
@@ -1105,7 +1110,6 @@ const handleBlankUpload = async () => {
 			skipEmptyLines: true,
 			complete: async ({ data, errors }) => {
 				if (errors.length > 0) {
-					console.error("CSV parse errors:", errors);
 					errors.forEach(err =>
 						console.warn(`Row ${err.row}: ${err.code} — ${err.message}`)
 					);
