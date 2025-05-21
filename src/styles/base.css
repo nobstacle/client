@@ -424,8 +424,10 @@ button {
   border-color: #008080 !important;
   color: white !important;
 }
+
 .btn-teal:hover {
-  background-color: #006666 !important; /* darker teal */
+  background-color: #006666 !important;
+  /* darker teal */
 }
 
 .btn-blue {
@@ -433,6 +435,7 @@ button {
   color: white !important;
   border: none !important;
 }
+
 .btn-blue:hover {
   background-color: #2d4373 !important;
 }
@@ -441,13 +444,14 @@ button {
   background-color: #b91c1c !important;
   color: white !important;
 }
+
 .btn-red:hover {
   background-color: #991b1b !important;
 }
 
 @media screen and (max-width:1300px) {
-.emoticonWrapper svg{
-width:500px !important;
-height:500px !important;
-}
+  .emoticonWrapper svg {
+    width: 500px !important;
+    height: 500px !important;
+  }
 }

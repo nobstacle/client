@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React from "react";
 import { Content } from "../../components/pages/client/Content";
 import { StationPicker } from "../../components/pages/dashboard/Header/StationPicker";
 import { useMessageStore } from "../../lib/zustand/store/messageStore";
@@ -9,7 +9,7 @@ import { useSearchParams } from "next/navigation";
 import Modal from "../../components/Modal";
 import { useDisclousure } from "../../hooks/useDisclosure";
 import { LogoutIcon } from "../../components/icons/sidebar/LogoutIcon";
-import { Logout } from "../../components/pages/dashboard/Header/Logout";
+// import { Logout } from "../../components/pages/dashboard/Header/Logout";
 import { signOut } from "next-auth/react";
 import { ErudaContainer } from "../../components/containers/ErudaContainer";
 import TestAudioRecorder from "../../components/TestAudioRecorder";
@@ -38,8 +38,10 @@ const ClientStationPicker = () => {
     <>
       <div
         onClick={handleOpen}
-        className="fixed bottom-0 left-0 h-8 w-screen"
-      />
+        className="fixed"
+        style={{ left: '0.5rem', bottom: '0.5rem', height: '4rem', width: '8rem' }}
+      >
+      </div>
       <Modal title="" isOpen={isOpen} closeModal={handleClose}>
         <div className="mb-4 flex w-full justify-end ">
           {socketConnected ? (
