@@ -24,6 +24,10 @@ export const Content: React.FC = () => {
   const params = useSearchParams();
   const messageStore = useMessageStore();
   const hasHydrated = useHasHydrated();
+  const [aspectRatio, setAspectRatio] = useState("16 / 9");
+  const [objectFit, setObjectFit] = useState("cover");
+  const [padding, setPadding] = useState("0");
+
   const defaultSlideshowContent =
     useContentControllerGetDefaultSlideshowContent({
       query: {
@@ -54,6 +58,37 @@ export const Content: React.FC = () => {
       isFirstTimeOpen.current = false;
     }
   }, [messageStore.receivedType]);
+
+  useEffect(() => {
+    const updateVideoStyles = () => {
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      const isPortrait = height > width;
+
+      if ((width < 768 && isPortrait) || (width < 950 && !isPortrait)) {
+        setAspectRatio(isPortrait ? "9 / 16" : "16 / 9");
+        setObjectFit(isPortrait ? "contain" : "cover");
+        setPadding(isPortrait ? '0' : '3.2rem 0.2rem');
+      } else if (width >= 768 && width <= 1200) {
+        setAspectRatio(isPortrait ? "3 / 4" : "4 / 3");
+        setObjectFit(isPortrait ? "contain" : "cover");
+        setPadding(isPortrait ? '0' : '2.25rem 0.3rem');
+      } else {
+        setAspectRatio("16 / 9");
+        setObjectFit("cover");
+        setPadding('5.5rem 0.3rem');
+      }
+    };
+
+    updateVideoStyles();
+    window.addEventListener("resize", updateVideoStyles);
+    window.addEventListener("orientationchange", updateVideoStyles);
+
+    return () => {
+      window.removeEventListener("resize", updateVideoStyles);
+      window.removeEventListener("orientationchange", updateVideoStyles);
+    };
+  }, []);
 
   const { emitSendMessage } = useSocketContext();
 
@@ -109,25 +144,39 @@ export const Content: React.FC = () => {
       );
     }
 
+
     if (messageStore.receivedType === "Video") {
       return (
-        <>
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100vw',
+            height: '100vh',
+            overflow: 'hidden',
+            zIndex: 9,
+            pointerEvents: 'none',
+            backgroundColor: 'black',
+          }}
+        >
           <video
             ref={videoElement}
             autoPlay
             muted
             loop
-            key={messageStore.receivedContent?.content ?? ""}
             playsInline
+            key={messageStore.receivedContent?.content ?? ""}
             style={{
-              position: 'fixed',
-              top: '0px',
-              left: '0px',
-              width: '100%',
-              height: '100%',
-              objectFit: 'fill',
-              zIndex: 999,
-              border: 'none',
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              aspectRatio,
+              objectFit,
+              minWidth: '100%',
+              minHeight: '100%',
+              padding
             }}
           >
             <source
@@ -135,9 +184,11 @@ export const Content: React.FC = () => {
               type="video/mp4"
             />
           </video>
-        </>
+        </div>
       );
     }
+
+
     if (messageStore.receivedType === "Slideshow") {
       return (
         <Slideshow contents={messageStore.receivedContent?.contents ?? []} />
