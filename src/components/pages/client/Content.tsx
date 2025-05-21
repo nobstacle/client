@@ -120,12 +120,15 @@ export const Content: React.FC = () => {
             key={messageStore.receivedContent?.content ?? ""}
             playsInline
             style={{
-              height: "100%",
-              maxWidth: "100%",
-              width: "100%",
-              objectFit: "cover",
-              display: "block",
-            }} // optional
+              position: 'fixed',
+              top: '0px',
+              left: '0px',
+              width: '100%',
+              height: '100%',
+              objectFit: 'fill',
+              zIndex: 999,
+              border: 'none',
+            }}
           >
             <source
               src={messageStore.receivedContent?.content ?? ""}
