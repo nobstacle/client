@@ -502,20 +502,36 @@ button {
   }
 }
 
-.qrCode {
-  position: fixed;
-  top: 1rem;
-  right: 1rem;
-  z-index: 1000;
-  background-color: white;
-  padding: 0.5rem;
-  border-radius: 0.5rem;
-  box-shadow: '0 0 10px rgba(0,0,0,0.1)';
+.surveyWrapper {
+  width: 100%;
+  height: 100%;
 }
 
-/* Mobiles (9:16) */
-@media (max-width: 767px) {
-  .qrCode {
-    position: absolute;
+.qrCodeWrapper {
+  display: flex;
+}
+
+.customScanCode {
+  position: absolute;
+  left: 36%;
+  font-size: 1.6rem;
+}
+
+@media (min-width: 950px) and (max-width: 1400px) {
+  .customScanCode {
+    left: 24%;
+    font-size: 1.4rem;
+  }
+}
+
+@media (min-width: 1600px) {
+  .customScanCode {
+    left: 34%;
+  }
+}
+
+@media (max-width: 900px) {
+  .customScanCode {
+    font-size: 1rem;
   }
 }

@@ -32,7 +32,7 @@ export const Content: React.FC = () => {
   const [objectFit, setObjectFit] = useState("cover");
   const [padding, setPadding] = useState("0");
   const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+   const [showQR, setShowQR] = useState(false);
 
   const defaultSlideshowContent =
     useContentControllerGetDefaultSlideshowContent({
@@ -114,11 +114,9 @@ export const Content: React.FC = () => {
         try {
           const url = await QRCode.toDataURL(content);
           setQrCodeUrl(url);
-          const screenWidth = window.innerWidth;
-          if (screenWidth > 650) {
-            setTimeout(() => {
-              setIsModalOpen(true);
-            }, 1000);
+          const wdthSize = window.innerWidth;
+          if(wdthSize > 650) {
+            setShowQR(true);
           }
         } catch (err) {
           console.error("Failed to generate QR code", err);
@@ -242,34 +240,46 @@ export const Content: React.FC = () => {
     return <SurveyAnswer tag={messageStore.receivedSurvey.tag} />;
   }
 
-  if (
-    messageStore.receivedType === ("JotFormMessage" as any)
-  ) {
+  if (messageStore.receivedType === ("JotFormMessage" as any)) {
 
-    return (
-      <>
-        <Modal
-          title="Scan this QR Code to fill the form on your device!"
-          open={isModalOpen}
-          onCancel={() => setIsModalOpen(false)}
-          footer={null}
-          centered
-        >
-          {qrCodeUrl && (
-            <img
-              src={qrCodeUrl}
-              alt="QR Code"
-              style={{ width: "100%", maxWidth: "300px", margin: "auto", display: "block" }}
-            />
-          )}
-        </Modal>
+
+  return (
+    <div className="surveyWrapper w-screen h-screen flex flex-col bg-gray-100">
+      {/* QR Code Top Header */}
+      {showQR && (
+        <div className="relative bg-white shadow-md px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            {qrCodeUrl && (
+              <img
+                src={qrCodeUrl}
+                alt="QR Code"
+               className="w-28 h-28 object-contain"
+              />
+            )}
+            <span className="text-gray-700 text-xl customScanCode">
+              Kindly scan to fill the form on your own device.
+            </span>
+          </div>
+          <button
+            onClick={() => setShowQR(false)}
+            className="text-2xl text-gray-500 hover:text-gray-700 absolute top-2 right-4"
+          >
+            ×
+          </button>
+        </div>
+      )}
+
+      {/* Form Iframe - Fills remaining space */}
+      <div className="flex-1 overflow-hidden">
         <iframe
-          className="h-full w-full"
+          className="w-full h-full"
           src={messageStore.receivedContent?.content ?? ""}
+          style={{ border: "none" }}
         />
-      </>
-    );
-  }
+      </div>
+    </div>
+  );
+}
 
   if (
     messageStore.receivedType === "Website" ||
