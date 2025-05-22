@@ -16,6 +16,10 @@ import Slideshow from "./Slideshow";
 import React from "react";
 import SimpleMap from "./Map";
 import SurveyAnswer from "./SurveyAnswer";
+import QRCode from 'qrcode';
+import "../../../styles/base.css";
+import { Modal } from "antd";
+import "antd/dist/reset.css";
 
 export const Content: React.FC = () => {
   const isFirstTimeOpen = useRef(true);
@@ -27,6 +31,8 @@ export const Content: React.FC = () => {
   const [aspectRatio, setAspectRatio] = useState("16 / 9");
   const [objectFit, setObjectFit] = useState("cover");
   const [padding, setPadding] = useState("0");
+  const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
 
   const defaultSlideshowContent =
     useContentControllerGetDefaultSlideshowContent({
@@ -100,6 +106,29 @@ export const Content: React.FC = () => {
       langCode: company.data?.defaultLangCode ?? "en",
     });
   };
+
+  useEffect(() => {
+    const generateQR = async () => {
+      const content = messageStore.receivedContent?.content;
+      if (content) {
+        try {
+          const url = await QRCode.toDataURL(content);
+          setQrCodeUrl(url);
+          const screenWidth = window.innerWidth;
+          if (screenWidth > 650) {
+            setTimeout(() => {
+              setIsModalOpen(true);
+            }, 1000);
+          }
+        } catch (err) {
+          console.error("Failed to generate QR code", err);
+        }
+      }
+    };
+
+    generateQR();
+  }, [messageStore.receivedContent?.content]);
+
 
   if (hasHydrated) {
     if (
@@ -214,11 +243,38 @@ export const Content: React.FC = () => {
   }
 
   if (
-    messageStore.receivedType === "Website" ||
-    messageStore.receivedType === "WebsiteTemplateMessage" ||
     messageStore.receivedType === ("JotFormMessage" as any)
   ) {
 
+    return (
+      <>
+        <Modal
+          title="Scan this QR Code to fill the form on your device!"
+          open={isModalOpen}
+          onCancel={() => setIsModalOpen(false)}
+          footer={null}
+          centered
+        >
+          {qrCodeUrl && (
+            <img
+              src={qrCodeUrl}
+              alt="QR Code"
+              style={{ width: "100%", maxWidth: "300px", margin: "auto", display: "block" }}
+            />
+          )}
+        </Modal>
+        <iframe
+          className="h-full w-full"
+          src={messageStore.receivedContent?.content ?? ""}
+        />
+      </>
+    );
+  }
+
+  if (
+    messageStore.receivedType === "Website" ||
+    messageStore.receivedType === "WebsiteTemplateMessage"
+  ) {
     return (
       <iframe
         className="h-full w-full"
