@@ -336,6 +336,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 				}
 			});
 
+			console.info("UUIDUUID", UUID)
 			const dynamicUrl = buildUrl(selectedForm, result, UUID);
 			sendJotFormMessage(dynamicUrl, data?.formData?.uuid);
 
@@ -660,16 +661,26 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 		);
 	};
 
-	const buildUrl = (formId: string, inputValues: any, UUID: any) => {
+	const buildUrl = (formId: string, inputValues: any, UUID?: string) => {
 		const params = new URLSearchParams();
-		params.append("uuid", UUID);
+
+		// Append inputValues to params
 		for (const [key, value] of Object.entries(inputValues)) {
 			if (typeof value === 'string') {
 				params.append(key, value);
 			}
 		}
 
-		const url = `https://form.jotform.com/${formId}?${params.toString()}`;
+		const baseUrl = 'https://www.nobstacle.com';
+		let url = '';
+
+		if (UUID) {
+			params.append("uuid", UUID);
+			url = `${baseUrl}/forms/${UUID}?${params.toString()}`;
+		} else {
+			url = `${baseUrl}/forms/${formId}?${params.toString()}`;
+		}
+
 		return url;
 	};
 

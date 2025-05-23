@@ -18,7 +18,6 @@ import SimpleMap from "./Map";
 import SurveyAnswer from "./SurveyAnswer";
 import QRCode from 'qrcode';
 import "../../../styles/base.css";
-import { Modal } from "antd";
 import "antd/dist/reset.css";
 
 export const Content: React.FC = () => {
@@ -32,7 +31,8 @@ export const Content: React.FC = () => {
   const [objectFit, setObjectFit] = useState("cover");
   const [padding, setPadding] = useState("0");
   const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
-   const [showQR, setShowQR] = useState(false);
+  const [showQR, setShowQR] = useState(false);
+  const iframeRef = useRef(null);
 
   const defaultSlideshowContent =
     useContentControllerGetDefaultSlideshowContent({
@@ -115,8 +115,10 @@ export const Content: React.FC = () => {
           const url = await QRCode.toDataURL(content);
           setQrCodeUrl(url);
           const wdthSize = window.innerWidth;
-          if(wdthSize > 650) {
-            setShowQR(true);
+          if (wdthSize > 650) {
+            setTimeout(() => {
+              setShowQR(true);
+            }, 3000);
           }
         } catch (err) {
           console.error("Failed to generate QR code", err);
@@ -126,7 +128,6 @@ export const Content: React.FC = () => {
 
     generateQR();
   }, [messageStore.receivedContent?.content]);
-
 
   if (hasHydrated) {
     if (
@@ -243,43 +244,47 @@ export const Content: React.FC = () => {
   if (messageStore.receivedType === ("JotFormMessage" as any)) {
 
 
-  return (
-    <div className="surveyWrapper w-screen h-screen flex flex-col bg-gray-100">
-      {/* QR Code Top Header */}
-      {showQR && (
-        <div className="relative bg-white shadow-md px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            {qrCodeUrl && (
-              <img
-                src={qrCodeUrl}
-                alt="QR Code"
-               className="w-28 h-28 object-contain"
-              />
-            )}
-            <span className="text-gray-700 text-xl customScanCode">
-              Kindly scan to fill the form on your own device.
-            </span>
-          </div>
-          <button
-            onClick={() => setShowQR(false)}
-            className="text-2xl text-gray-500 hover:text-gray-700 absolute top-2 right-4"
+    return (
+      <div className="surveyWrapper w-screen h-screen flex flex-col bg-gray-100">
+        {showQR && (
+          <div
+            className="relative bg-white shadow-md px-4 py-3 flex items-center justify-between animate-slide-down z-50"
+            style={{ animation: 'slideDown 0.5s ease-out forwards' }}
           >
-            ×
-          </button>
-        </div>
-      )}
+            <div className="flex items-center gap-4">
+              {qrCodeUrl && (
+                <img
+                  src={qrCodeUrl}
+                  alt="QR Code"
+                  className="w-28 h-28 object-contain"
+                />
+              )}
+              <span className="text-gray-700 text-xl customScanCode">
+                Kindly scan to fill the form on your own device.
+              </span>
+            </div>
+            <button
+              onClick={() => setShowQR(false)}
+              className="text-2xl text-gray-500 hover:text-gray-700 absolute top-2 right-4"
+            >
+              ×
+            </button>
+          </div>
+        )}
 
-      {/* Form Iframe - Fills remaining space */}
-      <div className="flex-1 overflow-hidden">
-        <iframe
-          className="w-full h-full"
-          src={messageStore.receivedContent?.content ?? ""}
-          style={{ border: "none" }}
-        />
+        <div
+          className="flex-1 overflow-auto"
+        >
+          <iframe
+            ref={iframeRef}
+            className="w-full h-full"
+            src={messageStore.receivedContent?.content ?? ""}
+            style={{ border: "none" }}
+          />
+        </div>
       </div>
-    </div>
-  );
-}
+    );
+  }
 
   if (
     messageStore.receivedType === "Website" ||
