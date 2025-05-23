@@ -447,12 +447,35 @@ button {
   background-color: #991b1b !important;
 }
 
-@media screen and (max-width:1300px) {
+
+@media screen and (max-width: 650px) {
   .emoticonWrapper svg {
-    width: 500px !important;
-    height: 500px !important;
+    width: 60px !important;
+    height: 60px !important;
   }
 }
+
+@media screen and (min-width: 651px) and (max-width: 1080px) {
+  .emoticonWrapper svg {
+    width: 125px !important;
+    height: 125px !important;
+  }
+}
+
+@media screen and (min-width: 961px) and (max-width: 1300px) {
+  .emoticonWrapper svg {
+    width: 150px !important;
+    height: 150px !important;
+  }
+}
+
+@media screen and (min-width: 1301px) {
+  .emoticonWrapper svg {
+    width: 200px !important;
+    height: 200px !important;
+  }
+}
+
 
 
 .video-bg-container {
@@ -570,9 +593,11 @@ button {
 .customSurveyTable .ant-table tr th {
   padding: 15px 15px !important;
 }
+
 .customSurveyTable .ant-table tr td {
   padding: 10px 15px !important;
 }
+
 .swal2-popup .swal2-confirm {
   background: #3b5998 !important;
 }

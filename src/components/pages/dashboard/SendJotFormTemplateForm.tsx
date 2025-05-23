@@ -336,7 +336,6 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 				}
 			});
 
-			console.info("UUIDUUID", UUID)
 			const dynamicUrl = buildUrl(selectedForm, result, UUID);
 			sendJotFormMessage(dynamicUrl, data?.formData?.uuid);
 
@@ -784,31 +783,35 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 	};
 
 	async function onSubmit(event: React.MouseEvent<HTMLButtonElement, MouseEvent>) {
-		event.preventDefault();
+		let uploadBlankRecord = await handleBlankUpload();
+		if (uploadBlankRecord) {
+			let uuid = uploadBlankRecord?.uuid;
+			event.preventDefault();
 
-		if (!selectedForm) {
-			toast.error("Please select a form before submitting.");
-			return;
+			if (!selectedForm) {
+				toast.error("Please select a form before submitting.");
+				return;
+			}
+
+			const dynamicUrl = buildUrl(selectedForm, manualInputValues, uuid);
+			sendJotFormMessage(dynamicUrl, uuid);
+
+			toast.success('Form sent successfully!', {
+				position: "bottom-right",
+				autoClose: 5000,
+				hideProgressBar: false,
+				closeOnClick: false,
+				pauseOnHover: true,
+				draggable: true,
+				progress: undefined,
+				theme: "colored",
+				transition: Bounce,
+			});
+			closeModal();
+			closeSendModal();
+			reset();
+			setManualInputValues({});
 		}
-
-		const dynamicUrl = buildUrl(selectedForm, manualInputValues);
-		sendJotFormMessage(dynamicUrl);
-
-		toast.success('Form sent successfully!', {
-			position: "bottom-right",
-			autoClose: 5000,
-			hideProgressBar: false,
-			closeOnClick: false,
-			pauseOnHover: true,
-			draggable: true,
-			progress: undefined,
-			theme: "colored",
-			transition: Bounce,
-		});
-		closeModal();
-		closeSendModal();
-		reset();
-		setManualInputValues({});
 	}
 
 	const handleManualInputChange = (text: string, value: string) => {

@@ -17,37 +17,37 @@ import { GoodIcon } from "../../icons/survey/GoodIcon";
 
 // Add CSS to your global stylesheet or component styles
 const responsiveStyles = `
-  @media (max-width: 640px) {
+  @media (max-width: 650px) {
     .emoticonWrapper .icon-container {
-      width: 60px !important;
-      height: 60px !important;
+      width: 50px !important;
+      height: 50px !important;
     }
   }
   
   @media (min-width: 641px) and (max-width: 768px) {
     .emoticonWrapper .icon-container {
-      width: 80px !important;
-      height: 80px !important;
+      width: 70px !important;
+      height: 70px !important;
     }
   }
   
   @media (min-width: 769px) and (max-width: 1024px) {
     .emoticonWrapper .icon-container {
-      width: 100px !important;
-      height: 100px !important;
+      width: 90px !important;
+      height: 90px !important;
     }
   }
   
   @media (min-width: 1025px) and (max-width: 1300px){
     .emoticonWrapper .icon-container {
-      width: 130px !important;
-      height: 130px !important;
+      width: 120px !important;
+      height: 120px !important;
     }
   }
      @media (min-width: 1301px) {
     .emoticonWrapper .icon-container {
-      width: 220px !important;
-      height: 220px !important;
+      width: 180px !important;
+      height: 180px !important;
     }
   }
 `;
