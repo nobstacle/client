@@ -1,13 +1,15 @@
 "use client";
+import { useState } from 'react';
 import useTemplateStore from "../../../lib/zustand/store/templateStore";
 import { useHasHydrated } from "../../../hooks/useHydrated";
-import { useSearchTemplate } from "../../../hooks/useSearchTemplate";
-import { SearchTemplateForm } from "../../../components/pages/dashboard/SearchTemplateForm";
 import { surveyAnswerValToColor } from "../../../utils";
 import { CreateSurveyTemplate } from "../../../components/pages/dashboard/CreateSurveyTemplate";
 import { useSession } from "next-auth/react";
-import { TrashIcon } from "../../../components/icons/TrashIcon";
 import { useSurveyAnswerControllerDeleteSurveyAnswer } from "../../../lib/client/api";
+import { Table, Tag, Button, Popconfirm, message, Card } from "antd";
+import "../../../styles/base.css";
+import { FaTrash } from "react-icons/fa";
+import Swal from "sweetalert2";
 
 function Page() {
   const isHydrated = useHasHydrated();
@@ -15,12 +17,13 @@ function Page() {
   if (!isHydrated) return <div></div>;
 
   return (
-    <div className="h-full overflow-y-auto p-4">
-      <div className="flex w-full flex-col gap-4">
-        <CreateSurveyTemplate />
-      </div>
-
-      <SurveyAnswers />
+    <div className="h-full overflow-y-auto p-4 ">
+      <Card className=" bg-gray-50">
+        <div className="flex w-full flex-col gap-4">
+          <CreateSurveyTemplate />
+        </div>
+        <SurveyAnswers />
+      </Card>
     </div>
   );
 }
@@ -32,62 +35,133 @@ function SurveyAnswers() {
     setSurveyAnswers,
     searchSurveysAnswers,
   } = useTemplateStore();
+
   const sourceAnswers =
     searchSurveysAnswers.length > 0 ? searchSurveysAnswers : surveysAnswer;
 
   const { data: userData } = useSession();
   const deleteSurveyAnswer = useSurveyAnswerControllerDeleteSurveyAnswer();
+  const [deletingId, setDeletingId] = useState<number | null>(null);
 
   const handleDeleteSurveyAnswer = (id: number) => {
-    deleteSurveyAnswer.mutate(
-      { id },
-      {
-        onSuccess: () => {
-          // delete from local states
-          setSearchSurveysAnswers(
-            searchSurveysAnswers.filter((val) => val.id !== id),
-          );
-          setSurveyAnswers(surveysAnswer.filter((val) => val.id !== id));
-        },
-      },
-    );
+    Swal.fire({
+      title: "Are you sure?",
+      text: "This will permanently delete the survey answer.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#3b5998",
+      confirmButtonText: "Yes, delete it!",
+    }).then((result) => {
+      if (result.isConfirmed) {
+        deleteSurveyAnswer.mutate(
+          { id },
+          {
+            onSuccess: () => {
+              setSearchSurveysAnswers(searchSurveysAnswers.filter((val) => val.id !== id));
+              setSurveyAnswers(surveysAnswer.filter((val) => val.id !== id));
+              Swal.fire("Deleted!", "Survey answer deleted successfully.", "success");
+            },
+            onError: () => {
+              Swal.fire("Error!", "Failed to delete the survey answer.", "error");
+            },
+          }
+        );
+      }
+    });
   };
 
-  return (
-    <div className="mt-4 flex w-full flex-col items-start justify-start gap-5">
-      {sourceAnswers.map(({ tag, value, id, createdAt, stationNo }) => (
-        <div key={id} className="flex items-center gap-5">
-          <span
-            style={{
-              backgroundColor: surveyAnswerValToColor(value ?? 0),
-            }}
-            className="flex h-[50px] w-[50px] items-center justify-center rounded-full text-center  text-white"
+  const columns = [
+    {
+      title: "Value",
+      dataIndex: "value",
+      key: "value",
+      render: (value: number) => (
+        <Tag
+          color={surveyAnswerValToColor(value)}
+          style={{
+            width: 30,
+            height: 30,
+            textAlign: "center",
+            lineHeight: "30px",
+            borderRadius: "50%",
+          }}
+        >
+          {value.toString().charAt(0).toUpperCase()}
+        </Tag>
+      ),
+    },
+    {
+      title: "Tag",
+      dataIndex: "tag",
+      key: "tag",
+    },
+    {
+      title: "Station",
+      key: "stationNo",
+      dataIndex: "stationNo",
+    },
+    {
+      title: "Date",
+      key: "createdAt",
+      render: (_, record) => (
+        <span>{new Date(record.createdAt).toLocaleString("tr-TR")}</span>
+      ),
+    },
+    {
+      title: "Action",
+      key: "action",
+      render: (_, record) =>
+        userData?.user.Roles?.includes("Admin") ? (
+          <button
+            onClick={() => handleDeleteSurveyAnswer(record.id)}
+            disabled={deletingId === record.id}
+            className={`
+              w-8 h-8 flex items-center justify-center 
+              text-white bg-red-700 hover:bg-red-800 
+              focus:ring-4 focus:ring-red-300 font-medium 
+              rounded-full text-xs
+              ${deletingId === record.id ? "opacity-80 cursor-not-allowed" : ""}
+            `}
           >
-            {(value ?? 0).toString().charAt(0).toUpperCase()}{" "}
-          </span>
-          <div className="flex flex-col items-start justify-start ">
-            <div>
-              <p className="text-xl">{tag}</p>
-            </div>
-            <div>
-              <p className="inline-block text-sm">
-                Station: {stationNo}, Date:{" "}
-                {new Date(createdAt).toLocaleString("tr-Tr")}
-              </p>
-            </div>
-          </div>
+            {deletingId === record.id ? (
+              <svg
+                className="animate-spin h-3 w-3 text-white"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                ></circle>
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                ></path>
+              </svg>
+            ) : (
+              <FaTrash size={12} />
+            )}
+          </button>
+        ) : null,
+    },
+  ];
 
-          {userData?.user.Roles?.includes("Admin") && (
-            <button
-              className="h-8 w-8  text-danger"
-              onClick={() => handleDeleteSurveyAnswer(id)}
-              disabled={deleteSurveyAnswer.status === "pending"}
-            >
-              <TrashIcon />
-            </button>
-          )}
-        </div>
-      ))}
+  return (
+    <div className="p-4 shadow-md rounded-lg customTableWrapper customSurveyTable bg-white">
+      <Table
+        rowKey="id"
+        columns={columns}
+        dataSource={sourceAnswers}
+        pagination={{ pageSize: 10 }}
+        className="jotFormTable"
+      />
     </div>
   );
 }

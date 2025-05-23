@@ -352,8 +352,6 @@ button {
 
 .jotFormTable .ant-table-body {
   max-height: 450px !important;
-  /* overflow: hidden !important;
-  overflow-x: scroll ; */
 }
 
 .jotFormTable .ant-table-thead th {
@@ -541,6 +539,7 @@ button {
     transform: translateY(-100%);
     opacity: 0;
   }
+
   to {
     transform: translateY(0);
     opacity: 1;
@@ -549,4 +548,39 @@ button {
 
 .animate-slide-down {
   animation: slideDown 0.5s ease-out forwards;
+}
+
+.customSUrveyHeaderCard .ant-card-body {
+  padding: 1rem !important;
+}
+
+.customSendButton {
+  width: 3.5rem !important;
+  background: #3b5998;
+  color: white;
+  border: none !important;
+}
+
+.customSendButton:hover {
+  background: #2e467a !important;
+  color: white;
+  border: none !important;
+}
+
+.customSurveyTable .ant-table tr th {
+  padding: 15px 15px !important;
+}
+.customSurveyTable .ant-table tr td {
+  padding: 10px 15px !important;
+}
+.swal2-popup .swal2-confirm {
+  background: #3b5998 !important;
+}
+
+.swal2-popup .swal2-confirm:hover {
+  background: #2e467a !important;
+}
+
+.swal2-popup .swal2-cancel {
+  background: #ad1d1d !important;
 }

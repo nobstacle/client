@@ -1,8 +1,8 @@
 import * as React from "react";
-import { SubmitHandler, useForm } from "react-hook-form";
+import { SubmitHandler, useForm, Controller } from "react-hook-form";
 import * as yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
-import Input from "../../Input";
+// import Input from "../../Input";
 import { Button } from "../../Button";
 import { SendIcon } from "../../icons/SendIcon";
 import { useSocketContext } from "../../../context/SocketContextProvider";
@@ -10,6 +10,8 @@ import { useSearchParams } from "next/navigation";
 import { useSearchTemplate } from "../../../hooks/useSearchTemplate";
 import useTemplateStore from "../../../lib/zustand/store/templateStore";
 import { surveyAnswerValToColor } from "../../../utils";
+import { Card } from 'antd';
+import { Input as AntdInput } from "antd";
 
 interface SendMapTemplateFormFieldValues {
   identifier: string;
@@ -28,6 +30,9 @@ export const CreateSurveyTemplate: React.FC = () => {
     handleSubmit,
     formState: { errors },
     reset,
+    control,
+    setValue,
+    watch
   } = useForm<SendMapTemplateFormFieldValues>({
     resolver: yupResolver(schema),
     defaultValues: {
@@ -35,7 +40,6 @@ export const CreateSurveyTemplate: React.FC = () => {
     },
   });
   const params = useSearchParams();
-
   const { emitSendSurvey } = useSocketContext();
 
   const handleSendSurvey = (data: SendMapTemplateFormFieldValues) => {
@@ -44,74 +48,80 @@ export const CreateSurveyTemplate: React.FC = () => {
       station: params.get("station") ? Number(params.get("station")) : 1,
     });
     reset();
+    setSearchSurveysAnswers([]);
+    search("");
   };
 
   const onSubmit: SubmitHandler<SendMapTemplateFormFieldValues> = (data) =>
     handleSendSurvey(data);
 
   return (
-    <form className="flex" onSubmit={handleSubmit(onSubmit)}>
-      <div className="mt-3 flex w-3/12 items-center gap-4 ">
-        <Input
-          register={register}
-          name="identifier"
-          label=""
-          type="text"
-          required
-          placeholder="Type survey identifier here"
-          className="rounded-md border-2  p-2"
-          onChange={(e) => {
-            search(e.currentTarget.value);
-          }}
-        />
+    <Card bordered className="w-full mb-6 pb-0 customSUrveyHeaderCard">
+      <form
+        className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 w-full"
+        onSubmit={handleSubmit(onSubmit)}
+      >
+        {/* Input Section */}
+        <div className="flex flex-col md:flex-row items-start md:items-center gap-2 md:gap-4 w-full md:w-1/2">
 
-        {errors.identifier && (
-          <p className="text-xs text-rose-600">{errors.identifier.message} </p>
-        )}
-        <div>
+          <Controller
+            name="identifier"
+            control={control}
+            render={({ field }) => (
+              <AntdInput
+                {...field}
+                value={field.value}
+                placeholder="Type survey identifier here"
+                status={errors.identifier ? "error" : ""}
+                onChange={(e) => {
+                  field.onChange(e);
+                  search(e.currentTarget.value);
+                }}
+                style={{ width: '50%' }}
+              />
+            )}
+          />
           <Button
-            className="border-1 flex justify-center rounded-md border-black  p-2 px-6 text-center text-white"
+            className="flex items-center justify-center bg-blue-600 hover:bg-blue-700 rounded-md px-4 py-2 text-white headerButton"
             type="submit"
           >
             <SendIcon />
           </Button>
+          {errors.identifier && (
+            <p className="text-sm text-red-600">{errors.identifier.message}</p>
+          )}
         </div>
-      </div>
 
-      <div className="flex w-full justify-end gap-4">
-        {[1, 2, 3, 4, 5].map((val) => (
-          <button
-            type="button"
-            onClick={() => {
-              if (
-                searchSurveysAnswers.find(
-                  (searchSurvey) => searchSurvey.value === val,
-                )
-              ) {
-                // on the second click reset default
-                setSearchSurveysAnswers([]);
-              } else {
-                const filteredVal = surveysAnswer.filter(
-                  (temp) => temp.value === val,
-                );
-
-                setSearchSurveysAnswers(filteredVal);
-              }
-            }}
-            key={val}
-            className="flex items-center gap-5"
-          >
-            <span
+        {/* Filter Buttons */}
+        <div className="flex items-center gap-2 justify-start md:justify-end flex-wrap">
+          {[1, 2, 3, 4, 5].map((val) => (
+            <button
+              type="button"
+              onClick={() => {
+                if (
+                  searchSurveysAnswers.find(
+                    (searchSurvey) => searchSurvey.value === val,
+                  )
+                ) {
+                  setSearchSurveysAnswers([]);
+                } else {
+                  const filteredVal = surveysAnswer.filter(
+                    (temp) => temp.value === val,
+                  );
+                  setSearchSurveysAnswers(filteredVal);
+                }
+              }}
+              key={val}
+              className="flex items-center justify-center w-8 h-8 rounded-full text-white text-sm font-medium"
               style={{
                 backgroundColor: surveyAnswerValToColor(val),
               }}
-              className="flex h-[25px] w-[25px]  items-center justify-center rounded-full text-center  text-white"
             >
-              {val.toString().charAt(0).toUpperCase()}{" "}
-            </span>
-          </button>
-        ))}
-      </div>
-    </form>
+              {val.toString().charAt(0).toUpperCase()}
+            </button>
+          ))}
+        </div>
+      </form>
+    </Card>
   );
 };
