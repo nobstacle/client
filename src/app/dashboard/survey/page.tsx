@@ -6,7 +6,7 @@ import { surveyAnswerValToColor } from "../../../utils";
 import { CreateSurveyTemplate } from "../../../components/pages/dashboard/CreateSurveyTemplate";
 import { useSession } from "next-auth/react";
 import { useSurveyAnswerControllerDeleteSurveyAnswer } from "../../../lib/client/api";
-import { Table, Tag, Button, Popconfirm, message, Card } from "antd";
+import { Table, Tag, Card, Pagination } from "antd";
 import "../../../styles/base.css";
 import { FaTrash } from "react-icons/fa";
 import Swal from "sweetalert2";
@@ -42,6 +42,10 @@ function SurveyAnswers() {
   const { data: userData } = useSession();
   const deleteSurveyAnswer = useSurveyAnswerControllerDeleteSurveyAnswer();
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalItems, setTotalItems] = useState(0);
+  const [pageSize, setPageSize] = useState(10);
 
   const handleDeleteSurveyAnswer = (id: number) => {
     Swal.fire({
@@ -80,15 +84,20 @@ function SurveyAnswers() {
         <Tag
           color={surveyAnswerValToColor(value)}
           style={{
-            width: 30,
-            height: 30,
-            textAlign: "center",
-            lineHeight: "30px",
-            borderRadius: "50%",
+            width: '36px',
+            height: '36px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderRadius: '50%',
+            padding: 0,
+            fontSize: '1.4rem',
+            lineHeight: 2,
           }}
         >
-          {value.toString().charAt(0).toUpperCase()}
+          <b>{value.toString().charAt(0).toUpperCase()}</b>
         </Tag>
+
       ),
     },
     {
@@ -153,15 +162,29 @@ function SurveyAnswers() {
     },
   ];
 
+  const handlePageChange = (pageNumber: number) => {
+    setCurrentPage(pageNumber);
+  };
+
   return (
     <div className="p-4 shadow-md rounded-lg customTableWrapper customSurveyTable bg-white">
       <Table
         rowKey="id"
         columns={columns}
         dataSource={sourceAnswers}
-        pagination={{ pageSize: 10 }}
+        pagination={false}
         className="jotFormTable"
       />
+      <div className="flex justify-center mt-6">
+        <Pagination
+          current={currentPage}
+          total={totalItems}
+          pageSize={pageSize}
+          onChange={handlePageChange}
+          showSizeChanger
+          pageSizeOptions={['10', '20', '50', '100']}
+        />
+      </div>
     </div>
   );
 }

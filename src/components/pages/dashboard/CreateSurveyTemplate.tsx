@@ -117,7 +117,7 @@ export const CreateSurveyTemplate: React.FC = () => {
                 backgroundColor: surveyAnswerValToColor(val),
               }}
             >
-              {val.toString().charAt(0).toUpperCase()}
+              <b>{val.toString().charAt(0).toUpperCase()}</b>
             </button>
           ))}
         </div>

@@ -814,6 +814,37 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 		}
 	}
 
+	async function onPrefillSubmit(event: React.MouseEvent<HTMLButtonElement, MouseEvent>) {
+		let uploadBlankRecord = await handleManualUpload('false');
+		if (uploadBlankRecord) {
+			let uuid = uploadBlankRecord?.uuid;
+			event.preventDefault();
+
+			if (!selectedForm) {
+				toast.error("Please select a form before submitting.");
+				return;
+			}
+
+			const dynamicUrl = buildUrl(selectedForm, manualInputValues, uuid);
+			sendJotFormMessage(dynamicUrl, uuid);
+
+			toast.success('Form sent successfully!', {
+				position: "bottom-right",
+				autoClose: 5000,
+				hideProgressBar: false,
+				closeOnClick: false,
+				pauseOnHover: true,
+				draggable: true,
+				progress: undefined,
+				theme: "colored",
+				transition: Bounce,
+			});
+			closeModal();
+			closeSendModal();
+			reset();
+			setManualInputValues({});
+		}
+	}
 	const handleManualInputChange = (text: string, value: string) => {
 		setManualInputValues((prev) => ({
 			...prev,
@@ -1514,7 +1545,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 						Upload <RiUploadCloudFill size={25} />
 					</Button>
 					<Button
-						onClick={onSubmit}
+						onClick={onPrefillSubmit}
 						className="customSearchButton ml-4 text-white px-6 py-2 rounded-md flex gap-2"
 					>
 						Send <SendIcon />
