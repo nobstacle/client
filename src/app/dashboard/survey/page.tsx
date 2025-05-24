@@ -83,17 +83,7 @@ function SurveyAnswers() {
       render: (value: number) => (
         <Tag
           color={surveyAnswerValToColor(value)}
-          style={{
-            width: '36px',
-            height: '36px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            borderRadius: '50%',
-            padding: 0,
-            fontSize: '1.4rem',
-            lineHeight: 2,
-          }}
+          className="flex items-center justify-center w-8 h-8 rounded-full text-white text-sm font-medium"
         >
           <b>{value.toString().charAt(0).toUpperCase()}</b>
         </Tag>
