@@ -9,7 +9,6 @@ import { useSearchParams } from "next/navigation";
 import Modal from "../../components/Modal";
 import { useDisclousure } from "../../hooks/useDisclosure";
 import { LogoutIcon } from "../../components/icons/sidebar/LogoutIcon";
-// import { Logout } from "../../components/pages/dashboard/Header/Logout";
 import { signOut } from "next-auth/react";
 import { ErudaContainer } from "../../components/containers/ErudaContainer";
 import TestAudioRecorder from "../../components/TestAudioRecorder";

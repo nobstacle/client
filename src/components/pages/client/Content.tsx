@@ -33,6 +33,7 @@ export const Content: React.FC = () => {
   const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
   const [showQR, setShowQR] = useState(false);
   const iframeRef = useRef(null);
+  const [timer, setTimer] = useState(20);
 
   const defaultSlideshowContent =
     useContentControllerGetDefaultSlideshowContent({
@@ -128,6 +129,24 @@ export const Content: React.FC = () => {
 
     generateQR();
   }, [messageStore.receivedContent?.content]);
+
+  useEffect(() => {
+    let countdown: NodeJS.Timeout;
+    if (showQR) {
+      setTimer(20);
+      countdown = setInterval(() => {
+        setTimer(prev => {
+          if (prev <= 1) {
+            setShowQR(false);
+            clearInterval(countdown);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(countdown);
+  }, [showQR]);
 
   if (hasHydrated) {
     if (
@@ -242,8 +261,6 @@ export const Content: React.FC = () => {
   }
 
   if (messageStore.receivedType === ("JotFormMessage" as any)) {
-
-
     return (
       <div className="surveyWrapper w-screen h-screen flex flex-col bg-gray-100">
         {showQR && (
@@ -263,6 +280,11 @@ export const Content: React.FC = () => {
                 Kindly scan to fill the form on your own device.
               </span>
             </div>
+
+            <div className="absolute bottom-2 right-4 text-sm text-gray-500">
+              Hiding in {timer}s
+            </div>
+
             <button
               onClick={() => setShowQR(false)}
               className="text-2xl text-gray-500 hover:text-gray-700 absolute top-2 right-4"
