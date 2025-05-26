@@ -532,30 +532,6 @@ button {
   display: flex;
 }
 
-.customScanCode {
-  position: absolute;
-  left: 36%;
-  font-size: 1.6rem;
-}
-
-@media (min-width: 950px) and (max-width: 1400px) {
-  .customScanCode {
-    left: 24%;
-    font-size: 1.4rem;
-  }
-}
-
-@media (min-width: 1600px) {
-  .customScanCode {
-    left: 34%;
-  }
-}
-
-@media (max-width: 900px) {
-  .customScanCode {
-    font-size: 1rem;
-  }
-}
 
 @keyframes slideDown {
   from {
@@ -609,3 +585,4 @@ button {
 .swal2-popup .swal2-cancel {
   background: #ad1d1d !important;
 }
+

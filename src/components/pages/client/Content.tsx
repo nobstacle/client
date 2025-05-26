@@ -34,6 +34,7 @@ export const Content: React.FC = () => {
   const [showQR, setShowQR] = useState(false);
   const iframeRef = useRef(null);
   const [timer, setTimer] = useState(20);
+  const [isClosing, setIsClosing] = useState(false);
 
   const defaultSlideshowContent =
     useContentControllerGetDefaultSlideshowContent({
@@ -119,14 +120,15 @@ export const Content: React.FC = () => {
     generateQR();
   }, [messageStore.receivedContent?.content]);
 
+
   useEffect(() => {
     let countdown: NodeJS.Timeout;
-    if (showQR) {
+    if (showQR && !isClosing) {
       setTimer(20);
       countdown = setInterval(() => {
         setTimer(prev => {
           if (prev <= 1) {
-            setShowQR(false);
+            handleCloseQR();
             clearInterval(countdown);
             return 0;
           }
@@ -135,7 +137,15 @@ export const Content: React.FC = () => {
       }, 1000);
     }
     return () => clearInterval(countdown);
-  }, [showQR]);
+  }, [showQR, isClosing]);
+
+  const handleCloseQR = () => {
+    setIsClosing(true);
+    setTimeout(() => {
+      setShowQR(false);
+      setIsClosing(false);
+    }, 500);
+  };
 
   const { emitSendMessage } = useSocketContext();
 
@@ -260,49 +270,122 @@ export const Content: React.FC = () => {
     return <SurveyAnswer tag={messageStore.receivedSurvey.tag} />;
   }
 
+
   if (messageStore.receivedType === ("JotFormMessage" as any)) {
     return (
-      <div className="surveyWrapper w-screen h-screen flex flex-col bg-gray-100">
-        {showQR && (
-          <div
-            className="relative bg-white shadow-md px-4 py-3 flex items-center justify-between animate-slide-down z-50"
-            style={{ animation: 'slideDown 0.5s ease-out forwards' }}
-          >
-            <div className="flex items-center gap-4">
-              {qrCodeUrl && (
-                <img
-                  src={qrCodeUrl}
-                  alt="QR Code"
-                  className="w-28 h-28 object-contain"
-                />
-              )}
-              <span className="text-gray-700 text-xl customScanCode">
-                Kindly scan to fill the form on your own device.
-              </span>
-            </div>
-            <div className="absolute bottom-2 right-4 text-sm text-gray-500">
-              Hiding in {timer}s
-            </div>
-            <button
-              onClick={() => setShowQR(false)}
-              className="text-2xl text-gray-500 hover:text-gray-700 absolute top-2 right-4"
-            >
-              ×
-            </button>
-          </div>
-        )}
+      <>
+        <style jsx>{`
+        @keyframes slideDown {
+          from {
+            transform: translateY(-100%);
+            opacity: 0;
+          }
+          to {
+            transform: translateY(0);
+            opacity: 1;
+          }
+        }
 
-        <div
-          className="flex-1 overflow-auto"
-        >
-          <iframe
-            ref={iframeRef}
-            className="w-full h-full"
-            src={messageStore.receivedContent?.content ?? ""}
-            style={{ border: "none" }}
-          />
+        @keyframes slideUp {
+          from {
+            transform: translateY(0);
+            opacity: 1;
+          }
+          to {
+            transform: translateY(-100%);
+            opacity: 0;
+          }
+        }
+
+        @keyframes iframeSlideUp {
+          from {
+            transform: translateY(0);
+          }
+          to {
+            transform: translateY(-20vh);
+          }
+        }
+
+        @keyframes iframeSlideDown {
+          from {
+            transform: translateY(-20vh);
+          }
+          to {
+            transform: translateY(0);
+          }
+        }
+
+        .qr-modal-enter {
+          animation: slideDown 0.5s ease-out forwards;
+        }
+
+        .qr-modal-exit {
+          animation: slideUp 0.5s ease-out forwards;
+        }
+
+        .iframe-slide-up {
+          animation: iframeSlideUp 0.5s ease-out forwards;
+        }
+
+        .iframe-slide-down {
+          animation: iframeSlideDown 0.5s ease-out forwards;
+        }
+
+        .iframe-container {
+          transition: transform 0.5s ease-out;
+        }
+      `}</style>
+        <div className="surveyWrapper w-screen h-screen flex flex-col bg-gray-100">
+          {showQR && (
+            <div
+              className={`relative bg-white shadow-md px-4 py-3 z-50 ${isClosing ? 'qr-modal-exit' : 'qr-modal-enter'
+                }`}
+            >
+              {qrCodeUrl && (
+                <div className="absolute left-4 top-1/2 transform -translate-y-1/2">
+                  <img
+                    src={qrCodeUrl}
+                    alt="QR Code"
+                    className="w-28 h-28 object-contain"
+                  />
+                </div>
+              )}
+              <div className="flex justify-center items-center w-full h-full min-h-[7rem]">
+                <span className="text-gray-700 text-xl customScanCode text-center">
+                  Kindly scan to fill the form on your own device.
+                </span>
+              </div>
+
+              <div className="absolute bottom-2 right-4 text-sm text-gray-500">
+                {timer}s
+              </div>
+
+              <button
+                onClick={handleCloseQR}
+                className="text-2xl text-gray-500 hover:text-gray-700 absolute top-2 right-4 transition-colors duration-200"
+              >
+                ×
+              </button>
+            </div>
+          )}
+
+          <div
+            className={`flex-1 overflow-auto iframe-container ${showQR && !isClosing
+              ? 'iframe-slide-down'
+              : isClosing
+                ? 'iframe-slide-up'
+                : ''
+              }`}
+          >
+            <iframe
+              ref={iframeRef}
+              className="w-full h-full"
+              src={messageStore.receivedContent?.content ?? ""}
+              style={{ border: "none" }}
+            />
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 
