@@ -27,9 +27,6 @@ export const Content: React.FC = () => {
   const params = useSearchParams();
   const messageStore = useMessageStore();
   const hasHydrated = useHasHydrated();
-  const [aspectRatio, setAspectRatio] = useState("16 / 9");
-  const [objectFit, setObjectFit] = useState("cover");
-  const [padding, setPadding] = useState("0");
   const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
   const [showQR, setShowQR] = useState(false);
   const iframeRef = useRef(null);
@@ -69,34 +66,77 @@ export const Content: React.FC = () => {
 
   useEffect(() => {
     const updateVideoStyles = () => {
-      const width = window.innerWidth;
-      const height = window.innerHeight;
-      const isPortrait = height > width;
+      if (!videoElement.current) return;
 
-      if ((width < 768 && isPortrait) || (width < 950 && !isPortrait)) {
-        setAspectRatio(isPortrait ? "9 / 16" : "16 / 9");
-        setObjectFit(isPortrait ? "contain" : "cover");
-        setPadding(isPortrait ? '0' : '3.2rem 0.2rem');
-      } else if (width >= 768 && width <= 1200) {
-        setAspectRatio(isPortrait ? "3 / 4" : "4 / 3");
-        setObjectFit(isPortrait ? "contain" : "cover");
-        setPadding(isPortrait ? '0' : '2.25rem 0.3rem');
+      const containerWidth = window.innerWidth;
+      const containerHeight = window.innerHeight;
+      const containerAspectRatio = containerWidth / containerHeight;
+
+      // Get video dimensions when metadata is loaded
+      const video = videoElement.current;
+
+      const handleLoadedMetadata = () => {
+        const videoWidth = video.videoWidth;
+        const videoHeight = video.videoHeight;
+        const videoAspectRatio = videoWidth / videoHeight;
+
+        let width:any; 
+        let height:any;
+
+        if (videoAspectRatio > containerAspectRatio) {
+          width = containerWidth;
+          height = containerWidth / videoAspectRatio;
+
+          // If height exceeds container, fit to height instead
+          if (height > containerHeight) {
+            height = containerHeight;
+            width = containerHeight * videoAspectRatio;
+          }
+        } else {
+          // Video is taller than container - fit to height
+          height = containerHeight;
+          width = containerHeight * videoAspectRatio;
+
+          // If width exceeds container, fit to width instead
+          if (width > containerWidth) {
+            width = containerWidth;
+            height = containerWidth / videoAspectRatio;
+          }
+        }
+
+        // Apply calculated dimensions
+        video.style.width = `${width}px`;
+        video.style.height = `${height}px`;
+        video.style.objectFit = 'contain';
+      };
+
+      // If metadata is already loaded
+      if (video.readyState >= 1) {
+        handleLoadedMetadata();
       } else {
-        setAspectRatio("16 / 9");
-        setObjectFit("cover");
-        setPadding('5.5rem 0.3rem');
+        video.addEventListener('loadedmetadata', handleLoadedMetadata);
       }
+
+      return () => {
+        video.removeEventListener('loadedmetadata', handleLoadedMetadata);
+      };
+    };
+
+    const handleResize = () => {
+      // Small delay to ensure orientation change is complete
+      setTimeout(updateVideoStyles, 100);
     };
 
     updateVideoStyles();
-    window.addEventListener("resize", updateVideoStyles);
-    window.addEventListener("orientationchange", updateVideoStyles);
+
+    window.addEventListener("resize", handleResize);
+    window.addEventListener("orientationchange", handleResize);
 
     return () => {
-      window.removeEventListener("resize", updateVideoStyles);
-      window.removeEventListener("orientationchange", updateVideoStyles);
+      window.removeEventListener("resize", handleResize);
+      window.removeEventListener("orientationchange", handleResize);
     };
-  }, []);
+  }, [messageStore.receivedContent?.content]);
 
   useEffect(() => {
     const generateQR = async () => {
@@ -201,7 +241,6 @@ export const Content: React.FC = () => {
       );
     }
 
-
     if (messageStore.receivedType === "Video") {
       return (
         <div
@@ -215,6 +254,9 @@ export const Content: React.FC = () => {
             zIndex: 9,
             pointerEvents: 'none',
             backgroundColor: 'black',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
           }}
         >
           <video
@@ -225,15 +267,12 @@ export const Content: React.FC = () => {
             playsInline
             key={messageStore.receivedContent?.content ?? ""}
             style={{
-              position: 'absolute',
-              top: '50%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)',
-              aspectRatio,
-              objectFit,
-              minWidth: '100%',
-              minHeight: '100%',
-              padding
+              maxWidth: '100%',
+              maxHeight: '100%',
+              width: 'auto',
+              height: 'auto',
+              objectFit: 'contain',
+              display: 'block',
             }}
           >
             <source
@@ -244,7 +283,6 @@ export const Content: React.FC = () => {
         </div>
       );
     }
-
 
     if (messageStore.receivedType === "Slideshow") {
       return (
