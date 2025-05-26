@@ -47,7 +47,7 @@ const schema = yup.object().shape(
         yup
           .string()
           .required("Tag is required")
-          .max(20, "Tag must be at most 20 characters"),
+          .max(30, "Tag must be at most 30 characters"),
     }),
   },
   [["tagCreate", "tagSelect"]],
@@ -95,8 +95,8 @@ export const CreateVideoTemplateForm: React.FC<{
             cb(
               template[0],
               !!data.tagSelect ||
-                !!videoTags.data?.find(({ tag }) => tag === template[0].tag) ||
-                false,
+              !!videoTags.data?.find(({ tag }) => tag === template[0].tag) ||
+              false,
             );
           }
         },
@@ -165,8 +165,11 @@ export const CreateVideoTemplateForm: React.FC<{
               {errors.file?.message?.toString()}{" "}
             </p>
           )}
-          {(errors.tagCreate || errors.tagSelect) && (
+          {errors.tagSelect && (
             <p className="text-xs text-rose-600">Tag is required</p>
+          )}
+          {errors.tagCreate && (
+            <p className="text-xs text-rose-600">{errors.tagCreate?.message}</p>
           )}
           {errors.langCode && (
             <p className="text-xs text-rose-600">Language is required</p>

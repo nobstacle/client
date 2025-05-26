@@ -34,7 +34,7 @@ const schema = yup.object().shape(
         yup
           .string()
           .required("Tag is required")
-          .max(20, "Tag must be at most 20 characters"),
+          .max(30, "Tag must be at most 30 characters"),
     }),
     content: yup.string().required("Content is required"),
     langCode: yup.string().required("Language is required"),
@@ -80,8 +80,8 @@ export const CreateTextTemplateForm: React.FC<{
             cb(
               template,
               !!data.tagSelect ||
-                !!textTags.data?.find(({ tag }) => tag === template.tag) ||
-                false,
+              !!textTags.data?.find(({ tag }) => tag === template.tag) ||
+              false,
             );
           }
         },
@@ -148,10 +148,13 @@ export const CreateTextTemplateForm: React.FC<{
           {errors.content && (
             <p className="text-xs text-rose-600">{errors.content.message}</p>
           )}
-          {(errors.tagCreate || errors.tagSelect) && (
+          {errors.tagSelect && (
             <p className="text-xs text-rose-600">
               {errors.tagCreate?.message || errors.tagSelect?.message}
             </p>
+          )}
+          {errors.tagCreate && (
+            <p className="text-xs text-rose-600">{errors.tagCreate?.message}</p>
           )}
           {errors.langCode && (
             <p className="text-xs text-rose-600">{errors.langCode.message}</p>

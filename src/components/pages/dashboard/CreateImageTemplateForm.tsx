@@ -27,19 +27,18 @@ const schema = yup.object().shape(
     file: yup.mixed().required("File is required"),
     langCode: yup.string().required(),
     tagSelect: yup.string().when("tagCreate", {
-      is: (val: any) => val && val.length > 0,
-      then: () => yup.string(),
-      otherwise: () => yup.string().required(),
+      is: (val: any) => !val || val.length === 0,
+      then: () => yup.string().required("Tag is required"),
+      otherwise: () => yup.string(),
     }),
 
     tagCreate: yup.string().when("tagSelect", {
-      is: (val: any) => val && val.length > 0,
-      then: () => yup.string(),
-      otherwise: () =>
-        yup
-          .string()
-          .required("Tag is required")
-          .max(20, "Tag must be at most 20 characters"),
+      is: (val: any) => !val || val.length === 0,
+      then: () => yup
+        .string()
+        .required("Tag is required")
+        .max(30, "Tag must be at most 30 characters"),
+      otherwise: () => yup.string(),
     }),
   },
   [["tagCreate", "tagSelect"]],
@@ -87,8 +86,8 @@ export const CreateImageTemplateForm: React.FC<{
             cb(
               template[0],
               !!data.tagSelect ||
-                !!imageTags.data?.find(({ tag }) => tag === template[0].tag) ||
-                false,
+              !!imageTags.data?.find(({ tag }) => tag === template[0].tag) ||
+              false,
             );
           }
         },
@@ -155,8 +154,11 @@ export const CreateImageTemplateForm: React.FC<{
           {errors.file && (
             <p className="text-xs text-rose-600">File is required</p>
           )}
-          {(errors.tagCreate || errors.tagSelect) && (
+          {errors.tagSelect && (
             <p className="text-xs text-rose-600">Tag is required</p>
+          )}
+          {errors.tagCreate && (
+            <p className="text-xs text-rose-600">{errors.tagCreate?.message}</p>
           )}
           {errors.langCode && (
             <p className="text-xs text-rose-600">Language is required</p>

@@ -586,3 +586,8 @@ button {
   background: #ad1d1d !important;
 }
 
+.customTemplateButton {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
