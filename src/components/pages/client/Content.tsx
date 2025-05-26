@@ -136,6 +136,7 @@ export const Content: React.FC = () => {
     }
     return () => clearInterval(countdown);
   }, [showQR]);
+
   const { emitSendMessage } = useSocketContext();
 
   const sendMessage = (message: string) => {
@@ -146,7 +147,6 @@ export const Content: React.FC = () => {
       langCode: company.data?.defaultLangCode ?? "en",
     });
   };
-
 
   if (hasHydrated) {
     if (
@@ -261,8 +261,6 @@ export const Content: React.FC = () => {
   }
 
   if (messageStore.receivedType === ("JotFormMessage" as any)) {
-
-
     return (
       <div className="surveyWrapper w-screen h-screen flex flex-col bg-gray-100">
         {showQR && (
