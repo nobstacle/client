@@ -33,6 +33,7 @@ export const Content: React.FC = () => {
   const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
   const [showQR, setShowQR] = useState(false);
   const iframeRef = useRef(null);
+  const [timer, setTimer] = useState(20);
 
   const defaultSlideshowContent =
     useContentControllerGetDefaultSlideshowContent({
@@ -96,17 +97,6 @@ export const Content: React.FC = () => {
     };
   }, []);
 
-  const { emitSendMessage } = useSocketContext();
-
-  const sendMessage = (message: string) => {
-    emitSendMessage({
-      message: message,
-      station: Number(params.get("station") ?? 1),
-      refType: "ChatMessage",
-      langCode: company.data?.defaultLangCode ?? "en",
-    });
-  };
-
   useEffect(() => {
     const generateQR = async () => {
       const content = messageStore.receivedContent?.content;
@@ -128,6 +118,35 @@ export const Content: React.FC = () => {
 
     generateQR();
   }, [messageStore.receivedContent?.content]);
+
+  useEffect(() => {
+    let countdown: NodeJS.Timeout;
+    if (showQR) {
+      setTimer(20);
+      countdown = setInterval(() => {
+        setTimer(prev => {
+          if (prev <= 1) {
+            setShowQR(false);
+            clearInterval(countdown);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(countdown);
+  }, [showQR]);
+  const { emitSendMessage } = useSocketContext();
+
+  const sendMessage = (message: string) => {
+    emitSendMessage({
+      message: message,
+      station: Number(params.get("station") ?? 1),
+      refType: "ChatMessage",
+      langCode: company.data?.defaultLangCode ?? "en",
+    });
+  };
+
 
   if (hasHydrated) {
     if (
@@ -262,6 +281,9 @@ export const Content: React.FC = () => {
               <span className="text-gray-700 text-xl customScanCode">
                 Kindly scan to fill the form on your own device.
               </span>
+            </div>
+            <div className="absolute bottom-2 right-4 text-sm text-gray-500">
+              Hiding in {timer}s
             </div>
             <button
               onClick={() => setShowQR(false)}
