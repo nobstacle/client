@@ -626,10 +626,6 @@ button {
   color: white !important;
 }
 
-.customCards {
-  background: #F9FAFB !important;
-}
-
 .customCardBottom .ant-card-body {
   padding-bottom: 0.4rem !important;
 }

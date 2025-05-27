@@ -11,7 +11,7 @@ import {
 } from "../../../lib/client/api";
 import useTemplateStore from "../../../lib/zustand/store/templateStore";
 import { useSearchParams } from "next/navigation";
-import { Card } from "../../../components/Card";
+// import { Card } from "../../../components/Card";
 import { useSocketContext } from "../../../context/SocketContextProvider";
 import { ChatType } from "../../../constant/types";
 import { SendTextTemplateForm } from "../../../components/pages/dashboard/SendTextTemplateForm";
@@ -28,6 +28,7 @@ import {
 } from "../../../components/DraggableCard";
 import { UniqueIdentifier } from "@dnd-kit/core";
 import { arrayMove } from "@dnd-kit/sortable";
+import {Card} from "antd";
 
 export default function Dashboard() {
   const [editTemplate, setEditTemplate] = useState<null | GetTextTemplateRes>(
@@ -117,7 +118,7 @@ export default function Dashboard() {
     return (
       <div className="flex h-full w-full justify-start gap-2 overflow-y-auto  p-6">
         <div className="flex w-full flex-col gap-4">
-          <div className="flex gap-4 ">
+          <Card className="w-full">
             <SendTextTemplateForm onSend={sendTextTemplateMessage} />
             {textsSource.length > 0 && (
               <div className="w-full">
@@ -126,7 +127,7 @@ export default function Dashboard() {
                 </div>
               </div>
             )}
-          </div>
+          </Card>
           {userData?.user.Roles?.includes("Admin") && (
             <Modal
               title="Create template"

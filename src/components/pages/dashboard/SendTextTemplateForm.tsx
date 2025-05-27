@@ -35,7 +35,6 @@ export const SendTextTemplateForm: React.FC<PropsI> = ({ onSend }) => {
   };
 
   return (
-    <Card className="w-full customCards">
       <Form layout="vertical" onFinish={handleSubmit(onSubmit)} className="w-full gap-4">
         <Row gutter={16}>
           <Col md={23} xs={24}>
@@ -72,6 +71,5 @@ export const SendTextTemplateForm: React.FC<PropsI> = ({ onSend }) => {
           </Col>
         </Row>
       </Form>
-    </Card >
   );
 };
