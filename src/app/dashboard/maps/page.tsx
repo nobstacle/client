@@ -173,8 +173,8 @@ export default function MapsDashboard() {
                       val.id,
                       val.langCode.includes(
                         params.get("lang") ||
-                          companyData?.defaultLangCode ||
-                          "",
+                        companyData?.defaultLangCode ||
+                        "",
                       ),
                     )
                   }

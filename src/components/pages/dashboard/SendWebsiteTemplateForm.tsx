@@ -1,11 +1,11 @@
+import React from "react";
+import { useForm, SubmitHandler, Controller } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
-import * as React from "react";
-import { SubmitHandler, useForm } from "react-hook-form";
 import * as yup from "yup";
-import { Button } from "../../Button";
-import { SendIcon } from "../../icons/SendIcon";
-import Input from "../../Input";
-
+import { Form, Input as AntdInput, Button as AntdButton, Card } from "antd";
+import { SendOutlined } from "@ant-design/icons";
+import "../../../styles/base.css";
+import { SendIcon } from "@/components/icons/SendIcon";
 interface PropsI {
   onSend: (url: string) => void;
 }
@@ -14,14 +14,16 @@ type FormValues = {
   url: string;
 };
 
-const schema = yup
-  .object({
-    url: yup.string().required(),
-  })
-  .required();
+const schema = yup.object({
+  url: yup.string().required("Url is required"),
+});
 
 export const SendWebsiteTemplateForm: React.FC<PropsI> = ({ onSend }) => {
-  const { register, formState, handleSubmit } = useForm<FormValues>({
+  const {
+    handleSubmit,
+    control,
+    formState: { errors },
+  } = useForm<FormValues>({
     resolver: yupResolver(schema),
     defaultValues: { url: "" },
   });
@@ -29,35 +31,37 @@ export const SendWebsiteTemplateForm: React.FC<PropsI> = ({ onSend }) => {
   const onSubmit: SubmitHandler<FormValues> = (data) => onSend(data.url);
 
   return (
-    <form
-      onSubmit={handleSubmit(onSubmit)}
-      className=" w-full items-start justify-start gap-4"
-    >
-      <div className="flex items-center gap-4">
-        <Input
-          register={register}
-          name="url"
-          label=""
-          type="text"
-          required
-          placeholder="Type the url to send here..."
-          className="w-full rounded-md border-2  p-2"
-        />
-        <div className="flex items-start gap-2">
-          <div>
-            <Button
-              className="border-1 flex justify-center rounded-md border-black  p-2 px-6 text-center text-white"
-              type="submit"
-            >
-              <SendIcon />
-            </Button>
-          </div>
-        </div>
-      </div>
+    <Card className="w-full customCards">
+      <Form onFinish={handleSubmit(onSubmit)} className="w-full">
+        <div className="flex items-center gap-4">
+          <Form.Item
+            validateStatus={errors.url ? "error" : ""}
+            help={errors.url?.message}
+            className="w-full mb-0"
+          >
+            <Controller
+              name="url"
+              control={control}
+              render={({ field }) => (
+                <AntdInput
+                  {...field}
+                  placeholder="Type the url to send here..."
+                  className="customInputHorizontal"
+                />
+              )}
+            />
+          </Form.Item>
 
-      {formState.errors.url && (
-        <p className="text-xs text-rose-600">Url is required</p>
-      )}
-    </form>
+          <Form.Item className="mb-0">
+            <AntdButton
+              htmlType="submit"
+              type="primary"
+              icon={<SendIcon />}
+              className="textSendButton"
+            />
+          </Form.Item>
+        </div>
+      </Form>
+    </Card>
   );
 };

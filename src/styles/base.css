@@ -591,3 +591,45 @@ button {
   justify-content: center;
   align-items: center;
 }
+
+.textSendButton {
+  background: #3b5998;
+  color: white;
+  border: none;
+  min-width: 3.5rem !important;
+}
+
+.textSendButton:hover {
+  background: #2d4373 !important;
+  color: white !important;
+}
+
+.customInputPadding {
+  padding: 0.5rem 1rem !important;
+}
+
+.customInputHorizontal {
+  height: 40px;
+  padding: 0 1rem !important;
+}
+
+.textSendButton {
+  background: #3b5998;
+  color: white;
+  border: none;
+  min-width: 3.5rem !important;
+  height: 2.44rem;
+}
+
+.textSendButton:hover {
+  background: #2d4373 !important;
+  color: white !important;
+}
+
+.customCards {
+  background: #F9FAFB !important;
+}
+
+.customCardBottom .ant-card-body {
+  padding-bottom: 0.4rem !important;
+}

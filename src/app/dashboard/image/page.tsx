@@ -1,18 +1,18 @@
 "use client";
 
-import Image from "next/image";
-import { Button } from "../../../components/Button";
+// import Image from "next/image";
+// import { Button } from "../../../components/Button";
 import Modal from "../../../components/Modal";
 import { CreateImageTemplateForm } from "../../../components/pages/dashboard/CreateImageTemplateForm";
 import { useDisclousure } from "../../../hooks/useDisclosure";
 import {
-  getTemplateControllerGetImageTemplatesQueryKey,
+  // getTemplateControllerGetImageTemplatesQueryKey,
   useCompanyControllerGetCompany,
   useImageTemplateControllerDeleteImageTemplateOne,
   useImageTemplateControllerPatchImageTemplateOrder,
-  useTemplateControllerGetImageTemplates,
+  // useTemplateControllerGetImageTemplates,
 } from "../../../lib/client/api";
-import { Card } from "../../../components/Card";
+// import { Card } from "../../../components/Card";
 import { useSearchParams } from "next/navigation";
 import { useSocketContext } from "../../../context/SocketContextProvider";
 import { ChatType } from "../../../constant/types";
@@ -32,6 +32,8 @@ import {
 } from "../../../components/DraggableCard";
 import { arrayMove } from "@dnd-kit/sortable";
 import { UniqueIdentifier } from "@dnd-kit/core";
+import { Card } from 'antd';
+import "../../../styles/base.css";
 
 export default function ImageDashboard() {
   const [editTemplate, setEditTemplate] = useState<null | GetImageTemplateRes>(
@@ -111,12 +113,16 @@ export default function ImageDashboard() {
 
   if (isHydrated)
     return (
-      <div className="flex h-full w-full flex-col justify-start gap-4 overflow-y-auto  p-6">
-        {imagesSource.length > 0 && (
-          <div className="w-50">
-            <SearchTemplateForm searchOnChange={search} />
-          </div>
-        )}
+      <div className="flex h-full w-full flex-col justify-start gap-4 overflow-y-auto p-6">
+        <div className="customSearchWrapper">
+          {imagesSource.length > 0 && (
+            <Card className="w-full customCards">
+              <div style={{ width: '20%' }}>
+                <SearchTemplateForm searchOnChange={search} />
+              </div>
+            </Card>
+          )}
+        </div>
         {userData?.user.Roles?.includes("Admin") && (
           <Modal
             title="Create template"
@@ -158,8 +164,8 @@ export default function ImageDashboard() {
                       val.id,
                       val.langCode.includes(
                         params.get("lang") ||
-                          companyData?.defaultLangCode ||
-                          "",
+                        companyData?.defaultLangCode ||
+                        "",
                       ),
                       val.ext,
                     )

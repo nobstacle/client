@@ -117,7 +117,7 @@ export default function Dashboard() {
     return (
       <div className="flex h-full w-full justify-start gap-2 overflow-y-auto  p-6">
         <div className="flex w-full flex-col gap-4">
-          <div className="flex w-8/12 flex-col items-end gap-4 ">
+          <div className="flex gap-4 ">
             <SendTextTemplateForm onSend={sendTextTemplateMessage} />
             {textsSource.length > 0 && (
               <div className="w-full">

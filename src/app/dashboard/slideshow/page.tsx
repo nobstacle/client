@@ -11,7 +11,6 @@ import {
   useSlideshowTemplateControllerPatchSlideshowTemplateOrder,
   useTemplateControllerGetSlideshowTemplates,
 } from "../../../lib/client/api";
-import { Card } from "../../../components/Card";
 import { useSearchParams } from "next/navigation";
 import { useSocketContext } from "../../../context/SocketContextProvider";
 import { ChatType } from "../../../constant/types";
@@ -24,7 +23,7 @@ import { useTemplateContext } from "../../../context/TemplatesProvider";
 import { UpdateSlideshowTemplateForm } from "../../../components/pages/dashboard/UpdateSlideshowTemplateForm";
 import { useState } from "react";
 import {
-  GetImageTemplateRes,
+  // GetImageTemplateRes,
   GetSlideshowTemplateRes,
 } from "../../../lib/client/model";
 import { useSearchTemplate } from "../../../hooks/useSearchTemplate";
@@ -35,6 +34,8 @@ import {
 } from "../../../components/DraggableCard";
 import { UniqueIdentifier } from "@dnd-kit/core";
 import { arrayMove } from "@dnd-kit/sortable";
+import { Card } from 'antd';
+import "../../../styles/base.css";
 
 export default function SlideshowDashboard() {
   const [editTemplate, setEditTemplate] =
@@ -124,9 +125,11 @@ export default function SlideshowDashboard() {
     return (
       <div className="flex h-full w-full flex-col justify-start gap-4 overflow-y-auto  p-6">
         {slideshowsSource.length > 0 && (
-          <div className="w-50">
-            <SearchTemplateForm searchOnChange={search} />
-          </div>
+          <Card className="w-full customCards">
+            <div style={{ width: '20%' }}>
+              <SearchTemplateForm searchOnChange={search} />
+            </div>
+          </Card>
         )}
         {userData?.user.Roles?.includes("Admin") && (
           <div className="flex w-2/12 flex-col gap-4">
@@ -187,8 +190,8 @@ export default function SlideshowDashboard() {
                       val.id,
                       val.langCode.includes(
                         params.get("lang") ||
-                          companyData?.defaultLangCode ||
-                          "",
+                        companyData?.defaultLangCode ||
+                        "",
                       ),
                     )
                   }
