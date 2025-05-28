@@ -177,8 +177,8 @@ export default function Dashboard() {
                       val.id,
                       val.langCode.includes(
                         params.get("lang") ||
-                          companyData?.defaultLangCode ||
-                          "",
+                        companyData?.defaultLangCode ||
+                        "",
                       ),
                     )
                   }
@@ -198,8 +198,8 @@ export default function Dashboard() {
                       >
                         {val.langCode.includes(
                           params.get("lang") ||
-                            companyData?.defaultLangCode ||
-                            "",
+                          companyData?.defaultLangCode ||
+                          "",
                         ) ? (
                           <span
                             className="absolute bottom-0 right-0 h-0 w-0

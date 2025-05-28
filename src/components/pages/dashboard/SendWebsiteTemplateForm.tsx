@@ -32,7 +32,7 @@ export const SendWebsiteTemplateForm: React.FC<PropsI> = ({ onSend }) => {
 
   return (
     <Card className="w-full customCards">
-      <Form onFinish={handleSubmit(onSubmit)} className="w-full">
+      <Form onFinish={handleSubmit(onSubmit)} className="w-1/2">
         <div className="flex items-center gap-4">
           <Form.Item
             validateStatus={errors.url ? "error" : ""}
@@ -56,8 +56,8 @@ export const SendWebsiteTemplateForm: React.FC<PropsI> = ({ onSend }) => {
             <AntdButton
               htmlType="submit"
               type="primary"
-              icon={<SendIcon />}
-              className="textSendButton"
+              icon={<SendIcon size={20} />}
+              className="headerButton"
             />
           </Form.Item>
         </div>

@@ -121,8 +121,8 @@ export default function Dashboard() {
           <Card className="w-full">
             <SendTextTemplateForm onSend={sendTextTemplateMessage} />
             {textsSource.length > 0 && (
-              <div className="w-full">
-                <div className="w-50">
+              <div className="w-1/2">
+                <div className="w-1/2">
                   <SearchTemplateForm searchOnChange={search} />
                 </div>
               </div>

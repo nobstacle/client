@@ -117,8 +117,8 @@ export const SendMapForm: React.FC<{
                 htmlType="submit"
                 loading={createMapsTemplate.status === "pending"}
                 disabled={createMapsTemplate.status === "pending"}
-                icon={<SendIcon />}
-                className="textSendButton"
+                icon={<SendIcon size={20}/>}
+                className="headerButton"
               />
             </Form.Item>
           </Col>

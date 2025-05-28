@@ -64,8 +64,8 @@ export const SendTextTemplateForm: React.FC<PropsI> = ({ onSend }) => {
               <Button
                 type="primary"
                 htmlType="submit"
-                icon={<SendIcon />}
-                className="textSendButton"
+                icon={<SendIcon size={20}/>}
+               className="headerButton"
               />
             </Form.Item>
           </Col>
