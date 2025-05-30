@@ -1,23 +1,17 @@
 "use client";
 
-// import Image from "next/image";
-// import { Button } from "../../../components/Button";
 import Modal from "../../../components/Modal";
 import { CreateImageTemplateForm } from "../../../components/pages/dashboard/CreateImageTemplateForm";
 import { useDisclousure } from "../../../hooks/useDisclosure";
 import {
-  // getTemplateControllerGetImageTemplatesQueryKey,
   useCompanyControllerGetCompany,
   useImageTemplateControllerDeleteImageTemplateOne,
   useImageTemplateControllerPatchImageTemplateOrder,
-  // useTemplateControllerGetImageTemplates,
 } from "../../../lib/client/api";
-// import { Card } from "../../../components/Card";
 import { useSearchParams } from "next/navigation";
 import { useSocketContext } from "../../../context/SocketContextProvider";
 import { ChatType } from "../../../constant/types";
 import { useSession } from "next-auth/react";
-import { Spinner } from "../../../components/Spinner";
 import { PlusIcon } from "../../../components/icons/PlusIcon";
 import useTemplateStore from "../../../lib/zustand/store/templateStore";
 import { useHasHydrated } from "../../../hooks/useHydrated";

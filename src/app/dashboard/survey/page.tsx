@@ -18,7 +18,7 @@ function Page() {
 
   return (
     <div className="h-full overflow-y-auto p-4 ">
-      <Card className=" bg-gray-50">
+      <Card className="bg-gray-50">
         <div className="flex w-full flex-col gap-4">
           <CreateSurveyTemplate />
         </div>

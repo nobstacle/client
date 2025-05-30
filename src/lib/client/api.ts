@@ -2480,50 +2480,50 @@ export const useSurveyAnswerControllerDeleteSurveyAnswer = <TError = ErrorType<H
 
 export const companyControllerGetAllCompanies = (
 	options?: SecondParameter<typeof nobstacleBackendApiInstance>, signal?: AbortSignal
-  ) => {
+) => {
 	return nobstacleBackendApiInstance<GetCompanyRes[]>(
-	  {
-		url: `/api/v1/company/all`,
-		method: 'GET',
-		headers: {
-		  'Accept': 'application/json, text/plain, */*',
-		  'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjEsIlJvbGVzIjpbIlNBZG1pbiJdLCJjb21wYW55SWQiOjEsImlhdCI6MTc0MjQ2NzY5NCwiZXhwIjoxNzQ2MDY3Njk0fQ.KJPy-F_0fD6BzpMl0I0qvXYaA8odvHgoiUEC-hZwUog'
+		{
+			url: `/api/v1/company/all`,
+			method: 'GET',
+			headers: {
+				'Accept': 'application/json, text/plain, */*',
+				'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjEsIlJvbGVzIjpbIlNBZG1pbiJdLCJjb21wYW55SWQiOjEsImlhdCI6MTc0MjQ2NzY5NCwiZXhwIjoxNzQ2MDY3Njk0fQ.KJPy-F_0fD6BzpMl0I0qvXYaA8odvHgoiUEC-hZwUog'
+			},
+			signal
 		},
-		signal
-	  },
-	  options
+		options
 	);
-  };
-  
-  export const getCompanyControllerGetAllCompaniesQueryKey = () => {
+};
+
+export const getCompanyControllerGetAllCompaniesQueryKey = () => {
 	return [`/api/v1/company/all`] as const;
-  };
-  
-  export const getCompanyControllerGetAllCompaniesQueryOptions = <TData = Awaited<ReturnType<typeof companyControllerGetAllCompanies>>, TError = ErrorType<HttpExceptionSchema>>(options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof companyControllerGetAllCompanies>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
-  ) => {
+};
+
+export const getCompanyControllerGetAllCompaniesQueryOptions = <TData = Awaited<ReturnType<typeof companyControllerGetAllCompanies>>, TError = ErrorType<HttpExceptionSchema>>(options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof companyControllerGetAllCompanies>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+) => {
 	const { query: queryOptions, request: requestOptions } = options ?? {};
-  
+
 	const queryKey = queryOptions?.queryKey ?? getCompanyControllerGetAllCompaniesQueryKey();
-  
+
 	const queryFn: QueryFunction<Awaited<ReturnType<typeof companyControllerGetAllCompanies>>> = ({ signal }) => companyControllerGetAllCompanies(requestOptions, signal);
-  
+
 	return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<Awaited<ReturnType<typeof companyControllerGetAllCompanies>>, TError, TData> & { queryKey: QueryKey };
-  };
-  
-  export type CompanyControllerGetAllCompaniesQueryResult = NonNullable<Awaited<ReturnType<typeof companyControllerGetAllCompanies>>>;
-  export type CompanyControllerGetAllCompaniesQueryError = ErrorType<HttpExceptionSchema>;
-  
-  export const useCompanyControllerGetAllCompanies = <TData = Awaited<ReturnType<typeof companyControllerGetAllCompanies>>, TError = ErrorType<HttpExceptionSchema>>(
+};
+
+export type CompanyControllerGetAllCompaniesQueryResult = NonNullable<Awaited<ReturnType<typeof companyControllerGetAllCompanies>>>;
+export type CompanyControllerGetAllCompaniesQueryError = ErrorType<HttpExceptionSchema>;
+
+export const useCompanyControllerGetAllCompanies = <TData = Awaited<ReturnType<typeof companyControllerGetAllCompanies>>, TError = ErrorType<HttpExceptionSchema>>(
 	options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof companyControllerGetAllCompanies>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
-  ): UseQueryResult<TData, TError> & { queryKey: QueryKey } => {
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } => {
 	const queryOptions = getCompanyControllerGetAllCompaniesQueryOptions(options);
-  
+
 	const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
-  
+
 	query.queryKey = queryOptions.queryKey;
-  
+
 	return query;
-  };
+};
 
 export const companyControllerCreateCompany = (
 	postCompanyReq: BodyType<PostCompanyReq>,
@@ -2643,6 +2643,30 @@ export const uploadControllerUploadCompanyFile = (
 		},
 		options);
 }
+
+export const uploadControllerUploadDocument = (
+  uploadControllerUploadDocumentBody: BodyType<UploadControllerUploadDocumentBody>,
+  options?: SecondParameter<typeof nobstacleBackendApiInstance>,
+) => {
+  const formData = new FormData();
+  formData.append('file', uploadControllerUploadDocumentBody.file);
+  formData.append('docName', uploadControllerUploadDocumentBody.docName);
+  formData.append('langCode', uploadControllerUploadDocumentBody.langCode);
+  // include userId if you need to override default from the token
+  if (uploadControllerUploadDocumentBody.userId) {
+    formData.append('userId', uploadControllerUploadDocumentBody.userId);
+  }
+
+  return nobstacleBackendApiInstance<GetDocumentRes>(
+    {
+      url: `/api/v1/documents`,
+      method: 'POST',
+      headers: { 'Content-Type': 'multipart/form-data' },
+      data: formData,
+    },
+    options,
+  );
+};
 
 
 
@@ -3241,13 +3265,7 @@ export const getTemplateControllerGetWebsiteTemplatesQueryOptions = <TData = Awa
 
 	const queryKey = queryOptions?.queryKey ?? getTemplateControllerGetWebsiteTemplatesQueryKey(params);
 
-
-
 	const queryFn: QueryFunction<Awaited<ReturnType<typeof templateControllerGetWebsiteTemplates>>> = ({ signal }) => templateControllerGetWebsiteTemplates(params, requestOptions, signal);
-
-
-
-
 
 	return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<Awaited<ReturnType<typeof templateControllerGetWebsiteTemplates>>, TError, TData> & { queryKey: QueryKey }
 }
@@ -3259,13 +3277,7 @@ export const getTemplateControllerGetJotformTemplatesQueryOptions = <TData = Awa
 
 	const queryKey = queryOptions?.queryKey ?? getTemplateControllerGetJotformTemplatesQueryKey(params);
 
-
-
 	const queryFn: QueryFunction<Awaited<ReturnType<typeof templateControllerGetJotformTemplates>>> = ({ signal }) => templateControllerGetJotformTemplates(params, requestOptions, signal);
-
-
-
-
 
 	return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<Awaited<ReturnType<typeof templateControllerGetJotformTemplates>>, TError, TData> & { queryKey: QueryKey }
 }
@@ -3303,9 +3315,6 @@ export const useTemplateControllerGetJotformTemplates = <TData = Awaited<ReturnT
 
 	return query;
 }
-
-
-
 
 export const shortcutControllerCreateShortcutMany = (
 	postShortcutManyReq: BodyType<PostShortcutManyReq>,
@@ -3682,5 +3691,45 @@ export const useAppControllerHealthz = <TData = Awaited<ReturnType<typeof appCon
 }
 
 
+export const documentTemplateControllerDeleteDocumentTemplateOne = (
+	id: number,
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>,
+) => {
+	return nobstacleBackendApiInstance<boolean>(
+		{
+			url: `/api/v1/content/document/${id}`, 
+			method: 'DELETE'
+		},
+		options
+	);
+}
 
+export const getDocumentTemplateControllerDeleteDocumentTemplateOneMutationOptions = <
+	TError = ErrorType<HttpExceptionSchema>,
+	TContext = unknown
+>(options?: { 
+	mutation?: UseMutationOptions<Awaited<ReturnType<typeof documentTemplateControllerDeleteDocumentTemplateOne>>, TError, { id: number }, TContext>, 
+	request?: SecondParameter<typeof nobstacleBackendApiInstance> 
+}): UseMutationOptions<Awaited<ReturnType<typeof documentTemplateControllerDeleteDocumentTemplateOne>>, TError, { id: number }, TContext> => {
+	const { mutation: mutationOptions, request: requestOptions } = options ?? {};
 
+	const mutationFn: MutationFunction<Awaited<ReturnType<typeof documentTemplateControllerDeleteDocumentTemplateOne>>, { id: number }> = (props) => {
+		const { id } = props ?? {};
+
+		return documentTemplateControllerDeleteDocumentTemplateOne(id, requestOptions)
+	}
+
+	return { mutationFn, ...mutationOptions }
+}
+
+export const useDocumentTemplateControllerDeleteDocumentTemplateOne = <
+	TError = ErrorType<HttpExceptionSchema>,
+	TContext = unknown
+>(options?: { 
+	mutation?: UseMutationOptions<Awaited<ReturnType<typeof documentTemplateControllerDeleteDocumentTemplateOne>>, TError, { id: number }, TContext>, 
+	request?: SecondParameter<typeof nobstacleBackendApiInstance> 
+}) => {
+	const mutationOptions = getDocumentTemplateControllerDeleteDocumentTemplateOneMutationOptions(options);
+
+	return useMutation(mutationOptions);
+}

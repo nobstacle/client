@@ -42,8 +42,9 @@ export const ClientLink = ({
         {title === "Settings" && <SettingsIcon />}
         {title === "Website" && <WebsiteIcon />}
         {title === "Test Mic" && <MicIcon fill="#ffffff" />}
-        {title === "Form" && <WebsiteIcon/>}
-        {title === "Responses" && <WebsiteIcon/>}
+        {title === "Form" && <WebsiteIcon />}
+        {title === "Documents" && <WebsiteIcon />}
+        {title === "Responses" && <WebsiteIcon />}
       </div>
       <Link className="font-medium text-white" href={`${href}?${params}`}>
         {title}

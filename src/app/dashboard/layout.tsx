@@ -90,6 +90,7 @@ const Sidebar = async () => {
               <ClientLink href="/dashboard/survey" title="Survey" />
               <ClientLink href="/dashboard/website" title="Website" />
               <ClientLink href="/dashboard/form" title="Form" />
+              <ClientLink href="/dashboard/documents" title="Documents" />
             </>
           )}
 
