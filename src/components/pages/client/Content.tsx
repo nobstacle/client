@@ -32,6 +32,9 @@ export const Content: React.FC = () => {
   const iframeRef = useRef(null);
   const [timer, setTimer] = useState(20);
   const [isClosing, setIsClosing] = useState(false);
+  const [viewMode, setViewMode] = useState('embedded'); // 'embedded' or 'download'
+  const [loadError, setLoadError] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   const defaultSlideshowContent =
     useContentControllerGetDefaultSlideshowContent({
@@ -64,6 +67,8 @@ export const Content: React.FC = () => {
     }
   }, [messageStore.receivedType]);
 
+  console.info("messageStore.receivedType", messageStore.receivedType);
+
   useEffect(() => {
     const updateVideoStyles = () => {
       if (!videoElement.current) return;
@@ -80,8 +85,8 @@ export const Content: React.FC = () => {
         const videoHeight = video.videoHeight;
         const videoAspectRatio = videoWidth / videoHeight;
 
-        let width:any; 
-        let height:any;
+        let width: any;
+        let height: any;
 
         if (videoAspectRatio > containerAspectRatio) {
           width = containerWidth;
@@ -238,6 +243,154 @@ export const Content: React.FC = () => {
           }} // optional
           src={messageStore.receivedContent?.content ?? ""}
         />
+      );
+    }
+    if (messageStore.receivedType === "Document" ||
+      messageStore.receivedType === "PdfDocument" ||
+      messageStore.receivedType === "WordDocument" ||
+      messageStore.receivedType === "ExcelDocument" ||
+      messageStore.receivedType === "PowerPointDocument" ||
+      messageStore.receivedType === "CsvDocument") {
+
+      const documentUrl = messageStore.receivedContent?.content ?? "";
+      const fileType = messageStore.receivedContent?.extraContent?.toLowerCase() ?? "";
+      const fileName = `document.${fileType}`;
+
+      const handleIframeError = () => {
+        setLoadError(true);
+        setIsLoading(false);
+      };
+
+      const handleIframeLoad = () => {
+        setIsLoading(false);
+      };
+
+
+      const renderDocumentViewer = () => {
+        if (loadError) {
+          return;
+        }
+
+        switch (fileType) {
+          case 'pdf':
+            return (
+              <div className="w-full h-screen border rounded-lg overflow-hidden relative">
+                {isLoading && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-gray-50 z-10">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+                  </div>
+                )}
+                <iframe
+                  src={documentUrl}
+                  className="w-full h-full"
+                  title="PDF Document"
+                  frameBorder="0"
+                  onLoad={handleIframeLoad}
+                  onError={handleIframeError}
+                />
+              </div>
+            );
+
+          case 'doc':
+          case 'docx':
+            return (
+              <div className="w-full h-screen border rounded-lg overflow-hidden relative">
+                {isLoading && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-gray-50 z-10">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+                  </div>
+                )}
+                <iframe
+                  src={`https://docs.google.com/gview?url=${encodeURIComponent(documentUrl)}&embedded=true`}
+                  className="w-full h-full"
+                  title="Word Document"
+                  frameBorder="0"
+                  onLoad={handleIframeLoad}
+                  onError={handleIframeError}
+                />
+              </div>
+            );
+
+          case 'xls':
+          case 'xlsx':
+            return (
+              <div className="w-full h-screen border rounded-lg overflow-hidden relative">
+                {isLoading && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-gray-50 z-10">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+                  </div>
+                )}
+                <iframe
+                  src={`https://docs.google.com/gview?url=${encodeURIComponent(documentUrl)}&embedded=true`}
+                  className="w-full h-full"
+                  title="Excel Document"
+                  frameBorder="0"
+                  onLoad={handleIframeLoad}
+                  onError={handleIframeError}
+                />
+              </div>
+            );
+
+          case 'ppt':
+          case 'pptx':
+            return (
+              <div className="w-full h-screen border rounded-lg overflow-hidden relative">
+                {isLoading && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-gray-50 z-10">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+                  </div>
+                )}
+                <iframe
+                  src={`https://docs.google.com/gview?url=${encodeURIComponent(documentUrl)}&embedded=true`}
+                  className="w-full h-full"
+                  title="PowerPoint Document"
+                  frameBorder="0"
+                  onLoad={handleIframeLoad}
+                  onError={handleIframeError}
+                />
+              </div>
+            );
+
+          case 'csv':
+            return (
+              <div className="w-full h-96 border rounded-lg overflow-auto bg-gray-50 p-4 relative">
+                {isLoading && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-gray-50 z-10">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+                  </div>
+                )}
+                <iframe
+                  src={documentUrl}
+                  className="w-full h-full"
+                  title="CSV Document"
+                  frameBorder="0"
+                  onLoad={handleIframeLoad}
+                  onError={handleIframeError}
+                />
+              </div>
+            );
+
+          default:
+            return (
+              <div className="w-full p-8 text-center border-2 border-dashed border-gray-300 rounded-lg">
+                <div className="text-gray-500 mb-4">
+                  <svg className="mx-auto h-12 w-12 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  <p>Preview not available for this file type</p>
+                  <p className="text-sm">Use the download button below to view the document</p>
+                </div>
+              </div>
+            );
+        }
+      };
+
+      return (
+        <div className="w-full p-5">
+          {/* Document Viewer */}
+          {renderDocumentViewer()}
+
+        </div>
       );
     }
 

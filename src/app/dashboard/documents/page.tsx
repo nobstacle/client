@@ -1,6 +1,5 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Table, Pagination, Card } from 'antd';
 import { SendDocumentForm } from "../../../components/pages/dashboard/SendDocuments";
 import { useSearchParams } from "next/navigation";
 import { useDisclousure } from "../../../hooks/useDisclosure";
@@ -9,69 +8,23 @@ import Modal from "../../../components/Modal";
 import { UploadDocumentTemplateForm } from "../../../components/pages/dashboard/CreateDocumentTemplate";
 import { useSession } from "next-auth/react";
 import { FilePdfOutlined, FileWordOutlined, FileUnknownOutlined } from '@ant-design/icons';
+import {
+    DraggableCardContainer,
+    DraggableCardItem,
+} from "../../../components/DraggableCard";
+import { arrayMove } from "@dnd-kit/sortable";
+import { UniqueIdentifier } from "@dnd-kit/core";
+import { useSocketContext } from "../../../context/SocketContextProvider";
+import { ChatType } from "../../../constant/types";
 
 export default function Documents() {
-    const [currentPage, setCurrentPage] = useState(1);
-    const [totalPages, setTotalPages] = useState(0);
-    const [totalItems, setTotalItems] = useState(0);
-    const [pageSize, setPageSize] = useState(10);
+    const [searchDocuments, setSearchDocuments] = useState([]);
     const { data } = useSession();
     const params = useSearchParams();
     const { handleClose, handleOpen, isOpen } = useDisclousure();
     const [responses, setResponses] = useState([]);
+    const { emitSendDocument } = useSocketContext();
     let Url = process.env.NEXT_PUBLIC_BACKEND_URL;
-
-    const documentsData = responses;
-
-    const columns = [
-        {
-            title: "ID",
-            dataIndex: "id",
-            key: "id",
-        },
-        {
-            title: "Tag",
-            dataIndex: "tag",
-            key: "tag",
-        },
-        {
-            title: "Languages",
-            dataIndex: "langCode",
-            key: "langCode",
-            render: (langs: string[]) => langs.join(', '),
-        },
-        {
-            title: "File",
-            key: "file",
-            render: (_: any, record: any) => {
-                let icon;
-                const ext = record.ext?.toLowerCase();
-
-                switch (ext) {
-                    case 'pdf':
-                        icon = <FilePdfOutlined style={{ color: 'red' }} />;
-                        break;
-                    case 'doc':
-                    case 'docx':
-                        icon = <FileWordOutlined style={{ color: 'blue' }} />;
-                        break;
-                    default:
-                        icon = <FileUnknownOutlined />;
-                }
-
-                return (
-                    <a href={record.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
-                        {icon}
-                        <span>{record.tag}.{record.ext}</span>
-                    </a>
-                );
-            },
-        },
-    ];
-
-    const handlePageChange = (pageNumber: number) => {
-        setCurrentPage(pageNumber);
-    };
 
     const fetchDocuments = () => {
         if (data?.user.backendTokens.at) {
@@ -84,7 +37,6 @@ export default function Documents() {
                 })
                 .then((data) => {
                     setResponses(data);
-                    setTotalItems(data.length);
                 })
                 .catch((error) => console.error("Error fetching data:", error));
         }
@@ -98,39 +50,132 @@ export default function Documents() {
         fetchDocuments();
     }
 
+    // Function to handle document deletion
+    const onDeleteDocument = (id: number) => {
+        // Add your delete API call here
+        // Example:
+        // fetch(`${Url}/api/v1/template/documents/${id}`, {
+        //     method: 'DELETE',
+        //     headers: { Authorization: `Bearer ${data?.user.backendTokens.at}` },
+        // })
+        // .then(() => {
+        //     const newDocuments = responses.filter((doc) => doc.id !== id);
+        //     setResponses(newDocuments);
+        // })
+        // .catch((error) => console.error("Error deleting document:", error));
+
+        // For now, just remove from state
+        const newDocuments = responses.filter((doc) => doc.id !== id);
+        setResponses(newDocuments);
+    };
+
+    const onUpdateDocument = (document: any) => {
+        console.log("Update document:", document);
+    };
+
+    const sortDocuments = (item1: UniqueIdentifier, item2: UniqueIdentifier) => {
+        const setResource = searchDocuments.length > 0 ? setSearchDocuments : setResponses;
+        const documentsResource = searchDocuments.length > 0 ? searchDocuments : responses;
+
+        const oldIndex = documentsResource.findIndex((item) => item.id === item1);
+        const newIndex = documentsResource.findIndex((item) => item.id === item2);
+
+        let shallow = [...documentsResource];
+        shallow = arrayMove(documentsResource, oldIndex, newIndex);
+
+        shallow.forEach(({ id }, index) => {
+        });
+
+        setResource(shallow);
+    };
+
+    const getFileIcon = (ext: string) => {
+        const extension = ext?.toLowerCase();
+        switch (extension) {
+            case 'pdf':
+                return <FilePdfOutlined style={{ color: 'red', fontSize: '24px' }} />;
+            case 'doc':
+            case 'docx':
+                return <FileWordOutlined style={{ color: 'blue', fontSize: '24px' }} />;
+            default:
+                return <FileUnknownOutlined style={{ fontSize: '24px' }} />;
+        }
+    };
+
+
+    const sendDocument = (document: any) => {
+        emitSendDocument({
+            refId: document?.id,
+            langCode: document?.isAvailable
+                ? params.get("lang") || document?.companyData?.defaultLangCode || "en"
+                : document?.companyData?.defaultLangCode || "en",
+            refType: ChatType.Document,
+            station: Number(params.get("station") ?? 1),
+            contentExtra: document?.ext,
+        });
+    };
+
+    const documentsSource = searchDocuments.length > 0 ? searchDocuments : responses;
+
     return (
         <>
-            <div className="h-full overflow-y-auto p-4 ">
+            <div className="h-full overflow-y-auto p-4">
                 <div className="flex w-full flex-col gap-4 p-4">
                     <SendDocumentForm />
                 </div>
+
                 <div className="flex w-full flex-col items-center justify-center gap-2 p-6">
-                    <div className="w-full ">
-                        <Table
-                            rowKey="id"
-                            columns={columns}
-                            dataSource={documentsData}
-                            pagination={false}
-                            className="jotFormTable"
-                        />
-                        <div className="flex justify-center mt-6">
-                            <Pagination
-                                current={currentPage}
-                                total={totalItems}
-                                pageSize={pageSize}
-                                onChange={handlePageChange}
-                                showSizeChanger
-                                pageSizeOptions={['10', '20', '50', '100']}
-                            />
+                    <div className="w-full">
+                        <div className="flex h-full w-full">
+                            <div className="flex w-full flex-wrap content-start gap-4">
+                                <DraggableCardContainer items={documentsSource} sort={sortDocuments}>
+                                    {documentsSource?.map((document) => (
+                                        <DraggableCardItem
+                                            key={document.id}
+                                            id={document.id}
+                                            tag={document.tag}
+                                            isAdmin={data?.user.Roles?.includes("Admin")}
+                                            isAvailable={document.langCode?.includes(
+                                                params.get("lang") || "en"
+                                            )}
+                                            onUpdate={() => onUpdateDocument(document)}
+                                            onDelete={() => onDeleteDocument(document.id)}
+                                            sendOnClick={() => sendDocument(document)}
+                                            isDraggable={searchDocuments.length === 0}
+                                            icon={getFileIcon(document.ext)}
+                                        >
+                                            <div className="flex flex-col items-center justify-center h-full p-2">
+                                                <div className="text-4xl mb-2">
+                                                    {getFileIcon(document.ext)}
+                                                </div>
+                                                {/* <div className="text-xs text-center text-gray-600 truncate w-full">
+                                                    {document.tag}
+                                                </div> */}
+                                                {/* {document.langCode && (
+                                                    <div className="text-xs text-center text-gray-500 mt-1">
+                                                        {Array.isArray(document.langCode)
+                                                            ? document.langCode.join(', ')
+                                                            : document.langCode}
+                                                    </div>
+                                                )} */}
+                                            </div>
+                                        </DraggableCardItem>
+                                    ))}
+                                </DraggableCardContainer>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
+
+            {/* Upload Modal */}
             {data?.user.Roles?.includes("Admin") && (
                 <Modal title="Upload Document" closeModal={handleClose} isOpen={isOpen}>
                     <UploadDocumentTemplateForm onClose={handleClose} onSuccess={handleUploadSuccess} />
                 </Modal>
             )}
+
+            {/* Add Button */}
             {data?.user.Roles?.includes("Admin") && (
                 <div className="fixed bottom-0 right-0 p-4">
                     <button onClick={handleOpen}>
@@ -139,5 +184,5 @@ export default function Documents() {
                 </div>
             )}
         </>
-    )
+    );
 }

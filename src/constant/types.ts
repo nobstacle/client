@@ -7,6 +7,7 @@ export enum ChatType {
   Survey = "Survey",
   Website = "Website",
   Form = "Form",
+  Document = "Document",
 }
 
 export type ReceivedType =
