@@ -245,6 +245,8 @@ export const Content: React.FC = () => {
         />
       );
     }
+
+
     if (messageStore.receivedType === "Document" ||
       messageStore.receivedType === "PdfDocument" ||
       messageStore.receivedType === "WordDocument" ||
@@ -271,6 +273,7 @@ export const Content: React.FC = () => {
           return;
         }
 
+
         switch (fileType) {
           case 'pdf':
             return (
@@ -280,6 +283,7 @@ export const Content: React.FC = () => {
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
                   </div>
                 )}
+
                 <iframe
                   src={documentUrl}
                   className="w-full h-full"

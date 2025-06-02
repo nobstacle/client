@@ -119,7 +119,7 @@ export const SocketContextProvider = ({
   };
 
   const onReceivedDocument = (data: any) => {
-    console.log("📄 Received Document:", data);
+    console.info("📄 Received Document:", data);
 
     try {
       const parsedRes = JSON.parse(data);
@@ -129,7 +129,7 @@ export const SocketContextProvider = ({
       }
 
       const parsedData = parsedRes.data as ReceivedDocumentContent;
-      console.log("✅ Parsed Document Data:", parsedData);
+      console.info("✅ Parsed Document Data:", parsedData);
 
       // Handle document reception
       setReceivedContent(parsedData);
@@ -353,8 +353,10 @@ export const SocketContextProvider = ({
     
     // Emit without callback to avoid array format issue
     if (callback) {
+         console.log("🚀 Call back case", data);
       socketClient.emit("send-document", data, callback);
     } else {
+         console.log("🚀 Without Call back case:", data);
       socketClient.emit("send-document", data);
     }
   };
