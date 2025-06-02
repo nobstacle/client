@@ -119,7 +119,6 @@ const buildUrl = (
         });
 
         let url = buildUrl(result);
-        console.info("CHECK THE UKLR", url)
         setFormUrl(url);
       } catch (error: any) {
         console.error({ error });

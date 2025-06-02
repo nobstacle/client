@@ -30,7 +30,6 @@ export const SendTextTemplateForm: React.FC<PropsI> = ({ onSend }) => {
   });
 
   const onSubmit: SubmitHandler<FormValues> = (data) => {
-    console.info("data.content", data.content);
     onSend(data.content);
   };
 

@@ -32,7 +32,6 @@ export const Content: React.FC = () => {
   const iframeRef = useRef(null);
   const [timer, setTimer] = useState(20);
   const [isClosing, setIsClosing] = useState(false);
-  const [viewMode, setViewMode] = useState('embedded'); // 'embedded' or 'download'
   const [loadError, setLoadError] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -66,8 +65,6 @@ export const Content: React.FC = () => {
       isFirstTimeOpen.current = false;
     }
   }, [messageStore.receivedType]);
-
-  console.info("messageStore.receivedType", messageStore.receivedType);
 
   useEffect(() => {
     const updateVideoStyles = () => {
@@ -246,7 +243,6 @@ export const Content: React.FC = () => {
       );
     }
 
-
     if (messageStore.receivedType === "Document" ||
       messageStore.receivedType === "PdfDocument" ||
       messageStore.receivedType === "WordDocument" ||
@@ -273,7 +269,6 @@ export const Content: React.FC = () => {
           return;
         }
 
-
         switch (fileType) {
           case 'pdf':
             return (
@@ -283,7 +278,6 @@ export const Content: React.FC = () => {
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
                   </div>
                 )}
-
                 <iframe
                   src={documentUrl}
                   className="w-full h-full"
@@ -305,7 +299,7 @@ export const Content: React.FC = () => {
                   </div>
                 )}
                 <iframe
-                  src={`https://docs.google.com/gview?url=${encodeURIComponent(documentUrl)}&embedded=true`}
+                  src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(documentUrl)}`}
                   className="w-full h-full"
                   title="Word Document"
                   frameBorder="0"
@@ -325,7 +319,7 @@ export const Content: React.FC = () => {
                   </div>
                 )}
                 <iframe
-                  src={`https://docs.google.com/gview?url=${encodeURIComponent(documentUrl)}&embedded=true`}
+                  src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(documentUrl)}`}
                   className="w-full h-full"
                   title="Excel Document"
                   frameBorder="0"
@@ -345,7 +339,7 @@ export const Content: React.FC = () => {
                   </div>
                 )}
                 <iframe
-                  src={`https://docs.google.com/gview?url=${encodeURIComponent(documentUrl)}&embedded=true`}
+                  src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(documentUrl)}`}
                   className="w-full h-full"
                   title="PowerPoint Document"
                   frameBorder="0"
