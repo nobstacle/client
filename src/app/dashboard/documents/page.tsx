@@ -7,7 +7,7 @@ import { PlusIcon } from "../../../components/icons/PlusIcon";
 import Modal from "../../../components/Modal";
 import { UploadDocumentTemplateForm } from "../../../components/pages/dashboard/CreateDocumentTemplate";
 import { useSession } from "next-auth/react";
-// import { FilePdfOutlined, FileWordOutlined, FileUnknownOutlined } from '@ant-design/icons';
+import { BiSolidFileTxt } from "react-icons/bi";
 import {
     DraggableCardContainer,
     DraggableCardItem,
@@ -122,7 +122,7 @@ export default function Documents() {
             case 'txt':
             case 'json':
             case 'csv':
-                return <AiFillFileText color="#6a4c93" {...iconProps} />;
+                return <BiSolidFileTxt color="#6a4c93" {...iconProps} />;
             default:
                 return <AiFillFileUnknown color="#999" {...iconProps} />;
         }
