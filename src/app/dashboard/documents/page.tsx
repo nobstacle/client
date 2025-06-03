@@ -98,18 +98,6 @@ export default function Documents() {
         setResource(shallow);
     };
 
-    // const getFileIcon = (ext: string) => {
-    //     const extension = ext?.toLowerCase();
-    //     switch (extension) {
-    //         case 'pdf':
-    //             return <FilePdfOutlined style={{ color: 'red', fontSize: '60px' }} />;
-    //         case 'doc':
-    //         case 'docx':
-    //             return <FileWordOutlined style={{ color: 'blue', fontSize: '60px' }} />;
-    //         default:
-    //             return <FileUnknownOutlined style={{ fontSize: '60px' }} />;
-    //     }
-    // };
     const getFileIcon = (ext: string) => {
         const extension = ext?.toLowerCase();
         const iconProps = { size: 65 };
@@ -180,6 +168,7 @@ export default function Documents() {
                                             sendOnClick={() => sendDocument(document)}
                                             isDraggable={searchDocuments.length === 0}
                                         >
+                                            {console.info("document.langCode",document.langCode, params.get("lang"))}
                                             <div className="flex flex-col items-center justify-center h-full p-2">
                                                 <div className="text-4xl mb-2">
                                                     {getFileIcon(document.ext)}
