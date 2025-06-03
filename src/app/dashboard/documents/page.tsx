@@ -25,6 +25,8 @@ import {
     AiFillFileText,
     AiFillFileUnknown
 } from 'react-icons/ai';
+import { useDocumentControllerDeleteDocumentOne } from "../../../lib/client/api";
+import { toast, Bounce } from 'react-toastify';
 
 export default function Documents() {
     const [searchDocuments, setSearchDocuments] = useState([]);
@@ -59,23 +61,21 @@ export default function Documents() {
         fetchDocuments();
     }
 
+    const { mutate: deleteDocument } = useDocumentControllerDeleteDocumentOne({
+        mutation: {
+            onSuccess: (_, variables) => {
+                toast.success("Document deleted successfully!");
+                fetchDocuments();
+            },
+            onError: (error) => {
+                toast.error(error?.message ?? "Error deleting document");
+            }
+        }
+    });
+
     // Function to handle document deletion
     const onDeleteDocument = (id: number) => {
-        // Add your delete API call here
-        // Example:
-        // fetch(`${Url}/api/v1/template/documents/${id}`, {
-        //     method: 'DELETE',
-        //     headers: { Authorization: `Bearer ${data?.user.backendTokens.at}` },
-        // })
-        // .then(() => {
-        //     const newDocuments = responses.filter((doc) => doc.id !== id);
-        //     setResponses(newDocuments);
-        // })
-        // .catch((error) => console.error("Error deleting document:", error));
-
-        // For now, just remove from state
-        const newDocuments = responses.filter((doc) => doc.id !== id);
-        setResponses(newDocuments);
+        deleteDocument({ id });
     };
 
     const onUpdateDocument = (document: any) => {

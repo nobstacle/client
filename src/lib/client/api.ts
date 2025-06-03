@@ -1066,17 +1066,11 @@ export const getImageTemplateControllerDeleteImageTemplateOneMutationOptions = <
 	): UseMutationOptions<Awaited<ReturnType<typeof imageTemplateControllerDeleteImageTemplateOne>>, TError, { id: number }, TContext> => {
 	const { mutation: mutationOptions, request: requestOptions } = options ?? {};
 
-
-
-
 	const mutationFn: MutationFunction<Awaited<ReturnType<typeof imageTemplateControllerDeleteImageTemplateOne>>, { id: number }> = (props) => {
 		const { id } = props ?? {};
 
 		return imageTemplateControllerDeleteImageTemplateOne(id, requestOptions)
 	}
-
-
-
 
 	return { mutationFn, ...mutationOptions }
 }
@@ -3733,3 +3727,70 @@ export const useDocumentTemplateControllerDeleteDocumentTemplateOne = <
 
 	return useMutation(mutationOptions);
 }
+
+export const documentControllerDeleteDocumentOne = (
+	id: number,
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
+
+
+	return nobstacleBackendApiInstance<boolean>(
+		{
+			url: `/api/v1/content/document/${id}`, method: 'DELETE'
+		},
+		options);
+}
+
+
+export const useDocumentControllerDeleteDocumentOne = <
+  TError = ErrorType<HttpExceptionSchema>,
+  TContext = unknown
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof documentControllerDeleteDocumentOne>>,
+    TError,
+    { id: number },
+    TContext
+  >,
+  request?: SecondParameter<typeof nobstacleBackendApiInstance>
+}) => {
+  const mutationOptions = getDocumentControllerDeleteDocumentOneMutationOptions(options);
+  return useMutation(mutationOptions);
+};
+
+
+export type DocumentControllerDeleteDocumentOneMutationResult = NonNullable<
+  Awaited<ReturnType<typeof documentControllerDeleteDocumentOne>>
+>;
+
+export type DocumentControllerDeleteDocumentOneMutationError = ErrorType<HttpExceptionSchema>;
+
+
+export const getDocumentControllerDeleteDocumentOneMutationOptions = <
+  TError = ErrorType<HttpExceptionSchema>,
+  TContext = unknown
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof documentControllerDeleteDocumentOne>>,
+    TError,
+    { id: number },
+    TContext
+  >,
+  request?: SecondParameter<typeof nobstacleBackendApiInstance>
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof documentControllerDeleteDocumentOne>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof documentControllerDeleteDocumentOne>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+    return documentControllerDeleteDocumentOne(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
