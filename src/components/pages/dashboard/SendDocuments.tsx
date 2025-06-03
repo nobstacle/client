@@ -3,11 +3,11 @@ import { SubmitHandler, useForm, Controller } from "react-hook-form";
 import * as yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { Form, Input as AntdInput, Button as AntdButton, Row, Col, Card } from "antd";
-import {
-  useMapTemplateControllerCreateMapTemplate,
-} from "../../../lib/client/api";
+// import {
+//   useMapTemplateControllerCreateMapTemplate,
+// } from "../../../lib/client/api";
 import { Autocomplete, useJsApiLoader } from "@react-google-maps/api";
-import { SendIcon } from "@/components/icons/SendIcon";
+// import { SendIcon } from "@/components/icons/SendIcon";
 import "../../../styles/base.css";
 
 interface SendMapTemplateFormFieldValues {
@@ -42,10 +42,10 @@ export const SendDocumentForm: React.FC<{
     },
   });
 
-  const createMapsTemplate = useMapTemplateControllerCreateMapTemplate();
+  // const createMapsTemplate = useMapTemplateControllerCreateMapTemplate();
 
   const originRef = React.useRef<google.maps.places.Autocomplete | null>(null);
-  const destinationRef = React.useRef<google.maps.places.Autocomplete | null>(null);
+  // const destinationRef = React.useRef<google.maps.places.Autocomplete | null>(null);
 
   const onPlaceChanged = (field: "origin" | "destination", ref: any) => {
     if (ref.current) {
@@ -83,28 +83,14 @@ export const SendDocumentForm: React.FC<{
                     onLoad={(ref) => (originRef.current = ref)}
                     onPlaceChanged={() => onPlaceChanged("origin", originRef)}
                   >
-                    <AntdInput {...field} placeholder="Origin Address" className="customInputHorizontal" />
+                    <AntdInput {...field} placeholder="Search template" className="customInputHorizontal" />
                   </Autocomplete>
                 )}
               />
             </Form.Item>
           </Col>
-
-          <Col md={4} xs={24}>
-            <Form.Item style={{ marginBottom: 0 }}>
-              <AntdButton
-                type="primary"
-                htmlType="submit"
-                loading={createMapsTemplate.status === "pending"}
-                disabled={createMapsTemplate.status === "pending"}
-                icon={<SendIcon size={20}/>}
-                className="headerButton"
-              />
-            </Form.Item>
-          </Col>
         </Row>
       </Form>
-
     </Card>
   );
 };

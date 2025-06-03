@@ -175,7 +175,7 @@ export const DraggableCardItem: React.FC<
       <div className="h-full">
         <Button className="relative h-full w-full rounded-b-md bg-primary  text-sm text-white">
           {tag}
-          {icon}
+          {/* {icon} */}
           {!icon && isAvailable && (
             <span
               className="absolute bottom-0 right-0 h-0 w-0

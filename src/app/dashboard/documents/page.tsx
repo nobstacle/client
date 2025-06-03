@@ -7,7 +7,7 @@ import { PlusIcon } from "../../../components/icons/PlusIcon";
 import Modal from "../../../components/Modal";
 import { UploadDocumentTemplateForm } from "../../../components/pages/dashboard/CreateDocumentTemplate";
 import { useSession } from "next-auth/react";
-import { FilePdfOutlined, FileWordOutlined, FileUnknownOutlined } from '@ant-design/icons';
+// import { FilePdfOutlined, FileWordOutlined, FileUnknownOutlined } from '@ant-design/icons';
 import {
     DraggableCardContainer,
     DraggableCardItem,
@@ -16,6 +16,15 @@ import { arrayMove } from "@dnd-kit/sortable";
 import { UniqueIdentifier } from "@dnd-kit/core";
 import { useSocketContext } from "../../../context/SocketContextProvider";
 import { ChatType } from "../../../constant/types";
+import {
+    AiFillFilePdf,
+    AiFillFileWord,
+    AiFillFileExcel,
+    AiFillFileImage,
+    AiFillFileZip,
+    AiFillFileText,
+    AiFillFileUnknown
+} from 'react-icons/ai';
 
 export default function Documents() {
     const [searchDocuments, setSearchDocuments] = useState([]);
@@ -89,19 +98,47 @@ export default function Documents() {
         setResource(shallow);
     };
 
+    // const getFileIcon = (ext: string) => {
+    //     const extension = ext?.toLowerCase();
+    //     switch (extension) {
+    //         case 'pdf':
+    //             return <FilePdfOutlined style={{ color: 'red', fontSize: '60px' }} />;
+    //         case 'doc':
+    //         case 'docx':
+    //             return <FileWordOutlined style={{ color: 'blue', fontSize: '60px' }} />;
+    //         default:
+    //             return <FileUnknownOutlined style={{ fontSize: '60px' }} />;
+    //     }
+    // };
     const getFileIcon = (ext: string) => {
         const extension = ext?.toLowerCase();
+        const iconProps = { size: 65 };
+
         switch (extension) {
             case 'pdf':
-                return <FilePdfOutlined style={{ color: 'red', fontSize: '24px' }} />;
+                return <AiFillFilePdf color="#e63946" {...iconProps} />;
             case 'doc':
             case 'docx':
-                return <FileWordOutlined style={{ color: 'blue', fontSize: '24px' }} />;
+                return <AiFillFileWord color="#1a73e8" {...iconProps} />;
+            case 'xls':
+            case 'xlsx':
+                return <AiFillFileExcel color="#2e7d32" {...iconProps} />;
+            case 'png':
+            case 'jpg':
+            case 'jpeg':
+            case 'gif':
+                return <AiFillFileImage color="#6c757d" {...iconProps} />;
+            case 'zip':
+            case 'rar':
+                return <AiFillFileZip color="#ffb703" {...iconProps} />;
+            case 'txt':
+            case 'json':
+            case 'csv':
+                return <AiFillFileText color="#6a4c93" {...iconProps} />;
             default:
-                return <FileUnknownOutlined style={{ fontSize: '24px' }} />;
+                return <AiFillFileUnknown color="#999" {...iconProps} />;
         }
     };
-
 
     const sendDocument = (document: any) => {
         emitSendDocument({
@@ -136,13 +173,12 @@ export default function Documents() {
                                             tag={document.tag}
                                             isAdmin={data?.user.Roles?.includes("Admin")}
                                             isAvailable={document.langCode?.includes(
-                                                params.get("lang") || "en"
+                                                params.get("lang") || ""
                                             )}
                                             onUpdate={() => onUpdateDocument(document)}
                                             onDelete={() => onDeleteDocument(document.id)}
                                             sendOnClick={() => sendDocument(document)}
                                             isDraggable={searchDocuments.length === 0}
-                                            icon={getFileIcon(document.ext)}
                                         >
                                             <div className="flex flex-col items-center justify-center h-full p-2">
                                                 <div className="text-4xl mb-2">
