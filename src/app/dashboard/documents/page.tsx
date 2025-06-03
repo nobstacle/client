@@ -168,7 +168,6 @@ export default function Documents() {
                                             sendOnClick={() => sendDocument(document)}
                                             isDraggable={searchDocuments.length === 0}
                                         >
-                                            {console.info("document.langCode",document.langCode, params.get("lang"))}
                                             <div className="flex flex-col items-center justify-center h-full p-2">
                                                 <div className="text-4xl mb-2">
                                                     {getFileIcon(document.ext)}
