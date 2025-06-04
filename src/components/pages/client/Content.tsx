@@ -335,44 +335,8 @@ export const Content: React.FC = () => {
                       <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
                     </div>
                   )}
- <div className="flex-1 w-full relative">
-          <iframe
-            src={isIOS ? 
-              `https://docs.google.com/viewer?url=${encodeURIComponent(documentUrl)}&embedded=true` :
-              `https://mozilla.github.io/pdf.js/web/viewer.html?file=${encodeURIComponent(documentUrl)}`
-            }
-            className="w-full h-full border-0"
-            title="PDF Document"
-            style={{
-              width: '100%',
-              height: '100%',
-              border: 'none',
-              overflow: isIOS ? 'hidden' : 'auto'
-            }}
-            scrolling={isIOS ? "no" : "yes"}
-            onLoad={() => {
-              setIsLoading(false);  
-              setLoadError(false);
-            }}
-            onError={() => {
-              // Fallback strategy
-              const iframe = document.querySelector('iframe[title="PDF Document"]') as HTMLIFrameElement;
-              if (iframe) {
-                if (isIOS) {
-                  // iOS fallback: try direct PDF link
-                  iframe.src = documentUrl + '#toolbar=0&navpanes=0&scrollbar=0';
-                } else {
-                  // Android fallback: try Google Docs viewer
-                  iframe.src = `https://docs.google.com/viewer?url=${encodeURIComponent(documentUrl)}&embedded=true`;
-                }
-              }
-              setTimeout(() => {
-                setIsLoading(false);
-              }, 5000);
-            }}
-          />
-        </div>
-                  {/* {isIOS ? (
+
+                  {isIOS ? (
                     <div className="flex-1 w-full relative">
                       <iframe
                         src={`https://docs.google.com/viewer?url=${encodeURIComponent(documentUrl)}&embedded=true`}
@@ -397,31 +361,49 @@ export const Content: React.FC = () => {
                     </div>
                   ) : (
                     <div className="flex-1 w-full relative">
-                      <iframe
-                        src={`https://mozilla.github.io/pdf.js/web/viewer.html?file=${encodeURIComponent(documentUrl)}`}
-                        className="w-full h-full border-0"
-                        title="PDF Document"
-                        style={{
-                          width: '100%',
-                          height: '100%',
-                          border: 'none'
-                        }}
-                        onLoad={() => {
-                          setIsLoading(false);
-                          setLoadError(false);
-                        }}
-                        onError={() => {
-                          const iframe = document.querySelector('iframe[title="PDF Document"]') as HTMLIFrameElement;
-                          if (iframe) {
-                            iframe.src = `https://docs.google.com/viewer?url=${encodeURIComponent(documentUrl)}&embedded=true`;
-                          }
-                          setTimeout(() => {
-                            setIsLoading(false);
-                          }, 5000);
-                        }}
-                      />
+       <object
+              data={documentUrl}
+              type="application/pdf"
+              className="w-full h-full"
+              style={{ width: '100%', height: '100%' }}
+              onLoad={() => {
+                setIsLoading(false);
+                setLoadError(false);
+              }}
+              onError={() => {
+                // Fallback 1: Try Google Docs viewer
+                const container = document.querySelector('.flex-1.w-full.relative');
+                if (container) {
+                  container.innerHTML = `
+                    <iframe
+                      src="https://docs.google.com/viewer?url=${encodeURIComponent(documentUrl)}&embedded=true"
+                      style="width: 100%; height: 100%; border: none;"
+                      title="PDF Document"
+                    ></iframe>
+                  `;
+                }
+                setTimeout(() => setIsLoading(false), 3000);
+              }}
+            >
+              {/* Fallback for object tag */}
+              <iframe
+                src={`https://drive.google.com/viewerng/viewer?embedded=true&url=${encodeURIComponent(documentUrl)}`}
+                className="w-full h-full border-0"
+                title="PDF Document"
+                style={{ width: '100%', height: '100%', border: 'none' }}
+                onLoad={() => {
+                  setIsLoading(false);
+                  setLoadError(false);
+                }}
+                onError={() => {
+                  // Final fallback: Direct link in new tab
+                  window.open(documentUrl, '_blank');
+                  setIsLoading(false);
+                }}
+              />
+            </object>
                     </div>
-                  )} */}
+                  )}
 
                 </div>
               );
@@ -458,32 +440,47 @@ export const Content: React.FC = () => {
                       </div>
                     )}
 
-                    <iframe
-                      src={`https://docs.google.com/viewer?url=${encodeURIComponent(documentUrl)}&embedded=true`}
-                      className="w-full h-full border-0"
-                      title="Word Document"
-                      style={{
-                        width: '100%',
-                        height: '100%',
-                        border: 'none'
-                      }}
-                      onLoad={() => {
-                        setIsLoading(false);
-                        setLoadError(false);
-                      }}
-                      onError={() => {
-                        // Fallback to Office viewer
-                        const iframe = document.querySelector('iframe[title="Word Document"]') as HTMLIFrameElement;
-                        if (iframe) {
-                          iframe.src = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(documentUrl)}`;
-                        }
-                        setTimeout(() => {
-                          setIsLoading(false);
-                        }, 5000);
-                      }}
-                    />
+          {isAndroid ? (
+            // Android: Try multiple viewers in order
+            <iframe
+              src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(documentUrl)}`}
+              className="w-full h-full border-0"
+              title="Word Document"
+              style={{ width: '100%', height: '100%', border: 'none' }}
+              onLoad={() => {
+                setIsLoading(false);
+                setLoadError(false);
+              }}
+              onError={() => {
+                // Fallback: Google Docs viewer
+                const iframe = document.querySelector('iframe[title="Word Document"]') as HTMLIFrameElement;
+                if (iframe) {
+                  iframe.src = `https://docs.google.com/viewer?url=${encodeURIComponent(documentUrl)}&embedded=true`;
+                }
+                setTimeout(() => setIsLoading(false), 3000);
+              }}
+            />
+          ) : (
+            // iOS: Google Docs viewer
+            <iframe
+              src={`https://docs.google.com/viewer?url=${encodeURIComponent(documentUrl)}&embedded=true`}
+              className="w-full h-full border-0"
+              title="Word Document"
+              style={{ width: '100%', height: '100%', border: 'none' }}
+              onLoad={() => {
+                setIsLoading(false);
+                setLoadError(false);
+              }}
+              onError={() => {
+                const iframe = document.querySelector('iframe[title="Word Document"]') as HTMLIFrameElement;
+                if (iframe) {
+                  iframe.src = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(documentUrl)}`;
+                }
+                setTimeout(() => setIsLoading(false), 5000);
+              }}
+            />
+          )}
                   </div>
-
                 </div>
               );
             } else {
