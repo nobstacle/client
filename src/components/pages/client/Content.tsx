@@ -37,6 +37,7 @@ export const Content: React.FC = () => {
   const [isMobile, setIsMobile] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
   const [isAndroid, setIsAndroid] = useState(false);
+  const [loadingTimeout, setLoadingTimeout] = useState<NodeJS.Timeout | null>(null);
 
   const defaultSlideshowContent =
     useContentControllerGetDefaultSlideshowContent({
@@ -280,11 +281,33 @@ export const Content: React.FC = () => {
       const handleIframeError = () => {
         setLoadError(true);
         setIsLoading(false);
+        if (loadingTimeout) {
+          clearTimeout(loadingTimeout);
+        }
       };
 
       const handleIframeLoad = () => {
         setIsLoading(false);
+        setLoadError(false);
+        if (loadingTimeout) {
+          clearTimeout(loadingTimeout);
+        }
       };
+
+      // Set a timeout for loading state
+      useEffect(() => {
+        if (isLoading) {
+          const timeout = setTimeout(() => {
+            setIsLoading(false);
+          }, 8000);
+
+          setLoadingTimeout(timeout);
+
+          return () => {
+            clearTimeout(timeout);
+          };
+        }
+      }, [isLoading]);
 
       const renderDocumentViewer = () => {
         if (loadError) {
@@ -295,12 +318,6 @@ export const Content: React.FC = () => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
                 </svg>
                 <p className="mb-4">Unable to display document</p>
-                <button
-                  onClick={() => handleDownload(documentUrl, fileName)}
-                  className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
-                >
-                  Download Document
-                </button>
               </div>
             </div>
           );
@@ -308,71 +325,70 @@ export const Content: React.FC = () => {
 
         switch (fileType) {
           case 'pdf':
-            // For mobile devices, especially iOS, use a different approach
             if (isMobile) {
               return (
-                <div className="w-full h-screen flex flex-col">
-                  {/* Mobile-optimized PDF viewer */}
-                  <div className="flex-1 relative overflow-hidden">
-                    {isLoading && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-gray-50 z-10">
-                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-                      </div>
-                    )}
+                <div className="w-full h-screen flex flex-col overflow-hidden">
+                  {isLoading && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-gray-50 z-10">
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+                    </div>
+                  )}
 
-                    {isIOS ? (
-                      // For iOS, use a more compatible approach
-                      <div className="w-full h-full bg-gray-100 flex flex-col">
-                        <div className="p-4 bg-white border-b">
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium">PDF Document</span>
-                            <button
-                              onClick={() => window.open(documentUrl, '_blank')}
-                              className="px-3 py-2 bg-blue-500 text-white text-sm rounded hover:bg-blue-600 transition-colors"
-                            >
-                              Open in New Tab
-                            </button>
-                          </div>
-                        </div>
-                        <iframe
-                          src={documentUrl}
-                          className="flex-1 w-full border-0"
-                          title="PDF Document"
-                          style={{
-                            minHeight: '70vh',
-                            transform: 'scale(1)',
-                            transformOrigin: 'top left'
-                          }}
-                          onLoad={handleIframeLoad}
-                          onError={handleIframeError}
-                        />
-                      </div>
-                    ) : (
-                      // For Android and other mobile devices
-                      <div className="w-full h-full">
-                        <iframe
-                          src={`https://docs.google.com/viewer?url=${encodeURIComponent(documentUrl)}&embedded=true`}
-                          className="w-full h-full border-0"
-                          title="PDF Document"
-                          onLoad={handleIframeLoad}
-                          onError={handleIframeError}
-                        />
-                      </div>
-                    )}
-                  </div>
+                  {isIOS ? (
+                    // For iOS - use Mozilla PDF.js or Google Docs viewer
+                    <div className="flex-1 w-full relative">
+                      <iframe
+                        src={`https://docs.google.com/viewer?url=${encodeURIComponent(documentUrl)}&embedded=true`}
+                        className="w-full h-full border-0"
+                        title="PDF Document"
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          border: 'none',
+                          overflow: 'hidden'
+                        }}
+                        scrolling="no"
+                        onLoad={handleIframeLoad}
+                        onError={() => {
+                          // Fallback to direct PDF if Google viewer fails
+                          setLoadError(false);
+                          const iframe = document.querySelector('iframe[title="PDF Document"]') as HTMLIFrameElement;
+                          if (iframe) {
+                            iframe.src = documentUrl + '#toolbar=0&navpanes=0&scrollbar=0';
+                          }
+                        }}
+                      />
+                    </div>
+                  ) : (
+                    // For Android - try multiple approaches with timeout
+                    <div className="flex-1 w-full relative">
+                      <iframe
+                        src={`https://mozilla.github.io/pdf.js/web/viewer.html?file=${encodeURIComponent(documentUrl)}`}
+                        className="w-full h-full border-0"
+                        title="PDF Document"
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          border: 'none'
+                        }}
+                        onLoad={() => {
+                          setIsLoading(false);
+                          setLoadError(false);
+                        }}
+                        onError={() => {
+                          // Fallback to Google Docs viewer for Android
+                          const iframe = document.querySelector('iframe[title="PDF Document"]') as HTMLIFrameElement;
+                          if (iframe) {
+                            iframe.src = `https://docs.google.com/viewer?url=${encodeURIComponent(documentUrl)}&embedded=true`;
+                          }
+                          setTimeout(() => {
+                            setIsLoading(false);
+                          }, 5000);
+                        }}
+                      />
+                    </div>
+                  )}
 
-                  {/* Mobile download button */}
-                  <div className="p-4 bg-white border-t">
-                    <button
-                      onClick={() => handleDownload(documentUrl, fileName)}
-                      className="w-full px-4 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center justify-center gap-2"
-                    >
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
-                      Download PDF
-                    </button>
-                  </div>
                 </div>
               );
             } else {
@@ -400,7 +416,7 @@ export const Content: React.FC = () => {
           case 'docx':
             if (isMobile) {
               return (
-                <div className="w-full h-screen flex flex-col">
+                <div className="w-full h-screen flex flex-col overflow-hidden">
                   <div className="flex-1 relative">
                     {isLoading && (
                       <div className="absolute inset-0 flex items-center justify-center bg-gray-50 z-10">
@@ -408,41 +424,32 @@ export const Content: React.FC = () => {
                       </div>
                     )}
 
-                    {isAndroid ? (
-                      // For Android, use Google Docs viewer
-                      <iframe
-                        src={`https://docs.google.com/viewer?url=${encodeURIComponent(documentUrl)}&embedded=true`}
-                        className="w-full h-full border-0"
-                        title="Word Document"
-                        onLoad={handleIframeLoad}
-                        onError={handleIframeError}
-                      />
-                    ) : (
-                      // For iOS and other devices, use Office viewer
-                      <iframe
-                        src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(documentUrl)}`}
-                        className="w-full h-full border-0"
-                        title="Word Document"
-                        style={{
-                          minHeight: '70vh'
-                        }}
-                        onLoad={handleIframeLoad}
-                        onError={handleIframeError}
-                      />
-                    )}
+                    <iframe
+                      src={`https://docs.google.com/viewer?url=${encodeURIComponent(documentUrl)}&embedded=true`}
+                      className="w-full h-full border-0"
+                      title="Word Document"
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        border: 'none'
+                      }}
+                      onLoad={() => {
+                        setIsLoading(false);
+                        setLoadError(false);
+                      }}
+                      onError={() => {
+                        // Fallback to Office viewer
+                        const iframe = document.querySelector('iframe[title="Word Document"]') as HTMLIFrameElement;
+                        if (iframe) {
+                          iframe.src = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(documentUrl)}`;
+                        }
+                        setTimeout(() => {
+                          setIsLoading(false);
+                        }, 5000);
+                      }}
+                    />
                   </div>
 
-                  <div className="p-4 bg-white border-t">
-                    <button
-                      onClick={() => handleDownload(documentUrl, fileName)}
-                      className="w-full px-4 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center justify-center gap-2"
-                    >
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
-                      Download Document
-                    </button>
-                  </div>
                 </div>
               );
             } else {
@@ -474,12 +481,6 @@ export const Content: React.FC = () => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
                   <p className="mb-4">Preview not available for this file type</p>
-                  <button
-                    onClick={() => handleDownload(documentUrl, fileName)}
-                    className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
-                  >
-                    Download Document
-                  </button>
                 </div>
               </div>
             );
