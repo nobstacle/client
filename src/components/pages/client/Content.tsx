@@ -239,7 +239,7 @@ export const Content: React.FC = () => {
           };
         }
       }, [isLoading]);
-      
+
   if (hasHydrated) {
     if (
       messageStore.receivedType === "TextTemplateMessage" ||
@@ -282,6 +282,7 @@ export const Content: React.FC = () => {
         />
       );
     }
+    
     if (messageStore.receivedType === "Document" ||
       messageStore.receivedType === "PdfDocument" ||
       messageStore.receivedType === "WordDocument" ||
@@ -334,9 +335,44 @@ export const Content: React.FC = () => {
                       <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
                     </div>
                   )}
-
-                  {isIOS ? (
-                    // For iOS - use Mozilla PDF.js or Google Docs viewer
+ <div className="flex-1 w-full relative">
+          <iframe
+            src={isIOS ? 
+              `https://docs.google.com/viewer?url=${encodeURIComponent(documentUrl)}&embedded=true` :
+              `https://mozilla.github.io/pdf.js/web/viewer.html?file=${encodeURIComponent(documentUrl)}`
+            }
+            className="w-full h-full border-0"
+            title="PDF Document"
+            style={{
+              width: '100%',
+              height: '100%',
+              border: 'none',
+              overflow: isIOS ? 'hidden' : 'auto'
+            }}
+            scrolling={isIOS ? "no" : "yes"}
+            onLoad={() => {
+              setIsLoading(false);  
+              setLoadError(false);
+            }}
+            onError={() => {
+              // Fallback strategy
+              const iframe = document.querySelector('iframe[title="PDF Document"]') as HTMLIFrameElement;
+              if (iframe) {
+                if (isIOS) {
+                  // iOS fallback: try direct PDF link
+                  iframe.src = documentUrl + '#toolbar=0&navpanes=0&scrollbar=0';
+                } else {
+                  // Android fallback: try Google Docs viewer
+                  iframe.src = `https://docs.google.com/viewer?url=${encodeURIComponent(documentUrl)}&embedded=true`;
+                }
+              }
+              setTimeout(() => {
+                setIsLoading(false);
+              }, 5000);
+            }}
+          />
+        </div>
+                  {/* {isIOS ? (
                     <div className="flex-1 w-full relative">
                       <iframe
                         src={`https://docs.google.com/viewer?url=${encodeURIComponent(documentUrl)}&embedded=true`}
@@ -351,7 +387,6 @@ export const Content: React.FC = () => {
                         scrolling="no"
                         onLoad={handleIframeLoad}
                         onError={() => {
-                          // Fallback to direct PDF if Google viewer fails
                           setLoadError(false);
                           const iframe = document.querySelector('iframe[title="PDF Document"]') as HTMLIFrameElement;
                           if (iframe) {
@@ -361,7 +396,6 @@ export const Content: React.FC = () => {
                       />
                     </div>
                   ) : (
-                    // For Android - try multiple approaches with timeout
                     <div className="flex-1 w-full relative">
                       <iframe
                         src={`https://mozilla.github.io/pdf.js/web/viewer.html?file=${encodeURIComponent(documentUrl)}`}
@@ -377,7 +411,6 @@ export const Content: React.FC = () => {
                           setLoadError(false);
                         }}
                         onError={() => {
-                          // Fallback to Google Docs viewer for Android
                           const iframe = document.querySelector('iframe[title="PDF Document"]') as HTMLIFrameElement;
                           if (iframe) {
                             iframe.src = `https://docs.google.com/viewer?url=${encodeURIComponent(documentUrl)}&embedded=true`;
@@ -388,7 +421,7 @@ export const Content: React.FC = () => {
                         }}
                       />
                     </div>
-                  )}
+                  )} */}
 
                 </div>
               );
