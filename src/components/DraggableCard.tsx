@@ -129,7 +129,7 @@ export const DraggableCardItem: React.FC<
     >
       <div className="min-h-[118px] px-3 pt-3">{children}</div>
 
-      {!isRecevied && isAvailable && isHover && isAdmin && (
+      {!isRecevied && isHover && isAdmin && (
         <div className="absolute left-0 top-0 z-10 flex ">
           <button
             className="m-0 h-5 w-5 rounded-b-md    text-center text-black"

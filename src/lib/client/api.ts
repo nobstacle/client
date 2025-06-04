@@ -1146,7 +1146,6 @@ export const useImageTemplateControllerGetImageTags = <TData = Awaited<ReturnTyp
 
 
 
-
 export const videoTemplateControllerCreateVideoTemplate = (
 	postVideoTemplateReq: BodyType<PostVideoTemplateReq>,
 	options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
@@ -3793,4 +3792,77 @@ export const getDocumentControllerDeleteDocumentOneMutationOptions = <
   };
 
   return { mutationFn, ...mutationOptions };
+};
+
+
+export const documentControllerGetDocumentTags = (
+  options?: SecondParameter<typeof nobstacleBackendApiInstance>,
+  signal?: AbortSignal
+) => {
+  return nobstacleBackendApiInstance<GetImageTemplateTagRes[]>(
+    {
+      url: `/api/v1/content/document/tags`, 
+      method: 'GET',
+      signal,
+    },
+    options
+  );
+};
+
+
+export const getDocumentControllerGetDocumentTagsQueryOptions = <
+  TData = Awaited<ReturnType<typeof documentControllerGetDocumentTags>>,
+  TError = ErrorType<HttpExceptionSchema>
+>(
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof documentControllerGetDocumentTags>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof nobstacleBackendApiInstance>;
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? ['documentControllerGetDocumentTags'];
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof documentControllerGetDocumentTags>>
+  > = ({ signal }) => documentControllerGetDocumentTags(requestOptions, signal);
+
+  return {
+    queryKey,
+    queryFn,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof documentControllerGetDocumentTags>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+
+export const useDocumentControllerGetDocumentTags = <
+  TData = Awaited<ReturnType<typeof documentControllerGetDocumentTags>>,
+  TError = ErrorType<HttpExceptionSchema>
+>(
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof documentControllerGetDocumentTags>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof nobstacleBackendApiInstance>;
+  }
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } => {
+  const queryOptions = getDocumentControllerGetDocumentTagsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  query.queryKey = queryOptions.queryKey;
+
+  return query;
 };

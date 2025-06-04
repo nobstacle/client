@@ -34,6 +34,8 @@ export default function Documents() {
     const params = useSearchParams();
     const { handleClose, handleOpen, isOpen } = useDisclousure();
     const [responses, setResponses] = useState([]);
+    const [selectedDocument, setSelectedDocument] = useState(null); // State for selected document
+    const [modalType, setModalType] = useState<'create' | 'update'>('create'); // State for modal type
     const { emitSendDocument } = useSocketContext();
     let Url = process.env.NEXT_PUBLIC_BACKEND_URL;
 
@@ -59,6 +61,8 @@ export default function Documents() {
 
     const handleUploadSuccess = () => {
         fetchDocuments();
+        setSelectedDocument(null); // Clear selected document after success
+        setModalType('create'); // Reset modal type
     }
 
     const { mutate: deleteDocument } = useDocumentControllerDeleteDocumentOne({
@@ -78,8 +82,26 @@ export default function Documents() {
         deleteDocument({ id });
     };
 
+    // Enhanced function to handle document update
     const onUpdateDocument = (document: any) => {
+        setSelectedDocument(document);
+        setModalType('update');
+        handleOpen();
         console.log("Update document:", document);
+    };
+
+    // Function to handle creating new document
+    const onCreateDocument = () => {
+        setSelectedDocument(null);
+        setModalType('create');
+        handleOpen();
+    };
+
+    // Enhanced modal close handler
+    const handleModalClose = () => {
+        handleClose();
+        setSelectedDocument(null);
+        setModalType('create');
     };
 
     const sortDocuments = (item1: UniqueIdentifier, item2: UniqueIdentifier) => {
@@ -108,21 +130,6 @@ export default function Documents() {
             case 'doc':
             case 'docx':
                 return <AiFillFileWord color="#1a73e8" {...iconProps} />;
-            case 'xls':
-            case 'xlsx':
-                return <AiFillFileExcel color="#2e7d32" {...iconProps} />;
-            case 'png':
-            case 'jpg':
-            case 'jpeg':
-            case 'gif':
-                return <AiFillFileImage color="#6c757d" {...iconProps} />;
-            case 'zip':
-            case 'rar':
-                return <AiFillFileZip color="#ffb703" {...iconProps} />;
-            case 'txt':
-            case 'json':
-            case 'csv':
-                return <BiSolidFileTxt color="#6a4c93" {...iconProps} />;
             default:
                 return <AiFillFileUnknown color="#999" {...iconProps} />;
         }
@@ -172,16 +179,6 @@ export default function Documents() {
                                                 <div className="text-4xl mb-2">
                                                     {getFileIcon(document.ext)}
                                                 </div>
-                                                {/* <div className="text-xs text-center text-gray-600 truncate w-full">
-                                                    {document.tag}
-                                                </div> */}
-                                                {/* {document.langCode && (
-                                                    <div className="text-xs text-center text-gray-500 mt-1">
-                                                        {Array.isArray(document.langCode)
-                                                            ? document.langCode.join(', ')
-                                                            : document.langCode}
-                                                    </div>
-                                                )} */}
                                             </div>
                                         </DraggableCardItem>
                                     ))}
@@ -192,17 +189,26 @@ export default function Documents() {
                 </div>
             </div>
 
-            {/* Upload Modal */}
+            {/* Upload/Update Modal */}
             {data?.user.Roles?.includes("Admin") && (
-                <Modal title="Upload Document" closeModal={handleClose} isOpen={isOpen}>
-                    <UploadDocumentTemplateForm onClose={handleClose} onSuccess={handleUploadSuccess} />
+                <Modal 
+                    title={modalType === 'update' ? "Update Document" : "Upload Document"} 
+                    closeModal={handleModalClose} 
+                    isOpen={isOpen}
+                >
+                    <UploadDocumentTemplateForm 
+                        onClose={handleModalClose} 
+                        onSuccess={handleUploadSuccess}
+                        document={selectedDocument}
+                        mode={modalType}
+                    />
                 </Modal>
             )}
 
             {/* Add Button */}
             {data?.user.Roles?.includes("Admin") && (
                 <div className="fixed bottom-0 right-0 p-4">
-                    <button onClick={handleOpen}>
+                    <button onClick={onCreateDocument}>
                         <PlusIcon />
                     </button>
                 </div>

@@ -7,6 +7,7 @@ import { Button } from "../../Button";
 import { languages } from "../../../constant/languages";
 import {
     useCompanyControllerGetCompany,
+    useDocumentControllerGetDocumentTags
 } from "../../../lib/client/api";
 import { useMutation } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
@@ -20,31 +21,48 @@ interface UploadDocTemplateFormValues {
     templateId: string;
 }
 
-const schema = yup.object().shape({
-    file: yup
-        .mixed<FileList>()
-        .required("File is required")
-        .test("fileRequired", "File is required", (v) => v?.length > 0)
-        .test("fileSize", "Max 10MB", (v) => !v?.[0] || v[0].size <= 10 * 1024 * 1024)
-        .test("fileType", "PDF/DOC/DOCX/TXT only", (v) => {
-            if (!v?.[0]) return true;
-            return [
-                "application/pdf",
-                "application/msword",
-                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                "text/plain",
-            ].includes(v[0].type);
-        }),
-    docName: yup.string().required("Document name is required").max(100, "Document name must be less than 100 characters"),
-    langCode: yup.string().required("Language is required"),
-});
+// Create dynamic schema based on mode
+const createSchema = (isUpdateMode: boolean) =>
+    yup.object().shape({
+        file: isUpdateMode
+            ? yup
+                .mixed<FileList>()
+                .test("fileSize", "Max 10MB", (v) => !v?.[0] || v[0].size <= 10 * 1024 * 1024)
+                .test("fileType", "Only PDF, DOC, and DOCX files are allowed", (v) => {
+                    if (!v?.[0]) return true;
+                    return [
+                        "application/pdf",
+                        "application/msword",
+                        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    ].includes(v[0].type);
+                })
+            : yup
+                .mixed<FileList>()
+                .required("File is required")
+                .test("fileRequired", "File is required", (v) => v?.length > 0)
+                .test("fileSize", "Max 10MB", (v) => !v?.[0] || v[0].size <= 10 * 1024 * 1024)
+                .test("fileType", "Only PDF, DOC, and DOCX files are allowed", (v) => {
+                    if (!v?.[0]) return true;
+                    return [
+                        "application/pdf",
+                        "application/msword",
+                        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    ].includes(v[0].type);
+                }),
+        docName: yup.string().required("Document name is required").max(100, "Document name must be less than 100 characters"),
+        langCode: yup.string().required("Language is required"),
+    });
 
 export const UploadDocumentTemplateForm: React.FC<{
     onSuccess?: (data: any) => void;
     onClose?: () => void;
-}> = ({ onSuccess, onClose }) => {
+    document?: any; // The document to edit (for update mode)
+    mode?: 'create' | 'update'; // Mode of the form
+}> = ({ onSuccess, onClose, document, mode = 'create' }) => {
+    const documentTags = useDocumentControllerGetDocumentTags();
     const company = useCompanyControllerGetCompany();
     const { data } = useSession();
+    const isUpdateMode = mode === 'update' && document;
 
     const {
         register,
@@ -52,22 +70,48 @@ export const UploadDocumentTemplateForm: React.FC<{
         formState: { errors },
         reset,
         watch,
+        setValue,
     } = useForm<UploadDocTemplateFormValues>({
-        resolver: yupResolver(schema),
+        resolver: yupResolver(createSchema(isUpdateMode)),
+        defaultValues: {
+            docName: isUpdateMode ? document?.tag || '' : '',
+            langCode: isUpdateMode ? document?.langCode || '' : '',
+        }
     });
+
+    // Set default values when document changes (for update mode)
+    React.useEffect(() => {
+        if (isUpdateMode && document) {
+            setValue('docName', document.tag || '');
+            setValue('langCode', document.langCode || '');
+        } else {
+            // Reset form for create mode
+            reset({
+                docName: '',
+                langCode: '',
+                file: undefined,
+            });
+        }
+    }, [document, isUpdateMode, setValue, reset]);
 
     const uploadDocument = useMutation({
         mutationFn: async (formData: FormData) => {
             const baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
-            const response = await fetch(`${baseUrl}/api/v1/uploads/company-document`, {
-                method: 'POST',
+            const endpoint = isUpdateMode
+                ? `${baseUrl}/api/v1/uploads/company-document/${document.id}`
+                : `${baseUrl}/api/v1/uploads/company-document`;
+
+            const method = isUpdateMode ? 'PUT' : 'POST';
+
+            const response = await fetch(endpoint, {
+                method,
                 body: formData,
                 headers: { Authorization: `Bearer ${data?.user.backendTokens.at}` },
             });
 
             if (!response.ok) {
                 const errorText = await response.text();
-                let errorMessage = "Upload failed";
+                let errorMessage = isUpdateMode ? "Update failed" : "Upload failed";
 
                 try {
                     const errorJson = JSON.parse(errorText);
@@ -82,7 +126,11 @@ export const UploadDocumentTemplateForm: React.FC<{
             return response.json();
         },
         onSuccess: (data) => {
-            toast.success('Document uploaded successfully!', {
+            const successMessage = isUpdateMode
+                ? 'Document updated successfully!'
+                : 'Document uploaded successfully!';
+
+            toast.success(successMessage, {
                 position: "bottom-right",
                 autoClose: 5000,
                 hideProgressBar: false,
@@ -98,7 +146,11 @@ export const UploadDocumentTemplateForm: React.FC<{
             onClose?.();
         },
         onError: (error: Error) => {
-            toast.error(`Upload failed: ${error.message}`, {
+            const errorMessage = isUpdateMode
+                ? `Update failed: ${error.message}`
+                : `Upload failed: ${error.message}`;
+
+            toast.error(errorMessage, {
                 position: "bottom-right",
                 autoClose: 5000,
                 hideProgressBar: false,
@@ -109,19 +161,18 @@ export const UploadDocumentTemplateForm: React.FC<{
                 theme: "colored",
                 transition: Bounce,
             });
-            console.error("Document upload error:", error);
+            console.error(`Document ${isUpdateMode ? 'update' : 'upload'} error:`, error);
         },
     });
 
-    const handleDocumentUpload = (data: UploadDocTemplateFormValues) => {
-        const file = data.file[0];
-        if (!file) {
-            console.error("No file selected");
-            return;
+    const handleDocumentSubmit = (data: UploadDocTemplateFormValues) => {
+        const formData = new FormData();
+
+        // Only append file if it exists (for create mode or update with new file)
+        if (data.file?.[0]) {
+            formData.append('file', data.file[0]);
         }
 
-        const formData = new FormData();
-        formData.append('file', file);
         formData.append('tag', data.docName);
         formData.append('langCode', data.langCode);
         formData.append('defaultLangCode', company.data?.defaultLangCode ?? "en");
@@ -130,41 +181,65 @@ export const UploadDocumentTemplateForm: React.FC<{
     };
 
     const onSubmit: SubmitHandler<UploadDocTemplateFormValues> = (data) =>
-        handleDocumentUpload(data);
+        handleDocumentSubmit(data);
 
     const selectedFile = watch("file");
     const fileInfo = selectedFile?.[0];
 
+    // Handler for dropdown selection
+    const handleTagSelect = (selectedTag: string) => {
+        if (selectedTag) {
+            setValue('docName', selectedTag);
+        }
+    };
+
     return (
         <>
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+                {/* File Upload Section */}
                 <div>
                     <Input
                         register={register}
                         name="file"
-                        label="Upload Document"
+                        label={isUpdateMode ? "Replace Document (Optional)" : "Upload Document"}
                         type="file"
-                        accept=".pdf,.doc,.docx,.txt"
-                        required
+                        accept=".pdf,.doc,.docx"
+                        required={!isUpdateMode}
                     />
                     {errors.file && (
                         <p className="text-red-600 text-sm mt-1">
                             {errors.file.message}
                         </p>
                     )}
-                    {fileInfo && (
-                        <p className="text-sm text-gray-600 mt-1">
-                            Selected: {fileInfo.name} ({(fileInfo.size / 1024 / 1024).toFixed(2)} MB)
+
+                    {/* Show current file info in update mode */}
+                    {isUpdateMode && document && !fileInfo && (
+                        <p className="text-sm text-blue-600 mt-1">
+                            Current file: {document.originalName || document.tag}.{document.ext}
                         </p>
                     )}
+
+                    {/* Show selected new file info */}
+                    {fileInfo && (
+                        <p className="text-sm text-gray-600 mt-1">
+                            {isUpdateMode ? 'New file selected: ' : 'Selected: '}
+                            {fileInfo.name} ({(fileInfo.size / 1024 / 1024).toFixed(2)} MB)
+                        </p>
+                    )}
+
+                    {/* File type hint */}
+                    <p className="text-xs text-gray-500 mt-1">
+                        Accepted formats: PDF, DOC, DOCX (Max 10MB)
+                    </p>
                 </div>
 
+                {/* Document Tag Section */}
                 <div>
                     <Input
                         register={register}
                         name="docName"
-                        label="Document Name"
-                        placeholder="Enter document name"
+                        label="Document Tag"
+                        placeholder="Enter tag name or select from dropdown..."
                         required
                     />
                     {errors.docName && (
@@ -172,8 +247,28 @@ export const UploadDocumentTemplateForm: React.FC<{
                             {errors.docName.message}
                         </p>
                     )}
+
+                    {/* Tag Dropdown */}
+                    <div className="mt-2">
+                        <label className="block text-xs font-medium text-gray-600 mb-1">
+                            Or select existing tag:
+                        </label>
+                        <select
+                            onChange={(e) => handleTagSelect(e.target.value)}
+                            className="w-full border border-gray-300 p-2 rounded text-sm"
+                            defaultValue=""
+                        >
+                            <option value="">Select existing tag...</option>
+                            {documentTags.data?.map((value, index) => (
+                                <option value={value.tag} key={`${value.tag}-${index}`}>
+                                    {value.tag}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
                 </div>
 
+                {/* Language Selection */}
                 <div>
                     <label className="block text-sm font-medium mb-1">Language *</label>
                     <select
@@ -198,6 +293,7 @@ export const UploadDocumentTemplateForm: React.FC<{
                     )}
                 </div>
 
+                {/* Error Display */}
                 <div className="text-center">
                     {uploadDocument.isError && (
                         <div className="bg-red-50 border border-red-200 text-red-600 px-3 py-2 rounded text-sm">
@@ -206,6 +302,7 @@ export const UploadDocumentTemplateForm: React.FC<{
                     )}
                 </div>
 
+                {/* Form Actions */}
                 <div className="flex justify-end space-x-2 pt-4">
                     {onClose && (
                         <Button
@@ -221,7 +318,7 @@ export const UploadDocumentTemplateForm: React.FC<{
                         disabled={uploadDocument.isPending}
                         type="submit"
                     >
-                        Upload Document
+                        {isUpdateMode ? 'Update Document' : 'Upload Document'}
                     </Button>
                 </div>
             </form>
