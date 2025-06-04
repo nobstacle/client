@@ -225,6 +225,21 @@ export const Content: React.FC = () => {
     document.body.removeChild(link);
   };
 
+        // Set a timeout for loading state
+      useEffect(() => {
+        if (isLoading) {
+          const timeout = setTimeout(() => {
+            setIsLoading(false);
+          }, 8000);
+
+          setLoadingTimeout(timeout);
+
+          return () => {
+            clearTimeout(timeout);
+          };
+        }
+      }, [isLoading]);
+      
   if (hasHydrated) {
     if (
       messageStore.receivedType === "TextTemplateMessage" ||
@@ -294,20 +309,6 @@ export const Content: React.FC = () => {
         }
       };
 
-      // Set a timeout for loading state
-      useEffect(() => {
-        if (isLoading) {
-          const timeout = setTimeout(() => {
-            setIsLoading(false);
-          }, 8000);
-
-          setLoadingTimeout(timeout);
-
-          return () => {
-            clearTimeout(timeout);
-          };
-        }
-      }, [isLoading]);
 
       const renderDocumentViewer = () => {
         if (loadError) {
