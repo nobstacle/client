@@ -46,7 +46,7 @@ export default function SlideshowDashboard() {
   const { slideshows, setSlideshows, setSearchSlideshows, searchSlideshows } =
     useTemplateStore();
 
-  const { search } = useSearchTemplate(slideshows, setSearchSlideshows);
+  const { search, clearSearch } = useSearchTemplate(slideshows, setSearchSlideshows);
 
   const params = useSearchParams();
   const { handleClose, handleOpen, isOpen } = useDisclousure();
@@ -127,7 +127,11 @@ export default function SlideshowDashboard() {
         {slideshowsSource.length > 0 && (
           <Card className="w-full customCards">
             <div style={{ width: '20%' }}>
-              <SearchTemplateForm searchOnChange={search} />
+              <SearchTemplateForm
+                searchOnChange={search}
+                onClear={clearSearch}
+                placeholder="Search documents by name, tag, or file type..."
+              />
             </div>
           </Card>
         )}

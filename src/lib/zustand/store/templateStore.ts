@@ -44,6 +44,10 @@ interface BearState {
   setSurveyAnswers: (surveys: GetSurveyAnswerTemplateRes[]) => void;
   surveysAnswer: GetSurveyAnswerTemplateRes[];
   addSurveyAnswer: (survey: GetSurveyAnswerTemplateRes) => void;
+  documents: any[];
+  setDocuments: (documents: any[]) => void;
+  searchDocuments: any[];
+  setSearchDocuments: (documents: any[]) => void;
 }
 
 const useTemplateStore = create<BearState>()(
@@ -83,6 +87,10 @@ const useTemplateStore = create<BearState>()(
       setWebsites: (websites) => set(() => ({ websites })),
       searchWebsites: [],
       setSearchWebsites: (searchWebsites) => set(() => ({ searchWebsites })),
+      documents: [],
+      setDocuments: (documents) => set(() => ({ documents })),
+      searchDocuments: [],
+      setSearchDocuments: (searchDocuments) => set(() => ({ searchDocuments })),
     }),
     {
       name: "templates-storage", // name of the item in the storage (must be unique)

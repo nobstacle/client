@@ -37,7 +37,7 @@ export default function VideoDashboard() {
   const { videos, setVideos, setSearchVideos, searchVideos } =
     useTemplateStore();
 
-  const { search } = useSearchTemplate(videos, setSearchVideos);
+  const { search,clearSearch } = useSearchTemplate(videos, setSearchVideos);
 
   const params = useSearchParams();
 
@@ -115,7 +115,11 @@ export default function VideoDashboard() {
         {videosSource.length > 0 && (
           <Card className="w-full customCards">
             <div style={{ width: '20%' }}>
-              <SearchTemplateForm searchOnChange={search} />
+             <SearchTemplateForm
+                  searchOnChange={search}
+                  onClear={clearSearch}
+                  placeholder="Search documents by name, tag, or file type..."  
+                />
             </div>
           </Card>
         )}

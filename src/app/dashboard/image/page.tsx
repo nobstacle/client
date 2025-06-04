@@ -36,7 +36,7 @@ export default function ImageDashboard() {
   const isHydrated = useHasHydrated();
   const { setImages, images, setSearchImages, searchImages } =
     useTemplateStore();
-  const { search } = useSearchTemplate(images, setSearchImages);
+  const { search, clearSearch } = useSearchTemplate(images, setSearchImages);
   const params = useSearchParams();
   const { handleClose, handleOpen, isOpen } = useDisclousure();
   const {
@@ -112,7 +112,11 @@ export default function ImageDashboard() {
           {imagesSource.length > 0 && (
             <Card className="w-full customCards">
               <div style={{ width: '20%' }}>
-                <SearchTemplateForm searchOnChange={search} />
+                <SearchTemplateForm
+                  searchOnChange={search}
+                  onClear={clearSearch}
+                  placeholder="Search documents by name, tag, or file type..."
+                />
               </div>
             </Card>
           )}

@@ -14,5 +14,9 @@ export const useSearchTemplate = (
     }
   };
 
-  return { search };
+  const clearSearch = () => {
+    setSearchTemplate([]);
+  };
+
+  return { search, clearSearch };
 };

@@ -3,11 +3,7 @@ import { SubmitHandler, useForm, Controller } from "react-hook-form";
 import * as yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { Form, Input as AntdInput, Button as AntdButton, Row, Col, Card } from "antd";
-// import {
-//   useMapTemplateControllerCreateMapTemplate,
-// } from "../../../lib/client/api";
 import { Autocomplete, useJsApiLoader } from "@react-google-maps/api";
-// import { SendIcon } from "@/components/icons/SendIcon";
 import "../../../styles/base.css";
 
 interface SendMapTemplateFormFieldValues {
@@ -42,10 +38,8 @@ export const SendDocumentForm: React.FC<{
     },
   });
 
-  // const createMapsTemplate = useMapTemplateControllerCreateMapTemplate();
 
   const originRef = React.useRef<google.maps.places.Autocomplete | null>(null);
-  // const destinationRef = React.useRef<google.maps.places.Autocomplete | null>(null);
 
   const onPlaceChanged = (field: "origin" | "destination", ref: any) => {
     if (ref.current) {
