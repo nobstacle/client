@@ -146,9 +146,10 @@ export const UploadDocumentTemplateForm: React.FC<{
             onClose?.();
         },
         onError: (error: Error) => {
+            const shortMessage = error.message.split('\n')[0];
             const errorMessage = isUpdateMode
-                ? `Update failed: ${error.message}`
-                : `Upload failed: ${error.message}`;
+                ? `Update failed: ${shortMessage}`
+                : `Upload failed: ${shortMessage}`;
 
             toast.error(errorMessage, {
                 position: "bottom-right",
@@ -163,6 +164,7 @@ export const UploadDocumentTemplateForm: React.FC<{
             });
             console.error(`Document ${isUpdateMode ? 'update' : 'upload'} error:`, error);
         },
+
     });
 
     const handleDocumentSubmit = (data: UploadDocTemplateFormValues) => {
@@ -172,7 +174,7 @@ export const UploadDocumentTemplateForm: React.FC<{
             formData.append('file', data.file[0]);
         }
 
-        console.info("data.langCode",data.langCode);
+        console.info("data.langCode", data.langCode);
 
         formData.append('tag', data.docName);
         formData.append('langCode', data.langCode);
@@ -287,20 +289,6 @@ export const UploadDocumentTemplateForm: React.FC<{
                         <option value="tr">Turkish</option>
                         <option value="fr">French</option>
                     </select>
-                    {errors.langCode && (
-                        <p className="text-red-600 text-sm mt-1">
-                            {errors.langCode.message}
-                        </p>
-                    )}
-                </div>
-
-                {/* Error Display */}
-                <div className="text-center">
-                    {uploadDocument.isError && (
-                        <div className="bg-red-50 border border-red-200 text-red-600 px-3 py-2 rounded text-sm">
-                            {(uploadDocument.error as Error)?.message}
-                        </div>
-                    )}
                 </div>
 
                 {/* Form Actions */}
