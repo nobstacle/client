@@ -21,7 +21,7 @@ import {
     AiFillFileWord,
     AiFillFileUnknown
 } from 'react-icons/ai';
-import { useDocumentControllerDeleteDocumentOne } from "../../../lib/client/api";
+import { useDocumentControllerDeleteDocumentOne, useCompanyControllerGetCompany } from "../../../lib/client/api";
 import { toast } from 'react-toastify';
 import useTemplateStore from "../../../lib/zustand/store/templateStore";
 import { useSearchDocument } from "../../../hooks/useSearchDocument";
@@ -44,6 +44,7 @@ export default function Documents() {
     const { search, clearSearch, isSearching } = useSearchDocument(documents, setSearchDocuments);
     const { emitSendDocument } = useSocketContext();
     let Url = process.env.NEXT_PUBLIC_BACKEND_URL;
+    const { data: companyData } = useCompanyControllerGetCompany();
 
     useEffect(() => {
         setIsMounted(true);
@@ -197,8 +198,11 @@ export default function Documents() {
                                             id={document.id}
                                             tag={document.tag}
                                             isAdmin={data?.user.Roles?.includes("Admin")}
-                                            isAvailable={document.langCode?.includes(
-                                                params.get("lang") || ""
+                                            // isAvailable={document.langCode?.includes(
+                                            //     params.get("lang") || ""
+                                            // )}
+                                            isAvailable={document.langCode.includes(
+                                                params.get("lang") || companyData?.defaultLangCode || "",
                                             )}
                                             onUpdate={() => onUpdateDocument(document)}
                                             onDelete={() => onDeleteDocument(document.id)}
