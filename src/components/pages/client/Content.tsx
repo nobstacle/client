@@ -215,30 +215,40 @@ export const Content: React.FC = () => {
     });
   };
 
-  const handleDownload = (url: string, fileName: string) => {
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = fileName;
-    link.target = '_blank';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const getDeviceInfo = () => {
+    const userAgent = navigator.userAgent.toLowerCase();
+    const isIOS = /ipad|iphone|ipod/.test(userAgent);
+    const isAndroid = /android/.test(userAgent);
+    const isAndroidTablet = isAndroid && !/mobile/.test(userAgent);
+    const isAndroidPhone = isAndroid && /mobile/.test(userAgent);
+    const isMobileDevice = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent);
+    const isTablet = /ipad/.test(userAgent) || isAndroidTablet;
+
+    return {
+      isIOS,
+      isAndroid,
+      isAndroidTablet,
+      isAndroidPhone,
+      isMobileDevice: isMobileDevice || isTablet,
+      isTablet
+    };
   };
 
-        // Set a timeout for loading state
-      useEffect(() => {
-        if (isLoading) {
-          const timeout = setTimeout(() => {
-            setIsLoading(false);
-          }, 8000);
 
-          setLoadingTimeout(timeout);
+  // Set a timeout for loading state
+  useEffect(() => {
+    if (isLoading) {
+      const timeout = setTimeout(() => {
+        setIsLoading(false);
+      }, 8000);
 
-          return () => {
-            clearTimeout(timeout);
-          };
-        }
-      }, [isLoading]);
+      setLoadingTimeout(timeout);
+
+      return () => {
+        clearTimeout(timeout);
+      };
+    }
+  }, [isLoading]);
 
   if (hasHydrated) {
     if (
@@ -282,7 +292,7 @@ export const Content: React.FC = () => {
         />
       );
     }
-    
+
     if (messageStore.receivedType === "Document" ||
       messageStore.receivedType === "PdfDocument" ||
       messageStore.receivedType === "WordDocument" ||
@@ -327,7 +337,8 @@ export const Content: React.FC = () => {
 
         switch (fileType) {
           case 'pdf':
-            if (isMobile) {
+            const deviceInfo = getDeviceInfo();
+            if (deviceInfo.isMobileDevice || deviceInfo.isTablet) {
               return (
                 <div className="w-full h-screen flex flex-col overflow-hidden">
                   {isLoading && (
@@ -336,7 +347,8 @@ export const Content: React.FC = () => {
                     </div>
                   )}
 
-                  {isIOS ? (
+                  {deviceInfo.isIOS ? (
+                    // iOS devices (iPhone/iPad)
                     <div className="flex-1 w-full relative">
                       <iframe
                         src={`https://docs.google.com/viewer?url=${encodeURIComponent(documentUrl)}&embedded=true`}
@@ -351,7 +363,7 @@ export const Content: React.FC = () => {
                         scrolling="no"
                         onLoad={handleIframeLoad}
                         onError={() => {
-                          setLoadError(false);
+                          // Fallback for iOS
                           const iframe = document.querySelector('iframe[title="PDF Document"]') as HTMLIFrameElement;
                           if (iframe) {
                             iframe.src = documentUrl + '#toolbar=0&navpanes=0&scrollbar=0';
@@ -360,55 +372,80 @@ export const Content: React.FC = () => {
                       />
                     </div>
                   ) : (
+                    // Android devices (phones and tablets)
                     <div className="flex-1 w-full relative">
-       <object
-              data={documentUrl}
-              type="application/pdf"
-              className="w-full h-full"
-              style={{ width: '100%', height: '100%' }}
-              onLoad={() => {
-                setIsLoading(false);
-                setLoadError(false);
-              }}
-              onError={() => {
-                // Fallback 1: Try Google Docs viewer
-                const container = document.querySelector('.flex-1.w-full.relative');
-                if (container) {
-                  container.innerHTML = `
+                      <object
+                        data={`https://docs.google.com/viewer?url=${encodeURIComponent(documentUrl)}&embedded=true`}
+                        type="application/pdf"
+                        className="w-full h-full"
+                        style={{ width: '100%', height: '100%' }}
+                        onLoad={() => {
+                          setIsLoading(false);
+                          setLoadError(false);
+                        }}
+                        onError={() => {
+                          // Fallback 1: Try Mozilla PDF.js viewer
+                          const container = document.querySelector('.flex-1.w-full.relative');
+                          if (container) {
+                            container.innerHTML = `
                     <iframe
-                      src="https://docs.google.com/viewer?url=${encodeURIComponent(documentUrl)}&embedded=true"
+                      src="https://mozilla.github.io/pdf.js/web/viewer.html?file=${encodeURIComponent(documentUrl)}"
                       style="width: 100%; height: 100%; border: none;"
                       title="PDF Document"
+                      onload="setIsLoading(false)"
+                      onerror="handleFinalFallback()"
                     ></iframe>
                   `;
-                }
-                setTimeout(() => setIsLoading(false), 3000);
-              }}
-            >
-              {/* Fallback for object tag */}
-              <iframe
-                src={`https://drive.google.com/viewerng/viewer?embedded=true&url=${encodeURIComponent(documentUrl)}`}
-                className="w-full h-full border-0"
-                title="PDF Document"
-                style={{ width: '100%', height: '100%', border: 'none' }}
-                onLoad={() => {
-                  setIsLoading(false);
-                  setLoadError(false);
-                }}
-                onError={() => {
-                  // Final fallback: Direct link in new tab
-                  window.open(documentUrl, '_blank');
-                  setIsLoading(false);
-                }}
-              />
-            </object>
+                          }
+                          setTimeout(() => setIsLoading(false), 3000);
+                        }}
+                      >
+                        {/* Primary fallback: Google Docs viewer iframe */}
+                        <iframe
+                          src={`https://docs.google.com/viewer?url=${encodeURIComponent(documentUrl)}&embedded=true`}
+                          className="w-full h-full border-0"
+                          title="PDF Document"
+                          style={{ width: '100%', height: '100%', border: 'none' }}
+                          onLoad={() => {
+                            setIsLoading(false);
+                            setLoadError(false);
+                          }}
+                          onError={() => {
+                            // Secondary fallback: Try Office viewer
+                            const iframe = document.querySelector('iframe[title="PDF Document"]') as HTMLIFrameElement;
+                            if (iframe) {
+                              iframe.src = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(documentUrl)}`;
+                              setTimeout(() => {
+                                setIsLoading(false);
+                                // Final fallback: Download link
+                                if (iframe.contentDocument === null) {
+                                  const container = iframe.parentElement;
+                                  if (container) {
+                                    container.innerHTML = `
+                            <div class="flex flex-col items-center justify-center h-full p-8 text-center">
+                              <svg class="w-16 h-16 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                              </svg>
+                              <p class="text-lg font-medium text-gray-900 mb-2">PDF Preview Not Available</p>
+                              <p class="text-gray-500 mb-4">This PDF cannot be displayed in the browser.</p>
+                              <a href="${documentUrl}" target="_blank" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                                Download PDF
+                              </a>
+                            </div>
+                          `;
+                                  }
+                                }
+                              }, 3000);
+                            }
+                          }}
+                        />
+                      </object>
                     </div>
                   )}
-
                 </div>
               );
             } else {
-              // Desktop PDF viewer
+              // Desktop PDF viewer - enhanced for better compatibility
               return (
                 <div className="w-full h-screen border rounded-lg overflow-hidden relative">
                   {isLoading && (
@@ -416,17 +453,144 @@ export const Content: React.FC = () => {
                       <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
                     </div>
                   )}
-                  <iframe
-                    src={documentUrl}
+
+                  <object
+                    data={documentUrl}
+                    type="application/pdf"
                     className="w-full h-full"
-                    title="PDF Document"
-                    frameBorder="0"
-                    onLoad={handleIframeLoad}
-                    onError={handleIframeError}
-                  />
+                    onLoad={() => {
+                      setIsLoading(false);
+                      setLoadError(false);
+                    }}
+                    onError={() => {
+                      // Desktop fallback: Google Docs viewer
+                      const container = document.querySelector('.w-full.h-screen.border.rounded-lg.overflow-hidden.relative');
+                      if (container) {
+                        container.innerHTML = `
+                <iframe
+                  src="https://docs.google.com/viewer?url=${encodeURIComponent(documentUrl)}&embedded=true"
+                  style="width: 100%; height: 100%; border: none;"
+                  title="PDF Document"
+                  frameborder="0"
+                ></iframe>
+              `;
+                      }
+                      setIsLoading(false);
+                    }}
+                  >
+                    {/* Fallback iframe for desktop */}
+                    <iframe
+                      src={`https://docs.google.com/viewer?url=${encodeURIComponent(documentUrl)}&embedded=true`}
+                      className="w-full h-full"
+                      title="PDF Document"
+                      frameBorder="0"
+                      onLoad={handleIframeLoad}
+                      onError={handleIframeError}
+                    />
+                  </object>
                 </div>
               );
             }
+          //       if (isMobile) {
+          //         return (
+          //           <div className="w-full h-screen flex flex-col overflow-hidden">
+          //             {isLoading && (
+          //               <div className="absolute inset-0 flex items-center justify-center bg-gray-50 z-10">
+          //                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+          //               </div>
+          //             )}
+
+          //             {isIOS ? (
+          //               <div className="flex-1 w-full relative">
+          //                 <iframe
+          //                   src={`https://docs.google.com/viewer?url=${encodeURIComponent(documentUrl)}&embedded=true`}
+          //                   className="w-full h-full border-0"
+          //                   title="PDF Document"
+          //                   style={{
+          //                     width: '100%',
+          //                     height: '100%',
+          //                     border: 'none',
+          //                     overflow: 'hidden'
+          //                   }}
+          //                   scrolling="no"
+          //                   onLoad={handleIframeLoad}
+          //                   onError={() => {
+          //                     setLoadError(false);
+          //                     const iframe = document.querySelector('iframe[title="PDF Document"]') as HTMLIFrameElement;
+          //                     if (iframe) {
+          //                       iframe.src = documentUrl + '#toolbar=0&navpanes=0&scrollbar=0';
+          //                     }
+          //                   }}
+          //                 />
+          //               </div>
+          //             ) : (
+          //               <div className="flex-1 w-full relative">
+          //  <object
+          //         data={documentUrl}
+          //         type="application/pdf"
+          //         className="w-full h-full"
+          //         style={{ width: '100%', height: '100%' }}
+          //         onLoad={() => {
+          //           setIsLoading(false);
+          //           setLoadError(false);
+          //         }}
+          //         onError={() => {
+          //           // Fallback 1: Try Google Docs viewer
+          //           const container = document.querySelector('.flex-1.w-full.relative');
+          //           if (container) {
+          //             container.innerHTML = `
+          //               <iframe
+          //                 src="https://docs.google.com/viewer?url=${encodeURIComponent(documentUrl)}&embedded=true"
+          //                 style="width: 100%; height: 100%; border: none;"
+          //                 title="PDF Document"
+          //               ></iframe>
+          //             `;
+          //           }
+          //           setTimeout(() => setIsLoading(false), 3000);
+          //         }}
+          //       >
+          //         {/* Fallback for object tag */}
+          //         <iframe
+          //           src={`https://drive.google.com/viewerng/viewer?embedded=true&url=${encodeURIComponent(documentUrl)}`}
+          //           className="w-full h-full border-0"
+          //           title="PDF Document"
+          //           style={{ width: '100%', height: '100%', border: 'none' }}
+          //           onLoad={() => {
+          //             setIsLoading(false);
+          //             setLoadError(false);
+          //           }}
+          //           onError={() => {
+          //             // Final fallback: Direct link in new tab
+          //             window.open(documentUrl, '_blank');
+          //             setIsLoading(false);
+          //           }}
+          //         />
+          //       </object>
+          //               </div>
+          //             )}
+
+          //           </div>
+          //         );
+          //       } else {
+          //         // Desktop PDF viewer
+          //         return (
+          //           <div className="w-full h-screen border rounded-lg overflow-hidden relative">
+          //             {isLoading && (
+          //               <div className="absolute inset-0 flex items-center justify-center bg-gray-50 z-10">
+          //                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+          //               </div>
+          //             )}
+          //             <iframe
+          //               src={documentUrl}
+          //               className="w-full h-full"
+          //               title="PDF Document"
+          //               frameBorder="0"
+          //               onLoad={handleIframeLoad}
+          //               onError={handleIframeError}
+          //             />
+          //           </div>
+          //         );
+          //       }
 
           case 'doc':
           case 'docx':
@@ -440,46 +604,46 @@ export const Content: React.FC = () => {
                       </div>
                     )}
 
-          {isAndroid ? (
-            // Android: Try multiple viewers in order
-            <iframe
-              src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(documentUrl)}`}
-              className="w-full h-full border-0"
-              title="Word Document"
-              style={{ width: '100%', height: '100%', border: 'none' }}
-              onLoad={() => {
-                setIsLoading(false);
-                setLoadError(false);
-              }}
-              onError={() => {
-                // Fallback: Google Docs viewer
-                const iframe = document.querySelector('iframe[title="Word Document"]') as HTMLIFrameElement;
-                if (iframe) {
-                  iframe.src = `https://docs.google.com/viewer?url=${encodeURIComponent(documentUrl)}&embedded=true`;
-                }
-                setTimeout(() => setIsLoading(false), 3000);
-              }}
-            />
-          ) : (
-            // iOS: Google Docs viewer
-            <iframe
-              src={`https://docs.google.com/viewer?url=${encodeURIComponent(documentUrl)}&embedded=true`}
-              className="w-full h-full border-0"
-              title="Word Document"
-              style={{ width: '100%', height: '100%', border: 'none' }}
-              onLoad={() => {
-                setIsLoading(false);
-                setLoadError(false);
-              }}
-              onError={() => {
-                const iframe = document.querySelector('iframe[title="Word Document"]') as HTMLIFrameElement;
-                if (iframe) {
-                  iframe.src = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(documentUrl)}`;
-                }
-                setTimeout(() => setIsLoading(false), 5000);
-              }}
-            />
-          )}
+                    {isAndroid ? (
+                      // Android: Try multiple viewers in order
+                      <iframe
+                        src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(documentUrl)}`}
+                        className="w-full h-full border-0"
+                        title="Word Document"
+                        style={{ width: '100%', height: '100%', border: 'none' }}
+                        onLoad={() => {
+                          setIsLoading(false);
+                          setLoadError(false);
+                        }}
+                        onError={() => {
+                          // Fallback: Google Docs viewer
+                          const iframe = document.querySelector('iframe[title="Word Document"]') as HTMLIFrameElement;
+                          if (iframe) {
+                            iframe.src = `https://docs.google.com/viewer?url=${encodeURIComponent(documentUrl)}&embedded=true`;
+                          }
+                          setTimeout(() => setIsLoading(false), 3000);
+                        }}
+                      />
+                    ) : (
+                      // iOS: Google Docs viewer
+                      <iframe
+                        src={`https://docs.google.com/viewer?url=${encodeURIComponent(documentUrl)}&embedded=true`}
+                        className="w-full h-full border-0"
+                        title="Word Document"
+                        style={{ width: '100%', height: '100%', border: 'none' }}
+                        onLoad={() => {
+                          setIsLoading(false);
+                          setLoadError(false);
+                        }}
+                        onError={() => {
+                          const iframe = document.querySelector('iframe[title="Word Document"]') as HTMLIFrameElement;
+                          if (iframe) {
+                            iframe.src = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(documentUrl)}`;
+                          }
+                          setTimeout(() => setIsLoading(false), 5000);
+                        }}
+                      />
+                    )}
                   </div>
                 </div>
               );
