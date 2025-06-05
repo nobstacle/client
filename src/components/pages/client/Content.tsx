@@ -295,10 +295,7 @@ export const Content: React.FC = () => {
 
     if (messageStore.receivedType === "Document" ||
       messageStore.receivedType === "PdfDocument" ||
-      messageStore.receivedType === "WordDocument" ||
-      messageStore.receivedType === "ExcelDocument" ||
-      messageStore.receivedType === "PowerPointDocument" ||
-      messageStore.receivedType === "CsvDocument") {
+      messageStore.receivedType === "WordDocument") {
 
       const documentUrl = messageStore.receivedContent?.content ?? "";
       const fileType = messageStore.receivedContent?.extraContent?.toLowerCase() ?? "";
@@ -339,7 +336,7 @@ export const Content: React.FC = () => {
             const deviceInfo = getDeviceInfo();
             if (deviceInfo.isMobileDevice || deviceInfo.isTablet) {
               return (
-                <div className="w-full h-screen flex flex-col">
+                <div className="w-full" style={{ height: '100vh' }}>
                   {isLoading && (
                     <div className="absolute inset-0 flex items-center justify-center bg-gray-50 z-10">
                       <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
@@ -347,61 +344,100 @@ export const Content: React.FC = () => {
                   )}
 
                   {deviceInfo.isIOS ? (
-                    // iOS devices (iPhone/iPad) - Fixed for scrolling
-                    <div className="flex-1 w-full relative" style={{ height: '100vh', overflow: 'auto' }}>
+                    // iOS devices (iPhone/iPad) - Use native PDF viewer approach
+                    <div className="w-full h-full">
+                      {/* Try PDF.js first for better control */}
                       <iframe
-                        src={`https://docs.google.com/viewer?url=${encodeURIComponent(documentUrl)}&embedded=true`}
+                        src={`https://mozilla.github.io/pdf.js/web/viewer.html?file=${encodeURIComponent(documentUrl)}`}
                         className="w-full h-full border-0"
                         title="PDF Document"
                         style={{
                           width: '100%',
-                          minHeight: '100vh',
-                          height: 'auto',
+                          height: '100%',
                           border: 'none'
                         }}
-                        // Removed scrolling="no" to allow scrolling
                         onLoad={handleIframeLoad}
                         onError={() => {
-                          // Fallback for iOS - with scrolling enabled
+                          // Fallback 1: Try direct PDF with specific parameters for iOS
                           const iframe = document.querySelector('iframe[title="PDF Document"]') as HTMLIFrameElement;
                           if (iframe) {
-                            iframe.src = `https://mozilla.github.io/pdf.js/web/viewer.html?file=${encodeURIComponent(documentUrl)}`;
+                            // Use direct PDF URL with parameters to disable compression
+                            iframe.src = `${documentUrl}#view=FitH&pagemode=none&navpanes=0&toolbar=1&statusbar=0&messages=0&scrollbar=1`;
                           }
+                          setTimeout(() => {
+                            // Fallback 2: Use Office viewer if direct PDF fails
+                            if (iframe && !iframe.contentDocument) {
+                              iframe.src = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(documentUrl)}&wdStartOn=1&wdEmbedCode=0`;
+                            }
+                          }, 3000);
                         }}
                       />
                     </div>
                   ) : (
-                    // Android devices (phones and tablets) - Fixed for scrolling
-                    <div className="flex-1 w-full relative" style={{ height: '100vh', overflow: 'auto' }}>
-                      <iframe
-                        src={`https://docs.google.com/viewer?url=${encodeURIComponent(documentUrl)}&embedded=true`}
-                        className="w-full border-0"
-                        title="PDF Document"
-                        style={{
-                          width: '100%',
-                          minHeight: '100vh',
-                          height: 'auto',
-                          border: 'none'
-                        }}
+                    // Android devices - Better PDF handling
+                    <div className="w-full h-full">
+                      {/* Try direct PDF object first */}
+                      <object
+                        data={`${documentUrl}#view=FitH&pagemode=none&navpanes=0&toolbar=1&statusbar=0&scrollbar=1`}
+                        type="application/pdf"
+                        className="w-full h-full"
+                        style={{ width: '100%', height: '100%' }}
                         onLoad={() => {
                           setIsLoading(false);
                           setLoadError(false);
                         }}
                         onError={() => {
-                          // Fallback 1: Try Mozilla PDF.js viewer
-                          const iframe = document.querySelector('iframe[title="PDF Document"]') as HTMLIFrameElement;
-                          if (iframe) {
-                            iframe.src = `https://mozilla.github.io/pdf.js/web/viewer.html?file=${encodeURIComponent(documentUrl)}`;
+                          // Fallback: Use PDF.js
+                          const container = document.querySelector('.w-full.h-full');
+                          if (container) {
+                            container.innerHTML = `
+                            <iframe
+                              src="https://mozilla.github.io/pdf.js/web/viewer.html?file=${encodeURIComponent(documentUrl)}"
+                              style="width: 100%; height: 100%; border: none;"
+                              title="PDF Document"
+                            ></iframe>
+                          `;
                           }
                           setTimeout(() => setIsLoading(false), 3000);
                         }}
-                      />
+                      >
+                        {/* Final fallback for Android */}
+                        <iframe
+                          src={`https://mozilla.github.io/pdf.js/web/viewer.html?file=${encodeURIComponent(documentUrl)}`}
+                          className="w-full h-full border-0"
+                          title="PDF Document"
+                          style={{ width: '100%', height: '100%', border: 'none' }}
+                          onLoad={() => {
+                            setIsLoading(false);
+                            setLoadError(false);
+                          }}
+                          onError={() => {
+                            // Last resort: Download link
+                            const container = document.querySelector('.w-full.h-full');
+                            if (container) {
+                              container.innerHTML = `
+                              <div class="flex flex-col items-center justify-center h-full p-8 text-center">
+                                <svg class="w-16 h-16 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                </svg>
+                                <p class="text-lg font-medium text-gray-900 mb-2">PDF Preview Not Available</p>
+                                <p class="text-gray-500 mb-4">Open PDF in a new tab for better viewing experience.</p>
+                                <a href="${documentUrl}" target="_blank" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                                  Open PDF
+                                </a>
+                              </div>
+                            `;
+                            }
+                            setIsLoading(false);
+                          }}
+                        />
+                      </object>
                     </div>
                   )}
                 </div>
               );
             } else {
-              // Desktop PDF viewer - enhanced for better compatibility
+              // Desktop PDF viewer - Use native browser PDF viewer
               return (
                 <div className="w-full h-screen border rounded-lg overflow-hidden relative">
                   {isLoading && (
@@ -411,7 +447,7 @@ export const Content: React.FC = () => {
                   )}
 
                   <object
-                    data={documentUrl}
+                    data={`${documentUrl}#view=FitH&pagemode=none&toolbar=1`}
                     type="application/pdf"
                     className="w-full h-full"
                     onLoad={() => {
@@ -419,24 +455,24 @@ export const Content: React.FC = () => {
                       setLoadError(false);
                     }}
                     onError={() => {
-                      // Desktop fallback: Google Docs viewer
+                      // Desktop fallback: PDF.js
                       const container = document.querySelector('.w-full.h-screen.border.rounded-lg.overflow-hidden.relative');
                       if (container) {
                         container.innerHTML = `
-              <iframe
-                src="https://docs.google.com/viewer?url=${encodeURIComponent(documentUrl)}&embedded=true"
-                style="width: 100%; height: 100%; border: none;"
-                title="PDF Document"
-                frameborder="0"
-              ></iframe>
-            `;
+                        <iframe
+                          src="https://mozilla.github.io/pdf.js/web/viewer.html?file=${encodeURIComponent(documentUrl)}"
+                          style="width: 100%; height: 100%; border: none;"
+                          title="PDF Document"
+                          frameborder="0"
+                        ></iframe>
+                      `;
                       }
                       setIsLoading(false);
                     }}
                   >
                     {/* Fallback iframe for desktop */}
                     <iframe
-                      src={`https://docs.google.com/viewer?url=${encodeURIComponent(documentUrl)}&embedded=true`}
+                      src={`https://mozilla.github.io/pdf.js/web/viewer.html?file=${encodeURIComponent(documentUrl)}`}
                       className="w-full h-full"
                       title="PDF Document"
                       frameBorder="0"
@@ -452,8 +488,8 @@ export const Content: React.FC = () => {
           case 'docx':
             if (isMobile) {
               return (
-                <div className="w-full h-screen flex flex-col">
-                  <div className="flex-1 relative" style={{ height: '100vh', overflow: 'auto' }}>
+                <div className="w-full" style={{ height: '100vh' }}>
+                  <div className="w-full h-full relative">
                     {isLoading && (
                       <div className="absolute inset-0 flex items-center justify-center bg-gray-50 z-10">
                         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
@@ -461,15 +497,14 @@ export const Content: React.FC = () => {
                     )}
 
                     {isAndroid ? (
-                      // Android: Try multiple viewers in order
+                      // Android: Office viewer with better parameters
                       <iframe
-                        src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(documentUrl)}`}
-                        className="w-full border-0"
+                        src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(documentUrl)}&wdStartOn=1&wdEmbedCode=0&wdPrint=0&wdDownloadButton=1`}
+                        className="w-full h-full border-0"
                         title="Word Document"
                         style={{
                           width: '100%',
-                          minHeight: '100vh',
-                          height: 'auto',
+                          height: '100%',
                           border: 'none'
                         }}
                         onLoad={() => {
@@ -486,15 +521,14 @@ export const Content: React.FC = () => {
                         }}
                       />
                     ) : (
-                      // iOS: Google Docs viewer - Fixed for scrolling
+                      // iOS: Office viewer first, then Google Docs
                       <iframe
-                        src={`https://docs.google.com/viewer?url=${encodeURIComponent(documentUrl)}&embedded=true`}
-                        className="w-full border-0"
+                        src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(documentUrl)}&wdStartOn=1&wdEmbedCode=0&wdPrint=0&wdDownloadButton=1`}
+                        className="w-full h-full border-0"
                         title="Word Document"
                         style={{
                           width: '100%',
-                          minHeight: '100vh',
-                          height: 'auto',
+                          height: '100%',
                           border: 'none'
                         }}
                         onLoad={() => {
@@ -504,7 +538,7 @@ export const Content: React.FC = () => {
                         onError={() => {
                           const iframe = document.querySelector('iframe[title="Word Document"]') as HTMLIFrameElement;
                           if (iframe) {
-                            iframe.src = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(documentUrl)}`;
+                            iframe.src = `https://docs.google.com/viewer?url=${encodeURIComponent(documentUrl)}&embedded=true`;
                           }
                           setTimeout(() => setIsLoading(false), 5000);
                         }}
@@ -553,7 +587,7 @@ export const Content: React.FC = () => {
           {renderDocumentViewer()}
         </div>
       );
-    }
+    };
 
     if (messageStore.receivedType === "Video") {
       return (
