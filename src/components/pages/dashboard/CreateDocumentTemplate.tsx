@@ -168,10 +168,11 @@ export const UploadDocumentTemplateForm: React.FC<{
     const handleDocumentSubmit = (data: UploadDocTemplateFormValues) => {
         const formData = new FormData();
 
-        // Only append file if it exists (for create mode or update with new file)
         if (data.file?.[0]) {
             formData.append('file', data.file[0]);
         }
+
+        console.info("data.langCode",data.langCode);
 
         formData.append('tag', data.docName);
         formData.append('langCode', data.langCode);

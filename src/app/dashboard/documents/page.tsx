@@ -95,11 +95,16 @@ export default function Documents() {
 
     // Enhanced function to handle document update
     const onUpdateDocument = (document: any) => {
-        setSelectedDocument(document);
+        const updatedDocument = {
+            ...document,
+            langCode: Array.isArray(document.langCode) ? document.langCode.join(',') : document.langCode,
+        };
+
+        setSelectedDocument(updatedDocument);
         setModalType('update');
         handleOpen();
-        console.log("Update document:", document);
     };
+
 
     // Function to handle creating new document
     const onCreateDocument = () => {
