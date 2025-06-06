@@ -292,342 +292,129 @@ export const Content: React.FC = () => {
       );
     }
 
- if (messageStore.receivedType === "Document" ||
+// Simplified Document Viewer - Replace your existing document handling code
+
+if (messageStore.receivedType === "Document" ||
     messageStore.receivedType === "PdfDocument" ||
     messageStore.receivedType === "WordDocument") {
 
     const documentUrl = messageStore.receivedContent?.content ?? "";
     const fileType = messageStore.receivedContent?.extraContent?.toLowerCase() ?? "";
-    const fileName = `document.${fileType}`;
 
-    const handleIframeError = () => {
-      setLoadError(true);
-      setIsLoading(false);
-      if (loadingTimeout) {
-        clearTimeout(loadingTimeout);
-      }
-    };
-
-    const handleIframeLoad = () => {
-      setIsLoading(false);
-      setLoadError(false);
-      if (loadingTimeout) {
-        clearTimeout(loadingTimeout);
-      }
-    };
-
-    const renderDocumentViewer = () => {
-      if (loadError) {
-        return (
-          <div className="w-full p-8 text-center border-2 border-dashed border-gray-300 rounded-lg">
-            <div className="text-gray-500 mb-4">
-              <svg className="mx-auto h-12 w-12 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-              </svg>
-              <p className="mb-4">Unable to display document</p>
-            </div>
-          </div>
-        );
-      }
-
-      const fullUrl = `https://mozilla.github.io/pdf.js/web/viewer.html?file=${encodeURIComponent(documentUrl)}`;
-      const newUrl = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(documentUrl)}&wdStartOn=1&wdEmbedCode=0`;
-      console.info("HELLO", fullUrl, newUrl);
-
-      switch (fileType) {
-        case 'pdf':
-          const deviceInfo = getDeviceInfo();
-
-          const isMobileOrTablet = deviceInfo.isMobileDevice || deviceInfo.isTablet;
-          
-          if (isMobileOrTablet) {
+    const renderSimpleDocumentViewer = () => {
+        // For PDF files - Mobile optimized approach
+        if (fileType === 'pdf') {
             return (
-              <div className="w-full" style={{ height: '100vh' }}>
-                {isLoading && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-gray-50 z-10">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-                  </div>
-                )}
-
-                {deviceInfo.isIOS || (deviceInfo.isTablet && !deviceInfo.isAndroid) ? (
-                  <div className="w-full h-full">
+                <div className="w-full h-screen">
+                    {/* Mobile-first approach: PDF.js viewer as primary */}
                     <iframe
-                      src={`https://mozilla.github.io/pdf.js/web/viewer.html?file=${encodeURIComponent(documentUrl)}`}
-                      className="w-full h-full border-0"
-                      title="PDF Document"
-                      style={{
-                        width: '100%',
-                        height: '100%',
-                        border: 'none'
-                      }}
-                      onLoad={handleIframeLoad}
-                      onError={() => {
-
-                        const iframe = document.querySelector('iframe[title="PDF Document"]') as HTMLIFrameElement;
-                        if (iframe) {
-                          iframe.src = `${documentUrl}#view=FitH&pagemode=none&navpanes=0&toolbar=1&statusbar=0&messages=0&scrollbar=1`;
-                        }
-                        setTimeout(() => {
-                          if (iframe && !iframe.contentDocument) {
-                            iframe.src = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(documentUrl)}&wdStartOn=1&wdEmbedCode=0`;
-                          }
-                        }, 3000);
-                      }}
-                    />
-                  </div>
-                ) : (
-                  <div className="w-full h-full">
-                    {deviceInfo.isTablet ? (
-                      <iframe
                         src={`https://mozilla.github.io/pdf.js/web/viewer.html?file=${encodeURIComponent(documentUrl)}`}
-                        className="w-full h-full border-0"
-                        title="PDF Document"
-                        style={{ width: '100%', height: '100%', border: 'none' }}
-                        onLoad={() => {
-                          setIsLoading(false);
-                          setLoadError(false);
-                        }}
-                        onError={() => {
-                          // Tablet fallback: Direct PDF object
-                          const container = document.querySelector('.w-full.h-full');
-                          if (container) {
-                            container.innerHTML = `
-                              <object
-                                data="${documentUrl}#view=FitH&pagemode=none&navpanes=0&toolbar=1"
-                                type="application/pdf"
-                                style="width: 100%; height: 100%;"
-                              >
-                                <div style="text-align: center; padding: 20px;">
-                                  <p>PDF cannot be displayed</p>
-                                  <a href="${documentUrl}" target="_blank" style="color: blue; text-decoration: underline;">Open PDF in new tab</a>
-                                </div>
-                              </object>
-                            `;
-                          }
-                          setTimeout(() => setIsLoading(false), 3000);
-                        }}
-                      />
-                    ) : (
-                      // Mobile phones - Use object with iframe fallback
-                      <object
-                        data={`${documentUrl}#view=FitH&pagemode=none&navpanes=0&toolbar=1&statusbar=0&scrollbar=1`}
-                        type="application/pdf"
                         className="w-full h-full"
-                        style={{ width: '100%', height: '100%' }}
-                        onLoad={() => {
-                          setIsLoading(false);
-                          setLoadError(false);
-                        }}
-                        onError={() => {
-                          // Fallback: Use PDF.js
-                          const container = document.querySelector('.w-full.h-full');
-                          if (container) {
-                            container.innerHTML = `
-                            <iframe
-                              src="https://mozilla.github.io/pdf.js/web/viewer.html?file=${encodeURIComponent(documentUrl)}"
-                              style="width: 100%; height: 100%; border: none;"
-                              title="PDF Document"
-                            ></iframe>
-                          `;
-                          }
-                          setTimeout(() => setIsLoading(false), 3000);
-                        }}
-                      >
-                        {/* Final fallback for Android phones */}
-                        <iframe
-                          src={`https://mozilla.github.io/pdf.js/web/viewer.html?file=${encodeURIComponent(documentUrl)}`}
-                          className="w-full h-full border-0"
-                          title="PDF Document"
-                          style={{ width: '100%', height: '100%', border: 'none' }}
-                          onLoad={() => {
-                            setIsLoading(false);
-                            setLoadError(false);
-                          }}
-                          onError={() => {
-                            // Last resort: Download link
-                            const container = document.querySelector('.w-full.h-full');
-                            if (container) {
-                              container.innerHTML = `
-                              <div class="flex flex-col items-center justify-center h-full p-8 text-center">
-                                <svg class="w-16 h-16 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                                </svg>
-                                <p class="text-lg font-medium text-gray-900 mb-2">PDF Preview Not Available</p>
-                                <p class="text-gray-500 mb-4">Open PDF in a new tab for better viewing experience.</p>
-                                <a href="${documentUrl}" target="_blank" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
-                                  Open PDF
-                                </a>
-                              </div>
-                            `;
-                            }
-                            setIsLoading(false);
-                          }}
-                        />
-                      </object>
-                    )}
-                  </div>
-                )}
-              </div>
-            );
-          } else {
-            // Desktop PDF viewer - Use native browser PDF viewer
-            return (
-              <div className="w-full h-screen border rounded-lg overflow-hidden relative">
-                {isLoading && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-gray-50 z-10">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-                  </div>
-                )}
-
-                <object
-                  data={`${documentUrl}#view=FitH&pagemode=none&toolbar=1`}
-                  type="application/pdf"
-                  className="w-full h-full"
-                  onLoad={() => {
-                    setIsLoading(false);
-                    setLoadError(false);
-                  }}
-                  onError={() => {
-                    // Desktop fallback: PDF.js
-                    const container = document.querySelector('.w-full.h-screen.border.rounded-lg.overflow-hidden.relative');
-                    if (container) {
-                      container.innerHTML = `
-                      <iframe
-                        src="https://mozilla.github.io/pdf.js/web/viewer.html?file=${encodeURIComponent(documentUrl)}"
-                        style="width: 100%; height: 100%; border: none;"
+                        style={{ width: '100%', height: '100%', border: 'none' }}
                         title="PDF Document"
-                        frameborder="0"
-                      ></iframe>
-                    `;
-                    }
-                    setIsLoading(false);
-                  }}
-                >
-                  {/* Fallback iframe for desktop */}
-                  <iframe
-                    src={`https://mozilla.github.io/pdf.js/web/viewer.html?file=${encodeURIComponent(documentUrl)}`}
-                    className="w-full h-full"
-                    title="PDF Document"
-                    frameBorder="0"
-                    onLoad={handleIframeLoad}
-                    onError={handleIframeError}
-                  />
-                </object>
-              </div>
-            );
-          }
-
-        case 'doc':
-        case 'docx':
-          // Updated to use consistent mobile/tablet detection
-          const isMobileOrTabletForWord = deviceInfo.isMobileDevice || deviceInfo.isTablet;
-          
-          if (isMobileOrTabletForWord) {
-            return (
-              <div className="w-full" style={{ height: '100vh' }}>
-                <div className="w-full h-full relative">
-                  {isLoading && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-gray-50 z-10">
-                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-                    </div>
-                  )}
-
-                  {(deviceInfo.isAndroid && !deviceInfo.isTablet) ? (
-                    // Android phones: Office viewer with better parameters
-                    <iframe
-                      src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(documentUrl)}&wdStartOn=1&wdEmbedCode=0&wdPrint=0&wdDownloadButton=1`}
-                      className="w-full h-full border-0"
-                      title="Word Document"
-                      style={{
-                        width: '100%',
-                        height: '100%',
-                        border: 'none'
-                      }}
-                      onLoad={() => {
-                        setIsLoading(false);
-                        setLoadError(false);
-                      }}
-                      onError={() => {
-                        // Fallback: Google Docs viewer
-                        const iframe = document.querySelector('iframe[title="Word Document"]') as HTMLIFrameElement;
-                        if (iframe) {
-                          iframe.src = `https://docs.google.com/viewer?url=${encodeURIComponent(documentUrl)}&embedded=true`;
-                        }
-                        setTimeout(() => setIsLoading(false), 3000);
-                      }}
-                    />
-                  ) : (
-                    // iOS and tablets: Office viewer first, then Google Docs
-                    <iframe
-                      src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(documentUrl)}&wdStartOn=1&wdEmbedCode=0&wdPrint=0&wdDownloadButton=1`}
-                      className="w-full h-full border-0"
-                      title="Word Document"
-                      style={{
-                        width: '100%',
-                        height: '100%',
-                        border: 'none'
-                      }}
-                      onLoad={() => {
-                        setIsLoading(false);
-                        setLoadError(false);
-                      }}
-                      onError={() => {
-                        const iframe = document.querySelector('iframe[title="Word Document"]') as HTMLIFrameElement;
-                        if (iframe) {
-                          iframe.src = `https://docs.google.com/viewer?url=${encodeURIComponent(documentUrl)}&embedded=true`;
-                        }
-                        setTimeout(() => setIsLoading(false), 5000);
-                      }}
-                    />
-                  )}
+                        onError={() => {
+                            // Fallback: Try native object tag
+                            const container = document.querySelector('.w-full.h-screen');
+                            if (container) {
+                                container.innerHTML = `
+                                    <object data="${documentUrl}" type="application/pdf" style="width: 100%; height: 100%;">
+                                        <div style="padding: 2rem; text-align: center;">
+                                            <p style="margin-bottom: 1rem; font-size: 1.1rem;">PDF Preview</p>
+                                            <a href="${documentUrl}" target="_blank" style="background: #3B82F6; color: white; padding: 0.5rem 1rem; border-radius: 0.25rem; text-decoration: none;">
+                                                Open PDF
+                                            </a>
+                                        </div>
+                                    </object>
+                                `;
+                            }
+                        }}
+                    >
+                        {/* Final fallback: Clean mobile-friendly interface */}
+                        <div className="flex flex-col items-center justify-center h-full p-8 bg-gray-50">
+                            <div className="text-center bg-white p-6 rounded-lg shadow-md max-w-sm">
+                                <svg className="mx-auto h-12 w-12 text-red-500 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                                </svg>
+                                <h3 className="text-lg font-medium text-gray-900 mb-2">PDF Viewer Not Available</h3>
+                                <p className="text-gray-600 mb-4 text-sm">Your browser cannot display this PDF inline.</p>
+                                <a 
+                                    href={documentUrl} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="inline-block bg-blue-500 text-white px-4 py-2 rounded text-sm hover:bg-blue-600 transition-colors"
+                                >
+                                    Open PDF in New Tab
+                                </a>
+                            </div>
+                        </div>
+                    </iframe>
                 </div>
-              </div>
             );
-          } else {
-            // Desktop Word viewer
+        }
+
+        // For Word documents (doc, docx)
+        if (fileType === 'doc' || fileType === 'docx') {
             return (
-              <div className="w-full h-screen border rounded-lg overflow-hidden relative">
-                {isLoading && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-gray-50 z-10">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-                  </div>
-                )}
-                <iframe
-                  src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(documentUrl)}`}
-                  className="w-full h-full"
-                  title="Word Document"
-                  frameBorder="0"
-                  onLoad={handleIframeLoad}
-                  onError={handleIframeError}
-                />
-              </div>
+                <div className="w-full h-screen">
+                    {/* Primary: Office Online viewer */}
+                    <iframe
+                        src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(documentUrl)}`}
+                        className="w-full h-full"
+                        style={{ width: '100%', height: '100%', border: 'none' }}
+                        title="Word Document"
+                        onError={() => {
+                            // Fallback: Google Docs viewer
+                            const iframe = document.querySelector('iframe[title="Word Document"]');
+                            if (iframe) {
+                                iframe.src = `https://docs.google.com/viewer?url=${encodeURIComponent(documentUrl)}&embedded=true`;
+                            }
+                        }}
+                    >
+                        {/* Final fallback: Download link */}
+                        <div className="flex flex-col items-center justify-center h-full p-8">
+                            <p className="mb-4 text-lg">Cannot display document in this browser</p>
+                            <a 
+                                href={documentUrl} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+                            >
+                                Download Document
+                            </a>
+                        </div>
+                    </iframe>
+                </div>
             );
-          }
+        }
 
-        default:
-          return (
-            <div className="w-full p-8 text-center border-2 border-dashed border-gray-300 rounded-lg">
-              <div className="text-gray-500 mb-4">
-                <svg className="mx-auto h-12 w-12 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                <p className="mb-4">Preview not available for this file type</p>
-              </div>
+        // For other file types
+        return (
+            <div className="w-full h-screen flex flex-col items-center justify-center p-8">
+                <div className="text-center">
+                    <svg className="mx-auto h-16 w-16 text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">File Preview Not Available</h3>
+                    <p className="text-gray-500 mb-4">This file type cannot be previewed in the browser.</p>
+                    <a 
+                        href={documentUrl} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+                    >
+                        Download File
+                    </a>
+                </div>
             </div>
-          );
-      }
+        );
     };
-
-    // Updated to use consistent mobile/tablet detection
-    const deviceInfo = getDeviceInfo();
-    const isMobileOrTablet = deviceInfo.isMobileDevice || deviceInfo.isTablet;
 
     return (
-      <div className={`w-full ${isMobileOrTablet ? 'p-2' : 'p-5'}`}>
-        {renderDocumentViewer()}
-      </div>
+        <div className="w-full p-2">
+            {renderSimpleDocumentViewer()}
+        </div>
     );
-  };
+}
 
     if (messageStore.receivedType === "Video") {
       return (
