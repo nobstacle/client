@@ -177,7 +177,6 @@ export const Content: React.FC = () => {
     generateQR();
   }, [messageStore.receivedContent?.content]);
 
-
   useEffect(() => {
     let countdown: NodeJS.Timeout;
     if (showQR && !isClosing) {
