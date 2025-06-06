@@ -28,9 +28,13 @@ import 'react-pdf/dist/esm/Page/TextLayer.css';
 // React Doc Viewer import
 import DocViewer, { DocViewerRenderers } from 'react-doc-viewer';
 
-// Set up PDF.js worker
+// Set up PDF.js worker with proper error handling
 if (typeof window !== 'undefined') {
-  pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
+  try {
+    pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
+  } catch (error) {
+    console.warn('PDF.js worker setup failed:', error);
+  }
 }
 
 export const Content: React.FC = () => {
@@ -71,15 +75,22 @@ export const Content: React.FC = () => {
 
   const chatBoxRef = useRef<HTMLDivElement | null>(null);
 
+  // Device detection with error handling
   useEffect(() => {
-    const userAgent = navigator.userAgent;
-    const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
-    const isIOSDevice = /iPad|iPhone|iPod/.test(userAgent);
-    const isAndroidDevice = /Android/i.test(userAgent);
+    if (typeof navigator === 'undefined') return;
+    
+    try {
+      const userAgent = navigator.userAgent || '';
+      const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
+      const isIOSDevice = /iPad|iPhone|iPod/.test(userAgent);
+      const isAndroidDevice = /Android/i.test(userAgent);
 
-    setIsMobile(isMobileDevice);
-    setIsIOS(isIOSDevice);
-    setIsAndroid(isAndroidDevice);
+      setIsMobile(isMobileDevice);
+      setIsIOS(isIOSDevice);
+      setIsAndroid(isAndroidDevice);
+    } catch (error) {
+      console.warn('Device detection failed:', error);
+    }
   }, []);
 
   useEffect(() => {
@@ -92,7 +103,7 @@ export const Content: React.FC = () => {
         chatBoxRef.current.scrollTop = chatBoxRef.current.scrollHeight;
       }
     }
-  }, [messageStore.receivedMessage.length, chatBoxRef.current]);
+  }, [messageStore.receivedMessage.length, messageStore.receivedType]);
 
   useEffect(() => {
     if (messageStore.receivedType && isFirstTimeOpen.current === true) {
@@ -100,66 +111,70 @@ export const Content: React.FC = () => {
     }
   }, [messageStore.receivedType]);
 
+  // Video resize effect with better error handling
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+
     const updateVideoStyles = () => {
       if (!videoElement.current) return;
 
-      const containerWidth = window.innerWidth;
-      const containerHeight = window.innerHeight;
-      const containerAspectRatio = containerWidth / containerHeight;
+      try {
+        const containerWidth = window.innerWidth;
+        const containerHeight = window.innerHeight;
+        const containerAspectRatio = containerWidth / containerHeight;
 
-      // Get video dimensions when metadata is loaded
-      const video = videoElement.current;
+        const video = videoElement.current;
 
-      const handleLoadedMetadata = () => {
-        const videoWidth = video.videoWidth;
-        const videoHeight = video.videoHeight;
-        const videoAspectRatio = videoWidth / videoHeight;
+        const handleLoadedMetadata = () => {
+          try {
+            const videoWidth = video.videoWidth;
+            const videoHeight = video.videoHeight;
+            const videoAspectRatio = videoWidth / videoHeight;
 
-        let width: any;
-        let height: any;
+            let width: number;
+            let height: number;
 
-        if (videoAspectRatio > containerAspectRatio) {
-          width = containerWidth;
-          height = containerWidth / videoAspectRatio;
+            if (videoAspectRatio > containerAspectRatio) {
+              width = containerWidth;
+              height = containerWidth / videoAspectRatio;
 
-          // If height exceeds container, fit to height instead
-          if (height > containerHeight) {
-            height = containerHeight;
-            width = containerHeight * videoAspectRatio;
+              if (height > containerHeight) {
+                height = containerHeight;
+                width = containerHeight * videoAspectRatio;
+              }
+            } else {
+              height = containerHeight;
+              width = containerHeight * videoAspectRatio;
+
+              if (width > containerWidth) {
+                width = containerWidth;
+                height = containerWidth / videoAspectRatio;
+              }
+            }
+
+            video.style.width = `${width}px`;
+            video.style.height = `${height}px`;
+            video.style.objectFit = 'contain';
+          } catch (error) {
+            console.warn('Video sizing failed:', error);
           }
+        };
+
+        if (video.readyState >= 1) {
+          handleLoadedMetadata();
         } else {
-          // Video is taller than container - fit to height
-          height = containerHeight;
-          width = containerHeight * videoAspectRatio;
-
-          // If width exceeds container, fit to width instead
-          if (width > containerWidth) {
-            width = containerWidth;
-            height = containerWidth / videoAspectRatio;
-          }
+          video.addEventListener('loadedmetadata', handleLoadedMetadata);
         }
 
-        // Apply calculated dimensions
-        video.style.width = `${width}px`;
-        video.style.height = `${height}px`;
-        video.style.objectFit = 'contain';
-      };
-
-      // If metadata is already loaded
-      if (video.readyState >= 1) {
-        handleLoadedMetadata();
-      } else {
-        video.addEventListener('loadedmetadata', handleLoadedMetadata);
+        return () => {
+          video.removeEventListener('loadedmetadata', handleLoadedMetadata);
+        };
+      } catch (error) {
+        console.warn('Video update failed:', error);
       }
-
-      return () => {
-        video.removeEventListener('loadedmetadata', handleLoadedMetadata);
-      };
     };
 
     const handleResize = () => {
-      // Small delay to ensure orientation change is complete
       setTimeout(updateVideoStyles, 100);
     };
 
@@ -174,28 +189,33 @@ export const Content: React.FC = () => {
     };
   }, [messageStore.receivedContent?.content]);
 
+  // QR Code generation with error handling
   useEffect(() => {
     const generateQR = async () => {
       const content = messageStore.receivedContent?.content;
-      if (content) {
-        try {
-          const url = await QRCode.toDataURL(content);
-          setQrCodeUrl(url);
-          const wdthSize = window.innerWidth;
-          if (wdthSize > 650) {
+      if (!content || typeof content !== 'string') return;
+      
+      try {
+        const url = await QRCode.toDataURL(content);
+        setQrCodeUrl(url);
+        
+        if (typeof window !== 'undefined') {
+          const windowWidth = window.innerWidth;
+          if (windowWidth > 650) {
             setTimeout(() => {
               setShowQR(true);
             }, 3000);
           }
-        } catch (err) {
-          console.error("Failed to generate QR code", err);
         }
+      } catch (err) {
+        console.error("Failed to generate QR code", err);
       }
     };
 
     generateQR();
   }, [messageStore.receivedContent?.content]);
 
+  // QR Timer effect
   useEffect(() => {
     let countdown: NodeJS.Timeout;
     if (showQR && !isClosing) {
@@ -211,7 +231,9 @@ export const Content: React.FC = () => {
         });
       }, 1000);
     }
-    return () => clearInterval(countdown);
+    return () => {
+      if (countdown) clearInterval(countdown);
+    };
   }, [showQR, isClosing]);
 
   const handleCloseQR = () => {
@@ -225,34 +247,21 @@ export const Content: React.FC = () => {
   const { emitSendMessage } = useSocketContext();
 
   const sendMessage = (message: string) => {
-    emitSendMessage({
-      message: message,
-      station: Number(params.get("station") ?? 1),
-      refType: "ChatMessage",
-      langCode: company.data?.defaultLangCode ?? "en",
-    });
+    if (!message || !params) return;
+    
+    try {
+      emitSendMessage({
+        message: message,
+        station: Number(params.get("station") ?? 1),
+        refType: "ChatMessage",
+        langCode: company.data?.defaultLangCode ?? "en",
+      });
+    } catch (error) {
+      console.error('Send message failed:', error);
+    }
   };
 
-  const getDeviceInfo = () => {
-    const userAgent = navigator.userAgent.toLowerCase();
-    const isIOS = /ipad|iphone|ipod/.test(userAgent);
-    const isAndroid = /android/.test(userAgent);
-    const isAndroidTablet = isAndroid && !/mobile/.test(userAgent);
-    const isAndroidPhone = isAndroid && /mobile/.test(userAgent);
-    const isMobileDevice = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent);
-    const isTablet = /ipad/.test(userAgent) || isAndroidTablet;
-
-    return {
-      isIOS,
-      isAndroid,
-      isAndroidTablet,
-      isAndroidPhone,
-      isMobileDevice: isMobileDevice || isTablet,
-      isTablet
-    };
-  };
-
-  // Set a timeout for loading state
+  // Loading timeout effect
   useEffect(() => {
     if (isLoading) {
       const timeout = setTimeout(() => {
@@ -283,15 +292,14 @@ export const Content: React.FC = () => {
   const goToPrevPage = () => setPageNumber(page => Math.max(page - 1, 1));
   const goToNextPage = () => setPageNumber(page => Math.min(page + 1, numPages || 1));
 
-  // Enhanced Document Viewer Component
-  const renderEnhancedDocumentViewer = () => {
+  const EnhancedDocumentViewer = React.memo(() => {
     const documentUrl = messageStore.receivedContent?.content ?? "";
     const fileType = messageStore.receivedContent?.extraContent?.toLowerCase() ?? "";
 
     console.info("documentUrl", documentUrl);
     console.info("fileType", fileType);
 
-    // Reset states when document changes
+    // Reset PDF state when URL changes
     useEffect(() => {
       setPdfError(false);
       setPdfLoading(true);
@@ -299,11 +307,9 @@ export const Content: React.FC = () => {
       setNumPages(null);
     }, [documentUrl]);
 
-    // For PDF files - Use react-pdf as primary
     if (fileType === 'pdf') {
       return (
         <div className="w-full h-screen bg-gray-100">
-          {/* Loading indicator */}
           {pdfLoading && (
             <div className="flex items-center justify-center h-full">
               <div className="text-center">
@@ -313,7 +319,6 @@ export const Content: React.FC = () => {
             </div>
           )}
 
-          {/* PDF Error fallback */}
           {pdfError && (
             <div className="flex flex-col items-center justify-center h-full p-8">
               <div className="text-center bg-white p-6 rounded-lg shadow-md max-w-md">
@@ -323,26 +328,13 @@ export const Content: React.FC = () => {
                 <h3 className="text-lg font-medium text-gray-900 mb-2">PDF Load Failed</h3>
                 <p className="text-gray-600 mb-4 text-sm">Unable to load PDF with react-pdf. Trying fallback viewer...</p>
                 
-                {/* Fallback iframe */}
                 <iframe
                   src={`https://mozilla.github.io/pdf.js/web/viewer.html?file=${encodeURIComponent(documentUrl)}`}
                   className="w-full h-96 mb-4"
                   style={{ border: '1px solid #e5e7eb' }}
                   title="PDF Document Fallback"
                   onError={() => {
-                    // Final fallback - direct link
-                    const container = document.querySelector('.text-center.bg-white');
-                    if (container) {
-                      container.innerHTML = `
-                        <div class="text-center">
-                          <p class="mb-4">Cannot display PDF in browser</p>
-                          <a href="${documentUrl}" target="_blank" rel="noopener noreferrer" 
-                             class="inline-block bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
-                            Open PDF in New Tab
-                          </a>
-                        </div>
-                      `;
-                    }
+                    console.error('PDF fallback iframe failed');
                   }}
                 />
 
@@ -388,21 +380,23 @@ export const Content: React.FC = () => {
 
               {/* PDF Document Container */}
               <div className="flex-1 overflow-auto bg-gray-100 flex justify-center p-4">
-                <Document
-                  file={documentUrl}
-                  onLoadSuccess={onDocumentLoadSuccess}
-                  onLoadError={onDocumentLoadError}
-                  loading={null} // We handle loading ourselves
-                  className="shadow-lg"
-                >
-                  <Page
-                    pageNumber={pageNumber}
-                    width={Math.min(window.innerWidth - 32, 800)}
-                    className="bg-white"
-                    renderTextLayer={true}
-                    renderAnnotationLayer={true}
-                  />
-                </Document>
+                {typeof window !== 'undefined' && (
+                  <Document
+                    file={documentUrl}
+                    onLoadSuccess={onDocumentLoadSuccess}
+                    onLoadError={onDocumentLoadError}
+                    loading={null}
+                    className="shadow-lg"
+                  >
+                    <Page
+                      pageNumber={pageNumber}
+                      width={Math.min(window.innerWidth - 32, 800)}
+                      className="bg-white"
+                      renderTextLayer={true}
+                      renderAnnotationLayer={true}
+                    />
+                  </Document>
+                )}
               </div>
             </div>
           )}
@@ -410,7 +404,7 @@ export const Content: React.FC = () => {
       );
     }
 
-    // For Word documents and other supported formats - Use react-doc-viewer
+    // For Word documents and other supported formats
     if (fileType === 'doc' || fileType === 'docx' || fileType === 'xlsx' || fileType === 'pptx') {
       const docs = [
         {
@@ -440,27 +434,6 @@ export const Content: React.FC = () => {
             style={{ height: '100vh' }}
             onError={(error) => {
               console.error('DocViewer error:', error);
-              // Fallback to iframe approach
-              const container = document.querySelector('.w-full.h-screen');
-              if (container) {
-                container.innerHTML = `
-                  <div class="flex flex-col items-center justify-center h-full p-8">
-                    <div class="text-center bg-white p-6 rounded-lg shadow-md max-w-md">
-                      <h3 class="text-lg font-medium text-gray-900 mb-2">Document Viewer Error</h3>
-                      <p class="text-gray-600 mb-4 text-sm">Unable to display document with react-doc-viewer. Trying alternative viewer...</p>
-                      <iframe 
-                        src="https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(documentUrl)}"
-                        style="width: 100%; height: 400px; border: 1px solid #e5e7eb;"
-                        title="Document Fallback"
-                      ></iframe>
-                      <a href="${documentUrl}" target="_blank" rel="noopener noreferrer" 
-                         class="inline-block bg-blue-500 text-white px-4 py-2 rounded mt-4 hover:bg-blue-600">
-                        Download Document
-                      </a>
-                    </div>
-                  </div>
-                `;
-              }
             }}
           />
         </div>
@@ -487,123 +460,128 @@ export const Content: React.FC = () => {
         </div>
       </div>
     );
-  };
+  });
 
-  if (hasHydrated) {
-    if (
-      messageStore.receivedType === "TextTemplateMessage" ||
-      messageStore.receivedType === "Text"
-    ) {
-      return (
-        <div className="w-full p-5">
-          <p className="text-center text-4xl" style={{ lineHeight: "3.5rem" }}>
-            {messageStore.receivedContent?.content ?? ""}
-          </p>
-        </div>
-      );
-    }
+  EnhancedDocumentViewer.displayName = 'EnhancedDocumentViewer';
 
-    if (messageStore.receivedType === "ChatMessage") {
-      return (
-        <div className="w-6/12 ">
-          <ChatBox
-            ref={chatBoxRef}
-            messages={messageStore.receivedMessage}
-            sendMessage={sendMessage}
-          />
-        </div>
-      );
-    }
+  // Wait for hydration before rendering
+  if (!hasHydrated) {
+    return <div></div>;
+  }
 
-    if (messageStore.receivedType === "Image") {
-      return (
-        <img
-          key={messageStore.receivedContent?.id ?? ""}
-          alt="template_image"
-          style={{
-            height: "auto",
-            maxHeight: "100%",
-            maxWidth: "100%",
-            objectFit: "cover",
-            display: "block",
-          }}
-          src={messageStore.receivedContent?.content ?? ""}
+  if (
+    messageStore.receivedType === "TextTemplateMessage" ||
+    messageStore.receivedType === "Text"
+  ) {
+    return (
+      <div className="w-full p-5">
+        <p className="text-center text-4xl" style={{ lineHeight: "3.5rem" }}>
+          {messageStore.receivedContent?.content ?? ""}
+        </p>
+      </div>
+    );
+  }
+
+  if (messageStore.receivedType === "ChatMessage") {
+    return (
+      <div className="w-6/12 ">
+        <ChatBox
+          ref={chatBoxRef}
+          messages={messageStore.receivedMessage}
+          sendMessage={sendMessage}
         />
-      );
-    }
+      </div>
+    );
+  }
 
-    // Enhanced Document Viewer Section
-    if (messageStore.receivedType === "Document" ||
-        messageStore.receivedType === "PdfDocument" ||
-        messageStore.receivedType === "WordDocument") {
-      return (
-        <div className="w-full">
-          {renderEnhancedDocumentViewer()}
-        </div>
-      );
-    }
+  if (messageStore.receivedType === "Image") {
+    return (
+      <img
+        key={messageStore.receivedContent?.id ?? ""}
+        alt="template_image"
+        style={{
+          height: "auto",
+          maxHeight: "100%",
+          maxWidth: "100%",
+          objectFit: "cover",
+          display: "block",
+        }}
+        src={messageStore.receivedContent?.content ?? ""}
+      />
+    );
+  }
 
-    if (messageStore.receivedType === "Video") {
-      return (
-        <div
+  // Enhanced Document Viewer Section
+  if (messageStore.receivedType === "Document" ||
+      messageStore.receivedType === "PdfDocument" ||
+      messageStore.receivedType === "WordDocument") {
+    return (
+      <div className="w-full">
+        <EnhancedDocumentViewer />
+      </div>
+    );
+  }
+
+  if (messageStore.receivedType === "Video") {
+    return (
+      <div
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: '100vh',
+          overflow: 'hidden',
+          zIndex: 9,
+          pointerEvents: 'none',
+          backgroundColor: 'black',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <video
+          ref={videoElement}
+          autoPlay
+          muted
+          loop
+          playsInline
+          key={messageStore.receivedContent?.content ?? ""}
           style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            width: '100vw',
-            height: '100vh',
-            overflow: 'hidden',
-            zIndex: 9,
-            pointerEvents: 'none',
-            backgroundColor: 'black',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
+            maxWidth: '100%',
+            maxHeight: '100%',
+            width: 'auto',
+            height: 'auto',
+            objectFit: 'contain',
+            display: 'block',
           }}
         >
-          <video
-            ref={videoElement}
-            autoPlay
-            muted
-            loop
-            playsInline
-            key={messageStore.receivedContent?.content ?? ""}
-            style={{
-              maxWidth: '100%',
-              maxHeight: '100%',
-              width: 'auto',
-              height: 'auto',
-              objectFit: 'contain',
-              display: 'block',
-            }}
-          >
-            <source
-              src={messageStore.receivedContent?.content ?? ""}
-              type="video/mp4"
-            />
-          </video>
-        </div>
-      );
-    }
+          <source
+            src={messageStore.receivedContent?.content ?? ""}
+            type="video/mp4"
+          />
+        </video>
+      </div>
+    );
+  }
 
-    if (messageStore.receivedType === "Slideshow") {
-      return (
-        <Slideshow contents={messageStore.receivedContent?.contents ?? []} />
-      );
-    }
+  if (messageStore.receivedType === "Slideshow") {
+    return (
+      <Slideshow contents={messageStore.receivedContent?.contents ?? []} />
+    );
+  }
 
-    if (
-      messageStore.receivedType === "Map" ||
-      messageStore.receivedType === "MapTemplateMessage"
-    ) {
-      return (
-        <SimpleMap
-          destination={messageStore.receivedContent?.extraContent ?? ""}
-          origin={messageStore.receivedContent?.content ?? ""}
-          languageCode={messageStore.receivedContent?.langCode ?? "en"}
-        />
-      );
-    }
+  if (
+    messageStore.receivedType === "Map" ||
+    messageStore.receivedType === "MapTemplateMessage"
+  ) {
+    return (
+      <SimpleMap
+        destination={messageStore.receivedContent?.extraContent ?? ""}
+        origin={messageStore.receivedContent?.content ?? ""}
+        languageCode={messageStore.receivedContent?.langCode ?? "en"}
+      />
+    );
   }
 
   if (messageStore.receivedType === "Survey" && messageStore.receivedSurvey) {
@@ -740,10 +718,11 @@ export const Content: React.FC = () => {
     );
   }
 
-  if (isFirstTimeOpen && defaultSlideshowContent.data)
+  if (isFirstTimeOpen.current && defaultSlideshowContent.data) {
     return (
       <Slideshow contents={defaultSlideshowContent.data?.contents ?? []} />
     );
+  }
 
   return <div></div>;
 };
