@@ -319,7 +319,7 @@ export const Content: React.FC = () => {
 
         switch (fileType) {
           case 'pdf':
-            if (isMobile || isTablet) {
+            if (isMobile) {
               return (
                 <div className="w-full h-screen flex flex-col overflow-hidden">
                   {isLoading && (
@@ -399,7 +399,51 @@ export const Content: React.FC = () => {
 
                 </div>
               );
-            } else {
+            } else if (isTablet) {
+              const pdfViewerUrl = `https://mozilla.github.io/pdf.js/web/viewer.html?file=${encodeURIComponent(documentUrl)}`;
+
+              return (
+                <div className="w-full h-screen flex flex-col overflow-hidden">
+                  {isLoading && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-gray-50 z-10">
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+                    </div>
+                  )}
+
+                  <div className="flex-1 w-full relative">
+                    <iframe
+                      src={pdfViewerUrl}
+                      className="w-full h-full border-0"
+                      title="PDF Document"
+                      style={{ width: '100%', height: '100%', border: 'none', overflow: 'hidden' }}
+                      onLoad={() => {
+                        setIsLoading(false);
+                        setLoadError(false);
+                      }}
+                      onError={() => {
+                        setLoadError(true);
+                        window.open(documentUrl, '_blank');
+                      }}
+                    />
+
+                    {loadError && (
+                      <div className="absolute inset-0 flex flex-col items-center justify-center bg-white p-4 space-y-2">
+                        <p className="text-gray-700">Failed to load PDF viewer.</p>
+                        <a
+                          href={documentUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-4 py-2 bg-blue-500 text-white rounded"
+                        >
+                          Open directly
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            }
+            else {
               // Desktop PDF viewer
               return (
                 <div className="w-full h-screen border rounded-lg overflow-hidden relative">
