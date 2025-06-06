@@ -1,4 +1,6 @@
 /* eslint-disable @next/next/no-img-element */
+"use client";
+
 import { useEffect, useRef, useState } from "react";
 import { useMessageStore } from "../../../lib/zustand/store/messageStore";
 import { ChatBox } from "../../ChatBox";
@@ -18,124 +20,153 @@ import QRCode from 'qrcode';
 import "../../../styles/base.css";
 import "antd/dist/reset.css";
 
-// React PDF imports
-import { Document, Page, pdfjs } from 'react-pdf';
-import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
-import 'react-pdf/dist/esm/Page/TextLayer.css';
-
-// React Doc Viewer import
-import DocViewer, { DocViewerRenderers } from 'react-doc-viewer';
-
-// Set up PDF.js worker with proper error handling
-if (typeof window !== 'undefined') {
-  try {
-    pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
-  } catch (error) {
-    console.warn('PDF.js worker setup failed:', error);
-  }
-}
-
 export const Content: React.FC = () => {
   const isFirstTimeOpen = useRef(true);
-  const videoElement = useRef<HTMLVideoElement | null>(null);
+  const videoElement = React.useRef<HTMLVideoElement | null>(null);
+  const company = useCompanyControllerGetCompany();
   const params = useSearchParams();
   const messageStore = useMessageStore();
   const hasHydrated = useHasHydrated();
-  const [company, setCompany] = useState(null);
   const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
   const [showQR, setShowQR] = useState(false);
-  const iframeRef = useRef<HTMLIFrameElement | null>(null);
+  const iframeRef = useRef(null);
   const [timer, setTimer] = useState(20);
   const [isClosing, setIsClosing] = useState(false);
+  const [loadError, setLoadError] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isMobile, setIsMobile] = useState(false);
+  const [isIOS, setIsIOS] = useState(false);
+  const [isAndroid, setIsAndroid] = useState(false);
+  const [loadingTimeout, setLoadingTimeout] = useState<NodeJS.Timeout | null>(null);
 
-  // PDF viewer states
-  const [numPages, setNumPages] = useState<number | null>(null);
-  const [pageNumber, setPageNumber] = useState(1);
-  const [pdfError, setPdfError] = useState(false);
-  const [pdfLoading, setPdfLoading] = useState(true);
-
-  const defaultSlideshowContent = useContentControllerGetDefaultSlideshowContent({
-    query: {
-      staleTime: Infinity,
-      gcTime: Infinity,
-      refetchOnMount: false,
-      refetchOnWindowFocus: false,
-      queryKey: getContentControllerGetDefaultSlideshowContentQueryKey(),
-    },
-  });
+  const defaultSlideshowContent =
+    useContentControllerGetDefaultSlideshowContent({
+      query: {
+        staleTime: Infinity,
+        gcTime: Infinity,
+        refetchOnMount: false,
+        refetchOnWindowFocus: false,
+        queryKey: getContentControllerGetDefaultSlideshowContentQueryKey(),
+      },
+    });
 
   const chatBoxRef = useRef<HTMLDivElement | null>(null);
 
-  // Device detection
   useEffect(() => {
-    const userAgent = navigator.userAgent || '';
+    const userAgent = navigator.userAgent;
     const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
+    const isIOSDevice = /iPad|iPhone|iPod/.test(userAgent);
+    const isAndroidDevice = /Android/i.test(userAgent);
+
     setIsMobile(isMobileDevice);
+    setIsIOS(isIOSDevice);
+    setIsAndroid(isAndroidDevice);
   }, []);
 
   useEffect(() => {
-    const fetchCompanyData = async () => {
-      const companyData = await useCompanyControllerGetCompany();
-      setCompany(companyData);
-      setIsLoading(false);
-    };
-
-    fetchCompanyData();
-  }, []);
-
-  useEffect(() => {
-    if (messageStore.receivedType) {
-      chatBoxRef.current?.scrollTo(0, chatBoxRef.current.scrollHeight);
+    if (!messageStore.receivedType) {
+      if (chatBoxRef.current) {
+        chatBoxRef.current.scrollTop = chatBoxRef.current.scrollHeight;
+      }
+    } else if (messageStore.receivedType === "ChatMessage") {
+      if (chatBoxRef.current) {
+        chatBoxRef.current.scrollTop = chatBoxRef.current.scrollHeight;
+      }
     }
-  }, [messageStore.receivedMessage.length, messageStore.receivedType]);
+  }, [messageStore.receivedMessage.length, chatBoxRef.current]);
 
-  // Video resize effect
+  useEffect(() => {
+    if (messageStore.receivedType && isFirstTimeOpen.current === true) {
+      isFirstTimeOpen.current = false;
+    }
+  }, [messageStore.receivedType]);
+
   useEffect(() => {
     const updateVideoStyles = () => {
-      if (videoElement.current) {
-        const containerWidth = window.innerWidth;
-        const containerHeight = window.innerHeight;
-        const video = videoElement.current;
+      if (!videoElement.current) return;
 
-        const handleLoadedMetadata = () => {
-          const videoWidth = video.videoWidth;
-          const videoHeight = video.videoHeight;
-          const videoAspectRatio = videoWidth / videoHeight;
+      const containerWidth = window.innerWidth;
+      const containerHeight = window.innerHeight;
+      const containerAspectRatio = containerWidth / containerHeight;
 
-          let width = containerWidth;
-          let height = containerWidth / videoAspectRatio;
+      // Get video dimensions when metadata is loaded
+      const video = videoElement.current;
 
+      const handleLoadedMetadata = () => {
+        const videoWidth = video.videoWidth;
+        const videoHeight = video.videoHeight;
+        const videoAspectRatio = videoWidth / videoHeight;
+
+        let width: any;
+        let height: any;
+
+        if (videoAspectRatio > containerAspectRatio) {
+          width = containerWidth;
+          height = containerWidth / videoAspectRatio;
+
+          // If height exceeds container, fit to height instead
           if (height > containerHeight) {
             height = containerHeight;
             width = containerHeight * videoAspectRatio;
           }
+        } else {
+          // Video is taller than container - fit to height
+          height = containerHeight;
+          width = containerHeight * videoAspectRatio;
 
-          video.style.width = `${width}px`;
-          video.style.height = `${height}px`;
-          video.style.objectFit = 'contain';
-        };
+          // If width exceeds container, fit to width instead
+          if (width > containerWidth) {
+            width = containerWidth;
+            height = containerWidth / videoAspectRatio;
+          }
+        }
 
-        video.readyState >= 1 ? handleLoadedMetadata() : video.addEventListener('loadedmetadata', handleLoadedMetadata);
-        return () => video.removeEventListener('loadedmetadata', handleLoadedMetadata);
+        // Apply calculated dimensions
+        video.style.width = `${width}px`;
+        video.style.height = `${height}px`;
+        video.style.objectFit = 'contain';
+      };
+
+      // If metadata is already loaded
+      if (video.readyState >= 1) {
+        handleLoadedMetadata();
+      } else {
+        video.addEventListener('loadedmetadata', handleLoadedMetadata);
       }
+
+      return () => {
+        video.removeEventListener('loadedmetadata', handleLoadedMetadata);
+      };
+    };
+
+    const handleResize = () => {
+      // Small delay to ensure orientation change is complete
+      setTimeout(updateVideoStyles, 100);
     };
 
     updateVideoStyles();
-    window.addEventListener("resize", updateVideoStyles);
-    return () => window.removeEventListener("resize", updateVideoStyles);
+
+    window.addEventListener("resize", handleResize);
+    window.addEventListener("orientationchange", handleResize);
+
+    return () => {
+      window.removeEventListener("resize", handleResize);
+      window.removeEventListener("orientationchange", handleResize);
+    };
   }, [messageStore.receivedContent?.content]);
 
-  // QR Code generation
   useEffect(() => {
     const generateQR = async () => {
       const content = messageStore.receivedContent?.content;
-      if (content && typeof content === 'string') {
+      if (content) {
         try {
           const url = await QRCode.toDataURL(content);
           setQrCodeUrl(url);
-          if (window.innerWidth > 650) {
-            setTimeout(() => setShowQR(true), 3000);
+          const wdthSize = window.innerWidth;
+          if (wdthSize > 650) {
+            setTimeout(() => {
+              setShowQR(true);
+            }, 3000);
           }
         } catch (err) {
           console.error("Failed to generate QR code", err);
@@ -146,7 +177,7 @@ export const Content: React.FC = () => {
     generateQR();
   }, [messageStore.receivedContent?.content]);
 
-  // Timer effect for QR Code
+
   useEffect(() => {
     let countdown: NodeJS.Timeout;
     if (showQR && !isClosing) {
@@ -162,9 +193,7 @@ export const Content: React.FC = () => {
         });
       }, 1000);
     }
-    return () => {
-      if (countdown) clearInterval(countdown);
-    };
+    return () => clearInterval(countdown);
   }, [showQR, isClosing]);
 
   const handleCloseQR = () => {
@@ -178,169 +207,44 @@ export const Content: React.FC = () => {
   const { emitSendMessage } = useSocketContext();
 
   const sendMessage = (message: string) => {
-    if (message && params) {
-      emitSendMessage({
-        message,
-        station: Number(params.get("station") ?? 1),
-        refType: "ChatMessage",
-        langCode: company.data?.defaultLangCode ?? "en",
-      });
-    }
+    emitSendMessage({
+      message: message,
+      station: Number(params.get("station") ?? 1),
+      refType: "ChatMessage",
+      langCode: company.data?.defaultLangCode ?? "en",
+    });
   };
 
-  // PDF Document handlers
-  const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
-    setNumPages(numPages);
-    setPdfLoading(false);
-    setPdfError(false);
+  const handleDownload = (url: string, fileName: string) => {
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    link.target = '_blank';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
-  const onDocumentLoadError = (error: any) => {
-    console.error('PDF load error:', error);
-    setPdfError(true);
-    setPdfLoading(false);
-  };
+        // Set a timeout for loading state
+      useEffect(() => {
+        if (isLoading) {
+          const timeout = setTimeout(() => {
+            setIsLoading(false);
+          }, 8000);
 
-  const goToPrevPage = () => setPageNumber(prev => Math.max(prev - 1, 1));
-  const goToNextPage = () => setPageNumber(prev => Math.min(prev + 1, numPages || 1));
+          setLoadingTimeout(timeout);
 
-  const EnhancedDocumentViewer = React.memo(() => {
-    const documentUrl = messageStore.receivedContent?.content ?? "";
-    const fileType = messageStore.receivedContent?.extraContent?.toLowerCase() ?? "";
+          return () => {
+            clearTimeout(timeout);
+          };
+        }
+      }, [isLoading]);
 
-    useEffect(() => {
-      setPdfError(false);
-      setPdfLoading(true);
-      setPageNumber(1);
-      setNumPages(null);
-    }, [documentUrl]);
-
-    if (fileType === 'pdf') {
-      return (
-        <div className="w-full h-screen bg-gray-100">
-          {pdfLoading && (
-            <div className="flex items-center justify-center h-full">
-              <div className="text-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-                <p className="text-gray-600">Loading PDF...</p>
-              </div>
-            </div>
-          )}
-          {pdfError ? (
-            <div className="flex flex-col items-center justify-center h-full p-8">
-              <div className="text-center bg-white p-6 rounded-lg shadow-md max-w-md">
-                <h3 className="text-lg font-medium text-gray-900 mb-2">PDF Load Failed</h3>
-                <p className="text-gray-600 mb-4 text-sm">Unable to load PDF with react-pdf. Trying fallback viewer...</p>
-                <iframe
-                  src={`https://mozilla.github.io/pdf.js/web/viewer.html?file=${encodeURIComponent(documentUrl)}`}
-                  className="w-full h-96 mb-4"
-                  style={{ border: '1px solid #e5e7eb' }}
-                  title="PDF Document Fallback"
-                />
-                <a
-                  href={documentUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-block bg-blue-500 text-white px-4 py-2 rounded text-sm hover:bg-blue-600 transition-colors"
-                >
-                  Open PDF in New Tab
-                </a>
-              </div>
-            </div>
-          ) : (
-            <div className="flex flex-col h-full">
-              {numPages && numPages > 1 && (
-                <div className="bg-white shadow-sm border-b px-4 py-2 flex items-center justify-between">
-                  <button
-                    onClick={goToPrevPage}
-                    disabled={pageNumber <= 1}
-                    className="px-3 py-1 bg-blue-500 text-white rounded disabled:bg-gray-300 disabled:cursor-not-allowed hover:bg-blue-600 transition-colors"
-                  >
-                    Previous
-                  </button>
-                  <span className="text-sm text-gray-600">Page {pageNumber} of {numPages}</span>
-                  <button
-                    onClick={goToNextPage}
-                    disabled={pageNumber >= numPages}
-                    className="px-3 py-1 bg-blue-500 text-white rounded disabled:bg-gray-300 disabled:cursor-not-allowed hover:bg-blue-600 transition-colors"
-                  >
-                    Next
-                  </button>
-                </div>
-              )}
-              <div className="flex-1 overflow-auto bg-gray-100 flex justify-center p-4">
-                <Document
-                  file={documentUrl}
-                  onLoadSuccess={onDocumentLoadSuccess}
-                  onLoadError={onDocumentLoadError}
-                  loading={null}
-                  className="shadow-lg"
-                >
-                  <Page
-                    pageNumber={pageNumber}
-                    width={Math.min(window.innerWidth - 32, 800)}
-                    className="bg-white"
-                    renderTextLayer={true}
-                    renderAnnotationLayer={true}
-                  />
-                </Document>
-              </div>
-            </div>
-          )}
-        </div>
-      );
-    }
-
-    // Handle other document types
-    if (['doc', 'docx', 'xlsx', 'pptx'].includes(fileType)) {
-      const docs = [{ uri: documentUrl, fileName: `document.${fileType}`, fileType }];
-      return (
-        <div className="w-full h-screen">
-          <DocViewer
-            documents={docs}
-            pluginRenderers={DocViewerRenderers}
-            config={{
-              header: { disableHeader: false, disableFileName: false, retainURLParams: false },
-              csvDelimiter: ",",
-              pdfZoom: { defaultZoom: 1.1, zoomJump: 0.2 },
-            }}
-            style={{ height: '100vh' }}
-            onError={(error) => console.error('DocViewer error:', error)}
-          />
-        </div>
-      );
-    }
-
-    // Unsupported file types
-    return (
-      <div className="w-full h-screen flex flex-col items-center justify-center p-8">
-        <div className="text-center bg-white p-6 rounded-lg shadow-md max-w-md">
-          <h3 className="text-lg font-medium text-gray-900 mb-2">File Type Not Supported</h3>
-          <p className="text-gray-500 mb-4 text-sm">This file type ({fileType}) cannot be previewed in the browser.</p>
-          <a
-            href={documentUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-block bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition-colors"
-          >
-            Download File
-          </a>
-        </div>
-      </div>
-    );
-  });
-
-  EnhancedDocumentViewer.displayName = 'EnhancedDocumentViewer';
-
-  // Wait for hydration before rendering
-  if (!hasHydrated) {
-    return <div></div>;
-  }
-
-  // Render based on message type
-  switch (messageStore.receivedType) {
-    case "TextTemplateMessage":
-    case "Text":
+  if (hasHydrated) {
+    if (
+      messageStore.receivedType === "TextTemplateMessage" ||
+      messageStore.receivedType === "Text"
+    ) {
       return (
         <div className="w-full p-5">
           <p className="text-center text-4xl" style={{ lineHeight: "3.5rem" }}>
@@ -348,8 +252,9 @@ export const Content: React.FC = () => {
           </p>
         </div>
       );
+    }
 
-    case "ChatMessage":
+    if (messageStore.receivedType === "ChatMessage") {
       return (
         <div className="w-6/12 ">
           <ChatBox
@@ -359,8 +264,9 @@ export const Content: React.FC = () => {
           />
         </div>
       );
+    }
 
-    case "Image":
+    if (messageStore.receivedType === "Image") {
       return (
         <img
           key={messageStore.receivedContent?.id ?? ""}
@@ -371,21 +277,255 @@ export const Content: React.FC = () => {
             maxWidth: "100%",
             objectFit: "cover",
             display: "block",
-          }}
+          }} // optional
           src={messageStore.receivedContent?.content ?? ""}
         />
       );
+    }
+    
+    if (messageStore.receivedType === "Document" ||
+      messageStore.receivedType === "PdfDocument" ||
+      messageStore.receivedType === "WordDocument" ||
+      messageStore.receivedType === "ExcelDocument" ||
+      messageStore.receivedType === "PowerPointDocument" ||
+      messageStore.receivedType === "CsvDocument") {
 
-    case "Document":
-    case "PdfDocument":
-    case "WordDocument":
+      const documentUrl = messageStore.receivedContent?.content ?? "";
+      const fileType = messageStore.receivedContent?.extraContent?.toLowerCase() ?? "";
+      const fileName = `document.${fileType}`;
+
+      const handleIframeError = () => {
+        setLoadError(true);
+        setIsLoading(false);
+        if (loadingTimeout) {
+          clearTimeout(loadingTimeout);
+        }
+      };
+
+      const handleIframeLoad = () => {
+        setIsLoading(false);
+        setLoadError(false);
+        if (loadingTimeout) {
+          clearTimeout(loadingTimeout);
+        }
+      };
+
+
+      const renderDocumentViewer = () => {
+        if (loadError) {
+          return (
+            <div className="w-full p-8 text-center border-2 border-dashed border-gray-300 rounded-lg">
+              <div className="text-gray-500 mb-4">
+                <svg className="mx-auto h-12 w-12 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+                <p className="mb-4">Unable to display document</p>
+              </div>
+            </div>
+          );
+        }
+
+        switch (fileType) {
+          case 'pdf':
+            if (isMobile) {
+              return (
+                <div className="w-full h-screen flex flex-col overflow-hidden">
+                  {isLoading && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-gray-50 z-10">
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+                    </div>
+                  )}
+
+                  {isIOS ? (
+                    <div className="flex-1 w-full relative">
+                      <iframe
+                        src={`https://docs.google.com/viewer?url=${encodeURIComponent(documentUrl)}&embedded=true`}
+                        className="w-full h-full border-0"
+                        title="PDF Document"
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          border: 'none',
+                          overflow: 'hidden'
+                        }}
+                        scrolling="no"
+                        onLoad={handleIframeLoad}
+                        onError={() => {
+                          setLoadError(false);
+                          const iframe = document.querySelector('iframe[title="PDF Document"]') as HTMLIFrameElement;
+                          if (iframe) {
+                            iframe.src = documentUrl + '#toolbar=0&navpanes=0&scrollbar=0';
+                          }
+                        }}
+                      />
+                    </div>
+                  ) : (
+                    <div className="flex-1 w-full relative">
+       <object
+              data={documentUrl}
+              type="application/pdf"
+              className="w-full h-full"
+              style={{ width: '100%', height: '100%' }}
+              onLoad={() => {
+                setIsLoading(false);
+                setLoadError(false);
+              }}
+              onError={() => {
+                // Fallback 1: Try Google Docs viewer
+                const container = document.querySelector('.flex-1.w-full.relative');
+                if (container) {
+                  container.innerHTML = `
+                    <iframe
+                      src="https://docs.google.com/viewer?url=${encodeURIComponent(documentUrl)}&embedded=true"
+                      style="width: 100%; height: 100%; border: none;"
+                      title="PDF Document"
+                    ></iframe>
+                  `;
+                }
+                setTimeout(() => setIsLoading(false), 3000);
+              }}
+            >
+              {/* Fallback for object tag */}
+              <iframe
+                src={`https://drive.google.com/viewerng/viewer?embedded=true&url=${encodeURIComponent(documentUrl)}`}
+                className="w-full h-full border-0"
+                title="PDF Document"
+                style={{ width: '100%', height: '100%', border: 'none' }}
+                onLoad={() => {
+                  setIsLoading(false);
+                  setLoadError(false);
+                }}
+                onError={() => {
+                  // Final fallback: Direct link in new tab
+                  window.open(documentUrl, '_blank');
+                  setIsLoading(false);
+                }}
+              />
+            </object>
+                    </div>
+                  )}
+
+                </div>
+              );
+            } else {
+              // Desktop PDF viewer
+              return (
+                <div className="w-full h-screen border rounded-lg overflow-hidden relative">
+                  {isLoading && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-gray-50 z-10">
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+                    </div>
+                  )}
+                  <iframe
+                    src={documentUrl}
+                    className="w-full h-full"
+                    title="PDF Document"
+                    frameBorder="0"
+                    onLoad={handleIframeLoad}
+                    onError={handleIframeError}
+                  />
+                </div>
+              );
+            }
+
+          case 'doc':
+          case 'docx':
+            if (isMobile) {
+              return (
+                <div className="w-full h-screen flex flex-col overflow-hidden">
+                  <div className="flex-1 relative">
+                    {isLoading && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-gray-50 z-10">
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+                      </div>
+                    )}
+
+          {isAndroid ? (
+            // Android: Try multiple viewers in order
+            <iframe
+              src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(documentUrl)}`}
+              className="w-full h-full border-0"
+              title="Word Document"
+              style={{ width: '100%', height: '100%', border: 'none' }}
+              onLoad={() => {
+                setIsLoading(false);
+                setLoadError(false);
+              }}
+              onError={() => {
+                // Fallback: Google Docs viewer
+                const iframe = document.querySelector('iframe[title="Word Document"]') as HTMLIFrameElement;
+                if (iframe) {
+                  iframe.src = `https://docs.google.com/viewer?url=${encodeURIComponent(documentUrl)}&embedded=true`;
+                }
+                setTimeout(() => setIsLoading(false), 3000);
+              }}
+            />
+          ) : (
+            // iOS: Google Docs viewer
+            <iframe
+              src={`https://docs.google.com/viewer?url=${encodeURIComponent(documentUrl)}&embedded=true`}
+              className="w-full h-full border-0"
+              title="Word Document"
+              style={{ width: '100%', height: '100%', border: 'none' }}
+              onLoad={() => {
+                setIsLoading(false);
+                setLoadError(false);
+              }}
+              onError={() => {
+                const iframe = document.querySelector('iframe[title="Word Document"]') as HTMLIFrameElement;
+                if (iframe) {
+                  iframe.src = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(documentUrl)}`;
+                }
+                setTimeout(() => setIsLoading(false), 5000);
+              }}
+            />
+          )}
+                  </div>
+                </div>
+              );
+            } else {
+              // Desktop Word viewer
+              return (
+                <div className="w-full h-screen border rounded-lg overflow-hidden relative">
+                  {isLoading && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-gray-50 z-10">
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+                    </div>
+                  )}
+                  <iframe
+                    src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(documentUrl)}`}
+                    className="w-full h-full"
+                    title="Word Document"
+                    frameBorder="0"
+                    onLoad={handleIframeLoad}
+                    onError={handleIframeError}
+                  />
+                </div>
+              );
+            }
+
+          default:
+            return (
+              <div className="w-full p-8 text-center border-2 border-dashed border-gray-300 rounded-lg">
+                <div className="text-gray-500 mb-4">
+                  <svg className="mx-auto h-12 w-12 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  <p className="mb-4">Preview not available for this file type</p>
+                </div>
+              </div>
+            );
+        }
+      };
+
       return (
-        <div className="w-full">
-          <EnhancedDocumentViewer />
+        <div className={`w-full ${isMobile ? 'p-2' : 'p-5'}`}>
+          {renderDocumentViewer()}
         </div>
       );
+    }
 
-    case "Video":
+    if (messageStore.receivedType === "Video") {
       return (
         <div
           style={{
@@ -426,14 +566,18 @@ export const Content: React.FC = () => {
           </video>
         </div>
       );
+    }
 
-    case "Slideshow":
+    if (messageStore.receivedType === "Slideshow") {
       return (
         <Slideshow contents={messageStore.receivedContent?.contents ?? []} />
       );
+    }
 
-    case "Map":
-    case "MapTemplateMessage":
+    if (
+      messageStore.receivedType === "Map" ||
+      messageStore.receivedType === "MapTemplateMessage"
+    ) {
       return (
         <SimpleMap
           destination={messageStore.receivedContent?.extraContent ?? ""}
@@ -441,18 +585,91 @@ export const Content: React.FC = () => {
           languageCode={messageStore.receivedContent?.langCode ?? "en"}
         />
       );
+    }
+  }
 
-    case "Survey":
-      return messageStore.receivedSurvey ? <SurveyAnswer tag={messageStore.receivedSurvey.tag} /> : null;
+  if (messageStore.receivedType === "Survey" && messageStore.receivedSurvey) {
+    return <SurveyAnswer tag={messageStore.receivedSurvey.tag} />;
+  }
 
-    case "JotFormMessage":
-      return (
+
+  if (messageStore.receivedType === ("JotFormMessage" as any)) {
+    return (
+      <>
+        <style jsx>{`
+        @keyframes slideDown {
+          from {
+            transform: translateY(-100%);
+            opacity: 0;
+          }
+          to {
+            transform: translateY(0);
+            opacity: 1;
+          }
+        }
+
+        @keyframes slideUp {
+          from {
+            transform: translateY(0);
+            opacity: 1;
+          }
+          to {
+            transform: translateY(-100%);
+            opacity: 0;
+          }
+        }
+
+        @keyframes iframeSlideUp {
+          from {
+            transform: translateY(0);
+          }
+          to {
+            transform: translateY(-20vh);
+          }
+        }
+
+        @keyframes iframeSlideDown {
+          from {
+            transform: translateY(-20vh);
+          }
+          to {
+            transform: translateY(0);
+          }
+        }
+
+        .qr-modal-enter {
+          animation: slideDown 0.5s ease-out forwards;
+        }
+
+        .qr-modal-exit {
+          animation: slideUp 0.5s ease-out forwards;
+        }
+
+        .iframe-slide-up {
+          animation: iframeSlideUp 0.5s ease-out forwards;
+        }
+
+        .iframe-slide-down {
+          animation: iframeSlideDown 0.5s ease-out forwards;
+        }
+
+        .iframe-container {
+          transition: transform 0.5s ease-out;
+        }
+      `}</style>
         <div className="surveyWrapper w-screen h-screen flex flex-col bg-gray-100">
           {showQR && (
-            <div className={`relative bg-white shadow-md px-4 py-3 z-50 ${isClosing ? 'qr-modal-exit' : 'qr-modal-enter'}`}>
+            <div
+              className={`relative bg-white shadow-md px-4 py-3 z-50 ${isClosing ? 'qr-modal-exit' : 'qr-modal-enter'
+                }`}
+            >
               {qrCodeUrl && (
                 <div className="absolute left-4 top-1/2 transform -translate-y-1/2">
-                  <img src={qrCodeUrl} alt="QR Code" className="w-28 h-28 object-contain" />
+                  <img
+                    src={qrCodeUrl}
+                    alt="QR Code"
+                    className="w-28 h-28 object-contain"
+                  />
                 </div>
               )}
               <div className="flex justify-center items-center w-full h-full min-h-[7rem]">
@@ -460,7 +677,11 @@ export const Content: React.FC = () => {
                   Kindly scan to fill the form on your own device.
                 </span>
               </div>
-              <div className="absolute bottom-2 right-4 text-sm text-gray-500">{timer}s</div>
+
+              <div className="absolute bottom-2 right-4 text-sm text-gray-500">
+                {timer}s
+              </div>
+
               <button
                 onClick={handleCloseQR}
                 className="text-2xl text-gray-500 hover:text-gray-700 absolute top-2 right-4 transition-colors duration-200"
@@ -469,7 +690,15 @@ export const Content: React.FC = () => {
               </button>
             </div>
           )}
-          <div className={`flex-1 overflow-auto iframe-container ${showQR && !isClosing ? 'iframe-slide-down' : isClosing ? 'iframe-slide-up' : ''}`}>
+
+          <div
+            className={`flex-1 overflow-auto iframe-container ${showQR && !isClosing
+              ? 'iframe-slide-down'
+              : isClosing
+                ? 'iframe-slide-up'
+                : ''
+              }`}
+          >
             <iframe
               ref={iframeRef}
               className="w-full h-full"
@@ -478,18 +707,26 @@ export const Content: React.FC = () => {
             />
           </div>
         </div>
-      );
-
-    case "Website":
-    case "WebsiteTemplateMessage":
-      return (
-        <iframe className="h-full w-full" src={messageStore.receivedContent?.content ?? ""} />
-      );
-
-    default:
-      if (isFirstTimeOpen.current && defaultSlideshowContent.data) {
-        return <Slideshow contents={defaultSlideshowContent.data?.contents ?? []} />;
-      }
-      return <div></div>;
+      </>
+    );
   }
+
+  if (
+    messageStore.receivedType === "Website" ||
+    messageStore.receivedType === "WebsiteTemplateMessage"
+  ) {
+    return (
+      <iframe
+        className="h-full w-full"
+        src={messageStore.receivedContent?.content ?? ""}
+      />
+    );
+  }
+
+  if (isFirstTimeOpen && defaultSlideshowContent.data)
+    return (
+      <Slideshow contents={defaultSlideshowContent.data?.contents ?? []} />
+    );
+
+  return <div></div>;
 };
