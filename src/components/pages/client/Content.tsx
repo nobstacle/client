@@ -20,6 +20,19 @@ import QRCode from 'qrcode';
 import "../../../styles/base.css";
 import "antd/dist/reset.css";
 
+// React PDF imports
+import { Document, Page, pdfjs } from 'react-pdf';
+import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
+import 'react-pdf/dist/esm/Page/TextLayer.css';
+
+// React Doc Viewer import
+import DocViewer, { DocViewerRenderers } from 'react-doc-viewer';
+
+// Set up PDF.js worker
+if (typeof window !== 'undefined') {
+  pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
+}
+
 export const Content: React.FC = () => {
   const isFirstTimeOpen = useRef(true);
   const videoElement = React.useRef<HTMLVideoElement | null>(null);
@@ -38,6 +51,12 @@ export const Content: React.FC = () => {
   const [isIOS, setIsIOS] = useState(false);
   const [isAndroid, setIsAndroid] = useState(false);
   const [loadingTimeout, setLoadingTimeout] = useState<NodeJS.Timeout | null>(null);
+
+  // PDF viewer states
+  const [numPages, setNumPages] = useState<number | null>(null);
+  const [pageNumber, setPageNumber] = useState(1);
+  const [pdfError, setPdfError] = useState(false);
+  const [pdfLoading, setPdfLoading] = useState(true);
 
   const defaultSlideshowContent =
     useContentControllerGetDefaultSlideshowContent({
@@ -233,7 +252,6 @@ export const Content: React.FC = () => {
     };
   };
 
-
   // Set a timeout for loading state
   useEffect(() => {
     if (isLoading) {
@@ -248,6 +266,228 @@ export const Content: React.FC = () => {
       };
     }
   }, [isLoading]);
+
+  // PDF Document handlers
+  const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
+    setNumPages(numPages);
+    setPdfLoading(false);
+    setPdfError(false);
+  };
+
+  const onDocumentLoadError = (error: any) => {
+    console.error('PDF load error:', error);
+    setPdfError(true);
+    setPdfLoading(false);
+  };
+
+  const goToPrevPage = () => setPageNumber(page => Math.max(page - 1, 1));
+  const goToNextPage = () => setPageNumber(page => Math.min(page + 1, numPages || 1));
+
+  // Enhanced Document Viewer Component
+  const renderEnhancedDocumentViewer = () => {
+    const documentUrl = messageStore.receivedContent?.content ?? "";
+    const fileType = messageStore.receivedContent?.extraContent?.toLowerCase() ?? "";
+
+    console.info("documentUrl", documentUrl);
+    console.info("fileType", fileType);
+
+    // Reset states when document changes
+    useEffect(() => {
+      setPdfError(false);
+      setPdfLoading(true);
+      setPageNumber(1);
+      setNumPages(null);
+    }, [documentUrl]);
+
+    // For PDF files - Use react-pdf as primary
+    if (fileType === 'pdf') {
+      return (
+        <div className="w-full h-screen bg-gray-100">
+          {/* Loading indicator */}
+          {pdfLoading && (
+            <div className="flex items-center justify-center h-full">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+                <p className="text-gray-600">Loading PDF...</p>
+              </div>
+            </div>
+          )}
+
+          {/* PDF Error fallback */}
+          {pdfError && (
+            <div className="flex flex-col items-center justify-center h-full p-8">
+              <div className="text-center bg-white p-6 rounded-lg shadow-md max-w-md">
+                <svg className="mx-auto h-12 w-12 text-red-500 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">PDF Load Failed</h3>
+                <p className="text-gray-600 mb-4 text-sm">Unable to load PDF with react-pdf. Trying fallback viewer...</p>
+                
+                {/* Fallback iframe */}
+                <iframe
+                  src={`https://mozilla.github.io/pdf.js/web/viewer.html?file=${encodeURIComponent(documentUrl)}`}
+                  className="w-full h-96 mb-4"
+                  style={{ border: '1px solid #e5e7eb' }}
+                  title="PDF Document Fallback"
+                  onError={() => {
+                    // Final fallback - direct link
+                    const container = document.querySelector('.text-center.bg-white');
+                    if (container) {
+                      container.innerHTML = `
+                        <div class="text-center">
+                          <p class="mb-4">Cannot display PDF in browser</p>
+                          <a href="${documentUrl}" target="_blank" rel="noopener noreferrer" 
+                             class="inline-block bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+                            Open PDF in New Tab
+                          </a>
+                        </div>
+                      `;
+                    }
+                  }}
+                />
+
+                <a 
+                  href={documentUrl} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="inline-block bg-blue-500 text-white px-4 py-2 rounded text-sm hover:bg-blue-600 transition-colors"
+                >
+                  Open PDF in New Tab
+                </a>
+              </div>
+            </div>
+          )}
+
+          {/* React PDF Document */}
+          {!pdfError && (
+            <div className="flex flex-col h-full">
+              {/* PDF Navigation Controls */}
+              {numPages && numPages > 1 && (
+                <div className="bg-white shadow-sm border-b px-4 py-2 flex items-center justify-between">
+                  <button
+                    onClick={goToPrevPage}
+                    disabled={pageNumber <= 1}
+                    className="px-3 py-1 bg-blue-500 text-white rounded disabled:bg-gray-300 disabled:cursor-not-allowed hover:bg-blue-600 transition-colors"
+                  >
+                    Previous
+                  </button>
+                  
+                  <span className="text-sm text-gray-600">
+                    Page {pageNumber} of {numPages}
+                  </span>
+                  
+                  <button
+                    onClick={goToNextPage}
+                    disabled={pageNumber >= numPages}
+                    className="px-3 py-1 bg-blue-500 text-white rounded disabled:bg-gray-300 disabled:cursor-not-allowed hover:bg-blue-600 transition-colors"
+                  >
+                    Next
+                  </button>
+                </div>
+              )}
+
+              {/* PDF Document Container */}
+              <div className="flex-1 overflow-auto bg-gray-100 flex justify-center p-4">
+                <Document
+                  file={documentUrl}
+                  onLoadSuccess={onDocumentLoadSuccess}
+                  onLoadError={onDocumentLoadError}
+                  loading={null} // We handle loading ourselves
+                  className="shadow-lg"
+                >
+                  <Page
+                    pageNumber={pageNumber}
+                    width={Math.min(window.innerWidth - 32, 800)}
+                    className="bg-white"
+                    renderTextLayer={true}
+                    renderAnnotationLayer={true}
+                  />
+                </Document>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // For Word documents and other supported formats - Use react-doc-viewer
+    if (fileType === 'doc' || fileType === 'docx' || fileType === 'xlsx' || fileType === 'pptx') {
+      const docs = [
+        {
+          uri: documentUrl,
+          fileName: `document.${fileType}`,
+          fileType: fileType,
+        },
+      ];
+
+      return (
+        <div className="w-full h-screen">
+          <DocViewer
+            documents={docs}
+            pluginRenderers={DocViewerRenderers}
+            config={{
+              header: {
+                disableHeader: false,
+                disableFileName: false,
+                retainURLParams: false,
+              },
+              csvDelimiter: ",",
+              pdfZoom: {
+                defaultZoom: 1.1,
+                zoomJump: 0.2,
+              },
+            }}
+            style={{ height: '100vh' }}
+            onError={(error) => {
+              console.error('DocViewer error:', error);
+              // Fallback to iframe approach
+              const container = document.querySelector('.w-full.h-screen');
+              if (container) {
+                container.innerHTML = `
+                  <div class="flex flex-col items-center justify-center h-full p-8">
+                    <div class="text-center bg-white p-6 rounded-lg shadow-md max-w-md">
+                      <h3 class="text-lg font-medium text-gray-900 mb-2">Document Viewer Error</h3>
+                      <p class="text-gray-600 mb-4 text-sm">Unable to display document with react-doc-viewer. Trying alternative viewer...</p>
+                      <iframe 
+                        src="https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(documentUrl)}"
+                        style="width: 100%; height: 400px; border: 1px solid #e5e7eb;"
+                        title="Document Fallback"
+                      ></iframe>
+                      <a href="${documentUrl}" target="_blank" rel="noopener noreferrer" 
+                         class="inline-block bg-blue-500 text-white px-4 py-2 rounded mt-4 hover:bg-blue-600">
+                        Download Document
+                      </a>
+                    </div>
+                  </div>
+                `;
+              }
+            }}
+          />
+        </div>
+      );
+    }
+
+    // For unsupported file types
+    return (
+      <div className="w-full h-screen flex flex-col items-center justify-center p-8">
+        <div className="text-center bg-white p-6 rounded-lg shadow-md max-w-md">
+          <svg className="mx-auto h-16 w-16 text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">File Type Not Supported</h3>
+          <p className="text-gray-500 mb-4 text-sm">This file type ({fileType}) cannot be previewed in the browser.</p>
+          <a 
+            href={documentUrl} 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="inline-block bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition-colors"
+          >
+            Download File
+          </a>
+        </div>
+      </div>
+    );
+  };
 
   if (hasHydrated) {
     if (
@@ -286,135 +526,22 @@ export const Content: React.FC = () => {
             maxWidth: "100%",
             objectFit: "cover",
             display: "block",
-          }} // optional
+          }}
           src={messageStore.receivedContent?.content ?? ""}
         />
       );
     }
 
-// Simplified Document Viewer - Replace your existing document handling code
-
-if (messageStore.receivedType === "Document" ||
-    messageStore.receivedType === "PdfDocument" ||
-    messageStore.receivedType === "WordDocument") {
-
-    const documentUrl = messageStore.receivedContent?.content ?? "";
-    const fileType = messageStore.receivedContent?.extraContent?.toLowerCase() ?? "";
-
-    const renderSimpleDocumentViewer = () => {
-        // For PDF files - Mobile optimized approach
-        if (fileType === 'pdf') {
-            return (
-                <div className="w-full h-screen">
-                    {/* Mobile-first approach: PDF.js viewer as primary */}
-                    <iframe
-                        src={`https://mozilla.github.io/pdf.js/web/viewer.html?file=${encodeURIComponent(documentUrl)}`}
-                        className="w-full h-full"
-                        style={{ width: '100%', height: '100%', border: 'none' }}
-                        title="PDF Document"
-                        onError={() => {
-                            // Fallback: Try native object tag
-                            const container = document.querySelector('.w-full.h-screen');
-                            if (container) {
-                                container.innerHTML = `
-                                    <object data="${documentUrl}" type="application/pdf" style="width: 100%; height: 100%;">
-                                        <div style="padding: 2rem; text-align: center;">
-                                            <p style="margin-bottom: 1rem; font-size: 1.1rem;">PDF Preview</p>
-                                            <a href="${documentUrl}" target="_blank" style="background: #3B82F6; color: white; padding: 0.5rem 1rem; border-radius: 0.25rem; text-decoration: none;">
-                                                Open PDF
-                                            </a>
-                                        </div>
-                                    </object>
-                                `;
-                            }
-                        }}
-                    >
-                        {/* Final fallback: Clean mobile-friendly interface */}
-                        <div className="flex flex-col items-center justify-center h-full p-8 bg-gray-50">
-                            <div className="text-center bg-white p-6 rounded-lg shadow-md max-w-sm">
-                                <svg className="mx-auto h-12 w-12 text-red-500 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                                </svg>
-                                <h3 className="text-lg font-medium text-gray-900 mb-2">PDF Viewer Not Available</h3>
-                                <p className="text-gray-600 mb-4 text-sm">Your browser cannot display this PDF inline.</p>
-                                <a 
-                                    href={documentUrl} 
-                                    target="_blank" 
-                                    rel="noopener noreferrer"
-                                    className="inline-block bg-blue-500 text-white px-4 py-2 rounded text-sm hover:bg-blue-600 transition-colors"
-                                >
-                                    Open PDF in New Tab
-                                </a>
-                            </div>
-                        </div>
-                    </iframe>
-                </div>
-            );
-        }
-
-        // For Word documents (doc, docx)
-        if (fileType === 'doc' || fileType === 'docx') {
-            return (
-                <div className="w-full h-screen">
-                    {/* Primary: Office Online viewer */}
-                    <iframe
-                        src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(documentUrl)}`}
-                        className="w-full h-full"
-                        style={{ width: '100%', height: '100%', border: 'none' }}
-                        title="Word Document"
-                        onError={() => {
-                            // Fallback: Google Docs viewer
-                            const iframe = document.querySelector('iframe[title="Word Document"]');
-                            if (iframe) {
-                                iframe.src = `https://docs.google.com/viewer?url=${encodeURIComponent(documentUrl)}&embedded=true`;
-                            }
-                        }}
-                    >
-                        {/* Final fallback: Download link */}
-                        <div className="flex flex-col items-center justify-center h-full p-8">
-                            <p className="mb-4 text-lg">Cannot display document in this browser</p>
-                            <a 
-                                href={documentUrl} 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-                            >
-                                Download Document
-                            </a>
-                        </div>
-                    </iframe>
-                </div>
-            );
-        }
-
-        // For other file types
-        return (
-            <div className="w-full h-screen flex flex-col items-center justify-center p-8">
-                <div className="text-center">
-                    <svg className="mx-auto h-16 w-16 text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">File Preview Not Available</h3>
-                    <p className="text-gray-500 mb-4">This file type cannot be previewed in the browser.</p>
-                    <a 
-                        href={documentUrl} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-                    >
-                        Download File
-                    </a>
-                </div>
-            </div>
-        );
-    };
-
-    return (
-        <div className="w-full p-2">
-            {renderSimpleDocumentViewer()}
+    // Enhanced Document Viewer Section
+    if (messageStore.receivedType === "Document" ||
+        messageStore.receivedType === "PdfDocument" ||
+        messageStore.receivedType === "WordDocument") {
+      return (
+        <div className="w-full">
+          {renderEnhancedDocumentViewer()}
         </div>
-    );
-}
+      );
+    }
 
     if (messageStore.receivedType === "Video") {
       return (
@@ -482,7 +609,6 @@ if (messageStore.receivedType === "Document" ||
   if (messageStore.receivedType === "Survey" && messageStore.receivedSurvey) {
     return <SurveyAnswer tag={messageStore.receivedSurvey.tag} />;
   }
-
 
   if (messageStore.receivedType === ("JotFormMessage" as any)) {
     return (
