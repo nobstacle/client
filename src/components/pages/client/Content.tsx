@@ -41,14 +41,14 @@ export const Content: React.FC = () => {
   const params = useSearchParams();
   const messageStore = useMessageStore();
   const hasHydrated = useHasHydrated();
-  const company = useCompanyControllerGetCompany(); // Moved to top for better structure
+  const [company, setCompany] = useState(null);
   const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
   const [showQR, setShowQR] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const [timer, setTimer] = useState(20);
   const [isClosing, setIsClosing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  
+
   // PDF viewer states
   const [numPages, setNumPages] = useState<number | null>(null);
   const [pageNumber, setPageNumber] = useState(1);
@@ -72,6 +72,16 @@ export const Content: React.FC = () => {
     const userAgent = navigator.userAgent || '';
     const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
     setIsMobile(isMobileDevice);
+  }, []);
+
+  useEffect(() => {
+    const fetchCompanyData = async () => {
+      const companyData = await useCompanyControllerGetCompany();
+      setCompany(companyData);
+      setIsLoading(false);
+    };
+
+    fetchCompanyData();
   }, []);
 
   useEffect(() => {
@@ -227,9 +237,9 @@ export const Content: React.FC = () => {
                   style={{ border: '1px solid #e5e7eb' }}
                   title="PDF Document Fallback"
                 />
-                <a 
-                  href={documentUrl} 
-                  target="_blank" 
+                <a
+                  href={documentUrl}
+                  target="_blank"
                   rel="noopener noreferrer"
                   className="inline-block bg-blue-500 text-white px-4 py-2 rounded text-sm hover:bg-blue-600 transition-colors"
                 >
@@ -307,9 +317,9 @@ export const Content: React.FC = () => {
         <div className="text-center bg-white p-6 rounded-lg shadow-md max-w-md">
           <h3 className="text-lg font-medium text-gray-900 mb-2">File Type Not Supported</h3>
           <p className="text-gray-500 mb-4 text-sm">This file type ({fileType}) cannot be previewed in the browser.</p>
-          <a 
-            href={documentUrl} 
-            target="_blank" 
+          <a
+            href={documentUrl}
+            target="_blank"
             rel="noopener noreferrer"
             className="inline-block bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition-colors"
           >
