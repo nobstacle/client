@@ -13,10 +13,10 @@ export const ChatMessage = ({
     : "rounded-r-lg rounded-bl-lg bg-green-300 p-3";
 
   return (
-    <div className={parentClass}>
+    <div className={parentClass} style={{ fontFamily: 'var(--font-inter)' }}>
       <div>
-        <div className={bubbleClass}>
-          <p className="text-sm">{message}</p>
+        <div className={bubbleClass} style={{ fontFamily: 'inherit' }}>
+          <p className="text-sm" style={{ fontFamily: 'inherit' }}>{message}</p>
         </div>
       </div>
     </div>

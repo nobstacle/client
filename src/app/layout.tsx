@@ -5,7 +5,11 @@ import { ReactQueryContextProvider } from "../context/ReactQueryContextProvider"
 import { SessionContextProvider } from "../context/SessionContextProvider";
 import { ToastContainer, Bounce } from 'react-toastify';
 
-const inter = Inter({ subsets: ["latin"] });
+const inter = Inter({
+  subsets: ['latin'],
+  variable: '--font-inter',
+  display: 'swap',
+})
 
 export const metadata: Metadata = {
   title: "Nobstacle",
@@ -21,7 +25,7 @@ interface RootLayourPropsI {
 
 function RootLayout({ children, session }: RootLayourPropsI) {
   return (
-    <html lang="en">
+    <html lang="en" className={inter.variable}>
       <body className={inter.className}>
         <ReactQueryContextProvider>
           <SessionContextProvider session={session}>

@@ -12,6 +12,7 @@ import { Button } from "./Button";
 import { SendIcon } from "./icons/SendIcon";
 import { useSearchParams } from "next/navigation";
 import AudioRecorder from "./AudioRecorder";
+import { useSession } from "next-auth/react";
 
 interface ChatBoxProps {
   sendMessage: (value: string) => void;
@@ -23,6 +24,13 @@ export const ChatBox = React.forwardRef<HTMLDivElement, ChatBoxProps>(
   ({ messages, sendMessage, children }, ref) => {
     const params = useSearchParams();
     const [message, setMessage] = useState("");
+    const { data } = useSession();
+    const userRole = data?.user?.Roles[0];
+
+    // Helper function to determine if message should be on the right
+    const isCurrentUserMessage = (messageRole: string) => {
+      return messageRole === userRole;
+    };
 
     return (
       <div className="relative flex h-[500px] w-full flex-col ">
@@ -40,7 +48,7 @@ export const ChatBox = React.forwardRef<HTMLDivElement, ChatBoxProps>(
                 <ChatMessage
                   key={id}
                   message={message}
-                  isRight={role === "Admin" || role === "Staff"}
+                  isRight={isCurrentUserMessage(role)}
                 />
               ))}
           </div>
@@ -53,7 +61,6 @@ export const ChatBox = React.forwardRef<HTMLDivElement, ChatBoxProps>(
                     sendMessage(message);
                     setMessage("");
                   }
-                  // Do something
                 }
               }}
               value={message}
@@ -68,8 +75,10 @@ export const ChatBox = React.forwardRef<HTMLDivElement, ChatBoxProps>(
                 className="border-1 flex justify-center rounded-md border-black  p-2 px-6 text-center text-white"
                 type="button"
                 onClick={() => {
-                  sendMessage(message);
-                  setMessage("");
+                  if (message.trim()) {
+                    sendMessage(message);
+                    setMessage("");
+                  }
                 }}
               >
                 <SendIcon />
