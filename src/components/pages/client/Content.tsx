@@ -19,7 +19,6 @@ import SurveyAnswer from "./SurveyAnswer";
 import QRCode from 'qrcode';
 import "../../../styles/base.css";
 import "antd/dist/reset.css";
-import PDFViewer from "./pdfViewer";
 
 export const Content: React.FC = () => {
   const isFirstTimeOpen = useRef(true);
@@ -280,156 +279,289 @@ export const Content: React.FC = () => {
       );
     }
 
-// Main component integration
-if (messageStore.receivedType === "Document" ||
-    messageStore.receivedType === "PdfDocument" ||
-    messageStore.receivedType === "WordDocument" ||
-    messageStore.receivedType === "ExcelDocument" ||
-    messageStore.receivedType === "PowerPointDocument" ||
-    messageStore.receivedType === "CsvDocument") {
+    if (messageStore.receivedType === "Document" ||
+      messageStore.receivedType === "PdfDocument" ||
+      messageStore.receivedType === "WordDocument" ||
+      messageStore.receivedType === "ExcelDocument" ||
+      messageStore.receivedType === "PowerPointDocument" ||
+      messageStore.receivedType === "CsvDocument") {
 
-  const documentUrl = messageStore.receivedContent?.content ?? "";
-  const fileType = messageStore.receivedContent?.extraContent?.toLowerCase() ?? "";
+      const documentUrl = messageStore.receivedContent?.content ?? "";
+      const fileType = messageStore.receivedContent?.extraContent?.toLowerCase() ?? "";
 
-  const handleIframeError = () => {
-    setLoadError(true);
-    setIsLoading(false);
-    if (loadingTimeout) {
-      clearTimeout(loadingTimeout);
-    }
-  };
+      const handleIframeError = () => {
+        setLoadError(true);
+        setIsLoading(false);
+        if (loadingTimeout) {
+          clearTimeout(loadingTimeout);
+        }
+      };
 
-  const handleIframeLoad = () => {
-    setIsLoading(false);
-    setLoadError(false);
-    if (loadingTimeout) {
-      clearTimeout(loadingTimeout);
-    }
-  };
+      const handleIframeLoad = () => {
+        setIsLoading(false);
+        setLoadError(false);
+        if (loadingTimeout) {
+          clearTimeout(loadingTimeout);
+        }
+      };
 
-  const renderDocumentViewer = () => {
-    if (loadError) {
-      return (
-        <div className="w-full p-8 text-center border-2 border-dashed border-gray-300 rounded-lg">
-          <div className="text-gray-500 mb-4">
-            <svg className="mx-auto h-12 w-12 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-            </svg>
-            <p className="mb-4">Unable to display document</p>
-            <p className="text-sm">URL: {documentUrl}</p>
-          </div>
-        </div>
-      );
-    }
-
-    switch (fileType) {
-      case 'pdf':
-        return (
-          <div className="w-full h-screen">
-            <PDFViewer
-              documentUrl={documentUrl}
-              onLoadingChange={setIsLoading}
-              onError={() => {
-                console.error('❌ PDFViewer reported final error');
-                setLoadError(true);
-              }}
-            />
-          </div>
-        );
-
-      case 'doc':
-      case 'docx':
-        // Keep existing Word document handling
-        if (isMobile || isTablet) {
+      const renderDocumentViewer = () => {
+        if (loadError) {
           return (
-            <div className="w-full h-screen flex flex-col overflow-hidden">
-              <div className="flex-1 relative">
-                {isLoading && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-gray-50 z-10">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-                  </div>
-                )}
-
-                {isAndroid ? (
-                  <iframe
-                    src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(documentUrl)}`}
-                    className="w-full h-full border-0"
-                    title="Word Document"
-                    style={{ width: '100%', height: '100%', border: 'none' }}
-                    onLoad={() => {
-                      setIsLoading(false);
-                      setLoadError(false);
-                    }}
-                    onError={() => {
-                      const iframe = document.querySelector('iframe[title="Word Document"]') as HTMLIFrameElement;
-                      if (iframe) {
-                        iframe.src = `https://docs.google.com/viewer?url=${encodeURIComponent(documentUrl)}&embedded=true`;
-                      }
-                      setTimeout(() => setIsLoading(false), 3000);
-                    }}
-                  />
-                ) : (
-                  <iframe
-                    src={`https://docs.google.com/viewer?url=${encodeURIComponent(documentUrl)}&embedded=true`}
-                    className="w-full h-full border-0"
-                    title="Word Document"
-                    style={{ width: '100%', height: '100%', border: 'none' }}
-                    onLoad={() => {
-                      setIsLoading(false);
-                      setLoadError(false);
-                    }}
-                    onError={() => {
-                      const iframe = document.querySelector('iframe[title="Word Document"]') as HTMLIFrameElement;
-                      if (iframe) {
-                        iframe.src = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(documentUrl)}`;
-                      }
-                      setTimeout(() => setIsLoading(false), 5000);
-                    }}
-                  />
-                )}
+            <div className="w-full p-8 text-center border-2 border-dashed border-gray-300 rounded-lg">
+              <div className="text-gray-500 mb-4">
+                <svg className="mx-auto h-12 w-12 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+                <p className="mb-4">Unable to display document</p>
               </div>
-            </div>
-          );
-        } else {
-          return (
-            <div className="w-full h-screen border rounded-lg overflow-hidden relative">
-              {isLoading && (
-                <div className="absolute inset-0 flex items-center justify-center bg-gray-50 z-10">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-                </div>
-              )}
-              <iframe
-                src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(documentUrl)}`}
-                className="w-full h-full"
-                title="Word Document"
-                frameBorder="0"
-                onLoad={handleIframeLoad}
-                onError={handleIframeError}
-              />
             </div>
           );
         }
 
-      default:
-        return (
-          <div className="w-full p-8 text-center border-2 border-dashed border-gray-300 rounded-lg">
-            <div className="text-gray-500 mb-4">
-              <svg className="mx-auto h-12 w-12 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              <p className="mb-4">Preview not available for this file type</p>
-            </div>
-          </div>
-        );
-    }
-  };
+        switch (fileType) {
+          case 'pdf':
+            if (isMobile) {
+              return (
+                <div className="w-full h-screen flex flex-col overflow-hidden">
+                  {isLoading && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-gray-50 z-10">
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+                    </div>
+                  )}
 
-  return (
-    <div className={`w-full ${isMobile ? 'p-2' : 'p-5'}`}>
-      {renderDocumentViewer()}
-    </div>
-  );
-}
+                  {isIOS ? (
+                    <div className="flex-1 w-full relative">
+                      <iframe
+                        src={`https://docs.google.com/viewer?url=${encodeURIComponent(documentUrl)}&embedded=true`}
+                        className="w-full h-full border-0"
+                        title="PDF Document"
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          border: 'none',
+                          overflow: 'hidden'
+                        }}
+                        scrolling="no"
+                        onLoad={handleIframeLoad}
+                        onError={() => {
+                          setLoadError(false);
+                          const iframe = document.querySelector('iframe[title="PDF Document"]') as HTMLIFrameElement;
+                          if (iframe) {
+                            iframe.src = documentUrl + '#toolbar=0&navpanes=0&scrollbar=0';
+                          }
+                        }}
+                      />
+                    </div>
+                  ) : (
+                    <div className="flex-1 w-full relative">
+                      <object
+                        data={documentUrl}
+                        type="application/pdf"
+                        className="w-full h-full"
+                        style={{ width: '100%', height: '100%' }}
+                        onLoad={() => {
+                          setIsLoading(false);
+                          setLoadError(false);
+                        }}
+                        onError={() => {
+                          // Fallback 1: Try Google Docs viewer
+                          const container = document.querySelector('.flex-1.w-full.relative');
+                          if (container) {
+                            container.innerHTML = `
+                    <iframe
+                      src="https://docs.google.com/viewer?url=${encodeURIComponent(documentUrl)}&embedded=true"
+                      style="width: 100%; height: 100%; border: none;"
+                      title="PDF Document"
+                    ></iframe>
+                  `;
+                          }
+                          setTimeout(() => setIsLoading(false), 3000);
+                        }}
+                      >
+                        {/* Fallback for object tag */}
+                        <iframe
+                          src={`https://drive.google.com/viewerng/viewer?embedded=true&url=${encodeURIComponent(documentUrl)}`}
+                          className="w-full h-full border-0"
+                          title="PDF Document"
+                          style={{ width: '100%', height: '100%', border: 'none' }}
+                          onLoad={() => {
+                            setIsLoading(false);
+                            setLoadError(false);
+                          }}
+                          onError={() => {
+                            // Final fallback: Direct link in new tab
+                            window.open(documentUrl, '_blank');
+                            setIsLoading(false);
+                          }}
+                        />
+                      </object>
+                    </div>
+                  )}
+
+                </div>
+              );
+            } else if (isTablet) {
+              const pdfViewerUrl = `https://mozilla.github.io/pdf.js/web/viewer.html?file=${encodeURIComponent(documentUrl)}`;
+
+              return (
+                <div className="w-full h-screen flex flex-col overflow-hidden">
+                  {isLoading && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-gray-50 z-10">
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+                    </div>
+                  )}
+
+                  <div className="flex-1 w-full relative">
+                    <iframe
+                      src={pdfViewerUrl}
+                      className="w-full h-full border-0"
+                      title="PDF Document"
+                      style={{ width: '100%', height: '100%', border: 'none', overflow: 'hidden' }}
+                      onLoad={() => {
+                        setIsLoading(false);
+                        setLoadError(false);
+                      }}
+                      onError={() => {
+                        setLoadError(true);
+                        window.open(documentUrl, '_blank');
+                      }}
+                    />
+
+                    {loadError && (
+                      <div className="absolute inset-0 flex flex-col items-center justify-center bg-white p-4 space-y-2">
+                        <p className="text-gray-700">Failed to load PDF viewer.</p>
+                        <a
+                          href={documentUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-4 py-2 bg-blue-500 text-white rounded"
+                        >
+                          Open directly
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            }
+            else {
+              // Desktop PDF viewer
+              return (
+                <div className="w-full h-screen border rounded-lg overflow-hidden relative">
+                  {isLoading && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-gray-50 z-10">
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+                    </div>
+                  )}
+                  <iframe
+                    src={documentUrl}
+                    className="w-full h-full"
+                    title="PDF Document"
+                    frameBorder="0"
+                    onLoad={handleIframeLoad}
+                    onError={handleIframeError}
+                  />
+                </div>
+              );
+            }
+
+          case 'doc':
+          case 'docx':
+            if (isMobile || isTablet) {
+              return (
+                <div className="w-full h-screen flex flex-col overflow-hidden">
+                  <div className="flex-1 relative">
+                    {isLoading && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-gray-50 z-10">
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+                      </div>
+                    )}
+
+                    {isAndroid ? (
+                      // Android: Try multiple viewers in order
+                      <iframe
+                        src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(documentUrl)}`}
+                        className="w-full h-full border-0"
+                        title="Word Document"
+                        style={{ width: '100%', height: '100%', border: 'none' }}
+                        onLoad={() => {
+                          setIsLoading(false);
+                          setLoadError(false);
+                        }}
+                        onError={() => {
+                          // Fallback: Google Docs viewer
+                          const iframe = document.querySelector('iframe[title="Word Document"]') as HTMLIFrameElement;
+                          if (iframe) {
+                            iframe.src = `https://docs.google.com/viewer?url=${encodeURIComponent(documentUrl)}&embedded=true`;
+                          }
+                          setTimeout(() => setIsLoading(false), 3000);
+                        }}
+                      />
+                    ) : (
+                      // iOS: Google Docs viewer
+                      <iframe
+                        src={`https://docs.google.com/viewer?url=${encodeURIComponent(documentUrl)}&embedded=true`}
+                        className="w-full h-full border-0"
+                        title="Word Document"
+                        style={{ width: '100%', height: '100%', border: 'none' }}
+                        onLoad={() => {
+                          setIsLoading(false);
+                          setLoadError(false);
+                        }}
+                        onError={() => {
+                          const iframe = document.querySelector('iframe[title="Word Document"]') as HTMLIFrameElement;
+                          if (iframe) {
+                            iframe.src = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(documentUrl)}`;
+                          }
+                          setTimeout(() => setIsLoading(false), 5000);
+                        }}
+                      />
+                    )}
+                  </div>
+                </div>
+              );
+            } else {
+              // Desktop Word viewer
+              return (
+                <div className="w-full h-screen border rounded-lg overflow-hidden relative">
+                  {isLoading && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-gray-50 z-10">
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+                    </div>
+                  )}
+                  <iframe
+                    src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(documentUrl)}`}
+                    className="w-full h-full"
+                    title="Word Document"
+                    frameBorder="0"
+                    onLoad={handleIframeLoad}
+                    onError={handleIframeError}
+                  />
+                </div>
+              );
+            }
+
+          default:
+            return (
+              <div className="w-full p-8 text-center border-2 border-dashed border-gray-300 rounded-lg">
+                <div className="text-gray-500 mb-4">
+                  <svg className="mx-auto h-12 w-12 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  <p className="mb-4">Preview not available for this file type</p>
+                </div>
+              </div>
+            );
+        }
+      };
+
+      return (
+        <div className={`w-full ${isMobile ? 'p-2' : 'p-5'}`}>
+          {renderDocumentViewer()}
+        </div>
+      );
+    }
 
     if (messageStore.receivedType === "Video") {
       return (
