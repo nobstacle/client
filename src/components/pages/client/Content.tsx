@@ -250,12 +250,14 @@ export const Content: React.FC = () => {
 
     if (messageStore.receivedType === "ChatMessage") {
       return (
-        <div className="w-6/12 ">
-          <ChatBox
-            ref={chatBoxRef}
-            messages={messageStore.receivedMessage}
-            sendMessage={sendMessage}
-          />
+        <div className="flex w-full flex-col items-center justify-center gap-2 p-4">
+          <div className="w-full max-w-[100%] sm:max-w-[75%] md:max-w-[50%]">
+            <ChatBox
+              ref={chatBoxRef}
+              messages={messageStore.receivedMessage}
+              sendMessage={sendMessage}
+            />
+          </div>
         </div>
       );
     }
