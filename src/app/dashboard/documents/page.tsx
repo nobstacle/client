@@ -16,16 +16,18 @@ import { arrayMove } from "@dnd-kit/sortable";
 import { UniqueIdentifier } from "@dnd-kit/core";
 import { useSocketContext } from "../../../context/SocketContextProvider";
 import { ChatType } from "../../../constant/types";
-import {
-    AiFillFilePdf,
-    AiFillFileWord,
-    AiFillFileUnknown
-} from 'react-icons/ai';
 import { useDocumentControllerDeleteDocumentOne, useCompanyControllerGetCompany } from "../../../lib/client/api";
 import { toast } from 'react-toastify';
 import useTemplateStore from "../../../lib/zustand/store/templateStore";
 import { useSearchDocument } from "../../../hooks/useSearchDocument";
 import { Card } from "antd";
+import {
+    AiFillFilePdf,
+    AiFillFileWord,
+    AiFillFileExcel,
+    AiFillFilePpt,
+    AiFillFileUnknown,
+} from "react-icons/ai";
 
 export default function Documents() {
     const { data } = useSession();
@@ -142,15 +144,23 @@ export default function Documents() {
         const iconProps = { size: 65 };
 
         switch (extension) {
-            case 'pdf':
+            case "pdf":
                 return <AiFillFilePdf color="#e63946" {...iconProps} />;
-            case 'doc':
-            case 'docx':
+            case "doc":
+            case "docx":
                 return <AiFillFileWord color="#1a73e8" {...iconProps} />;
+            case "xls":
+            case "xlsx":
+            case "csv":
+                return <AiFillFileExcel color="#28a745" {...iconProps} />;
+            case "ppt":
+            case "pptx":
+                return <AiFillFilePpt color="#f57c00" {...iconProps} />;
             default:
                 return <AiFillFileUnknown color="#999" {...iconProps} />;
         }
     };
+
 
     const sendDocument = (document: any) => {
         emitSendDocument({

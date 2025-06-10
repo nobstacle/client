@@ -34,7 +34,12 @@ const createSchema = (isUpdateMode: boolean) =>
                         "application/pdf",
                         "application/msword",
                         "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                        "application/vnd.ms-powerpoint",
+                        "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                        "application/vnd.ms-excel",
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                     ].includes(v[0].type);
+
                 })
             : yup
                 .mixed<FileList>()
@@ -47,7 +52,12 @@ const createSchema = (isUpdateMode: boolean) =>
                         "application/pdf",
                         "application/msword",
                         "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                        "application/vnd.ms-powerpoint",
+                        "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                        "application/vnd.ms-excel",
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                     ].includes(v[0].type);
+
                 }),
         docName: yup.string().required("Document name is required").max(100, "Document name must be less than 100 characters"),
         langCode: yup.string().required("Language is required"),
@@ -206,7 +216,7 @@ export const UploadDocumentTemplateForm: React.FC<{
                         name="file"
                         label={isUpdateMode ? "Replace Document (Optional)" : "Upload Document"}
                         type="file"
-                        accept=".pdf,.doc,.docx"
+                        accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx"
                         required={!isUpdateMode}
                     />
                     {errors.file && (
@@ -232,8 +242,9 @@ export const UploadDocumentTemplateForm: React.FC<{
 
                     {/* File type hint */}
                     <p className="text-xs text-gray-500 mt-1">
-                        Accepted formats: PDF, DOC, DOCX (Max 10MB)
+                        Accepted formats: PDF, DOC, DOCX, PPT, PPTX, XLS, XLSX (Max 10MB)
                     </p>
+
                 </div>
 
                 {/* Document Tag Section */}

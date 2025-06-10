@@ -320,6 +320,29 @@ export const Content: React.FC = () => {
         }
 
         switch (fileType) {
+          case 'ppt':
+          case 'pptx':
+          case 'xls':
+          case 'xlsx':
+          case 'csv':
+            return (
+              <div className="w-full h-screen border rounded-lg overflow-hidden relative">
+                {isLoading && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-gray-50 z-10">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+                  </div>
+                )}
+                <iframe
+                  src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(documentUrl)}`}
+                  className="w-full h-full"
+                  title="Office Document"
+                  frameBorder="0"
+                  onLoad={handleIframeLoad}
+                  onError={handleIframeError}
+                />
+              </div>
+            );
+
           case 'pdf':
             if (isMobile) {
               return (
