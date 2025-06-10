@@ -58,13 +58,13 @@
   display: flex;
   justify-content: flex-start;
   gap: 10px;
-  font-family: '__Inter_d65c78', '__Inter_Fallback_d65c78';
+  /* font-family: '__Inter_d65c78', '__Inter_Fallback_d65c78'; */
   font-style: normal;
 }
 
 
 .react-select-container {
-  font-family: '__Inter_d65c78', '__Inter_Fallback_d65c78';
+  /* font-family: '__Inter_d65c78', '__Inter_Fallback_d65c78'; */
   font-style: normal;
 
   .react-select {
@@ -77,20 +77,20 @@
 .swal2-cancel {
   background-color: red !important;
   color: white !important;
-  font-family: '__Inter_d65c78', '__Inter_Fallback_d65c78';
+  /* font-family: '__Inter_d65c78', '__Inter_Fallback_d65c78'; */
   font-style: normal;
 }
 
 .swal2-confirm {
   background-color: blue !important;
   color: white !important;
-  font-family: '__Inter_d65c78', '__Inter_Fallback_d65c78';
+  /* font-family: '__Inter_d65c78', '__Inter_Fallback_d65c78'; */
   font-style: normal;
 }
 
 
 .customTableWrapper {
-  font-family: '__Inter_d65c78', '__Inter_Fallback_d65c78';
+  /* font-family: '__Inter_d65c78', '__Inter_Fallback_d65c78'; */
   font-style: normal;
 
   thead {
@@ -144,14 +144,14 @@
   align-items: center;
   height: 100%;
   min-height: 40vh;
-  font-family: '__Inter_d65c78', '__Inter_Fallback_d65c78';
+  /* font-family: '__Inter_d65c78', '__Inter_Fallback_d65c78'; */
   font-style: normal;
 }
 
 th,
 td {
   box-sizing: border-box;
-  font-family: '__Inter_d65c78', '__Inter_Fallback_d65c78';
+  /* font-family: '__Inter_d65c78', '__Inter_Fallback_d65c78'; */
   font-style: normal;
 }
 
@@ -160,14 +160,14 @@ td {
   width: 100%;
   justify-content: center;
   align-items: center;
-  font-family: '__Inter_d65c78', '__Inter_Fallback_d65c78';
+  /* font-family: '__Inter_d65c78', '__Inter_Fallback_d65c78'; */
   font-style: normal;
 }
 
 .customButtonWrapper .blueButtons {
   background: #3b5998;
   color: white;
-  font-family: '__Inter_d65c78', '__Inter_Fallback_d65c78';
+  /* font-family: '__Inter_d65c78', '__Inter_Fallback_d65c78'; */
   font-style: normal;
 }
 
@@ -215,29 +215,29 @@ td {
 .confirm-btn {
   background-color: #3b5998 !important;
   border-color: #3b5998 !important;
-  font-family: '__Inter_d65c78', '__Inter_Fallback_d65c78';
+  /* font-family: '__Inter_d65c78', '__Inter_Fallback_d65c78'; */
   font-style: normal;
 }
 
 .cancel-btn {
   background-color: #f0f0f0 !important;
   border-color: #dcdcdc !important;
-  font-family: '__Inter_d65c78', '__Inter_Fallback_d65c78';
+  /* font-family: '__Inter_d65c78', '__Inter_Fallback_d65c78'; */
   font-style: normal;
 }
 
 .ant-modal input {
-  font-family: '__Inter_d65c78', '__Inter_Fallback_d65c78';
+  /* font-family: '__Inter_d65c78', '__Inter_Fallback_d65c78'; */
   font-style: normal;
 }
 
 .ant-modal label {
-  font-family: '__Inter_d65c78', '__Inter_Fallback_d65c78';
+  /* font-family: '__Inter_d65c78', '__Inter_Fallback_d65c78'; */
   font-style: normal;
 }
 
 .ant-modal .ant-modal-title {
-  font-family: '__Inter_d65c78', '__Inter_Fallback_d65c78';
+  /* font-family: '__Inter_d65c78', '__Inter_Fallback_d65c78'; */
   font-style: normal;
 }
 
@@ -252,7 +252,7 @@ span,
 label,
 input,
 button {
-  font-family: '__Inter_d65c78', '__Inter_Fallback_d65c78';
+  /* font-family: '__Inter_d65c78', '__Inter_Fallback_d65c78'; */
   font-style: normal;
 }
 
