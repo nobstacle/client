@@ -3,7 +3,7 @@
 .btnWrapper {
   button {
     margin-bottom: 0.2rem;
-    font-family: '__Inter_d65c78', '__Inter_Fallback_d65c78';
+    /* font-family: '__Inter_d65c78', '__Inter_Fallback_d65c78'; */
     font-style: normal;
   }
 }
@@ -15,7 +15,7 @@
     th {
       width: 100%;
       white-space: nowrap;
-      font-family: '__Inter_d65c78', '__Inter_Fallback_d65c78';
+      /* font-family: '__Inter_d65c78', '__Inter_Fallback_d65c78'; */
       font-style: normal;
     }
 
@@ -28,7 +28,7 @@
       padding: 0 1rem;
       min-width: 100%;
       text-align: left;
-      font-family: '__Inter_d65c78', '__Inter_Fallback_d65c78';
+      /* font-family: '__Inter_d65c78', '__Inter_Fallback_d65c78'; */
       font-style: normal;
     }
   }
@@ -43,7 +43,7 @@
     width: fit-content;
     padding: 0.3rem 0.6rem;
     margin: 0.8rem 0;
-    font-family: '__Inter_d65c78', '__Inter_Fallback_d65c78';
+    /* font-family: '__Inter_d65c78', '__Inter_Fallback_d65c78'; */
     font-style: normal;
 
     &:first-child {
@@ -69,7 +69,7 @@
 
   .react-select {
     padding: 0.15rem !important;
-    font-family: '__Inter_d65c78', '__Inter_Fallback_d65c78';
+    /* font-family: '__Inter_d65c78', '__Inter_Fallback_d65c78'; */
     font-style: normal;
   }
 }
@@ -96,7 +96,7 @@
   thead {
     th {
       white-space: nowrap;
-      font-family: '__Inter_d65c78', '__Inter_Fallback_d65c78';
+      /* font-family: '__Inter_d65c78', '__Inter_Fallback_d65c78'; */
       font-style: normal;
     }
   }
@@ -104,7 +104,7 @@
   tr {
     td {
       padding: 0.4rem 1rem;
-      font-family: '__Inter_d65c78', '__Inter_Fallback_d65c78';
+      /* font-family: '__Inter_d65c78', '__Inter_Fallback_d65c78'; */
       font-style: normal;
     }
   }
@@ -119,7 +119,7 @@
     --tw-border-opacity: 1;
     border-color: rgb(209 213 219 / var(--tw-border-opacity));
     box-sizing: border-box;
-    font-family: '__Inter_d65c78', '__Inter_Fallback_d65c78';
+    /* font-family: '__Inter_d65c78', '__Inter_Fallback_d65c78'; */
     font-style: normal;
   }
 
@@ -132,7 +132,7 @@
     min-width: 8vw;
     border-bottom: 1px solid #cecece;
     box-sizing: border-box;
-    font-family: '__Inter_d65c78', '__Inter_Fallback_d65c78';
+    /* font-family: '__Inter_d65c78', '__Inter_Fallback_d65c78'; */
     font-style: normal;
 
   }
@@ -177,7 +177,7 @@ td {
       .ant-table-cell {
         background: #d1d5db;
         color: white;
-        font-family: '__Inter_d65c78', '__Inter_Fallback_d65c78';
+        /* font-family: '__Inter_d65c78', '__Inter_Fallback_d65c78'; */
         font-style: normal;
         color: black;
         padding: 10px 16px;
@@ -188,7 +188,7 @@ td {
   .ant-table-body {
     overflow: hidden;
     overflow-x: scroll;
-    font-family: '__Inter_d65c78', '__Inter_Fallback_d65c78';
+    /* font-family: '__Inter_d65c78', '__Inter_Fallback_d65c78'; */
     font-style: normal;
 
     td {
@@ -201,7 +201,7 @@ td {
   .ant-table-tbody {
     .ant-table-cell {
       padding: 0.4rem 1rem !important;
-      font-family: '__Inter_d65c78', '__Inter_Fallback_d65c78';
+      /* font-family: '__Inter_d65c78', '__Inter_Fallback_d65c78'; */
       font-style: normal;
     }
   }
