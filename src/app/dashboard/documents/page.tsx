@@ -1,6 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
-// import { SendDocumentForm } from "../../../components/pages/dashboard/SendDocuments";
+import { useEffect, useState, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import { useDisclousure } from "../../../hooks/useDisclosure";
 import { PlusIcon } from "../../../components/icons/PlusIcon";
@@ -52,6 +51,35 @@ export default function Documents() {
         setIsMounted(true);
     }, []);
 
+    const filterDocumentsByLanguage = (docs) => {
+        const selectedLang = params.get("lang") || companyData?.defaultLangCode || "en";
+
+        const groupedByTag = docs.reduce((acc, doc) => {
+            if (!acc[doc.tag]) {
+                acc[doc.tag] = [];
+            }
+            acc[doc.tag].push(doc);
+            return acc;
+        }, {});
+
+        const filteredDocs = [];
+        Object.entries(groupedByTag).forEach(([tag, tagDocs]) => {
+            if (tagDocs.length === 1) {
+                filteredDocs.push(tagDocs[0]);
+            } else {
+                const matchingLangDoc = tagDocs.find(doc => doc.langCode === selectedLang);
+                if (matchingLangDoc) {
+                    filteredDocs.push(matchingLangDoc);
+                } else {
+                    const defaultLangDoc = tagDocs.find(doc => doc.langCode === (companyData?.defaultLangCode || "en"));
+                    filteredDocs.push(defaultLangDoc || tagDocs[0]);
+                }
+            }
+        });
+
+        return filteredDocs;
+    };
+
     const fetchDocuments = () => {
         if (data?.user.backendTokens.at) {
             fetch(`${Url}/api/v1/template/documents`, {
@@ -62,8 +90,9 @@ export default function Documents() {
                     return response.json();
                 })
                 .then((data) => {
-                    setResponses(data);
-                    setDocuments(data); // To Store documents in Zustand store
+                    const filteredData = filterDocumentsByLanguage(data);
+                    setResponses(filteredData);
+                    setDocuments(filteredData);
                 })
                 .catch((error) => console.error("Error fetching data:", error));
         }
@@ -71,12 +100,12 @@ export default function Documents() {
 
     useEffect(() => {
         fetchDocuments();
-    }, [data]);
+    }, [data, companyData, params.get("lang")]);
 
     const handleUploadSuccess = () => {
         fetchDocuments();
-        setSelectedDocument(null); // To clear selected document after success
-        setModalType('create'); // To reset modal type
+        setSelectedDocument(null);
+        setModalType('create');
     }
 
     const { mutate: deleteDocument } = useDocumentControllerDeleteDocumentOne({
@@ -107,7 +136,6 @@ export default function Documents() {
         setModalType('update');
         handleOpen();
     };
-
 
     // Function to handle creating new document
     const onCreateDocument = () => {
@@ -161,7 +189,6 @@ export default function Documents() {
         }
     };
 
-
     const sendDocument = (document: any) => {
         emitSendDocument({
             refId: document?.id,
@@ -174,12 +201,15 @@ export default function Documents() {
         });
     };
 
-    const documentsSource = searchDocuments.length > 0 ? searchDocuments : documents;
+    // Apply language filtering to search results as well
+    const documentsSource = useMemo(() => {
+        const baseDocuments = searchDocuments.length > 0 ? searchDocuments : documents;
+        return filterDocumentsByLanguage(baseDocuments);
+    }, [searchDocuments, documents, params.get("lang"), companyData?.defaultLangCode]);
 
     if (!isMounted) {
         return null;
     }
-
 
     return (
         <>
@@ -208,9 +238,6 @@ export default function Documents() {
                                             id={document.id}
                                             tag={document.tag}
                                             isAdmin={data?.user.Roles?.includes("Admin")}
-                                            // isAvailable={document.langCode?.includes(
-                                            //     params.get("lang") || ""
-                                            // )}
                                             isAvailable={document.langCode.includes(
                                                 params.get("lang") || companyData?.defaultLangCode || "",
                                             )}
