@@ -23,30 +23,53 @@ export const LanguageShortcutPicker: React.FC = () => {
   const { languagesShortcuts } = useShortcutStore();
   const { emitSendLangCode } = useSocketContext();
 
+  const handleLanguageChange = (value: string) => {
+    setChecked(value);
+    router.push("lang", value);
+
+    emitSendLangCode({
+      langCode: value,
+      station: Number(params.get("station") ?? 1),
+    });
+  };
+
   if (!isHydrated) return <Spinner />;
+
+  const sortedLanguages = languagesShortcuts.sort((a, b) => a.order! - b.order!);
+  const selectedLanguage = sortedLanguages.find(
+    lang => headerLangaugePickerDefault === lang.value || checked === lang.value
+  );
 
   return (
     <>
-      {languagesShortcuts
-        .sort((a, b) => a.order! - b.order!)
-        .map((res) => (
+      {/* Mobile Select Dropdown */}
+      <div className="block md:hidden">
+        <select
+          value={selectedLanguage?.value || headerLangaugePickerDefault}
+          onChange={(e) => handleLanguageChange(e.target.value)}
+           className="rounded-md"
+        >
+          {sortedLanguages.map((res) => (
+            <option key={res.id} value={res.value} className="bg-primary text-white">
+              {res.value}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* Desktop Radio Buttons */}
+      <div className="hidden md:flex md:gap-4">
+        {sortedLanguages.map((res) => (
           <RadioInput
             key={res.id}
-            onClick={(value) => {
-              setChecked(value);
-              router.push("lang", value);
-
-              emitSendLangCode({
-                langCode: value,
-                station: Number(params.get("station") ?? 1),
-              });
-            }}
+            onClick={handleLanguageChange}
             data={res}
             isChecked={
               headerLangaugePickerDefault === res.value || checked === res.value
             }
           />
         ))}
+      </div>
     </>
   );
 };
@@ -54,13 +77,10 @@ export const LanguageShortcutPicker: React.FC = () => {
 const RadioInput: React.FC<{
   data: GetShortcutRes;
   isChecked: boolean;
-  onClick: (e: string) => void;
+  onClick: (value: string) => void;
 }> = ({ data, isChecked, onClick }) => {
   return (
-    <div>
-      <label className="text-white" htmlFor={data.value}>
-        {data.value}{" "}
-      </label>
+    <div className="flex items-center gap-2">
       <input
         onClick={(e) => onClick(e.currentTarget.value)}
         className="cursor-pointer"
@@ -68,7 +88,11 @@ const RadioInput: React.FC<{
         value={data.value}
         type="radio"
         checked={isChecked}
+        readOnly
       />
+      <label className="text-white cursor-pointer" htmlFor={`${data.value}-${data.order}`}>
+        {data.value}
+      </label>
     </div>
   );
 };

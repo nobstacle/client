@@ -30,6 +30,7 @@ export const LanguagePicker: React.FC<LanguagePickerPropsI> = ({
       onChange={onChange}
       defaultValue={defaultValue}
       name={name}
+      style={{maxWidth:'100px'}}
       {...registerActive}
     >
       {languages.map(({ code, name }) => (
