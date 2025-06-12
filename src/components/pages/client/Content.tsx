@@ -39,6 +39,7 @@ export const Content: React.FC = () => {
   const [isAndroid, setIsAndroid] = useState(false);
   const [loadingTimeout, setLoadingTimeout] = useState<NodeJS.Timeout | null>(null);
   const [isTablet, setIsTablet] = useState(false);
+const [permissionGranted, setPermissionGranted] = useState(false);
 
   const defaultSlideshowContent =
     useContentControllerGetDefaultSlideshowContent({
@@ -218,6 +219,61 @@ export const Content: React.FC = () => {
       langCode: company.data?.defaultLangCode ?? "en",
     });
   };
+
+  const requestCameraPermission = async () => {
+    try {
+      // Check if getUserMedia is supported
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('getUserMedia is not supported in this browser');
+      }
+  
+      // Check current permission status
+      const permissionStatus = await navigator.permissions.query({ name: 'camera' as PermissionName });
+      console.log('Current camera permission status:', permissionStatus.state);
+  
+      if (permissionStatus.state === 'denied') {
+        throw new Error('Camera permission is blocked. Please enable it in browser settings.');
+      }
+  
+      // Request camera access
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { 
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        },
+        audio: true
+      });
+      
+      // Stop the stream immediately since we just needed permission
+      stream.getTracks().forEach(track => track.stop());
+      
+      console.log('Camera permission granted successfully');
+      return true;
+    } catch (error) {
+      console.error('Camera permission error:', error);
+      
+      // Provide specific error messages
+      if (error.name === 'NotAllowedError') {
+        alert('Camera access was denied. Please click the camera icon in your browser\'s address bar and allow camera access.');
+      } else if (error.name === 'NotFoundError') {
+        alert('No camera device found. Please connect a camera and try again.');
+      } else if (error.name === 'NotSupportedError') {
+        alert('Camera access is not supported in this browser or context.');
+      }
+      
+      return false;
+    }
+  };
+  
+    useEffect(() => {
+      // Request camera permission when component mounts
+      const requestPermission = async () => {
+        const granted = await requestCameraPermission();
+        setPermissionGranted(granted);
+      };
+  
+      requestPermission();
+    }, []);
 
   // Set a timeout for loading state
   useEffect(() => {
@@ -653,6 +709,7 @@ export const Content: React.FC = () => {
     return <SurveyAnswer tag={messageStore.receivedSurvey.tag} />;
   }
 
+  
   if (messageStore.receivedType === ("JotFormMessage" as any)) {
     return (
       <>
@@ -717,7 +774,16 @@ export const Content: React.FC = () => {
           transition: transform 0.5s ease-out;
         }
       `}</style>
+        
         <div className="surveyWrapper w-screen h-screen flex flex-col bg-gray-100">
+          {/* Show permission status if needed */}
+          {!permissionGranted && (
+            <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4">
+              <p className="font-bold">Camera Access Required</p>
+              <p>Please allow camera access to use all form features.</p>
+            </div>
+          )}
+
           {showQR && (
             <div
               className={`relative bg-white shadow-md px-4 py-3 z-50 ${isClosing ? 'qr-modal-exit' : 'qr-modal-enter'
@@ -764,8 +830,9 @@ export const Content: React.FC = () => {
               className="w-full h-full"
               src={messageStore.receivedContent?.content ?? ""}
               style={{ border: "none" }}
-              allow="camera; microphone; geolocation"
+              allow="camera *; microphone *; geolocation *; autoplay; encrypted-media; fullscreen"
               allowFullScreen
+              sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-pointer-lock allow-top-navigation allow-presentation"
             />
           </div>
         </div>
