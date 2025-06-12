@@ -26,6 +26,8 @@ interface RootLayourPropsI {
 function RootLayout({ children, session }: RootLayourPropsI) {
   return (
     <html lang="en" className={inter.variable}>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <meta http-equiv="Permissions-Policy" content="camera=*, microphone=*, geolocation=*" />
       <body className={inter.className}>
         <ReactQueryContextProvider>
           <SessionContextProvider session={session}>
