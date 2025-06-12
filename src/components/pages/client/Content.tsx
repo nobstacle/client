@@ -653,7 +653,6 @@ export const Content: React.FC = () => {
     return <SurveyAnswer tag={messageStore.receivedSurvey.tag} />;
   }
 
-
   if (messageStore.receivedType === ("JotFormMessage" as any)) {
     return (
       <>
@@ -765,6 +764,8 @@ export const Content: React.FC = () => {
               className="w-full h-full"
               src={messageStore.receivedContent?.content ?? ""}
               style={{ border: "none" }}
+              allow="camera; microphone; geolocation"
+              allowFullScreen
             />
           </div>
         </div>
