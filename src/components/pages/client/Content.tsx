@@ -19,6 +19,7 @@ import SurveyAnswer from "./SurveyAnswer";
 import QRCode from 'qrcode';
 import "../../../styles/base.css";
 import "antd/dist/reset.css";
+import { useSession } from "next-auth/react";
 
 export const Content: React.FC = () => {
   const isFirstTimeOpen = useRef(true);
@@ -39,6 +40,9 @@ export const Content: React.FC = () => {
   const [isAndroid, setIsAndroid] = useState(false);
   const [loadingTimeout, setLoadingTimeout] = useState<NodeJS.Timeout | null>(null);
   const [isTablet, setIsTablet] = useState(false);
+  const { data } = useSession();
+  let baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+  const [jotFormUrl, setJotFormUrl] = useState<string | null>(null);
 
   const defaultSlideshowContent =
     useContentControllerGetDefaultSlideshowContent({
@@ -64,7 +68,7 @@ export const Content: React.FC = () => {
     setIsMobile(isMobileDevice);
     setIsIOS(isIOSDevice);
     setIsAndroid(isAndroidDevice);
-    setIsTablet(isTabletDevice); // Set tablet state
+    setIsTablet(isTabletDevice);
   }, []);
 
   useEffect(() => {
@@ -93,7 +97,6 @@ export const Content: React.FC = () => {
       const containerHeight = window.innerHeight;
       const containerAspectRatio = containerWidth / containerHeight;
 
-      // Get video dimensions when metadata is loaded
       const video = videoElement.current;
 
       const handleLoadedMetadata = () => {
@@ -108,30 +111,25 @@ export const Content: React.FC = () => {
           width = containerWidth;
           height = containerWidth / videoAspectRatio;
 
-          // If height exceeds container, fit to height instead
           if (height > containerHeight) {
             height = containerHeight;
             width = containerHeight * videoAspectRatio;
           }
         } else {
-          // Video is taller than container - fit to height
           height = containerHeight;
           width = containerHeight * videoAspectRatio;
 
-          // If width exceeds container, fit to width instead
           if (width > containerWidth) {
             width = containerWidth;
             height = containerWidth / videoAspectRatio;
           }
         }
 
-        // Apply calculated dimensions
         video.style.width = `${width}px`;
         video.style.height = `${height}px`;
         video.style.objectFit = 'contain';
       };
 
-      // If metadata is already loaded
       if (video.readyState >= 1) {
         handleLoadedMetadata();
       } else {
@@ -144,7 +142,6 @@ export const Content: React.FC = () => {
     };
 
     const handleResize = () => {
-      // Small delay to ensure orientation change is complete
       setTimeout(updateVideoStyles, 100);
     };
 
@@ -181,7 +178,6 @@ export const Content: React.FC = () => {
     generateQR();
   }, [messageStore.receivedContent?.content]);
 
-
   useEffect(() => {
     let countdown: NodeJS.Timeout;
     if (showQR && !isClosing) {
@@ -199,6 +195,55 @@ export const Content: React.FC = () => {
     }
     return () => clearInterval(countdown);
   }, [showQR, isClosing]);
+
+  useEffect(() => {
+    const loadFormData = async () => {
+      if (messageStore.receivedType === "JotFormMessage" && messageStore.receivedContent?.content) {
+        try {
+          const newUrl = await getFormData(messageStore.receivedContent.content);
+          setJotFormUrl(newUrl || null);
+        } catch (error) {
+          console.error("Failed to load form data:", error);
+          setJotFormUrl(null);
+        }
+      }
+    };
+
+    loadFormData();
+  }, [messageStore.receivedType, messageStore.receivedContent?.content, data?.user.backendTokens.at]);
+
+  const getFormData = async (url: string): Promise<string | null> => {
+    try {
+      const urlObj = new URL(url);
+      const uuid = urlObj.searchParams.get("uuid");
+
+      if (!uuid) {
+        console.error("UUID not found in URL");
+        return null;
+      }
+
+      const res = await fetch(`${baseUrl}/api/jotform/get-assigned-form-by-uuid?uuid=${uuid}`, {
+        headers: {
+          Authorization: `Bearer ${data?.user.backendTokens.at}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
+
+      const text = await res.text();
+      const result = JSON.parse(text);
+      const newUrl = `https://form.jotform.com/${result.data.formId}?uuid=${uuid}`;
+      console.info("newUrlnewUrl", newUrl);
+      return newUrl;
+
+    } catch (error) {
+      console.error("Error fetching data:", error);
+      return null;
+    }
+  };
 
   const handleCloseQR = () => {
     setIsClosing(true);
@@ -219,7 +264,6 @@ export const Content: React.FC = () => {
     });
   };
 
-  // Set a timeout for loading state
   useEffect(() => {
     if (isLoading) {
       const timeout = setTimeout(() => {
@@ -653,11 +697,10 @@ export const Content: React.FC = () => {
     return <SurveyAnswer tag={messageStore.receivedSurvey.tag} />;
   }
 
-
-if (messageStore.receivedType === ("JotFormMessage" as any)) {
- return (
-    <>
-      <style jsx>{`
+  if (messageStore.receivedType === ("JotFormMessage" as any)) {
+    return (
+      <>
+        <style jsx>{`
         @keyframes slideDown {
           from {
             transform: translateY(-100%);
@@ -761,68 +804,65 @@ if (messageStore.receivedType === ("JotFormMessage" as any)) {
           z-index: 1000;
         }
       `}</style>
-        
-      <div className="surveyWrapper w-screen h-screen flex flex-col bg-gray-100 relative">
 
-        {showQR && (
-          <div
-            className={`relative bg-white shadow-md px-4 py-3 z-50 ${isClosing ? 'qr-modal-exit' : 'qr-modal-enter'}`}
-          >
-            {qrCodeUrl && (
-              <div className="absolute left-4 top-1/2 transform -translate-y-1/2">
-                <img
-                  src={qrCodeUrl}
-                  alt="QR Code"
-                  className="w-28 h-28 object-contain"
-                />
-              </div>
-            )}
-            <div className="flex justify-center items-center w-full h-full min-h-[7rem]">
-              <span className="text-gray-700 text-xl customScanCode text-center">
-                Kindly scan to fill the form on your own device.
-              </span>
-            </div>
+        <div className="surveyWrapper w-screen h-screen flex flex-col bg-gray-100 relative">
 
-            <div className="absolute bottom-2 right-4 text-sm text-gray-500">
-              {timer}s
-            </div>
-
-            <button
-              onClick={handleCloseQR}
-              className="text-2xl text-gray-500 hover:text-gray-700 absolute top-2 right-4 transition-colors duration-200"
+          {showQR && (
+            <div
+              className={`relative bg-white shadow-md px-4 py-3 z-50 ${isClosing ? 'qr-modal-exit' : 'qr-modal-enter'}`}
             >
-              ×
-            </button>
-          </div>
-        )}
+              {qrCodeUrl && (
+                <div className="absolute left-4 top-1/2 transform -translate-y-1/2">
+                  <img
+                    src={qrCodeUrl}
+                    alt="QR Code"
+                    className="w-28 h-28 object-contain"
+                  />
+                </div>
+              )}
+              <div className="flex justify-center items-center w-full h-full min-h-[7rem]">
+                <span className="text-gray-700 text-xl customScanCode text-center">
+                  Kindly scan to fill the form on your own device.
+                </span>
+              </div>
 
-        <div
-          className={`flex-1 overflow-auto iframe-container ${showQR && !isClosing
-            ? 'iframe-slide-down'
-            : isClosing
-              ? 'iframe-slide-up'
-              : ''
-            }`}
-        >
-          {console.info("messageStore.receivedContent?.content", messageStore.receivedContent?.content)}
-          <iframe
-            ref={iframeRef}
-            className="w-full h-full"
-            src={messageStore.receivedContent?.content ?? ""}
-            style={{ border: "none" }}
-            allow="camera; microphone; geolocation; autoplay; encrypted-media; fullscreen; picture-in-picture; web-share; display-capture; clipboard-read; clipboard-write; usb; magnetometer; gyroscope; accelerometer; ambient-light-sensor; battery; bluetooth; payment; midi; speaker-selection; screen-wake-lock; document-domain"
-            allowFullScreen
-            sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-pointer-lock allow-top-navigation allow-presentation allow-downloads allow-modals allow-orientation-lock allow-popups-to-escape-sandbox allow-storage-access-by-user-activation"
-            referrerPolicy="strict-origin-when-cross-origin"
-            loading="eager"
-            title="JotForm"
-            credentialless="true"
-          />
+              <div className="absolute bottom-2 right-4 text-sm text-gray-500">
+                {timer}s
+              </div>
+
+              <button
+                onClick={handleCloseQR}
+                className="text-2xl text-gray-500 hover:text-gray-700 absolute top-2 right-4 transition-colors duration-200"
+              >
+                ×
+              </button>
+            </div>
+          )}
+
+          <div
+            className={`flex-1 overflow-auto iframe-container ${showQR && !isClosing
+              ? 'iframe-slide-down'
+              : isClosing
+                ? 'iframe-slide-up'
+                : ''
+              }`}
+          >
+            <iframe
+              ref={iframeRef}
+              className="w-full h-full"
+              src={jotFormUrl || ""}
+              style={{ border: "none" }}
+              allow="camera; microphone; geolocation; autoplay; encrypted-media; fullscreen; picture-in-picture; web-share; display-capture; clipboard-read; clipboard-write; usb; magnetometer; gyroscope; accelerometer; ambient-light-sensor; battery; bluetooth; payment; midi; speaker-selection; screen-wake-lock; document-domain"
+              allowFullScreen
+              referrerPolicy="no-referrer"
+              loading="eager"
+              title="JotForm"
+            />
+          </div>
         </div>
-      </div>
-    </>
-  );
-}
+      </>
+    );
+  }
 
   if (
     messageStore.receivedType === "Website" ||
