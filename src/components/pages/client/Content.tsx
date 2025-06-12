@@ -20,48 +20,6 @@ import QRCode from 'qrcode';
 import "../../../styles/base.css";
 import "antd/dist/reset.css";
 
-const requestCameraPermission = async () => {
-  try {
-    // Check if getUserMedia is supported
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      console.error('getUserMedia is not supported in this browser');
-      return false;
-    }
-
-    // Detect Android Chrome specifically
-    const isAndroidChrome = /Android.*Chrome/i.test(navigator.userAgent) && 
-                           !/Edge|OPR|Samsung/i.test(navigator.userAgent);
-    
-    if (isAndroidChrome) {
-      console.log('Android Chrome detected - using enhanced permission strategy');
-    }
-
-    // For Android Chrome, we need to be more aggressive about permission requests
-    const stream = await navigator.mediaDevices.getUserMedia({ 
-      video: { 
-        width: { ideal: 1280, min: 320 },
-        height: { ideal: 720, min: 240 },
-        facingMode: 'user'
-      },
-      audio: false
-    });
-    
-    // Keep the stream active longer for Android
-    setTimeout(() => {
-      stream.getTracks().forEach(track => {
-        track.stop();
-        console.log('Stopped track:', track.kind);
-      });
-    }, isAndroidChrome ? 2000 : 100);
-    
-    console.log('Camera permission granted successfully');
-    return true;
-  } catch (error) {
-    console.error('Camera permission error:', error);
-    return false;
-  }
-};
-
 export const Content: React.FC = () => {
   const isFirstTimeOpen = useRef(true);
   const videoElement = React.useRef<HTMLVideoElement | null>(null);
@@ -81,9 +39,6 @@ export const Content: React.FC = () => {
   const [isAndroid, setIsAndroid] = useState(false);
   const [loadingTimeout, setLoadingTimeout] = useState<NodeJS.Timeout | null>(null);
   const [isTablet, setIsTablet] = useState(false);
-  const [permissionGranted, setPermissionGranted] = useState(false);
-  const [isAndroidChrome, setIsAndroidChrome] = useState(false);
-  const [showFallbackOptions, setShowFallbackOptions] = useState(false);
 
   const defaultSlideshowContent =
     useContentControllerGetDefaultSlideshowContent({
@@ -263,47 +218,6 @@ export const Content: React.FC = () => {
       langCode: company.data?.defaultLangCode ?? "en",
     });
   };
-
- const openInNewTab = () => {
-    const formUrl = messageStore.receivedContent?.content ?? "";
-    window.open(formUrl, '_blank', 'noopener,noreferrer');
-  };
-
-  const openInSameTab = () => {
-    const formUrl = messageStore.receivedContent?.content ?? "";
-    window.location.href = formUrl;
-  };
-
-  useEffect(() => {
-    // Detect Android Chrome
-    const androidChrome = /Android.*Chrome/i.test(navigator.userAgent) && 
-                         !/Edge|OPR|Samsung/i.test(navigator.userAgent);
-    setIsAndroidChrome(androidChrome);
-    
-    if (androidChrome) {
-      console.log('Android Chrome detected - will show fallback options if needed');
-    }
-  }, []);
-
-  useEffect(() => {
-    if (messageStore.receivedType === ("JotFormMessage" as any)) {
-      // For Android Chrome, show fallback options after a delay
-      if (isAndroidChrome) {
-        const timer = setTimeout(() => {
-          setShowFallbackOptions(true);
-        }, 3000);
-        return () => clearTimeout(timer);
-      }
-      
-      // Still try to request permission
-      const requestPermission = async () => {
-        const granted = await requestCameraPermission();
-        setPermissionGranted(granted);
-      };
-      
-      requestPermission();
-    }
-  }, [messageStore.receivedType, isAndroidChrome]);
 
   // Set a timeout for loading state
   useEffect(() => {
@@ -740,7 +654,7 @@ export const Content: React.FC = () => {
   }
 
 
-  if (messageStore.receivedType === ("JotFormMessage" as any)) {
+if (messageStore.receivedType === ("JotFormMessage" as any)) {
  return (
     <>
       <style jsx>{`
@@ -849,47 +763,6 @@ export const Content: React.FC = () => {
       `}</style>
         
       <div className="surveyWrapper w-screen h-screen flex flex-col bg-gray-100 relative">
-        {/* Android Chrome specific warning */}
-        {isAndroidChrome && showFallbackOptions && (
-          <div className="android-warning">
-            <div className="flex items-center mb-2">
-              <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z" clipRule="evenodd" />
-              </svg>
-              <span className="font-medium">Camera Access Issue Detected</span>
-            </div>
-            <p className="text-sm mb-2">
-              Android Chrome may block camera access in embedded forms. For full camera functionality:
-            </p>
-            <div className="fallback-buttons">
-              <button onClick={openInNewTab} className="fallback-btn">
-                📱 Open in New Tab
-              </button>
-              <button onClick={openInSameTab} className="fallback-btn">
-                🔄 Open Directly
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Enhanced permission status */}
-        {!permissionGranted && !isAndroidChrome && (
-          <div className="bg-blue-50 border-l-4 border-blue-400 text-blue-800 p-3 text-sm">
-            <div className="flex items-center">
-              <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-              </svg>
-              <span>Camera access may be needed for photo uploads in this form.</span>
-            </div>
-          </div>
-        )}
-
-        {/* Camera status indicator */}
-        {isAndroidChrome && (
-          <div className="camera-indicator">
-            📷 Android Chrome
-          </div>
-        )}
 
         {showQR && (
           <div
@@ -931,30 +804,25 @@ export const Content: React.FC = () => {
               : ''
             }`}
         >
+          {console.info("messageStore.receivedContent?.content", messageStore.receivedContent?.content)}
           <iframe
             ref={iframeRef}
             className="w-full h-full"
             src={messageStore.receivedContent?.content ?? ""}
             style={{ border: "none" }}
-            // Enhanced permissions specifically for Android Chrome
-            allow="camera 'self' *; microphone 'self' *; geolocation 'self' *; autoplay; encrypted-media; fullscreen; picture-in-picture; web-share; display-capture"
+            allow="camera; microphone; geolocation; autoplay; encrypted-media; fullscreen; picture-in-picture; web-share; display-capture; clipboard-read; clipboard-write; usb; magnetometer; gyroscope; accelerometer; ambient-light-sensor; battery; bluetooth; payment; midi; speaker-selection; screen-wake-lock; document-domain"
             allowFullScreen
-            // More specific sandbox for Android Chrome
-            sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-pointer-lock allow-top-navigation allow-presentation allow-downloads allow-modals allow-orientation-lock allow-popups-to-escape-sandbox"
-            // Additional attributes for Android Chrome
+            sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-pointer-lock allow-top-navigation allow-presentation allow-downloads allow-modals allow-orientation-lock allow-popups-to-escape-sandbox allow-storage-access-by-user-activation"
             referrerPolicy="strict-origin-when-cross-origin"
             loading="eager"
-            // Android Chrome specific attributes
-            {...(isAndroidChrome && {
-              'data-android-chrome': 'true',
-              'allowpaymentrequest': 'true'
-            })}
+            title="JotForm"
+            credentialless="true"
           />
         </div>
       </div>
     </>
   );
-  }
+}
 
   if (
     messageStore.receivedType === "Website" ||
