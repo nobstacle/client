@@ -39,7 +39,7 @@ export const Content: React.FC = () => {
   const [isAndroid, setIsAndroid] = useState(false);
   const [loadingTimeout, setLoadingTimeout] = useState<NodeJS.Timeout | null>(null);
   const [isTablet, setIsTablet] = useState(false);
-const [permissionGranted, setPermissionGranted] = useState(false);
+  const [permissionGranted, setPermissionGranted] = useState(false);
 
   const defaultSlideshowContent =
     useContentControllerGetDefaultSlideshowContent({
@@ -220,60 +220,108 @@ const [permissionGranted, setPermissionGranted] = useState(false);
     });
   };
 
+
   const requestCameraPermission = async () => {
     try {
       // Check if getUserMedia is supported
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        throw new Error('getUserMedia is not supported in this browser');
+        console.error('getUserMedia is not supported in this browser');
+        return false;
       }
-  
-      // Check current permission status
-      const permissionStatus = await navigator.permissions.query({ name: 'camera' as PermissionName });
-      console.log('Current camera permission status:', permissionStatus.state);
-  
-      if (permissionStatus.state === 'denied') {
-        throw new Error('Camera permission is blocked. Please enable it in browser settings.');
+
+      // For embedded iframes, we need to ensure the iframe has the right permissions
+      // Check if we're in an iframe context
+      const isInIframe = window !== window.parent;
+
+      if (isInIframe) {
+        console.log('Running in iframe context - checking iframe permissions');
       }
-  
-      // Request camera access
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { 
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
+
+      // Check current permission status first
+      try {
+        const permissionStatus = await navigator.permissions.query({ name: 'camera' as PermissionName });
+        console.log('Current camera permission status:', permissionStatus.state);
+
+        if (permissionStatus.state === 'denied') {
+          alert('Camera permission is blocked. Please enable it in browser settings and refresh the page.');
+          return false;
+        }
+      } catch (permError) {
+        console.log('Permission query not supported, proceeding with direct request');
+      }
+
+      // Request camera access with more specific constraints
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          width: { ideal: 1280, min: 640 },
+          height: { ideal: 720, min: 480 },
+          facingMode: 'user' // or 'environment' for back camera
         },
-        audio: true
+        audio: false // Set to true if you need audio as well
       });
-      
+
       // Stop the stream immediately since we just needed permission
-      stream.getTracks().forEach(track => track.stop());
-      
+      stream.getTracks().forEach(track => {
+        track.stop();
+        console.log('Stopped track:', track.kind);
+      });
+
       console.log('Camera permission granted successfully');
       return true;
     } catch (error) {
       console.error('Camera permission error:', error);
-      
-      // Provide specific error messages
-      if (error.name === 'NotAllowedError') {
-        alert('Camera access was denied. Please click the camera icon in your browser\'s address bar and allow camera access.');
-      } else if (error.name === 'NotFoundError') {
-        alert('No camera device found. Please connect a camera and try again.');
-      } else if (error.name === 'NotSupportedError') {
-        alert('Camera access is not supported in this browser or context.');
+
+      // Provide specific error messages based on error type
+      let errorMessage = 'Camera access failed. ';
+
+      switch (error.name) {
+        case 'NotAllowedError':
+          errorMessage += 'Please allow camera access when prompted, or check your browser settings.';
+          break;
+        case 'NotFoundError':
+          errorMessage += 'No camera device found. Please connect a camera and try again.';
+          break;
+        case 'NotSupportedError':
+          errorMessage += 'Camera access is not supported in this browser or context.';
+          break;
+        case 'NotReadableError':
+          errorMessage += 'Camera is already in use by another application.';
+          break;
+        case 'OverconstrainedError':
+          errorMessage += 'Camera constraints could not be satisfied.';
+          break;
+        case 'SecurityError':
+          errorMessage += 'Camera access blocked due to security restrictions.';
+          break;
+        default:
+          errorMessage += error.message || 'Unknown error occurred.';
       }
-      
+
+      // Don't show alert immediately - let the user try first
+      console.warn(errorMessage);
       return false;
     }
   };
-  
-    useEffect(() => {
-      // Request camera permission when component mounts
-      const requestPermission = async () => {
+
+  // Updated useEffect for requesting camera permission
+  useEffect(() => {
+    if (messageStore.receivedType === ("JotFormMessage" as any)) {
+      // Add a small delay to ensure the iframe is loaded
+      const timer = setTimeout(async () => {
+        console.log('Requesting camera permission for JotForm...');
         const granted = await requestCameraPermission();
         setPermissionGranted(granted);
-      };
-  
-      requestPermission();
-    }, []);
+
+        if (!granted) {
+          // Show a user-friendly message instead of an alert
+          console.log('Camera permission not granted - form will still work but camera features may be limited');
+        }
+      }, 1000); // 1 second delay
+
+      return () => clearTimeout(timer);
+    }
+  }, [messageStore.receivedType]);
+
 
   // Set a timeout for loading state
   useEffect(() => {
@@ -709,7 +757,7 @@ const [permissionGranted, setPermissionGranted] = useState(false);
     return <SurveyAnswer tag={messageStore.receivedSurvey.tag} />;
   }
 
-  
+
   if (messageStore.receivedType === ("JotFormMessage" as any)) {
     return (
       <>
@@ -774,20 +822,23 @@ const [permissionGranted, setPermissionGranted] = useState(false);
           transition: transform 0.5s ease-out;
         }
       `}</style>
-        
+
         <div className="surveyWrapper w-screen h-screen flex flex-col bg-gray-100">
-          {/* Show permission status if needed */}
-          {!permissionGranted && (
-            <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4">
-              <p className="font-bold">Camera Access Required</p>
-              <p>Please allow camera access to use all form features.</p>
+          {/* Enhanced permission status */}
+          {!permissionGranted && messageStore.receivedType === ("JotFormMessage" as any) && (
+            <div className="bg-blue-50 border-l-4 border-blue-400 text-blue-800 p-3 text-sm">
+              <div className="flex items-center">
+                <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                </svg>
+                <span>Camera access may be needed for photo uploads in this form.</span>
+              </div>
             </div>
           )}
 
           {showQR && (
             <div
-              className={`relative bg-white shadow-md px-4 py-3 z-50 ${isClosing ? 'qr-modal-exit' : 'qr-modal-enter'
-                }`}
+              className={`relative bg-white shadow-md px-4 py-3 z-50 ${isClosing ? 'qr-modal-exit' : 'qr-modal-enter'}`}
             >
               {qrCodeUrl && (
                 <div className="absolute left-4 top-1/2 transform -translate-y-1/2">
@@ -830,9 +881,14 @@ const [permissionGranted, setPermissionGranted] = useState(false);
               className="w-full h-full"
               src={messageStore.receivedContent?.content ?? ""}
               style={{ border: "none" }}
-              allow="camera *; microphone *; geolocation *; autoplay; encrypted-media; fullscreen"
+              // Enhanced permissions for camera access
+              allow="camera *; microphone *; geolocation *; autoplay; encrypted-media; fullscreen; picture-in-picture; web-share"
               allowFullScreen
-              sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-pointer-lock allow-top-navigation allow-presentation"
+              // More permissive sandbox to allow camera access
+              sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-pointer-lock allow-top-navigation allow-presentation allow-downloads allow-modals"
+              // Additional attributes that might help
+              referrerPolicy="no-referrer-when-downgrade"
+              loading="eager"
             />
           </div>
         </div>
