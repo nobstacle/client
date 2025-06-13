@@ -1474,18 +1474,20 @@ export const useWebsiteTemplateControllerCreateWebsiteTemplate = <TError = Error
 }
 
 export const websiteTemplateControllerPatchWebsiteTemplateOne = (
-	tag: string,
-	patchJotformTemplateReq: BodyType<PatchWebsiteTemplateReq>,
-	options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
-
-
-	return nobstacleBackendApiInstance<GetJotformTemplateRes>(
-		{
-			url: `/api/v1/content/jotform/${tag}`, method: 'PATCH',
-			headers: { 'Content-Type': 'application/json', },
-			data: patchJotformTemplateReq
-		},
-		options);
+  tag: string,
+  patchWebsiteTemplateReq: BodyType<PatchWebsiteTemplateReq>,
+  options?: SecondParameter<typeof nobstacleBackendApiInstance>,
+) => {
+	console.info("tagtagtag",tag)
+  return nobstacleBackendApiInstance<GetWebsiteTemplateRes>(
+    {
+      url: `/api/v1/content/website/${tag}`,
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      data: patchWebsiteTemplateReq
+    },
+    options
+  );
 }
 
 export const websiteTemplateControllerPatchJotformTemplateOne = (
@@ -1581,6 +1583,7 @@ export const useWebsiteTemplateControllerPatchWebsiteTemplateOne = <TError = Err
 	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof websiteTemplateControllerPatchWebsiteTemplateOne>>, TError, { tag: string; data: BodyType<PatchWebsiteTemplateReq> }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
 	) => {
 
+		console.info("ONONE ONONEON ", options);
 	const mutationOptions = getWebsiteTemplateControllerPatchWebsiteTemplateOneMutationOptions(options);
 
 	return useMutation(mutationOptions);

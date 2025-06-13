@@ -66,30 +66,30 @@ export const UpdateWebsiteTemplateForm: React.FC<{
     if (content.isSuccess) {
       setValue("url", content.data.content ?? "");
     }
-  }, [content.isSuccess]);
+  }, [content.isSuccess, content.data?.content, setValue]);
 
   const updateWebsiteTemplate =
     useWebsiteTemplateControllerPatchWebsiteTemplateOne();
-  const handleUpdateWebsiteTemplate = (
-    data: CreateWebsiteTemplateFormFieldValues,
-  ) => {
-    updateWebsiteTemplate.mutate(
-      {
-        tag,
-        data: {
-          defaultLangCode: company.data?.defaultLangCode ?? "en",
-          url: data.url,
-          langCode: defaultLangCode,
-        },
+  const handleUpdateWebsiteTemplate = (data: CreateWebsiteTemplateFormFieldValues) => {
+    if (!company.data) {
+      console.error("Company data not loaded yet");
+      return;
+    }
+
+    updateWebsiteTemplate.mutate({
+      tag,
+      data: {
+        defaultLangCode: company.data.defaultLangCode ?? "en",
+        url: data.url,
+        langCode: defaultLangCode,
       },
-      {
-        onSuccess: (template) => {
-          if (cb) {
-            cb(template);
-          }
-        },
+    }, {
+      onSuccess: (template) => {
+        if (cb) {
+          cb(template);
+        }
       },
-    );
+    });
   };
 
   const onSubmit: SubmitHandler<CreateWebsiteTemplateFormFieldValues> = (
