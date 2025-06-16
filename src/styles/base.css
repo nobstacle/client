@@ -700,3 +700,7 @@ button {
   width: 100%;
   max-width: 40vw;
 }
+
+.custompadding {
+  padding-left: 3.5rem !important;
+}

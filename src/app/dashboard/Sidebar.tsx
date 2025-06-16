@@ -240,7 +240,7 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
                             onClick={() => toggleMenu(item)}
                             className={`
                                 flex items-center justify-between w-full px-4 py-3 cursor-pointer
-                                hover:bg-primary-dark transition-colors duration-200
+                                transition-colors duration-200
                                 ${level > 0 ? 'pl-8' : ''}
                                 ${hasActiveChild ? 'text-white' : 'text-white/90 hover:text-white'}
                             `}
@@ -289,10 +289,10 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
                     <div onClick={closeSidebar}>
                         <div
                             className={`
-                                flex items-center px-4 py-2 transition-colors duration-200 text-sm cursor-pointer customFont
+                                flex items-center px-4 py-2 transition-colors duration-200 text-sm cursor-pointer customFont custompadding
                                 ${isActive
                                     ? 'bg-primary-dark text-white'
-                                    : 'text-white/80 hover:text-white hover:bg-primary-dark/50'
+                                    : 'text-white/80 hover:text-white'
                                 }
                             `}
                         >
