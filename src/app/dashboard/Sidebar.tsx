@@ -242,7 +242,7 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
                                 flex items-center justify-between w-full px-4 py-3 cursor-pointer
                                 hover:bg-primary-dark transition-colors duration-200
                                 ${level > 0 ? 'pl-8' : ''}
-                                ${hasActiveChild ? 'bg-primary-dark/50 text-white' : 'text-white/90 hover:text-white'}
+                                ${hasActiveChild ? 'text-white' : 'text-white/90 hover:text-white'}
                             `}
                         >
                             <div className="flex items-center gap-3">
@@ -311,7 +311,7 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
 
     if (!mounted) {
         return (
-            <div className="relative w-[18%] sm:w-[16%] md:w-[13%] lg:w-[11.5%] xl:w-[10%] flex h-full flex-col bg-primary customSidebar">
+            <div className="relative w-[19%] sm:w-[17%] md:w-[14%] lg:w-[12.5%] xl:w-[11%] flex h-full flex-col bg-primary customSidebar">
                 <div
                     style={{
                         minHeight: "5rem",
@@ -386,7 +386,7 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
                     flex h-full flex-col bg-primary customSidebar transition-transform duration-300 ease-in-out z-40
                     ${isMobile
                         ? `fixed left-0 top-0 w-64 ${isOpen ? 'translate-x-0' : '-translate-x-full'}`
-                        : 'relative w-[18%] sm:w-[16%] md:w-[13%] lg:w-[11.5%] xl:w-[10%]'
+                        : 'relative w-[19%] sm:w-[17%] md:w-[14%] lg:w-[12.5%] xl:w-[11%]'
                     }
                 `}
             >
