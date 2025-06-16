@@ -222,7 +222,7 @@ export default function Documents() {
                                 searchOnChange={search}
                                 onClear={clearSearch}
                                 isSearching={isSearching}
-                                placeholder="Search documents by name, tag, or file type..."
+                                placeholder="Search template"
                             />
                         </div>
                     </Card>

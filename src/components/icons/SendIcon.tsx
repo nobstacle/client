@@ -16,7 +16,7 @@ export const SendIcon: React.FC<SendIconProps> = ({ size = 20 }) => {
       style={{
         width: finalSize,
         height: finalSize,
-        margin: "0 auto",
+        // margin: "0 auto",
       }}
       xmlSpace="preserve"
     >

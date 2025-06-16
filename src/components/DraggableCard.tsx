@@ -119,7 +119,7 @@ export const DraggableCardItem: React.FC<
           }
         }}
         id="card-container"
-        className="relative flex h-[166px] w-full max-w-[166px] cursor-pointer flex-col rounded-md bg-neutral-300 shadow-2xl"
+        className="relative flex h-[166px] w-full max-w-[166px] cursor-pointer flex-col rounded-md bg-neutral-300 shadow-2xl mb-4"
         style={{
           ...style,
           zIndex: isDragging ? 9999 : 1,

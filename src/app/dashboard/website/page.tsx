@@ -130,7 +130,7 @@ export default function Dashboard() {
         </div>
         {websitesSource.length > 0 && (
           <div className="w-50">
-            <SearchTemplateForm searchOnChange={search} />
+            <SearchTemplateForm searchOnChange={search} placeholder="Search template"/>
           </div>
         )}
         {userData?.user.Roles?.includes("Admin") && (

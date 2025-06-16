@@ -1,113 +1,20 @@
 "use client";
 
-import { useState } from "react";
-import Modal from "../../../components/Modal";
-import { CreateWebsiteTemplateForm } from "../../../components/pages/dashboard/CreateWebsiteTemplateForm";
-import { useDisclousure } from "../../../hooks/useDisclosure";
 import {
   useCompanyControllerGetCompany,
-  useWebsiteTemplateControllerDeleteWebsiteTemplateOne,
-  useWebsiteTemplateControllerPatchWebsiteTemplateOrder,
 } from "../../../lib/client/api";
-import useTemplateStore from "../../../lib/zustand/store/templateStore";
 import { useSearchParams } from "next/navigation";
-import { Card } from "../../../components/Card";
 import { useSocketContext } from "../../../context/SocketContextProvider";
-import { ChatType } from "../../../constant/types";
-import { useSession } from "next-auth/react";
-import { PlusIcon } from "../../../components/icons/PlusIcon";
 import { useHasHydrated } from "../../../hooks/useHydrated";
-import { UpdateWebsiteTemplateForm } from "../../../components/pages/dashboard/UpdateWebsiteTemplateForm";
-import { GetWebsiteTemplateRes } from "../../../lib/client/model";
-import { useSearchTemplate } from "../../../hooks/useSearchTemplate";
-import { MapIcon } from "../../../components/icons/MapIcon";
-import { SearchTemplateForm } from "../../../components/pages/dashboard/SearchTemplateForm";
-import { WebsiteIcon } from "../../../components/icons/sidebar/WebsiteIcon";
 import { SendJotFormTemplateForm } from "../../../components/pages/dashboard/SendJotFormTemplateForm";
-import { OpenLinkIcon } from "../../../components/icons/sidebar/OpenLinkIcon";
-import {
-  DraggableCardContainer,
-  DraggableCardItem,
-} from "../../../components/DraggableCard";
-import { UniqueIdentifier } from "@dnd-kit/core";
-import { arrayMove } from "@dnd-kit/sortable";
 
 export default function Dashboard() {
-  const [editTemplate, setEditTemplate] =
-    useState<null | GetWebsiteTemplateRes>(null);
+
   const hasHydrated = useHasHydrated();
-
-  
   const params = useSearchParams();
-  const { setWebsites, websites, searchWebsites, setSearchWebsites } =
-    useTemplateStore();
-  const { search } = useSearchTemplate(websites, setSearchWebsites);
-
-  const deleteWebsiteTemplate =
-    useWebsiteTemplateControllerDeleteWebsiteTemplateOne();
-
-  const updateTextTemplateOrder =
-    useWebsiteTemplateControllerPatchWebsiteTemplateOrder();
-
-  const { handleClose, handleOpen, isOpen } = useDisclousure();
-  const {
-    handleClose: updateHandleClose,
-    handleOpen: updateHandleOpen,
-    isOpen: updateIsOpen,
-  } = useDisclousure();
   const { emitSendTemplate } = useSocketContext();
   const { data: companyData } = useCompanyControllerGetCompany();
-  const { data: userData } = useSession();
-
-  const sendTemplate = (id: number, isAvailable: boolean) => {
-    emitSendTemplate({
-      refId: id,
-      langCode: isAvailable
-        ? params.get("lang") || companyData?.defaultLangCode || "en"
-        : companyData?.defaultLangCode || "en",
-      refType: ChatType.Website,
-      station: Number(params.get("station") ?? 1),
-    });
-  };
-
-  const onDeleteCard = (id: number) => {
-    deleteWebsiteTemplate.mutate(
-      { id },
-      {
-        onSuccess: () => {
-          const newWebsites = websites.filter((data) => data.id !== id);
-          setWebsites(newWebsites);
-        },
-      },
-    );
-  };
-
-  const onUpdateCard = (Website: GetWebsiteTemplateRes) => {
-    setEditTemplate(Website);
-    updateHandleOpen();
-  };
-
-  const sortWebsites = (item1: UniqueIdentifier, item2: UniqueIdentifier) => {
-    const setResource =
-      searchWebsites.length > 0 ? setSearchWebsites : setWebsites;
-    const websitesResource =
-      searchWebsites.length > 0 ? searchWebsites : websites;
-
-    const oldIndex = websitesResource.findIndex((item) => item.id === item1);
-    const newIndex = websitesResource.findIndex((item) => item.id === item2);
-
-    let shallow = [...websitesResource];
-    shallow = arrayMove(websitesResource, oldIndex, newIndex);
-
-    shallow.forEach(({ id }, index) => {
-      updateTextTemplateOrder.mutate({
-        data: { order: index + 1 },
-        id,
-      });
-    });
-
-    setResource(shallow);
-  };
+  let isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
 
   const sendJotFormTemplateMessage = (url: string) => {
     emitSendTemplate({
@@ -119,150 +26,14 @@ export default function Dashboard() {
     });
   };
 
-  const websitesSource = searchWebsites.length > 0 ? searchWebsites : websites;
-  
   if (hasHydrated)
     return (
-      <div className="flex h-full w-full flex-col justify-start gap-4 overflow-y-auto  p-6">
+      <div className={`flex h-full w-full flex-col justify-start gap-4 overflow-y-auto ${isMobile ? 'p-4' : 'p-6'}`}>
         <div className="flex w-full flex-col gap-4">
           <div className="flex w-full flex-col items-end gap-4 ">
             <SendJotFormTemplateForm onSend={sendJotFormTemplateMessage} />
           </div>
         </div>
-        {/* {websitesSource.length > 0 && (
-          <div className="w-50">
-            <SearchTemplateForm searchOnChange={search} />
-          </div>
-        )} */}
-        {/* {userData?.user.Roles?.includes("Admin") && (
-          <Modal
-            title="Create template"
-            closeModal={handleClose}
-            isOpen={isOpen}
-          >
-            <CreateWebsiteTemplateForm
-              cb={(template, isUpdate) => {
-                handleClose();
-                if (!isUpdate) {
-                  websites.push(template);
-                  setWebsites(websites);
-                } else {
-                  const shallow = [...websites];
-                  const index = shallow.findIndex(
-                    ({ id }) => id === template.id,
-                  );
-                  shallow[index]["langCode"] = template.langCode;
-                  shallow[index]["url"] = template.url;
-
-                  setWebsites(shallow);
-                }
-              }}
-            />
-          </Modal> 
-        )} */}
-        {/* <div id="card-wrapper" className="flex h-full w-full">
-          <div className="flex w-full flex-wrap content-start gap-4">
-            <DraggableCardContainer items={websitesSource} sort={sortWebsites}>
-              {websitesSource?.map((val) => (
-                <DraggableCardItem
-                  id={val.id}
-                  isAdmin={userData?.user.Roles?.includes("Admin")}
-                  key={val.id}
-                  tag={val.tag}
-                  onUpdate={() => onUpdateCard(val)}
-                  onDelete={() => {
-                    onDeleteCard(val.id);
-                  }}
-                  sendOnClick={() =>
-                    sendTemplate(
-                      val.id,
-                      val.langCode.includes(
-                        params.get("lang") ||
-                          companyData?.defaultLangCode ||
-                          "",
-                      ),
-                    )
-                  }
-                  isAvailable={val.langCode.includes(
-                    params.get("lang") || companyData?.defaultLangCode || "",
-                  )}
-                  icon={
-                    userData?.user.Roles?.includes("Staff") ? (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (val.url) {
-                            window.open(`${val.url}`);
-                          }
-                        }}
-                        className="absolute bottom-0 right-0 text-white"
-                      >
-                        {val.langCode.includes(
-                          params.get("lang") ||
-                            companyData?.defaultLangCode ||
-                            "",
-                        ) ? (
-                          <span
-                            className="absolute bottom-0 right-0 h-0 w-0
-                 border-b-[15px] border-l-[15px]
-                 border-green-500
-                 border-l-transparent"
-                          />
-                        ) : (
-                          <span
-                            className="absolute bottom-0 right-0 h-0 w-0
-                 border-b-[15px] border-l-[15px]
-                 border-red-500
-                 border-l-transparent"
-                          />
-                        )}
-                      </button>
-                    ) : undefined
-                  }
-                  isDraggable={searchWebsites.length === 0}
-                >
-                  <div className="flex w-full items-center justify-center">
-                    <WebsiteIcon width="100px" height="100px" />
-                  </div>
-                </DraggableCardItem>
-              ))}
-            </DraggableCardContainer>
-
-            {editTemplate && (
-              <Modal
-                title="Update template"
-                closeModal={updateHandleClose}
-                isOpen={updateIsOpen}
-              >
-                <UpdateWebsiteTemplateForm
-                  defaultLangCode={
-                    params.get("lang") || companyData?.defaultLangCode || "en"
-                  }
-                  sourceId={editTemplate?.id}
-                  tag={editTemplate.tag}
-                  cb={(template) => {
-                    updateHandleClose();
-                    const shallow = [...websites];
-                    const index = shallow.findIndex(
-                      ({ id }) => id === template.id,
-                    );
-                    shallow[index]["langCode"] = template.langCode;
-                    shallow[index]["url"] = template.url;
-                    setWebsites(shallow);
-                  }}
-                />
-              </Modal>
-            )}
-          </div>
-        </div> */}
-
-        {/* {userData?.user.Roles?.includes("Admin") && (
-          <div className="fixed bottom-0 right-0 p-4">
-            <button onClick={handleOpen}>
-              <PlusIcon />
-            </button>
-          </div>
-        )} */}
       </div>
     );
 

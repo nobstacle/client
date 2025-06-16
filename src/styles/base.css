@@ -646,8 +646,57 @@ button {
   .customJustifyHeader {
     justify-content: flex-end;
   }
+
+  .customWebsiteFormWidth {
+    width: 100% !important;
+  }
+
+  .customSUrveyHeaderCard .formInnerCOntainer {
+    flex-direction: row !important;
+  }
+
+  .customSUrveyHeaderCard .formInnerCOntainer input {
+    width: 100% !important;
+  }
+
+  .customSurveyTable .ant-table-wrapper {
+    overflow: hidden;
+    overflow-x: scroll;
+  }
+
+  .customJotFOrmHeader {
+    max-width: 100% !important;
+  }
+
+  .customHamburger {
+    top: 0.75rem !important;
+  }
+}
+
+.customFont {
+  font-size: 1rem;
+}
+
+@media screen and (max-width: 1600px) {
+  .customFont {
+    font-size: 0.7rem !important;
+  }
+
+  .customMenuIcon svg {
+    width: 1rem !important;
+    height: 1rem !important;
+  }
 }
 
 .customJustifyHeader {
   justify-content: flex-start;
+}
+
+.customWebsiteFormWidth {
+  width: 50%;
+}
+
+.customJotFOrmHeader {
+  width: 100%;
+  max-width: 40vw;
 }

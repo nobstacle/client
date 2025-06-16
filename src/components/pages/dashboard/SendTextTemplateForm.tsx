@@ -34,41 +34,41 @@ export const SendTextTemplateForm: React.FC<PropsI> = ({ onSend }) => {
   };
 
   return (
-      <Form layout="vertical" onFinish={handleSubmit(onSubmit)} className="w-full gap-4">
-        <Row gutter={16}>
-          <Col md={23} xs={24}>
-            <Form.Item
-              label="Message"
-              validateStatus={errors.content ? "error" : ""}
-              help={errors.content?.message}
-            >
-              <Controller
-                name="content"
-                control={control}
-                render={({ field }) => (
-                  <Input.TextArea
-                    {...field}
-                    rows={5}
-                    placeholder="Type your message here"
-                  />
-                )}
-              />
-            </Form.Item>
-          </Col>
-          <Col md={1} xs={24} style={{
-            display: 'flex',
-            alignItems: 'end'
-          }}>
-            <Form.Item>
-              <Button
-                type="primary"
-                htmlType="submit"
-                icon={<SendIcon size={20}/>}
-               className="headerButton"
-              />
-            </Form.Item>
-          </Col>
-        </Row>
-      </Form>
+    <Form layout="vertical" onFinish={handleSubmit(onSubmit)} className="w-full gap-4 customTextTemplateForm">
+      <Row gutter={16}>
+        <Col md={23} xs={19}>
+          <Form.Item
+            label="Message"
+            validateStatus={errors.content ? "error" : ""}
+            help={errors.content?.message}
+          >
+            <Controller
+              name="content"
+              control={control}
+              render={({ field }) => (
+                <Input.TextArea
+                  {...field}
+                  rows={5}
+                  placeholder="Type your message here"
+                />
+              )}
+            />
+          </Form.Item>
+        </Col>
+        <Col md={1} xs={4} style={{
+          display: 'flex',
+          alignItems: 'end'
+        }}>
+          <Form.Item>
+            <Button
+              type="primary"
+              htmlType="submit"
+              icon={<SendIcon size={20} />}
+              className="headerButton"
+            />
+          </Form.Item>
+        </Col>
+      </Row>
+    </Form>
   );
 };

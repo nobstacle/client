@@ -32,7 +32,7 @@ export const SendWebsiteTemplateForm: React.FC<PropsI> = ({ onSend }) => {
 
   return (
     <Card className="w-full customCards">
-      <Form onFinish={handleSubmit(onSubmit)} className="w-1/2">
+      <Form onFinish={handleSubmit(onSubmit)} className="customWebsiteFormWidth">
         <div className="flex items-center gap-4">
           <Form.Item
             validateStatus={errors.url ? "error" : ""}

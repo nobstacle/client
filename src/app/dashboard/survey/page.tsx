@@ -83,7 +83,7 @@ function SurveyAnswers() {
       render: (value: number) => (
         <Tag
           color={surveyAnswerValToColor(value)}
-className="flex items-center justify-center w-8 h-8 rounded-full text-white text-sm font-medium"
+          className="flex items-center justify-center w-8 h-8 rounded-full text-white text-sm font-medium"
         >
           <b>{value.toString().charAt(0).toUpperCase()}</b>
         </Tag>

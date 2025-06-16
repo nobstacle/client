@@ -118,7 +118,7 @@ export default function VideoDashboard() {
               <SearchTemplateForm
                 searchOnChange={search}
                 onClear={clearSearch}
-                placeholder="Search documents by name, tag, or file type..."
+                placeholder="Search template"
               />
             </div>
           </Card>

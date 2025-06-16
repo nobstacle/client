@@ -68,7 +68,7 @@ export const SendMapForm: React.FC<{
     <Card className="customCards">
       <Form layout="inline" onFinish={handleSubmit(onSubmit)} >
         <Row gutter={16} style={{ display: "flex", alignItems: "center", width: "100%" }}>
-          <Col xs={24} md={8}>
+          <Col xs={20} md={8} className="mb-4">
             <Form.Item
               validateStatus={errors.origin ? "error" : ""}
               help={errors.origin?.message}
@@ -89,7 +89,7 @@ export const SendMapForm: React.FC<{
             </Form.Item>
           </Col>
 
-          <Col xs={24} md={8}>
+          <Col xs={20} md={8} className="mb-4">
             <Form.Item
               validateStatus={errors.destination ? "error" : ""}
               help={errors.destination?.message}
@@ -110,14 +110,14 @@ export const SendMapForm: React.FC<{
             </Form.Item>
           </Col>
 
-          <Col md={4} xs={24}>
-            <Form.Item style={{ marginBottom: 0 }}>
+          <Col md={4} xs={2} className="mb-4">
+            <Form.Item style={{ marginBottom: 0 }} >
               <AntdButton
                 type="primary"
                 htmlType="submit"
                 loading={createMapsTemplate.status === "pending"}
                 disabled={createMapsTemplate.status === "pending"}
-                icon={<SendIcon size={20}/>}
+                icon={<SendIcon size={20} />}
                 className="headerButton"
               />
             </Form.Item>

@@ -66,6 +66,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 	const { socket } = useSocketContext();
 	const [pageSize, setPageSize] = useState(10);
 	let userROle = userData?.user?.Roles[0];
+	let isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
 
 	useEffect(() => {
 		lastSearchRef.current = lastSearchedValue;
@@ -80,12 +81,13 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 	};
 
 	const openModal = () => setIsModalOpen(true);
+
 	const closeModal = () => {
 		setIsModalOpen(false);
 		setManualInputValues({});
 	}
-	const closeSendModal = () => setIsSendModalOpen(false);
 
+	const closeSendModal = () => setIsSendModalOpen(false);
 
 	const closeReportModal = () => {
 		setIsReportModal(false);
@@ -275,14 +277,6 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 			field.name.includes('listable')
 		);
 
-		// const sortedListableFields = listableFields
-		// 	.filter(field =>
-		// 		uniqueKeys.some(key => key.toLowerCase() === field.name.toLowerCase())
-		// 	)
-		// 	.sort((a, b) => a.name.localeCompare(b.name));
-
-		// const filteredKeys = sortedListableFields.map(field => field.text);
-
 		const normalizeTableData = (data: any, labelFields: any) => {
 			const fieldLabelMap: Record<string, string> = {};
 			labelFields.forEach(field => {
@@ -419,24 +413,29 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 				key: 'action',
 				fixed: 'right',
 				render: (_: any, item: any, rowIndex: number) => (
-					<div className="flex flex-wrap gap-2  items-center">
+					<div className="flex flex-wrap gap-1 sm:gap-2 items-center justify-center sm:justify-start">
 						<Button
 							title="Copy URL"
 							onClick={() => copyFormUrl(item)}
 							disabled={!!item?.formData?.submission_id}
-							className={`group flex items-center justify-center w-8 h-8 text-white font-medium rounded-full text-xs text-center
-        ${item?.formData?.submission_id
+							className={`group flex items-center justify-center w-6 h-6 sm:w-8 sm:h-8 text-white font-medium rounded-full text-xs text-center
+					${item?.formData?.submission_id
 									? 'bg-[#005d4d] cursor-not-allowed'
 									: 'bg-green-700 hover:bg-green-800 focus:outline-none focus:ring-4 focus:ring-green-300 dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-green-800'}
-      `}
+				`}
 							style={{
 								background: item?.formData?.submission_id ? '#005d4d' : '#008080',
 								padding: 0,
 							}}
 						>
 							<FaCopy
+								size={10}
+								className={`sm:hidden transition-colors duration-200 ${!item?.formData?.submission_id ? 'group-hover:text-white' : 'text-gray-400'
+									}`}
+							/>
+							<FaCopy
 								size={14}
-								className={`transition-colors duration-200 ${!item?.formData?.submission_id ? 'group-hover:text-white' : 'text-gray-400'
+								className={`hidden sm:block transition-colors duration-200 ${!item?.formData?.submission_id ? 'group-hover:text-white' : 'text-gray-400'
 									}`}
 							/>
 						</Button>
@@ -448,24 +447,24 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 									handlePDFDownload(item?.formData?.form_id, item?.formData?.submission_id, rowIndex)
 								}
 								className={`
-          w-8 h-8 
-          flex items-center justify-center 
-          text-white 
-          bg-[#3b5998] 
-          hover:bg-[#2d4373] 
-          focus:ring-0 
-          border-none 
-          font-medium 
-          rounded-full 
-          text-xs
-          disabled:opacity-70
-          disabled:cursor-not-allowed
-        `}
+						w-6 h-6 sm:w-8 sm:h-8
+						flex items-center justify-center 
+						text-white 
+						bg-[#3b5998] 
+						hover:bg-[#2d4373] 
+						focus:ring-0 
+						border-none 
+						font-medium 
+						rounded-full 
+						text-xs
+						disabled:opacity-70
+						disabled:cursor-not-allowed
+					`}
 								disabled={downloadingPDF === rowIndex}
 							>
 								{downloadingPDF === rowIndex ? (
 									<svg
-										className="animate-spin h-3.5 w-3.5"
+										className="animate-spin h-2.5 w-2.5 sm:h-3.5 sm:w-3.5"
 										viewBox="0 0 24 24"
 										fill="none"
 									>
@@ -484,7 +483,14 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 										/>
 									</svg>
 								) : (
-									<FaFilePdf size={14} />
+									<>
+										{isMobile ? (
+											<SendIcon size={10} className="sm:hidden" />
+										) : (
+
+											<SendIcon size={14} className="hidden sm:block" />
+										)}
+									</>
 								)}
 							</button>
 						) : (
@@ -492,19 +498,24 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 								title="Send Form"
 								onClick={() => handleUploadedSend(item)}
 								className={`
-          w-8 h-8 
-          flex items-center justify-center 
-          text-white 
-          bg-[#3b5998] 
-          hover:bg-[#2d4373] 
-          focus:ring-0 
-          border-none 
-          font-medium 
-          rounded-full 
-          text-xs
-        `}
+						w-6 h-6 sm:w-8 sm:h-8
+						flex items-center justify-center 
+						text-white 
+						bg-[#3b5998] 
+						hover:bg-[#2d4373] 
+						focus:ring-0 
+						border-none 
+						font-medium 
+						rounded-full 
+						text-xs
+					`}
 							>
-								<SendIcon size={14} />
+								{isMobile ? (
+									<SendIcon size={10} className="sm:hidden" />
+								) : (
+
+									<SendIcon size={14} className="hidden sm:block" />
+								)}
 							</button>
 						)}
 
@@ -512,25 +523,25 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 							onClick={() => deleteRecord(item)}
 							disabled={userROle !== 'Admin' ? true : false}
 							className="
-        w-8 h-8 
-        flex items-center justify-center 
-        text-white 
-        bg-red-700 
-        hover:bg-red-800 
-        focus:ring-4 focus:ring-red-300 
-        font-medium 
-        rounded-full 
-        text-xs
-		disabled:opacity-80
-        disabled:cursor-not-allowed
-      "
+					w-6 h-6 sm:w-8 sm:h-8
+					flex items-center justify-center 
+					text-white 
+					bg-red-700 
+					hover:bg-red-800 
+					focus:ring-4 focus:ring-red-300 
+					font-medium 
+					rounded-full 
+					text-xs
+					disabled:opacity-80
+					disabled:cursor-not-allowed
+				"
 						>
-							<FaTrash size={12} />
+							<FaTrash size={8} className="sm:hidden" />
+							<FaTrash size={12} className="hidden sm:block" />
 						</button>
 					</div>
 				),
-
-			},
+			}
 		];
 
 		const calculatedTotalPages = Math.ceil(totalItems / 10);
@@ -845,6 +856,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 			setManualInputValues({});
 		}
 	}
+
 	const handleManualInputChange = (text: string, value: string) => {
 		setManualInputValues((prev) => ({
 			...prev,
@@ -960,68 +972,6 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 		}
 	};
 
-	// const handleBulkUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-	// 	if (!e.target.files || e.target.files.length === 0) {
-	// 		console.error("No file selected");
-	// 		return;
-	// 	}
-
-	// 	const file = e.target.files[0];
-	// 	const API_URL = Url + `/api/jotform/upload/${selectedForm || ""}`;
-
-	// 	const formData = new FormData();
-	// 	formData.append("formId", selectedForm || "");
-	// 	formData.append("data", file);
-
-	// 	try {
-	// 		const response = await axios.post(API_URL, formData, {
-	// 			headers: {
-	// 				"Content-Type": "multipart/form-data",
-	// 			},
-	// 		});
-	// 		setCurrentPage(1)
-	// 		getTableResponse(selectedForm || null, 1, 5, lastSearchedValue, selectedFilter);
-
-	// 		if (response.status === 201) {
-	// 			toast.success('Response uploaded successsfully!', {
-	// 				position: "bottom-right",
-	// 				autoClose: 5000,
-	// 				hideProgressBar: false,
-	// 				closeOnClick: false,
-	// 				pauseOnHover: true,
-	// 				draggable: true,
-	// 				progress: undefined,
-	// 				theme: "colored",
-	// 				transition: Bounce,
-	// 			});
-	// 		} else {
-	// 			toast.error('Unable to upload response.', {
-	// 				position: "bottom-right",
-	// 				autoClose: 5000,
-	// 				hideProgressBar: false,
-	// 				closeOnClick: false,
-	// 				pauseOnHover: true,
-	// 				draggable: true,
-	// 				progress: undefined,
-	// 				theme: "colored",
-	// 				transition: Bounce,
-	// 			});
-	// 		}
-	// 	} catch (error) {
-	// 		toast.error('Unable to upload response.', {
-	// 			position: "bottom-right",
-	// 			autoClose: 5000,
-	// 			hideProgressBar: false,
-	// 			closeOnClick: false,
-	// 			pauseOnHover: true,
-	// 			draggable: true,
-	// 			progress: undefined,
-	// 			theme: "colored",
-	// 			transition: Bounce,
-	// 		});
-	// 	}
-	// };
-
 	const onFinish = (values: any) => {
 		setLoader(true);
 
@@ -1060,27 +1010,6 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 		setLastSearchedValue(searchParams);
 		getTableResponse(selectedForm, 1, 10, searchParams, selectedFilter);
 	};
-
-	// const onSearchSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-	// 	setLoader(true);
-	// 	e.preventDefault();
-
-	// 	const formData = new FormData(e.currentTarget);
-	// 	const searchValues = Object.fromEntries(formData.entries());
-	// 	const searchParams = Object.entries(searchValues)
-	// 		.filter(([_, value]) => value !== "")
-	// 		.map(([label, value]) => `{label:${label},value:${value}}`)
-	// 		.join(',');
-	// 	let finalSearch = "";
-
-	// 	if (searchParams !== "") {
-	// 		finalSearch = `${searchParams}`
-	// 	}
-
-	// 	setCurrentPage(1);
-	// 	setLastSearchedValue(finalSearch);
-	// 	getTableResponse(selectedForm, 1, 8, finalSearch, selectedFilter)
-	// };
 
 	const handleSampleCSVDownload = () => {
 		if (
@@ -1308,82 +1237,193 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 	}
 
 	return (
-		<div className="bg-gray-50 p-6 rounded-lg shadow-md w-full mx-auto">
-			<div className="flex justify-between items-end mb-4">
-				<div className="flex items-end gap-2" style={{ width: '100%', maxWidth: '40vw' }}>
-					<Select
-						className="w-full"
-						onChange={handleFormChange}
-						style={{ minWidth: '30%', maxWidth: '35%' }}
-						placeholder="Select Form"
-						value={selectedForm}
-					>
-						{assignedForms.map((assignedForm) => (
-							<Option key={assignedForm?.form_id} value={assignedForm?.form_id}>
-								{assignedForm?.form_name}
-							</Option>
-						))}
-					</Select>
+		<div className="bg-gray-50 p-2 rounded-lg shadow-md w-full mx-auto">
+			<div className="mb-4">
+				{/* Mobile Layout */}
+				<div className="block sm:hidden">
+					{/* First Row - Select Dropdown */}
+					<Row className="mb-3">
+						<Col span={24}>
+							<Select
+								className="w-full"
+								onChange={handleFormChange}
+								placeholder="Select Form"
+								value={selectedForm}
+								size="middle"
+							>
+								{assignedForms.map((assignedForm) => (
+									<Option key={assignedForm?.form_id} value={assignedForm?.form_id}>
+										{assignedForm?.form_name}
+									</Option>
+								))}
+							</Select>
+						</Col>
+					</Row>
 
-					<Tooltip title="Send Form">
-						<Button
-							onClick={onSubmit}
-							icon={<SendIcon />}
-							type="primary"
-							className="headerButton"
-						/>
-					</Tooltip>
+					{/* Second Row - Action Buttons */}
+					<Row gutter={[8, 8]} justify="space-between" align="middle">
+						<Col flex="auto">
+							<div className="flex items-center gap-2 flex-wrap">
+								<Tooltip title="Send Form">
+									<Button
+										onClick={onSubmit}
+										icon={<SendIcon />}
+										type="primary"
+										className="headerButton"
+										size="middle"
+									/>
+								</Tooltip>
 
-					<Tooltip title="Prefill or upload">
-						<Button
-							onClick={openModal}
-							icon={<BsFillSendPlusFill size={20} color="#fff" />}
-							type="primary"
-							className="headerButton"
-						/>
-					</Tooltip>
-					<Tooltip title="Blank Form">
-						<Button
-							onClick={sendBlankForm}
-							icon={<IoQrCode size={20} color="#fff" />}
-							type="primary"
-							className="headerButton"
-						/>
-					</Tooltip>
+								<Tooltip title="Prefill or upload">
+									<Button
+										onClick={openModal}
+										icon={<BsFillSendPlusFill size={18} color="#fff" />}
+										type="primary"
+										className="headerButton"
+										size="middle"
+									/>
+								</Tooltip>
+
+								<Tooltip title="Blank Form">
+									<Button
+										onClick={sendBlankForm}
+										icon={<IoQrCode size={18} color="#fff" />}
+										type="primary"
+										className="headerButton"
+										size="middle"
+									/>
+								</Tooltip>
+
+								{selectedForm && (
+									<>
+										<Tooltip title="Download Sample CSV">
+											<Button
+												onClick={handleSampleCSVDownload}
+												icon={<FaFileDownload size={18} color="#fff" />}
+												type="primary"
+												className="headerButton"
+												size="middle"
+											/>
+										</Tooltip>
+										<Tooltip title="Upload File">
+											<Button
+												icon={<FaFileUpload size={18} color="#fff" />}
+												type="primary"
+												onClick={handleFileClick}
+												className="headerButton"
+												size="middle"
+											/>
+										</Tooltip>
+									</>
+								)}
+
+								<Tooltip title="Report">
+									<Button
+										className="headerButton"
+										type="primary"
+										onClick={() => openReportModel()}
+										icon={<FaChartBar size={18} color="#fff" />}
+										size="middle"
+									/>
+								</Tooltip>
+							</div>
+						</Col>
+					</Row>
+
+					{/* Hidden file input */}
 					{selectedForm && (
-						<>
-							<Tooltip title="Download Sample CSV">
-								<Button
-									onClick={handleSampleCSVDownload}
-									icon={<FaFileDownload size={20} color="#fff" />}
-									type="primary"
-									className="headerButton"
-								/>
-							</Tooltip>
-							<Tooltip title="Upload File">
-								<Button
-									icon={<FaFileUpload size={20} color="#fff" />}
-									type="primary"
-									onClick={handleFileClick}
-									className="headerButton"
-								/>
-							</Tooltip>
-							<input
-								id="file-upload"
-								type="file"
-								accept=".csv, .xlsx, .xls"
-								onChange={handleBulkUpload}
-								className="hidden"
-							/>
-						</>
+						<input
+							id="file-upload"
+							type="file"
+							accept=".csv, .xlsx, .xls"
+							onChange={handleBulkUpload}
+							className="hidden"
+						/>
 					)}
 				</div>
-				<div>
-					<Button
-						className="flex items-center gap-2 w-full lg:w-auto rounded-md px-6 py-2 text-white transition customSearchButton"
-						onClick={() => openReportModel()} >  <FaChartBar />
-						<span>Report</span>
-					</Button>
+
+				{/* Desktop Layout */}
+				<div className="hidden sm:flex justify-between items-end">
+					<div className="flex items-end gap-2 customJotFOrmHeader">
+						<Select
+							className="w-full"
+							onChange={handleFormChange}
+							style={{ minWidth: '30%', maxWidth: '35%' }}
+							placeholder="Select Form"
+							value={selectedForm}
+						>
+							{assignedForms.map((assignedForm) => (
+								<Option key={assignedForm?.form_id} value={assignedForm?.form_id}>
+									{assignedForm?.form_name}
+								</Option>
+							))}
+						</Select>
+
+						<Tooltip title="Send Form">
+							<Button
+								onClick={onSubmit}
+								icon={<SendIcon />}
+								type="primary"
+								className="headerButton"
+							/>
+						</Tooltip>
+
+						<Tooltip title="Prefill or upload">
+							<Button
+								onClick={openModal}
+								icon={<BsFillSendPlusFill size={20} color="#fff" />}
+								type="primary"
+								className="headerButton"
+							/>
+						</Tooltip>
+
+						<Tooltip title="Blank Form">
+							<Button
+								onClick={sendBlankForm}
+								icon={<IoQrCode size={20} color="#fff" />}
+								type="primary"
+								className="headerButton"
+							/>
+						</Tooltip>
+
+						{selectedForm && (
+							<>
+								<Tooltip title="Download Sample CSV">
+									<Button
+										onClick={handleSampleCSVDownload}
+										icon={<FaFileDownload size={20} color="#fff" />}
+										type="primary"
+										className="headerButton"
+									/>
+								</Tooltip>
+								<Tooltip title="Upload File">
+									<Button
+										icon={<FaFileUpload size={20} color="#fff" />}
+										type="primary"
+										onClick={handleFileClick}
+										className="headerButton"
+									/>
+								</Tooltip>
+								<input
+									id="file-upload"
+									type="file"
+									accept=".csv, .xlsx, .xls"
+									onChange={handleBulkUpload}
+									className="hidden"
+								/>
+							</>
+						)}
+					</div>
+
+					<div>
+						<Button
+							className="flex items-center gap-2 w-full lg:w-auto rounded-md px-6 py-2 text-white transition customSearchButton"
+							onClick={() => openReportModel()}
+						>
+							<FaChartBar />
+							<span>Report</span>
+						</Button>
+					</div>
 				</div>
 			</div>
 
@@ -1494,68 +1534,89 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 				open={isModalOpen}
 				onCancel={closeModal}
 				footer={null}
-				width="60%"
+				width="95%"
+				style={{ maxWidth: '800px' }}
 				centered
 				closable
 				title="Prefill and Display OR Upload"
 			>
 				<hr />
 				<div className="space-y-4 mt-4">
-
-					<Row gutter={16}>
+					<Row gutter={[16, 16]}>
 						{selectedFormFields?.content &&
 							Object.values(selectedFormFields.content)
 								.filter((item) => item?.name?.includes('prefillable'))
 								.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()))
 								.map((item) => (
-									<>
-										<Col md={12} xs={24} key={item.qid} className="mt-2">
-											<div className="flex flex-col space-y-2">
-												<label className="text-gray-700 font-medium">{item?.text}</label>
-												{item?.type === 'control_widget' || item.type.includes("date") ? (
-													<DatePicker
-														className="w-full"
-														format="DD/MM/YYYY"
-														value={
-															manualInputValues[item.name]
-																? dayjs(manualInputValues[item.name], dateFormat)
-																: null
-														}
-														onChange={(date, dateString) => {
-															handleManualInputChange(item.name, dateString);
-														}}
-													/>
-												) : (
-													<Input
-														value={manualInputValues[item.name] || ''}
-														onChange={(e) => handleManualInputChange(item.name, e.target.value)}
-													/>
-												)}
-											</div>
-										</Col>
-									</>
+									<Col
+										key={item.qid}
+										xs={24}
+										sm={12}
+										md={12}
+										lg={12}
+										className="mt-2"
+									>
+										<div className="flex flex-col space-y-2">
+											<label className="text-gray-700 font-medium text-sm sm:text-base">
+												{item?.text}
+											</label>
+											{item?.type === 'control_widget' || item.type.includes("date") ? (
+												<DatePicker
+													className="w-full"
+													format="DD/MM/YYYY"
+													size="middle"
+													value={
+														manualInputValues[item.name]
+															? dayjs(manualInputValues[item.name], dateFormat)
+															: null
+													}
+													onChange={(date, dateString) => {
+														handleManualInputChange(item.name, dateString);
+													}}
+												/>
+											) : (
+												<Input
+													value={manualInputValues[item.name] || ''}
+													onChange={(e) => handleManualInputChange(item.name, e.target.value)}
+													className="w-full"
+													size="middle"
+												/>
+											)}
+										</div>
+									</Col>
 								))}
 					</Row>
 				</div>
-				<div className="flex justify-end mt-6 customButtonWrapper">
+				<div className="flex flex-col sm:flex-row justify-end mt-6 customButtonWrapper gap-2 sm:gap-0">
 					<Button
 						onClick={() => handleManualUpload('true')}
-						className="customSearchButton text-white px-6 py-2 rounded-md flex gap-2"
+						className="customSearchButton text-white px-4 sm:px-6 py-2 rounded-md flex items-center justify-center gap-2 w-full sm:w-auto"
 					>
-						Upload <RiUploadCloudFill size={25} />
+						<span className="text-sm sm:text-base">Upload</span>
+						{isMobile ? (
+							<RiUploadCloudFill size={20} className="sm:hidden" />
+						) : (
+							<RiUploadCloudFill size={25} className="hidden sm:block" />
+						)}
 					</Button>
 					<Button
 						onClick={onPrefillSubmit}
-						className="customSearchButton ml-4 text-white px-6 py-2 rounded-md flex gap-2"
+						className="customSearchButton sm:ml-4 text-white px-4 sm:px-6 py-2 rounded-md flex items-center justify-center gap-2 w-full sm:w-auto"
 					>
-						Send <SendIcon />
+						<span className="text-sm sm:text-base">Send</span>
+						{isMobile ? (
+							<SendIcon size={18} className="sm:hidden" />
+						) : (
+							<SendIcon className="hidden sm:block" />
+						)}
+
 					</Button>
 					<Button
 						onClick={closeModal}
 						style={{ backgroundColor: '#DC2626' }}
-						className="customRedButton ml-4  text-white px-6 py-2 rounded-md "
+						className="customRedButton sm:ml-4 text-white px-4 sm:px-6 py-2 rounded-md w-full sm:w-auto"
 					>
-						Cancel
+						<span className="text-sm sm:text-base">Cancel</span>
 					</Button>
 				</div>
 			</Modal>

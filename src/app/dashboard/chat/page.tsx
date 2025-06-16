@@ -41,29 +41,29 @@ export default function Dashboard() {
 
   if (hasHydrated) {
     return (
-<div className="flex w-full flex-col items-center justify-center gap-2 p-4">
-  <div className="w-full max-w-[100%] sm:max-w-[75%] md:max-w-[50%]">
-    <ChatBox
-      ref={chatBoxRef}
-      messages={receivedMessage}
-      sendMessage={sendMessage}
-    >
-      <div className="absolute right-0">
-        <button
-          onClick={() =>
-            emitClearMessage({
-              station: Number(params.get("station") ?? 1),
-            })
-          }
-        >
-          <div className="mr-2 mt-2 text-white">
-            <EndChatIcon />
-          </div>
-        </button>
+      <div className="flex w-full flex-col items-center justify-center gap-2 p-4">
+        <div className="w-full max-w-[100%] sm:max-w-[75%] md:max-w-[50%]">
+          <ChatBox
+            ref={chatBoxRef}
+            messages={receivedMessage}
+            sendMessage={sendMessage}
+          >
+            <div className="absolute right-0">
+              <button
+                onClick={() =>
+                  emitClearMessage({
+                    station: Number(params.get("station") ?? 1),
+                  })
+                }
+              >
+                <div className="mr-2 mt-2 text-white">
+                  <EndChatIcon />
+                </div>
+              </button>
+            </div>
+          </ChatBox>
+        </div>
       </div>
-    </ChatBox>
-  </div>
-</div>
 
     );
   }

@@ -66,7 +66,7 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
             icon: <SurveyIcon />,
             children: [
                 { title: "Handover", href: "/dashboard/documents" },
-                { title: "Reminider", href: "/dashboard/documents" },
+                { title: "Reminder", href: "/dashboard/documents" },
                 { title: "Information", href: "/dashboard/documents" },
                 { title: "Documents", href: "/dashboard/documents" },
             ],
@@ -247,11 +247,11 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
                         >
                             <div className="flex items-center gap-3">
                                 {item.icon && (
-                                    <div style={{ marginRight: "0px" }}>
+                                    <div style={{ marginRight: "0px" }} className='customMenuIcon'>
                                         {item.icon}
                                     </div>
                                 )}
-                                <span className="font-medium text-sm tracking-wide">
+                                <span className="customFont text-sm tracking-wide">
                                     {item.title}
                                 </span>
                             </div>
@@ -289,7 +289,7 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
                     <div onClick={closeSidebar}>
                         <div
                             className={`
-                                flex items-center px-4 py-2 transition-colors duration-200 text-sm cursor-pointer
+                                flex items-center px-4 py-2 transition-colors duration-200 text-sm cursor-pointer customFont
                                 ${isActive
                                     ? 'bg-primary-dark text-white'
                                     : 'text-white/80 hover:text-white hover:bg-primary-dark/50'
@@ -315,7 +315,7 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
 
     if (!mounted) {
         return (
-            <div className="relative w-[19%] sm:w-[17%] md:w-[14%] lg:w-[12.5%] xl:w-[11%] flex h-full flex-col bg-primary customSidebar">
+            <div className="relative w-[20%] sm:w-[18%] md:w-[15%] lg:w-[13%] xl:w-[12%] flex h-full flex-col bg-primary customSidebar">
                 <div
                     style={{
                         minHeight: "5rem",
@@ -349,7 +349,7 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
         <>
             <button
                 onClick={toggleSidebar}
-                className="fixed top-4 left-4 z-50 p-2 bg-primary text-white rounded-md md:hidden"
+                className="fixed top-4 left-4 z-50 p-2 bg-primary text-white rounded-md md:hidden customHamburger"
                 aria-label="Toggle sidebar"
             >
                 <svg
@@ -390,7 +390,7 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
                     flex h-full flex-col bg-primary customSidebar transition-transform duration-300 ease-in-out z-40
                     ${isMobile
                         ? `fixed left-0 top-0 w-64 ${isOpen ? 'translate-x-0' : '-translate-x-full'}`
-                        : 'relative w-[19%] sm:w-[17%] md:w-[14%] lg:w-[12.5%] xl:w-[11%]'
+                        : 'relative w-[20%] sm:w-[18%] md:w-[15%] lg:w-[13%] xl:w-[12%]'
                     }
                 `}
             >

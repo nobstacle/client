@@ -62,7 +62,7 @@ export const CreateSurveyTemplate: React.FC = () => {
         onSubmit={handleSubmit(onSubmit)}
       >
         {/* Input Section */}
-        <div className="flex flex-col md:flex-row items-start md:items-center gap-2 md:gap-4 w-full md:w-1/2">
+        <div className="flex flex-col md:flex-row items-start md:items-center gap-2 md:gap-4 w-full md:w-1/2 formInnerCOntainer">
 
           <Controller
             name="identifier"

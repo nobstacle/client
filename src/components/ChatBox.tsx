@@ -26,10 +26,33 @@ export const ChatBox = React.forwardRef<HTMLDivElement, ChatBoxProps>(
     const [message, setMessage] = useState("");
     const { data } = useSession();
     const userRole = data?.user?.Roles[0];
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
 
     // Helper function to determine if message should be on the right
     const isCurrentUserMessage = (messageRole: string) => {
       return messageRole === userRole;
+    };
+
+    // No auto-resize - keeping fixed height with internal scrolling
+
+    const handleSendMessage = () => {
+      if (message.trim()) {
+        sendMessage(message);
+        setMessage("");
+      }
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      if (e.key === "Enter") {
+        if (e.shiftKey) {
+          // Allow new line with Shift+Enter
+          return;
+        } else {
+          // Send message with Enter
+          e.preventDefault();
+          handleSendMessage();
+        }
+      }
     };
 
     return (
@@ -53,33 +76,25 @@ export const ChatBox = React.forwardRef<HTMLDivElement, ChatBoxProps>(
               ))}
           </div>
 
-          <div className="flex items-center justify-start gap-2 bg-gray-300 p-4">
-            <input
-              onKeyUp={(e) => {
-                if (e.key === "Enter" || e.keyCode === 13) {
-                  if (e.currentTarget.value) {
-                    sendMessage(message);
-                    setMessage("");
-                  }
-                }
-              }}
+          <div className="flex items-end justify-start gap-2 bg-gray-300 p-4">
+            <textarea
+              ref={textareaRef}
+              onKeyDown={handleKeyDown}
               value={message}
-              onChange={(e) => setMessage(e.currentTarget.value)}
-              className="flex h-10 w-full items-center rounded-md px-3 text-sm"
-              type="text"
-              placeholder="Type your message…"
+              onChange={(e) => setMessage(e.target.value)}
+              className="h-[40px] w-full resize-none overflow-y-auto rounded-md px-3 py-2 text-sm leading-5"
+              placeholder="Type your message"
+              style={{
+                scrollbarWidth: 'thin',
+                scrollbarColor: '#888 transparent'
+              }}
             />
 
             <div className="flex gap-2">
               <Button
                 className="border-1 flex justify-center rounded-md border-black  p-2 px-6 text-center text-white"
                 type="button"
-                onClick={() => {
-                  if (message.trim()) {
-                    sendMessage(message);
-                    setMessage("");
-                  }
-                }}
+                onClick={handleSendMessage}
               >
                 <SendIcon />
               </Button>

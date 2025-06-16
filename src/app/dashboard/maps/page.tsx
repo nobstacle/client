@@ -124,7 +124,7 @@ export default function MapsDashboard() {
         {mapsSource.length > 0 && (
           <div className="w-full">
             <div className="w-50">
-              <SearchTemplateForm searchOnChange={search} />
+              <SearchTemplateForm searchOnChange={search} placeholder="Search template" />
             </div>
           </div>
         )}
