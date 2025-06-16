@@ -30,14 +30,6 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
     // Define menu structure
     const menuItems: MenuItem[] = [
         {
-            title: "Communicate",
-            children: [
-                { title: "Text", href: "/dashboard/text" },
-                { title: "Chat", href: "/dashboard/chat" }
-            ],
-            roles: ["Admin", "User", "Staff"]
-        },
-        {
             title: "Display",
             children: [
                 { title: "Image", href: "/dashboard/image" },
@@ -47,6 +39,14 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
                 { title: "Survey", href: "/dashboard/survey" },
                 { title: "Maps", href: "/dashboard/maps" },
                 { title: "Website", href: "/dashboard/website" }
+            ],
+            roles: ["Admin", "User", "Staff"]
+        },
+        {
+            title: "Communicate",
+            children: [
+                { title: "Text", href: "/dashboard/text" },
+                { title: "Chat", href: "/dashboard/chat" }
             ],
             roles: ["Admin", "User", "Staff"]
         },
