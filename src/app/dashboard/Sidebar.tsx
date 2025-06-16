@@ -7,6 +7,13 @@ import { ClientLink } from "../../components/pages/dashboard/Sidebar/ClientLink"
 import { Logout } from "../../components/pages/dashboard/Header/Logout";
 import { CompanyLogo } from "../../components/pages/dashboard/Header/CompanyLogo";
 import { LogoutIcon } from "../../components/icons/sidebar/LogoutIcon";
+import { ImageIcon } from "../../components/icons/sidebar/ImageIcon";
+import { ChatIcon } from "../../components/icons/sidebar/ChatIcon";
+import { SurveyIcon } from "../../components/icons/sidebar/SurveyIcon";
+import { TextIcon } from "../../components/icons/sidebar/TextIcon";
+import { SettingsIcon } from "../../components/icons/sidebar/SettingsIcon";
+import { MicIcon } from "../../components/icons/MicIcon";
+import { AssignFormsIcon } from "../../components/icons/sidebar/newIcons";
 
 interface ClientSidebarProps {
     user: Session | null;
@@ -18,6 +25,7 @@ interface MenuItem {
     children?: MenuItem[];
     roles?: string[];
     condition?: boolean;
+    icon?: JSX.Element;
 }
 
 const ClientSidebar = ({ user }: ClientSidebarProps) => {
@@ -27,10 +35,11 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
     const [mounted, setMounted] = useState(false);
     const pathname = usePathname();
 
-    // Define menu structure
+    // Define menu structure with icons only for main headers
     const menuItems: MenuItem[] = [
         {
             title: "Display",
+            icon: <ImageIcon />,
             children: [
                 { title: "Image", href: "/dashboard/image" },
                 { title: "Video", href: "/dashboard/video" },
@@ -44,6 +53,7 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
         },
         {
             title: "Communicate",
+            icon: <ChatIcon />,
             children: [
                 { title: "Text", href: "/dashboard/text" },
                 { title: "Chat", href: "/dashboard/chat" }
@@ -52,6 +62,7 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
         },
         {
             title: "Team",
+            icon: <SurveyIcon />,
             children: [
                 { title: "Handover", href: "/dashboard/documents" },
                 { title: "Reminider", href: "/dashboard/documents" },
@@ -62,32 +73,27 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
         },
         {
             title: "Register",
+            icon: <TextIcon />,
             children: [
                 { title: "Form", href: "/dashboard/form" }
             ],
             roles: ["Admin", "User", "Staff"]
         },
-        // {
-        //     title: "Promote",
-        //     children: [
-        //         { title: "Whatsapp", href: "/dashboard/form" },
-        //         { title: "Email", href: "/dashboard/form" },
-        //         { title: "Upselling", href: "/dashboard/form" },
-        //     ],
-        //     roles: ["Admin", "User", "Staff"]
-        // },
         {
             title: "Settings",
             href: "/dashboard/settings",
+            icon: <SettingsIcon />,
             roles: ["Admin"]
         },
         {
             title: "Test Mic",
             href: "/dashboard/test",
+            icon: <MicIcon fill="#ffffff" />,
             condition: typeof window !== 'undefined' ? process.env.VERCEL_ENV === "preview" : false
         },
         {
             title: "Admin",
+            icon: <AssignFormsIcon />,
             children: [
                 { title: "Assign Forms", href: "/dashboard/asignForms" }
             ],
@@ -185,9 +191,16 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
                                 ${hasActiveChild ? 'bg-primary-dark/50 text-white' : 'text-white/90 hover:text-white'}
                             `}
                         >
-                            <span className="font-medium text-sm tracking-wide">
-                                {item.title}
-                            </span>
+                            <div className="flex items-center gap-3">
+                                {item.icon && (
+                                    <div style={{ marginRight: "0px" }}>
+                                        {item.icon}
+                                    </div>
+                                )}
+                                <span className="font-medium text-sm tracking-wide">
+                                    {item.title}
+                                </span>
+                            </div>
                             <svg
                                 className={`w-4 h-4 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''
                                     }`}
@@ -216,17 +229,26 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
                     </>
                 ) : (
                     <div onClick={closeSidebar}>
-                        <ClientLink
-                            href={item.href!}
-                            title={item.title}
+                        <div
                             className={`
-                                flex items-center px-4 py-2 transition-colors duration-200 text-sm
+                                flex items-center px-4 py-2 transition-colors duration-200 text-sm cursor-pointer
                                 ${isActive
                                     ? 'bg-primary-dark text-white'
                                     : 'text-white/80 hover:text-white hover:bg-primary-dark/50'
                                 }
                             `}
-                        />
+                        >
+                            {item.icon && (
+                                <div style={{ marginRight: "10px" }}>
+                                    {item.icon}
+                                </div>
+                            )}
+                            <ClientLink
+                                href={item.href!}
+                                title={item.title}
+                                className="flex-1"
+                            />
+                        </div>
                     </div>
                 )}
             </li>
@@ -235,7 +257,7 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
 
     if (!mounted) {
         return (
-            <div className="relative w-[18%] sm:w-[16%] md:w-[13%] lg:w-[11.5%] xl:w-[10%] flex h-full flex-col bg-primary customSidebar">
+            <div className="relative w-[19%] sm:w-[17%] md:w-[14%] lg:w-[12%] xl:w-[11%] flex h-full flex-col bg-primary customSidebar">
                 <div
                     style={{
                         minHeight: "5rem",
@@ -310,7 +332,7 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
                     flex h-full flex-col bg-primary customSidebar transition-transform duration-300 ease-in-out z-40
                     ${isMobile
                         ? `fixed left-0 top-0 w-64 ${isOpen ? 'translate-x-0' : '-translate-x-full'}`
-                        : 'relative w-[18%] sm:w-[16%] md:w-[13%] lg:w-[11.5%] xl:w-[10%]'
+                        : 'relative w-[19%] sm:w-[17%] md:w-[14%] lg:w-[12%] xl:w-[11%]'
                     }
                 `}
             >
