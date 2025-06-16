@@ -33,6 +33,7 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
     const [isMobile, setIsMobile] = useState(false);
     const [expandedMenus, setExpandedMenus] = useState<string[]>([]);
     const [mounted, setMounted] = useState(false);
+    const [shouldAutoClose, setShouldAutoClose] = useState(false);
     const pathname = usePathname();
 
     // Define menu structure with icons only for main headers
@@ -127,20 +128,41 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
             }
         };
 
-        checkScreenSize();
-        window.addEventListener('resize', checkScreenSize);
-        return () => window.removeEventListener('resize', checkScreenSize);
-    }, []);
+        const checkMenuHeight = () => {
+            const sidebar = document.getElementById('child2');
+            if (sidebar) {
+                const sidebarHeight = sidebar.scrollHeight;
+                const windowHeight = window.innerHeight;
+                setShouldAutoClose(sidebarHeight > windowHeight);
+            }
+        };
 
-    // Auto-expand menu containing active route
+        checkScreenSize();
+        checkMenuHeight();
+
+        window.addEventListener('resize', () => {
+            checkScreenSize();
+            checkMenuHeight();
+        });
+
+        return () => window.removeEventListener('resize', () => {
+            checkScreenSize();
+            checkMenuHeight();
+        });
+    }, [expandedMenus]);
+
+    // Auto-expand menu containing active route, but preserve other expanded menus
     useEffect(() => {
         if (mounted && pathname) {
             const activeParent = findActiveParentMenu(menuItems, pathname);
             if (activeParent) {
-                setExpandedMenus([activeParent]);
-            } else {
-                // If no parent menu contains active route, keep current state or collapse all
-                setExpandedMenus([]);
+                setExpandedMenus(prev => {
+                    // Add active parent if not already in the list
+                    if (!prev.includes(activeParent)) {
+                        return [...prev, activeParent];
+                    }
+                    return prev;
+                });
             }
         }
     }, [pathname, mounted]);
@@ -156,11 +178,43 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
     };
 
     const toggleMenu = (menuData: MenuItem) => {
-        setExpandedMenus(prev =>
-            prev.includes(menuData.title)
-                ? []
-                : [menuData.title]
-        );
+        setExpandedMenus(prev => {
+            if (prev.includes(menuData.title)) {
+                // Remove from expanded menus (manual close)
+                return prev.filter(title => title !== menuData.title);
+            } else {
+                // Add to expanded menus
+                const newExpanded = [...prev, menuData.title];
+
+                // Check if more than 3 dropdowns would be open
+                if (newExpanded.length > 3) {
+                    // Find the currently active parent menu
+                    const activeParent = findActiveParentMenu(menuItems, pathname);
+                    if (activeParent) {
+                        // Keep only the active parent menu open
+                        return [activeParent];
+                    } else {
+                        // If no active parent, keep only the newly opened menu
+                        return [menuData.title];
+                    }
+                }
+
+                // Check if auto-close is needed due to height constraints
+                setTimeout(() => {
+                    const sidebar = document.getElementById('child2');
+                    if (sidebar && shouldAutoClose) {
+                        const sidebarHeight = sidebar.scrollHeight;
+                        const windowHeight = window.innerHeight;
+                        if (sidebarHeight > windowHeight) {
+                            // Only close other menus, keep the newly opened one
+                            setExpandedMenus([menuData.title]);
+                        }
+                    }
+                }, 100);
+
+                return newExpanded;
+            }
+        });
     };
 
     const hasAccess = (roles?: string[]) => {
@@ -257,7 +311,7 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
 
     if (!mounted) {
         return (
-            <div className="relative w-[19%] sm:w-[17%] md:w-[14%] lg:w-[12%] xl:w-[11%] flex h-full flex-col bg-primary customSidebar">
+            <div className="relative w-[18%] sm:w-[16%] md:w-[13%] lg:w-[11.5%] xl:w-[10%] flex h-full flex-col bg-primary customSidebar">
                 <div
                     style={{
                         minHeight: "5rem",
@@ -332,7 +386,7 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
                     flex h-full flex-col bg-primary customSidebar transition-transform duration-300 ease-in-out z-40
                     ${isMobile
                         ? `fixed left-0 top-0 w-64 ${isOpen ? 'translate-x-0' : '-translate-x-full'}`
-                        : 'relative w-[19%] sm:w-[17%] md:w-[14%] lg:w-[12%] xl:w-[11%]'
+                        : 'relative w-[18%] sm:w-[16%] md:w-[13%] lg:w-[11.5%] xl:w-[10%]'
                     }
                 `}
             >
