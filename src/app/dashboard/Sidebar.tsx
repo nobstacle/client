@@ -256,7 +256,7 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
                                 </span>
                             </div>
                             <svg
-                                className={`w-4 h-4 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''
+                                className={`w-4 h-4 transition-transform duration-500 ease-in-out ${isExpanded ? 'rotate-180' : ''
                                     }`}
                                 fill="none"
                                 stroke="currentColor"
@@ -272,11 +272,15 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
                         </div>
                         <div
                             className={`
-                                overflow-hidden transition-all duration-300 ease-in-out
+                                overflow-hidden transition-all duration-500 ease-out
                                 ${isExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}
                             `}
+                            style={{
+                                transitionProperty: 'max-height, opacity, padding',
+                                transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)',
+                            }}
                         >
-                            <ul>
+                            <ul className={`transition-all duration-500 ease-out ${isExpanded ? 'py-1' : 'py-0'}`}>
                                 {item.children?.map(child => renderMenuItem(child, level + 1))}
                             </ul>
                         </div>
