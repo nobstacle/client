@@ -67,15 +67,15 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
             ],
             roles: ["Admin", "User", "Staff"]
         },
-        {
-            title: "Promote",
-            children: [
-                { title: "Whatsapp", href: "/dashboard/form" },
-                { title: "Email", href: "/dashboard/form" },
-                { title: "Upselling", href: "/dashboard/form" },
-            ],
-            roles: ["Admin", "User", "Staff"]
-        },
+        // {
+        //     title: "Promote",
+        //     children: [
+        //         { title: "Whatsapp", href: "/dashboard/form" },
+        //         { title: "Email", href: "/dashboard/form" },
+        //         { title: "Upselling", href: "/dashboard/form" },
+        //     ],
+        //     roles: ["Admin", "User", "Staff"]
+        // },
         {
             title: "Settings",
             href: "/dashboard/settings",
