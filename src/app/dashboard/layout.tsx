@@ -34,7 +34,7 @@ const Header = () => {
   return (
     <nav className="h-20 w-full bg-primary px-4">
       <div className="flex h-full w-full items-center justify-between">
-        <div className="flex w-full gap-4 items-center justify-end">
+        <div className="flex w-full gap-4 items-center customJustifyHeader">
           <LanguageShortcutPicker />
           <HeaderLanguagePicker />
           <TemplateShortcutPicker />
@@ -55,72 +55,6 @@ const ServerSidebarWrapper = async () => {
 
   return <ClientSidebar user={user} />;
 };
-
-// const Sidebar = async () => {
-//   const user = await getServerSession(authOptions);
-
-//   return (
-//     <div
-//       id="child2"
-//   className="flex h-full flex-col bg-primary customSidebar 
-//              w-[18%] sm:w-[16%] md:w-[13%] lg:w-[11.5%] xl:w-[10%]"
-//     >
-//       <div
-//         style={{
-//           minHeight: "5rem",
-//           maxHeight: "5rem",
-//           height: "5rem",
-//           paddingTop: "0.2em",
-//           paddingLeft: "0.2em",
-//           paddingRight: "0.2em",
-//         }}
-//         className="flex items-center justify-center"
-//       >
-//         <CompanyLogo />
-//       </div>
-
-//       <div className="flex h-full w-full flex-col justify-between">
-//         <ul className="w-full">
-//           {(user?.user.Roles?.includes("Admin") || user?.user.Roles?.includes("User") || user?.user.Roles?.includes("Staff")) && (
-//             <>
-//               <ClientLink href="/dashboard/text" title="Text" />
-//               <ClientLink href="/dashboard/chat" title="Chat" />
-//               <ClientLink href="/dashboard/image" title="Image" />
-//               <ClientLink href="/dashboard/video" title="Video" />
-//               <ClientLink href="/dashboard/slideshow" title="Slideshow" />
-//               <ClientLink href="/dashboard/maps" title="Maps" />
-//               <ClientLink href="/dashboard/survey" title="Survey" />
-//               <ClientLink href="/dashboard/website" title="Website" />
-//               <ClientLink href="/dashboard/form" title="Form" />
-//               <ClientLink href="/dashboard/documents" title="Documents" />
-//             </>
-//           )}
-
-//           {user?.user.Roles?.includes("Admin") && (
-//             <ClientLink href="/dashboard/settings" title="Settings" />
-//           )}
-//           {process.env.VERCEL_ENV === "preview" && (
-//             <ClientLink href="/dashboard/test" title="Test Mic" />
-//           )}
-
-//           {user?.user.Roles?.includes("SAdmin") && (
-//             <>
-//               {/* <ClientLink href="/dashboard/superAdminDashboard" title="Dashboard" /> */}
-//               <ClientLink href="/dashboard/asignForms" title="Asign Forms" />
-//             </>
-//           )}
-
-//         </ul>
-//         <ul className="w-full">
-//           <li className="flex gap-2 p-4">
-//             <LogoutIcon />
-//             <Logout />
-//           </li>
-//         </ul>
-//       </div>
-//     </div>
-//   );
-// };
 
 const Body: React.FC<PropsWithChildren> = ({ children }) => {
   return (

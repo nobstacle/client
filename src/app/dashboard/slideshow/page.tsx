@@ -126,7 +126,7 @@ export default function SlideshowDashboard() {
       <div className="flex h-full w-full flex-col justify-start gap-4 overflow-y-auto  p-6">
         {slideshowsSource.length > 0 && (
           <Card className="w-full customCards">
-            <div style={{ width: '20%' }}>
+            <div className="searchInputWidth">
               <SearchTemplateForm
                 searchOnChange={search}
                 onClear={clearSearch}
@@ -218,9 +218,19 @@ export default function SlideshowDashboard() {
           </div>
         </div>
         {userData?.user.Roles?.includes("Admin") && (
-          <div className="fixed bottom-0 right-0 p-4">
-            <button onClick={handleOpen}>
-              <PlusIcon />
+          <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50">
+            <button
+              onClick={handleOpen}
+              className="group relative flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 bg-white/50 backdrop-blur-md hover:bg-white/60 border border-white/20 text-gray-700 hover:text-gray-900 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-white/30"
+              aria-label="Create new template"
+            >
+              <PlusIcon className="w-6 h-6 sm:w-7 sm:h-7 opacity-100" />
+
+              {/* Tooltip */}
+              <div className="absolute right-full mr-3 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
+                Create Template
+                <div className="absolute top-1/2 left-full w-0 h-0 border-l-4 border-l-gray-900 border-y-4 border-y-transparent transform -translate-y-1/2"></div>
+              </div>
             </button>
           </div>
         )}

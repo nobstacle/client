@@ -1,5 +1,3 @@
-
-
 .btnWrapper {
   button {
     margin-bottom: 0.2rem;
@@ -630,4 +628,26 @@ button {
 
 .customCardBottom .ant-card-body {
   padding-bottom: 0.4rem !important;
+}
+
+.searchInputWidth {
+  width: 20%;
+}
+
+@media screen and (max-width: 768px) {
+  .searchInputWidth {
+    width: 100%;
+  }
+
+  .customCards .ant-card-body {
+    padding: 15px;
+  }
+
+  .customJustifyHeader {
+    justify-content: flex-end;
+  }
+}
+
+.customJustifyHeader {
+  justify-content: flex-start;
 }

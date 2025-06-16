@@ -27,6 +27,7 @@ import {
     AiFillFilePpt,
     AiFillFileUnknown,
 } from "react-icons/ai";
+import "../../../styles/base.css";
 
 export default function Documents() {
     const { data } = useSession();
@@ -216,7 +217,7 @@ export default function Documents() {
             <div className="h-full overflow-y-auto p-4">
                 <div className="flex w-full flex-col gap-4 p-4">
                     <Card className="w-full customCards">
-                        <div style={{ width: '20%' }}>
+                        <div className="searchInputWidth">
                             <SearchTemplateForm
                                 searchOnChange={search}
                                 onClear={clearSearch}
@@ -227,7 +228,7 @@ export default function Documents() {
                     </Card>
                 </div>
 
-                <div className="flex w-full flex-col items-center justify-center gap-2 p-6">
+                <div className="flex w-full flex-col items-center justify-center gap-2 p-4">
                     <div className="w-full">
                         <div className="flex h-full w-full">
                             <div className="flex w-full flex-wrap content-start gap-4">
@@ -278,9 +279,19 @@ export default function Documents() {
 
             {/* Add Button */}
             {data?.user.Roles?.includes("Admin") && (
-                <div className="fixed bottom-0 right-0 p-4">
-                    <button onClick={onCreateDocument}>
-                        <PlusIcon />
+                <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50">
+                    <button
+                        onClick={handleOpen}
+                        className="group relative flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 bg-white/50 backdrop-blur-md hover:bg-white/60 border border-white/20 text-gray-700 hover:text-gray-900 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-white/30"
+                        aria-label="Create new template"
+                    >
+                        <PlusIcon className="w-6 h-6 sm:w-7 sm:h-7 opacity-100" />
+
+                        {/* Tooltip */}
+                        <div className="absolute right-full mr-3 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
+                            Create Template
+                            <div className="absolute top-1/2 left-full w-0 h-0 border-l-4 border-l-gray-900 border-y-4 border-y-transparent transform -translate-y-1/2"></div>
+                        </div>
                     </button>
                 </div>
             )}
