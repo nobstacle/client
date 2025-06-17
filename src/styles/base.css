@@ -669,7 +669,7 @@ button {
   }
 
   .customHamburger {
-    top: 0.75rem !important;
+    top: 0.5rem !important;
   }
 
   .formInnerCOntainer button {
@@ -703,6 +703,10 @@ button {
 
   .reportFilterWrapper button {
     font-size: 10px !important;
+  }
+
+  .headerButton {
+    width: 50px !important;
   }
 }
 
@@ -755,4 +759,12 @@ button {
     width: 16px !important;
     height: 16px !important;
   }
+}
+
+.customQuickActionButton {
+  padding: 0;
+}
+
+.customQuickActionButton .ant-btn-icon {
+  font-size: 1.2rem;
 }

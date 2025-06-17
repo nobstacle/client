@@ -6,7 +6,7 @@ export const DragIcon = () => {
         width: "1.5em",
         height: "1.5em",
         verticalAlign: "middle",
-        fill: "white",
+        fill: "black",
         overflow: "hidden",
       }}
       viewBox="0 0 1024 1024"

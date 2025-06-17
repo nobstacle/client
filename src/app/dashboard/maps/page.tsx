@@ -31,6 +31,7 @@ import { UniqueIdentifier } from "@dnd-kit/core";
 import { arrayMove } from "@dnd-kit/sortable";
 
 export default function MapsDashboard() {
+  let isMobile = typeof window !== 'undefined' && window.innerWidth <= 500;
   const [editTemplate, setEditTemplate] = useState<null | GetMapTemplateRes>(
     null,
   );
@@ -117,7 +118,8 @@ export default function MapsDashboard() {
 
   if (hasHydrated)
     return (
-      <div className="flex h-full w-full flex-col justify-start gap-4 overflow-y-auto  p-6">
+      <div
+        className={`flex h-full w-full flex-col justify-start gap-4 overflow-y-auto ${isMobile ? 'p-2' : 'p-6'}`}>
         <div>
           <SendMapForm onSend={sendMapTemplateMessage} />
         </div>

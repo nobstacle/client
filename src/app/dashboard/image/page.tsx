@@ -30,6 +30,7 @@ import { Card } from 'antd';
 import "../../../styles/base.css";
 
 export default function ImageDashboard() {
+    let isMobile = typeof window !== 'undefined' && window.innerWidth <= 500;
   const [editTemplate, setEditTemplate] = useState<null | GetImageTemplateRes>(
     null,
   );
@@ -107,7 +108,8 @@ export default function ImageDashboard() {
 
   if (isHydrated)
     return (
-      <div className="flex h-full w-full flex-col justify-start gap-4 overflow-y-auto p-6">
+      <div 
+        className={`flex h-full w-full flex-col justify-start gap-4 overflow-y-auto ${isMobile ? 'p-2' : 'p-6'}`}>
         <div className="customSearchWrapper">
           {imagesSource.length > 0 && (
             <Card className="w-full customCards">

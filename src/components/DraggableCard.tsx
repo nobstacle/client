@@ -25,6 +25,7 @@ import { Button } from "./Button";
 import { TrashIcon } from "./icons/TrashIcon";
 import { PencilIcon } from "./icons/PencilIcon";
 import { DragIcon } from "./icons/DragIcon";
+import { Color } from "antd/es/color-picker";
 
 export const DraggableCardContainer: React.FC<{
   items: any[];
@@ -50,8 +51,19 @@ export const DraggableCardContainer: React.FC<{
         items={items.map((item) => item.id)}
         strategy={horizontalListSortingStrategy}
       >
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-2 sm:gap-3 md:gap-4 lg:gap-6 xl:gap-8">
-          {children}
+        {/* Improved responsive grid with better breakpoints and full width utilization */}
+        <div className="w-full px-2 sm:px-4 lg:px-6">
+          <div className="grid gap-3 sm:gap-4 md:gap-5 lg:gap-6 
+                         grid-cols-2 
+                         sm:grid-cols-3 
+                         md:grid-cols-4 
+                         lg:grid-cols-5 
+                         xl:grid-cols-6 
+                         2xl:grid-cols-8 
+                         3xl:grid-cols-10
+                         w-full">
+            {children}
+          </div>
         </div>
       </SortableContext>
     </DndContext>
@@ -62,7 +74,6 @@ export const DraggableCardContainer: React.FC<{
   }
 
   function handleDragOver(event: DragOverEvent) {
-    // const activeContainerIndex = findContainerIndex(event.active.id);
     const { active, over } = event;
 
     if (over && active.id !== over.id) {
@@ -99,14 +110,14 @@ export const DraggableCardItem: React.FC<
     const transformValues = transform
       ? {
         ...transform,
-        scaleX: isDragging ? 1.05 : 1.0,
-        scaleY: isDragging ? 1.05 : 1.0,
+        scaleX: isDragging ? 1.02 : 1.0,
+        scaleY: isDragging ? 1.02 : 1.0,
       }
       : null;
 
     const style = {
       transform: CSS.Transform.toString(transformValues),
-      transition,
+      transition: transition || 'transform 200ms ease',
     };
 
     return (
@@ -121,29 +132,35 @@ export const DraggableCardItem: React.FC<
           }
         }}
         id="card-container"
-        className="relative flex cursor-pointer flex-col rounded-md bg-neutral-300 shadow-lg 
-                   h-32 w-full
-                   xs:h-36 
-                   sm:h-40 sm:shadow-xl
-                   md:h-44 md:shadow-2xl
-                   lg:h-48
-                   xl:h-52"
+        className="relative flex cursor-pointer flex-col rounded-lg bg-neutral-300 shadow-md hover:shadow-lg transition-all duration-200
+                   w-full aspect-[4/5]
+                   min-h-[140px]
+                   sm:min-h-[160px] sm:shadow-lg hover:sm:shadow-xl
+                   md:min-h-[180px] md:shadow-xl hover:md:shadow-2xl
+                   lg:min-h-[200px]
+                   xl:min-h-[220px]
+                   2xl:min-h-[240px]"
         style={{
           ...style,
           zIndex: isDragging ? 9999 : 1,
           position: "relative",
         }}
       >
-        <div className="flex-1 p-2 sm:p-3 md:px-3 md:pt-3 overflow-hidden">
-          <div className="h-full text-xs sm:text-sm md:text-base">
+        {/* Content Area - Flexible height */}
+        <div className="flex-1 p-2 sm:p-3 md:p-4 lg:p-5 overflow-hidden">
+          <div className="h-full text-xs sm:text-sm md:text-base lg:text-lg leading-tight">
             {children}
           </div>
         </div>
 
+        {/* Edit Button - Top Left */}
         {!isRecevied && isHover && isAdmin && (
-          <div className="absolute left-0 top-0 z-10 flex">
+          <div className="absolute left-1 top-1 z-10">
             <button
-              className="m-0 h-4 w-4 sm:h-5 sm:w-5 rounded-b-md text-center text-black bg-white/80 hover:bg-white"
+              className="flex items-center justify-center
+                         h-6 w-6 sm:h-7 sm:w-7 md:h-8 md:w-8
+                         rounded-md text-gray-700 bg-white/90 hover:bg-white 
+                         shadow-sm hover:shadow-md transition-all duration-150"
               onClick={(e) => {
                 e.stopPropagation();
                 if (onUpdate) {
@@ -155,11 +172,15 @@ export const DraggableCardItem: React.FC<
             </button>
           </div>
         )}
-        
+
+        {/* Delete Button - Top Right */}
         {!isRecevied && isHover && isAdmin && (
-          <div className="absolute right-0 top-0 z-10 flex">
+          <div className="absolute right-1 top-1 z-10">
             <button
-              className="m-0 h-4 w-4 sm:h-5 sm:w-5 rounded-b-md text-center text-danger bg-white/80 hover:bg-white"
+              className="flex items-center justify-center
+                         h-6 w-6 sm:h-7 sm:w-7 md:h-8 md:w-8
+                         rounded-md text-red-600 bg-white/90 hover:bg-white 
+                         shadow-sm hover:shadow-md transition-all duration-150"
               onClick={(e) => {
                 e.stopPropagation();
                 if (onDelete) {
@@ -172,47 +193,58 @@ export const DraggableCardItem: React.FC<
           </div>
         )}
 
+        {/* Drag Handle - Bottom Left */}
         {!isRecevied && isHover && isAdmin && isDraggable && (
           <div
             {...attributes}
             {...listeners}
-            className="absolute bottom-8 left-0 z-10 flex cursor-move 
-                       sm:bottom-10 
-                       md:bottom-12 
-                       lg:bottom-14 
-                       xl:bottom-16"
+            className="absolute bottom-10 left-1 z-10 cursor-move
+                       sm:bottom-12 
+                       md:bottom-14 
+                       lg:bottom-16 
+                       xl:bottom-18"
           >
-            <div className="p-1 bg-white/80 rounded-tr-md hover:bg-white">
+            <div className="flex items-center justify-center
+                           h-6 w-6 sm:h-7 sm:w-7 md:h-8 md:w-8
+                           bg-white/90 hover:bg-white rounded-md 
+                           shadow-sm hover:shadow-md transition-all duration-150">
               <DragIcon />
             </div>
           </div>
         )}
 
+        {/* Button Footer - Fixed at bottom */}
         <div className="mt-auto">
-          <Button className="relative h-8 w-full rounded-b-md bg-primary text-xs text-white
-                           sm:h-10 sm:text-sm
-                           md:text-base
-                           lg:h-12">
-            <span className="truncate px-2">{tag}</span>
-            {/* {icon} */}
+          <Button className="relative w-full rounded-b-lg bg-primary text-white font-medium
+                           h-8 text-xs
+                           sm:h-9 sm:text-sm
+                           md:h-10 md:text-base
+                           lg:h-11 lg:text-lg
+                           xl:h-12
+                           transition-colors duration-200 hover:bg-primary/90">
+            <span className="truncate px-2 sm:px-3 md:px-4">{tag}</span>
+
+            {/* Availability Indicator - Triangle */}
             {!icon && isAvailable && (
               <span
-                className="absolute bottom-0 right-0 h-0 w-0
-                 border-b-[10px] border-l-[10px]
-                 border-green-500
-                 border-l-transparent
-                 sm:border-b-[12px] sm:border-l-[12px]
-                 md:border-b-[15px] md:border-l-[15px]"
+                className="absolute bottom-0 right-0 
+                           border-b-[8px] border-l-[8px]
+                           border-green-500 border-l-transparent
+                           sm:border-b-[10px] sm:border-l-[10px]
+                           md:border-b-[12px] md:border-l-[12px]
+                           lg:border-b-[14px] lg:border-l-[14px]
+                           xl:border-b-[16px] xl:border-l-[16px]"
               />
             )}
             {!icon && !isAvailable && (
               <span
-                className="absolute bottom-0 right-0 h-0 w-0
-                 border-b-[10px] border-l-[10px]
-                 border-red-500
-                 border-l-transparent
-                 sm:border-b-[12px] sm:border-l-[12px]
-                 md:border-b-[15px] md:border-l-[15px]"
+                className="absolute bottom-0 right-0 
+                           border-b-[8px] border-l-[8px]
+                           border-red-500 border-l-transparent
+                           sm:border-b-[10px] sm:border-l-[10px]
+                           md:border-b-[12px] md:border-l-[12px]
+                           lg:border-b-[14px] lg:border-l-[14px]
+                           xl:border-b-[16px] xl:border-l-[16px]"
               />
             )}
           </Button>

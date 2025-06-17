@@ -110,7 +110,7 @@ export const SendMapForm: React.FC<{
             </Form.Item>
           </Col>
 
-          <Col md={4} xs={2} className="mb-4">
+          <Col md={4} xs={4} className="mb-4">
             <Form.Item style={{ marginBottom: 0 }} >
               <AntdButton
                 type="primary"

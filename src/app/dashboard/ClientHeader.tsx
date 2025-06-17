@@ -47,9 +47,9 @@ const ClientHeader = () => {
                         />
                         <Button
                             type="text"
-                            icon={<MoreOutlined className="text-white text-xl" />}
+                            icon={<MoreOutlined className="text-white text-xl" size={30} />}
                             onClick={showShortcutMenu}
-                            className="border-none shadow-none hover:bg-white/20 transition-colors duration-200 rounded-lg p-3"
+                            className="border-none shadow-none hover:bg-white/20 transition-colors duration-200 rounded-lg p-3 customQuickActionButton"
                             style={{
                                 background: 'transparent',
                                 border: 'none'
@@ -151,7 +151,7 @@ const ClientHeader = () => {
                                 </div>
                             </div>
                             <div className="space-y-2">
-                                <label className="text-sm font-medium text-gray-600 block">Header Language</label>
+                                <label className="text-sm font-medium text-gray-600 block">Language</label>
                                 <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
                                     <HeaderLanguagePicker />
                                 </div>
@@ -255,7 +255,7 @@ const ClientHeader = () => {
                         <LanguageShortcutPicker />
                     </div>
                     <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-                        <h3 className="text-base font-semibold text-gray-800 mb-3">Header Language</h3>
+                        <h3 className="text-base font-semibold text-gray-800 mb-3">Language</h3>
                         <HeaderLanguagePicker />
                     </div>
 
