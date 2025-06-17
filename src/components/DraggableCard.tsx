@@ -57,10 +57,10 @@ export const DraggableCardContainer: React.FC<{
                          grid-cols-2 
                          sm:grid-cols-3 
                          md:grid-cols-4 
-                         lg:grid-cols-5 
-                         xl:grid-cols-6 
-                         2xl:grid-cols-8 
-                         3xl:grid-cols-10
+                         lg:grid-cols-4 
+                         xl:grid-cols-5 
+                         2xl:grid-cols-6 
+                         3xl:grid-cols-8
                          w-full">
             {children}
           </div>
@@ -136,10 +136,10 @@ export const DraggableCardItem: React.FC<
                    w-full aspect-[4/5]
                    min-h-[140px]
                    sm:min-h-[160px] sm:shadow-lg hover:sm:shadow-xl
-                   md:min-h-[180px] md:shadow-xl hover:md:shadow-2xl
-                   lg:min-h-[200px]
-                   xl:min-h-[220px]
-                   2xl:min-h-[240px]"
+                   md:min-h-[170px] md:shadow-xl hover:md:shadow-2xl
+                   lg:min-h-[180px]
+                   xl:min-h-[190px]
+                   2xl:min-h-[200px]"
         style={{
           ...style,
           zIndex: isDragging ? 9999 : 1,
@@ -147,8 +147,8 @@ export const DraggableCardItem: React.FC<
         }}
       >
         {/* Content Area - Flexible height */}
-        <div className="flex-1 p-2 sm:p-3 md:p-4 lg:p-5 overflow-hidden">
-          <div className="h-full text-xs sm:text-sm md:text-base lg:text-lg leading-tight">
+        <div className="flex-1 p-2 sm:p-3 md:p-3 lg:p-4 overflow-hidden">
+          <div className="h-full text-xs sm:text-sm md:text-sm lg:text-base leading-tight">
             {children}
           </div>
         </div>
@@ -158,7 +158,7 @@ export const DraggableCardItem: React.FC<
           <div className="absolute left-1 top-1 z-10">
             <button
               className="flex items-center justify-center
-                         h-6 w-6 sm:h-7 sm:w-7 md:h-8 md:w-8
+                         h-6 w-6 sm:h-7 sm:w-7 md:h-7 md:w-7 lg:h-8 lg:w-8
                          rounded-md text-gray-700 bg-white/90 hover:bg-white 
                          shadow-sm hover:shadow-md transition-all duration-150"
               onClick={(e) => {
@@ -178,7 +178,7 @@ export const DraggableCardItem: React.FC<
           <div className="absolute right-1 top-1 z-10">
             <button
               className="flex items-center justify-center
-                         h-6 w-6 sm:h-7 sm:w-7 md:h-8 md:w-8
+                         h-6 w-6 sm:h-7 sm:w-7 md:h-7 md:w-7 lg:h-8 lg:w-8
                          rounded-md text-red-600 bg-white/90 hover:bg-white 
                          shadow-sm hover:shadow-md transition-all duration-150"
               onClick={(e) => {
@@ -198,14 +198,14 @@ export const DraggableCardItem: React.FC<
           <div
             {...attributes}
             {...listeners}
-            className="absolute bottom-10 left-1 z-10 cursor-move
-                       sm:bottom-12 
-                       md:bottom-14 
-                       lg:bottom-16 
-                       xl:bottom-18"
+            className="absolute bottom-8 left-1 z-10 cursor-move
+                       sm:bottom-9 
+                       md:bottom-10 
+                       lg:bottom-11 
+                       xl:bottom-12"
           >
             <div className="flex items-center justify-center
-                           h-6 w-6 sm:h-7 sm:w-7 md:h-8 md:w-8
+                           h-6 w-6 sm:h-7 sm:w-7 md:h-7 md:w-7 lg:h-8 lg:w-8
                            bg-white/90 hover:bg-white rounded-md 
                            shadow-sm hover:shadow-md transition-all duration-150">
               <DragIcon />
@@ -215,14 +215,14 @@ export const DraggableCardItem: React.FC<
 
         {/* Button Footer - Fixed at bottom */}
         <div className="mt-auto">
-          <Button className="relative w-full rounded-b-lg bg-primary text-white font-medium
+          <Button className="relative w-full rounded-b-lg bg-primary text-white customFont
                            h-8 text-xs
                            sm:h-9 sm:text-sm
-                           md:h-10 md:text-base
-                           lg:h-11 lg:text-lg
-                           xl:h-12
+                           md:h-10 md:text-sm
+                           lg:h-11 lg:text-base
+                           xl:h-12 xl:text-base
                            transition-colors duration-200 hover:bg-primary/90">
-            <span className="truncate px-2 sm:px-3 md:px-4">{tag}</span>
+            <span className="truncate px-2 sm:px-3 md:px-3 lg:px-4">{tag}</span>
 
             {/* Availability Indicator - Triangle */}
             {!icon && isAvailable && (
@@ -231,9 +231,9 @@ export const DraggableCardItem: React.FC<
                            border-b-[8px] border-l-[8px]
                            border-green-500 border-l-transparent
                            sm:border-b-[10px] sm:border-l-[10px]
-                           md:border-b-[12px] md:border-l-[12px]
-                           lg:border-b-[14px] lg:border-l-[14px]
-                           xl:border-b-[16px] xl:border-l-[16px]"
+                           md:border-b-[10px] md:border-l-[10px]
+                           lg:border-b-[12px] lg:border-l-[12px]
+                           xl:border-b-[12px] xl:border-l-[12px]"
               />
             )}
             {!icon && !isAvailable && (
@@ -242,9 +242,9 @@ export const DraggableCardItem: React.FC<
                            border-b-[8px] border-l-[8px]
                            border-red-500 border-l-transparent
                            sm:border-b-[10px] sm:border-l-[10px]
-                           md:border-b-[12px] md:border-l-[12px]
-                           lg:border-b-[14px] lg:border-l-[14px]
-                           xl:border-b-[16px] xl:border-l-[16px]"
+                           md:border-b-[10px] md:border-l-[10px]
+                           lg:border-b-[12px] lg:border-l-[12px]
+                           xl:border-b-[12px] xl:border-l-[12px]"
               />
             )}
           </Button>
