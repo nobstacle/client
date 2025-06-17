@@ -188,15 +188,8 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
 
                 // Check if more than 3 dropdowns would be open
                 if (newExpanded.length > 3) {
-                    // Find the currently active parent menu
-                    const activeParent = findActiveParentMenu(menuItems, pathname);
-                    if (activeParent) {
-                        // Keep only the active parent menu open
-                        return [activeParent];
-                    } else {
-                        // If no active parent, keep only the newly opened menu
-                        return [menuData.title];
-                    }
+                    // Close all others, keep only the newly clicked menu
+                    return [menuData.title];
                 }
 
                 // Check if auto-close is needed due to height constraints
