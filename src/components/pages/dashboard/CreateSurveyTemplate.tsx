@@ -93,7 +93,7 @@ export const CreateSurveyTemplate: React.FC = () => {
         </div>
 
         {/* Filter Buttons */}
-        <div className="flex items-center gap-2 justify-start md:justify-end flex-wrap">
+        <div className="flex items-center gap-2 filterBallsALignment md:justify-end flex-wrap">
           {[1, 2, 3, 4, 5].map((val) => (
             <button
               type="button"

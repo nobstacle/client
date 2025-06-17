@@ -129,7 +129,7 @@ export default function Dashboard() {
           </div>
         </div>
         {websitesSource.length > 0 && (
-          <div className="w-50">
+          <div className="searchInputWidth">
             <SearchTemplateForm searchOnChange={search} placeholder="Search template"/>
           </div>
         )}

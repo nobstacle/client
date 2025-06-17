@@ -1294,7 +1294,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 									/>
 								</Tooltip>
 
-								{selectedForm && (
+								{selectedForm && !isMobile && (
 									<>
 										<Tooltip title="Download Sample CSV">
 											<Button
@@ -1492,7 +1492,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 								<label
 									key={status}
 									htmlFor={status}
-									className="inline-flex items-center space-x-2 px-4 py-2 bg-gray-100 rounded-md cursor-pointer hover:bg-gray-200 transition"
+									className="inline-flex items-center space-x-2 py-2 bg-gray-100 rounded-md cursor-pointer hover:bg-gray-200 transition"
 								>
 									<input
 										id={status}
@@ -1670,10 +1670,11 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 				open={isReportModal}
 				onCancel={closeReportModal}
 				footer={null}
-				width="75%"
+				width={isMobile ? '100%' : "75%"}
 				centered
 				closable
 				title="Form Report"
+				className="customReportModal"
 			>
 				<hr />
 				{renderReport()}

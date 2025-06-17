@@ -6,7 +6,7 @@ import { useCompanyControllerGetCompany } from "../../../../lib/client/api";
 import { UseFormRegister } from "react-hook-form";
 import { useRouterWithQueryParams } from "../../../../hooks/useRouterWithQueryParams";
 import { useHasHydrated } from "../../../../hooks/useHydrated";
-import { Spinner } from "../../../Spinner";
+// import { Spinner } from "../../../Spinner";
 import { useSocketContext } from "../../../../context/SocketContextProvider";
 
 interface LanguagePickerPropsI {
@@ -23,14 +23,15 @@ export const LanguagePicker: React.FC<LanguagePickerPropsI> = ({
   name,
 }) => {
   const registerActive = register ? { ...register(name) } : {};
+  let isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
 
   return (
     <select
-      className="rounded-md"
+      className={isMobile ? 'w-full rounded-md' : "rounded-md"}
       onChange={onChange}
       defaultValue={defaultValue}
       name={name}
-      style={{maxWidth:'100px'}}
+      style={{ maxWidth: isMobile ? '' : '100px' }}
       {...registerActive}
     >
       {languages.map(({ code, name }) => (

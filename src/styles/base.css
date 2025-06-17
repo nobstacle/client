@@ -370,7 +370,7 @@ button {
 }
 
 .formFilters span {
-  font-size: 14px !important;
+  font-size: 14px;
 }
 
 .jNewHeader {
@@ -671,6 +671,43 @@ button {
   .customHamburger {
     top: 0.75rem !important;
   }
+
+  .formInnerCOntainer button {
+    padding: 0.36rem 1rem !important;
+  }
+
+  .filterBallsALignment {
+    justify-content: center !important;
+  }
+
+  .ant-card .ant-card-body {
+    padding: 10px !important;
+  }
+
+  .formFilters label {
+    padding: 0.5rem !important;
+  }
+
+  .formFilters label span {
+    font-size: 0.7rem !important;
+  }
+
+  .customReportModal .ant-modal-content {
+    padding: 10px !important;
+  }
+
+  .reportFilterWrapper {
+    flex-wrap: wrap;
+    justify-content: flex-start !important;
+  }
+
+  .reportFilterWrapper button {
+    font-size: 10px !important;
+  }
+}
+
+.formFilters label {
+  padding: 0.5rem 1rem;
 }
 
 .customFont {
@@ -703,4 +740,19 @@ button {
 
 .custompadding {
   padding-left: 3.5rem !important;
+}
+
+.filterBallsALignment {
+  justify-content: flex-start;
+}
+
+@media screen and (max-width: 380px) {
+  input {
+    font-size: 0.75rem !important;
+  }
+
+  .formInnerCOntainer button svg {
+    width: 16px !important;
+    height: 16px !important;
+  }
 }

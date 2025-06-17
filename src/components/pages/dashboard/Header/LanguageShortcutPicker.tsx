@@ -16,7 +16,8 @@ export const LanguageShortcutPicker: React.FC = () => {
   const params = useSearchParams();
   const [checked, setChecked] = useState<string>("");
   const isHydrated = useHasHydrated();
-
+  let isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
+  
   const headerLangaugePickerDefault =
     params.get("lang") || company?.defaultLangCode || "en";
 
@@ -47,7 +48,7 @@ export const LanguageShortcutPicker: React.FC = () => {
         <select
           value={selectedLanguage?.value || headerLangaugePickerDefault}
           onChange={(e) => handleLanguageChange(e.target.value)}
-           className="rounded-md"
+          className={isMobile ? 'w-full rounded-md' : "rounded-md"}
         >
           {sortedLanguages.map((res) => (
             <option key={res.id} value={res.value} className="bg-primary text-white">

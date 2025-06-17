@@ -50,7 +50,9 @@ export const DraggableCardContainer: React.FC<{
         items={items.map((item) => item.id)}
         strategy={horizontalListSortingStrategy}
       >
-        {children}
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-2 sm:gap-3 md:gap-4 lg:gap-6 xl:gap-8">
+          {children}
+        </div>
       </SortableContext>
     </DndContext>
   );
@@ -97,8 +99,8 @@ export const DraggableCardItem: React.FC<
     const transformValues = transform
       ? {
         ...transform,
-        scaleX: isDragging ? 1.1 : 1.0,
-        scaleY: isDragging ? 1.1 : 1.0,
+        scaleX: isDragging ? 1.05 : 1.0,
+        scaleY: isDragging ? 1.05 : 1.0,
       }
       : null;
 
@@ -119,22 +121,31 @@ export const DraggableCardItem: React.FC<
           }
         }}
         id="card-container"
-        className="relative flex h-[166px] w-full max-w-[166px] cursor-pointer flex-col rounded-md bg-neutral-300 shadow-2xl mb-4"
+        className="relative flex cursor-pointer flex-col rounded-md bg-neutral-300 shadow-lg 
+                   h-32 w-full
+                   xs:h-36 
+                   sm:h-40 sm:shadow-xl
+                   md:h-44 md:shadow-2xl
+                   lg:h-48
+                   xl:h-52"
         style={{
           ...style,
           zIndex: isDragging ? 9999 : 1,
           position: "relative",
         }}
       >
-        <div className="min-h-[118px] px-3 pt-3">{children}</div>
+        <div className="flex-1 p-2 sm:p-3 md:px-3 md:pt-3 overflow-hidden">
+          <div className="h-full text-xs sm:text-sm md:text-base">
+            {children}
+          </div>
+        </div>
 
         {!isRecevied && isHover && isAdmin && (
-          <div className="absolute left-0 top-0 z-10 flex ">
+          <div className="absolute left-0 top-0 z-10 flex">
             <button
-              className="m-0 h-5 w-5 rounded-b-md    text-center text-black"
+              className="m-0 h-4 w-4 sm:h-5 sm:w-5 rounded-b-md text-center text-black bg-white/80 hover:bg-white"
               onClick={(e) => {
                 e.stopPropagation();
-
                 if (onUpdate) {
                   onUpdate();
                 }
@@ -144,10 +155,11 @@ export const DraggableCardItem: React.FC<
             </button>
           </div>
         )}
+        
         {!isRecevied && isHover && isAdmin && (
           <div className="absolute right-0 top-0 z-10 flex">
             <button
-              className="rounded-t-r-md m-0 h-5 w-5 rounded-b-md    text-center text-danger"
+              className="m-0 h-4 w-4 sm:h-5 sm:w-5 rounded-b-md text-center text-danger bg-white/80 hover:bg-white"
               onClick={(e) => {
                 e.stopPropagation();
                 if (onDelete) {
@@ -164,31 +176,43 @@ export const DraggableCardItem: React.FC<
           <div
             {...attributes}
             {...listeners}
-            className="absolute bottom-0 left-0 z-10 flex cursor-move"
+            className="absolute bottom-8 left-0 z-10 flex cursor-move 
+                       sm:bottom-10 
+                       md:bottom-12 
+                       lg:bottom-14 
+                       xl:bottom-16"
           >
-            <DragIcon />
+            <div className="p-1 bg-white/80 rounded-tr-md hover:bg-white">
+              <DragIcon />
+            </div>
           </div>
         )}
 
-        <div className="p-2"></div>
-        <div className="h-full">
-          <Button className="relative h-full w-full rounded-b-md bg-primary  text-sm text-white">
-            {tag}
+        <div className="mt-auto">
+          <Button className="relative h-8 w-full rounded-b-md bg-primary text-xs text-white
+                           sm:h-10 sm:text-sm
+                           md:text-base
+                           lg:h-12">
+            <span className="truncate px-2">{tag}</span>
             {/* {icon} */}
             {!icon && isAvailable && (
               <span
                 className="absolute bottom-0 right-0 h-0 w-0
-                 border-b-[15px] border-l-[15px]
+                 border-b-[10px] border-l-[10px]
                  border-green-500
-                 border-l-transparent"
+                 border-l-transparent
+                 sm:border-b-[12px] sm:border-l-[12px]
+                 md:border-b-[15px] md:border-l-[15px]"
               />
             )}
             {!icon && !isAvailable && (
               <span
                 className="absolute bottom-0 right-0 h-0 w-0
-                 border-b-[15px] border-l-[15px]
+                 border-b-[10px] border-l-[10px]
                  border-red-500
-                 border-l-transparent"
+                 border-l-transparent
+                 sm:border-b-[12px] sm:border-l-[12px]
+                 md:border-b-[15px] md:border-l-[15px]"
               />
             )}
           </Button>

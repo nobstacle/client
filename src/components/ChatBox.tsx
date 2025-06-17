@@ -83,7 +83,7 @@ export const ChatBox = React.forwardRef<HTMLDivElement, ChatBoxProps>(
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               className="h-[40px] w-full resize-none overflow-y-auto rounded-md px-3 py-2 text-sm leading-5"
-              placeholder="Type your message"
+              placeholder="Message"
               style={{
                 scrollbarWidth: 'thin',
                 scrollbarColor: '#888 transparent'

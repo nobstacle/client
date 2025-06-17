@@ -33,7 +33,7 @@ export const SearchTemplateForm: React.FC<PropsI> = ({
       value={searchValue}
       placeholder={placeholder}
       onChange={handleInputChange}
-      className="rounded-md border-2 p-2"
+      className="rounded-md p-2"
       suffix={
         <div className="flex items-center gap-1">
           {isSearching && <LoadingOutlined className="text-blue-500" />}
@@ -45,7 +45,7 @@ export const SearchTemplateForm: React.FC<PropsI> = ({
           )}
         </div>
       }
-      allowClear={false} // We're handling clear manually
+      allowClear={false}
     />
   );
 };

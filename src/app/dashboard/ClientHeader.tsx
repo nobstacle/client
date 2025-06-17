@@ -2,7 +2,7 @@
 
 import { PropsWithChildren, useState } from "react";
 import { Drawer, Button, Divider } from "antd";
-import { MenuOutlined, CloseOutlined, SettingOutlined } from "@ant-design/icons";
+import { MenuOutlined, CloseOutlined, SettingOutlined, MoreOutlined } from "@ant-design/icons";
 import { HeaderLanguagePicker } from "../../components/pages/dashboard/Header/LanguagePicker";
 import { LanguageShortcutPicker } from "../../components/pages/dashboard/Header/LanguageShortcutPicker";
 import { TemplateShortcutPicker } from "../../components/pages/dashboard/Header/TemplateShortcutPicker";
@@ -10,7 +10,7 @@ import { StationPicker } from "../../components/pages/dashboard/Header/StationPi
 
 const ClientHeader = () => {
     const [drawerOpen, setDrawerOpen] = useState(false);
-let isMobile = typeof window !== 'undefined' && window.innerWidth <= 1024;
+    const [shortcutMenuOpen, setShortcutMenuOpen] = useState(false);
 
     const showDrawer = () => {
         setDrawerOpen(true);
@@ -20,36 +20,66 @@ let isMobile = typeof window !== 'undefined' && window.innerWidth <= 1024;
         setDrawerOpen(false);
     };
 
-    console.info("isMobile",isMobile);
+    const showShortcutMenu = () => {
+        setShortcutMenuOpen(true);
+    };
+
+    const closeShortcutMenu = () => {
+        setShortcutMenuOpen(false);
+    };
 
     return (
         <>
             {/* Mobile Header */}
-          <nav className="h-16 sm:h-20 w-full shadow-sm border-b border-gray-100 px-4 block lg:hidden"
-                style={{ backgroundColor: '#3b5998' }}>
-                <div className="flex h-full w-full items-center justify-between">
-                     <div className="flex items-center" style={{ paddingLeft: isMobile ? '10vw' : '0' }}>
-                        <h1 className="text-white text-xl font-semibold tracking-tight">Dashboard</h1>
-                    </div> 
-                    <Button
-                        type="text"
-                        icon={<MenuOutlined className="text-white text-xl" />}
-                        onClick={showDrawer}
-                        className="border-none shadow-none hover:bg-white/20 transition-colors duration-200 rounded-lg p-3"
-                        style={{
-                            background: 'transparent',
-                            border: 'none'
-                        }}
-                    />
-                </div>
-            </nav>
+            <div className="block lg:hidden" style={{ backgroundColor: '#3b5998' }}>
+                {/* First Line: Main Menu (Left) - Shortcut Menu (Right) */}
+                <nav className="h-14 w-full shadow-sm border-b border-white/20 px-4">
+                    <div className="flex h-full w-full items-center justify-between">
+                        <Button
+                            type="text"
+                            icon={<MenuOutlined className="text-white text-xl" />}
+                            onClick={showDrawer}
+                            className="border-none shadow-none hover:bg-white/20 transition-colors duration-200 rounded-lg p-3"
+                            style={{
+                                background: 'transparent',
+                                border: 'none'
+                            }}
+                        />
+                        <Button
+                            type="text"
+                            icon={<MoreOutlined className="text-white text-xl" />}
+                            onClick={showShortcutMenu}
+                            className="border-none shadow-none hover:bg-white/20 transition-colors duration-200 rounded-lg p-3"
+                            style={{
+                                background: 'transparent',
+                                border: 'none'
+                            }}
+                        />
+                    </div>
+                </nav>
+
+                {/* Second Line: Language Radio Buttons (Left) - Station Dropdown (Right) */}
+                {/* <div className="h-12 w-full px-4 py-2 border-b border-gray-100">
+                    <div className="flex h-full w-full items-center justify-between">
+                        <div className="flex-1">
+                            <div className="bg-white/10 backdrop-blur-sm rounded-lg px-3 py-1 inline-block">
+                                <LanguageShortcutPicker />
+                            </div>
+                        </div>
+                        <div className="ml-4">
+                            <div className="bg-white/10 backdrop-blur-sm rounded-lg px-3 py-1">
+                                <StationPicker />
+                            </div>
+                        </div>
+                    </div>
+                </div> */}
+            </div>
 
             {/* Desktop Header */}
-            <nav className="h-20 w-full shadow-sm border-b border-gray-100 px-6 hidden sm:block"
+            <nav className="h-20 w-full shadow-sm border-b border-gray-100 px-6 hidden lg:block"
                 style={{ backgroundColor: '#3b5998' }}>
                 <div className="flex h-full w-full items-center justify-between mx-auto">
                     <div className="flex items-center gap-6">
-                        {/* <h1 className="text-white text-xl font-semibold tracking-tight mr-4">Dashboard</h1> */}
                         <div className="flex items-center gap-4">
                             <div className="bg-white/10 backdrop-blur-sm rounded-lg px-4 py-2">
                                 <LanguageShortcutPicker />
@@ -71,7 +101,7 @@ let isMobile = typeof window !== 'undefined' && window.innerWidth <= 1024;
                 </div>
             </nav>
 
-            {/* Mobile Drawer */}
+            {/* Main Menu Drawer */}
             <Drawer
                 title={
                     <div className="flex items-center justify-between py-2">
@@ -93,7 +123,7 @@ let isMobile = typeof window !== 'undefined' && window.innerWidth <= 1024;
                 onClose={closeDrawer}
                 open={drawerOpen}
                 height="auto"
-                  className="block lg:hidden"
+                className="block lg:hidden"
                 bodyStyle={{
                     padding: '24px',
                     backgroundColor: '#f8fafc',
@@ -181,6 +211,61 @@ let isMobile = typeof window !== 'undefined' && window.innerWidth <= 1024;
                         >
                             Cancel
                         </Button>
+                    </div>
+                </div>
+            </Drawer>
+
+            {/* Shortcut Menu Drawer */}
+            <Drawer
+                title={
+                    <div className="flex items-center justify-between py-2">
+                        <div className="flex items-center gap-3">
+                            <MoreOutlined className="text-white text-lg" />
+                            <span className="text-lg font-semibold text-white">Quick Actions</span>
+                        </div>
+                        <Button
+                            type="text"
+                            icon={<CloseOutlined className="text-white" />}
+                            onClick={closeShortcutMenu}
+                            className="border-none shadow-none hover:bg-white/20 rounded-lg"
+                            style={{ background: 'transparent' }}
+                        />
+                    </div>
+                }
+                placement="right"
+                closable={false}
+                onClose={closeShortcutMenu}
+                open={shortcutMenuOpen}
+                width={300}
+                className="block lg:hidden"
+                bodyStyle={{
+                    padding: '24px',
+                    backgroundColor: '#f8fafc'
+                }}
+                headerStyle={{
+                    backgroundColor: '#3b5998',
+                    color: 'white',
+                    borderBottom: 'none',
+                    padding: '16px 24px'
+                }}
+            >
+                <div className="space-y-4">
+                    <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                        <h3 className="text-base font-semibold text-gray-800 mb-3">Language Shortcut Picker</h3>
+                        <LanguageShortcutPicker />
+                    </div>
+                    <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                        <h3 className="text-base font-semibold text-gray-800 mb-3">Header Language</h3>
+                        <HeaderLanguagePicker />
+                    </div>
+
+                    <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                        <h3 className="text-base font-semibold text-gray-800 mb-3">Template Shortcut</h3>
+                        <TemplateShortcutPicker />
+                    </div>
+                    <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                        <h3 className="text-base font-semibold text-gray-800 mb-3">Station Picker</h3>
+                        <StationPicker />
                     </div>
                 </div>
             </Drawer>

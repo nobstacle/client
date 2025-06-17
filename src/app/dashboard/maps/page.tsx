@@ -123,7 +123,7 @@ export default function MapsDashboard() {
         </div>
         {mapsSource.length > 0 && (
           <div className="w-full">
-            <div className="w-50">
+            <div className="searchInputWidth">
               <SearchTemplateForm searchOnChange={search} placeholder="Search template" />
             </div>
           </div>

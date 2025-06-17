@@ -289,7 +289,7 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
                     <div onClick={closeSidebar}>
                         <div
                             className={`
-                                flex items-center px-4 py-2 transition-colors duration-200 text-sm cursor-pointer customFont custompadding
+                                flex items-center px-4 py-2 transition-colors duration-200 text-sm cursor-pointer customFont ${item.title !== 'Settings' ? 'custompadding' : ''}
                                 ${isActive
                                     ? 'bg-primary-dark text-white'
                                     : 'text-white/80 hover:text-white'
