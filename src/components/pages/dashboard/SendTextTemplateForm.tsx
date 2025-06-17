@@ -38,7 +38,6 @@ export const SendTextTemplateForm: React.FC<PropsI> = ({ onSend }) => {
       <Row gutter={16}>
         <Col md={23} xs={19}>
           <Form.Item
-            label="Message"
             validateStatus={errors.content ? "error" : ""}
             help={errors.content?.message}
           >

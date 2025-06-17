@@ -134,12 +134,12 @@ export const DraggableCardItem: React.FC<
         id="card-container"
         className="relative flex cursor-pointer flex-col rounded-lg bg-neutral-300 shadow-md hover:shadow-lg transition-all duration-200
                    w-full aspect-[4/5]
-                   min-h-[140px]
-                   sm:min-h-[160px] sm:shadow-lg hover:sm:shadow-xl
-                   md:min-h-[170px] md:shadow-xl hover:md:shadow-2xl
-                   lg:min-h-[180px]
-                   xl:min-h-[190px]
-                   2xl:min-h-[200px]"
+                   min-h-[150px]
+                   sm:h-[150px] sm:shadow-lg hover:sm:shadow-xl
+                   md:h-[150px] md:shadow-xl hover:md:shadow-2xl
+                   lg:h-[170px]
+                   xl:h-[180px]
+                   2xl:h-[200px]"
         style={{
           ...style,
           zIndex: isDragging ? 9999 : 1,
@@ -222,7 +222,7 @@ export const DraggableCardItem: React.FC<
                            lg:h-11 lg:text-base
                            xl:h-12 xl:text-base
                            transition-colors duration-200 hover:bg-primary/90">
-            <span className="truncate px-2 sm:px-3 md:px-3 lg:px-4">{tag}</span>
+            <span className="block truncate px-2 sm:px-3 md:px-3 lg:px-4 overflow-hidden text-ellipsis whitespace-nowrap">{tag}</span>
 
             {/* Availability Indicator - Triangle */}
             {!icon && isAvailable && (

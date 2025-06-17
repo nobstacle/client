@@ -31,7 +31,7 @@ export const LanguagePicker: React.FC<LanguagePickerPropsI> = ({
       onChange={onChange}
       defaultValue={defaultValue}
       name={name}
-      style={{ maxWidth: isMobile ? '' : '100px' }}
+      style={{ maxWidth: isMobile ? '' : '190px' }}
       {...registerActive}
     >
       {languages.map(({ code, name }) => (
