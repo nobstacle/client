@@ -38,6 +38,8 @@ const IframeWithPrefill = React.memo(({ src, prefillData }: { src: string, prefi
     }
   }, [src, prefillData]);
 
+  console.info("srcsrcsrcsrcsrc",src);
+
   return (
     <iframe
       ref={iframeRef}
@@ -247,6 +249,7 @@ export const Content: React.FC = () => {
         try {
           const result = await getFormData(messageStore.receivedContent.content);
           console.info("Form data result:", result);
+          console.info("!@#$%%:", messageStore.receivedContent.content);
 
           if (result) {
             setJotFormUrl(result.url);
@@ -266,58 +269,58 @@ export const Content: React.FC = () => {
     loadFormData();
   }, [messageStore.receivedType, messageStore.receivedContent?.content, data?.user.backendTokens.at]);
 
+const getFormData = async (url: string): Promise<{ url: string, prefillData: Record<string, string> } | null> => {
+  try {
+    const urlObj = new URL(url);
+    const uuid = urlObj.searchParams.get("uuid");
 
-
-
-  const getFormData = async (url: string): Promise<{ url: string, prefillData: Record<string, string> } | null> => {
-    try {
-      const urlObj = new URL(url);
-      const uuid = urlObj.searchParams.get("uuid");
-
-      if (!uuid) {
-        console.error("UUID not found in URL");
-        return null;
-      }
-
-      // Extract prefill data from original URL
-      const prefillData: Record<string, string> = {};
-      urlObj.searchParams.forEach((value, key) => {
-        if (key !== 'uuid') {
-          prefillData[key] = value;
-        }
-      });
-
-      const res = await fetch(`${baseUrl}/api/jotform/get-assigned-form-by-uuid?uuid=${uuid}`, {
-        headers: {
-          Authorization: `Bearer ${data?.user.backendTokens.at}`,
-          "Content-Type": "application/json",
-        },
-      });
-
-      if (!res.ok) {
-        throw new Error(`HTTP error! status: ${res.status}`);
-      }
-
-      const text = await res.text();
-      const result = JSON.parse(text);
-
-      const newUrl = new URL(`https://form.jotform.com/${result.data.formId}`);
-
-      // Add all prefill parameters to the new URL
-      Object.entries(prefillData).forEach(([key, value]) => {
-        newUrl.searchParams.set(key, value);
-      });
-
-      return {
-        url: newUrl.toString(),
-        prefillData
-      };
-
-    } catch (error) {
-      console.error("Error fetching data:", error);
+    if (!uuid) {
+      console.error("UUID not found in URL");
       return null;
     }
-  };
+
+    // Extract prefill data from original URL
+    const prefillData: Record<string, string> = {};
+    urlObj.searchParams.forEach((value, key) => {
+      if (key !== 'uuid') {
+        prefillData[key] = value;
+      }
+    });
+
+    const res = await fetch(`${baseUrl}/api/jotform/get-assigned-form-by-uuid?uuid=${uuid}`, {
+      headers: {
+        Authorization: `Bearer ${data?.user.backendTokens.at}`,
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!res.ok) {
+      throw new Error(`HTTP error! status: ${res.status}`);
+    }
+
+    const text = await res.text();
+    const result = JSON.parse(text);
+
+    const newUrl = new URL(`https://form.jotform.com/${result.data.formId}`);
+
+    // Add the UUID back to the new URL
+    newUrl.searchParams.set('uuid', uuid);
+
+    // Add all prefill parameters to the new URL
+    Object.entries(prefillData).forEach(([key, value]) => {
+      newUrl.searchParams.set(key, value);
+    });
+
+    return {
+      url: newUrl.toString(),
+      prefillData
+    };
+
+  } catch (error) {
+    console.error("Error fetching data:", error);
+    return null;
+  }
+};
 
   const { emitSendMessage } = useSocketContext();
 
