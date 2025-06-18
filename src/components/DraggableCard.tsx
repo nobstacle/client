@@ -14,7 +14,7 @@ import {
 } from "@dnd-kit/core";
 import {
   SortableContext,
-  horizontalListSortingStrategy,
+  rectSortingStrategy,
   sortableKeyboardCoordinates,
   useSortable,
 } from "@dnd-kit/sortable";
@@ -49,19 +49,11 @@ export const DraggableCardContainer: React.FC<{
     >
       <SortableContext
         items={items.map((item) => item.id)}
-        strategy={horizontalListSortingStrategy}
+        strategy={rectSortingStrategy}
       >
-        {/* Improved responsive grid with better breakpoints and full width utilization */}
-        <div className="w-full px-2 sm:px-4 lg:px-6">
-          <div className="grid gap-3 sm:gap-4 md:gap-5 lg:gap-6 
-                         grid-cols-2 
-                         sm:grid-cols-3 
-                         md:grid-cols-4 
-                         lg:grid-cols-4 
-                         xl:grid-cols-5 
-                         2xl:grid-cols-6 
-                         3xl:grid-cols-8
-                         w-full">
+        <div className="w-full">
+          <div className="flex flex-wrap gap-3 sm:gap-2 md:gap-2 lg:gap-4 
+                         w-full justify-start items-start">
             {children}
           </div>
         </div>
@@ -133,13 +125,14 @@ export const DraggableCardItem: React.FC<
         }}
         id="card-container"
         className="relative flex cursor-pointer flex-col rounded-lg bg-neutral-300 shadow-md hover:shadow-lg transition-all duration-200
-                   w-full aspect-[4/5]
-                   min-h-[150px]
-                   sm:h-[150px] sm:shadow-lg hover:sm:shadow-xl
-                   md:h-[150px] md:shadow-xl hover:md:shadow-2xl
-                   lg:h-[170px]
-                   xl:h-[180px]
-                   2xl:h-[200px]"
+                   flex-shrink-0 flex-grow-0
+                   w-[calc(50%-0.375rem)] aspect-[4/5]
+                   min-h-[150px] 
+                   sm:w-[120px] sm:h-[150px] sm:shadow-lg hover:sm:shadow-xl
+                   md:w-[120px] md:h-[150px] md:shadow-xl hover:md:shadow-2xl
+                   lg:w-[120px] lg:h-[170px]
+                   xl:w-[130px] xl:h-[180px]
+                   2xl:w-[160px] 2xl:h-[180px]"
         style={{
           ...style,
           zIndex: isDragging ? 9999 : 1,
