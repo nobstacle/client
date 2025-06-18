@@ -252,7 +252,7 @@ export const SocketContextProvider = ({
   };
 
   const onReceivedJotForm = (data: any) => {
-    console.log("📩 Received JotForm Submission:", data);
+    console.info("📩 Received JotForm Submission:", data);
 
     try {
       const parsedRes = JSON.parse(data);
@@ -272,7 +272,7 @@ export const SocketContextProvider = ({
   };
 
   const onDataSubmitted = (data: any) => {
-    console.log("📩 Received JotForm data:", data);
+    console.info("📩 Received JotForm data:", data);
 
     try {
       const parsedRes = JSON.parse(data);
