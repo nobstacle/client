@@ -485,10 +485,10 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 								) : (
 									<>
 										{isMobile ? (
-											<SendIcon size={10} className="sm:hidden" />
+											<FaFilePdf size={10} className="sm:hidden" />
 										) : (
 
-											<SendIcon size={14} className="hidden sm:block" />
+											<FaFilePdf size={14} className="hidden sm:block" />
 										)}
 									</>
 								)}
