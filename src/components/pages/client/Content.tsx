@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useMemo, useCallback } from "react";
 import { useMessageStore } from "../../../lib/zustand/store/messageStore";
 import { ChatBox } from "../../ChatBox";
 import { useSocketContext } from "../../../context/SocketContextProvider";
@@ -13,13 +13,47 @@ import {
   useContentControllerGetDefaultSlideshowContent,
 } from "../../../lib/client/api";
 import Slideshow from "./Slideshow";
-import React from "react";
 import SimpleMap from "./Map";
 import SurveyAnswer from "./SurveyAnswer";
 import QRCode from 'qrcode';
 import "../../../styles/base.css";
 import "antd/dist/reset.css";
 import { useSession } from "next-auth/react";
+
+const IframeWithPrefill = React.memo(({ src, prefillData }: { src: string, prefillData: Record<string, string> }) => {
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const [iframeKey, setIframeKey] = useState(0);
+  const prevSrcRef = useRef(src);
+  const prevPrefillDataRef = useRef(JSON.stringify(prefillData));
+
+  useEffect(() => {
+    const currentPrefillStr = JSON.stringify(prefillData);
+    const srcChanged = prevSrcRef.current !== src;
+    const prefillChanged = prevPrefillDataRef.current !== currentPrefillStr;
+
+    if (srcChanged || prefillChanged) {
+      setIframeKey(prev => prev + 1);
+      prevSrcRef.current = src;
+      prevPrefillDataRef.current = currentPrefillStr;
+    }
+  }, [src, prefillData]);
+
+  return (
+    <iframe
+      ref={iframeRef}
+      key={iframeKey}
+      src={src}
+      width="100%"
+      height="600"
+      frameBorder="0"
+      scrolling="auto"
+      allow="geolocation; microphone; camera"
+      style={{ border: "none" }}
+      className="w-full h-full"
+      title="JotForm"
+    />
+  );
+});
 
 export const Content: React.FC = () => {
   const isFirstTimeOpen = useRef(true);
@@ -43,6 +77,7 @@ export const Content: React.FC = () => {
   const { data } = useSession();
   let baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
   const [jotFormUrl, setJotFormUrl] = useState<string | null>(null);
+  const [prefillData, setPrefillData] = useState<Record<string, string>>({});
 
   const defaultSlideshowContent =
     useContentControllerGetDefaultSlideshowContent({
@@ -178,10 +213,19 @@ export const Content: React.FC = () => {
     generateQR();
   }, [messageStore.receivedContent?.content]);
 
+  const handleCloseQR = useCallback(() => {
+    setIsClosing(true);
+    setShowQR(false);
+    setTimer(0);
+  }, []);
+
+
   useEffect(() => {
     let countdown: NodeJS.Timeout;
+
     if (showQR && !isClosing) {
       setTimer(20);
+
       countdown = setInterval(() => {
         setTimer(prev => {
           if (prev <= 1) {
@@ -193,18 +237,28 @@ export const Content: React.FC = () => {
         });
       }, 1000);
     }
+
     return () => clearInterval(countdown);
-  }, [showQR, isClosing]);
+  }, [showQR, isClosing, handleCloseQR]);
 
   useEffect(() => {
     const loadFormData = async () => {
       if (messageStore.receivedType === "JotFormMessage" && messageStore.receivedContent?.content) {
         try {
-          const newUrl = await getFormData(messageStore.receivedContent.content);
-          setJotFormUrl(newUrl || null);
+          const result = await getFormData(messageStore.receivedContent.content);
+          console.info("Form data result:", result);
+
+          if (result) {
+            setJotFormUrl(result.url);
+            setPrefillData(result.prefillData);
+          } else {
+            setJotFormUrl(null);
+            setPrefillData({});
+          }
         } catch (error) {
           console.error("Failed to load form data:", error);
           setJotFormUrl(null);
+          setPrefillData({});
         }
       }
     };
@@ -212,7 +266,10 @@ export const Content: React.FC = () => {
     loadFormData();
   }, [messageStore.receivedType, messageStore.receivedContent?.content, data?.user.backendTokens.at]);
 
-  const getFormData = async (url: string): Promise<string | null> => {
+
+
+
+  const getFormData = async (url: string): Promise<{ url: string, prefillData: Record<string, string> } | null> => {
     try {
       const urlObj = new URL(url);
       const uuid = urlObj.searchParams.get("uuid");
@@ -221,6 +278,14 @@ export const Content: React.FC = () => {
         console.error("UUID not found in URL");
         return null;
       }
+
+      // Extract prefill data from original URL
+      const prefillData: Record<string, string> = {};
+      urlObj.searchParams.forEach((value, key) => {
+        if (key !== 'uuid') {
+          prefillData[key] = value;
+        }
+      });
 
       const res = await fetch(`${baseUrl}/api/jotform/get-assigned-form-by-uuid?uuid=${uuid}`, {
         headers: {
@@ -235,22 +300,23 @@ export const Content: React.FC = () => {
 
       const text = await res.text();
       const result = JSON.parse(text);
-      const newUrl = `https://form.jotform.com/${result.data.formId}?uuid=${uuid}`;
-      console.info("newUrlnewUrl", newUrl);
-      return newUrl;
+
+      const newUrl = new URL(`https://form.jotform.com/${result.data.formId}`);
+
+      // Add all prefill parameters to the new URL
+      Object.entries(prefillData).forEach(([key, value]) => {
+        newUrl.searchParams.set(key, value);
+      });
+
+      return {
+        url: newUrl.toString(),
+        prefillData
+      };
 
     } catch (error) {
       console.error("Error fetching data:", error);
       return null;
     }
-  };
-
-  const handleCloseQR = () => {
-    setIsClosing(true);
-    setTimeout(() => {
-      setShowQR(false);
-      setIsClosing(false);
-    }, 500);
   };
 
   const { emitSendMessage } = useSocketContext();
@@ -840,23 +906,10 @@ export const Content: React.FC = () => {
           )}
 
           <div
-            className={`flex-1 overflow-auto iframe-container ${showQR && !isClosing
-              ? 'iframe-slide-down'
-              : isClosing
-                ? 'iframe-slide-up'
-                : ''
-              }`}
-          >
-            <iframe
-              ref={iframeRef}
-              className="w-full h-full"
-              src={jotFormUrl || ""}
-              style={{ border: "none" }}
-              allow="camera; microphone; geolocation; autoplay; encrypted-media; fullscreen; picture-in-picture; web-share; display-capture; clipboard-read; clipboard-write; usb; magnetometer; gyroscope; accelerometer; ambient-light-sensor; battery; bluetooth; payment; midi; speaker-selection; screen-wake-lock; document-domain"
-              allowFullScreen
-              referrerPolicy="no-referrer"
-              loading="eager"
-              title="JotForm"
+            className="flex-1 overflow-auto iframe-container" >
+            <IframeWithPrefill
+              src={jotFormUrl}
+              prefillData={prefillData}
             />
           </div>
         </div>
