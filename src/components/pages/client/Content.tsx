@@ -80,6 +80,7 @@ export const Content: React.FC = () => {
   let baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
   const [jotFormUrl, setJotFormUrl] = useState<string | null>(null);
   const [prefillData, setPrefillData] = useState<Record<string, string>>({});
+const [contentKey, setContentKey] = useState(0);
 
   const defaultSlideshowContent =
     useContentControllerGetDefaultSlideshowContent({
@@ -193,27 +194,30 @@ export const Content: React.FC = () => {
     };
   }, [messageStore.receivedContent?.content]);
 
-  useEffect(() => {
-    const generateQR = async () => {
-      const content = messageStore.receivedContent?.content;
-      if (content) {
-        try {
-          const url = await QRCode.toDataURL(content);
-          setQrCodeUrl(url);
-          const wdthSize = window.innerWidth;
-          if (wdthSize > 650) {
-            setTimeout(() => {
-              setShowQR(true);
-            }, 3000);
-          }
-        } catch (err) {
-          console.error("Failed to generate QR code", err);
+useEffect(() => {
+  const generateQR = async () => {
+    const content = messageStore.receivedContent?.content;
+    if (content) {
+      try {
+        const url = await QRCode.toDataURL(content);
+        setQrCodeUrl(url);
+        const wdthSize = window.innerWidth;
+        if (wdthSize > 650) {
+          // Reset the timer states when new content arrives
+          setIsClosing(false);
+          setContentKey(prev => prev + 1); // Trigger timer reset
+          setTimeout(() => {
+            setShowQR(true);
+          }, 3000);
         }
+      } catch (err) {
+        console.error("Failed to generate QR code", err);
       }
-    };
+    }
+  };
 
-    generateQR();
-  }, [messageStore.receivedContent?.content]);
+  generateQR();
+}, [messageStore.receivedContent?.content]);
 
   const handleCloseQR = useCallback(() => {
     setIsClosing(true);
@@ -222,26 +226,26 @@ export const Content: React.FC = () => {
   }, []);
 
 
-  useEffect(() => {
-    let countdown: NodeJS.Timeout;
+useEffect(() => {
+  let countdown: NodeJS.Timeout;
 
-    if (showQR && !isClosing) {
-      setTimer(20);
+  if (showQR && !isClosing) {
+    setTimer(20); 
 
-      countdown = setInterval(() => {
-        setTimer(prev => {
-          if (prev <= 1) {
-            handleCloseQR();
-            clearInterval(countdown);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    }
+    countdown = setInterval(() => {
+      setTimer(prev => {
+        if (prev <= 1) {
+          handleCloseQR();
+          clearInterval(countdown);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  }
 
-    return () => clearInterval(countdown);
-  }, [showQR, isClosing, handleCloseQR]);
+  return () => clearInterval(countdown);
+}, [showQR, isClosing, handleCloseQR, contentKey]); 
 
   useEffect(() => {
     const loadFormData = async () => {
