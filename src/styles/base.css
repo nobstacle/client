@@ -775,6 +775,14 @@ button {
   border: 1px solid #B3D4FC !important;
 }
 
+.HandoverMainWrapper .active-card .glowDot {
+  box-shadow: 0 0 6px 2px rgba(82, 196, 26, 0.6);
+}
+
+.HandoverMainWrapper .inactive-card .glowDot {
+  box-shadow: 0 0 6px 2px rgba(255, 77, 79, 0.6);
+}
+
 .HandoverMainWrapper .inactive-card {
   background: #F5F7FA;
   border: 1px solid #DDE3E9 !important;
@@ -806,4 +814,28 @@ button {
 
 .handoverModal .bottomActionSection button:hover {
   background: #2d4373 !important;
+}
+
+.HandoverMainWrapper .customDeleteButton {
+  background: #B91C1C !important;
+  color: white;
+  border-radius: 25px;
+  padding: 0.88rem;
+  border: none;
+}
+
+.HandoverMainWrapper .customEditButton {
+  background: #008080 !important;
+  color: white;
+  border-radius: 25px;
+  padding: 0.88rem;
+  border: none;
+}
+
+.HandoverMainWrapper .customDeleteButton:hover {
+  background: #7F1313 !important;
+}
+
+.HandoverMainWrapper .customEditButton:hover {
+  background: #005959 !important;
 }

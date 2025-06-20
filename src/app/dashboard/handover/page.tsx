@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Table, Button, Space, Card, Modal, Form, Input, DatePicker, Upload, Row, Col, Divider } from 'antd';
+import { Table, Button, Space, Card, Modal, Form, Input, DatePicker, Upload, Row, Col, Divider, Image } from 'antd';
 import { EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import {
     useCompanyControllerGetCompany,
@@ -16,16 +16,17 @@ import { useMutation } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
 import { toast, Bounce } from 'react-toastify';
 import "react-toastify/dist/ReactToastify.css";
-
+import { PlusIcon } from "../../../components/icons/PlusIcon";
+import { FaTrash } from "react-icons/fa";
+import { RiEdit2Fill } from "react-icons/ri";
 
 interface uploadHandoverNoteData {
-  note: string;
-  startDate: string; 
-  endDate: string;  
-  imageUrl: File;    
-  createdBy: string;
+    note: string;
+    startDate: string;
+    endDate: string;
+    imageUrl: File;
+    createdBy: string;
 }
-
 
 export default function Handover() {
     const hasHydrated = useHasHydrated();
@@ -35,7 +36,7 @@ export default function Handover() {
     let isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [form] = Form.useForm();
-const { data } = useSession();
+    const { data } = useSession();
 
     const tableData = [
         {
@@ -44,6 +45,7 @@ const { data } = useSession();
             notes: 'This is a note',
             by: 'John Doe',
             validity: '24/04/2025 - 24/09/2025',
+            imageUrl: 'https://images.unsplash.com/photo-1557804506-669a67965ba0?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80',
         },
         {
             key: '2',
@@ -58,6 +60,7 @@ const { data } = useSession();
             notes: "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum",
             by: 'Mike Johnson',
             validity: '15/05/2024 - 15/06/2024',
+            imageUrl: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80',
         },
         {
             key: '4',
@@ -89,44 +92,74 @@ const { data } = useSession();
 
     const columns = [
         {
-            title: 'S.no',
-            dataIndex: 'sno',
-            key: 'sno',
-            width: 80,
-        },
-        {
             title: 'Notes',
             dataIndex: 'notes',
             key: 'notes',
             render: (text, record) => {
                 const isActive = isRecordActive(record.validity);
+                const dotColor = isActive ? '#52c41a' : '#ff4d4f';
+                const glowColor = isActive ? 'rgba(82, 196, 26, 0.6)' : 'rgba(255, 77, 79, 0.6)';
 
                 return (
-                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
                         <span
                             style={{
                                 width: '8px',
                                 height: '8px',
                                 borderRadius: '50%',
-                                backgroundColor: isActive ? '#52c41a' : '#ff4d4f',
+                                backgroundColor: dotColor,
+                                boxShadow: `0 0 6px 2px ${glowColor}`,
                                 display: 'inline-block',
                                 marginTop: '6px',
                                 flexShrink: 0
                             }}
                         ></span>
-                        <span style={{
-                            wordBreak: 'break-word',
-                            whiteSpace: 'normal',
-                            lineHeight: '1.5'
-                        }}>
-                            {text}
-                        </span>
+                        <div style={{ flex: 1 }}>
+                            <div style={{
+                                wordBreak: 'break-word',
+                                whiteSpace: 'normal',
+                                lineHeight: '1.5',
+                                marginBottom: record.imageUrl ? '8px' : '0'
+                            }}>
+                                {text}
+                            </div>
+                            {record.imageUrl && (
+                                <div style={{ marginTop: '8px' }}>
+                                    <Image
+                                        src={record.imageUrl}
+                                        alt="Note attachment"
+                                        width={60}
+                                        height={60}
+                                        style={{
+                                            objectFit: 'cover',
+                                            borderRadius: '6px',
+                                            border: '1px solid #d9d9d9'
+                                        }}
+                                        preview={{
+                                            mask: (
+                                                <div style={{
+                                                    background: 'rgba(0,0,0,0.6)',
+                                                    color: 'white',
+                                                    fontSize: '12px',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    height: '100%'
+                                                }}>
+                                                    <PictureOutlined />
+                                                </div>
+                                            )
+                                        }}
+                                    />
+                                </div>
+                            )}
+                        </div>
                     </div>
                 );
             },
         },
         {
-            title: 'BY',
+            title: 'Added By',
             dataIndex: 'by',
             key: 'by',
             width: 150,
@@ -145,16 +178,18 @@ const { data } = useSession();
                 <Space size="middle">
                     <Button
                         type="link"
-                        icon={<EditOutlined />}
+                        icon={<RiEdit2Fill />}
                         onClick={() => handleEdit(record)}
                         size="small"
+                        className='customEditButton'
                     />
                     <Button
                         type="link"
                         danger
-                        icon={<DeleteOutlined />}
+                        icon={<FaTrash />}
                         onClick={() => handleDelete(record)}
                         size="small"
+                        className='customDeleteButton'
                     />
                 </Space>
             ),
@@ -238,23 +273,26 @@ const { data } = useSession();
         },
     });
 
-const handleOk = (dataValue: uploadHandoverNoteData) => {
-    const formData = new FormData();
+    const handleOk = (dataValue: uploadHandoverNoteData) => {
+        const formData = new FormData();
 
-    if (dataValue.imageUrl?.[0]) {
-        formData.append('file', dataValue.imageUrl[0]);
-    }
+        if (dataValue.imageUrl?.[0]) {
+            formData.append('file', dataValue.imageUrl[0]);
+        }
 
-    formData.append('note', ddataValueata.note);
-    formData.append('startDate', dayjs(dataValue.startDate).format('YYYY-MM-DD'));
-    formData.append('endDate', dayjs(dataValue.endDate).format('YYYY-MM-DD'));
-    formData.append('createdBy', dataValue.createdBy || data?.user?.name || 'Unknown User'); 
+        formData.append('note', dataValue.note);
+        formData.append('startDate', dayjs(dataValue.startDate).format('YYYY-MM-DD'));
+        formData.append('endDate', dayjs(dataValue.endDate).format('YYYY-MM-DD'));
+        formData.append('createdBy', dataValue.createdBy || data?.user?.name || 'Unknown User');
 
-    uploadHandoverNote.mutate(formData);
-};
+        uploadHandoverNote.mutate(formData);
+        setIsModalOpen(false);
+        form.resetFields();
+    };
 
     const handleCancel = () => {
         setIsModalOpen(false);
+        form.resetFields();
     };
 
     // Mobile Card Component
@@ -271,7 +309,6 @@ const handleOk = (dataValue: uploadHandoverNoteData) => {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <span style={{ fontWeight: 'bold', color: '#666' }}>#{record.sno}</span>
                             <span
                                 style={{
                                     width: '8px',
@@ -280,6 +317,7 @@ const handleOk = (dataValue: uploadHandoverNoteData) => {
                                     backgroundColor: isActive ? '#52c41a' : '#ff4d4f',
                                     display: 'inline-block',
                                 }}
+                                className='glowDot'
                             ></span>
                             <span style={{
                                 fontSize: '12px',
@@ -295,7 +333,7 @@ const handleOk = (dataValue: uploadHandoverNoteData) => {
                                 icon={<EditOutlined />}
                                 onClick={() => handleEdit(record)}
                                 size="small"
-                                style={{ color: '#1890ff' }}
+                                className='customEditButton'
                             />
                             <Button
                                 type="text"
@@ -303,55 +341,68 @@ const handleOk = (dataValue: uploadHandoverNoteData) => {
                                 icon={<DeleteOutlined />}
                                 onClick={() => handleDelete(record)}
                                 size="small"
+                                className='customDeleteButton'
                             />
                         </Space>
                     </div>
 
-                    {/* Notes */}
+                    {/* Notes and Image */}
                     <div>
-                        <div style={{
-                            fontSize: '12px',
-                            color: '#666',
-                            marginBottom: '4px',
-                            fontWeight: '500'
-                        }}>
-                            Notes
-                        </div>
                         <div style={{
                             wordBreak: 'break-word',
                             whiteSpace: 'normal',
                             lineHeight: '1.5',
-                            fontSize: '14px'
+                            fontSize: '14px',
+                            marginBottom: record.imageUrl ? '12px' : '0'
                         }}>
                             {record.notes}
                         </div>
+                        
+                        {record.imageUrl && (
+                            <div style={{ 
+                                display: 'flex', 
+                                justifyContent: 'flex-start',
+                                marginBottom: '8px' 
+                            }}>
+                                <Image
+                                    src={record.imageUrl}
+                                    alt="Note attachment"
+                                    width={80}
+                                    height={80}
+                                    style={{
+                                        objectFit: 'cover',
+                                        borderRadius: '8px',
+                                        border: '1px solid #d9d9d9'
+                                    }}
+                                    preview={{
+                                        mask: (
+                                            <div style={{
+                                                background: 'rgba(0,0,0,0.6)',
+                                                color: 'white',
+                                                fontSize: '14px',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                height: '100%'
+                                            }}>
+                                                <PictureOutlined />
+                                            </div>
+                                        )
+                                    }}
+                                />
+                            </div>
+                        )}
                     </div>
 
                     {/* By and Validity */}
                     <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
                         <div>
-                            <div style={{
-                                fontSize: '12px',
-                                color: '#666',
-                                marginBottom: '2px',
-                                fontWeight: '500'
-                            }}>
-                                By
-                            </div>
-                            <div style={{ fontSize: '14px', fontWeight: '500' }}>
+                            <div style={{ fontSize: '14px', fontStyle: 'italic' }}>
                                 {record.by}
                             </div>
                         </div>
                         <div style={{ textAlign: 'right' }}>
-                            <div style={{
-                                fontSize: '12px',
-                                color: '#666',
-                                marginBottom: '2px',
-                                fontWeight: '500'
-                            }}>
-                                Validity
-                            </div>
-                            <div style={{ fontSize: '14px' }}>
+                            <div style={{ fontSize: '14px', fontStyle: 'italic' }}>
                                 {record.validity}
                             </div>
                         </div>
@@ -366,28 +417,27 @@ const handleOk = (dataValue: uploadHandoverNoteData) => {
             <>
                 <div className={`HandoverMainWrapper flex h-full w-full flex-col justify-start gap-4 overflow-y-auto ${isMobile ? 'p-4' : 'p-6'}`}>
                     <div className="flex w-full flex-col gap-4">
+                        <div className="customSearchWrapper">
+                            <Card className="w-full customCards">
+                                <div className="searchInputWidth">
+                                    <Input placeholder='Search Handover Notes' className='w-full rounded-md p-2' />
+                                </div>
+                            </Card>
+                        </div>
                         <div className="flex w-full flex-col items-end gap-4">
                             <div className="w-full">
                                 {isMobile ? (
                                     <div>
-                                        <div className="flex justify-between items-center mb-4">
-                                            <h2 className='pb-4'>Handover Notes</h2>
-                                            <Button className="btn-primary addNoteButton" onClick={() => createNotes()}>Add Note</Button>
-                                        </div>
-
                                         {tableData.map((record) => (
                                             <MobileCard key={record.key} record={record} />
                                         ))}
                                     </div>
                                 ) : (
                                     <>
-                                        <div className="flex justify-between items-center mb-4">
-                                            <h2 className='pb-4'>Handover Notes</h2>
-                                            <Button className="btn-primary addNoteButton" onClick={() => createNotes()}>Add Note</Button>
-                                        </div>
                                         <Table
                                             columns={columns}
                                             dataSource={tableData}
+                                            className='customHandoverTable'
                                             pagination={false}
                                             bordered
                                             size="middle"
@@ -397,6 +447,19 @@ const handleOk = (dataValue: uploadHandoverNoteData) => {
                             </div>
                         </div>
                     </div>
+                </div>
+                <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50">
+                    <Button
+                        onClick={() => createNotes()}
+                        className="group relative flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 bg-white/50 backdrop-blur-md hover:bg-white/60 border border-white/20 text-gray-700 hover:text-gray-900 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-white/30"
+                        aria-label="Create new template"
+                    >
+                        <PlusIcon className="w-6 h-6 sm:w-7 sm:h-7 opacity-100" />
+                        <div className="absolute right-full mr-3 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
+                            Add Notes
+                            <div className="absolute top-1/2 left-full w-0 h-0 border-l-4 border-l-gray-900 border-y-4 border-y-transparent transform -translate-y-1/2"></div>
+                        </div>
+                    </Button>
                 </div>
                 <Modal
                     title={
@@ -413,6 +476,7 @@ const handleOk = (dataValue: uploadHandoverNoteData) => {
                     }
                     open={isModalOpen}
                     footer={false}
+                    onCancel={handleCancel}
                     className='handoverModal'
                     width="90%"
                     style={{
@@ -446,6 +510,7 @@ const handleOk = (dataValue: uploadHandoverNoteData) => {
                         form={form}
                         requiredMark={false}
                         style={{ marginTop: '16px' }}
+                        onFinish={handleOk}
                     >
                         {/* Note Section */}
                         <div style={{ marginBottom: '24px' }}>
@@ -549,7 +614,7 @@ const handleOk = (dataValue: uploadHandoverNoteData) => {
 
                             <Col xs={24} sm={24} md={8}>
                                 <Form.Item
-                                    name="upload"
+                                    name="imageUrl"
                                     label={
                                         <div style={{
                                             display: 'flex',
@@ -613,14 +678,14 @@ const handleOk = (dataValue: uploadHandoverNoteData) => {
                         <div className='bottomActionSection'>
                             <Form.Item>
                                 <Button
-                                    type="primary" htmlType="submit"
-                                    onClick={() => handleOk()}
+                                    type="primary" 
+                                    htmlType="submit"
                                     style={{
                                         height: '42px',
                                         borderRadius: '8px',
                                         fontWeight: '500',
-
-                                    }}>Add
+                                    }}>
+                                    Add Note
                                 </Button>
                             </Form.Item>
                         </div>
