@@ -65,9 +65,9 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
             title: "Team",
             icon: <SurveyIcon />,
             children: [
-                { title: "Handover", href: "/dashboard/documents" },
-                { title: "Reminder", href: "/dashboard/documents" },
-                { title: "Information", href: "/dashboard/documents" },
+                { title: "Handover", href: "/dashboard/handover" },
+                { title: "Reminder", href: "/dashboard/reminder" },
+                { title: "Information", href: "/dashboard/information" },
                 { title: "Documents", href: "/dashboard/documents" },
             ],
             roles: ["Admin", "User", "Staff"]

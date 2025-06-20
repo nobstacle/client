@@ -768,3 +768,42 @@ button {
 .customQuickActionButton .ant-btn-icon {
   font-size: 1.2rem;
 }
+
+
+.HandoverMainWrapper .active-card {
+  background: #EAF4FF;
+  border: 1px solid #B3D4FC !important;
+}
+
+.HandoverMainWrapper .inactive-card {
+  background: #F5F7FA;
+  border: 1px solid #DDE3E9 !important;
+}
+
+.HandoverMainWrapper .addNoteButton {
+  background: #3b5998;
+  color: white;
+  transition: background 0.3s ease;
+}
+
+.HandoverMainWrapper .addNoteButton:hover {
+  background: #2d4373 !important;
+}
+
+
+.handoverModal .bottomActionSection {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 1rem;
+}
+
+.handoverModal .bottomActionSection button {
+  background: #3b5998;
+  padding: 0.5rem 2rem;
+  color: white;
+}
+
+.handoverModal .bottomActionSection button:hover {
+  background: #2d4373 !important;
+}

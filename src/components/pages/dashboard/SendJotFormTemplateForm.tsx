@@ -656,6 +656,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 	});
 
 	const sendJotFormMessage = (content: string, uuid: string) => {
+					console.info("contentcontentcontent", content);
 		emitSendJotForm(
 			{
 				refId: 1,
@@ -673,8 +674,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 
 	const buildUrl = (formId: string, inputValues: any, UUID?: string) => {
 		const params = new URLSearchParams();
-
-		// Append inputValues to params
+				console.info("paramsparams",inputValues);
 		for (const [key, value] of Object.entries(inputValues)) {
 			if (typeof value === 'string') {
 				params.append(key, value);
@@ -690,7 +690,6 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 		} else {
 			url = `${baseUrl}/forms/${formId}?${params.toString()}`;
 		}
-
 		return url;
 	};
 

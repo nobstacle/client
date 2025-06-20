@@ -3869,3 +3869,122 @@ export const useDocumentControllerGetDocumentTags = <
 
   return query;
 };
+
+
+export const getHandoverNotes = (
+  options?: SecondParameter<typeof nobstacleBackendApiInstance>,
+  signal?: AbortSignal
+) => {
+  return nobstacleBackendApiInstance<GetImageTemplateTagRes[]>(
+    {
+      url: `/api/v1/content/handover-notes`, 
+      method: 'GET',
+      signal,
+    },
+    options
+  );
+};
+
+
+export const getHandoverControllerNotes = <
+  TData = Awaited<ReturnType<typeof getHandoverNotes>>,
+  TError = ErrorType<HttpExceptionSchema>
+>(
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getHandoverNotes>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof nobstacleBackendApiInstance>;
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? ['getHandoverNotes'];
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getHandoverNotes>>
+  > = ({ signal }) => getHandoverNotes(requestOptions, signal);
+
+  return {
+    queryKey,
+    queryFn,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof documentControllerGetDocumentTags>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+
+
+export const handoverNotesControllerCreateHandoverNote = (
+	postHandoverNoteReq: BodyType,
+	options?: SecondParameter,
+) => {
+	return nobstacleBackendApiInstance(
+		{
+			url: `/api/v1/handover-notes`,
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			data: postHandoverNoteReq
+		},
+		options
+	);
+}
+
+export const getHandoverNotesControllerCreateHandoverNoteMutationOptions = <
+	TError = ErrorType,
+	TContext = unknown
+>(options?: {
+	mutation?: UseMutationOptions<
+		Awaited<ReturnType<typeof handoverNotesControllerCreateHandoverNote>>,
+		TError,
+		{ data: BodyType },
+		TContext
+	>,
+	request?: SecondParameter
+}): UseMutationOptions<
+	Awaited<ReturnType<typeof handoverNotesControllerCreateHandoverNote>>,
+	TError,
+	{ data: BodyType },
+	TContext
+> => {
+	const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+
+	const mutationFn: MutationFunction<
+		Awaited<ReturnType<typeof handoverNotesControllerCreateHandoverNote>>,
+		{ data: BodyType }
+	> = (props) => {
+		const { data } = props ?? {};
+
+		return handoverNotesControllerCreateHandoverNote(data, requestOptions)
+	}
+
+	return { mutationFn, ...mutationOptions }
+}
+
+export type HandoverNotesControllerCreateHandoverNoteMutationResult = NonNullable<
+	Awaited<ReturnType<typeof handoverNotesControllerCreateHandoverNote>>
+>
+export type HandoverNotesControllerCreateHandoverNoteMutationBody = BodyType
+export type HandoverNotesControllerCreateHandoverNoteMutationError = ErrorType
+
+export const useHandoverNotesControllerCreateHandoverNote = <
+	TError = ErrorType,
+	TContext = unknown
+>(options?: {
+	mutation?: UseMutationOptions<
+		Awaited<ReturnType<typeof handoverNotesControllerCreateHandoverNote>>,
+		TError,
+		{ data: BodyType },
+		TContext
+	>,
+	request?: SecondParameter
+}) => {
+	const mutationOptions = getHandoverNotesControllerCreateHandoverNoteMutationOptions(options);
+
+	return useMutation(mutationOptions);
+}
