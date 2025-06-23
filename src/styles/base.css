@@ -839,3 +839,11 @@ button {
 .HandoverMainWrapper .customEditButton:hover {
   background: #005959 !important;
 }
+
+.customHandoverTable .ant-table tr td:last-child {
+  text-align: center;
+}
+
+.ReminderModal {
+  max-width: 55vw;
+}

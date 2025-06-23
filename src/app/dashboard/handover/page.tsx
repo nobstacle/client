@@ -1,13 +1,9 @@
 "use client";
 
-import React, { useState } from 'react';
-import { Table, Button, Space, Card, Modal, Form, Input, DatePicker, Upload, Row, Col, Divider, Image } from 'antd';
+import React, { useEffect, useState } from 'react';
+import { Table, Button, Space, Card, Modal, Form, Input, DatePicker, Upload, Row, Col, Divider, Image, message } from 'antd';
 import { EditOutlined, DeleteOutlined } from '@ant-design/icons';
-import {
-    useCompanyControllerGetCompany,
-} from "../../../lib/client/api";
 import { useSearchParams } from "next/navigation";
-import { useSocketContext } from "../../../context/SocketContextProvider";
 import { useHasHydrated } from "../../../hooks/useHydrated";
 import "../../../styles/base.css";
 import dayjs from 'dayjs';
@@ -31,72 +27,60 @@ interface uploadHandoverNoteData {
 export default function Handover() {
     const hasHydrated = useHasHydrated();
     const params = useSearchParams();
-    const { emitSendTemplate } = useSocketContext();
-    const { data: companyData } = useCompanyControllerGetCompany();
     let isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [form] = Form.useForm();
     const { data } = useSession();
+    const [notesList, setNotesList] = useState([]);
+    const [editRecordData, setEditRecordData] = useState([]);
+    const [originalNotesList, setOriginalNotesList] = useState([]);
+    const [loadingData, setLoadingData] = useState(true);
+    let Url = process.env.NEXT_PUBLIC_BACKEND_URL;
+    let role = data?.user?.Roles[0];
 
-    const tableData = [
-        {
-            key: '1',
-            sno: 1,
-            notes: 'This is a note',
-            by: 'John Doe',
-            validity: '24/04/2025 - 24/09/2025',
-            imageUrl: 'https://images.unsplash.com/photo-1557804506-669a67965ba0?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80',
-        },
-        {
-            key: '2',
-            sno: 2,
-            notes: 'Important project deadline reminder',
-            by: 'Jane Smith',
-            validity: '01/01/2025 - 31/12/2025',
-        },
-        {
-            key: '3',
-            sno: 3,
-            notes: "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum",
-            by: 'Mike Johnson',
-            validity: '15/05/2024 - 15/06/2024',
-            imageUrl: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80',
-        },
-        {
-            key: '4',
-            sno: 4,
-            notes: 'Security protocol updates for all team members',
-            by: 'Sarah Wilson',
-            validity: '01/06/2025 - 01/12/2025',
-        },
-        {
-            key: '5',
-            sno: 5,
-            notes: 'Budget review and allocation for Q3',
-            by: 'David Brown',
-            validity: '10/03/2024 - 10/04/2024',
+    const fetchNotes = () => {
+        fetch(`${Url}/api/v1/uploads/handover-notes`, {
+            headers: { Authorization: `Bearer ${data?.user.backendTokens.at}` },
+        })
+            .then(async (response) => {
+                const text = await response.text();
+                const json = JSON.parse(text);
+                const data = json.data || json;
+                setOriginalNotesList(data);
+                setNotesList(data);
+                setLoadingData(false);
+            })
+            .catch((error) => {
+                setLoadingData(false);
+                console.warn("Error fetching data:", error)
+            });
+    }
+
+    useEffect(() => {
+        if (data?.user !== undefined) {
+            fetchNotes();
         }
-    ];
+    }, [data]);
 
-    const isRecordActive = (validity) => {
-        const [startDateStr, endDateStr] = validity.split(' - ');
-        const [startDay, startMonth, startYear] = startDateStr.split('/');
-        const [endDay, endMonth, endYear] = endDateStr.split('/');
+    const isRecordActive = (record: any) => {
+        const { startDate, endDate } = record;
 
-        const startDate = new Date(startYear, startMonth - 1, startDay);
-        const endDate = new Date(endYear, endMonth - 1, endDay);
+        if (!startDate || !endDate) return false;
+
+        const start = new Date(startDate);
+        const end = new Date(endDate);
         const today = new Date();
 
-        return today >= startDate && today <= endDate;
+        return today >= start && today <= end;
     };
 
     const columns = [
         {
             title: 'Notes',
-            dataIndex: 'notes',
-            key: 'notes',
+            dataIndex: 'note',
+            key: 'note',
             render: (text, record) => {
-                const isActive = isRecordActive(record.validity);
+                const isActive = isRecordActive(record);
                 const dotColor = isActive ? '#52c41a' : '#ff4d4f';
                 const glowColor = isActive ? 'rgba(82, 196, 26, 0.6)' : 'rgba(255, 77, 79, 0.6)';
 
@@ -119,14 +103,14 @@ export default function Handover() {
                                 wordBreak: 'break-word',
                                 whiteSpace: 'normal',
                                 lineHeight: '1.5',
-                                marginBottom: record.imageUrl ? '8px' : '0'
+                                marginBottom: record.signedImageUrl ? '8px' : '0'
                             }}>
                                 {text}
                             </div>
-                            {record.imageUrl && (
+                            {record.signedImageUrl && (
                                 <div style={{ marginTop: '8px' }}>
                                     <Image
-                                        src={record.imageUrl}
+                                        src={record.signedImageUrl}
                                         alt="Note attachment"
                                         width={60}
                                         height={60}
@@ -160,8 +144,8 @@ export default function Handover() {
         },
         {
             title: 'Added By',
-            dataIndex: 'by',
-            key: 'by',
+            dataIndex: 'createdBy',
+            key: 'createdBy',
             width: 150,
         },
         {
@@ -169,6 +153,25 @@ export default function Handover() {
             dataIndex: 'validity',
             key: 'validity',
             width: 200,
+            render: (_, record) => {
+                const { startDate, endDate } = record;
+
+                if (!startDate || !endDate) return 'N/A';
+
+                const formattedStart = new Date(startDate).toLocaleDateString('en-IN', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                });
+
+                const formattedEnd = new Date(endDate).toLocaleDateString('en-IN', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                });
+
+                return `${formattedStart} - ${formattedEnd}`;
+            },
         },
         {
             title: 'Actions',
@@ -183,28 +186,60 @@ export default function Handover() {
                         size="small"
                         className='customEditButton'
                     />
-                    <Button
-                        type="link"
-                        danger
-                        icon={<FaTrash />}
-                        onClick={() => handleDelete(record)}
-                        size="small"
-                        className='customDeleteButton'
-                    />
+                    {role === 'Admin' && (
+                        <Button
+                            type="link"
+                            danger
+                            icon={<FaTrash />}
+                            onClick={() => handleDelete(record)}
+                            size="small"
+                            className='customDeleteButton'
+                        />
+                    )}
                 </Space>
             ),
         },
     ];
 
-    const handleEdit = (record) => {
-        console.log('Edit clicked for:', record);
+    const handleEdit = (record: any) => {
+        const processedRecord = {
+            ...record,
+            startDate: record.startDate ? dayjs(record.startDate) : null,
+            endDate: record.endDate ? dayjs(record.endDate) : null,
+        };
+
+        setEditRecordData(processedRecord);
+        setIsModalOpen(true);
     };
 
-    const handleDelete = (record) => {
-        console.log('Delete clicked for:', record);
+    const handleDelete = async (record: any) => {
+        setLoadingData(true);
+
+        try {
+            const response = await fetch(`${Url}/api/v1/uploads/handover-note/${record?.id}`, {
+                method: 'DELETE',
+                headers: {
+                    Authorization: `Bearer ${data?.user.backendTokens.at}`,
+                    'Content-Type': 'application/json'
+                },
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Delete failed: ${errorText}`);
+            }
+
+            fetchNotes();
+        } catch (error) {
+            console.warn("Error deleting handover note:", error);
+        } finally {
+            setLoadingData(false);
+        }
     };
 
     const createNotes = () => {
+        form.resetFields();
+        setEditRecordData(null);
         setIsModalOpen(true);
     }
 
@@ -220,8 +255,6 @@ export default function Handover() {
                     Authorization: `Bearer ${data?.user.backendTokens.at}`,
                 },
             });
-
-            console.info("responseresponseresponse", response);
 
             if (!response.ok) {
                 const errorText = await response.text();
@@ -241,70 +274,126 @@ export default function Handover() {
         },
 
         onSuccess: (data) => {
-            toast.success('Handover note uploaded successfully!', {
-                position: "bottom-right",
-                autoClose: 5000,
-                hideProgressBar: false,
-                closeOnClick: false,
-                pauseOnHover: true,
-                draggable: true,
-                progress: undefined,
-                theme: "colored",
-                transition: Bounce,
-            });
+            message.success('Handover note uploaded successfully!');
+            fetchNotes();
         },
 
         onError: (error: Error) => {
             const shortMessage = error.message.split('\n')[0];
-
-            toast.error(`Upload failed: ${shortMessage}`, {
-                position: "bottom-right",
-                autoClose: 5000,
-                hideProgressBar: false,
-                closeOnClick: false,
-                pauseOnHover: true,
-                draggable: true,
-                progress: undefined,
-                theme: "colored",
-                transition: Bounce,
-            });
+            message.error(`Upload failed: ${shortMessage}`);
 
             console.error('Handover note upload error:', error);
+        },
+    });
+
+    const updateHandoverNote = useMutation({
+        mutationFn: async (formData: FormData) => {
+            const baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://nobstacle.com';
+            const id = formData.get('id');
+            const endpoint = `${baseUrl}/api/v1/uploads/handover-note/${id}`;
+
+            const response = await fetch(endpoint, {
+                method: 'PUT', // or 'PATCH' depending on your backend API
+                body: formData,
+                headers: {
+                    Authorization: `Bearer ${data?.user.backendTokens.at}`,
+                },
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                let errorMessage = "Update failed";
+
+                try {
+                    const errorJson = JSON.parse(errorText);
+                    errorMessage = errorJson.message || errorMessage;
+                } catch {
+                    errorMessage = errorText || errorMessage;
+                }
+
+                throw new Error(errorMessage);
+            }
+
+            return response.json();
+        },
+
+        onSuccess: (data) => {
+            message.success('Handover note updated successfully!');
+            fetchNotes();
+            setEditRecordData(null);
+        },
+
+        onError: (error: Error) => {
+            const shortMessage = error.message.split('\n')[0];
+            message.error(`Update failed: ${shortMessage}`);
+            console.error('Handover note update error:', error);
         },
     });
 
     const handleOk = (dataValue: uploadHandoverNoteData) => {
         const formData = new FormData();
 
-        if (dataValue.imageUrl?.[0]) {
-            formData.append('file', dataValue.imageUrl[0]);
+        // Handle file upload (only append if there's a new file)
+        if (dataValue.imageUrl !== undefined && dataValue.imageUrl?.[0]) {
+            const fileItem = dataValue.imageUrl[0];
+
+            if (fileItem.originFileObj) {
+                formData.append('file', fileItem.originFileObj);
+            }
+            else if (fileItem instanceof File) {
+                formData.append('file', fileItem);
+            }
+            else if (fileItem.files && fileItem.files[0]) {
+                formData.append('file', fileItem.files[0]);
+            }
+            else {
+                console.error('Unable to extract file from:', fileItem);
+            }
         }
 
         formData.append('note', dataValue.note);
         formData.append('startDate', dayjs(dataValue.startDate).format('YYYY-MM-DD'));
         formData.append('endDate', dayjs(dataValue.endDate).format('YYYY-MM-DD'));
-        formData.append('createdBy', dataValue.createdBy || data?.user?.name || 'Unknown User');
+        formData.append('createdBy', dataValue.createdBy || data?.user?.email || 'Unknown User');
 
-        uploadHandoverNote.mutate(formData);
+        // If editing, add the ID to formData
+        if (editRecordData && editRecordData.id) {
+            formData.append('id', editRecordData.id);
+        }
+
+        for (let [key, value] of formData.entries()) {
+            console.log(key, value);
+        }
+
+        if (editRecordData && editRecordData.id) {
+            updateHandoverNote.mutate(formData);
+        } else {
+            uploadHandoverNote.mutate(formData);
+        }
+
         setIsModalOpen(false);
         form.resetFields();
     };
 
     const handleCancel = () => {
-        setIsModalOpen(false);
         form.resetFields();
+        setEditRecordData(null);
+        setIsModalOpen(false);
     };
 
-    // Mobile Card Component
-    const MobileCard = ({ record }) => {
+    const MobileCard = ({ record, index }) => {
         const isActive = isRecordActive(record.validity);
+        const isEvenIndex = index % 2 === 0;
 
         return (
             <Card
                 size="small"
-                style={{ marginBottom: '12px' }}
+                style={{
+                    marginBottom: '12px',
+                    backgroundColor: isEvenIndex ? '#e6f4ff' : '#f5f5f5',
+                    border: isEvenIndex ? '1px solid #91caff' : '1px solid #d9d9d9'
+                }}
                 bodyStyle={{ padding: '16px' }}
-                className={isActive ? 'active-card' : 'inactive-card'}
             >
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -346,7 +435,6 @@ export default function Handover() {
                         </Space>
                     </div>
 
-                    {/* Notes and Image */}
                     <div>
                         <div style={{
                             wordBreak: 'break-word',
@@ -357,12 +445,12 @@ export default function Handover() {
                         }}>
                             {record.notes}
                         </div>
-                        
+
                         {record.imageUrl && (
-                            <div style={{ 
-                                display: 'flex', 
+                            <div style={{
+                                display: 'flex',
                                 justifyContent: 'flex-start',
-                                marginBottom: '8px' 
+                                marginBottom: '8px'
                             }}>
                                 <Image
                                     src={record.imageUrl}
@@ -394,15 +482,14 @@ export default function Handover() {
                         )}
                     </div>
 
-                    {/* By and Validity */}
                     <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
                         <div>
-                            <div style={{ fontSize: '14px', fontStyle: 'italic' }}>
+                            <div style={{ fontSize: '12px', fontStyle: 'italic' }}>
                                 {record.by}
                             </div>
                         </div>
                         <div style={{ textAlign: 'right' }}>
-                            <div style={{ fontSize: '14px', fontStyle: 'italic' }}>
+                            <div style={{ fontSize: '12px', fontStyle: 'italic' }}>
                                 {record.validity}
                             </div>
                         </div>
@@ -412,6 +499,35 @@ export default function Handover() {
         );
     };
 
+    useEffect(() => {
+        if (isModalOpen) {
+            if (editRecordData) {
+                form.setFieldsValue({
+                    note: editRecordData.note || '',
+                    startDate: editRecordData.startDate ? dayjs(editRecordData.startDate) : null,
+                    endDate: editRecordData.endDate ? dayjs(editRecordData.endDate) : null,
+                    imageUrl: [],
+                });
+            } else {
+                form.resetFields();
+            }
+        }
+    }, [editRecordData, isModalOpen, form]);
+
+    const searchNotes = (e: any) => {
+        const searchTerm = e.target.value.toLowerCase().trim();
+
+        if (searchTerm === '') {
+            setNotesList(originalNotesList);
+        } else {
+            const filteredRecords = originalNotesList.filter((item) =>
+                item?.note?.toLowerCase().includes(searchTerm) ||
+                item?.createdBy?.toLowerCase().includes(searchTerm)
+            );
+            setNotesList(filteredRecords);
+        }
+    }
+
     if (hasHydrated)
         return (
             <>
@@ -420,7 +536,7 @@ export default function Handover() {
                         <div className="customSearchWrapper">
                             <Card className="w-full customCards">
                                 <div className="searchInputWidth">
-                                    <Input placeholder='Search Handover Notes' className='w-full rounded-md p-2' />
+                                    <Input placeholder='Search Handover Notes' className='w-full rounded-md p-2' onChange={searchNotes} />
                                 </div>
                             </Card>
                         </div>
@@ -428,19 +544,20 @@ export default function Handover() {
                             <div className="w-full">
                                 {isMobile ? (
                                     <div>
-                                        {tableData.map((record) => (
-                                            <MobileCard key={record.key} record={record} />
+                                        {notesList.map((record, i) => (
+                                            <MobileCard record={record} index={i} />
                                         ))}
                                     </div>
                                 ) : (
                                     <>
                                         <Table
                                             columns={columns}
-                                            dataSource={tableData}
+                                            dataSource={notesList}
                                             className='customHandoverTable'
                                             pagination={false}
                                             bordered
                                             size="middle"
+                                            loading={loadingData}
                                         />
                                     </>
                                 )}
@@ -461,6 +578,7 @@ export default function Handover() {
                         </div>
                     </Button>
                 </div>
+
                 <Modal
                     title={
                         <div style={{
@@ -471,7 +589,7 @@ export default function Handover() {
                             fontWeight: '600'
                         }}>
                             <FileTextOutlined style={{ color: '#1890ff' }} />
-                            Add New Note
+                            {editRecordData ? 'Edit Note' : 'Add New Note'}
                         </div>
                     }
                     open={isModalOpen}
@@ -488,22 +606,7 @@ export default function Handover() {
                         overflowY: 'auto',
                         padding: '5px 8px'
                     }}
-                    okButtonProps={{
-                        size: 'large',
-                        style: {
-                            background: 'linear-gradient(135deg, #1890ff 0%, #096dd9 100%)',
-                            border: 'none',
-                            borderRadius: '8px',
-                            fontWeight: '500'
-                        }
-                    }}
-                    cancelButtonProps={{
-                        size: 'large',
-                        style: {
-                            borderRadius: '8px',
-                            fontWeight: '500'
-                        }
-                    }}
+                    destroyOnClose={true} // This helps clear the form when modal closes
                 >
                     <Form
                         layout="vertical"
@@ -512,28 +615,14 @@ export default function Handover() {
                         style={{ marginTop: '16px' }}
                         onFinish={handleOk}
                     >
-                        {/* Note Section */}
                         <div style={{ marginBottom: '24px' }}>
                             <Form.Item
                                 name="note"
-                                label={
-                                    <div style={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '6px',
-                                        fontSize: '15px',
-                                        fontWeight: '500',
-                                        color: '#262626'
-                                    }}>
-                                        <FileTextOutlined />
-                                        Note Content
-                                    </div>
-                                }
                                 rules={[{ required: true, message: 'Please enter your note content' }]}
                             >
                                 <Input.TextArea
                                     rows={5}
-                                    placeholder="Write your note here... Share your thoughts, ideas, or important information."
+                                    placeholder="Add your note here"
                                     style={{
                                         borderRadius: '8px',
                                         fontSize: '14px',
@@ -550,7 +639,6 @@ export default function Handover() {
                             <span style={{ color: '#8c8c8c', fontSize: '13px' }}>Additional Details</span>
                         </Divider>
 
-                        {/* Responsive Grid */}
                         <Row gutter={[16, 16]}>
                             <Col xs={24} sm={12} md={8}>
                                 <Form.Item
@@ -629,7 +717,12 @@ export default function Handover() {
                                         </div>
                                     }
                                     valuePropName="fileList"
-                                    getValueFromEvent={e => e?.fileList}
+                                    getValueFromEvent={(e) => {
+                                        if (Array.isArray(e)) {
+                                            return e;
+                                        }
+                                        return e?.fileList || [];
+                                    }}
                                 >
                                     <Upload
                                         name="image"
@@ -662,30 +755,17 @@ export default function Handover() {
                             </Col>
                         </Row>
 
-                        {/* Help Text */}
-                        <div style={{
-                            marginTop: '16px',
-                            padding: '12px',
-                            background: '#f6ffed',
-                            border: '1px solid #b7eb8f',
-                            borderRadius: '8px',
-                            fontSize: '13px',
-                            color: '#389e0d'
-                        }}>
-                            💡 <strong>Tip:</strong> Add meaningful dates and attach relevant images to make your notes more organized and memorable.
-                        </div>
-
                         <div className='bottomActionSection'>
                             <Form.Item>
                                 <Button
-                                    type="primary" 
+                                    type="primary"
                                     htmlType="submit"
                                     style={{
                                         height: '42px',
                                         borderRadius: '8px',
                                         fontWeight: '500',
                                     }}>
-                                    Add Note
+                                    {editRecordData ? 'Update Note' : 'Add Note'}
                                 </Button>
                             </Form.Item>
                         </div>
