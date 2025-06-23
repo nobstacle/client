@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { Table, Button, Space, Card, Modal, Form, Input, DatePicker, Upload, Row, Col, Divider, Image, message } from 'antd';
+import { Table, Button, Space, Card, Modal, Form, Input, Pagination, DatePicker, Upload, Row, Col, Divider, Image, message } from 'antd';
 import { EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useSearchParams } from "next/navigation";
 import { useHasHydrated } from "../../../hooks/useHydrated";
@@ -35,44 +35,60 @@ export default function Handover() {
     const [editRecordData, setEditRecordData] = useState([]);
     const [originalNotesList, setOriginalNotesList] = useState([]);
     const [loadingData, setLoadingData] = useState(true);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [pageSize, setPageSize] = useState(10);
+    const [totalRecords, setTotalRecords] = useState(0);
     let Url = process.env.NEXT_PUBLIC_BACKEND_URL;
     let role = data?.user?.Roles[0];
 
-    const fetchNotes = () => {
-        fetch(`${Url}/api/v1/uploads/handover-notes`, {
+    const fetchNotes = (page = 1, limit = 10) => {
+        setLoadingData(true);
+        fetch(`${Url}/api/v1/uploads/handover-notes?page=${page}&limit=${limit}`, {
             headers: { Authorization: `Bearer ${data?.user.backendTokens.at}` },
         })
             .then(async (response) => {
                 const text = await response.text();
                 const json = JSON.parse(text);
                 const data = json.data || json;
-                setOriginalNotesList(data);
-                setNotesList(data);
-                setLoadingData(false);
+
+                // If total count is provided by backend
+                setTotalRecords(json.pagination?.totalCount);
+
+                // Sort with active on top
+                const sortedData = [...data].sort((a, b) => {
+                    const aActive = isRecordActive(a) ? 1 : 0;
+                    const bActive = isRecordActive(b) ? 1 : 0;
+                    return bActive - aActive;
+                });
+
+                setOriginalNotesList(sortedData);
+                setNotesList(sortedData);
             })
             .catch((error) => {
+                console.warn("Error fetching data:", error);
+            })
+            .finally(() => {
                 setLoadingData(false);
-                console.warn("Error fetching data:", error)
             });
-    }
+    };
 
     useEffect(() => {
         if (data?.user !== undefined) {
-            fetchNotes();
+            fetchNotes(currentPage, pageSize);
         }
-    }, [data]);
+    }, [data, currentPage, pageSize]);
 
     const isRecordActive = (record: any) => {
-        if(record) {
-        const { startDate, endDate } = record;
+        if (record) {
+            const { startDate, endDate } = record;
 
-        if (!startDate || !endDate) return false;
+            if (!startDate || !endDate) return false;
 
-        const start = new Date(startDate);
-        const end = new Date(endDate);
-        const today = new Date();
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+            const today = new Date();
 
-        return today >= start && today <= end;
+            return today >= start && today <= end;
         }
     };
 
@@ -103,7 +119,7 @@ export default function Handover() {
                         <div style={{ flex: 1 }}>
                             <div style={{
                                 wordBreak: 'break-word',
-                                whiteSpace: 'normal',
+                                whiteSpace: 'pre-wrap',
                                 lineHeight: '1.5',
                                 marginBottom: record.signedImageUrl ? '8px' : '0'
                             }}>
@@ -383,129 +399,130 @@ export default function Handover() {
         setIsModalOpen(false);
     };
 
-const MobileCard = ({ record, index }) => {
-    const isActive = new Date(record.endDate) > new Date(); // Or use isRecordActive if it uses startDate/endDate
-    const isEvenIndex = index % 2 === 0;
+    const MobileCard = ({ record, index }) => {
+        const isActive = isRecordActive(record);
+        const isEvenIndex = index % 2 === 0;
 
-    const imageSrc = record.imageUrl || record.signedImageUrl;
-    const validity = `${dayjs(record.startDate).format("DD MMM YYYY")} - ${dayjs(record.endDate).format("DD MMM YYYY")}`;
+        const imageSrc = record.signedImageUrl || record.imageUrl;
+        const validity = `${dayjs(record.startDate).format("DD MMM YYYY")} - ${dayjs(record.endDate).format("DD MMM YYYY")}`;
 
-    return (
-        <Card
-            size="small"
-            style={{
-                marginBottom: '12px',
-                backgroundColor: isEvenIndex ? '#e6f4ff' : '#f5f5f5',
-                border: isEvenIndex ? '1px solid #91caff' : '1px solid #d9d9d9'
-            }}
-            bodyStyle={{ padding: '16px' }}
-        >
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {/* Status and Action Buttons */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span
-                            style={{
-                                width: '8px',
-                                height: '8px',
-                                borderRadius: '50%',
-                                backgroundColor: isActive ? '#52c41a' : '#ff4d4f',
-                                display: 'inline-block',
-                            }}
-                            className='glowDot'
-                        ></span>
-                        <span style={{
-                            fontSize: '12px',
-                            color: isActive ? '#52c41a' : '#ff4d4f',
-                            fontWeight: '500'
-                        }}>
-                            {isActive ? 'Active' : 'Inactive'}
-                        </span>
-                    </div>
-                    <Space size="small">
-                        <Button
-                            type="text"
-                            icon={<EditOutlined />}
-                            onClick={() => handleEdit(record)}
-                            size="small"
-                            className='customEditButton'
-                        />
-                        <Button
-                            type="text"
-                            danger
-                            icon={<DeleteOutlined />}
-                            onClick={() => handleDelete(record)}
-                            size="small"
-                            className='customDeleteButton'
-                        />
-                    </Space>
-                </div>
-
-                {/* Note Content */}
-                <div>
-                    <div style={{
-                        wordBreak: 'break-word',
-                        whiteSpace: 'normal',
-                        lineHeight: '1.5',
-                        fontSize: '14px',
-                        marginBottom: imageSrc ? '12px' : '0'
-                    }}>
-                        {record.note}
-                    </div>
-
-                    {imageSrc && (
-                        <div style={{
-                            display: 'flex',
-                            justifyContent: 'flex-start',
-                            marginBottom: '8px'
-                        }}>
-                            <Image
-                                src={imageSrc}
-                                alt="Note attachment"
-                                width={80}
-                                height={80}
+        return (
+            <Card
+                size="small"
+                style={{
+                    marginBottom: '12px',
+                    backgroundColor: isEvenIndex ? '#e6f4ff' : '#f5f5f5',
+                    border: isEvenIndex ? '1px solid #91caff' : '1px solid #d9d9d9'
+                }}
+                bodyStyle={{ padding: '16px' }}
+            >
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {/* Status and Action Buttons */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span
                                 style={{
-                                    objectFit: 'cover',
-                                    borderRadius: '8px',
-                                    border: '1px solid #d9d9d9'
+                                    width: '8px',
+                                    height: '8px',
+                                    borderRadius: '50%',
+                                    backgroundColor: isActive ? '#52c41a' : '#ff4d4f',
+                                    display: 'inline-block',
                                 }}
-                                preview={{
-                                    mask: (
-                                        <div style={{
-                                            background: 'rgba(0,0,0,0.6)',
-                                            color: 'white',
-                                            fontSize: '14px',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            height: '100%'
-                                        }}>
-                                            <PictureOutlined />
-                                        </div>
-                                    )
-                                }}
+                                className='glowDot'
+                            ></span>
+                            <span style={{
+                                fontSize: '12px',
+                                color: isActive ? '#52c41a' : '#ff4d4f',
+                                fontWeight: '500'
+                            }}>
+                                {isActive ? 'Active' : 'Inactive'}
+                            </span>
+                        </div>
+                        <Space size="small">
+                            <Button
+                                type="text"
+                                icon={<EditOutlined />}
+                                onClick={() => handleEdit(record)}
+                                size="small"
+                                className='customEditButton'
                             />
-                        </div>
-                    )}
-                </div>
+                            <Button
+                                type="text"
+                                danger
+                                icon={<DeleteOutlined />}
+                                onClick={() => handleDelete(record)}
+                                size="small"
+                                className='customDeleteButton'
+                            />
+                        </Space>
+                    </div>
 
-                {/* Footer: Created By and Validity */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+                    {/* Note Content */}
                     <div>
-                        <div style={{ fontSize: '12px', fontStyle: 'italic' }}>
-                            Created By: {record.createdBy}
+                        <div style={{
+                            wordBreak: 'break-word',
+                           whiteSpace: 'pre-wrap', 
+                            lineHeight: '1.5',
+                            fontSize: '14px',
+                            marginBottom: imageSrc ? '12px' : '0'
+                        }}>
+                            {record.note}
                         </div>
+
+                        {imageSrc && (
+                            <div style={{
+                                display: 'flex',
+                                justifyContent: 'flex-start',
+                                marginBottom: '8px'
+                            }}>
+                                <Image
+                                    src={imageSrc}
+                                    alt="Note attachment"
+                                    width={80}
+                                    height={80}
+                                    style={{
+                                        objectFit: 'cover',
+                                        borderRadius: '8px',
+                                        border: '1px solid #d9d9d9'
+                                    }}
+                                    preview={{
+                                        mask: (
+                                            <div style={{
+                                                background: 'rgba(0,0,0,0.6)',
+                                                color: 'white',
+                                                fontSize: '14px',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                height: '100%'
+                                            }}>
+                                                <PictureOutlined />
+                                            </div>
+                                        )
+                                    }}
+                                />
+                            </div>
+                        )}
                     </div>
-                    <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontSize: '12px', fontStyle: 'italic' }}>
-                            {validity}
+
+                    {/* Footer: Created By and Validity */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+                        <div>
+                            <div style={{ fontSize: '12px', fontStyle: 'italic' }}>
+                                {/* Created By: {record.createdBy} */}
+                                Created By: @
+                            </div>
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                            <div style={{ fontSize: '12px', fontStyle: 'italic' }}>
+                                {validity}
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
-        </Card>
-    );
-};
+            </Card>
+        );
+    };
 
 
     useEffect(() => {
@@ -527,15 +544,18 @@ const MobileCard = ({ record, index }) => {
         const searchTerm = e.target.value.toLowerCase().trim();
 
         if (searchTerm === '') {
-            setNotesList(originalNotesList);
+            fetchNotes(currentPage, pageSize);
         } else {
             const filteredRecords = originalNotesList.filter((item) =>
                 item?.note?.toLowerCase().includes(searchTerm) ||
                 item?.createdBy?.toLowerCase().includes(searchTerm)
             );
+
             setNotesList(filteredRecords);
+            setCurrentPage(1);
+            setTotalRecords(filteredRecords.length);
         }
-    }
+    };
 
     if (hasHydrated)
         return (
@@ -568,6 +588,19 @@ const MobileCard = ({ record, index }) => {
                                             size="middle"
                                             loading={loadingData}
                                         />
+                                        <div className="flex justify-center mt-6">
+                                            <Pagination
+                                                current={currentPage}
+                                                total={totalRecords}
+                                                pageSize={pageSize}
+                                                onChange={(page, pageSize) => {
+                                                    setCurrentPage(page);
+                                                    setPageSize(pageSize);
+                                                }}
+                                                showSizeChanger
+                                                pageSizeOptions={['10', '20', '50', '100']}
+                                            />
+                                        </div>
                                     </>
                                 )}
                             </div>
