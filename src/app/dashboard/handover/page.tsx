@@ -383,123 +383,130 @@ export default function Handover() {
         setIsModalOpen(false);
     };
 
-    const MobileCard = ({ record, index }) => {
-        const isActive = isRecordActive(record.validity);
-        const isEvenIndex = index % 2 === 0;
+const MobileCard = ({ record, index }) => {
+    const isActive = new Date(record.endDate) > new Date(); // Or use isRecordActive if it uses startDate/endDate
+    const isEvenIndex = index % 2 === 0;
 
-        return (
-            <Card
-                size="small"
-                style={{
-                    marginBottom: '12px',
-                    backgroundColor: isEvenIndex ? '#e6f4ff' : '#f5f5f5',
-                    border: isEvenIndex ? '1px solid #91caff' : '1px solid #d9d9d9'
-                }}
-                bodyStyle={{ padding: '16px' }}
-            >
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <span
-                                style={{
-                                    width: '8px',
-                                    height: '8px',
-                                    borderRadius: '50%',
-                                    backgroundColor: isActive ? '#52c41a' : '#ff4d4f',
-                                    display: 'inline-block',
-                                }}
-                                className='glowDot'
-                            ></span>
-                            <span style={{
-                                fontSize: '12px',
-                                color: isActive ? '#52c41a' : '#ff4d4f',
-                                fontWeight: '500'
-                            }}>
-                                {isActive ? 'Active' : 'Inactive'}
-                            </span>
-                        </div>
-                        <Space size="small">
-                            <Button
-                                type="text"
-                                icon={<EditOutlined />}
-                                onClick={() => handleEdit(record)}
-                                size="small"
-                                className='customEditButton'
-                            />
-                            <Button
-                                type="text"
-                                danger
-                                icon={<DeleteOutlined />}
-                                onClick={() => handleDelete(record)}
-                                size="small"
-                                className='customDeleteButton'
-                            />
-                        </Space>
-                    </div>
+    const imageSrc = record.imageUrl || record.signedImageUrl;
+    const validity = `${dayjs(record.startDate).format("DD MMM YYYY")} - ${dayjs(record.endDate).format("DD MMM YYYY")}`;
 
-                    <div>
-                        <div style={{
-                            wordBreak: 'break-word',
-                            whiteSpace: 'normal',
-                            lineHeight: '1.5',
-                            fontSize: '14px',
-                            marginBottom: record.imageUrl ? '12px' : '0'
+    return (
+        <Card
+            size="small"
+            style={{
+                marginBottom: '12px',
+                backgroundColor: isEvenIndex ? '#e6f4ff' : '#f5f5f5',
+                border: isEvenIndex ? '1px solid #91caff' : '1px solid #d9d9d9'
+            }}
+            bodyStyle={{ padding: '16px' }}
+        >
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {/* Status and Action Buttons */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span
+                            style={{
+                                width: '8px',
+                                height: '8px',
+                                borderRadius: '50%',
+                                backgroundColor: isActive ? '#52c41a' : '#ff4d4f',
+                                display: 'inline-block',
+                            }}
+                            className='glowDot'
+                        ></span>
+                        <span style={{
+                            fontSize: '12px',
+                            color: isActive ? '#52c41a' : '#ff4d4f',
+                            fontWeight: '500'
                         }}>
-                            {record.notes}
-                        </div>
+                            {isActive ? 'Active' : 'Inactive'}
+                        </span>
+                    </div>
+                    <Space size="small">
+                        <Button
+                            type="text"
+                            icon={<EditOutlined />}
+                            onClick={() => handleEdit(record)}
+                            size="small"
+                            className='customEditButton'
+                        />
+                        <Button
+                            type="text"
+                            danger
+                            icon={<DeleteOutlined />}
+                            onClick={() => handleDelete(record)}
+                            size="small"
+                            className='customDeleteButton'
+                        />
+                    </Space>
+                </div>
 
-                        {record.imageUrl && (
-                            <div style={{
-                                display: 'flex',
-                                justifyContent: 'flex-start',
-                                marginBottom: '8px'
-                            }}>
-                                <Image
-                                    src={record.imageUrl}
-                                    alt="Note attachment"
-                                    width={80}
-                                    height={80}
-                                    style={{
-                                        objectFit: 'cover',
-                                        borderRadius: '8px',
-                                        border: '1px solid #d9d9d9'
-                                    }}
-                                    preview={{
-                                        mask: (
-                                            <div style={{
-                                                background: 'rgba(0,0,0,0.6)',
-                                                color: 'white',
-                                                fontSize: '14px',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                height: '100%'
-                                            }}>
-                                                <PictureOutlined />
-                                            </div>
-                                        )
-                                    }}
-                                />
-                            </div>
-                        )}
+                {/* Note Content */}
+                <div>
+                    <div style={{
+                        wordBreak: 'break-word',
+                        whiteSpace: 'normal',
+                        lineHeight: '1.5',
+                        fontSize: '14px',
+                        marginBottom: imageSrc ? '12px' : '0'
+                    }}>
+                        {record.note}
                     </div>
 
-                    <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
-                        <div>
-                            <div style={{ fontSize: '12px', fontStyle: 'italic' }}>
-                                {record.by}
-                            </div>
+                    {imageSrc && (
+                        <div style={{
+                            display: 'flex',
+                            justifyContent: 'flex-start',
+                            marginBottom: '8px'
+                        }}>
+                            <Image
+                                src={imageSrc}
+                                alt="Note attachment"
+                                width={80}
+                                height={80}
+                                style={{
+                                    objectFit: 'cover',
+                                    borderRadius: '8px',
+                                    border: '1px solid #d9d9d9'
+                                }}
+                                preview={{
+                                    mask: (
+                                        <div style={{
+                                            background: 'rgba(0,0,0,0.6)',
+                                            color: 'white',
+                                            fontSize: '14px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            height: '100%'
+                                        }}>
+                                            <PictureOutlined />
+                                        </div>
+                                    )
+                                }}
+                            />
                         </div>
-                        <div style={{ textAlign: 'right' }}>
-                            <div style={{ fontSize: '12px', fontStyle: 'italic' }}>
-                                {record.validity}
-                            </div>
+                    )}
+                </div>
+
+                {/* Footer: Created By and Validity */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+                    <div>
+                        <div style={{ fontSize: '12px', fontStyle: 'italic' }}>
+                            Created By: {record.createdBy}
+                        </div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontSize: '12px', fontStyle: 'italic' }}>
+                            {validity}
                         </div>
                     </div>
                 </div>
-            </Card>
-        );
-    };
+            </div>
+        </Card>
+    );
+};
+
 
     useEffect(() => {
         if (isModalOpen) {
