@@ -63,6 +63,7 @@ export default function Handover() {
     }, [data]);
 
     const isRecordActive = (record: any) => {
+        if(record) {
         const { startDate, endDate } = record;
 
         if (!startDate || !endDate) return false;
@@ -72,6 +73,7 @@ export default function Handover() {
         const today = new Date();
 
         return today >= start && today <= end;
+        }
     };
 
     const columns = [
