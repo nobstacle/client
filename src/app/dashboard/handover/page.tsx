@@ -91,6 +91,10 @@ export default function Handover() {
             const end = new Date(endDate);
             const today = new Date();
 
+            start.setHours(0, 0, 0, 0);
+
+            end.setHours(23, 59, 59, 999);
+
             return today >= start && today <= end;
         }
     };
@@ -509,11 +513,9 @@ export default function Handover() {
                         )}
                     </div>
 
-                    {/* Footer: Created By and Validity */}
                     <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
                         <div>
                             <div style={{ fontSize: '12px', fontStyle: 'italic' }}>
-                                {/* Created By: {record.createdBy} */}
                                 Created By: {record?.createdBy}
                             </div>
                         </div>
