@@ -10,7 +10,7 @@ import dayjs from 'dayjs';
 import { UploadOutlined, FileTextOutlined, CalendarOutlined, PictureOutlined } from '@ant-design/icons';
 import { useMutation } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
-import { toast, Bounce } from 'react-toastify';
+// import { toast, Bounce } from 'react-toastify';
 import "react-toastify/dist/ReactToastify.css";
 import { PlusIcon } from "../../../components/icons/PlusIcon";
 import { FaTrash } from "react-icons/fa";
@@ -38,12 +38,13 @@ export default function Handover() {
     const [currentPage, setCurrentPage] = useState(1);
     const [pageSize, setPageSize] = useState(10);
     const [totalRecords, setTotalRecords] = useState(0);
+    const [startDate, setStartDate] = useState(null);
     let Url = process.env.NEXT_PUBLIC_BACKEND_URL;
     let role = data?.user?.Roles[0];
 
-    const fetchNotes = (page = 1, limit = 10) => {
+    const fetchNotes = (page = 1, limit = 10, searchTerm: any) => {
         setLoadingData(true);
-        fetch(`${Url}/api/v1/uploads/handover-notes?page=${page}&limit=${limit}`, {
+        fetch(`${Url}/api/v1/uploads/handover-notes?page=${page}&limit=${limit}&search=${searchTerm}`, {
             headers: { Authorization: `Bearer ${data?.user.backendTokens.at}` },
         })
             .then(async (response) => {
@@ -293,7 +294,7 @@ export default function Handover() {
 
         onSuccess: (data) => {
             message.success('Handover note uploaded successfully!');
-            fetchNotes();
+            fetchNotes(1, 10, undefined);
         },
 
         onError: (error: Error) => {
@@ -311,7 +312,7 @@ export default function Handover() {
             const endpoint = `${baseUrl}/api/v1/uploads/handover-note/${id}`;
 
             const response = await fetch(endpoint, {
-                method: 'PUT', // or 'PATCH' depending on your backend API
+                method: 'PUT',
                 body: formData,
                 headers: {
                     Authorization: `Bearer ${data?.user.backendTokens.at}`,
@@ -337,7 +338,7 @@ export default function Handover() {
 
         onSuccess: (data) => {
             message.success('Handover note updated successfully!');
-            fetchNotes();
+            fetchNotes(1, 10, undefined);
             setEditRecordData(null);
         },
 
@@ -369,12 +370,13 @@ export default function Handover() {
             }
         }
 
+        let userInfo = data?.user?.email?.split('@')[0];
+
         formData.append('note', dataValue.note);
         formData.append('startDate', dayjs(dataValue.startDate).format('YYYY-MM-DD'));
         formData.append('endDate', dayjs(dataValue.endDate).format('YYYY-MM-DD'));
-        formData.append('createdBy', dataValue.createdBy || data?.user?.email || 'Unknown User');
+        formData.append('createdBy', userInfo);
 
-        // If editing, add the ID to formData
         if (editRecordData && editRecordData.id) {
             formData.append('id', editRecordData.id);
         }
@@ -461,7 +463,7 @@ export default function Handover() {
                     <div>
                         <div style={{
                             wordBreak: 'break-word',
-                           whiteSpace: 'pre-wrap', 
+                            whiteSpace: 'pre-wrap',
                             lineHeight: '1.5',
                             fontSize: '14px',
                             marginBottom: imageSrc ? '12px' : '0'
@@ -524,7 +526,6 @@ export default function Handover() {
         );
     };
 
-
     useEffect(() => {
         if (isModalOpen) {
             if (editRecordData) {
@@ -544,18 +545,18 @@ export default function Handover() {
         const searchTerm = e.target.value.toLowerCase().trim();
 
         if (searchTerm === '') {
-            fetchNotes(currentPage, pageSize);
+            fetchNotes(currentPage, pageSize, undefined);
         } else {
-            const filteredRecords = originalNotesList.filter((item) =>
-                item?.note?.toLowerCase().includes(searchTerm) ||
-                item?.createdBy?.toLowerCase().includes(searchTerm)
-            );
-
-            setNotesList(filteredRecords);
-            setCurrentPage(1);
-            setTotalRecords(filteredRecords.length);
+            fetchNotes(currentPage, pageSize, searchTerm);
         }
     };
+
+    useEffect(() => {
+        const isMobile = window.innerWidth <= 768;
+        if (isMobile) {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    }, [currentPage, pageSize]);
 
     if (hasHydrated)
         return (
@@ -576,6 +577,19 @@ export default function Handover() {
                                         {notesList.map((record, i) => (
                                             <MobileCard record={record} index={i} />
                                         ))}
+                                        <div className="flex justify-center mt-6">
+                                            <Pagination
+                                                current={currentPage}
+                                                total={totalRecords}
+                                                pageSize={pageSize}
+                                                onChange={(page, pageSize) => {
+                                                    setCurrentPage(page);
+                                                    setPageSize(pageSize);
+                                                }}
+                                                showSizeChanger
+                                                pageSizeOptions={['10', '20', '50', '100']}
+                                            />
+                                        </div>
                                     </div>
                                 ) : (
                                     <>
@@ -708,6 +722,7 @@ export default function Handover() {
                                         }}
                                         placeholder="Select start date"
                                         format="DD/MM/YYYY"
+                                        onChange={(date) => setStartDate(date)}
                                     />
                                 </Form.Item>
                             </Col>
@@ -728,7 +743,18 @@ export default function Handover() {
                                             End Date
                                         </div>
                                     }
-                                    rules={[{ required: true, message: 'Please select end date' }]}
+                                    rules={[
+                                        { required: true, message: 'Please select end date' },
+                                        ({ getFieldValue }) => ({
+                                            validator(_, value) {
+                                                const sDate = getFieldValue('startDate');
+                                                if (!value || !sDate || value.isSameOrAfter(sDate, 'day')) {
+                                                    return Promise.resolve();
+                                                }
+                                                return Promise.reject(new Error('End date cannot be before start date'));
+                                            },
+                                        }),
+                                    ]}
                                 >
                                     <DatePicker
                                         style={{
@@ -738,6 +764,9 @@ export default function Handover() {
                                         }}
                                         placeholder="Select end date"
                                         format="DD/MM/YYYY"
+                                        disabledDate={(current) =>
+                                            startDate && current && current.isBefore(startDate, 'day')
+                                        }
                                     />
                                 </Form.Item>
                             </Col>
