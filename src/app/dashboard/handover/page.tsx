@@ -15,6 +15,8 @@ import "react-toastify/dist/ReactToastify.css";
 import { PlusIcon } from "../../../components/icons/PlusIcon";
 import { FaTrash } from "react-icons/fa";
 import { RiEdit2Fill } from "react-icons/ri";
+import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
+dayjs.extend(isSameOrAfter);
 
 interface uploadHandoverNoteData {
     note: string;
