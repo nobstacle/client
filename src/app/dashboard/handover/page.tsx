@@ -514,7 +514,7 @@ export default function Handover() {
                         <div>
                             <div style={{ fontSize: '12px', fontStyle: 'italic' }}>
                                 {/* Created By: {record.createdBy} */}
-                                Created By: @
+                                Created By: {record?.createdBy}
                             </div>
                         </div>
                         <div style={{ textAlign: 'right' }}>
