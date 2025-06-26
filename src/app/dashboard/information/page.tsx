@@ -458,7 +458,7 @@ export default function InformationNotes() {
 
     return (
         <>
-            {/* <div className={`HandoverMainWrapper flex h-full w-full flex-col justify-start gap-4 overflow-y-auto ${isMobile ? 'p-4' : 'p-6'}`}>
+            <div className={`HandoverMainWrapper flex h-full w-full flex-col justify-start gap-4 overflow-y-auto ${isMobile ? 'p-4' : 'p-6'}`}>
                 <div className="flex w-full flex-col gap-4">
                     <div className="customSearchWrapper">
                         <Card className="w-full customCards">
@@ -492,10 +492,10 @@ export default function InformationNotes() {
                         </div>
                     </div>
                 </div>
-            </div> */}
+            </div>
 
             {/* Add/Edit Information Modal */}
-            {/* <Modal
+            <Modal
                 title={
                     <div style={{
                         display: 'flex',
@@ -662,10 +662,10 @@ export default function InformationNotes() {
                         </Button>
                     </div>
                 </Form>
-            </Modal> */}
+            </Modal>
 
             {/* Floating Add Button */}
-            {/* <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50">
+            <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50">
                 <Button
                     onClick={() => createNotes()}
                     className="group relative flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 bg-white/50 backdrop-blur-md hover:bg-white/60 border border-white/20 text-gray-700 hover:text-gray-900 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-white/30"
@@ -677,9 +677,9 @@ export default function InformationNotes() {
                         <div className="absolute top-1/2 left-full w-0 h-0 border-l-4 border-l-gray-900 border-y-4 border-y-transparent transform -translate-y-1/2"></div>
                     </div>
                 </Button>
-            </div> */}
+            </div>
 
-            {/* <style jsx>{`
+            <style jsx>{`
                 .note-upload .ant-upload-select {
                     width: 100% !important;
                     height: auto !important;
@@ -701,7 +701,7 @@ export default function InformationNotes() {
                         height: auto !important;
                     }
                 }
-            `}</style> */}
+            `}</style>
         </>
     )
 }
