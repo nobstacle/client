@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
-import { Select, Table, Button, Space, Checkbox, Tag, InputNumber, Typography, Radio, Card, Modal, Form, Input, Upload, Row, Col, Image, message } from 'antd';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
+import { Select, Table, Button, Space, Checkbox, Tag, InputNumber, Typography, Radio, Card, Modal, Form, Input, Upload, Row, Col, Image, message, Spin } from 'antd';
 import { EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useHasHydrated } from "../../../hooks/useHydrated";
 import "../../../styles/base.css";
@@ -30,6 +30,14 @@ interface InformationRecord {
     updatedAt: string;
 }
 
+interface PaginationResponse {
+    data: InformationRecord[];
+    total: number;
+    page: number;
+    limit: number;
+    hasMore: boolean;
+}
+
 export default function InformationNotes() {
     const hasHydrated = useHasHydrated();
     let isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
@@ -40,10 +48,20 @@ export default function InformationNotes() {
     const [editRecordData, setEditRecordData] = useState<InformationRecord | null>(null);
     const [originalInformationList, setOriginalInformationList] = useState<InformationRecord[]>([]);
     const [loadingData, setLoadingData] = useState(true);
+    const [loadingMore, setLoadingMore] = useState(false);
     const [fileList, setFileList] = useState([]);
     const [submitting, setSubmitting] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [hasMore, setHasMore] = useState(true);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalRecords, setTotalRecords] = useState(0);
+    const observerRef = useRef<IntersectionObserver | null>(null);
+    const loadingRef = useRef<HTMLDivElement>(null);
+    const debounceRef = useRef<NodeJS.Timeout>();
+
     let Url = process.env.NEXT_PUBLIC_BACKEND_URL;
     let role = data?.user?.Roles?.[0];
+    const ITEMS_PER_PAGE = 10;
 
     const columns = [
         {
@@ -62,7 +80,7 @@ export default function InformationNotes() {
                         <div style={{ flex: 1 }}>
                             <div style={{
                                 wordBreak: 'break-word',
-                                whiteSpace: 'normal',
+                                whiteSpace: 'pre-wrap',
                                 lineHeight: '1.5',
                                 marginBottom: record.signedImageUrl ? '8px' : '0'
                             }}>
@@ -151,38 +169,115 @@ export default function InformationNotes() {
         }] : [])
     ];
 
-    const fetchInformation = () => {
+    const fetchInformation = useCallback(async (page: number = 1, search: string = '', reset: boolean = false) => {
         if (!data?.user?.backendTokens?.at) {
             setLoadingData(false);
             return;
         }
 
-        fetch(`${Url}/api/v1/uploads/information`, {
-            headers: { Authorization: `Bearer ${data?.user.backendTokens.at}` },
-        })
-            .then(async (response) => {
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                const json = await response.json();
-                const responseData = json.data || json;
+        try {
+            const isFirstLoad = page === 1 && !search;
+            if (isFirstLoad) {
+                setLoadingData(true);
+            } else {
+                setLoadingMore(true);
+            }
 
-                setOriginalInformationList(responseData);
-                setInformationList(responseData);
-                setLoadingData(false);
-            })
-            .catch((error) => {
-                setLoadingData(false);
-                console.warn("Error fetching information:", error);
-                message.error('Failed to load information notes');
+            const queryParams = new URLSearchParams({
+                page: page.toString(),
+                limit: ITEMS_PER_PAGE.toString(),
+                ...(search && { search })
             });
-    };
 
+            const response = await fetch(`${Url}/api/v1/uploads/information?${queryParams}`, {
+                headers: { Authorization: `Bearer ${data?.user.backendTokens.at}` },
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const result: PaginationResponse = await response.json();
+            const newData = result.data || [];
+
+            if (reset || page === 1) {
+                setInformationList(newData);
+                setOriginalInformationList(newData);
+            } else {
+                setInformationList(prev => [...prev, ...newData]);
+                setOriginalInformationList(prev => [...prev, ...newData]);
+            }
+
+            setHasMore(result.hasMore || (newData.length === ITEMS_PER_PAGE));
+            setTotalRecords(result.total || 0);
+            setCurrentPage(page);
+
+        } catch (error) {
+            console.warn("Error fetching information:", error);
+            message.error('Failed to load information notes');
+        } finally {
+            setLoadingData(false);
+            setLoadingMore(false);
+        }
+    }, [data?.user?.backendTokens?.at, Url]);
+
+    // Debounced search function
+    const debouncedSearch = useCallback((searchValue: string) => {
+        if (debounceRef.current) {
+            clearTimeout(debounceRef.current);
+        }
+
+        debounceRef.current = setTimeout(() => {
+            setCurrentPage(1);
+            setHasMore(true);
+            fetchInformation(1, searchValue, true);
+        }, 500);
+    }, [fetchInformation]);
+
+    // Load more data when intersection observer triggers
+    const loadMore = useCallback(() => {
+        if (!loadingMore && hasMore && !searchTerm) {
+            const nextPage = currentPage + 1;
+            fetchInformation(nextPage, searchTerm);
+        }
+    }, [loadingMore, hasMore, currentPage, searchTerm, fetchInformation]);
+
+    // Set up intersection observer
+    useEffect(() => {
+        if (loadingRef.current) {
+            observerRef.current = new IntersectionObserver(
+                (entries) => {
+                    if (entries[0].isIntersecting) {
+                        loadMore();
+                    }
+                },
+                { threshold: 0.1 }
+            );
+            observerRef.current.observe(loadingRef.current);
+        }
+
+        return () => {
+            if (observerRef.current) {
+                observerRef.current.disconnect();
+            }
+        };
+    }, [loadMore]);
+
+    // Initial data fetch
     useEffect(() => {
         if (data?.user !== undefined) {
-            fetchInformation();
+            fetchInformation(1, '', true);
         }
-    }, [data]);
+    }, [data, fetchInformation]);
+
+    // Cleanup debounce on unmount
+    useEffect(() => {
+        return () => {
+            if (debounceRef.current) {
+                clearTimeout(debounceRef.current);
+            }
+        };
+    }, []);
 
     const handleEdit = (record: InformationRecord) => {
         setEditRecordData(record);
@@ -220,7 +315,10 @@ export default function InformationNotes() {
 
                     if (response.ok) {
                         message.success('Information note deleted successfully');
-                        fetchInformation(); // Refresh the list
+                        // Refresh the list from the beginning
+                        setCurrentPage(1);
+                        setHasMore(true);
+                        fetchInformation(1, searchTerm, true);
                     } else {
                         throw new Error('Failed to delete');
                     }
@@ -268,7 +366,10 @@ export default function InformationNotes() {
             if (response.ok) {
                 message.success(editRecordData ? 'Information note updated successfully!' : 'Information note created successfully!');
                 handleModalCancel();
-                fetchInformation();
+                // Refresh the list from the beginning
+                setCurrentPage(1);
+                setHasMore(true);
+                fetchInformation(1, searchTerm, true);
             } else {
                 const errorData = await response.json();
                 throw new Error(errorData.message || 'Failed to save information note');
@@ -435,18 +536,9 @@ export default function InformationNotes() {
     };
 
     const searchNotes = (e: any) => {
-        const searchTerm = e.target.value.toLowerCase().trim();
-
-        if (searchTerm === '') {
-            setInformationList(originalInformationList);
-        } else {
-            const filteredRecords = originalInformationList.filter((item) =>
-                item?.notes?.toLowerCase().includes(searchTerm) ||
-                item?.title?.toLowerCase().includes(searchTerm) ||
-                item?.createdBy?.toLowerCase().includes(searchTerm)
-            );
-            setInformationList(filteredRecords);
-        }
+        const searchValue = e.target.value.toLowerCase().trim();
+        setSearchTerm(searchValue);
+        debouncedSearch(searchValue);
     }
 
     const createNotes = () => {
@@ -474,6 +566,25 @@ export default function InformationNotes() {
                                     {informationList.map((record, i) => (
                                         <MobileCard key={record.id || i} record={record} index={i} />
                                     ))}
+
+                                    {/* Loading indicator for mobile */}
+                                    {(loadingMore || hasMore) && (
+                                        <div
+                                            ref={loadingRef}
+                                            style={{
+                                                textAlign: 'center',
+                                                padding: '20px',
+                                                display: 'flex',
+                                                justifyContent: 'center',
+                                                alignItems: 'center'
+                                            }}
+                                        >
+                                            {loadingMore && <Spin size="small" />}
+                                            {!hasMore && informationList.length > 0 && (
+                                                <Text type="secondary">No more records to load</Text>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
                             ) : (
                                 <>
@@ -487,6 +598,25 @@ export default function InformationNotes() {
                                         loading={loadingData}
                                         rowKey="id"
                                     />
+
+                                    {/* Loading indicator for desktop */}
+                                    {(loadingMore || hasMore) && (
+                                        <div
+                                            ref={loadingRef}
+                                            style={{
+                                                textAlign: 'center',
+                                                padding: '20px',
+                                                display: 'flex',
+                                                justifyContent: 'center',
+                                                alignItems: 'center'
+                                            }}
+                                        >
+                                            {loadingMore && <Spin size="small" />}
+                                            {!hasMore && informationList.length > 0 && (
+                                                <Text type="secondary">No more records to load</Text>
+                                            )}
+                                        </div>
+                                    )}
                                 </>
                             )}
                         </div>
