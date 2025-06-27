@@ -110,7 +110,7 @@ export default function InformationNotes() {
             width: 150,
         },
         {
-            title: 'Created At',
+            title: 'Created On',
             dataIndex: 'createdAt',
             key: 'createdAt',
             width: 150,
@@ -332,7 +332,7 @@ export default function InformationNotes() {
             >
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                     {/* Header with actions */}
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', position: 'absolute', right: '0.5rem' }}>
                         {role === "Admin" && (
                             <Space size="small">
                                 <Button
@@ -521,6 +521,7 @@ export default function InformationNotes() {
                     maxHeight: isMobile ? 'calc(100vh - 160px)' : '70vh',
                 }}
                 destroyOnClose={true}
+                className='handoverModal'
             >
                 <Form
                     form={form}
@@ -639,23 +640,15 @@ export default function InformationNotes() {
                         </Col>
                     </Row>
 
-                    <div style={{
-                        display: 'flex',
-                        gap: '12px',
-                        justifyContent: 'center',
-                        marginTop: '24px',
-                        paddingTop: '16px',
-                        borderTop: '1px solid #f0f0f0'
-                    }}>
+                    <div className='bottomActionSection'>
                         <Button
                             type="primary"
                             htmlType="submit"
                             loading={submitting}
                             style={{
+                                height: '42px',
                                 borderRadius: '8px',
-                                height: isMobile ? '36px' : '40px',
-                                fontSize: isMobile ? '14px' : '15px',
-                                minWidth: isMobile ? '80px' : '90px'
+                                fontWeight: '500',
                             }}
                         >
                             {submitting ? 'Saving...' : (editRecordData ? 'Update' : 'Add Note')}
