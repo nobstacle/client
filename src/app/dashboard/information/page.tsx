@@ -469,7 +469,7 @@ export default function InformationNotes() {
                     <div>
                         <div style={{
                             wordBreak: 'break-word',
-                            whiteSpace: 'normal',
+                            whiteSpace: 'pre-wrap',
                             lineHeight: '1.5',
                             fontSize: '14px',
                             color: '#595959',

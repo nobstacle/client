@@ -1301,7 +1301,7 @@ export default function Reminder() {
     if (hasHydrated)
         return (
             <>
-                {/* <div className={`HandoverMainWrapper flex h-full w-full flex-col justify-start gap-4 overflow-y-auto ${isMobile ? 'p-4' : 'p-6'}`}>
+                <div className={`HandoverMainWrapper flex h-full w-full flex-col justify-start gap-4 overflow-y-auto ${isMobile ? 'p-4' : 'p-6'}`}>
                     <div className="flex w-full flex-col gap-4">
                         <div className="customSearchWrapper">
                             <Card className="w-full customCards">
@@ -1347,9 +1347,9 @@ export default function Reminder() {
                             <div className="absolute top-1/2 left-full w-0 h-0 border-l-4 border-l-gray-900 border-y-4 border-y-transparent transform -translate-y-1/2"></div>
                         </div>
                     </Button>
-                </div> */}
+                </div>
 
-                {/* <Modal
+                <Modal
                     title={
                         <div style={{
                             display: 'flex',
@@ -1669,7 +1669,7 @@ export default function Reminder() {
                             </Form.Item>
                         </div>
                     </Form>
-                </Modal> */}
+                </Modal>
             </>
         );
 
