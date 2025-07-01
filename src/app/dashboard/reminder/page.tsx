@@ -745,7 +745,7 @@ export default function Reminder() {
         },
         // Replace the existing 'By Validity' column render function with this:
         {
-            title: 'By Validity',
+            title: 'Reccurence',
             key: 'byValidity',
             width: 300,
             render: (_: any, record: NoteRecord) => {
@@ -994,46 +994,45 @@ export default function Reminder() {
                 bodyStyle={{ padding: '16px' }}
             >
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    {/* Header with status indicator and actions */}
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
-                        {role === "Admin" && (
-                            <Space size="small">
-                                <Button
-                                    type="text"
-                                    icon={<EditOutlined />}
-                                    onClick={() => handleEdit(record)}
-                                    size="small"
-                                    className='customEditButton'
-                                />
-                                <Button
-                                    type="text"
-                                    danger
-                                    icon={<DeleteOutlined />}
-                                    onClick={() => handleDelete(record)}
-                                    size="small"
-                                    className='customDeleteButton'
-                                />
-                            </Space>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        {/* Title */}
+                        {record.title && (
+                            <div style={{
+                                fontSize: '16px',
+                                fontWeight: '600',
+                                color: '#262626',
+                                marginBottom: '4px'
+                            }}>
+                                {record.title}
+                            </div>
                         )}
-                    </div>
-
-                    {/* Title */}
-                    {record.title && (
-                        <div style={{
-                            fontSize: '16px',
-                            fontWeight: '600',
-                            color: '#262626',
-                            marginBottom: '4px'
-                        }}>
-                            {record.title}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            {role === "Admin" && (
+                                <Space size="small">
+                                    <Button
+                                        type="text"
+                                        icon={<EditOutlined />}
+                                        onClick={() => handleEdit(record)}
+                                        size="small"
+                                        className='customEditButton'
+                                    />
+                                    <Button
+                                        type="text"
+                                        danger
+                                        icon={<DeleteOutlined />}
+                                        onClick={() => handleDelete(record)}
+                                        size="small"
+                                        className='customDeleteButton'
+                                    />
+                                </Space>
+                            )}
                         </div>
-                    )}
-
+                    </div>
                     {/* Note content */}
                     <div>
                         <div style={{
                             wordBreak: 'break-word',
-                            whiteSpace: 'normal',
+                            whiteSpace: 'pre-wrap',
                             lineHeight: '1.5',
                             fontSize: '14px',
                             color: '#595959',
@@ -1105,21 +1104,8 @@ export default function Reminder() {
                                 </span>
                             </div>
                         )}
-                    </div>
-
-                    {/* Footer with creation info */}
-                    <div style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        paddingTop: '8px',
-                        borderTop: '1px solid #f0f0f0'
-                    }}>
-                        <div style={{ fontSize: '12px', color: '#8c8c8c', fontStyle: 'italic' }}>
+                        <div style={{ fontSize: '12px', color: '#8c8c8c', fontStyle: 'italic', marginTop: '2px' }}>
                             Created by: {record.createdBy}
-                        </div>
-                        <div style={{ fontSize: '12px', color: '#8c8c8c', fontStyle: 'italic' }}>
-                            {formatDate(record.createdAt)}
                         </div>
                     </div>
 
@@ -1306,7 +1292,7 @@ export default function Reminder() {
                         <div className="customSearchWrapper">
                             <Card className="w-full customCards">
                                 <div className="searchInputWidth">
-                                    <Input placeholder='Search Handover Notes' className='w-full rounded-md p-2' onChange={searchNotes} />
+                                    <Input placeholder='Search Reminders' className='w-full rounded-md p-2' onChange={searchNotes} />
                                 </div>
                             </Card>
                         </div>
@@ -1366,7 +1352,7 @@ export default function Reminder() {
                     open={isModalOpen}
                     footer={null}
                     onCancel={handleCancel}
-                    className='ReminderModal'
+                    className='handoverModal'
                     width="100%"
                     style={{
                         maxWidth: window.innerWidth <= 768 ? '95vw' : '600px',
@@ -1625,47 +1611,21 @@ export default function Reminder() {
                             )}
                         </div>
 
-                        <div style={{
+                        <div className='bottomActionSection' style={{
                             position: 'sticky',
-                            bottom: 0,
-                            background: '#ffffff',
-                            padding: '8px 0 0',
-                            borderTop: '1px solid #f0f0f0',
-                            zIndex: 10
+                            bottom: 0
                         }}>
                             <Form.Item style={{ marginBottom: 0 }}>
-                                <div style={{
-                                    display: 'flex',
-                                    gap: '8px',
-                                    flexDirection: window.innerWidth <= 480 ? 'column' : 'row'
-                                }}>
-                                    <Button
-                                        type="default"
-                                        onClick={handleCancel}
-                                        style={{
-                                            flex: window.innerWidth <= 480 ? 'none' : '1',
-                                            height: '38px',
-                                            borderRadius: '6px',
-                                            fontWeight: '500'
-                                        }}
-                                    >
-                                        Cancel
-                                    </Button>
-                                    <Button
-                                        type="primary"
-                                        htmlType="submit"
-                                        style={{
-                                            flex: window.innerWidth <= 480 ? 'none' : '2',
-                                            height: '38px',
-                                            borderRadius: '6px',
-                                            fontWeight: '500',
-                                            background: 'linear-gradient(135deg, #1890ff 0%, #096dd9 100%)',
-                                            border: 'none'
-                                        }}
-                                    >
-                                        {editRecordData ? 'Update' : 'Add Note'}
-                                    </Button>
-                                </div>
+                                <Button
+                                    type="primary"
+                                    htmlType="submit"
+                                    style={{
+                                        height: '42px',
+                                        borderRadius: '8px',
+                                        fontWeight: '500',
+                                    }}>
+                                    {editRecordData ? 'Update' : 'Add Note'}
+                                </Button>
                             </Form.Item>
                         </div>
                     </Form>

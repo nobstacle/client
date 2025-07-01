@@ -168,7 +168,9 @@ export const SocketContextProvider = ({
     try {
       const parsedData = JSON.parse(data).data as ReceivedMessageContent;
 
-      if (parsedData.role === "Admin" || parsedData.role === "Staff") {
+      let role = session.data.user.Roles[0];
+
+      if (role === "Admin" || role === "Staff") {
         setReceivedMessage({
           ...parsedData,
           message:
@@ -180,9 +182,7 @@ export const SocketContextProvider = ({
       } else {
         setReceivedMessage({
           ...parsedData,
-          message: session.data?.user.Roles?.includes("User")
-            ? parsedData.originalMessage
-            : parsedData.message,
+          message: parsedData.message,
         });
       }
     } catch (error) {
