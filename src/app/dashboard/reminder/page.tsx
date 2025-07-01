@@ -702,7 +702,7 @@ export default function Reminder() {
                         <div style={{ flex: 1 }}>
                             <div style={{
                                 wordBreak: 'break-word',
-                                whiteSpace: 'normal',
+                                whiteSpace: 'pre-wrap',
                                 lineHeight: '1.5',
                                 marginBottom: record.signedImageUrl ? '8px' : '0'
                             }}>
