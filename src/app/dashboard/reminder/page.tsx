@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
-import { Select, Table, Button, Space, Checkbox, Tag, InputNumber, Typography, Radio, Card, Modal, Form, Input, Upload, Row, Col, Image, message } from 'antd';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
+import { Select, Table, Button, Space, Checkbox, Tag, InputNumber, Typography, Radio, Spin, Card, Modal, Form, Input, Upload, Row, Col, Image, message } from 'antd';
 import { EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useHasHydrated } from "../../../hooks/useHydrated";
 import "../../../styles/base.css";
@@ -9,7 +9,6 @@ import dayjs from 'dayjs';
 import { UploadOutlined, FileTextOutlined, PictureOutlined, BellOutlined } from '@ant-design/icons';
 import { useMutation } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
-import { toast, Bounce } from 'react-toastify';
 import "react-toastify/dist/ReactToastify.css";
 import { PlusIcon } from "../../../components/icons/PlusIcon";
 import { FaTrash } from "react-icons/fa";
@@ -18,7 +17,6 @@ import { RiEdit2Fill } from "react-icons/ri";
 const { Option } = Select;
 const { TextArea } = Input;
 const { Text } = Typography;
-
 
 interface NoteRecord {
     id: string;
@@ -49,59 +47,135 @@ interface NoteRecord {
         customPeriod?: string;
     };
 }
+
 export default function Reminder() {
     const hasHydrated = useHasHydrated();
-    // const params = useSearchParams();
     let isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [form] = Form.useForm();
     const { data } = useSession();
     const [notesList, setNotesList] = useState<NoteRecord[]>([]);
     const [editRecordData, setEditRecordData] = useState<NoteRecord | null>(null);
-    const [originalNotesList, setOriginalNotesList] = useState<NoteRecord[]>([]);
     const [loadingData, setLoadingData] = useState(true);
-    const [recurringEnabled, setRecurringEnabled] = useState(false);
     const [frequency, setFrequency] = useState('once');
     const [customInterval, setCustomInterval] = useState(1);
     const [dailyType, setDailyType] = useState('every');
     const [weeklyInterval, setWeeklyInterval] = useState(1);
     const [monthlyInterval, setMonthlyInterval] = useState(1);
     const [monthlyType, setMonthlyType] = useState('date');
+    const [currentPage, setCurrentPage] = useState(1);
+    const [hasMore, setHasMore] = useState(true);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [loadingMore, setLoadingMore] = useState(false);
+    const ITEMS_PER_PAGE = 10;
+    const loadingRef = useRef<HTMLDivElement>(null);
+    const debounceRef = useRef<NodeJS.Timeout>();
+    const observerRef = useRef<IntersectionObserver | null>(null);
 
     let Url = process.env.NEXT_PUBLIC_BACKEND_URL;
     let role = data?.user?.Roles?.[0];
 
-    const fetchNotes = () => {
+    const fetchNotes = (page = 1, append = false, search: string = '',) => {
         if (!data?.user?.backendTokens?.at) {
             setLoadingData(false);
             return;
         }
 
-        fetch(`${Url}/api/v1/uploads/reminders`, {
+        if (append && (loadingMore || !hasMore)) {
+            return;
+        }
+
+        if (!append) {
+            setLoadingData(true);
+        } else {
+            setLoadingMore(true);
+        }
+
+        fetch(`${Url}/api/v1/uploads/reminders?page=${page}&limit=${ITEMS_PER_PAGE}`, {
             headers: { Authorization: `Bearer ${data?.user.backendTokens.at}` },
         })
             .then(async (response) => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
                 const text = await response.text();
                 const json = JSON.parse(text);
                 const responseData = json.data || json;
-
-                // Process the data to ensure recurringConfig is properly parsed
                 const processedData = responseData.map(item => ({
                     ...item,
+                    key: item.id,
                     recurringConfig: typeof item.recurringConfig === 'string'
                         ? JSON.parse(item.recurringConfig)
                         : item.recurringConfig || {}
                 }));
 
-                setOriginalNotesList(processedData);
-                setNotesList(processedData);
-                setLoadingData(false);
+                if (append) {
+                    setNotesList(prev => {
+                        const existingIds = new Set(prev.map(item => item.id));
+                        const newItems = processedData.filter(item => !existingIds.has(item.id));
+                        return [...prev, ...newItems];
+                    });
+                } else {
+                    setNotesList(processedData);
+                }
+
+                setHasMore(processedData.length === ITEMS_PER_PAGE);
+                setCurrentPage(page);
             })
             .catch((error) => {
+                console.error("Error fetching data:", error);
+            })
+            .finally(() => {
                 setLoadingData(false);
-                console.warn("Error fetching data:", error);
+                setLoadingMore(false);
             });
     };
+
+    // Load more data when intersection observer triggers
+    const loadMore = useCallback(() => {
+        if (!loadingMore && hasMore && !searchTerm) {
+            const nextPage = currentPage + 1;
+            fetchNotes(nextPage, true, searchTerm);
+        }
+    }, [loadingMore, hasMore, currentPage, searchTerm, fetchNotes]);
+
+    // Set up intersection observer
+    useEffect(() => {
+        if (loadingRef.current) {
+            observerRef.current = new IntersectionObserver(
+                (entries) => {
+                    if (entries[0].isIntersecting) {
+                        loadMore();
+                    }
+                },
+                { threshold: 0.1 }
+            );
+            observerRef.current.observe(loadingRef.current);
+        }
+
+        return () => {
+            if (observerRef.current) {
+                observerRef.current.disconnect();
+            }
+        };
+    }, [loadMore]);
+
+    useEffect(() => {
+        const isMobile = window.innerWidth <= 768;
+        if (isMobile) {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    }, [currentPage]);
+
+    useEffect(() => {
+        if (data?.user !== undefined) {
+            setCurrentPage(1);
+            setHasMore(true);
+            setNotesList([]);
+            fetchNotes(1, false);
+        }
+    }, [data?.user]);
 
     useEffect(() => {
         if (data?.user !== undefined) {
@@ -111,7 +185,6 @@ export default function Reminder() {
 
     useEffect(() => {
         if (!isModalOpen) {
-            setRecurringEnabled(false);
             setFrequency('once');
             setCustomInterval(1);
         }
@@ -643,7 +716,7 @@ export default function Reminder() {
         setFrequency('once');
         resetRecurringState();
     };
-    // Helper function to build recurring configuration
+
     const buildRecurringConfig = (frequency, dataValue) => {
         const config = {};
 
@@ -858,10 +931,12 @@ export default function Reminder() {
                 throw new Error(`Delete failed: ${errorText}`);
             }
 
-            fetchNotes();
+            // Reset and fetch first page after delete
+            setCurrentPage(1);
+            setHasMore(true);
+            fetchNotes(1, false);
         } catch (error) {
             console.warn("Error deleting handover note:", error);
-        } finally {
             setLoadingData(false);
         }
     };
@@ -904,7 +979,9 @@ export default function Reminder() {
 
         onSuccess: (data) => {
             message.success('Reminder added successfully!');
-            fetchNotes();
+            setCurrentPage(1);
+            setHasMore(true);
+            fetchNotes(1, false);
         },
 
         onError: (error: Error) => {
@@ -947,7 +1024,9 @@ export default function Reminder() {
 
         onSuccess: (data) => {
             message.success('Reminder note updated successfully!');
-            fetchNotes();
+            setCurrentPage(1);
+            setHasMore(true);
+            fetchNotes(1, false);
             setEditRecordData(null);
         },
 
@@ -1079,10 +1158,10 @@ export default function Reminder() {
                     </div>
 
                     {/* Reminder details */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <span style={{ fontSize: '12px', color: '#8c8c8c' }}>Reminder Date:</span>
-                            <span style={{ fontSize: '12px', fontWeight: '500' }}>
+                            <span style={{ fontSize: '12px' }}>
                                 {formatDate(record.reminderDate)}
                             </span>
                         </div>
@@ -1090,7 +1169,7 @@ export default function Reminder() {
                         {record.frequency && (
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <span style={{ fontSize: '12px', color: '#8c8c8c' }}>Frequency:</span>
-                                <span style={{ fontSize: '12px', fontWeight: '500', textTransform: 'capitalize' }}>
+                                <span style={{ fontSize: '12px', textTransform: 'capitalize' }}>
                                     {record.frequency}
                                 </span>
                             </div>
@@ -1099,13 +1178,16 @@ export default function Reminder() {
                         {record.endDate && (
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <span style={{ fontSize: '12px', color: '#8c8c8c' }}>End Date:</span>
-                                <span style={{ fontSize: '12px', fontWeight: '500' }}>
+                                <span style={{ fontSize: '12px' }}>
                                     {formatDate(record.endDate)}
                                 </span>
                             </div>
                         )}
-                        <div style={{ fontSize: '12px', color: '#8c8c8c', fontStyle: 'italic', marginTop: '2px' }}>
-                            Created by: {record.createdBy}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontSize: '12px', color: '#8c8c8c' }}>Created by:</span>
+                            <span style={{ fontSize: '12px' }}>
+                                {record.createdBy}
+                            </span>
                         </div>
                     </div>
 
@@ -1270,18 +1352,23 @@ export default function Reminder() {
         setCustomInterval(1);
     };
 
-    const searchNotes = (e: any) => {
-        const searchTerm = e.target.value.toLowerCase().trim();
-
-        if (searchTerm === '') {
-            setNotesList(originalNotesList);
-        } else {
-            const filteredRecords = originalNotesList.filter((item) =>
-                item?.note?.toLowerCase().includes(searchTerm) ||
-                item?.createdBy?.toLowerCase().includes(searchTerm)
-            );
-            setNotesList(filteredRecords);
+    // Debounced search function
+    const debouncedSearch = useCallback((searchValue: string) => {
+        if (debounceRef.current) {
+            clearTimeout(debounceRef.current);
         }
+
+        debounceRef.current = setTimeout(() => {
+            setCurrentPage(1);
+            setHasMore(true);
+            fetchNotes(1, true, searchValue);
+        }, 500);
+    }, [fetchNotes]);
+
+    const searchNotes = (e: any) => {
+        const searchValue = e.target.value.toLowerCase().trim();
+        setSearchTerm(searchValue);
+        debouncedSearch(searchValue);
     }
 
     if (hasHydrated)
@@ -1303,6 +1390,23 @@ export default function Reminder() {
                                         {notesList.map((record, i) => (
                                             <MobileCard record={record} index={i} />
                                         ))}
+                                        {(loadingMore || hasMore) && (
+                                            <div
+                                                ref={loadingRef}
+                                                style={{
+                                                    textAlign: 'center',
+                                                    padding: '20px',
+                                                    display: 'flex',
+                                                    justifyContent: 'center',
+                                                    alignItems: 'center'
+                                                }}
+                                            >
+                                                {loadingMore && <Spin size="small" />}
+                                                {!hasMore && notesList.length > 0 && (
+                                                    <Text type="secondary">No more records to load</Text>
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
                                 ) : (
                                     <>
@@ -1315,6 +1419,23 @@ export default function Reminder() {
                                             size="middle"
                                             loading={loadingData}
                                         />
+                                        {(loadingMore || hasMore) && (
+                                            <div
+                                                ref={loadingRef}
+                                                style={{
+                                                    textAlign: 'center',
+                                                    padding: '20px',
+                                                    display: 'flex',
+                                                    justifyContent: 'center',
+                                                    alignItems: 'center'
+                                                }}
+                                            >
+                                                {loadingMore && <Spin size="small" />}
+                                                {!hasMore && notesList.length > 0 && (
+                                                    <Text type="secondary">No more records to load</Text>
+                                                )}
+                                            </div>
+                                        )}
                                     </>
                                 )}
                             </div>
@@ -1611,10 +1732,7 @@ export default function Reminder() {
                             )}
                         </div>
 
-                        <div className='bottomActionSection' style={{
-                            position: 'sticky',
-                            bottom: 0
-                        }}>
+                        <div className='bottomActionSection'>
                             <Form.Item style={{ marginBottom: 0 }}>
                                 <Button
                                     type="primary"

@@ -100,133 +100,133 @@ export default function Handover() {
     };
 
     // Updated function to get record status and colors
-const getRecordStatusAndColors = (record) => {
-    if (record) {
-        const { startDate, endDate } = record;
+    const getRecordStatusAndColors = (record) => {
+        if (record) {
+            const { startDate, endDate } = record;
 
-        if (!startDate || !endDate) {
-            return {
-                status: 'unknown',
-                label: 'Unknown',
-                backgroundColor: '#d9d9d9',
-                textColor: '#666',
-                glowColor: 'rgba(217, 217, 217, 0.6)'
-            };
+            if (!startDate || !endDate) {
+                return {
+                    status: 'unknown',
+                    label: 'Unknown',
+                    backgroundColor: '#d9d9d9',
+                    textColor: '#666',
+                    glowColor: 'rgba(217, 217, 217, 0.6)'
+                };
+            }
+
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+            const today = new Date();
+
+            start.setHours(0, 0, 0, 0);
+            end.setHours(23, 59, 59, 999);
+
+            if (today >= start && today <= end) {
+                // Active
+                return {
+                    status: 'active',
+                    label: 'Active',
+                    backgroundColor: '#52c41a',
+                    textColor: '#52c41a',
+                    glowColor: 'rgba(82, 196, 26, 0.6)'
+                };
+            } else if (today < start) {
+                // Inactive (Future)
+                return {
+                    status: 'inactive',
+                    label: 'Inactive',
+                    backgroundColor: '#fa8c16',
+                    textColor: '#fa8c16',
+                    glowColor: 'rgba(250, 140, 22, 0.6)'
+                };
+            } else {
+                // Expired
+                return {
+                    status: 'expired',
+                    label: 'Expired',
+                    backgroundColor: '#ff4d4f',
+                    textColor: '#ff4d4f',
+                    glowColor: 'rgba(255, 77, 79, 0.6)'
+                };
+            }
         }
 
-        const start = new Date(startDate);
-        const end = new Date(endDate);
-        const today = new Date();
-
-        start.setHours(0, 0, 0, 0);
-        end.setHours(23, 59, 59, 999);
-
-        if (today >= start && today <= end) {
-            // Active
-            return {
-                status: 'active',
-                label: 'Active',
-                backgroundColor: '#52c41a',
-                textColor: '#52c41a',
-                glowColor: 'rgba(82, 196, 26, 0.6)'
-            };
-        } else if (today < start) {
-            // Inactive (Future)
-            return {
-                status: 'inactive',
-                label: 'Inactive',
-                backgroundColor: '#fa8c16',
-                textColor: '#fa8c16',
-                glowColor: 'rgba(250, 140, 22, 0.6)'
-            };
-        } else {
-            // Expired
-            return {
-                status: 'expired',
-                label: 'Expired',
-                backgroundColor: '#ff4d4f',
-                textColor: '#ff4d4f',
-                glowColor: 'rgba(255, 77, 79, 0.6)'
-            };
-        }
-    }
-
-    return {
-        status: 'unknown',
-        label: 'Unknown',
-        backgroundColor: '#d9d9d9',
-        textColor: '#666',
-        glowColor: 'rgba(217, 217, 217, 0.6)'
+        return {
+            status: 'unknown',
+            label: 'Unknown',
+            backgroundColor: '#d9d9d9',
+            textColor: '#666',
+            glowColor: 'rgba(217, 217, 217, 0.6)'
+        };
     };
-};
 
 
     const columns = [
-{
-    title: 'Notes',
-    dataIndex: 'note',
-    key: 'note',
-    render: (text, record) => {
-        const statusInfo = getRecordStatusAndColors(record);
+        {
+            title: 'Notes',
+            dataIndex: 'note',
+            key: 'note',
+            render: (text, record) => {
+                const statusInfo = getRecordStatusAndColors(record);
 
-        return (
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
-                <span
-                    style={{
-                        width: '8px',
-                        height: '8px',
-                        borderRadius: '50%',
-                        backgroundColor: statusInfo.backgroundColor,
-                        boxShadow: `0 0 6px 2px ${statusInfo.glowColor}`,
-                        display: 'inline-block',
-                        marginTop: '6px',
-                        flexShrink: 0
-                    }}
-                ></span>
-                <div style={{ flex: 1 }}>
-                    <div style={{
-                        wordBreak: 'break-word',
-                        whiteSpace: 'pre-wrap',
-                        lineHeight: '1.5',
-                        marginBottom: record.signedImageUrl ? '8px' : '0'
-                    }}>
-                        {text}
-                    </div>
-                    {record.signedImageUrl && (
-                        <div style={{ marginTop: '8px' }}>
-                            <Image
-                                src={record.signedImageUrl}
-                                alt="Note attachment"
-                                width={60}
-                                height={60}
-                                style={{
-                                    objectFit: 'cover',
-                                    borderRadius: '6px',
-                                    border: '1px solid #d9d9d9'
-                                }}
-                                preview={{
-                                    mask: (
-                                        <div style={{
-                                            background: 'rgba(0,0,0,0.6)',
-                                            color: 'white',
-                                            fontSize: '12px',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            height: '100%'
-                                        }}>
-                                            <PictureOutlined />
-                                        </div>
-                                    )
-                                }}
-                            />
+                return (
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                        <span
+                            style={{
+                                width: '8px',
+                                height: '8px',
+                                borderRadius: '50%',
+                                backgroundColor: statusInfo.backgroundColor,
+                                boxShadow: `0 0 6px 2px ${statusInfo.glowColor}`,
+                                display: 'inline-block',
+                                marginTop: '6px',
+                                flexShrink: 0
+                            }}
+                        ></span>
+                        <div style={{ flex: 1 }}>
+                            <div style={{
+                                wordBreak: 'break-word',
+                                whiteSpace: 'pre-wrap',
+                                lineHeight: '1.5',
+                                marginBottom: record.signedImageUrl ? '8px' : '0'
+                            }}>
+                                {text}
+                            </div>
+                            {record.signedImageUrl && (
+                                <div style={{ marginTop: '8px' }}>
+                                    <Image
+                                        src={record.signedImageUrl}
+                                        alt="Note attachment"
+                                        width={60}
+                                        height={60}
+                                        style={{
+                                            objectFit: 'cover',
+                                            borderRadius: '6px',
+                                            border: '1px solid #d9d9d9'
+                                        }}
+                                        preview={{
+                                            mask: (
+                                                <div style={{
+                                                    background: 'rgba(0,0,0,0.6)',
+                                                    color: 'white',
+                                                    fontSize: '12px',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    height: '100%'
+                                                }}>
+                                                    <PictureOutlined />
+                                                </div>
+                                            )
+                                        }}
+                                    />
+                                </div>
+                            )}
                         </div>
-                    )}
-                </div>
-            </div>
-        );
-    },
-},
+                    </div>
+                );
+            },
+        },
         {
             title: 'Added By',
             dataIndex: 'createdBy',
@@ -467,128 +467,128 @@ const getRecordStatusAndColors = (record) => {
         setIsModalOpen(false);
     };
 
-const MobileCard = ({ record, index }) => {
-    const statusInfo = getRecordStatusAndColors(record);
-    const isEvenIndex = index % 2 === 0;
+    const MobileCard = ({ record, index }) => {
+        const statusInfo = getRecordStatusAndColors(record);
+        const isEvenIndex = index % 2 === 0;
 
-    const imageSrc = record.signedImageUrl || record.imageUrl;
-    const validity = `${dayjs(record.startDate).format("DD MMM YYYY")} - ${dayjs(record.endDate).format("DD MMM YYYY")}`;
+        const imageSrc = record.signedImageUrl || record.imageUrl;
+        const validity = `${dayjs(record.startDate).format("DD MMM YYYY")} - ${dayjs(record.endDate).format("DD MMM YYYY")}`;
 
-    return (
-        <Card
-            size="small"
-            style={{
-                marginBottom: '12px',
-                backgroundColor: isEvenIndex ? '#e6f4ff' : '#f5f5f5',
-                border: isEvenIndex ? '1px solid #91caff' : '1px solid #d9d9d9'
-            }}
-            bodyStyle={{ padding: '16px' }}
-        >
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {/* Status and Action Buttons */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span
-                            style={{
-                                width: '8px',
-                                height: '8px',
-                                borderRadius: '50%',
-                                backgroundColor: statusInfo.backgroundColor,
-                                display: 'inline-block',
-                            }}
-                            className='glowDot'
-                        ></span>
-                        <span style={{
-                            fontSize: '12px',
-                            color: statusInfo.textColor,
-                            fontWeight: '500'
-                        }}>
-                            {statusInfo.label}
-                        </span>
-                    </div>
-                    <Space size="small">
-                        <Button
-                            type="text"
-                            icon={<EditOutlined />}
-                            onClick={() => handleEdit(record)}
-                            size="small"
-                            className='customEditButton'
-                        />
-                        <Button
-                            type="text"
-                            danger
-                            icon={<DeleteOutlined />}
-                            onClick={() => handleDelete(record)}
-                            size="small"
-                            className='customDeleteButton'
-                        />
-                    </Space>
-                </div>
-
-                {/* Note Content */}
-                <div>
-                    <div style={{
-                        wordBreak: 'break-word',
-                        whiteSpace: 'pre-wrap',
-                        lineHeight: '1.5',
-                        fontSize: '14px',
-                        marginBottom: imageSrc ? '12px' : '0'
-                    }}>
-                        {record.note}
-                    </div>
-
-                    {imageSrc && (
-                        <div style={{
-                            display: 'flex',
-                            justifyContent: 'flex-start',
-                            marginBottom: '8px'
-                        }}>
-                            <Image
-                                src={imageSrc}
-                                alt="Note attachment"
-                                width={80}
-                                height={80}
+        return (
+            <Card
+                size="small"
+                style={{
+                    marginBottom: '12px',
+                    backgroundColor: isEvenIndex ? '#e6f4ff' : '#f5f5f5',
+                    border: isEvenIndex ? '1px solid #91caff' : '1px solid #d9d9d9'
+                }}
+                bodyStyle={{ padding: '16px' }}
+            >
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {/* Status and Action Buttons */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span
                                 style={{
-                                    objectFit: 'cover',
-                                    borderRadius: '8px',
-                                    border: '1px solid #d9d9d9'
+                                    width: '8px',
+                                    height: '8px',
+                                    borderRadius: '50%',
+                                    backgroundColor: statusInfo.backgroundColor,
+                                    display: 'inline-block',
                                 }}
-                                preview={{
-                                    mask: (
-                                        <div style={{
-                                            background: 'rgba(0,0,0,0.6)',
-                                            color: 'white',
-                                            fontSize: '14px',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            height: '100%'
-                                        }}>
-                                            <PictureOutlined />
-                                        </div>
-                                    )
-                                }}
+                                className='glowDot'
+                            ></span>
+                            <span style={{
+                                fontSize: '12px',
+                                color: statusInfo.textColor,
+                                fontWeight: '500'
+                            }}>
+                                {statusInfo.label}
+                            </span>
+                        </div>
+                        <Space size="small">
+                            <Button
+                                type="text"
+                                icon={<EditOutlined />}
+                                onClick={() => handleEdit(record)}
+                                size="small"
+                                className='customEditButton'
                             />
-                        </div>
-                    )}
-                </div>
+                            <Button
+                                type="text"
+                                danger
+                                icon={<DeleteOutlined />}
+                                onClick={() => handleDelete(record)}
+                                size="small"
+                                className='customDeleteButton'
+                            />
+                        </Space>
+                    </div>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+                    {/* Note Content */}
                     <div>
-                        <div style={{ fontSize: '12px', fontStyle: 'italic' }}>
-                            Created By: {record?.createdBy}
+                        <div style={{
+                            wordBreak: 'break-word',
+                            whiteSpace: 'pre-wrap',
+                            lineHeight: '1.5',
+                            fontSize: '14px',
+                            marginBottom: imageSrc ? '12px' : '0'
+                        }}>
+                            {record.note}
                         </div>
+
+                        {imageSrc && (
+                            <div style={{
+                                display: 'flex',
+                                justifyContent: 'flex-start',
+                                marginBottom: '8px'
+                            }}>
+                                <Image
+                                    src={imageSrc}
+                                    alt="Note attachment"
+                                    width={80}
+                                    height={80}
+                                    style={{
+                                        objectFit: 'cover',
+                                        borderRadius: '8px',
+                                        border: '1px solid #d9d9d9'
+                                    }}
+                                    preview={{
+                                        mask: (
+                                            <div style={{
+                                                background: 'rgba(0,0,0,0.6)',
+                                                color: 'white',
+                                                fontSize: '14px',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                height: '100%'
+                                            }}>
+                                                <PictureOutlined />
+                                            </div>
+                                        )
+                                    }}
+                                />
+                            </div>
+                        )}
                     </div>
-                    <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontSize: '12px', fontStyle: 'italic' }}>
-                            {validity}
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+                        <div>
+                            <div style={{ fontSize: '12px', fontStyle: 'italic' }}>
+                                Created By: {record?.createdBy}
+                            </div>
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                            <div style={{ fontSize: '12px', fontStyle: 'italic' }}>
+                                {validity}
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
-        </Card>
-    );
-};
+            </Card>
+        );
+    };
 
     useEffect(() => {
         if (isModalOpen) {
