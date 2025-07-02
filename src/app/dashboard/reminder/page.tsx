@@ -264,11 +264,9 @@ export default function Reminder() {
     };
 
     const frequencyOptions = [
-        { label: 'Once', value: 'once', icon: '📝' },
         { label: 'Daily', value: 'daily', icon: '📅' },
         { label: 'Weekly', value: 'weekly', icon: '🗓️' },
         { label: 'Monthly', value: 'monthly', icon: '📆' },
-        { label: 'Yearly', value: 'yearly', icon: '🗓️' },
         { label: 'Custom', value: 'custom', icon: '⚙️' }
     ];
 
@@ -423,12 +421,7 @@ export default function Reminder() {
                     style={{ width: '100%' }}
                 >
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                        <Radio value="date">
-                            <span>On the same date each month</span>
-                        </Radio>
-                        <Radio value="weekday">
-                            <span>On the same weekday</span>
-                        </Radio>
+
                         <Radio value="last">
                             <span>On the last day of the month</span>
                         </Radio>
@@ -449,17 +442,6 @@ export default function Reminder() {
                                 placeholder="1-31"
                                 style={{ width: '100%' }}
                             />
-                        </Form.Item>
-                    </Col>
-                    <Col span={12}>
-                        <Form.Item label="Or Week Position" name="monthlyWeekPosition">
-                            <Select placeholder="Select position" style={{ width: '100%' }}>
-                                <Option value="first">1st Week</Option>
-                                <Option value="second">2nd Week</Option>
-                                <Option value="third">3rd Week</Option>
-                                <Option value="fourth">4th Week</Option>
-                                <Option value="last">Last Week</Option>
-                            </Select>
                         </Form.Item>
                     </Col>
                 </Row>
@@ -524,8 +506,6 @@ export default function Reminder() {
                 <Col span={16}>
                     <Form.Item label="Period" name="customPeriod">
                         <Select placeholder="Select period" style={{ width: '100%' }}>
-                            <Option value="minutes">Minutes</Option>
-                            <Option value="hours">Hours</Option>
                             <Option value="days">Days</Option>
                             <Option value="weeks">Weeks</Option>
                             <Option value="months">Months</Option>
@@ -691,7 +671,7 @@ export default function Reminder() {
 
         // Build and save detailed recurring configuration
         const recurringConfig = buildRecurringConfig(selectedFrequency, dataValue);
-        formData.append('recurringConfig', JSON.stringify(recurringConfig));
+        formData.append('recurringOptions', JSON.stringify(recurringConfig));
 
         // Generate schedule data - NOW PASSING THE REMINDER DATE
         const scheduleData = generateScheduleDates(selectedFrequency, recurringConfig, reminderDateToUse);
@@ -718,25 +698,46 @@ export default function Reminder() {
     };
 
     const buildRecurringConfig = (frequency, dataValue) => {
-        const config = {};
+        const config: any = {};
 
         switch (frequency) {
             case 'daily':
-                config.dailyInterval = dataValue.dailyInterval || 1;
+                config.dailyType = dataValue.dailyType || 'every';
+                if (dataValue.dailyType === 'specific') {
+                    config.dailySpecificDays = dataValue.dailySpecificDays || [];
+                }
+                if (dataValue.dailyType === 'interval') {
+                    config.customInterval = dataValue.customInterval || 1;
+                }
                 break;
 
             case 'weekly':
                 config.weeklyInterval = dataValue.weeklyInterval || 1;
-                config.selectedDays = dataValue.selectedDays || [new Date().getDay()];
+                config.weeklyDays = dataValue.weeklyDays || [];
                 break;
 
             case 'monthly':
+                config.monthlyType = dataValue.monthlyType || 'date';
                 config.monthlyInterval = dataValue.monthlyInterval || 1;
-                config.monthlyType = dataValue.monthlyType || 'date'; // 'date' or 'last'
+                if (dataValue.monthlyType === 'custom') {
+                    config.monthlyCustomDate = dataValue.monthlyCustomDate || 1;
+                }
+                if (dataValue.monthlyWeekPosition) {
+                    config.monthlyWeekPosition = dataValue.monthlyWeekPosition;
+                }
                 break;
 
             case 'yearly':
-                config.yearlyInterval = dataValue.yearlyInterval || 1;
+                config.yearlyMonth = dataValue.yearlyMonth || null;
+                config.yearlyDay = dataValue.yearlyDay || null;
+                if (dataValue.yearlyAdvanced) {
+                    config.yearlyAdvanced = true;
+                }
+                break;
+
+            case 'custom':
+                config.customInterval = dataValue.customInterval || 1;
+                config.customPeriod = dataValue.customPeriod || 'days';
                 break;
 
             default:
@@ -816,56 +817,49 @@ export default function Reminder() {
                 );
             },
         },
-        // Replace the existing 'By Validity' column render function with this:
         {
-            title: 'Reccurence',
+            title: 'Recurrence',
             key: 'byValidity',
             width: 300,
             render: (_: any, record: NoteRecord) => {
-                const { reminderDate, endDate, frequency, createdBy, recurringConfig } = record;
+                const {
+                    reminderDate,
+                    endDate,
+                    frequency,
+                    createdBy,
+                    recurringOptions // comes as JSON string
+                } = record;
+
+                // Parse recurringOptions safely
+                let recurringConfig: any = {};
+                try {
+                    recurringConfig = typeof recurringOptions === 'string'
+                        ? JSON.parse(recurringOptions)
+                        : recurringOptions || {};
+                } catch (err) {
+                    console.warn('Failed to parse recurringOptions:', err);
+                }
 
                 const parsedDate = reminderDate ? new Date(reminderDate) : null;
 
-                // Format the reminder date
                 const formattedReminderDate = parsedDate
-                    ? parsedDate.toLocaleDateString('en-IN', {
-                        day: '2-digit',
-                        month: '2-digit',
-                        year: 'numeric',
-                    })
+                    ? parsedDate.toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })
                     : null;
 
                 const formattedTime = parsedDate
-                    ? parsedDate.toLocaleTimeString('en-US', {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        hour12: true
-                    })
+                    ? parsedDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
                     : null;
 
-                // Format end date if exists
                 const formattedEndDate = endDate
-                    ? new Date(endDate).toLocaleDateString('en-IN', {
-                        day: '2-digit',
-                        month: '2-digit',
-                        year: 'numeric',
-                    })
+                    ? new Date(endDate).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })
                     : null;
 
-                // Get creator info
-                const creatorName = createdBy;
-
-                // Get detailed recurring summary
                 const detailedRecurringSummary = getDetailedRecurringSummary(frequency, reminderDate, recurringConfig);
 
                 return (
-                    <div style={{
-                        lineHeight: 1.4,
-                        fontSize: '13px',
-                        color: '#666'
-                    }}>
+                    <div style={{ lineHeight: 1.4, fontSize: '13px', color: '#666' }}>
                         <div style={{ marginBottom: '2px' }}>
-                            <span style={{ color: '#333' }}>Created by {creatorName}</span>
+                            <span style={{ color: '#333' }}>Created by {createdBy}</span>
                         </div>
                         <div style={{ marginBottom: '2px' }}>
                             Until {formattedEndDate || formattedReminderDate} {formattedTime}
@@ -904,15 +898,19 @@ export default function Reminder() {
     ];
 
     const handleEdit = (record: NoteRecord) => {
-        const processedRecord = {
-            ...record,
-            startDate: record.startDate ? dayjs(record.startDate) : null,
-            endDate: record.endDate ? dayjs(record.endDate) : null,
-        };
-
-        setEditRecordData(processedRecord);
-        setIsModalOpen(true);
+    const processedRecord = {
+        ...record,
+        startDate: record.startDate ? dayjs(record.startDate) : null,
+        endDate: record.endDate ? dayjs(record.endDate) : null,
+        recurringConfig: typeof record.recurringOptions === 'string'
+        ? JSON.parse(record.recurringOptions)
+        : record.recurringOptions || {}
     };
+
+    setEditRecordData(processedRecord);
+    setIsModalOpen(true);
+    };
+
 
     const handleDelete = async (record: NoteRecord) => {
         setLoadingData(true);
