@@ -1017,6 +1017,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 		) {
 			const fields = Object.values(selectedFormFields.content)
 				.filter((item: any) => item?.name?.includes("prefillable"))
+				.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()))
 				.map((item: any) => item.text);
 
 			const csvContent = fields.join(",") + "\n";
