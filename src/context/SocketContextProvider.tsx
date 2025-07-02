@@ -171,19 +171,21 @@ export const SocketContextProvider = ({
       let role = session.data.user.Roles[0];
 
       if (role === "Admin" || role === "Staff") {
-        setReceivedMessage({
-          ...parsedData,
-          message:
-            session.data?.user.Roles?.includes("Admin") ||
-              session.data?.user.Roles?.includes("Staff")
-              ? parsedData.originalMessage
-              : parsedData.message,
-        });
+        setReceivedMessage(parsedData)
+        // setReceivedMessage({
+        //   ...parsedData,
+        //   message:
+        //     session.data?.user.Roles?.includes("Admin") ||
+        //       session.data?.user.Roles?.includes("Staff")
+        //       ? parsedData.originalMessage
+        //       : parsedData.message,
+        // });
       } else {
-        setReceivedMessage({
-          ...parsedData,
-          message: parsedData.message,
-        });
+                setReceivedMessage(parsedData)
+        // setReceivedMessage({
+        //   ...parsedData,
+        //   message: parsedData.message,
+        // });
       }
     } catch (error) {
       console.error("❌ Error parsing message response:", error);

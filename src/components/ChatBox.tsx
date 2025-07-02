@@ -28,12 +28,42 @@ export const ChatBox = React.forwardRef<HTMLDivElement, ChatBoxProps>(
     const userRole = data?.user?.Roles[0];
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+    // Get user's default language from localStorage or session
+    let companyData = JSON.parse(localStorage?.getItem('company-storage') || '{}');
+    let currentUserDefaultLang = companyData?.state?.company?.defaultLangCode || 'en';
+
     // Helper function to determine if message should be on the right
     const isCurrentUserMessage = (messageRole: string) => {
       return messageRole === userRole;
     };
 
-    // No auto-resize - keeping fixed height with internal scrolling
+    // Function to determine which message to display based on current user's role
+    const getDisplayMessage = (messageObj: ReceivedMessageContent) => {
+      const { message, originalMessage, role } = messageObj;
+
+      // If current user is Admin
+      if (userRole === 'Admin') {
+
+        // Show own messages in English (originalMessage)
+        if (role === 'Admin') {
+          return originalMessage || message;
+        }
+        else {
+          return message;
+        }
+      }
+      // If current user is Guest/User
+      else {
+        // Show own messages in their language (originalMessage)
+        if (role === 'User') {
+          return originalMessage || message;
+        }
+        // Show admin messages in their language (translated to their language)
+        else {
+          return message;
+        }
+      }
+    };
 
     const handleSendMessage = () => {
       if (message.trim()) {
@@ -54,7 +84,7 @@ export const ChatBox = React.forwardRef<HTMLDivElement, ChatBoxProps>(
         }
       }
     };
-
+                        console.info("2",messages);
     return (
       <div className="relative flex h-[500px] w-full flex-col ">
         {children}
@@ -67,11 +97,11 @@ export const ChatBox = React.forwardRef<HTMLDivElement, ChatBoxProps>(
               .filter(
                 ({ station }) => station === Number(params.get("station") ?? 1),
               )
-              .map(({ id, message, role }) => (
+              .map((messageObj) => (
                 <ChatMessage
-                  key={id}
-                  message={message}
-                  isRight={isCurrentUserMessage(role)}
+                  key={messageObj.id}
+                  message={getDisplayMessage(messageObj)}
+                  isRight={isCurrentUserMessage(messageObj.role)}
                 />
               ))}
           </div>
