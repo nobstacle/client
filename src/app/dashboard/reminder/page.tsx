@@ -67,6 +67,7 @@ export default function Reminder() {
     const [hasMore, setHasMore] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [loadingMore, setLoadingMore] = useState(false);
+    const [totalRecords, setTotalRecords] = useState(null);
     const ITEMS_PER_PAGE = 10;
     const loadingRef = useRef<HTMLDivElement>(null);
     const debounceRef = useRef<NodeJS.Timeout>();
@@ -75,68 +76,92 @@ export default function Reminder() {
     let Url = process.env.NEXT_PUBLIC_BACKEND_URL;
     let role = data?.user?.Roles?.[0];
 
-    const fetchNotes = (page = 1, append = false, search: string = '',) => {
+    const fetchNotes = useCallback(async (page: number = 1, search: string = '', reset: boolean = false) => {
         if (!data?.user?.backendTokens?.at) {
             setLoadingData(false);
             return;
         }
 
-        if (append && (loadingMore || !hasMore)) {
-            return;
-        }
+        try {
+            const isFirstLoad = page === 1 && !search;
+            if (isFirstLoad) {
+                setLoadingData(true);
+            } else {
+                setLoadingMore(true);
+            }
 
-        if (!append) {
-            setLoadingData(true);
-        } else {
-            setLoadingMore(true);
-        }
-
-        fetch(`${Url}/api/v1/uploads/reminders?page=${page}&limit=${ITEMS_PER_PAGE}`, {
-            headers: { Authorization: `Bearer ${data?.user.backendTokens.at}` },
-        })
-            .then(async (response) => {
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-
-                const text = await response.text();
-                const json = JSON.parse(text);
-                const responseData = json.data || json;
-                const processedData = responseData.map(item => ({
-                    ...item,
-                    key: item.id,
-                    recurringConfig: typeof item.recurringConfig === 'string'
-                        ? JSON.parse(item.recurringConfig)
-                        : item.recurringConfig || {}
-                }));
-
-                if (append) {
-                    setNotesList(prev => {
-                        const existingIds = new Set(prev.map(item => item.id));
-                        const newItems = processedData.filter(item => !existingIds.has(item.id));
-                        return [...prev, ...newItems];
-                    });
-                } else {
-                    setNotesList(processedData);
-                }
-
-                setHasMore(processedData.length === ITEMS_PER_PAGE);
-                setCurrentPage(page);
-            })
-            .catch((error) => {
-                console.error("Error fetching data:", error);
-            })
-            .finally(() => {
-                setLoadingData(false);
-                setLoadingMore(false);
+            const queryParams = new URLSearchParams({
+                page: page.toString(),
+                limit: ITEMS_PER_PAGE.toString(),
+                ...(search && { search })
             });
-    };
+
+            const response = await fetch(`${Url}/api/v1/uploads/reminders?${queryParams}`, {
+                headers: { Authorization: `Bearer ${data?.user.backendTokens.at}` },
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const result = await response.json();
+
+            // Handle the nested response structure from your backend
+            const newData = result.data || [];
+            const paginationInfo = result.pagination || {};
+
+            // Process the data with recurring config parsing
+            const processedData = newData.map(item => ({
+                ...item,
+                key: item.id,
+                recurringConfig: typeof item.recurringConfig === 'string'
+                    ? JSON.parse(item.recurringConfig)
+                    : item.recurringConfig || {}
+            }));
+
+            if (reset || page === 1) {
+                setNotesList(processedData);
+            } else {
+                setNotesList(prev => {
+                    const existingIds = new Set(prev.map(item => item.id));
+                    const newItems = processedData.filter(item => !existingIds.has(item.id));
+                    return [...prev, ...newItems];
+                });
+            }
+
+            // Use the hasMore from pagination info, fallback to length check
+            const hasMoreData = paginationInfo.hasMore || paginationInfo.hasNext || (processedData.length === ITEMS_PER_PAGE);
+            setHasMore(hasMoreData);
+            setTotalRecords(paginationInfo.totalCount || result.metadata?.totalReminders || 0);
+            setCurrentPage(page);
+
+        } catch (error) {
+            console.warn("Error fetching reminders:", error);
+            message.error('Failed to load reminders');
+        } finally {
+            setLoadingData(false);
+            setLoadingMore(false);
+        }
+    }, [data?.user?.backendTokens?.at, Url]);
+
+    // Debounced search function
+    const debouncedSearch = useCallback((searchValue: string) => {
+        if (debounceRef.current) {
+            clearTimeout(debounceRef.current);
+        }
+
+        debounceRef.current = setTimeout(() => {
+            setCurrentPage(1);
+            setHasMore(true);
+            fetchNotes(1, searchValue, true);
+        }, 500);
+    }, [fetchNotes]);
 
     // Load more data when intersection observer triggers
     const loadMore = useCallback(() => {
         if (!loadingMore && hasMore && !searchTerm) {
             const nextPage = currentPage + 1;
-            fetchNotes(nextPage, true, searchTerm);
+            fetchNotes(nextPage, searchTerm);
         }
     }, [loadingMore, hasMore, currentPage, searchTerm, fetchNotes]);
 
@@ -161,27 +186,12 @@ export default function Reminder() {
         };
     }, [loadMore]);
 
-    useEffect(() => {
-        const isMobile = window.innerWidth <= 768;
-        if (isMobile) {
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-    }, [currentPage]);
-
+    // Initial data fetch
     useEffect(() => {
         if (data?.user !== undefined) {
-            setCurrentPage(1);
-            setHasMore(true);
-            setNotesList([]);
-            fetchNotes(1, false);
+            fetchNotes(1, '', true);
         }
-    }, [data?.user]);
-
-    useEffect(() => {
-        if (data?.user !== undefined) {
-            fetchNotes();
-        }
-    }, [data]);
+    }, [data, fetchNotes]);
 
     useEffect(() => {
         if (!isModalOpen) {
@@ -707,20 +717,20 @@ export default function Reminder() {
                     config.dailySpecificDays = dataValue.dailySpecificDays || [];
                 }
                 if (dataValue.dailyType === 'interval') {
-                    config.customInterval = dataValue.customInterval || 1;
+                    config.customInterval = dataValue.customInterval || customInterval || 1;
                 }
                 break;
 
             case 'weekly':
-                config.weeklyInterval = dataValue.weeklyInterval || 1;
+                config.weeklyInterval = dataValue.weeklyInterval  || weeklyInterval || 1;
                 config.weeklyDays = dataValue.weeklyDays || [];
                 break;
 
             case 'monthly':
                 config.monthlyType = dataValue.monthlyType || 'date';
-                config.monthlyInterval = dataValue.monthlyInterval || 1;
+                config.monthlyInterval = dataValue.monthlyInterval  || monthlyInterval || 1;
                 if (dataValue.monthlyType === 'custom') {
-                    config.monthlyCustomDate = dataValue.monthlyCustomDate || 1;
+                    config.monthlyCustomDate = dataValue.monthlyCustomDate  || monthlyInterval || 1;
                 }
                 if (dataValue.monthlyWeekPosition) {
                     config.monthlyWeekPosition = dataValue.monthlyWeekPosition;
@@ -736,7 +746,7 @@ export default function Reminder() {
                 break;
 
             case 'custom':
-                config.customInterval = dataValue.customInterval || 1;
+                config.customInterval = dataValue.customInterval  || customInterval || 1;
                 config.customPeriod = dataValue.customPeriod || 'days';
                 break;
 
@@ -898,19 +908,18 @@ export default function Reminder() {
     ];
 
     const handleEdit = (record: NoteRecord) => {
-    const processedRecord = {
-        ...record,
-        startDate: record.startDate ? dayjs(record.startDate) : null,
-        endDate: record.endDate ? dayjs(record.endDate) : null,
-        recurringConfig: typeof record.recurringOptions === 'string'
-        ? JSON.parse(record.recurringOptions)
-        : record.recurringOptions || {}
-    };
+        const processedRecord = {
+            ...record,
+            startDate: record.startDate ? dayjs(record.startDate) : null,
+            endDate: record.endDate ? dayjs(record.endDate) : null,
+            recurringConfig: typeof record.recurringOptions === 'string'
+                ? JSON.parse(record.recurringOptions)
+                : record.recurringOptions || {}
+        };
 
-    setEditRecordData(processedRecord);
-    setIsModalOpen(true);
+        setEditRecordData(processedRecord);
+        setIsModalOpen(true);
     };
-
 
     const handleDelete = async (record: NoteRecord) => {
         setLoadingData(true);
@@ -1242,10 +1251,7 @@ export default function Reminder() {
                 if (reminderDate && recordFrequency !== 'once') {
                     const recurringFields = extractRecurringDetails(reminderDate, recordFrequency, editRecordData.recurringConfig);
 
-                    // Update state variables for UI components
                     updateRecurringState(recordFrequency, recurringFields);
-
-                    // Merge with base form fields
                     form.setFieldsValue({
                         ...baseFormFields,
                         ...recurringFields
@@ -1349,19 +1355,6 @@ export default function Reminder() {
         setMonthlyType('date');
         setCustomInterval(1);
     };
-
-    // Debounced search function
-    const debouncedSearch = useCallback((searchValue: string) => {
-        if (debounceRef.current) {
-            clearTimeout(debounceRef.current);
-        }
-
-        debounceRef.current = setTimeout(() => {
-            setCurrentPage(1);
-            setHasMore(true);
-            fetchNotes(1, true, searchValue);
-        }, 500);
-    }, [fetchNotes]);
 
     const searchNotes = (e: any) => {
         const searchValue = e.target.value.toLowerCase().trim();
