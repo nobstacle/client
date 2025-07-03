@@ -722,15 +722,15 @@ export default function Reminder() {
                 break;
 
             case 'weekly':
-                config.weeklyInterval = dataValue.weeklyInterval  || weeklyInterval || 1;
+                config.weeklyInterval = dataValue.weeklyInterval || weeklyInterval || 1;
                 config.weeklyDays = dataValue.weeklyDays || [];
                 break;
 
             case 'monthly':
                 config.monthlyType = dataValue.monthlyType || 'date';
-                config.monthlyInterval = dataValue.monthlyInterval  || monthlyInterval || 1;
+                config.monthlyInterval = dataValue.monthlyInterval || monthlyInterval || 1;
                 if (dataValue.monthlyType === 'custom') {
-                    config.monthlyCustomDate = dataValue.monthlyCustomDate  || monthlyInterval || 1;
+                    config.monthlyCustomDate = dataValue.monthlyCustomDate || monthlyInterval || 1;
                 }
                 if (dataValue.monthlyWeekPosition) {
                     config.monthlyWeekPosition = dataValue.monthlyWeekPosition;
@@ -746,7 +746,7 @@ export default function Reminder() {
                 break;
 
             case 'custom':
-                config.customInterval = dataValue.customInterval  || customInterval || 1;
+                config.customInterval = dataValue.customInterval || customInterval || 1;
                 config.customPeriod = dataValue.customPeriod || 'days';
                 break;
 
