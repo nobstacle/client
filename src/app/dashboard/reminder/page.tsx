@@ -872,7 +872,7 @@ export default function Reminder() {
                             <span style={{ color: '#333' }}>Created by {createdBy}</span>
                         </div>
                         <div style={{ marginBottom: '2px' }}>
-                            Until {formattedEndDate || formattedReminderDate} {formattedTime}
+                            From {formattedEndDate || formattedReminderDate} {formattedTime}
                         </div>
                         <div style={{ color: '#1890ff', fontWeight: '500' }}>
                             {detailedRecurringSummary}
