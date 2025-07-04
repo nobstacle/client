@@ -15,7 +15,7 @@ import { arrayMove } from "@dnd-kit/sortable";
 import { UniqueIdentifier } from "@dnd-kit/core";
 import { useSocketContext } from "../../../context/SocketContextProvider";
 import { ChatType } from "../../../constant/types";
-import { useDocumentControllerDeleteDocumentOne, useCompanyControllerGetCompany } from "../../../lib/client/api";
+import { useDocumentControllerDeleteDocumentOne, useCompanyControllerGetCompany, useDocumentTemplateControllerPatchDocumentTemplateOrder } from "../../../lib/client/api";
 import { toast } from 'react-toastify';
 import useTemplateStore from "../../../lib/zustand/store/templateStore";
 import { useSearchDocument } from "../../../hooks/useSearchDocument";
@@ -51,6 +51,9 @@ export default function Documents() {
     useEffect(() => {
         setIsMounted(true);
     }, []);
+
+    const updateDocumentTemplateOrder =
+        useDocumentTemplateControllerPatchDocumentTemplateOrder();
 
     const filterDocumentsByLanguage = (docs) => {
         const selectedLang = params.get("lang") || companyData?.defaultLangCode || "en";
@@ -152,20 +155,43 @@ export default function Documents() {
         setModalType('create');
     };
 
-    const sortDocuments = (item1: UniqueIdentifier, item2: UniqueIdentifier) => {
+    const sortDocuments = async (item1: UniqueIdentifier, item2: UniqueIdentifier) => {
         const setResource = searchDocuments.length > 0 ? setSearchDocuments : setResponses;
         const documentsResource = searchDocuments.length > 0 ? searchDocuments : responses;
 
         const oldIndex = documentsResource.findIndex((item) => item.id === item1);
         const newIndex = documentsResource.findIndex((item) => item.id === item2);
 
-        let shallow = [...documentsResource];
-        shallow = arrayMove(documentsResource, oldIndex, newIndex);
+        if (oldIndex === -1 || newIndex === -1) return;
 
-        shallow.forEach(({ id }, index) => {
-        });
+        let reorderedDocuments = [...documentsResource];
+        reorderedDocuments = arrayMove(documentsResource, oldIndex, newIndex);
+        setResource(reorderedDocuments);
 
-        setResource(shallow);
+        if (searchDocuments.length === 0) {
+            setDocuments(reorderedDocuments);
+        }
+
+        try {
+            const updatePromises = reorderedDocuments.map((document, index) => {
+                return updateDocumentTemplateOrder.mutateAsync({
+                    data: { order: index + 1 },
+                    id: document.id,
+                });
+            });
+
+            await Promise.all(updatePromises);
+            console.log("Document order updated successfully");
+
+        } catch (error) {
+            console.error("Error updating document order:", error);
+            toast.error("Failed to update document order");
+
+            setResource(documentsResource);
+            if (searchDocuments.length === 0) {
+                setDocuments(documentsResource);
+            }
+        }
     };
 
     const getFileIcon = (ext: string) => {

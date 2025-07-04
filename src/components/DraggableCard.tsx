@@ -1,6 +1,6 @@
 import type {
   DragStartEvent,
-  DragOverEvent,
+  DragEndEvent,
   UniqueIdentifier,
 } from "@dnd-kit/core";
 import {
@@ -32,6 +32,8 @@ export const DraggableCardContainer: React.FC<{
   sort: (item1: UniqueIdentifier, item2: UniqueIdentifier) => void;
   children: React.ReactNode;
 }> = ({ items, sort, children }) => {
+  const [activeId, setActiveId] = React.useState<UniqueIdentifier | null>(null);
+  
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(TouchSensor),
@@ -44,8 +46,8 @@ export const DraggableCardContainer: React.FC<{
     <DndContext
       sensors={sensors}
       collisionDetection={closestCenter}
-      onDragOver={handleDragOver}
       onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
     >
       <SortableContext
         items={items.map((item) => item.id)}
@@ -63,11 +65,14 @@ export const DraggableCardContainer: React.FC<{
 
   function handleDragStart(event: DragStartEvent) {
     const { active } = event;
+    setActiveId(active.id);
   }
 
-  function handleDragOver(event: DragOverEvent) {
+  function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
-
+    
+    setActiveId(null);
+    
     if (over && active.id !== over.id) {
       sort(active.id, over.id);
     }
@@ -109,7 +114,7 @@ export const DraggableCardItem: React.FC<
 
     const style = {
       transform: CSS.Transform.toString(transformValues),
-      transition: transition || 'transform 200ms ease',
+      transition: isDragging ? 'none' : (transition || 'transform 200ms ease'),
     };
 
     return (
@@ -119,7 +124,7 @@ export const DraggableCardItem: React.FC<
         onMouseLeave={() => setIsHover(false)}
         onClick={(e) => {
           e.stopPropagation();
-          if (sendOnClick) {
+          if (sendOnClick && !isDragging) {
             sendOnClick();
           }
         }}
@@ -137,6 +142,7 @@ export const DraggableCardItem: React.FC<
           ...style,
           zIndex: isDragging ? 9999 : 1,
           position: "relative",
+          opacity: isDragging ? 0.8 : 1,
         }}
       >
         {/* Content Area - Flexible height */}
@@ -147,7 +153,7 @@ export const DraggableCardItem: React.FC<
         </div>
 
         {/* Edit Button - Top Left */}
-        {!isRecevied && isHover && isAdmin && (
+        {!isRecevied && isHover && isAdmin && !isDragging && (
           <div className="absolute left-1 top-1 z-10">
             <button
               className="flex items-center justify-center
@@ -167,7 +173,7 @@ export const DraggableCardItem: React.FC<
         )}
 
         {/* Delete Button - Top Right */}
-        {!isRecevied && isHover && isAdmin && (
+        {!isRecevied && isHover && isAdmin && !isDragging && (
           <div className="absolute right-1 top-1 z-10">
             <button
               className="flex items-center justify-center
@@ -196,6 +202,9 @@ export const DraggableCardItem: React.FC<
                        md:bottom-10 
                        lg:bottom-11 
                        xl:bottom-12"
+            onClick={(e) => {
+              e.stopPropagation();
+            }}
           >
             <div className="flex items-center justify-center
                            h-6 w-6 sm:h-7 sm:w-7 md:h-7 md:w-7 lg:h-8 lg:w-8

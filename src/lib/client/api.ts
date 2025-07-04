@@ -4045,3 +4045,44 @@ export const getTeamDocumentControllerDeleteDocumentOneMutationOptions = <
 
 	return { mutationFn, ...mutationOptions };
 };
+
+export const useDocumentTemplateControllerPatchDocumentTemplateOrder = <TError = ErrorType<HttpExceptionSchema>,
+
+	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof imageTemplateControllerPatchImageTemplateOrder>>, TError, { id: number; data: BodyType<PatchImageTemplateOrderReq> }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+	) => {
+
+	const mutationOptions = getDocumentTemplateControllerPatchDocumentTemplateOrderMutationOptions(options);
+
+	return useMutation(mutationOptions);
+}
+
+export const getDocumentTemplateControllerPatchDocumentTemplateOrderMutationOptions = <TError = ErrorType<HttpExceptionSchema>,
+
+	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof documentTemplateControllerPatchDocumentTemplateOrder>>, TError, { id: number; data: BodyType<PatchImageTemplateOrderReq> }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+	): UseMutationOptions<Awaited<ReturnType<typeof documentTemplateControllerPatchDocumentTemplateOrder>>, TError, { id: number; data: BodyType<PatchImageTemplateOrderReq> }, TContext> => {
+	const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+
+	const mutationFn: MutationFunction<Awaited<ReturnType<typeof documentTemplateControllerPatchDocumentTemplateOrder>>, { id: number; data: BodyType<PatchImageTemplateOrderReq> }> = (props) => {
+		const { id, data } = props ?? {};
+
+		return documentTemplateControllerPatchDocumentTemplateOrder(id, data, requestOptions)
+	}
+
+	return { mutationFn, ...mutationOptions }
+}
+
+
+export const documentTemplateControllerPatchDocumentTemplateOrder = (
+	id: number,
+	patchImageTemplateOrderReq: BodyType<PatchImageTemplateOrderReq>,
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
+
+
+	return nobstacleBackendApiInstance<boolean>(
+		{
+			url: `/api/v1/content/image/document/order/${id}`, method: 'PATCH',
+			headers: { 'Content-Type': 'application/json', },
+			data: patchImageTemplateOrderReq
+		},
+		options);
+}
