@@ -190,19 +190,33 @@ export default function DocumentDownload() {
         }
     };
 
-    const sendDocument = (document: any) => {
-        emitSendTeamDocument({
-            refId: document?.id,
-            langCode: document?.isAvailable
-                ? params.get("lang") || document?.companyData?.defaultLangCode || "en"
-                : document?.companyData?.defaultLangCode || "en",
-            refType: ChatType.TeamDocument,
-            station: Number(params.get("station") ?? 1),
-            contentExtra: document?.ext,
-        });
+    const downloadDocument = async (record) => {
+        try {
+            const { url, tag, ext, id } = record;
+            const filename = `${tag || 'document'}-${id}.${ext}`;
+            const response = await fetch(url);
+
+            if (!response.ok) {
+                throw new Error(`Failed to download file: ${response.status} ${response.statusText}`);
+            }
+
+            const blob = await response.blob();
+            const blobUrl = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = blobUrl;
+            link.download = filename;
+
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            window.URL.revokeObjectURL(blobUrl);
+        } catch (error) {
+            console.error('Error downloading file:', error);
+            alert('Failed to download file. Please try again.');
+        }
     };
 
-    // Apply language filtering to search results as well
     const documentsSource = useMemo(() => {
         const baseDocuments = searchDocuments.length > 0 ? searchDocuments : documents;
         return filterDocumentsByLanguage(baseDocuments);
@@ -244,7 +258,7 @@ export default function DocumentDownload() {
                                             )}
                                             onUpdate={() => onUpdateDocument(document)}
                                             onDelete={() => onDeleteDocument(document.id)}
-                                            sendOnClick={() => sendDocument(document)}
+                                            sendOnClick={() => downloadDocument(document)}
                                             isDraggable={searchDocuments.length === 0}
                                         >
                                             <div className="flex flex-col items-center justify-center h-full p-2">
