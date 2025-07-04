@@ -23,7 +23,7 @@ import useTemplateStore from "../lib/zustand/store/templateStore";
 export interface SendDocumentPayloadType {
   refId: number;
   langCode: string;
-  refType: string; 
+  refType: string;
   station: number;
   contentExtra?: string;
 }
@@ -42,6 +42,7 @@ export const SocketContext = createContext<{
   socket: undefined | Socket<any, any>;
   emitSendTemplate: (data: SendTemplatePayloadType) => void;
   emitSendDocument: (data: SendDocumentPayloadType, callback?: (response: any) => void) => void;
+  emitSendTeamDocument: (data: SendDocumentPayloadType, callback?: (response: any) => void) => void;
   emitSendJotForm: (data: SendJotFormTemplate, callback?: (response: any) => void) => void;
   emitSendMessage: (data: SendMessagePayloadType) => void;
   emitClearMessage: (data: CleanMessagesPayloadType) => void;
@@ -136,6 +137,24 @@ export const SocketContextProvider = ({
     }
   };
 
+  const onReceivedTeamDocument = (data: any) => {
+
+    try {
+      const parsedRes = JSON.parse(data);
+      if (parsedRes.status === 400) {
+        console.warn("⚠️ Document response has error:", parsedRes);
+        return;
+      }
+
+      const parsedData = parsedRes.data as ReceivedDocumentContent;
+
+      setReceivedContent(parsedData);
+
+    } catch (error) {
+      console.error("❌ Error parsing document response:", error);
+    }
+  };
+
   const onDocumentSentSuccessfully = (data: any) => {
     console.log("📄 Document sent successfully:", data);
 
@@ -147,7 +166,7 @@ export const SocketContextProvider = ({
       }
 
       console.log("✅ Document sent successfully:", parsedRes);
-      
+
       // If you need to trigger a template emission after document is sent, do it here
       if (parsedRes.data) {
         // Emit send-template instead of received-template
@@ -181,7 +200,7 @@ export const SocketContextProvider = ({
         //       : parsedData.message,
         // });
       } else {
-                setReceivedMessage(parsedData)
+        setReceivedMessage(parsedData)
         // setReceivedMessage({
         //   ...parsedData,
         //   message: parsedData.message,
@@ -254,8 +273,6 @@ export const SocketContextProvider = ({
   };
 
   const onReceivedJotForm = (data: any) => {
-    console.info("📩 Received JotForm Submission:", data);
-
     try {
       const parsedRes = JSON.parse(data);
       if (parsedRes.status === 400) {
@@ -274,7 +291,6 @@ export const SocketContextProvider = ({
   };
 
   const onDataSubmitted = (data: any) => {
-    console.info("📩 Received JotForm data:", data);
 
     try {
       const parsedRes = JSON.parse(data);
@@ -307,6 +323,7 @@ export const SocketContextProvider = ({
     socketClient.on("jotForm-sent-successfully", onReceivedJotForm);
     socketClient.on("dataSaved", onDataSubmitted);
     socketClient.on("document-sent-successfully", onReceivedDocument);
+    socketClient.on("team-document-sent-successfully", onReceivedTeamDocument);
 
     return () => {
       socketClient.off("disconnect", onDisconnect);
@@ -321,6 +338,7 @@ export const SocketContextProvider = ({
       socketClient.off("jotForm-sent-successfully", onReceivedJotForm);
       socketClient.off("dataSaved", onDataSubmitted);
       socketClient.off("document-sent-successfully", onReceivedDocument);
+      socketClient.off("team-document-sent-successfully", onReceivedTeamDocument);
     };
   }, [socketClient]);
 
@@ -349,13 +367,30 @@ export const SocketContextProvider = ({
     }
 
     console.log("🚀 Emitting send-document with data:", data);
-    
+
     if (callback) {
-         console.log("🚀 Call back case", data);
+      console.log("🚀 Call back case", data);
       socketClient.emit("send-document", data, callback);
     } else {
-         console.log("🚀 Without Call back case:", data);
+      console.log("🚀 Without Call back case:", data);
       socketClient.emit("send-document", data);
+    }
+  };
+
+  const emitSendTeamDocument = (data: SendDocumentPayloadType, callback?: (response: any) => void) => {
+    if (!socketClient || !socketClient.connected) {
+      console.error("❌ Socket is not connected!");
+      return;
+    }
+
+    console.log("🚀 Emitting send-team-document with data:", data);
+
+    if (callback) {
+      console.log("🚀 Call back case", data);
+      socketClient.emit("send-team-document", data, callback);
+    } else {
+      console.log("🚀 Without Call back case:", data);
+      socketClient.emit("send-team-document", data);
     }
   };
 
@@ -434,6 +469,7 @@ export const SocketContextProvider = ({
         emitSendSurvey,
         emitSendLangCode,
         socketConnected,
+        emitSendTeamDocument
       }}
     >
       {children}

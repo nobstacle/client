@@ -38,8 +38,6 @@ const IframeWithPrefill = React.memo(({ src, prefillData }: { src: string, prefi
     }
   }, [src, prefillData]);
 
-  console.info("srcsrcsrcsrcsrc",src);
-
   return (
     <iframe
       ref={iframeRef}
@@ -80,7 +78,7 @@ export const Content: React.FC = () => {
   let baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
   const [jotFormUrl, setJotFormUrl] = useState<string | null>(null);
   const [prefillData, setPrefillData] = useState<Record<string, string>>({});
-const [contentKey, setContentKey] = useState(0);
+  const [contentKey, setContentKey] = useState(0);
 
   const defaultSlideshowContent =
     useContentControllerGetDefaultSlideshowContent({
@@ -194,30 +192,30 @@ const [contentKey, setContentKey] = useState(0);
     };
   }, [messageStore.receivedContent?.content]);
 
-useEffect(() => {
-  const generateQR = async () => {
-    const content = messageStore.receivedContent?.content;
-    if (content) {
-      try {
-        const url = await QRCode.toDataURL(content);
-        setQrCodeUrl(url);
-        const wdthSize = window.innerWidth;
-        if (wdthSize > 650) {
-          // Reset the timer states when new content arrives
-          setIsClosing(false);
-          setContentKey(prev => prev + 1); // Trigger timer reset
-          setTimeout(() => {
-            setShowQR(true);
-          }, 3000);
+  useEffect(() => {
+    const generateQR = async () => {
+      const content = messageStore.receivedContent?.content;
+      if (content) {
+        try {
+          const url = await QRCode.toDataURL(content);
+          setQrCodeUrl(url);
+          const wdthSize = window.innerWidth;
+          if (wdthSize > 650) {
+            // Reset the timer states when new content arrives
+            setIsClosing(false);
+            setContentKey(prev => prev + 1); // Trigger timer reset
+            setTimeout(() => {
+              setShowQR(true);
+            }, 3000);
+          }
+        } catch (err) {
+          console.error("Failed to generate QR code", err);
         }
-      } catch (err) {
-        console.error("Failed to generate QR code", err);
       }
-    }
-  };
+    };
 
-  generateQR();
-}, [messageStore.receivedContent?.content]);
+    generateQR();
+  }, [messageStore.receivedContent?.content]);
 
   const handleCloseQR = useCallback(() => {
     setIsClosing(true);
@@ -226,34 +224,32 @@ useEffect(() => {
   }, []);
 
 
-useEffect(() => {
-  let countdown: NodeJS.Timeout;
+  useEffect(() => {
+    let countdown: NodeJS.Timeout;
 
-  if (showQR && !isClosing) {
-    setTimer(20); 
+    if (showQR && !isClosing) {
+      setTimer(20);
 
-    countdown = setInterval(() => {
-      setTimer(prev => {
-        if (prev <= 1) {
-          handleCloseQR();
-          clearInterval(countdown);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-  }
+      countdown = setInterval(() => {
+        setTimer(prev => {
+          if (prev <= 1) {
+            handleCloseQR();
+            clearInterval(countdown);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
 
-  return () => clearInterval(countdown);
-}, [showQR, isClosing, handleCloseQR, contentKey]); 
+    return () => clearInterval(countdown);
+  }, [showQR, isClosing, handleCloseQR, contentKey]);
 
   useEffect(() => {
     const loadFormData = async () => {
       if (messageStore.receivedType === "JotFormMessage" && messageStore.receivedContent?.content) {
         try {
           const result = await getFormData(messageStore.receivedContent.content);
-          console.info("Form data result:", result);
-          console.info("!@#$%%:", messageStore.receivedContent.content);
 
           if (result) {
             setJotFormUrl(result.url);
@@ -273,58 +269,58 @@ useEffect(() => {
     loadFormData();
   }, [messageStore.receivedType, messageStore.receivedContent?.content, data?.user.backendTokens.at]);
 
-const getFormData = async (url: string): Promise<{ url: string, prefillData: Record<string, string> } | null> => {
-  try {
-    const urlObj = new URL(url);
-    const uuid = urlObj.searchParams.get("uuid");
+  const getFormData = async (url: string): Promise<{ url: string, prefillData: Record<string, string> } | null> => {
+    try {
+      const urlObj = new URL(url);
+      const uuid = urlObj.searchParams.get("uuid");
 
-    if (!uuid) {
-      console.error("UUID not found in URL");
+      if (!uuid) {
+        console.error("UUID not found in URL");
+        return null;
+      }
+
+      // Extract prefill data from original URL
+      const prefillData: Record<string, string> = {};
+      urlObj.searchParams.forEach((value, key) => {
+        if (key !== 'uuid') {
+          prefillData[key] = value;
+        }
+      });
+
+      const res = await fetch(`${baseUrl}/api/jotform/get-assigned-form-by-uuid?uuid=${uuid}`, {
+        headers: {
+          Authorization: `Bearer ${data?.user.backendTokens.at}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
+
+      const text = await res.text();
+      const result = JSON.parse(text);
+
+      const newUrl = new URL(`https://form.jotform.com/${result.data.formId}`);
+
+      // Add the UUID back to the new URL
+      newUrl.searchParams.set('uuid', uuid);
+
+      // Add all prefill parameters to the new URL
+      Object.entries(prefillData).forEach(([key, value]) => {
+        newUrl.searchParams.set(key, value);
+      });
+
+      return {
+        url: newUrl.toString(),
+        prefillData
+      };
+
+    } catch (error) {
+      console.error("Error fetching data:", error);
       return null;
     }
-
-    // Extract prefill data from original URL
-    const prefillData: Record<string, string> = {};
-    urlObj.searchParams.forEach((value, key) => {
-      if (key !== 'uuid') {
-        prefillData[key] = value;
-      }
-    });
-
-    const res = await fetch(`${baseUrl}/api/jotform/get-assigned-form-by-uuid?uuid=${uuid}`, {
-      headers: {
-        Authorization: `Bearer ${data?.user.backendTokens.at}`,
-        "Content-Type": "application/json",
-      },
-    });
-
-    if (!res.ok) {
-      throw new Error(`HTTP error! status: ${res.status}`);
-    }
-
-    const text = await res.text();
-    const result = JSON.parse(text);
-
-    const newUrl = new URL(`https://form.jotform.com/${result.data.formId}`);
-
-    // Add the UUID back to the new URL
-    newUrl.searchParams.set('uuid', uuid);
-
-    // Add all prefill parameters to the new URL
-    Object.entries(prefillData).forEach(([key, value]) => {
-      newUrl.searchParams.set(key, value);
-    });
-
-    return {
-      url: newUrl.toString(),
-      prefillData
-    };
-
-  } catch (error) {
-    console.error("Error fetching data:", error);
-    return null;
-  }
-};
+  };
 
   const { emitSendMessage } = useSocketContext();
 
@@ -351,6 +347,68 @@ const getFormData = async (url: string): Promise<{ url: string, prefillData: Rec
     }
   }, [isLoading]);
 
+
+  const getFileTypeInfo = (extraContent) => {
+    const fileType = extraContent?.toLowerCase();
+
+    const mimeTypes = {
+      'pdf': 'application/pdf',
+      'doc': 'application/msword',
+      'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'ppt': 'application/vnd.ms-powerpoint',
+      'pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      'xls': 'application/vnd.ms-excel',
+      'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    };
+
+    return {
+      extension: fileType,
+      mimeType: mimeTypes[fileType] || 'application/octet-stream'
+    };
+  };
+
+  useEffect(() => {
+    if (messageStore.receivedType && messageStore.receivedType === "Team-document") {
+      const fileInfo = getFileTypeInfo(messageStore.receivedContent.extraContent);
+
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const fileName = `document-${messageStore.receivedContent.id}-${timestamp}.${fileInfo.extension}`;
+
+      downloadFile(messageStore.receivedContent.content, fileName, fileInfo.mimeType);
+    }
+  }, [messageStore]);
+
+  const downloadFile = async (url, fileName, mimeType) => {
+    try {
+      const response = await fetch(url);
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const blob = await response.blob();
+      const blobWithType = new Blob([blob], { type: mimeType });
+
+      // Create download link
+      const downloadUrl = URL.createObjectURL(blobWithType);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = fileName;
+
+      // Trigger download
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      // Clean up
+      URL.revokeObjectURL(downloadUrl);
+
+      console.log(`Successfully downloaded: ${fileName}`);
+    } catch (error) {
+      console.error('Download failed:', error);
+    }
+  };
+
   if (hasHydrated) {
     if (
       messageStore.receivedType === "TextTemplateMessage" ||
@@ -374,6 +432,32 @@ const getFormData = async (url: string): Promise<{ url: string, prefillData: Rec
               messages={messageStore.receivedMessage}
               sendMessage={sendMessage}
             />
+          </div>
+        </div>
+      );
+    }
+
+    if (messageStore.receivedType === "Team-document") {
+      const { receivedContent } = messageStore;
+
+
+      return (
+        <div className="flex w-full flex-col items-center justify-center gap-2 p-4">
+          <div className="w-full max-w-[100%] sm:max-w-[75%] md:max-w-[50%]">
+            {/* Download status indicator */}
+            <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <div className="flex items-center justify-center gap-2 mb-2">
+                <svg className="w-5 h-5 text-blue-600 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span className="text-blue-800 font-medium">Downloading document...</span>
+              </div>
+              <p className="text-sm text-blue-600">
+                File: {receivedContent?.extraContent?.toUpperCase()} •
+                ID: {receivedContent?.id}
+              </p>
+            </div>
           </div>
         </div>
       );

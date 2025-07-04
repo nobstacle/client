@@ -68,7 +68,7 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
                 { title: "Handover", href: "/dashboard/handover" },
                 { title: "Reminder", href: "/dashboard/reminder" },
                 { title: "Information", href: "/dashboard/information" },
-                { title: "Documents", href: "/dashboard/documents" },
+                { title: "Documents", href: "/dashboard/documentDownload" },
             ],
             roles: ["Admin", "User", "Staff"]
         },

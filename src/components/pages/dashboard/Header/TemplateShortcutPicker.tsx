@@ -44,8 +44,6 @@ export const TemplateShortcutPicker: React.FC = () => {
     );
 
     if (!templateShortcut) return;
-
-    console.info("templatesShortcutstemplatesShortcuts",templatesShortcuts);
     
     let isExistOnDefaultLanguage = false;
 

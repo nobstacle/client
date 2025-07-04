@@ -1474,20 +1474,19 @@ export const useWebsiteTemplateControllerCreateWebsiteTemplate = <TError = Error
 }
 
 export const websiteTemplateControllerPatchWebsiteTemplateOne = (
-  tag: string,
-  patchWebsiteTemplateReq: BodyType<PatchWebsiteTemplateReq>,
-  options?: SecondParameter<typeof nobstacleBackendApiInstance>,
+	tag: string,
+	patchWebsiteTemplateReq: BodyType<PatchWebsiteTemplateReq>,
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>,
 ) => {
-	console.info("tagtagtag",tag)
-  return nobstacleBackendApiInstance<GetWebsiteTemplateRes>(
-    {
-      url: `/api/v1/content/website/${tag}`,
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      data: patchWebsiteTemplateReq
-    },
-    options
-  );
+	return nobstacleBackendApiInstance<GetWebsiteTemplateRes>(
+		{
+			url: `/api/v1/content/website/${tag}`,
+			method: 'PATCH',
+			headers: { 'Content-Type': 'application/json' },
+			data: patchWebsiteTemplateReq
+		},
+		options
+	);
 }
 
 export const websiteTemplateControllerPatchJotformTemplateOne = (
@@ -1582,8 +1581,6 @@ export const useWebsiteTemplateControllerPatchWebsiteTemplateOne = <TError = Err
 
 	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof websiteTemplateControllerPatchWebsiteTemplateOne>>, TError, { tag: string; data: BodyType<PatchWebsiteTemplateReq> }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
 	) => {
-
-		console.info("ONONE ONONEON ", options);
 	const mutationOptions = getWebsiteTemplateControllerPatchWebsiteTemplateOneMutationOptions(options);
 
 	return useMutation(mutationOptions);
@@ -2641,27 +2638,27 @@ export const uploadControllerUploadCompanyFile = (
 }
 
 export const uploadControllerUploadDocument = (
-  uploadControllerUploadDocumentBody: BodyType<UploadControllerUploadDocumentBody>,
-  options?: SecondParameter<typeof nobstacleBackendApiInstance>,
+	uploadControllerUploadDocumentBody: BodyType<UploadControllerUploadDocumentBody>,
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>,
 ) => {
-  const formData = new FormData();
-  formData.append('file', uploadControllerUploadDocumentBody.file);
-  formData.append('docName', uploadControllerUploadDocumentBody.docName);
-  formData.append('langCode', uploadControllerUploadDocumentBody.langCode);
-  // include userId if you need to override default from the token
-  if (uploadControllerUploadDocumentBody.userId) {
-    formData.append('userId', uploadControllerUploadDocumentBody.userId);
-  }
+	const formData = new FormData();
+	formData.append('file', uploadControllerUploadDocumentBody.file);
+	formData.append('docName', uploadControllerUploadDocumentBody.docName);
+	formData.append('langCode', uploadControllerUploadDocumentBody.langCode);
+	// include userId if you need to override default from the token
+	if (uploadControllerUploadDocumentBody.userId) {
+		formData.append('userId', uploadControllerUploadDocumentBody.userId);
+	}
 
-  return nobstacleBackendApiInstance<GetDocumentRes>(
-    {
-      url: `/api/v1/documents`,
-      method: 'POST',
-      headers: { 'Content-Type': 'multipart/form-data' },
-      data: formData,
-    },
-    options,
-  );
+	return nobstacleBackendApiInstance<GetDocumentRes>(
+		{
+			url: `/api/v1/documents`,
+			method: 'POST',
+			headers: { 'Content-Type': 'multipart/form-data' },
+			data: formData,
+		},
+		options,
+	);
 };
 
 
@@ -3693,7 +3690,7 @@ export const documentTemplateControllerDeleteDocumentTemplateOne = (
 ) => {
 	return nobstacleBackendApiInstance<boolean>(
 		{
-			url: `/api/v1/content/document/${id}`, 
+			url: `/api/v1/content/document/${id}`,
 			method: 'DELETE'
 		},
 		options
@@ -3703,9 +3700,9 @@ export const documentTemplateControllerDeleteDocumentTemplateOne = (
 export const getDocumentTemplateControllerDeleteDocumentTemplateOneMutationOptions = <
 	TError = ErrorType<HttpExceptionSchema>,
 	TContext = unknown
->(options?: { 
-	mutation?: UseMutationOptions<Awaited<ReturnType<typeof documentTemplateControllerDeleteDocumentTemplateOne>>, TError, { id: number }, TContext>, 
-	request?: SecondParameter<typeof nobstacleBackendApiInstance> 
+>(options?: {
+	mutation?: UseMutationOptions<Awaited<ReturnType<typeof documentTemplateControllerDeleteDocumentTemplateOne>>, TError, { id: number }, TContext>,
+	request?: SecondParameter<typeof nobstacleBackendApiInstance>
 }): UseMutationOptions<Awaited<ReturnType<typeof documentTemplateControllerDeleteDocumentTemplateOne>>, TError, { id: number }, TContext> => {
 	const { mutation: mutationOptions, request: requestOptions } = options ?? {};
 
@@ -3721,9 +3718,9 @@ export const getDocumentTemplateControllerDeleteDocumentTemplateOneMutationOptio
 export const useDocumentTemplateControllerDeleteDocumentTemplateOne = <
 	TError = ErrorType<HttpExceptionSchema>,
 	TContext = unknown
->(options?: { 
-	mutation?: UseMutationOptions<Awaited<ReturnType<typeof documentTemplateControllerDeleteDocumentTemplateOne>>, TError, { id: number }, TContext>, 
-	request?: SecondParameter<typeof nobstacleBackendApiInstance> 
+>(options?: {
+	mutation?: UseMutationOptions<Awaited<ReturnType<typeof documentTemplateControllerDeleteDocumentTemplateOne>>, TError, { id: number }, TContext>,
+	request?: SecondParameter<typeof nobstacleBackendApiInstance>
 }) => {
 	const mutationOptions = getDocumentTemplateControllerDeleteDocumentTemplateOneMutationOptions(options);
 
@@ -3744,178 +3741,178 @@ export const documentControllerDeleteDocumentOne = (
 
 
 export const useDocumentControllerDeleteDocumentOne = <
-  TError = ErrorType<HttpExceptionSchema>,
-  TContext = unknown
+	TError = ErrorType<HttpExceptionSchema>,
+	TContext = unknown
 >(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof documentControllerDeleteDocumentOne>>,
-    TError,
-    { id: number },
-    TContext
-  >,
-  request?: SecondParameter<typeof nobstacleBackendApiInstance>
+	mutation?: UseMutationOptions<
+		Awaited<ReturnType<typeof documentControllerDeleteDocumentOne>>,
+		TError,
+		{ id: number },
+		TContext
+	>,
+	request?: SecondParameter<typeof nobstacleBackendApiInstance>
 }) => {
-  const mutationOptions = getDocumentControllerDeleteDocumentOneMutationOptions(options);
-  return useMutation(mutationOptions);
+	const mutationOptions = getDocumentControllerDeleteDocumentOneMutationOptions(options);
+	return useMutation(mutationOptions);
 };
 
 
 export type DocumentControllerDeleteDocumentOneMutationResult = NonNullable<
-  Awaited<ReturnType<typeof documentControllerDeleteDocumentOne>>
+	Awaited<ReturnType<typeof documentControllerDeleteDocumentOne>>
 >;
 
 export type DocumentControllerDeleteDocumentOneMutationError = ErrorType<HttpExceptionSchema>;
 
 
 export const getDocumentControllerDeleteDocumentOneMutationOptions = <
-  TError = ErrorType<HttpExceptionSchema>,
-  TContext = unknown
+	TError = ErrorType<HttpExceptionSchema>,
+	TContext = unknown
 >(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof documentControllerDeleteDocumentOne>>,
-    TError,
-    { id: number },
-    TContext
-  >,
-  request?: SecondParameter<typeof nobstacleBackendApiInstance>
+	mutation?: UseMutationOptions<
+		Awaited<ReturnType<typeof documentControllerDeleteDocumentOne>>,
+		TError,
+		{ id: number },
+		TContext
+	>,
+	request?: SecondParameter<typeof nobstacleBackendApiInstance>
 }): UseMutationOptions<
-  Awaited<ReturnType<typeof documentControllerDeleteDocumentOne>>,
-  TError,
-  { id: number },
-  TContext
+	Awaited<ReturnType<typeof documentControllerDeleteDocumentOne>>,
+	TError,
+	{ id: number },
+	TContext
 > => {
-  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+	const { mutation: mutationOptions, request: requestOptions } = options ?? {};
 
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof documentControllerDeleteDocumentOne>>,
-    { id: number }
-  > = (props) => {
-    const { id } = props ?? {};
-    return documentControllerDeleteDocumentOne(id, requestOptions);
-  };
+	const mutationFn: MutationFunction<
+		Awaited<ReturnType<typeof documentControllerDeleteDocumentOne>>,
+		{ id: number }
+	> = (props) => {
+		const { id } = props ?? {};
+		return documentControllerDeleteDocumentOne(id, requestOptions);
+	};
 
-  return { mutationFn, ...mutationOptions };
+	return { mutationFn, ...mutationOptions };
 };
 
 
 export const documentControllerGetDocumentTags = (
-  options?: SecondParameter<typeof nobstacleBackendApiInstance>,
-  signal?: AbortSignal
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>,
+	signal?: AbortSignal
 ) => {
-  return nobstacleBackendApiInstance<GetImageTemplateTagRes[]>(
-    {
-      url: `/api/v1/content/document/tags`, 
-      method: 'GET',
-      signal,
-    },
-    options
-  );
+	return nobstacleBackendApiInstance<GetImageTemplateTagRes[]>(
+		{
+			url: `/api/v1/content/document/tags`,
+			method: 'GET',
+			signal,
+		},
+		options
+	);
 };
 
 
 export const getDocumentControllerGetDocumentTagsQueryOptions = <
-  TData = Awaited<ReturnType<typeof documentControllerGetDocumentTags>>,
-  TError = ErrorType<HttpExceptionSchema>
+	TData = Awaited<ReturnType<typeof documentControllerGetDocumentTags>>,
+	TError = ErrorType<HttpExceptionSchema>
 >(
-  options?: {
-    query?: UseQueryOptions<
-      Awaited<ReturnType<typeof documentControllerGetDocumentTags>>,
-      TError,
-      TData
-    >;
-    request?: SecondParameter<typeof nobstacleBackendApiInstance>;
-  }
+	options?: {
+		query?: UseQueryOptions<
+			Awaited<ReturnType<typeof documentControllerGetDocumentTags>>,
+			TError,
+			TData
+		>;
+		request?: SecondParameter<typeof nobstacleBackendApiInstance>;
+	}
 ) => {
-  const { query: queryOptions, request: requestOptions } = options ?? {};
+	const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey = queryOptions?.queryKey ?? ['documentControllerGetDocumentTags'];
+	const queryKey = queryOptions?.queryKey ?? ['documentControllerGetDocumentTags'];
 
-  const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof documentControllerGetDocumentTags>>
-  > = ({ signal }) => documentControllerGetDocumentTags(requestOptions, signal);
+	const queryFn: QueryFunction<
+		Awaited<ReturnType<typeof documentControllerGetDocumentTags>>
+	> = ({ signal }) => documentControllerGetDocumentTags(requestOptions, signal);
 
-  return {
-    queryKey,
-    queryFn,
-    ...queryOptions,
-  } as UseQueryOptions<
-    Awaited<ReturnType<typeof documentControllerGetDocumentTags>>,
-    TError,
-    TData
-  > & { queryKey: QueryKey };
+	return {
+		queryKey,
+		queryFn,
+		...queryOptions,
+	} as UseQueryOptions<
+		Awaited<ReturnType<typeof documentControllerGetDocumentTags>>,
+		TError,
+		TData
+	> & { queryKey: QueryKey };
 };
 
 
 export const useDocumentControllerGetDocumentTags = <
-  TData = Awaited<ReturnType<typeof documentControllerGetDocumentTags>>,
-  TError = ErrorType<HttpExceptionSchema>
+	TData = Awaited<ReturnType<typeof documentControllerGetDocumentTags>>,
+	TError = ErrorType<HttpExceptionSchema>
 >(
-  options?: {
-    query?: UseQueryOptions<
-      Awaited<ReturnType<typeof documentControllerGetDocumentTags>>,
-      TError,
-      TData
-    >;
-    request?: SecondParameter<typeof nobstacleBackendApiInstance>;
-  }
+	options?: {
+		query?: UseQueryOptions<
+			Awaited<ReturnType<typeof documentControllerGetDocumentTags>>,
+			TError,
+			TData
+		>;
+		request?: SecondParameter<typeof nobstacleBackendApiInstance>;
+	}
 ): UseQueryResult<TData, TError> & { queryKey: QueryKey } => {
-  const queryOptions = getDocumentControllerGetDocumentTagsQueryOptions(options);
+	const queryOptions = getDocumentControllerGetDocumentTagsQueryOptions(options);
 
-  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
-    queryKey: QueryKey;
-  };
+	const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+		queryKey: QueryKey;
+	};
 
-  query.queryKey = queryOptions.queryKey;
+	query.queryKey = queryOptions.queryKey;
 
-  return query;
+	return query;
 };
 
 
 export const getHandoverNotes = (
-  options?: SecondParameter<typeof nobstacleBackendApiInstance>,
-  signal?: AbortSignal
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>,
+	signal?: AbortSignal
 ) => {
-  return nobstacleBackendApiInstance<GetImageTemplateTagRes[]>(
-    {
-      url: `/api/v1/content/handover-notes`, 
-      method: 'GET',
-      signal,
-    },
-    options
-  );
+	return nobstacleBackendApiInstance<GetImageTemplateTagRes[]>(
+		{
+			url: `/api/v1/content/handover-notes`,
+			method: 'GET',
+			signal,
+		},
+		options
+	);
 };
 
 
 export const getHandoverControllerNotes = <
-  TData = Awaited<ReturnType<typeof getHandoverNotes>>,
-  TError = ErrorType<HttpExceptionSchema>
+	TData = Awaited<ReturnType<typeof getHandoverNotes>>,
+	TError = ErrorType<HttpExceptionSchema>
 >(
-  options?: {
-    query?: UseQueryOptions<
-      Awaited<ReturnType<typeof getHandoverNotes>>,
-      TError,
-      TData
-    >;
-    request?: SecondParameter<typeof nobstacleBackendApiInstance>;
-  }
+	options?: {
+		query?: UseQueryOptions<
+			Awaited<ReturnType<typeof getHandoverNotes>>,
+			TError,
+			TData
+		>;
+		request?: SecondParameter<typeof nobstacleBackendApiInstance>;
+	}
 ) => {
-  const { query: queryOptions, request: requestOptions } = options ?? {};
+	const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey = queryOptions?.queryKey ?? ['getHandoverNotes'];
+	const queryKey = queryOptions?.queryKey ?? ['getHandoverNotes'];
 
-  const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof getHandoverNotes>>
-  > = ({ signal }) => getHandoverNotes(requestOptions, signal);
+	const queryFn: QueryFunction<
+		Awaited<ReturnType<typeof getHandoverNotes>>
+	> = ({ signal }) => getHandoverNotes(requestOptions, signal);
 
-  return {
-    queryKey,
-    queryFn,
-    ...queryOptions,
-  } as UseQueryOptions<
-    Awaited<ReturnType<typeof documentControllerGetDocumentTags>>,
-    TError,
-    TData
-  > & { queryKey: QueryKey };
+	return {
+		queryKey,
+		queryFn,
+		...queryOptions,
+	} as UseQueryOptions<
+		Awaited<ReturnType<typeof documentControllerGetDocumentTags>>,
+		TError,
+		TData
+	> & { queryKey: QueryKey };
 };
 
 
@@ -3988,3 +3985,63 @@ export const useHandoverNotesControllerCreateHandoverNote = <
 
 	return useMutation(mutationOptions);
 }
+
+
+export const useTeamDocumentControllerDeleteDocumentOne = <
+	TError = ErrorType<HttpExceptionSchema>,
+	TContext = unknown
+>(options?: {
+	mutation?: UseMutationOptions<
+		Awaited<ReturnType<typeof teamDocumentControllerDeleteDocumentOne>>,
+		TError,
+		{ id: number },
+		TContext
+	>,
+	request?: SecondParameter<typeof nobstacleBackendApiInstance>
+}) => {
+	const mutationOptions = getTeamDocumentControllerDeleteDocumentOneMutationOptions(options);
+	return useMutation(mutationOptions);
+};
+
+export const teamDocumentControllerDeleteDocumentOne = (
+	id: number,
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
+
+
+	return nobstacleBackendApiInstance<boolean>(
+		{
+			url: `/api/v1/content/team-document/${id}`, method: 'DELETE'
+		},
+		options);
+}
+
+
+export const getTeamDocumentControllerDeleteDocumentOneMutationOptions = <
+	TError = ErrorType<HttpExceptionSchema>,
+	TContext = unknown
+>(options?: {
+	mutation?: UseMutationOptions<
+		Awaited<ReturnType<typeof teamDocumentControllerDeleteDocumentOne>>,
+		TError,
+		{ id: number },
+		TContext
+	>,
+	request?: SecondParameter<typeof nobstacleBackendApiInstance>
+}): UseMutationOptions<
+	Awaited<ReturnType<typeof teamDocumentControllerDeleteDocumentOne>>,
+	TError,
+	{ id: number },
+	TContext
+> => {
+	const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+
+	const mutationFn: MutationFunction<
+		Awaited<ReturnType<typeof teamDocumentControllerDeleteDocumentOne>>,
+		{ id: number }
+	> = (props) => {
+		const { id } = props ?? {};
+		return teamDocumentControllerDeleteDocumentOne(id, requestOptions);
+	};
+
+	return { mutationFn, ...mutationOptions };
+};

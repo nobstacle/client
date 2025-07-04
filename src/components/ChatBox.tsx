@@ -84,7 +84,7 @@ export const ChatBox = React.forwardRef<HTMLDivElement, ChatBoxProps>(
         }
       }
     };
-                        console.info("2",messages);
+
     return (
       <div className="relative flex h-[500px] w-full flex-col ">
         {children}

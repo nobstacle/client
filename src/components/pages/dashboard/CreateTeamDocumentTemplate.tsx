@@ -63,7 +63,7 @@ const createSchema = (isUpdateMode: boolean) =>
         langCode: yup.string().required("Language is required"),
     });
 
-export const UploadDocumentTemplateForm: React.FC<{
+export const UploadTeamDocumentTemplateForm: React.FC<{
     onSuccess?: (data: any) => void;
     onClose?: () => void;
     document?: any; // The document to edit (for update mode)
@@ -108,8 +108,8 @@ export const UploadDocumentTemplateForm: React.FC<{
         mutationFn: async (formData: FormData) => {
             const baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
             const endpoint = isUpdateMode
-                ? `${baseUrl}/api/v1/uploads/company-document/${document.id}`
-                : `${baseUrl}/api/v1/uploads/company-document`;
+                ? `${baseUrl}/api/v1/uploads/team-document/${document.id}`
+                : `${baseUrl}/api/v1/uploads/team-document`;
 
             const method = isUpdateMode ? 'PUT' : 'POST';
 
