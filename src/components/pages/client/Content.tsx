@@ -79,6 +79,7 @@ export const Content: React.FC = () => {
   const [jotFormUrl, setJotFormUrl] = useState<string | null>(null);
   const [prefillData, setPrefillData] = useState<Record<string, string>>({});
   const [contentKey, setContentKey] = useState(0);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   const defaultSlideshowContent =
     useContentControllerGetDefaultSlideshowContent({
@@ -347,7 +348,6 @@ export const Content: React.FC = () => {
     }
   }, [isLoading]);
 
-
   const getFileTypeInfo = (extraContent) => {
     const fileType = extraContent?.toLowerCase();
 
@@ -380,6 +380,7 @@ export const Content: React.FC = () => {
 
   const downloadFile = async (url, fileName, mimeType) => {
     try {
+      setIsDownloading(true);
       const response = await fetch(url);
 
       if (!response.ok) {
@@ -404,6 +405,7 @@ export const Content: React.FC = () => {
       URL.revokeObjectURL(downloadUrl);
 
       console.log(`Successfully downloaded: ${fileName}`);
+            setIsDownloading(false);
     } catch (error) {
       console.error('Download failed:', error);
     }
@@ -444,7 +446,7 @@ export const Content: React.FC = () => {
       return (
         <div className="flex w-full flex-col items-center justify-center gap-2 p-4">
           <div className="w-full max-w-[100%] sm:max-w-[75%] md:max-w-[50%]">
-            {/* Download status indicator */}
+            {isDownloading ? (
             <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-200">
               <div className="flex items-center justify-center gap-2 mb-2">
                 <svg className="w-5 h-5 text-blue-600 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -458,6 +460,8 @@ export const Content: React.FC = () => {
                 ID: {receivedContent?.id}
               </p>
             </div>
+            ) : ('')}
+
           </div>
         </div>
       );
