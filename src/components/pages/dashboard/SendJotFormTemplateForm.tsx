@@ -20,7 +20,13 @@ import dayjs from 'dayjs';
 import { IoQrCode } from "react-icons/io5";
 import Papa from 'papaparse';
 
-let Url = process.env.NEXT_PUBLIC_BACKEND_URL;
+const { Option } = Select;
+
+const getBackendUrl = () => {
+	return typeof window !== 'undefined'
+		? process.env.NEXT_PUBLIC_BACKEND_URL
+		: process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
+};
 
 const dateFormat = 'DD/MM/YYYY';
 
@@ -35,6 +41,31 @@ interface ManualInputValues {
 
 interface InputValues {
 	[key: string]: string;
+}
+
+interface AssignedForm {
+	id: number;
+	form_id: string;
+	form_name: string;
+	assigned_companies: string[];
+	createdAt: string;
+	updatedAt: string;
+}
+
+interface FormFields {
+	content: any[];
+}
+
+interface TableComponentProps {
+	tableData: any[];
+	uniqueKeys: string[];
+	currentPage: number;
+	itemsPerPage: number;
+	onPageChange: (pageNumber: number) => void;
+	totalPages: number;
+	setCurrentPage: React.Dispatch<React.SetStateAction<number>>;
+	selectedFormFields: any[];
+	totalItems: number;
 }
 
 export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => void }) => {
@@ -66,7 +97,27 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 	const { socket } = useSocketContext();
 	const [pageSize, setPageSize] = useState(10);
 	let userROle = userData?.user?.Roles[0];
-	let isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
+	const [isMobile, setIsMobile] = useState(false);
+	const userRole = userData?.user?.Roles?.[0];
+
+	useEffect(() => {
+		const handleResize = () => {
+			setIsMobile(window.innerWidth <= 768);
+		};
+
+		if (typeof window !== 'undefined') {
+			setIsMobile(window.innerWidth <= 768);
+			window.addEventListener('resize', handleResize);
+			return () => window.removeEventListener('resize', handleResize);
+		}
+	}, []);
+
+	const getUrlParams = () => {
+		if (typeof window !== 'undefined') {
+			return new URLSearchParams(window.location.search);
+		}
+		return new URLSearchParams();
+	};
 
 	useEffect(() => {
 		lastSearchRef.current = lastSearchedValue;
@@ -133,17 +184,6 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 		};
 	}, [socket]);
 
-	type AssignedForm = {
-		id: number;
-		form_id: string;
-		form_name: string;
-		assigned_companies: string[];
-		createdAt: string;
-		updatedAt: string;
-	};
-	interface FormFields {
-		content: any[];
-	}
 
 	useEffect(() => {
 		if (selectedForm) {
@@ -151,19 +191,8 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 		}
 	}, [currentPage, pageSize, selectedForm]);
 
-	interface TableComponentProps {
-		tableData: any[];
-		uniqueKeys: string[];
-		currentPage: number;
-		itemsPerPage: number;
-		onPageChange: (pageNumber: number) => void;
-		totalPages: number
-		setCurrentPage: React.Dispatch<React.SetStateAction<number>>;
-		selectedFormFields: any[];
-		totalItems: number;
-	}
-
 	async function deleteWithPathParam(id: any, UUID?: any) {
+		const Url = getBackendUrl();
 		const url = UUID
 			? `${Url}/api/jotform/responses/${id}/${UUID}`
 			: `${Url}/api/jotform/responses/${id}`;
@@ -174,7 +203,6 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 
 		return await response.json();
 	}
-
 	const deleteRecord = async (data: any) => {
 		Swal.fire({
 			title: "Are you sure?",
@@ -273,18 +301,18 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 		};
 
 		// Filtered and sorted form fields
-		const listableFields = selectedFormFields !== undefined && Object.values(selectedFormFields).filter(field =>
+		const listableFields = selectedFormFields !== undefined && Object.values(selectedFormFields).filter((field: any) =>
 			field.name.includes('listable')
 		);
 
 		const normalizeTableData = (data: any, labelFields: any) => {
 			const fieldLabelMap: Record<string, string> = {};
-			labelFields.forEach(field => {
+			labelFields.forEach((field: any) => {
 				fieldLabelMap[field.name] = field.text;
 			});
 
 			// Normalize entries
-			const normalizedData = data.map(entry => {
+			const normalizedData = data.map((entry: any) => {
 				const normalized: Record<string, any> = {};
 
 				for (let key in entry) {
@@ -392,26 +420,39 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 			}
 		};
 
-		const sortedListableFields = [...listableFields].sort((a, b) =>
-			a.name.localeCompare(b.name)
-		);
+		const sortedListableFields = Array.isArray(listableFields)
+			? [...listableFields].sort((a: any, b: any) => a.name.localeCompare(b.name))
+			: [];
 
 		const columns = [
-			...sortedListableFields.map(field => ({
+			...sortedListableFields.map((field: any) => ({
 				title: field.text,
 				dataIndex: field.text,
 				key: field.text,
-				render: (text: any) => (
-					<div className="max-w-[200px] overflow-hidden text-ellipsis whitespace-nowrap min-w-[160px]">
-						{text || '-'}
-					</div>
-				),
+				render: (text: any, record: any) => {
+					// Debug: Log what we're getting
+					console.log('Field:', field.text, 'Value:', text, 'Record:', record);
+
+					// Try multiple ways to get the value
+					let value = text || record[field.text] || record[field.name] || '-';
+
+					// Handle different data types
+					if (typeof value === 'object' && value !== null) {
+						value = JSON.stringify(value);
+					}
+
+					return (
+						<div className="max-w-[200px] overflow-hidden text-ellipsis whitespace-nowrap min-w-[160px]">
+							{value}
+						</div>
+					);
+				},
 				ellipsis: true,
 			})),
 			{
 				title: 'Action',
 				key: 'action',
-				fixed: 'right',
+				fixed: 'right' as const,
 				render: (_: any, item: any, rowIndex: number) => (
 					<div className="flex flex-wrap gap-1 sm:gap-2 items-center justify-center sm:justify-start">
 						<Button
@@ -419,24 +460,18 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 							onClick={() => copyFormUrl(item)}
 							disabled={!!item?.formData?.submission_id}
 							className={`group flex items-center justify-center w-6 h-6 sm:w-8 sm:h-8 text-white font-medium rounded-full text-xs text-center
-					${item?.formData?.submission_id
+                ${item?.formData?.submission_id
 									? 'bg-[#005d4d] cursor-not-allowed'
 									: 'bg-green-700 hover:bg-green-800 focus:outline-none focus:ring-4 focus:ring-green-300 dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-green-800'}
-				`}
+              `}
 							style={{
 								background: item?.formData?.submission_id ? '#005d4d' : '#008080',
 								padding: 0,
 							}}
 						>
 							<FaCopy
-								size={10}
-								className={`sm:hidden transition-colors duration-200 ${!item?.formData?.submission_id ? 'group-hover:text-white' : 'text-gray-400'
-									}`}
-							/>
-							<FaCopy
-								size={14}
-								className={`hidden sm:block transition-colors duration-200 ${!item?.formData?.submission_id ? 'group-hover:text-white' : 'text-gray-400'
-									}`}
+								size={isMobile ? 10 : 14}
+								className={`transition-colors duration-200 ${!item?.formData?.submission_id ? 'group-hover:text-white' : 'text-gray-400'}`}
 							/>
 						</Button>
 
@@ -447,19 +482,19 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 									handlePDFDownload(item?.formData?.form_id, item?.formData?.submission_id, rowIndex)
 								}
 								className={`
-						w-6 h-6 sm:w-8 sm:h-8
-						flex items-center justify-center 
-						text-white 
-						bg-[#3b5998] 
-						hover:bg-[#2d4373] 
-						focus:ring-0 
-						border-none 
-						font-medium 
-						rounded-full 
-						text-xs
-						disabled:opacity-70
-						disabled:cursor-not-allowed
-					`}
+                  w-6 h-6 sm:w-8 sm:h-8
+                  flex items-center justify-center 
+                  text-white 
+                  bg-[#3b5998] 
+                  hover:bg-[#2d4373] 
+                  focus:ring-0 
+                  border-none 
+                  font-medium 
+                  rounded-full 
+                  text-xs
+                  disabled:opacity-70
+                  disabled:cursor-not-allowed
+                `}
 								disabled={downloadingPDF === rowIndex}
 							>
 								{downloadingPDF === rowIndex ? (
@@ -483,14 +518,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 										/>
 									</svg>
 								) : (
-									<>
-										{isMobile ? (
-											<FaFilePdf size={10} className="sm:hidden" />
-										) : (
-
-											<FaFilePdf size={14} className="hidden sm:block" />
-										)}
-									</>
+									<FaFilePdf size={isMobile ? 10 : 14} />
 								)}
 							</button>
 						) : (
@@ -498,46 +526,40 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 								title="Send Form"
 								onClick={() => handleUploadedSend(item)}
 								className={`
-						w-6 h-6 sm:w-8 sm:h-8
-						flex items-center justify-center 
-						text-white 
-						bg-[#3b5998] 
-						hover:bg-[#2d4373] 
-						focus:ring-0 
-						border-none 
-						font-medium 
-						rounded-full 
-						text-xs
-					`}
+                  w-6 h-6 sm:w-8 sm:h-8
+                  flex items-center justify-center 
+                  text-white 
+                  bg-[#3b5998] 
+                  hover:bg-[#2d4373] 
+                  focus:ring-0 
+                  border-none 
+                  font-medium 
+                  rounded-full 
+                  text-xs
+                `}
 							>
-								{isMobile ? (
-									<SendIcon size={10} className="sm:hidden" />
-								) : (
-
-									<SendIcon size={14} className="hidden sm:block" />
-								)}
+								<SendIcon size={isMobile ? 10 : 14} />
 							</button>
 						)}
 
 						<button
 							onClick={() => deleteRecord(item)}
-							disabled={userROle !== 'Admin' ? true : false}
+							disabled={userRole !== 'Admin'}
 							className="
-					w-6 h-6 sm:w-8 sm:h-8
-					flex items-center justify-center 
-					text-white 
-					bg-red-700 
-					hover:bg-red-800 
-					focus:ring-4 focus:ring-red-300 
-					font-medium 
-					rounded-full 
-					text-xs
-					disabled:opacity-80
-					disabled:cursor-not-allowed
-				"
+                w-6 h-6 sm:w-8 sm:h-8
+                flex items-center justify-center 
+                text-white 
+                bg-red-700 
+                hover:bg-red-800 
+                focus:ring-4 focus:ring-red-300 
+                font-medium 
+                rounded-full 
+                text-xs
+                disabled:opacity-80
+                disabled:cursor-not-allowed
+              "
 						>
-							<FaTrash size={8} className="sm:hidden" />
-							<FaTrash size={12} className="hidden sm:block" />
+							<FaTrash size={isMobile ? 8 : 12} />
 						</button>
 					</div>
 				),
@@ -551,7 +573,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 				<Table
 					columns={columns}
 					dataSource={cleanTableData}
-					rowKey={(record, index) => record?.formData?.submission_id || index}
+					rowKey={(record: any, index?: number) => record?.formData?.submission_id || index}
 					pagination={false}
 					scroll={{ x: 'max-content', y: 400 }}
 					sticky
@@ -579,21 +601,18 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 		}));
 	};
 
-	interface FormFields {
-		content: any[];
-	}
-
 	const [selectedFormFields, setSelectedFormFields] = useState<FormFields | null>(null);
 
 	const getAssignedFormByID = async (company_id: number) => {
-		const API_URL = Url + `/api/assigned-form/${company_id}`;
+		const Url = getBackendUrl();
+		const API_URL = `${Url}/api/assigned-form/${company_id}`;
 
 		try {
 			const response = await axios.get(API_URL);
 			if (response.status === 200) {
 				setAssignedForms(response?.data);
 				if (selectedForm === null) {
-					setSelectedForm(response?.data[0]?.form_id || null)
+					setSelectedForm(response?.data[0]?.form_id || null);
 				}
 			} else {
 				console.error('Unexpected response status:', response.status);
@@ -601,7 +620,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 		} catch (error) {
 			console.error('Error fetching assigned form data:', error);
 		}
-	}
+	};
 
 	const fetchFormQuestions = async (form_id: string | null) => {
 		if (!form_id) return;
@@ -656,6 +675,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 	});
 
 	const sendJotFormMessage = (content: string, uuid: string) => {
+		const params = getUrlParams();
 		emitSendJotForm(
 			{
 				refId: 1,
@@ -665,7 +685,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 				directContent: content,
 				uuid: uuid,
 			},
-			(response) => {
+			(response: any) => {
 				alert(response?.success ? "JotForm message sent successfully!" : "Failed to send JotForm message.");
 			}
 		);
@@ -692,15 +712,15 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 	};
 
 	const getTableResponse = async (form_id: string | null, page: number, limit: number = 10, search: any = "", filter: string) => {
-		let API_URL = Url + `/api/jotform/responses/${form_id}?page=${page}&limit=${limit}`;
+		const Url = getBackendUrl();
+		let API_URL = `${Url}/api/jotform/responses/${form_id}?page=${page}&limit=${limit}`;
+
 		if (search && (typeof search === 'string' ? search !== "" : search.length > 0)) {
 			let searchArray = search;
 
 			if (typeof search === 'string') {
 				searchArray = [{ label: "", value: search }];
-			}
-
-			else if (!Array.isArray(search) && typeof search === 'object') {
+			} else if (!Array.isArray(search) && typeof search === 'object') {
 				searchArray = [search];
 			}
 
@@ -760,9 +780,9 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 						return prettyData;
 					});
 
-					let sortColumns = response.data.allFieldNames.sort((a, b) => {
+					let sortColumns = response.data.allFieldNames?.sort((a: string, b: string) => {
 						return a.localeCompare(b);
-					});
+					}) || [];
 
 					setTableResponse({ data: tableData, sortColumns });
 					setLoader(false);
@@ -862,6 +882,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 	};
 
 	const handleManualUpload = async (show: any) => {
+		const Url = getBackendUrl();
 		const formData = {
 			formId: selectedForm,
 			data: manualInputValues
@@ -926,6 +947,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 	};
 
 	const handleBlankUpload = async () => {
+		const Url = getBackendUrl();
 		const uploadURL = Url + `/api/jotform/upload-blank-record/${selectedForm || ""}`;
 
 		try {
