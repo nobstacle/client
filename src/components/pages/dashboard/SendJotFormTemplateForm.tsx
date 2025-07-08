@@ -1286,8 +1286,8 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 		if (hasOptions(item)) {
 			const options = parseOptions(item.options);
 
-			// Radio buttons for radio type
-			if (item.type === 'control_radio') {
+			// Show Radio if ≤ 3 options
+			if (options.length <= 3) {
 				return (
 					<Radio.Group
 						value={value}
@@ -1305,27 +1305,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 				);
 			}
 
-			// Dropdown for other types with options
-			if (item.type === 'control_dropdown' || item.type === 'control_select') {
-				return (
-					<Select
-						value={value}
-						onChange={onChange}
-						className="w-full"
-						size="middle"
-						placeholder={`Select ${item.text}`}
-						allowClear
-					>
-						{options.map(option => (
-							<Select.Option key={option.value} value={option.value}>
-								{option.label}
-							</Select.Option>
-						))}
-					</Select>
-				);
-			}
-
-			// Default to Select for any other type with options
+			// Else fallback to Select dropdown
 			return (
 				<Select
 					value={value}
@@ -1383,6 +1363,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 			/>
 		);
 	};
+
 
 	return (
 		<div className="bg-gray-50 p-2 rounded-lg shadow-md w-full mx-auto">
@@ -1710,13 +1691,6 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 												{item.required === 'Yes' && <span className="text-red-500 ml-1">*</span>}
 											</label>
 
-											{/* Show available options as hint for option-based fields */}
-											{hasOptions(item) && (
-												<div className="text-xs text-gray-500 mb-1">
-													Available options: {item.options.split('|').join(', ')}
-												</div>
-											)}
-
 											{renderFieldInput(
 												item,
 												manualInputValues[item.name],
@@ -1759,6 +1733,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 					</Button>
 				</div>
 			</Modal>
+
 			<Modal
 				open={isSendModalOpen}
 				onCancel={closeSendModal}
