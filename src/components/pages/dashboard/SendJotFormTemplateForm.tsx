@@ -10,7 +10,7 @@ import { FaFileDownload, FaFileUpload, FaCopy, FaFilePdf, FaSearch, FaTrash } fr
 import { toast, Bounce } from 'react-toastify';
 import { BsFillSendPlusFill } from "react-icons/bs";
 import { RiUploadCloudFill } from "react-icons/ri";
-import { Table, Button, Pagination, Row, Col, Modal, Select, Tooltip } from 'antd';
+import { Table, Button, Pagination, Row, Col, Modal, Select, Tooltip, Radio } from 'antd';
 import { FiSend } from "react-icons/fi";
 import Swal from 'sweetalert2';
 import { SendIcon } from "../../icons/SendIcon";
@@ -1225,6 +1225,10 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 		);
 	};
 
+	const hasOptions = (item) => {
+		return item.options && item.options.length > 0;
+	};
+
 	const sendBlankForm = async () => {
 		let uploadBlankRecord = await handleBlankUpload();
 		if (uploadBlankRecord) {
@@ -1255,6 +1259,130 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 			}
 		}
 	}
+
+	const parseOptions = (optionsString) => {
+		if (!optionsString) return [];
+		return optionsString.split('|').map(option => ({
+			label: option.trim(),
+			value: option.trim()
+		}));
+	};
+
+	const renderFieldInput = (item, value, onChange) => {
+		// Date fields
+		if (item?.type === 'control_widget' || item.type.includes("date")) {
+			return (
+				<DatePicker
+					className="w-full"
+					format="DD/MM/YYYY"
+					size="middle"
+					value={value ? dayjs(value, "DD/MM/YYYY") : null}
+					onChange={(date, dateString) => onChange(dateString)}
+				/>
+			);
+		}
+
+		// Fields with predefined options
+		if (hasOptions(item)) {
+			const options = parseOptions(item.options);
+
+			// Radio buttons for radio type
+			if (item.type === 'control_radio') {
+				return (
+					<Radio.Group
+						value={value}
+						onChange={(e) => onChange(e.target.value)}
+						className="w-full"
+					>
+						<div className="flex flex-col space-y-2">
+							{options.map(option => (
+								<Radio key={option.value} value={option.value}>
+									{option.label}
+								</Radio>
+							))}
+						</div>
+					</Radio.Group>
+				);
+			}
+
+			// Dropdown for other types with options
+			if (item.type === 'control_dropdown' || item.type === 'control_select') {
+				return (
+					<Select
+						value={value}
+						onChange={onChange}
+						className="w-full"
+						size="middle"
+						placeholder={`Select ${item.text}`}
+						allowClear
+					>
+						{options.map(option => (
+							<Select.Option key={option.value} value={option.value}>
+								{option.label}
+							</Select.Option>
+						))}
+					</Select>
+				);
+			}
+
+			// Default to Select for any other type with options
+			return (
+				<Select
+					value={value}
+					onChange={onChange}
+					className="w-full"
+					size="middle"
+					placeholder={`Select ${item.text}`}
+					allowClear
+				>
+					{options.map(option => (
+						<Select.Option key={option.value} value={option.value}>
+							{option.label}
+						</Select.Option>
+					))}
+				</Select>
+			);
+		}
+
+		// Email fields
+		if (item.type === 'control_email') {
+			return (
+				<Input
+					type="email"
+					value={value || ''}
+					onChange={(e) => onChange(e.target.value)}
+					className="w-full"
+					size="middle"
+					placeholder={item.subLabel || "Enter email"}
+				/>
+			);
+		}
+
+		// Number fields
+		if (item.type === 'control_number') {
+			return (
+				<Input
+					type="number"
+					value={value || ''}
+					onChange={(e) => onChange(e.target.value)}
+					className="w-full"
+					size="middle"
+					placeholder={`Enter ${item.text}`}
+				/>
+			);
+		}
+
+		// Default text input for other types
+		return (
+			<Input
+				value={value || ''}
+				onChange={(e) => onChange(e.target.value)}
+				className="w-full"
+				size="middle"
+				placeholder={`Enter ${item.text}`}
+			/>
+		);
+	};
 
 	return (
 		<div className="bg-gray-50 p-2 rounded-lg shadow-md w-full mx-auto">
@@ -1579,28 +1707,20 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 										<div className="flex flex-col space-y-2">
 											<label className="text-gray-700 font-medium text-sm sm:text-base">
 												{item?.text}
+												{item.required === 'Yes' && <span className="text-red-500 ml-1">*</span>}
 											</label>
-											{item?.type === 'control_widget' || item.type.includes("date") ? (
-												<DatePicker
-													className="w-full"
-													format="DD/MM/YYYY"
-													size="middle"
-													value={
-														manualInputValues[item.name]
-															? dayjs(manualInputValues[item.name], dateFormat)
-															: null
-													}
-													onChange={(date, dateString) => {
-														handleManualInputChange(item.name, dateString);
-													}}
-												/>
-											) : (
-												<Input
-													value={manualInputValues[item.name] || ''}
-													onChange={(e) => handleManualInputChange(item.name, e.target.value)}
-													className="w-full"
-													size="middle"
-												/>
+
+											{/* Show available options as hint for option-based fields */}
+											{hasOptions(item) && (
+												<div className="text-xs text-gray-500 mb-1">
+													Available options: {item.options.split('|').join(', ')}
+												</div>
+											)}
+
+											{renderFieldInput(
+												item,
+												manualInputValues[item.name],
+												(value) => handleManualInputChange(item.name, value)
 											)}
 										</div>
 									</Col>
@@ -1629,7 +1749,6 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 						) : (
 							<SendIcon className="hidden sm:block" />
 						)}
-
 					</Button>
 					<Button
 						onClick={closeModal}
@@ -1640,7 +1759,6 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 					</Button>
 				</div>
 			</Modal>
-
 			<Modal
 				open={isSendModalOpen}
 				onCancel={closeSendModal}
