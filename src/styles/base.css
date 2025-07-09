@@ -847,3 +847,7 @@ button {
 .ReminderModal {
   max-width: 55vw;
 }
+
+.customCloseIcon:hover {
+  color: black !important;
+}

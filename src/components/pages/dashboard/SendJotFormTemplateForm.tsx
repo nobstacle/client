@@ -483,186 +483,212 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 			? [...listableFields].sort((a: any, b: any) => a.name.localeCompare(b.name))
 			: [];
 
-		const columns = [
-			...sortedListableFields.map((field: any) => ({
-				title: field.text,
-				dataIndex: field.text,
-				key: field.text,
-				render: (text: any, record: any) => {
-					let value = text || record[field.text] || record[field.name] || '-';
+const columns = [
+	...sortedListableFields.map((field: any) => ({
+		title: field.text,
+		dataIndex: field.text,
+		key: field.text,
+		render: (text: any, record: any) => {
+			let value = text || record[field.text] || record[field.name] || '-';
 
-					if (typeof value === 'object' && value !== null) {
-						value = JSON.stringify(value);
-					}
-
-					const recordId = record?.formData?.submission_id || record?.formData?.uuid || record.id;
-					const isEditable = isFieldEditable(field.name);
-					const isCurrentlyEditing = editingCell?.recordId === recordId && editingCell?.fieldName === field.text;
-
-					if (isCurrentlyEditing) {
-						return (
-							<div className="flex items-center gap-2">
-								<Input
-									value={editingCell.value}
-									onChange={(e) => handleEditInputChange(e.target.value)}
-									onPressEnter={handleEditSave}
-									className="max-w-[150px]"
-									size="small"
-								/>
-								<Button
-									type="primary"
-									size="small"
-									icon={<FaCheck size={10} />}
-									onClick={handleEditSave}
-									loading={savingEdit}
-									className="min-w-[24px] h-6"
-								/>
-								<Button
-									size="small"
-									icon={<FaTimes size={10} />}
-									onClick={handleEditCancel}
-									className="min-w-[24px] h-6"
-								/>
-							</div>
-						);
-					}
-
-					return (
-						<div className="flex items-center gap-2 group">
-							<div className="max-w-[200px] overflow-hidden text-ellipsis whitespace-nowrap min-w-[160px]">
-								{value}
-							</div>
-							{isEditable && (
-								<Button
-									type="text"
-									size="small"
-									icon={<FaEdit size={10} />}
-									onClick={() => handleEditStart(recordId, field.text, value)}
-									className="min-w-[24px] h-6"
-									title="Edit this field"
-								/>
-							)}
-						</div>
-					);
-				},
-				ellipsis: true,
-			})),
-			{
-				title: 'Action',
-				key: 'action',
-				fixed: 'right' as const,
-				render: (_: any, item: any, rowIndex: number) => (
-					<div className="flex flex-wrap gap-1 sm:gap-2 items-center justify-center sm:justify-start">
-						<Button
-							title="Copy URL"
-							onClick={() => copyFormUrl(item)}
-							disabled={!!item?.formData?.submission_id}
-							className={`group flex items-center justify-center w-6 h-6 sm:w-8 sm:h-8 text-white font-medium rounded-full text-xs text-center
-							${item?.formData?.submission_id
-									? 'bg-[#005d4d] cursor-not-allowed'
-									: 'bg-green-700 hover:bg-green-800 focus:outline-none focus:ring-4 focus:ring-green-300 dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-green-800'}
-						`}
-							style={{
-								background: item?.formData?.submission_id ? '#005d4d' : '#008080',
-								padding: 0,
-							}}
-						>
-							<FaCopy
-								size={isMobile ? 10 : 14}
-								className={`transition-colors duration-200 ${!item?.formData?.submission_id ? 'group-hover:text-white' : 'text-gray-400'}`}
-							/>
-						</Button>
-
-						{item?.formData?.submission_id ? (
-							<button
-								title="Download PDF Response"
-								onClick={() =>
-									handlePDFDownload(item?.formData?.form_id, item?.formData?.submission_id, rowIndex)
-								}
-								className={`
-								w-6 h-6 sm:w-8 sm:h-8
-								flex items-center justify-center 
-								text-white 
-								bg-[#3b5998] 
-								hover:bg-[#2d4373] 
-								focus:ring-0 
-								border-none 
-								font-medium 
-								rounded-full 
-								text-xs
-								disabled:opacity-70
-								disabled:cursor-not-allowed
-							`}
-								disabled={downloadingPDF === rowIndex}
-							>
-								{downloadingPDF === rowIndex ? (
-									<svg
-										className="animate-spin h-2.5 w-2.5 sm:h-3.5 sm:w-3.5"
-										viewBox="0 0 24 24"
-										fill="none"
-									>
-										<circle
-											className="opacity-25"
-											cx="12"
-											cy="12"
-											r="10"
-											stroke="currentColor"
-											strokeWidth="4"
-										/>
-										<path
-											className="opacity-75"
-											fill="currentColor"
-											d="M4 12a8 8 0 018-8v8H4z"
-										/>
-									</svg>
-								) : (
-									<FaFilePdf size={isMobile ? 10 : 14} />
-								)}
-							</button>
-						) : (
-							<button
-								title="Send Form"
-								onClick={() => handleUploadedSend(item)}
-								className={`
-								w-6 h-6 sm:w-8 sm:h-8
-								flex items-center justify-center 
-								text-white 
-								bg-[#3b5998] 
-								hover:bg-[#2d4373] 
-								focus:ring-0 
-								border-none 
-								font-medium 
-								rounded-full 
-								text-xs
-							`}
-							>
-								<SendIcon size={isMobile ? 10 : 14} />
-							</button>
-						)}
-
-						<button
-							onClick={() => deleteRecord(item)}
-							disabled={userRole !== 'Admin'}
-							className="
-							w-6 h-6 sm:w-8 sm:h-8
-							flex items-center justify-center 
-							text-white 
-							bg-red-700 
-							hover:bg-red-800 
-							focus:ring-4 focus:ring-red-300 
-							font-medium 
-							rounded-full 
-							text-xs
-							disabled:opacity-80
-							disabled:cursor-not-allowed
-						"
-						>
-							<FaTrash size={isMobile ? 8 : 12} />
-						</button>
-					</div>
-				),
+			if (typeof value === 'object' && value !== null) {
+				value = JSON.stringify(value);
 			}
-		];
+
+			const recordId = record?.formData?.submission_id || record?.formData?.uuid || record.id;
+			const isEditable = isFieldEditable(field.name);
+			const isCurrentlyEditing = editingCell?.recordId === recordId && editingCell?.fieldName === field.text;
+
+			if (isCurrentlyEditing) {
+				return (
+					<div className="flex items-center gap-2">
+						<Input
+							value={editingCell.value}
+							onChange={(e) => handleEditInputChange(e.target.value)}
+							onPressEnter={handleEditSave}
+							className="max-w-[150px]"
+							size="small"
+						/>
+						<Button
+							type="primary"
+							size="small"
+							icon={<FaCheck size={10} />}
+							onClick={handleEditSave}
+							loading={savingEdit}
+							className="min-w-[24px] h-6"
+							style={{
+								backgroundColor: '#3b5998',
+								borderColor: '#3b5998',
+								color: 'white'
+							}}
+							onMouseEnter={(e) => {
+								e.currentTarget.style.backgroundColor = '#2d4373';
+								e.currentTarget.style.borderColor = '#2d4373';
+							}}
+							onMouseLeave={(e) => {
+								e.currentTarget.style.backgroundColor = '#3b5998';
+								e.currentTarget.style.borderColor = '#3b5998';
+							}}
+						/>
+						<Button
+						size="small"
+						icon={<FaTimes size={10} />}
+						onClick={handleEditCancel}
+						className="min-w-[24px] h-6 text-gray-500 hover:text-black customCloseIcon"
+						/>
+					</div>
+				);
+			}
+
+			return (
+				<div className="flex items-center gap-2 group">
+					<div className="max-w-[200px] overflow-hidden text-ellipsis whitespace-nowrap min-w-[160px]">
+						{value}
+					</div>
+					{isEditable && (
+						<Button
+							type="text"
+							size="small"
+							icon={<FaEdit size={10} />}
+							onClick={() => handleEditStart(recordId, field.text, value)}
+							className="min-w-[24px] h-6 hidden md:block opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+							title="Edit this field"
+							style={{
+								backgroundColor: '#3b5998',
+								borderColor: '#3b5998',
+								color: 'white'
+							}}
+							onMouseEnter={(e) => {
+								e.currentTarget.style.backgroundColor = '#2d4373';
+								e.currentTarget.style.borderColor = '#2d4373';
+							}}
+							onMouseLeave={(e) => {
+								e.currentTarget.style.backgroundColor = '#3b5998';
+								e.currentTarget.style.borderColor = '#3b5998';
+							}}
+						/>
+					)}
+				</div>
+			);
+		},
+		ellipsis: true,
+	})),
+	{
+		title: 'Action',
+		key: 'action',
+		fixed: 'right' as const,
+		render: (_: any, item: any, rowIndex: number) => (
+			<div className="flex flex-wrap gap-1 sm:gap-2 items-center justify-center sm:justify-start">
+				<Button
+					title="Copy URL"
+					onClick={() => copyFormUrl(item)}
+					disabled={!!item?.formData?.submission_id}
+					className={`group flex items-center justify-center w-6 h-6 sm:w-8 sm:h-8 text-white font-medium rounded-full text-xs text-center
+					${item?.formData?.submission_id
+							? 'bg-[#005d4d] cursor-not-allowed'
+							: 'bg-green-700 hover:bg-green-800 focus:outline-none focus:ring-4 focus:ring-green-300 dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-green-800'}
+				`}
+					style={{
+						background: item?.formData?.submission_id ? '#005d4d' : '#008080',
+						padding: 0,
+					}}
+				>
+					<FaCopy
+						size={isMobile ? 10 : 14}
+						className={`transition-colors duration-200 ${!item?.formData?.submission_id ? 'group-hover:text-white' : 'text-gray-400'}`}
+					/>
+				</Button>
+
+				{item?.formData?.submission_id ? (
+					<button
+						title="Download PDF Response"
+						onClick={() =>
+							handlePDFDownload(item?.formData?.form_id, item?.formData?.submission_id, rowIndex)
+						}
+						className={`
+						w-6 h-6 sm:w-8 sm:h-8
+						flex items-center justify-center 
+						text-white 
+						bg-[#3b5998] 
+						hover:bg-[#2d4373] 
+						focus:ring-0 
+						border-none 
+						font-medium 
+						rounded-full 
+						text-xs
+						disabled:opacity-70
+						disabled:cursor-not-allowed
+					`}
+						disabled={downloadingPDF === rowIndex}
+					>
+						{downloadingPDF === rowIndex ? (
+							<svg
+								className="animate-spin h-2.5 w-2.5 sm:h-3.5 sm:w-3.5"
+								viewBox="0 0 24 24"
+								fill="none"
+							>
+								<circle
+									className="opacity-25"
+									cx="12"
+									cy="12"
+									r="10"
+									stroke="currentColor"
+									strokeWidth="4"
+								/>
+								<path
+									className="opacity-75"
+									fill="currentColor"
+									d="M4 12a8 8 0 018-8v8H4z"
+								/>
+							</svg>
+						) : (
+							<FaFilePdf size={isMobile ? 10 : 14} />
+						)}
+					</button>
+				) : (
+					<button
+						title="Send Form"
+						onClick={() => handleUploadedSend(item)}
+						className={`
+						w-6 h-6 sm:w-8 sm:h-8
+						flex items-center justify-center 
+						text-white 
+						bg-[#3b5998] 
+						hover:bg-[#2d4373] 
+						focus:ring-0 
+						border-none 
+						font-medium 
+						rounded-full 
+						text-xs
+					`}
+					>
+						<SendIcon size={isMobile ? 10 : 14} />
+					</button>
+				)}
+
+				<button
+					onClick={() => deleteRecord(item)}
+					disabled={userRole !== 'Admin'}
+					className="
+					w-6 h-6 sm:w-8 sm:h-8
+					flex items-center justify-center 
+					text-white 
+					bg-red-700 
+					hover:bg-red-800 
+					focus:ring-4 focus:ring-red-300 
+					font-medium 
+					rounded-full 
+					text-xs
+					disabled:opacity-80
+					disabled:cursor-not-allowed
+				"
+				>
+					<FaTrash size={isMobile ? 8 : 12} />
+				</button>
+			</div>
+		),
+	}
+];
 		const calculatedTotalPages = Math.ceil(totalItems / 10);
 
 		return (
