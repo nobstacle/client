@@ -6,7 +6,7 @@ import { useSocketContext } from "../../../context/SocketContextProvider";
 import "../../../styles/base.css";
 import { useSession } from "next-auth/react";
 import axios from 'axios';
-import { FaFileDownload, FaFileUpload, FaCopy, FaFilePdf, FaSearch, FaTrash } from "react-icons/fa";
+import { FaFileDownload, FaFileUpload, FaCopy, FaFilePdf, FaSearch, FaTrash, FaCheck, FaTimes, FaEdit } from "react-icons/fa";
 import { toast, Bounce } from 'react-toastify';
 import { BsFillSendPlusFill } from "react-icons/bs";
 import { RiUploadCloudFill } from "react-icons/ri";
@@ -66,6 +66,7 @@ interface TableComponentProps {
 	setCurrentPage: React.Dispatch<React.SetStateAction<number>>;
 	selectedFormFields: any[];
 	totalItems: number;
+	onUpdateField?: (recordId: string, fieldName: string, newValue: string) => Promise<boolean>;
 }
 
 export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => void }) => {
@@ -244,9 +245,16 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 		totalItems,
 		totalPages,
 		setCurrentPage,
-		selectedFormFields
+		selectedFormFields,
+		onUpdateField
 	}) => {
 		const [downloadingPDF, setDownloadingPDF] = useState<number | null>(null);
+		const [editingCell, setEditingCell] = useState<{
+			recordId: string;
+			fieldName: string;
+			value: string;
+		} | null>(null);
+		const [savingEdit, setSavingEdit] = useState(false);
 
 		const handlePageChange = (page: number, size?: number) => {
 			setLoader(true);
@@ -298,6 +306,58 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 				});
 				setDownloadingPDF(null);
 			}, 2500);
+		};
+
+		const isFieldEditable = (fieldName: string) => {
+			return fieldName && fieldName.toLowerCase().includes('editable');
+		};
+
+		const handleEditSave = async () => {
+			if (!editingCell || !onUpdateField) return;
+
+			setSavingEdit(true);
+			try {
+				const success = await onUpdateField(
+					editingCell.recordId,
+					editingCell.fieldName,
+					editingCell.value
+				);
+
+				if (success) {
+					// message.success('Field updated successfully!');
+					setEditingCell(null);
+					// Optionally refresh the table data here
+				} else {
+					// message.error('Failed to update field');
+				}
+			} catch (error) {
+				console.error('Error updating field:', error);
+				// message.error('Error updating field');
+			} finally {
+				setSavingEdit(false);
+			}
+		};
+
+		// Handle edit cancel
+		const handleEditCancel = () => {
+			setEditingCell(null);
+		};
+
+		const handleEditStart = (recordId: string, fieldName: string, currentValue: any) => {
+			setEditingCell({
+				recordId,
+				fieldName,
+				value: String(currentValue || '')
+			});
+		};
+
+		const handleEditInputChange = (value: string) => {
+			if (editingCell) {
+				setEditingCell({
+					...editingCell,
+					value
+				});
+			}
 		};
 
 		// Filtered and sorted form fields
@@ -441,9 +501,53 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 						value = JSON.stringify(value);
 					}
 
+					const recordId = record?.formData?.submission_id || record?.formData?.uuid || record.id;
+					const isEditable = isFieldEditable(field.name);
+					const isCurrentlyEditing = editingCell?.recordId === recordId && editingCell?.fieldName === field.text;
+
+					if (isCurrentlyEditing) {
+						return (
+							<div className="flex items-center gap-2">
+								<Input
+									value={editingCell.value}
+									onChange={(e) => handleEditInputChange(e.target.value)}
+									onPressEnter={handleEditSave}
+									className="max-w-[150px]"
+									size="small"
+								/>
+								<Button
+									type="primary"
+									size="small"
+									icon={<FaCheck size={10} />}
+									onClick={handleEditSave}
+									loading={savingEdit}
+									className="min-w-[24px] h-6"
+								/>
+								<Button
+									size="small"
+									icon={<FaTimes size={10} />}
+									onClick={handleEditCancel}
+									className="min-w-[24px] h-6"
+								/>
+							</div>
+						);
+					}
+
 					return (
-						<div className="max-w-[200px] overflow-hidden text-ellipsis whitespace-nowrap min-w-[160px]">
-							{value}
+						<div className="flex items-center gap-2 group">
+							<div className="max-w-[200px] overflow-hidden text-ellipsis whitespace-nowrap min-w-[160px]">
+								{value}
+							</div>
+							{isEditable && (
+								<Button
+									type="text"
+									size="small"
+									icon={<FaEdit size={10} />}
+									onClick={() => handleEditStart(recordId, field.text, value)}
+									className="min-w-[24px] h-6"
+									title="Edit this field"
+								/>
+							)}
 						</div>
 					);
 				},
@@ -460,10 +564,10 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 							onClick={() => copyFormUrl(item)}
 							disabled={!!item?.formData?.submission_id}
 							className={`group flex items-center justify-center w-6 h-6 sm:w-8 sm:h-8 text-white font-medium rounded-full text-xs text-center
-                ${item?.formData?.submission_id
+							${item?.formData?.submission_id
 									? 'bg-[#005d4d] cursor-not-allowed'
 									: 'bg-green-700 hover:bg-green-800 focus:outline-none focus:ring-4 focus:ring-green-300 dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-green-800'}
-              `}
+						`}
 							style={{
 								background: item?.formData?.submission_id ? '#005d4d' : '#008080',
 								padding: 0,
@@ -482,19 +586,19 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 									handlePDFDownload(item?.formData?.form_id, item?.formData?.submission_id, rowIndex)
 								}
 								className={`
-                  w-6 h-6 sm:w-8 sm:h-8
-                  flex items-center justify-center 
-                  text-white 
-                  bg-[#3b5998] 
-                  hover:bg-[#2d4373] 
-                  focus:ring-0 
-                  border-none 
-                  font-medium 
-                  rounded-full 
-                  text-xs
-                  disabled:opacity-70
-                  disabled:cursor-not-allowed
-                `}
+								w-6 h-6 sm:w-8 sm:h-8
+								flex items-center justify-center 
+								text-white 
+								bg-[#3b5998] 
+								hover:bg-[#2d4373] 
+								focus:ring-0 
+								border-none 
+								font-medium 
+								rounded-full 
+								text-xs
+								disabled:opacity-70
+								disabled:cursor-not-allowed
+							`}
 								disabled={downloadingPDF === rowIndex}
 							>
 								{downloadingPDF === rowIndex ? (
@@ -526,17 +630,17 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 								title="Send Form"
 								onClick={() => handleUploadedSend(item)}
 								className={`
-                  w-6 h-6 sm:w-8 sm:h-8
-                  flex items-center justify-center 
-                  text-white 
-                  bg-[#3b5998] 
-                  hover:bg-[#2d4373] 
-                  focus:ring-0 
-                  border-none 
-                  font-medium 
-                  rounded-full 
-                  text-xs
-                `}
+								w-6 h-6 sm:w-8 sm:h-8
+								flex items-center justify-center 
+								text-white 
+								bg-[#3b5998] 
+								hover:bg-[#2d4373] 
+								focus:ring-0 
+								border-none 
+								font-medium 
+								rounded-full 
+								text-xs
+							`}
 							>
 								<SendIcon size={isMobile ? 10 : 14} />
 							</button>
@@ -546,18 +650,18 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 							onClick={() => deleteRecord(item)}
 							disabled={userRole !== 'Admin'}
 							className="
-                w-6 h-6 sm:w-8 sm:h-8
-                flex items-center justify-center 
-                text-white 
-                bg-red-700 
-                hover:bg-red-800 
-                focus:ring-4 focus:ring-red-300 
-                font-medium 
-                rounded-full 
-                text-xs
-                disabled:opacity-80
-                disabled:cursor-not-allowed
-              "
+							w-6 h-6 sm:w-8 sm:h-8
+							flex items-center justify-center 
+							text-white 
+							bg-red-700 
+							hover:bg-red-800 
+							focus:ring-4 focus:ring-red-300 
+							font-medium 
+							rounded-full 
+							text-xs
+							disabled:opacity-80
+							disabled:cursor-not-allowed
+						"
 						>
 							<FaTrash size={isMobile ? 8 : 12} />
 						</button>
@@ -565,7 +669,6 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 				),
 			}
 		];
-
 		const calculatedTotalPages = Math.ceil(totalItems / 10);
 
 		return (
@@ -1364,6 +1467,65 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 		);
 	};
 
+	const updateFieldValue = async (recordId: string, fieldName: string, newValue: string): Promise<boolean> => {
+		console.info("INSIDE", recordId, fieldName, newValue);
+		const Url = getBackendUrl();
+		try {
+			// Use the correct endpoint that matches your backend
+			const response = await fetch(Url + `/api/jotform/update-field/${recordId}`, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					// Add any authentication headers if needed
+					// 'Authorization': `Bearer ${authToken}`,
+				},
+				body: JSON.stringify({
+					fieldName,
+					newValue,
+					formId: selectedForm?.id,
+				}),
+			});
+
+			if (!response.ok) {
+				const errorData = await response.json();
+				throw new Error(errorData.message || 'Failed to update field');
+			}
+
+			const result = await response.json();
+
+			// Check if the API call was successful
+			if (!result.success) {
+				throw new Error(result.message || 'Failed to update field');
+			}
+
+			// Update local table data to reflect the change
+			setTableResponse(prevResponse => {
+				if (!prevResponse?.data) return prevResponse;
+
+				const updatedData = prevResponse.data.map(record => {
+					const recordIdToMatch = record?.formData?.submission_id || record?.formData?.uuid || record.id;
+
+					if (recordIdToMatch === recordId) {
+						return {
+							...record,
+							[fieldName]: newValue
+						};
+					}
+					return record;
+				});
+
+				return {
+					...prevResponse,
+					data: updatedData
+				};
+			});
+
+			return true;
+		} catch (error) {
+			console.error('Error updating field:', error);
+			return false;
+		}
+	};
 
 	return (
 		<div className="bg-gray-50 p-2 rounded-lg shadow-md w-full mx-auto">
@@ -1636,7 +1798,6 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 								</label>
 							))}
 						</div>
-
 					</div>
 					{loader ? (
 						<div className="flex items-center justify-center py-10">
@@ -1654,6 +1815,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 							setCurrentPage={setCurrentPage}
 							selectedFormFields={selectedFormFields?.content || []}
 							totalItems={totalItems}
+							onUpdateField={updateFieldValue}
 						/>
 					)}
 				</div>
