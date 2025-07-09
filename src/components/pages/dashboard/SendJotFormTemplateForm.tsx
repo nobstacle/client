@@ -324,15 +324,14 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 				);
 
 				if (success) {
-					// message.success('Field updated successfully!');
+					toast.success('Field updated successfully!');
 					setEditingCell(null);
-					// Optionally refresh the table data here
 				} else {
-					// message.error('Failed to update field');
+					toast.error('Failed to update field');
 				}
 			} catch (error) {
 				console.error('Error updating field:', error);
-				// message.error('Error updating field');
+				toast.error('Error updating field');
 			} finally {
 				setSavingEdit(false);
 			}
@@ -490,13 +489,8 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 				dataIndex: field.text,
 				key: field.text,
 				render: (text: any, record: any) => {
-					// Debug: Log what we're getting
-					console.log('Field:', field.text, 'Value:', text, 'Record:', record);
-
-					// Try multiple ways to get the value
 					let value = text || record[field.text] || record[field.name] || '-';
 
-					// Handle different data types
 					if (typeof value === 'object' && value !== null) {
 						value = JSON.stringify(value);
 					}
@@ -1468,16 +1462,12 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 	};
 
 	const updateFieldValue = async (recordId: string, fieldName: string, newValue: string): Promise<boolean> => {
-		console.info("INSIDE", recordId, fieldName, newValue);
 		const Url = getBackendUrl();
 		try {
-			// Use the correct endpoint that matches your backend
 			const response = await fetch(Url + `/api/jotform/update-field/${recordId}`, {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
-					// Add any authentication headers if needed
-					// 'Authorization': `Bearer ${authToken}`,
 				},
 				body: JSON.stringify({
 					fieldName,
@@ -1493,12 +1483,9 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 
 			const result = await response.json();
 
-			// Check if the API call was successful
 			if (!result.success) {
 				throw new Error(result.message || 'Failed to update field');
 			}
-
-			// Update local table data to reflect the change
 			setTableResponse(prevResponse => {
 				if (!prevResponse?.data) return prevResponse;
 
