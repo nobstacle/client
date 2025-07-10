@@ -185,7 +185,6 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 		};
 	}, [socket]);
 
-
 	useEffect(() => {
 		if (selectedForm) {
 			getTableResponse(selectedForm, currentPage, pageSize, lastSearchedValue, selectedFilter);
@@ -204,6 +203,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 
 		return await response.json();
 	}
+
 	const deleteRecord = async (data: any) => {
 		Swal.fire({
 			title: "Are you sure?",
@@ -253,6 +253,10 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 			recordId: string;
 			fieldName: string;
 			value: string;
+			fieldType?: string;
+			fieldOptions?: any[];
+			fieldData?: any;
+			field?: any[]
 		} | null>(null);
 		const [savingEdit, setSavingEdit] = useState(false);
 
@@ -268,6 +272,38 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 		const handlePageSizeChange = (current, size) => {
 			setitemsPerPage(size);
 			setCurrentPage(1);
+		};
+
+		// Helper function to check if field has options
+		const hasOptions = (field: any) => {
+			return field && field.options && field.options.trim() !== '';
+		};
+
+		// Helper function to parse options
+		const parseOptions = (optionsString: string) => {
+			if (!optionsString) return [];
+
+			try {
+				const lines = optionsString.split('\n');
+				return lines.map(line => {
+					const parts = line.split('|');
+					return {
+						value: parts[0]?.trim() || '',
+						label: parts[1]?.trim() || parts[0]?.trim() || ''
+					};
+				}).filter(option => option.value);
+			} catch (error) {
+				console.error('Error parsing options:', error);
+				return [];
+			}
+		};
+
+		// Helper function to get field data by name
+		const getFieldDataByName = (fieldName: string) => {
+			if (!selectedFormFields?.content) return null;
+			return Object.values(selectedFormFields.content).find((field: any) =>
+				field.text === fieldName || field.name === fieldName
+			);
 		};
 
 		// If no data is available
@@ -324,7 +360,6 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 				);
 
 				if (success) {
-					toast.success('Field updated successfully!');
 					setEditingCell(null);
 				} else {
 					toast.error('Failed to update field');
@@ -342,11 +377,30 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 			setEditingCell(null);
 		};
 
-		const handleEditStart = (recordId: string, fieldName: string, currentValue: any) => {
+		const parseOptionsNew = (optionsString: string): string[] => {
+			return optionsString
+				.split('|')
+				.map(option => option.trim())
+				.filter(option => option);
+		};
+
+		const handleEditStart = (
+			recordId: string,
+			fieldName: string,
+			currentValue: any,
+			field: any
+		) => {
+			const fieldData = getFieldDataByName(field?.name);
+			let options = field?.options;
+
 			setEditingCell({
 				recordId,
 				fieldName,
-				value: String(currentValue || '')
+				value: String(currentValue || ''),
+				fieldType: fieldData?.type || 'text',
+				fieldOptions: parseOptionsNew(options || fieldData?.options || ''),
+				fieldData: fieldData,
+				field: field
 			});
 		};
 
@@ -357,6 +411,90 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 					value
 				});
 			}
+		};
+
+		// Function to render the appropriate input based on field type
+		const renderEditInput = () => {
+			if (!editingCell) return null;
+
+			const { fieldType, fieldOptions, fieldData, value, field } = editingCell;
+
+			// Date fields
+			if (fieldType === 'control_widget' || fieldType?.includes("date")) {
+				return (
+					<DatePicker
+						className="max-w-[150px]"
+						format="DD/MM/YYYY"
+						size="small"
+						value={value ? dayjs(value, "DD/MM/YYYY") : null}
+						onChange={(date, dateString) => handleEditInputChange(dateString)}
+						onPressEnter={handleEditSave}
+					/>
+				);
+			}
+
+			// Fields with predefined options
+			if (fieldOptions && fieldOptions.length > 0) {
+				return (
+					<Select
+						value={value}
+						onChange={handleEditInputChange}
+						className="max-w-[150px]"
+						size="small"
+						placeholder={`Select ${fieldData?.text || 'option'}`}
+						allowClear
+						onPressEnter={handleEditSave}
+					>
+						{fieldOptions.map(option => (
+							<Select.Option key={option} value={option}>
+								{option}
+							</Select.Option>
+						))}
+					</Select>
+				);
+			}
+
+			// Email fields
+			if (fieldType === 'control_email') {
+				return (
+					<Input
+						type="email"
+						value={value}
+						onChange={(e) => handleEditInputChange(e.target.value)}
+						onPressEnter={handleEditSave}
+						className="max-w-[150px]"
+						size="small"
+						placeholder="Enter email"
+					/>
+				);
+			}
+
+			// Number fields
+			if (fieldType === 'control_number') {
+				return (
+					<Input
+						type="number"
+						value={value}
+						onChange={(e) => handleEditInputChange(e.target.value)}
+						onPressEnter={handleEditSave}
+						className="max-w-[150px]"
+						size="small"
+						placeholder="Enter number"
+					/>
+				);
+			}
+
+			// Default text input for other types
+			return (
+				<Input
+					value={value}
+					onChange={(e) => handleEditInputChange(e.target.value)}
+					onPressEnter={handleEditSave}
+					className="max-w-[150px]"
+					size="small"
+					placeholder="Enter value"
+				/>
+			);
 		};
 
 		// Filtered and sorted form fields
@@ -483,212 +621,207 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 			? [...listableFields].sort((a: any, b: any) => a.name.localeCompare(b.name))
 			: [];
 
-const columns = [
-	...sortedListableFields.map((field: any) => ({
-		title: field.text,
-		dataIndex: field.text,
-		key: field.text,
-		render: (text: any, record: any) => {
-			let value = text || record[field.text] || record[field.name] || '-';
+		const columns = [
+			...sortedListableFields.map((field: any) => ({
+				title: field.text,
+				dataIndex: field.text,
+				key: field.text,
+				render: (text: any, record: any) => {
+					let value = text || record[field.text] || record[field.name] || '-';
 
-			if (typeof value === 'object' && value !== null) {
-				value = JSON.stringify(value);
-			}
+					if (typeof value === 'object' && value !== null) {
+						value = JSON.stringify(value);
+					}
 
-			const recordId = record?.formData?.submission_id || record?.formData?.uuid || record.id;
-			const isEditable = isFieldEditable(field.name);
-			const isCurrentlyEditing = editingCell?.recordId === recordId && editingCell?.fieldName === field.text;
+					const recordId = record?.formData?.submission_id || record?.formData?.uuid || record.id;
+					const isEditable = isFieldEditable(field.name);
+					const isCurrentlyEditing = editingCell?.recordId === recordId && editingCell?.fieldName === field.text;
 
-			if (isCurrentlyEditing) {
-				return (
-					<div className="flex items-center gap-2">
-						<Input
-							value={editingCell.value}
-							onChange={(e) => handleEditInputChange(e.target.value)}
-							onPressEnter={handleEditSave}
-							className="max-w-[150px]"
-							size="small"
-						/>
+					if (isCurrentlyEditing) {
+						return (
+							<div className="flex items-center gap-2">
+								{renderEditInput()}
+								<Button
+									type="primary"
+									size="small"
+									icon={<FaCheck size={10} />}
+									onClick={handleEditSave}
+									loading={savingEdit}
+									className="min-w-[24px] h-6"
+									style={{
+										backgroundColor: '#3b5998',
+										borderColor: '#3b5998',
+										color: 'white'
+									}}
+									onMouseEnter={(e) => {
+										e.currentTarget.style.backgroundColor = '#2d4373';
+										e.currentTarget.style.borderColor = '#2d4373';
+									}}
+									onMouseLeave={(e) => {
+										e.currentTarget.style.backgroundColor = '#3b5998';
+										e.currentTarget.style.borderColor = '#3b5998';
+									}}
+								/>
+								<Button
+									size="small"
+									icon={<FaTimes size={10} />}
+									onClick={handleEditCancel}
+									className="min-w-[24px] h-6 text-gray-500 hover:text-black customCloseIcon"
+								/>
+							</div>
+						);
+					}
+
+					return (
+						<div className="flex items-center gap-2 group">
+							<div className="max-w-[200px] overflow-hidden text-ellipsis whitespace-nowrap min-w-[160px]">
+								{value}
+							</div>
+							{isEditable && (
+								<Button
+									type="text"
+									size="small"
+									icon={<FaEdit size={10} />}
+									onClick={() => handleEditStart(recordId, field.text, value, field)}
+									className="min-w-[24px] h-6 hidden md:block opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+									title="Edit this field"
+									style={{
+										backgroundColor: '#3b5998',
+										borderColor: '#3b5998',
+										color: 'white'
+									}}
+									onMouseEnter={(e) => {
+										e.currentTarget.style.backgroundColor = '#2d4373';
+										e.currentTarget.style.borderColor = '#2d4373';
+									}}
+									onMouseLeave={(e) => {
+										e.currentTarget.style.backgroundColor = '#3b5998';
+										e.currentTarget.style.borderColor = '#3b5998';
+									}}
+								/>
+							)}
+						</div>
+					);
+				},
+				ellipsis: true,
+			})),
+			{
+				title: 'Action',
+				key: 'action',
+				fixed: 'right' as const,
+				render: (_: any, item: any, rowIndex: number) => (
+					<div className="flex flex-wrap gap-1 sm:gap-2 items-center justify-center sm:justify-start">
 						<Button
-							type="primary"
-							size="small"
-							icon={<FaCheck size={10} />}
-							onClick={handleEditSave}
-							loading={savingEdit}
-							className="min-w-[24px] h-6"
-							style={{
-								backgroundColor: '#3b5998',
-								borderColor: '#3b5998',
-								color: 'white'
-							}}
-							onMouseEnter={(e) => {
-								e.currentTarget.style.backgroundColor = '#2d4373';
-								e.currentTarget.style.borderColor = '#2d4373';
-							}}
-							onMouseLeave={(e) => {
-								e.currentTarget.style.backgroundColor = '#3b5998';
-								e.currentTarget.style.borderColor = '#3b5998';
-							}}
-						/>
-						<Button
-						size="small"
-						icon={<FaTimes size={10} />}
-						onClick={handleEditCancel}
-						className="min-w-[24px] h-6 text-gray-500 hover:text-black customCloseIcon"
-						/>
-					</div>
-				);
-			}
-
-			return (
-				<div className="flex items-center gap-2 group">
-					<div className="max-w-[200px] overflow-hidden text-ellipsis whitespace-nowrap min-w-[160px]">
-						{value}
-					</div>
-					{isEditable && (
-						<Button
-							type="text"
-							size="small"
-							icon={<FaEdit size={10} />}
-							onClick={() => handleEditStart(recordId, field.text, value)}
-							className="min-w-[24px] h-6 hidden md:block opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-							title="Edit this field"
-							style={{
-								backgroundColor: '#3b5998',
-								borderColor: '#3b5998',
-								color: 'white'
-							}}
-							onMouseEnter={(e) => {
-								e.currentTarget.style.backgroundColor = '#2d4373';
-								e.currentTarget.style.borderColor = '#2d4373';
-							}}
-							onMouseLeave={(e) => {
-								e.currentTarget.style.backgroundColor = '#3b5998';
-								e.currentTarget.style.borderColor = '#3b5998';
-							}}
-						/>
-					)}
-				</div>
-			);
-		},
-		ellipsis: true,
-	})),
-	{
-		title: 'Action',
-		key: 'action',
-		fixed: 'right' as const,
-		render: (_: any, item: any, rowIndex: number) => (
-			<div className="flex flex-wrap gap-1 sm:gap-2 items-center justify-center sm:justify-start">
-				<Button
-					title="Copy URL"
-					onClick={() => copyFormUrl(item)}
-					disabled={!!item?.formData?.submission_id}
-					className={`group flex items-center justify-center w-6 h-6 sm:w-8 sm:h-8 text-white font-medium rounded-full text-xs text-center
-					${item?.formData?.submission_id
-							? 'bg-[#005d4d] cursor-not-allowed'
-							: 'bg-green-700 hover:bg-green-800 focus:outline-none focus:ring-4 focus:ring-green-300 dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-green-800'}
-				`}
-					style={{
-						background: item?.formData?.submission_id ? '#005d4d' : '#008080',
-						padding: 0,
-					}}
-				>
-					<FaCopy
-						size={isMobile ? 10 : 14}
-						className={`transition-colors duration-200 ${!item?.formData?.submission_id ? 'group-hover:text-white' : 'text-gray-400'}`}
-					/>
-				</Button>
-
-				{item?.formData?.submission_id ? (
-					<button
-						title="Download PDF Response"
-						onClick={() =>
-							handlePDFDownload(item?.formData?.form_id, item?.formData?.submission_id, rowIndex)
-						}
-						className={`
-						w-6 h-6 sm:w-8 sm:h-8
-						flex items-center justify-center 
-						text-white 
-						bg-[#3b5998] 
-						hover:bg-[#2d4373] 
-						focus:ring-0 
-						border-none 
-						font-medium 
-						rounded-full 
-						text-xs
-						disabled:opacity-70
-						disabled:cursor-not-allowed
+							title="Copy URL"
+							onClick={() => copyFormUrl(item)}
+							disabled={!!item?.formData?.submission_id}
+							className={`group flex items-center justify-center w-6 h-6 sm:w-8 sm:h-8 text-white font-medium rounded-full text-xs text-center
+						${item?.formData?.submission_id
+									? 'bg-[#005d4d] cursor-not-allowed'
+									: 'bg-green-700 hover:bg-green-800 focus:outline-none focus:ring-4 focus:ring-green-300 dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-green-800'}
 					`}
-						disabled={downloadingPDF === rowIndex}
-					>
-						{downloadingPDF === rowIndex ? (
-							<svg
-								className="animate-spin h-2.5 w-2.5 sm:h-3.5 sm:w-3.5"
-								viewBox="0 0 24 24"
-								fill="none"
+							style={{
+								background: item?.formData?.submission_id ? '#005d4d' : '#008080',
+								padding: 0,
+							}}
+						>
+							<FaCopy
+								size={isMobile ? 10 : 14}
+								className={`transition-colors duration-200 ${!item?.formData?.submission_id ? 'group-hover:text-white' : 'text-gray-400'}`}
+							/>
+						</Button>
+
+						{item?.formData?.submission_id ? (
+							<button
+								title="Download PDF Response"
+								onClick={() =>
+									handlePDFDownload(item?.formData?.form_id, item?.formData?.submission_id, rowIndex)
+								}
+								className={`
+							w-6 h-6 sm:w-8 sm:h-8
+							flex items-center justify-center 
+							text-white 
+							bg-[#3b5998] 
+							hover:bg-[#2d4373] 
+							focus:ring-0 
+							border-none 
+							font-medium 
+							rounded-full 
+							text-xs
+							disabled:opacity-70
+							disabled:cursor-not-allowed
+						`}
+								disabled={downloadingPDF === rowIndex}
 							>
-								<circle
-									className="opacity-25"
-									cx="12"
-									cy="12"
-									r="10"
-									stroke="currentColor"
-									strokeWidth="4"
-								/>
-								<path
-									className="opacity-75"
-									fill="currentColor"
-									d="M4 12a8 8 0 018-8v8H4z"
-								/>
-							</svg>
+								{downloadingPDF === rowIndex ? (
+									<svg
+										className="animate-spin h-2.5 w-2.5 sm:h-3.5 sm:w-3.5"
+										viewBox="0 0 24 24"
+										fill="none"
+									>
+										<circle
+											className="opacity-25"
+											cx="12"
+											cy="12"
+											r="10"
+											stroke="currentColor"
+											strokeWidth="4"
+										/>
+										<path
+											className="opacity-75"
+											fill="currentColor"
+											d="M4 12a8 8 0 018-8v8H4z"
+										/>
+									</svg>
+								) : (
+									<FaFilePdf size={isMobile ? 10 : 14} />
+								)}
+							</button>
 						) : (
-							<FaFilePdf size={isMobile ? 10 : 14} />
+							<button
+								title="Send Form"
+								onClick={() => handleUploadedSend(item)}
+								className={`
+							w-6 h-6 sm:w-8 sm:h-8
+							flex items-center justify-center 
+							text-white 
+							bg-[#3b5998] 
+							hover:bg-[#2d4373] 
+							focus:ring-0 
+							border-none 
+							font-medium 
+							rounded-full 
+							text-xs
+						`}
+							>
+								<SendIcon size={isMobile ? 10 : 14} />
+							</button>
 						)}
-					</button>
-				) : (
-					<button
-						title="Send Form"
-						onClick={() => handleUploadedSend(item)}
-						className={`
+
+						<button
+							onClick={() => deleteRecord(item)}
+							disabled={userRole !== 'Admin'}
+							className="
 						w-6 h-6 sm:w-8 sm:h-8
 						flex items-center justify-center 
 						text-white 
-						bg-[#3b5998] 
-						hover:bg-[#2d4373] 
-						focus:ring-0 
-						border-none 
+						bg-red-700 
+						hover:bg-red-800 
+						focus:ring-4 focus:ring-red-300 
 						font-medium 
 						rounded-full 
 						text-xs
-					`}
-					>
-						<SendIcon size={isMobile ? 10 : 14} />
-					</button>
-				)}
+						disabled:opacity-80
+						disabled:cursor-not-allowed
+					"
+						>
+							<FaTrash size={isMobile ? 8 : 12} />
+						</button>
+					</div>
+				),
+			}
+		];
 
-				<button
-					onClick={() => deleteRecord(item)}
-					disabled={userRole !== 'Admin'}
-					className="
-					w-6 h-6 sm:w-8 sm:h-8
-					flex items-center justify-center 
-					text-white 
-					bg-red-700 
-					hover:bg-red-800 
-					focus:ring-4 focus:ring-red-300 
-					font-medium 
-					rounded-full 
-					text-xs
-					disabled:opacity-80
-					disabled:cursor-not-allowed
-				"
-				>
-					<FaTrash size={isMobile ? 8 : 12} />
-				</button>
-			</div>
-		),
-	}
-];
 		const calculatedTotalPages = Math.ceil(totalItems / 10);
 
 		return (
@@ -1490,6 +1623,17 @@ const columns = [
 	const updateFieldValue = async (recordId: string, fieldName: string, newValue: string): Promise<boolean> => {
 		const Url = getBackendUrl();
 		try {
+			let fieldId = null;
+			if (selectedFormFields?.content) {
+				for (const [qid, field] of Object.entries(selectedFormFields.content)) {
+					const fieldData = field as any;
+					if (fieldData.name === fieldName || fieldData.text === fieldName) {
+						fieldId = qid;
+						break;
+					}
+				}
+			}
+
 			const response = await fetch(Url + `/api/jotform/update-field/${recordId}`, {
 				method: 'POST',
 				headers: {
@@ -1498,7 +1642,8 @@ const columns = [
 				body: JSON.stringify({
 					fieldName,
 					newValue,
-					formId: selectedForm?.id,
+					formId: selectedForm,
+					fieldId,
 				}),
 			});
 
@@ -1512,6 +1657,8 @@ const columns = [
 			if (!result.success) {
 				throw new Error(result.message || 'Failed to update field');
 			}
+
+			// Update local state
 			setTableResponse(prevResponse => {
 				if (!prevResponse?.data) return prevResponse;
 
@@ -1532,6 +1679,14 @@ const columns = [
 					data: updatedData
 				};
 			});
+
+			if (result.data?.jotFormUpdateSuccess) {
+				toast.success('Field updated successfully!');
+			} else if (result.data?.jotFormError) {
+				toast.warning(`Field updated in database, but JotForm update failed: ${result.data.jotFormError}`);
+			} else {
+				toast.success('Field updated successfully in database!');
+			}
 
 			return true;
 		} catch (error) {

@@ -851,3 +851,7 @@ button {
 .customCloseIcon:hover {
   color: black !important;
 }
+
+.ant-select-dropdown {
+  min-width: 10vw !important;
+}
