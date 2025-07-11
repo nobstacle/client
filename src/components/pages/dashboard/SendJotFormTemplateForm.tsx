@@ -831,7 +831,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
       <div className="text-xs font-medium text-gray-500 Capitalize truncate w-1/2" title={field.text}>
         {field.text}
       </div>
-      <div className="text-gray-900 text-sm truncate w-1/2 text-right" title={value}>
+      <div className="text-xs text-gray-900 text-sm truncate w-1/2 text-right" title={value}>
         {value}
       </div>
     </div>
