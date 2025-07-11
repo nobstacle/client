@@ -743,7 +743,6 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 			const [isExpanded, setIsExpanded] = useState(false);
 
 			const MAX_VISIBLE_FIELDS = 7;
-			console.info("sortedListableFieldssortedListableFields", sortedListableFields)
 			const hasMoreFields = sortedListableFields.length > MAX_VISIBLE_FIELDS;
 			const visibleFields = isExpanded ? sortedListableFields : sortedListableFields.slice(0, MAX_VISIBLE_FIELDS);
 			const hiddenFieldsCount = sortedListableFields.length - MAX_VISIBLE_FIELDS;
@@ -760,7 +759,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 									title={isSubmitted ? 'Cannot copy URL for submitted form' : 'Copy form URL'}
 									onClick={() => copyFormUrl(item)}
 									disabled={isSubmitted}
-									className={`group flex items-center justify-center w-6 h-6 sm:w-8 sm:h-8 text-white font-medium rounded-full text-xs text-center transition-colors duration-200
+									className={`group flex items-center justify-center w-8 h-8 sm:w-8 sm:h-8 text-white font-medium rounded-full text-xs text-center transition-colors duration-200
 						${isSubmitted
 											? 'bg-[#005d4d] cursor-not-allowed'
 											: 'bg-[#008080] hover:bg-green-800 focus:outline-none focus:ring-4 focus:ring-green-300'
@@ -781,7 +780,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 									<button
 										title="Download PDF Response"
 										onClick={() => handlePDFDownload(item?.formData?.form_id, item?.formData?.submission_id, index)}
-										className="w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center text-white bg-[#3b5998] hover:bg-[#2d4373] focus:ring-0 border-none font-medium rounded-full text-xs disabled:opacity-70 disabled:cursor-not-allowed transition-colors duration-200"
+										className="w-8 h-8 sm:w-8 sm:h-8 flex items-center justify-center text-white bg-[#3b5998] hover:bg-[#2d4373] focus:ring-0 border-none font-medium rounded-full text-xs disabled:opacity-70 disabled:cursor-not-allowed transition-colors duration-200"
 										disabled={downloadingPDF === index}
 									>
 										{downloadingPDF === index ? (
@@ -797,7 +796,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 									<button
 										title="Send Form"
 										onClick={() => handleUploadedSend(item)}
-										className="w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center text-white bg-[#3b5998] hover:bg-[#2d4373] focus:ring-0 border-none font-medium rounded-full text-xs transition-colors duration-200"
+										className="w-8 h-8 sm:w-8 sm:h-8 flex items-center justify-center text-white bg-[#3b5998] hover:bg-[#2d4373] focus:ring-0 border-none font-medium rounded-full text-xs transition-colors duration-200"
 									>
 										<SendIcon size={16} />
 									</button>
@@ -807,7 +806,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 								<button
 									onClick={() => deleteRecord(item)}
 									disabled={userRole !== 'Admin'}
-									className="w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center text-white bg-red-700 hover:bg-red-800 focus:ring-4 focus:ring-red-300 font-medium rounded-full text-xs disabled:opacity-80 disabled:cursor-not-allowed transition-colors duration-200"
+									className="w-8 h-8 sm:w-8 sm:h-8 flex items-center justify-center text-white bg-red-700 hover:bg-red-800 focus:ring-4 focus:ring-red-300 font-medium rounded-full text-xs disabled:opacity-80 disabled:cursor-not-allowed transition-colors duration-200"
 									title="Delete"
 								>
 									<FaTrash size={16} />
@@ -826,18 +825,18 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 									value = JSON.stringify(value);
 								}
 								return (
-									<div key={field.text} className="group">
-										<div className="flex items-start justify-between gap-3">
-											<div className="flex-1 min-w-0">
-												<div className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
-													{field.text}
-												</div>
-												<div className="text-gray-900 text-sm break-words leading-relaxed">
-													{value}
-												</div>
-											</div>
-										</div>
-									</div>
+									<div key={field.text} className="group w-full">
+  <div className="flex items-center justify-between w-full gap-3">
+    <div className="flex w-full justify-between gap-2">
+      <div className="text-xs font-medium text-gray-500 Capitalize truncate w-1/2" title={field.text}>
+        {field.text}
+      </div>
+      <div className="text-gray-900 text-sm truncate w-1/2 text-right" title={value}>
+        {value}
+      </div>
+    </div>
+  </div>
+</div>
 								);
 							})}
 						</div>
@@ -877,17 +876,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 		// Render mobile cards or desktop table based on screen size
 		if (isMobile) {
 			return (
-				<div className="p-4 bg-gray-50 min-h-screen">
-					{/* Mobile Header */}
-					<div className="mb-4">
-						<div className="relative">
-							<input
-								type="text"
-								placeholder="Search Handover Notes"
-								className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-							/>
-						</div>
-					</div>
+				<div className="bg-gray-50 min-h-screen pt-4">
 
 					{/* Mobile Cards */}
 					<div className="space-y-4">
