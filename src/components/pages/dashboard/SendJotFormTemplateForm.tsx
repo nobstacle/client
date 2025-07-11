@@ -826,17 +826,17 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 								}
 								return (
 									<div key={field.text} className="group w-full">
-  <div className="flex items-center justify-between w-full gap-3">
-    <div className="flex w-full justify-between gap-2">
-      <div className="text-xs font-medium text-gray-500 Capitalize truncate w-1/2" title={field.text}>
-        {field.text}
-      </div>
-      <div className="text-xs text-gray-900 text-sm truncate w-1/2 text-right" title={value}>
-        {value}
-      </div>
-    </div>
-  </div>
-</div>
+										<div className="flex items-center justify-between w-full gap-3">
+											<div className="flex w-full justify-between gap-2">
+												<div className="text-xs font-medium text-gray-500 Capitalize truncate w-1/2" title={field.text}>
+													{field.text}
+												</div>
+												<div className="text-xs text-gray-900 text-sm truncate w-1/2 text-right" title={value}>
+													{value}
+												</div>
+											</div>
+										</div>
+									</div>
 								);
 							})}
 						</div>
@@ -883,13 +883,6 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 						{cleanTableData.map((item, index) => (
 							<MobileCard key={item?.formData?.submission_id || index} item={item} index={index} />
 						))}
-					</div>
-
-					{/* Add Button */}
-					<div className="fixed bottom-6 right-6">
-						<button className="w-14 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg flex items-center justify-center text-2xl">
-							+
-						</button>
 					</div>
 
 					{/* Mobile Pagination */}
