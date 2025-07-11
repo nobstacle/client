@@ -32,6 +32,7 @@ import type {
 	GetTextTemplateTagRes,
 	GetUploadUrlRes,
 	GetUserRes,
+	GetUserListRes,
 	GetVideoTemplateRes,
 	GetVideoTemplateTagRes,
 	GetWebsiteTemplateRes,
@@ -98,45 +99,87 @@ type SecondParameter<T extends (...args: any) => any> = T extends (
 	? P
 	: never;
 
+// Fixed API Client - Update your API client code
 
-export const userControllerGetUsers = (
-	params?: UserControllerGetUsersParams,
-	options?: SecondParameter<typeof nobstacleBackendApiInstance>, signal?: AbortSignal
+export interface UserControllerGetUsersParams {
+  take?: number;
+  skip?: number;
+  // Add other query parameters as needed
+}
+
+export interface PaginatedUsersResponse {
+  users: GetUserListRes[];
+  totalCount: number;
+  totalPages: number;
+  currentPage: number;
+  pageSize: number;
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
+}
+
+export const userControllerGetUsers = async (
+  params?: UserControllerGetUsersParams,
+  requestOptions?: any,
+  signal?: AbortSignal
 ) => {
+  try {
+    console.log('Making API request with params:', params);
+    
+    const response = await nobstacleBackendApiInstance({
+      url: '/api/v1/iam/user',
+      method: 'GET',
+      params,
+      signal,
+      ...requestOptions
+    });
+    
+    console.log('API Response:', response);
+    return response;
+  } catch (error) {
+    console.error('API Error:', error);
+    throw error;
+  }
+};
 
-
-	return nobstacleBackendApiInstance<GetUserRes[]>(
-		{
-			url: `/api/v1/iam/user`, method: 'GET',
-			params, signal
-		},
-		options);
-}
-
-
-export const getUserControllerGetUsersQueryKey = (params?: UserControllerGetUsersParams,) => {
-
-	return [`/api/v1/iam/user`, ...(params ? [params] : [])] as const;
-}
-
-
-export const getUserControllerGetUsersQueryOptions = <TData = Awaited<ReturnType<typeof userControllerGetUsers>>, TError = ErrorType<HttpExceptionSchema>>(params?: UserControllerGetUsersParams, options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof userControllerGetUsers>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+export const getUserControllerGetUsersQueryKey = (
+  params?: UserControllerGetUsersParams,
 ) => {
+  return [`/api/v1/iam/user`, ...(params ? [params] : [])] as const;
+};
 
-	const { query: queryOptions, request: requestOptions } = options ?? {};
+export const getUserControllerGetUsersQueryOptions = <
+  TData = Awaited<ReturnType<typeof userControllerGetUsers>>,
+  TError = ErrorType<HttpExceptionSchema>
+>(
+  params?: UserControllerGetUsersParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof userControllerGetUsers>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof nobstacleBackendApiInstance>;
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
 
-	const queryKey = queryOptions?.queryKey ?? getUserControllerGetUsersQueryKey(params);
+  const queryKey = queryOptions?.queryKey ?? getUserControllerGetUsersQueryKey(params);
 
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof userControllerGetUsers>>
+  > = ({ signal }) => userControllerGetUsers(params, requestOptions, signal);
 
+  return {
+    queryKey,
+    queryFn,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof userControllerGetUsers>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
 
-	const queryFn: QueryFunction<Awaited<ReturnType<typeof userControllerGetUsers>>> = ({ signal }) => userControllerGetUsers(params, requestOptions, signal);
-
-
-
-
-
-	return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<Awaited<ReturnType<typeof userControllerGetUsers>>, TError, TData> & { queryKey: QueryKey }
-}
 
 export type UserControllerGetUsersQueryResult = NonNullable<Awaited<ReturnType<typeof userControllerGetUsers>>>
 export type UserControllerGetUsersQueryError = ErrorType<HttpExceptionSchema>
@@ -154,8 +197,6 @@ export const useUserControllerGetUsers = <TData = Awaited<ReturnType<typeof user
 
 	return query;
 }
-
-
 
 
 export const userControllerCreate = (

@@ -19,3 +19,9 @@ export interface GetUserRes {
   Roles: GetUserResRolesItem[] | null;
   updatedAt: string;
 }
+
+export interface GetUserListRes {
+  id: number;
+  email: string | null;
+  Roles: string[] | null;
+}

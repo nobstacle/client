@@ -28,7 +28,7 @@ const getBackendUrl = () => {
 		: process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
 };
 
-const dateFormat = 'DD/MM/YYYY';
+// const dateFormat = 'DD/MM/YYYY';
 
 const schema = yup
 	.object({
@@ -97,7 +97,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 	const filterRef = useRef(selectedFilter);
 	const { socket } = useSocketContext();
 	const [pageSize, setPageSize] = useState(10);
-	let userROle = userData?.user?.Roles[0];
+	// let userROle = userData?.user?.Roles[0];
 	const [isMobile, setIsMobile] = useState(false);
 	const userRole = userData?.user?.Roles?.[0];
 
@@ -259,6 +259,19 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 			field?: any[]
 		} | null>(null);
 		const [savingEdit, setSavingEdit] = useState(false);
+		const [isMobile, setIsMobile] = useState(false);
+
+		// Mobile detection hook
+		useEffect(() => {
+			const checkMobile = () => {
+				setIsMobile(window.innerWidth < 768);
+			};
+
+			checkMobile();
+			window.addEventListener('resize', checkMobile);
+
+			return () => window.removeEventListener('resize', checkMobile);
+		}, []);
 
 		const handlePageChange = (page: number, size?: number) => {
 			setLoader(true);
@@ -267,35 +280,6 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 				page = 1;
 			}
 			setCurrentPage(page);
-		};
-
-		const handlePageSizeChange = (current, size) => {
-			setitemsPerPage(size);
-			setCurrentPage(1);
-		};
-
-		// Helper function to check if field has options
-		const hasOptions = (field: any) => {
-			return field && field.options && field.options.trim() !== '';
-		};
-
-		// Helper function to parse options
-		const parseOptions = (optionsString: string) => {
-			if (!optionsString) return [];
-
-			try {
-				const lines = optionsString.split('\n');
-				return lines.map(line => {
-					const parts = line.split('|');
-					return {
-						value: parts[0]?.trim() || '',
-						label: parts[1]?.trim() || parts[0]?.trim() || ''
-					};
-				}).filter(option => option.value);
-			} catch (error) {
-				console.error('Error parsing options:', error);
-				return [];
-			}
 		};
 
 		// Helper function to get field data by name
@@ -319,7 +303,6 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 			setDownloadingPDF(rowIndex);
 
 			const api_key = process.env.NEXT_PUBLIC_JOTFORM_API_KEY;
-
 			const pdfUrl = `https://www.jotform.com/server.php?action=getSubmissionPDF&sid=${submission_id}&formID=${form_id}&apikey=${api_key}`;
 
 			const a = document.createElement("a");
@@ -372,7 +355,6 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 			}
 		};
 
-		// Handle edit cancel
 		const handleEditCancel = () => {
 			setEditingCell(null);
 		};
@@ -543,7 +525,6 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 
 		const handleUploadedSend = (data: any) => {
 			const result = {};
-
 			let UUID = data?.formData?.uuid;
 
 			listableFields.forEach((field) => {
@@ -593,7 +574,6 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 					}
 				});
 
-				// Preserving fallback behavior
 				url = buildUrl(selectedForm, result);
 			}
 
@@ -621,6 +601,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 			? [...listableFields].sort((a: any, b: any) => a.name.localeCompare(b.name))
 			: [];
 
+		// Desktop Table Columns
 		const columns = [
 			...sortedListableFields.map((field: any) => ({
 				title: field.text,
@@ -653,14 +634,6 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 										borderColor: '#3b5998',
 										color: 'white'
 									}}
-									onMouseEnter={(e) => {
-										e.currentTarget.style.backgroundColor = '#2d4373';
-										e.currentTarget.style.borderColor = '#2d4373';
-									}}
-									onMouseLeave={(e) => {
-										e.currentTarget.style.backgroundColor = '#3b5998';
-										e.currentTarget.style.borderColor = '#3b5998';
-									}}
 								/>
 								<Button
 									size="small"
@@ -690,14 +663,6 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 										borderColor: '#3b5998',
 										color: 'white'
 									}}
-									onMouseEnter={(e) => {
-										e.currentTarget.style.backgroundColor = '#2d4373';
-										e.currentTarget.style.borderColor = '#2d4373';
-									}}
-									onMouseLeave={(e) => {
-										e.currentTarget.style.backgroundColor = '#3b5998';
-										e.currentTarget.style.borderColor = '#3b5998';
-									}}
 								/>
 							)}
 						</div>
@@ -716,17 +681,17 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 							onClick={() => copyFormUrl(item)}
 							disabled={!!item?.formData?.submission_id}
 							className={`group flex items-center justify-center w-6 h-6 sm:w-8 sm:h-8 text-white font-medium rounded-full text-xs text-center
-						${item?.formData?.submission_id
+					${item?.formData?.submission_id
 									? 'bg-[#005d4d] cursor-not-allowed'
 									: 'bg-green-700 hover:bg-green-800 focus:outline-none focus:ring-4 focus:ring-green-300 dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-green-800'}
-					`}
+				`}
 							style={{
 								background: item?.formData?.submission_id ? '#005d4d' : '#008080',
 								padding: 0,
 							}}
 						>
 							<FaCopy
-								size={isMobile ? 10 : 14}
+								size={14}
 								className={`transition-colors duration-200 ${!item?.formData?.submission_id ? 'group-hover:text-white' : 'text-gray-400'}`}
 							/>
 						</Button>
@@ -737,93 +702,223 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 								onClick={() =>
 									handlePDFDownload(item?.formData?.form_id, item?.formData?.submission_id, rowIndex)
 								}
-								className={`
-							w-6 h-6 sm:w-8 sm:h-8
-							flex items-center justify-center 
-							text-white 
-							bg-[#3b5998] 
-							hover:bg-[#2d4373] 
-							focus:ring-0 
-							border-none 
-							font-medium 
-							rounded-full 
-							text-xs
-							disabled:opacity-70
-							disabled:cursor-not-allowed
-						`}
+								className="w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center text-white bg-[#3b5998] hover:bg-[#2d4373] focus:ring-0 border-none font-medium rounded-full text-xs disabled:opacity-70 disabled:cursor-not-allowed"
 								disabled={downloadingPDF === rowIndex}
 							>
 								{downloadingPDF === rowIndex ? (
-									<svg
-										className="animate-spin h-2.5 w-2.5 sm:h-3.5 sm:w-3.5"
-										viewBox="0 0 24 24"
-										fill="none"
-									>
-										<circle
-											className="opacity-25"
-											cx="12"
-											cy="12"
-											r="10"
-											stroke="currentColor"
-											strokeWidth="4"
-										/>
-										<path
-											className="opacity-75"
-											fill="currentColor"
-											d="M4 12a8 8 0 018-8v8H4z"
-										/>
+									<svg className="animate-spin h-2.5 w-2.5 sm:h-3.5 sm:w-3.5" viewBox="0 0 24 24" fill="none">
+										<circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+										<path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
 									</svg>
 								) : (
-									<FaFilePdf size={isMobile ? 10 : 14} />
+									<FaFilePdf size={14} />
 								)}
 							</button>
 						) : (
 							<button
 								title="Send Form"
 								onClick={() => handleUploadedSend(item)}
-								className={`
-							w-6 h-6 sm:w-8 sm:h-8
-							flex items-center justify-center 
-							text-white 
-							bg-[#3b5998] 
-							hover:bg-[#2d4373] 
-							focus:ring-0 
-							border-none 
-							font-medium 
-							rounded-full 
-							text-xs
-						`}
+								className="w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center text-white bg-[#3b5998] hover:bg-[#2d4373] focus:ring-0 border-none font-medium rounded-full text-xs"
 							>
-								<SendIcon size={isMobile ? 10 : 14} />
+								<SendIcon size={14} />
 							</button>
 						)}
 
 						<button
 							onClick={() => deleteRecord(item)}
 							disabled={userRole !== 'Admin'}
-							className="
-						w-6 h-6 sm:w-8 sm:h-8
-						flex items-center justify-center 
-						text-white 
-						bg-red-700 
-						hover:bg-red-800 
-						focus:ring-4 focus:ring-red-300 
-						font-medium 
-						rounded-full 
-						text-xs
-						disabled:opacity-80
-						disabled:cursor-not-allowed
-					"
+							className="w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center text-white bg-red-700 hover:bg-red-800 focus:ring-4 focus:ring-red-300 font-medium rounded-full text-xs disabled:opacity-80 disabled:cursor-not-allowed"
 						>
-							<FaTrash size={isMobile ? 8 : 12} />
+							<FaTrash size={12} />
 						</button>
 					</div>
 				),
 			}
 		];
 
-		const calculatedTotalPages = Math.ceil(totalItems / 10);
+		// Mobile Card Component
+		const MobileCard = ({ item, index }: { item: any; index: number }) => {
+			const recordId = item?.formData?.submission_id || item?.formData?.uuid || item.id;
+			const isSubmitted = !!item?.formData?.submission_id;
+			const [isExpanded, setIsExpanded] = useState(false);
 
+			const MAX_VISIBLE_FIELDS = 7;
+			console.info("sortedListableFieldssortedListableFields", sortedListableFields)
+			const hasMoreFields = sortedListableFields.length > MAX_VISIBLE_FIELDS;
+			const visibleFields = isExpanded ? sortedListableFields : sortedListableFields.slice(0, MAX_VISIBLE_FIELDS);
+			const hiddenFieldsCount = sortedListableFields.length - MAX_VISIBLE_FIELDS;
+
+			return (
+				<div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-4 hover:shadow-md transition-shadow duration-200">
+					{/* Header Section */}
+					<div className="bg-gradient-to-r from-blue-50 to-blue-100 px-4 py-3 border-b border-blue-200">
+						<div className="flex items-center justify-end">
+							{/* Action Buttons */}
+							<div className="flex flex-wrap gap-1 sm:gap-2 items-center justify-center sm:justify-start">
+								{/* Copy URL Button */}
+								<button
+									title={isSubmitted ? 'Cannot copy URL for submitted form' : 'Copy form URL'}
+									onClick={() => copyFormUrl(item)}
+									disabled={isSubmitted}
+									className={`group flex items-center justify-center w-6 h-6 sm:w-8 sm:h-8 text-white font-medium rounded-full text-xs text-center transition-colors duration-200
+						${isSubmitted
+											? 'bg-[#005d4d] cursor-not-allowed'
+											: 'bg-[#008080] hover:bg-green-800 focus:outline-none focus:ring-4 focus:ring-green-300'
+										}`}
+									style={{
+										background: isSubmitted ? '#005d4d' : '#008080',
+										padding: 0,
+									}}
+								>
+									<FaCopy
+										size={16}
+										className={`transition-colors duration-200 ${!isSubmitted ? 'group-hover:text-white' : 'text-gray-400'}`}
+									/>
+								</button>
+
+								{/* PDF Download or Send Button */}
+								{isSubmitted ? (
+									<button
+										title="Download PDF Response"
+										onClick={() => handlePDFDownload(item?.formData?.form_id, item?.formData?.submission_id, index)}
+										className="w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center text-white bg-[#3b5998] hover:bg-[#2d4373] focus:ring-0 border-none font-medium rounded-full text-xs disabled:opacity-70 disabled:cursor-not-allowed transition-colors duration-200"
+										disabled={downloadingPDF === index}
+									>
+										{downloadingPDF === index ? (
+											<svg className="animate-spin h-2.5 w-2.5 sm:h-3.5 sm:w-3.5" viewBox="0 0 24 24" fill="none">
+												<circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+												<path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+											</svg>
+										) : (
+											<FaFilePdf size={16} />
+										)}
+									</button>
+								) : (
+									<button
+										title="Send Form"
+										onClick={() => handleUploadedSend(item)}
+										className="w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center text-white bg-[#3b5998] hover:bg-[#2d4373] focus:ring-0 border-none font-medium rounded-full text-xs transition-colors duration-200"
+									>
+										<SendIcon size={16} />
+									</button>
+								)}
+
+								{/* Delete Button */}
+								<button
+									onClick={() => deleteRecord(item)}
+									disabled={userRole !== 'Admin'}
+									className="w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center text-white bg-red-700 hover:bg-red-800 focus:ring-4 focus:ring-red-300 font-medium rounded-full text-xs disabled:opacity-80 disabled:cursor-not-allowed transition-colors duration-200"
+									title="Delete"
+								>
+									<FaTrash size={16} />
+								</button>
+							</div>
+						</div>
+					</div>
+
+					{/* Content Section */}
+					<div className="p-4">
+						<div className="space-y-3">
+							{visibleFields.map((field: any) => {
+								let value = item[field.text] || item[field.name] || '-';
+
+								if (typeof value === 'object' && value !== null) {
+									value = JSON.stringify(value);
+								}
+								return (
+									<div key={field.text} className="group">
+										<div className="flex items-start justify-between gap-3">
+											<div className="flex-1 min-w-0">
+												<div className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
+													{field.text}
+												</div>
+												<div className="text-gray-900 text-sm break-words leading-relaxed">
+													{value}
+												</div>
+											</div>
+										</div>
+									</div>
+								);
+							})}
+						</div>
+
+						{/* View More/Less Section */}
+						{hasMoreFields && (
+							<div className="mt-4 relative">
+								<div className="flex justify-center pt-2">
+									<button
+										onClick={() => setIsExpanded(!isExpanded)}
+										className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors duration-200 border border-blue-200"
+									>
+										{isExpanded ? (
+											<>
+												<span>View Less</span>
+												<svg className="w-4 h-4 transform rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+													<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+												</svg>
+											</>
+										) : (
+											<>
+												<span>View All</span>
+												<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+													<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+												</svg>
+											</>
+										)}
+									</button>
+								</div>
+							</div>
+						)}
+					</div>
+				</div>
+			);
+		};
+
+		// Render mobile cards or desktop table based on screen size
+		if (isMobile) {
+			return (
+				<div className="p-4 bg-gray-50 min-h-screen">
+					{/* Mobile Header */}
+					<div className="mb-4">
+						<div className="relative">
+							<input
+								type="text"
+								placeholder="Search Handover Notes"
+								className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+							/>
+						</div>
+					</div>
+
+					{/* Mobile Cards */}
+					<div className="space-y-4">
+						{cleanTableData.map((item, index) => (
+							<MobileCard key={item?.formData?.submission_id || index} item={item} index={index} />
+						))}
+					</div>
+
+					{/* Add Button */}
+					<div className="fixed bottom-6 right-6">
+						<button className="w-14 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg flex items-center justify-center text-2xl">
+							+
+						</button>
+					</div>
+
+					{/* Mobile Pagination */}
+					<div className="mt-6 flex justify-center">
+						<Pagination
+							current={currentPage}
+							total={totalItems}
+							pageSize={pageSize}
+							onChange={handlePageChange}
+							showSizeChanger={false}
+							size="small"
+						/>
+					</div>
+				</div>
+			);
+		}
+
+		// Desktop Table View
 		return (
 			<div className="p-4 bg-white shadow-md rounded-lg customTableWrapper overflow-x-auto">
 				<Table
@@ -834,8 +929,9 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 					scroll={{ x: 'max-content', y: 400 }}
 					sticky
 					className="jotFormTable"
+					loading={loader}
 				/>
-				{/* Pagination Component */}
+				{/* Desktop Pagination */}
 				<div className="flex justify-center mt-6">
 					<Pagination
 						current={currentPage}

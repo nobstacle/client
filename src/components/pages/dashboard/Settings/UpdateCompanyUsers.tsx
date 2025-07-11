@@ -22,18 +22,32 @@ export const UpdateCompanyUsers: React.FC = () => {
   const { companyUsers: initialCompanyUsers, setCompanyUsers } =
     useCompanyStore();
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = React.useState(1);
+  const [pageSize] = React.useState(10);
+  const [totalPages, setTotalPages] = React.useState(0);
+  const [totalUsers, setTotalUsers] = React.useState(0);
+
+
   const companyUsers = useUserControllerGetUsers(
-    {},
+    {
+      take: pageSize,
+      skip: (currentPage - 1) * pageSize,
+    },
     {
       query: {
-        staleTime: Infinity,
-        enabled: false,
-        retry: 0,
-        queryKey: getUserControllerGetUsersQueryKey(),
-        gcTime: Infinity,
+        staleTime: 5 * 60 * 1000,
+        enabled: true,
+        retry: 1,
+        queryKey: getUserControllerGetUsersQueryKey({
+          take: pageSize,
+          skip: (currentPage - 1) * pageSize,
+        }),
+        gcTime: 10 * 60 * 1000,
       },
     },
   );
+
 
   const [isLoading, setIsLoading] = React.useState(false);
   const [errorMessage, setErrorMessage] = React.useState<string[]>([]);
@@ -49,16 +63,39 @@ export const UpdateCompanyUsers: React.FC = () => {
 
   const [deletedUsers, setDeletedUsers] = React.useState<number[]>([]);
 
+  // Update pagination info when data changes
   React.useEffect(() => {
-    setUsers(
-      initialCompanyUsers.map(({ email, id, Roles }) => ({
-        id,
-        email: email,
-        password: undefined,
-        action: "initial",
-        role: Roles && Roles?.length > 0 ? Roles[0] : "User",
-      })),
-    );
+    if (companyUsers.data) {
+      const { users: fetchedUsers, totalCount } = companyUsers.data;
+      console.info("HELLO", fetchedUsers, totalCount)
+      setTotalUsers(totalCount);
+      setTotalPages(Math.ceil(totalCount / pageSize));
+
+      // Update users state with fetched data
+      setUsers(
+        fetchedUsers.map(({ email, id, Roles }) => ({
+          id,
+          email: email,
+          password: undefined,
+          action: "initial" as const,
+          role: Roles && Roles?.length > 0 ? Roles[0] : "User",
+        })),
+      );
+    }
+  }, [companyUsers.data, pageSize]);
+
+  React.useEffect(() => {
+    if (initialCompanyUsers.length > 0) {
+      setUsers(
+        initialCompanyUsers.map(({ email, id, Roles }) => ({
+          id,
+          email: email,
+          password: undefined,
+          action: "initial",
+          role: Roles && Roles?.length > 0 ? Roles[0] : "User",
+        })),
+      );
+    }
   }, [initialCompanyUsers]);
 
   const handleInputChange = (
@@ -69,7 +106,6 @@ export const UpdateCompanyUsers: React.FC = () => {
     if (errorMessage.length !== 0) {
       setErrorMessage([]);
     }
-    // Update the corresponding field for the user
     const updatedUsers = [...users];
     updatedUsers[index][field] = value;
 
@@ -92,7 +128,6 @@ export const UpdateCompanyUsers: React.FC = () => {
     }
 
     shallowUsers.splice(index, 1);
-
     setUsers(shallowUsers);
   };
 
@@ -131,32 +166,78 @@ export const UpdateCompanyUsers: React.FC = () => {
         ),
         ...deleteUsers.map((id) => userDeleteOne.mutateAsync({ id })),
       ]);
+
+      // Refetch current page data
+      const companyUsersRefetch = await companyUsers.refetch();
+
+      if (companyUsersRefetch.data) {
+        const { users: fetchedUsers } = companyUsersRefetch.data;
+        setUsers(
+          fetchedUsers.map(({ email, id, Roles }) => ({
+            id,
+            email: email,
+            password: undefined,
+            action: "initial" as const,
+            role: Roles && Roles?.length > 0 ? Roles[0] : "User",
+          })),
+        );
+      }
+
+      setDeletedUsers([]);
+      setErrorMessage([]);
     } catch (error) {
       if (error instanceof AxiosError) {
         setErrorMessage([
           error.response?.data.message ?? "Something went wrong",
         ]);
       }
+    } finally {
+      setIsLoading(false);
     }
+  };
 
-    const companyUsersRefetch = await companyUsers.refetch({});
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
 
-    if (companyUsersRefetch.data) {
-      setCompanyUsers(companyUsersRefetch.data);
-    }
-
-    setDeletedUsers([]);
+  const handleAddUser = () => {
+    setUsers([
+      ...users,
+      {
+        email: "",
+        password: "",
+        action: "add",
+        id: `user-${Date.now()}`,
+        role: "User",
+      },
+    ]);
   };
 
   if (userSession.status === "loading") return null;
 
   return (
     <div className="mt-4 flex w-full flex-col gap-4">
-      <label className="font-extrabold text-gray-400">Company Users</label>
+      <div className="flex justify-between items-center">
+        <label className="font-extrabold text-gray-400">Company Users</label>
+        <div className="text-sm text-gray-500">
+          Total: {totalUsers} users
+        </div>
+      </div>
+
+      {companyUsers.isLoading && (
+        <div className="text-center py-4">Loading users...</div>
+      )}
+
+      {companyUsers.error && (
+        <div className="text-red-500 text-sm">
+          Error loading users: {companyUsers.error.message}
+        </div>
+      )}
+
       {users?.map((user, index) => (
         <CompanyUserItem
           onChange={handleInputChange}
-          key={`user-${index}`}
+          key={`user-${user.id}`}
           user={{
             id: user.id,
             email: user.email,
@@ -168,34 +249,58 @@ export const UpdateCompanyUsers: React.FC = () => {
           onDelete={handleOnDelete}
         />
       ))}
-      <button
-        onClick={() => {
-          setUsers([
-            ...users,
-            {
-              email: "",
-              password: "",
-              action: "add",
-              id: `user-${users.length + 1}`,
-              role: "User",
-            },
-          ]);
-        }}
-      >
+
+      <button onClick={handleAddUser}>
         <PlusIcon width="15px" />
       </button>
+
       {errorMessage.map((msg, index) => (
-        <p className="text-xs text-danger" key={index}>
+        <p className="text-xs text-red-500" key={index}>
           {msg}
         </p>
       ))}
+
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+        <div className="flex justify-center items-center gap-2 py-4">
+          <Button
+            onClick={() => handlePageChange(currentPage - 1)}
+            disabled={currentPage === 1}
+            className="px-3 py-1 text-sm"
+          >
+            Previous
+          </Button>
+
+          <div className="flex gap-1">
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+              <Button
+                key={page}
+                onClick={() => handlePageChange(page)}
+                className={`px-3 py-1 text-sm ${currentPage === page
+                    ? 'bg-primary text-white'
+                    : 'bg-gray-200 text-gray-700'
+                  }`}
+              >
+                {page}
+              </Button>
+            ))}
+          </div>
+
+          <Button
+            onClick={() => handlePageChange(currentPage + 1)}
+            disabled={currentPage === totalPages}
+            className="px-3 py-1 text-sm"
+          >
+            Next
+          </Button>
+        </div>
+      )}
+
       <div className="w-full">
         <Button
-          onClick={() => {
-            handleSubmit().finally(() => setIsLoading(false));
-          }}
+          onClick={handleSubmit}
           type="submit"
-          className="w-full rounded-xl  bg-primary p-2 text-white"
+          className="w-full rounded-xl bg-primary p-2 text-white"
           isLoading={isLoading}
           disabled={isLoading}
         >
@@ -226,7 +331,7 @@ const CompanyUserItem: React.FC<{
     <div className="flex w-full items-start gap-1">
       <div>
         <input
-          className="border-2"
+          className="border-2 px-2 py-1 rounded"
           type="email"
           onChange={(e) => {
             onChange(index, "email", e.currentTarget.value);
@@ -237,7 +342,7 @@ const CompanyUserItem: React.FC<{
       </div>
       <div>
         <input
-          className="border-2"
+          className="border-2 px-2 py-1 rounded"
           placeholder="password..."
           onChange={(e) => {
             onChange(index, "password", e.currentTarget.value);
@@ -248,21 +353,19 @@ const CompanyUserItem: React.FC<{
       {!user.isMe && (
         <div>
           <select
+            className="border-2 px-2 py-1 rounded"
             onChange={(e) => {
               onChange(index, "role", e.currentTarget.value);
             }}
             defaultValue={user.role}
           >
-            {Object.keys(GetUserResRolesItem).map((role) =>
-              role === "Admin" ? (
-                <option value={role} label={"Admin"} />
-              ) : (
-                <option
-                  value={role}
-                  label={role === "User" ? "Guest" : "User"}
-                />
-              ),
-            )}
+            {Object.keys(GetUserResRolesItem).map((role) => (
+              <option
+                key={role}
+                value={role}
+                label={role === "Admin" ? "Admin" : role === "User" ? "Guest" : "User"}
+              />
+            ))}
           </select>
         </div>
       )}

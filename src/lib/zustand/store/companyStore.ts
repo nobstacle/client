@@ -20,7 +20,7 @@ const useCompanyStore = create<CompanyState>()(
       setCompanyUsers: (companyUsers) => set(() => ({ companyUsers })),
     }),
     {
-      name: "company-storage", // name of the item in the storage (must be unique)
+      name: "company-storage", 
     },
   ),
 );
