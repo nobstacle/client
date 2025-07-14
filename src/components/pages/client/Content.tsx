@@ -355,7 +355,7 @@ export const Content: React.FC = () => {
     ) {
       return (
         <div className="w-full p-5">
-          <p className="text-center text-4xl" style={{ lineHeight: "3.5rem" }}>
+          <p className="text-center text-4xl" style={{ lineHeight: "3.5rem",whiteSpace: 'pre-wrap' }}>
             {messageStore.receivedContent?.content ?? ""}
           </p>
         </div>

@@ -180,7 +180,7 @@ export default function Dashboard() {
                     )}
                     isDraggable={searchTexts.length === 0}
                   >
-                    <p className="line-clamp-6 text-sm ">{val.content ?? ""}</p>
+                    <p className="line-clamp-5 text-sm ">{val.content ?? ""}</p>
                   </DraggableCardItem>
                 ))}
               </DraggableCardContainer>

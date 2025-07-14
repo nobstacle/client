@@ -220,8 +220,8 @@ export default function Dashboard() {
                   }
                   isDraggable={searchWebsites.length === 0}
                 >
-                  <div className="flex w-full items-center justify-center">
-                    <WebsiteIcon width="100px" height="100px" />
+                  <div className="flex w-full items-center justify-center" style={{height:'100%'}}>
+                    <WebsiteIcon width="70px" height="70px" />
                   </div>
                 </DraggableCardItem>
               ))}

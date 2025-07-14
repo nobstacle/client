@@ -33,7 +33,7 @@ export const DraggableCardContainer: React.FC<{
   children: React.ReactNode;
 }> = ({ items, sort, children }) => {
   const [activeId, setActiveId] = React.useState<UniqueIdentifier | null>(null);
-  
+
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(TouchSensor),
@@ -70,9 +70,9 @@ export const DraggableCardContainer: React.FC<{
 
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
-    
+
     setActiveId(null);
-    
+
     if (over && active.id !== over.id) {
       sort(active.id, over.id);
     }
@@ -147,7 +147,7 @@ export const DraggableCardItem: React.FC<
       >
         {/* Content Area - Flexible height */}
         <div className="flex-1 p-2 sm:p-3 md:p-3 lg:p-4 overflow-hidden">
-          <div className="h-full text-xs sm:text-sm md:text-sm lg:text-base leading-tight">
+          <div className="h-full text-xs sm:text-sm md:text-sm lg:text-base leading-tight" style={{whiteSpace: 'pre-wrap'}}>
             {children}
           </div>
         </div>
@@ -218,35 +218,47 @@ export const DraggableCardItem: React.FC<
         {/* Button Footer - Fixed at bottom */}
         <div className="mt-auto">
           <Button className="relative w-full rounded-b-lg bg-primary text-white customFont
-                           h-8 text-xs
-                           sm:h-9 sm:text-sm
-                           md:h-10 md:text-sm
-                           lg:h-11 lg:text-base
-                           xl:h-12 xl:text-base
-                           transition-colors duration-200 hover:bg-primary/90">
-            <span className="block truncate px-2 sm:px-3 md:px-3 lg:px-4 overflow-hidden text-ellipsis whitespace-nowrap">{tag}</span>
+                 h-8 text-xs
+                 sm:h-9 sm:text-xs
+                 md:h-10 md:text-xs
+                 lg:h-11 lg:text-sm
+                 xl:h-12 xl:text-sm
+                 transition-colors duration-200 hover:bg-primary/90">
+            <span className="block px-1 sm:px-2 md:px-2 lg:px-3 overflow-hidden 
+                   text-xs sm:text-xs md:text-xs lg:text-xs xl:text-sm
+                   leading-tight text-center"
+              style={{
+                display: '-webkit-box',
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: 'vertical',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis'
+              }}
+              title={tag}>
+              {tag}
+            </span>
 
             {/* Availability Indicator - Triangle */}
             {!icon && isAvailable && (
               <span
                 className="absolute bottom-0 right-0 
-                           border-b-[8px] border-l-[8px]
-                           border-green-500 border-l-transparent
-                           sm:border-b-[10px] sm:border-l-[10px]
-                           md:border-b-[10px] md:border-l-[10px]
-                           lg:border-b-[12px] lg:border-l-[12px]
-                           xl:border-b-[12px] xl:border-l-[12px]"
+                 border-b-[8px] border-l-[8px]
+                 border-green-500 border-l-transparent
+                 sm:border-b-[10px] sm:border-l-[10px]
+                 md:border-b-[10px] md:border-l-[10px]
+                 lg:border-b-[12px] lg:border-l-[12px]
+                 xl:border-b-[12px] xl:border-l-[12px]"
               />
             )}
             {!icon && !isAvailable && (
               <span
                 className="absolute bottom-0 right-0 
-                           border-b-[8px] border-l-[8px]
-                           border-red-500 border-l-transparent
-                           sm:border-b-[10px] sm:border-l-[10px]
-                           md:border-b-[10px] md:border-l-[10px]
-                           lg:border-b-[12px] lg:border-l-[12px]
-                           xl:border-b-[12px] xl:border-l-[12px]"
+                 border-b-[8px] border-l-[8px]
+                 border-red-500 border-l-transparent
+                 sm:border-b-[10px] sm:border-l-[10px]
+                 md:border-b-[10px] md:border-l-[10px]
+                 lg:border-b-[12px] lg:border-l-[12px]
+                 xl:border-b-[12px] xl:border-l-[12px]"
               />
             )}
           </Button>

@@ -1,5 +1,5 @@
 import * as React from "react";
-import { SubmitHandler, useForm } from "react-hook-form";
+import { Controller, SubmitHandler, useForm } from "react-hook-form";
 import {
   useCompanyControllerGetCompany,
   useTextTemplateControllerCreateTextTemplate,
@@ -7,16 +7,18 @@ import {
 } from "../../../lib/client/api";
 import * as yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
-import Input from "../../Input";
-import { Button } from "../../Button";
+import { Button, Input, Select, Form, Typography, Space } from "antd";
 import { languages } from "../../../constant/languages";
 import { GetTextTemplateRes } from "../../../lib/client/model";
+
+const { TextArea } = Input;
+const { Text } = Typography;
 
 interface CreateTextTemplateFormFieldValues {
   tagCreate?: string;
   tagSelect?: string;
   content: string;
-  langCode: string;
+  langCode?: string;
 }
 
 const schema = yup.object().shape(
@@ -49,20 +51,21 @@ export const CreateTextTemplateForm: React.FC<{
   const company = useCompanyControllerGetCompany();
 
   const {
-    register,
+    control,
     handleSubmit,
     formState: { errors },
   } = useForm<CreateTextTemplateFormFieldValues>({
     resolver: yupResolver(schema),
     defaultValues: {
       tagCreate: "",
-      tagSelect: "",
+      tagSelect: undefined,
       content: "",
-      langCode: "",
+      langCode: undefined,
     },
   });
 
   const createTextTemplate = useTextTemplateControllerCreateTextTemplate();
+  
   const handleCreateTextTemplate = (
     data: CreateTextTemplateFormFieldValues,
   ) => {
@@ -94,86 +97,131 @@ export const CreateTextTemplateForm: React.FC<{
 
   return (
     <form onSubmit={handleSubmit(onSubmit)}>
-      <div className="mt-3 flex flex-col gap-4">
-        <div className="flex flex-col gap-2">
-          <Input
-            register={register}
+      <Space direction="vertical" size="middle" style={{ width: '100%', marginTop: 12 }}>
+        
+        {/* Content Field */}
+        <div>
+          <Text style={{ color: '#6b7280', fontSize: '14px' }}>Content</Text>
+          <Controller
             name="content"
-            label="Content"
-            type="text"
-            required
-            placeholder="Type content here..."
+            control={control}
+            render={({ field }) => (
+              <TextArea
+                {...field}
+                placeholder="Type content here..."
+                status={errors.content ? 'error' : ''}
+                style={{ marginTop: 8 }}
+              />
+            )}
           />
         </div>
-        <div className="flex flex-col items-end">
-          <div className="flex w-full flex-col gap-2 ">
-            <Input
-              register={register}
+
+        {/* Tag Fields */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+          <div style={{ width: '100%' }}>
+            <Text style={{ color: '#6b7280', fontSize: '14px' }}>Tag create or select</Text>
+            <Controller
               name="tagCreate"
-              label="Tag create or select"
-              type="text"
-              required
-              placeholder="Type tag name here..."
+              control={control}
+              render={({ field }) => (
+                <Input
+                  {...field}
+                  placeholder="Type tag name here..."
+                  status={errors.tagCreate ? 'error' : ''}
+                  style={{ marginTop: 8 }}
+                />
+              )}
             />
           </div>
-          <div className="mt-4 flex">
-            <select {...register("tagSelect")}>
-              <option value="">Select tag...</option>
-              {textTags.data?.map((value, index) => (
-                <option value={value.tag} key={`${value.tag}-${index}`}>
-                  {value.tag}
-                </option>
-              ))}
-            </select>
+          
+          <div style={{ marginTop: 16 }}>
+            <Controller
+              name="tagSelect"
+              control={control}
+              render={({ field }) => (
+                <Select
+                  {...field}
+                  placeholder="Select tag..."
+                  style={{ minWidth: 200 }}
+                  status={errors.tagSelect ? 'error' : ''}
+                  allowClear
+                >
+                  {textTags.data?.map((value, index) => (
+                    <Select.Option value={value.tag} key={`${value.tag}-${index}`}>
+                      {value.tag}
+                    </Select.Option>
+                  ))}
+                </Select>
+              )}
+            />
           </div>
         </div>
 
-        <div className="flex flex-col">
-          <label className="text-md text-gray-500">Language</label>
-          <div>
-            <select {...register("langCode")}>
-              <option value="">Select language...</option>
-              {languages.map(({ code, name }) => (
-                <option value={code} key={code}>
-                  {name}
-                </option>
-              ))}
-              <option value="tr">Turkish</option>
-              <option value="fr">French</option>
-            </select>
-          </div>
+        {/* Language Field */}
+        <div>
+          <Text style={{ color: '#6b7280', fontSize: '14px' }}>Language</Text>
+          <Controller
+            name="langCode"
+            control={control}
+            render={({ field }) => (
+              <Select
+                {...field}
+                placeholder="Select language..."
+                style={{ width: '100%', marginTop: 8 }}
+                status={errors.langCode ? 'error' : ''}
+              >
+                {languages.map(({ code, name }) => (
+                  <Select.Option value={code} key={code}>
+                    {name}
+                  </Select.Option>
+                ))}
+                <Select.Option value="tr">Turkish</Select.Option>
+                <Select.Option value="fr">French</Select.Option>
+              </Select>
+            )}
+          />
         </div>
 
-        <div className="text-center">
+        {/* Error Messages */}
+        <div style={{ textAlign: 'center' }}>
           {errors.content && (
-            <p className="text-xs text-rose-600">{errors.content.message}</p>
+            <Text type="danger" style={{ fontSize: '12px', display: 'block' }}>
+              {errors.content.message}
+            </Text>
           )}
           {errors.tagSelect && (
-            <p className="text-xs text-rose-600">
+            <Text type="danger" style={{ fontSize: '12px', display: 'block' }}>
               {errors.tagCreate?.message || errors.tagSelect?.message}
-            </p>
+            </Text>
           )}
           {errors.tagCreate && (
-            <p className="text-xs text-rose-600">{errors.tagCreate?.message}</p>
+            <Text type="danger" style={{ fontSize: '12px', display: 'block' }}>
+              {errors.tagCreate?.message}
+            </Text>
           )}
           {errors.langCode && (
-            <p className="text-xs text-rose-600">{errors.langCode.message}</p>
+            <Text type="danger" style={{ fontSize: '12px', display: 'block' }}>
+              {errors.langCode.message}
+            </Text>
           )}
-
           {createTextTemplate.error?.message && (
-            <p className="text-xs text-rose-600">
-              {createTextTemplate.error.response?.data.message}{" "}
-            </p>
+            <Text type="danger" style={{ fontSize: '12px', display: 'block' }}>
+              {createTextTemplate.error.response?.data.message}
+            </Text>
           )}
         </div>
+
+        {/* Submit Button */}
         <Button
-          isLoading={createTextTemplate.status === "pending"}
+          type="primary"
+          htmlType="submit"
+          loading={createTextTemplate.status === "pending"}
           disabled={createTextTemplate.status === "pending"}
-          type="submit"
+          style={{ width: '100%' }}
         >
           Create Template
         </Button>
-      </div>
+      </Space>
     </form>
   );
 };

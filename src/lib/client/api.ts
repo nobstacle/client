@@ -4099,14 +4099,56 @@ export const useDocumentTemplateControllerPatchDocumentTemplateOrder = <TError =
 
 export const getDocumentTemplateControllerPatchDocumentTemplateOrderMutationOptions = <TError = ErrorType<HttpExceptionSchema>,
 
-	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof documentTemplateControllerPatchDocumentTemplateOrder>>, TError, { id: number; data: BodyType<PatchImageTemplateOrderReq> }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
-	): UseMutationOptions<Awaited<ReturnType<typeof documentTemplateControllerPatchDocumentTemplateOrder>>, TError, { id: number; data: BodyType<PatchImageTemplateOrderReq> }, TContext> => {
+	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof teamDocumentTemplateControllerPatchDocumentTemplateOrder>>, TError, { id: number; data: BodyType<PatchImageTemplateOrderReq> }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+	): UseMutationOptions<Awaited<ReturnType<typeof teamDocumentTemplateControllerPatchDocumentTemplateOrder>>, TError, { id: number; data: BodyType<PatchImageTemplateOrderReq> }, TContext> => {
 	const { mutation: mutationOptions, request: requestOptions } = options ?? {};
 
-	const mutationFn: MutationFunction<Awaited<ReturnType<typeof documentTemplateControllerPatchDocumentTemplateOrder>>, { id: number; data: BodyType<PatchImageTemplateOrderReq> }> = (props) => {
+	const mutationFn: MutationFunction<Awaited<ReturnType<typeof teamDocumentTemplateControllerPatchDocumentTemplateOrder>>, { id: number; data: BodyType<PatchImageTemplateOrderReq> }> = (props) => {
 		const { id, data } = props ?? {};
 
-		return documentTemplateControllerPatchDocumentTemplateOrder(id, data, requestOptions)
+		return teamDocumentTemplateControllerPatchDocumentTemplateOrder(id, data, requestOptions)
+	}
+
+	return { mutationFn, ...mutationOptions }
+}
+
+
+export const teamDocumentTemplateControllerPatchDocumentTemplateOrder = (
+	id: number,
+	patchImageTemplateOrderReq: BodyType<PatchImageTemplateOrderReq>,
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>,) => {
+
+
+	return nobstacleBackendApiInstance<boolean>(
+		{
+			url: `/api/v1/content/image/team-document/order/${id}`, method: 'PATCH',
+			headers: { 'Content-Type': 'application/json', },
+			data: patchImageTemplateOrderReq
+		},
+		options);
+}
+
+
+export const useTeamDocumentTemplateControllerPatchDocumentTemplateOrder = <TError = ErrorType<HttpExceptionSchema>,
+
+	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof imageTemplateControllerPatchImageTemplateOrder>>, TError, { id: number; data: BodyType<PatchImageTemplateOrderReq> }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+	) => {
+
+	const mutationOptions = getDocumentTemplateControllerPatchDocumentTemplateOrderMutationOptions(options);
+
+	return useMutation(mutationOptions);
+}
+
+export const getTeamDocumentTemplateControllerPatchDocumentTemplateOrderMutationOptions = <TError = ErrorType<HttpExceptionSchema>,
+
+	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof teamDocumentTemplateControllerPatchDocumentTemplateOrder>>, TError, { id: number; data: BodyType<PatchImageTemplateOrderReq> }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+	): UseMutationOptions<Awaited<ReturnType<typeof teamDocumentTemplateControllerPatchDocumentTemplateOrder>>, TError, { id: number; data: BodyType<PatchImageTemplateOrderReq> }, TContext> => {
+	const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+
+	const mutationFn: MutationFunction<Awaited<ReturnType<typeof teamDocumentTemplateControllerPatchDocumentTemplateOrder>>, { id: number; data: BodyType<PatchImageTemplateOrderReq> }> = (props) => {
+		const { id, data } = props ?? {};
+
+		return teamDocumentTemplateControllerPatchDocumentTemplateOrder(id, data, requestOptions)
 	}
 
 	return { mutationFn, ...mutationOptions }
