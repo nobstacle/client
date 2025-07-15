@@ -1,17 +1,27 @@
 import * as React from "react";
-import { SubmitHandler, useForm } from "react-hook-form";
+import { SubmitHandler, useForm, Controller } from "react-hook-form";
 import * as yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
-import Input from "../../Input";
-import { Button } from "../../Button";
+import {
+  Form,
+  Input,
+  Button,
+  Select,
+  Space,
+  Typography,
+  Alert,
+  Spin
+} from "antd";
 import { languages } from "../../../constant/languages";
-// import { GetMapsTemplateRes } from "../../../lib/client/model";
 import {
   useCompanyControllerGetCompany,
   useMapTemplateControllerCreateMapTemplate,
   useMapTemplateControllerGetMapTags,
 } from "../../../lib/client/api";
 import { Autocomplete, useJsApiLoader } from "@react-google-maps/api";
+
+const { Text } = Typography;
+const { Option } = Select;
 
 interface CreateMapsTemplateFormFieldValues {
   tagCreate?: string;
@@ -58,8 +68,9 @@ export const CreateMapsTemplateForm: React.FC<{
   const company = useCompanyControllerGetCompany();
 
   const {
-    register,
     handleSubmit,
+    control,
+    setValue,
     formState: { errors },
   } = useForm<CreateMapsTemplateFormFieldValues>({
     resolver: yupResolver(schema),
@@ -71,6 +82,35 @@ export const CreateMapsTemplateForm: React.FC<{
       langCode: "",
     },
   });
+
+  const [originAutocomplete, setOriginAutocomplete] = React.useState<google.maps.places.Autocomplete | null>(null);
+  const [destinationAutocomplete, setDestinationAutocomplete] = React.useState<google.maps.places.Autocomplete | null>(null);
+
+  const onOriginLoad = (autocomplete: google.maps.places.Autocomplete) => {
+    setOriginAutocomplete(autocomplete);
+  };
+
+  const onDestinationLoad = (autocomplete: google.maps.places.Autocomplete) => {
+    setDestinationAutocomplete(autocomplete);
+  };
+
+  const onOriginPlaceChanged = () => {
+    if (originAutocomplete !== null) {
+      const place = originAutocomplete.getPlace();
+      if (place.formatted_address) {
+        setValue("origin", place.formatted_address);
+      }
+    }
+  };
+
+  const onDestinationPlaceChanged = () => {
+    if (destinationAutocomplete !== null) {
+      const place = destinationAutocomplete.getPlace();
+      if (place.formatted_address) {
+        setValue("destination", place.formatted_address);
+      }
+    }
+  };
 
   const createMapsTemplate = useMapTemplateControllerCreateMapTemplate();
 
@@ -104,111 +144,172 @@ export const CreateMapsTemplateForm: React.FC<{
     handleCreateMapsTemplate(data);
 
   if (!isLoaded) {
-    return <p>Loading...</p>;
+    return (
+      <div style={{ textAlign: 'center', padding: '20px' }}>
+        <Spin size="large" />
+        <div style={{ marginTop: '10px' }}>Loading...</div>
+      </div>
+    );
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)}>
-      <div className="mt-3 flex flex-col gap-4">
-        <div className="flex flex-col gap-2">
-          <Autocomplete>
-            <Input
-              register={register}
+    <Form layout="vertical" onFinish={handleSubmit(onSubmit)} className="create-template-form customMapForm">
+      <hr />
+      <Space direction="vertical" size="middle" style={{ width: '100%', paddingTop: '1rem' }}>
+
+        {/* Origin and Destination Address Fields */}
+        <Space direction="vertical" size="small" style={{ width: '100%', rowGap: '0.3rem' }}>
+          <Form.Item
+            label="Origin Address"
+            validateStatus={errors.origin ? 'error' : ''}
+            help={errors.origin?.message}
+            required
+          >
+            <Controller
               name="origin"
-              label="Origin Address"
-              type="text"
-              required
-              placeholder="Type origin address here..."
+              control={control}
+              render={({ field }) => (
+                <Autocomplete
+                  onLoad={onOriginLoad}
+                  onPlaceChanged={onOriginPlaceChanged}
+                >
+                  <Input
+                    {...field}
+                    placeholder="Type origin address here..."
+                    status={errors.origin ? 'error' : ''}
+                  />
+                </Autocomplete>
+              )}
             />
-          </Autocomplete>
+          </Form.Item>
 
-          <Autocomplete>
-            <Input
-              register={register}
+          <Form.Item
+            label="Destination Address"
+            validateStatus={errors.destination ? 'error' : ''}
+            help={errors.destination?.message}
+            required
+          >
+            <Controller
               name="destination"
-              label="Destination Address"
-              type="text"
-              required
-              placeholder="Type destination address here..."
+              control={control}
+              render={({ field }) => (
+                <Autocomplete
+                  onLoad={onDestinationLoad}
+                  onPlaceChanged={onDestinationPlaceChanged}
+                >
+                  <Input
+                    {...field}
+                    placeholder="Type destination address here..."
+                    status={errors.destination ? 'error' : ''}
+                  />
+                </Autocomplete>
+              )}
             />
-          </Autocomplete>
-        </div>
+          </Form.Item>
+        </Space>
 
-        <div className="flex flex-col items-end">
-          <div className="flex w-full flex-col gap-2 ">
-            <Input
-              register={register}
+        {/* Tag Creation/Selection */}
+        <Space direction="vertical" size="small" style={{ width: '100%' }}>
+          <Form.Item
+            label="Create a tag"
+            validateStatus={errors.tagCreate ? 'error' : ''}
+            help={errors.tagCreate?.message}
+            required
+          >
+            <Controller
               name="tagCreate"
-              label="Tag create or select"
-              type="text"
-              required
-              placeholder="Type tag name here..."
+              control={control}
+              render={({ field }) => (
+                <Input
+                  {...field}
+                  placeholder="Type tag name here..."
+                  status={errors.tagCreate ? 'error' : ''}
+                />
+              )}
             />
-          </div>
-          <div className="mt-4 flex">
-            <select {...register("tagSelect")}>
-              <option value="">Select tag...</option>
-              {mapTags.data?.map((value, index) => (
-                <option value={value.tag} key={`${value.tag}-${index}`}>
-                  {value.tag}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
+          </Form.Item>
 
-        <div className="flex flex-col">
-          <label className="text-md text-gray-500">Language</label>
-          <div>
-            <select {...register("langCode")}>
-              <option value="">Select language...</option>
-              {languages.map(({ code, name }) => (
-                <option value={code} key={code}>
-                  {name}
-                </option>
-              ))}
-              <option value="tr">Turkish</option>
-              <option value="fr">French</option>
-            </select>
-          </div>
-        </div>
+          <Form.Item
+            label="Or select an existing tag"
+            validateStatus={errors.tagSelect ? 'error' : ''}
+            help={errors.tagSelect?.message}
+            style={{ marginTop: '0.4rem' }}
+          >
+            <Controller
+              name="tagSelect"
+              control={control}
+              render={({ field }) => (
+                <Select
+                  {...field}
+                  placeholder="Select tag..."
+                  style={{ width: '100%' }}
+                  status={errors.tagSelect ? 'error' : ''}
+                  allowClear
+                >
+                  {mapTags.data?.map((value, index) => (
+                    <Option value={value.tag} key={`${value.tag}-${index}`}>
+                      {value.tag}
+                    </Option>
+                  ))}
+                </Select>
+              )}
+            />
+          </Form.Item>
+        </Space>
 
-        <div className="text-center">
-          {errors.destination && (
-            <p className="text-xs text-rose-600">
-              {errors.destination.message}
-            </p>
-          )}
-
-          {errors.origin && (
-            <p className="text-xs text-rose-600">{errors.origin.message}</p>
-          )}
-          {errors.tagSelect && (
-            <p className="text-xs text-rose-600">
-              {errors.tagCreate?.message || errors.tagSelect?.message}
-            </p>
-          )}
-          {errors.tagCreate && (
-            <p className="text-xs text-rose-600">{errors.tagCreate?.message}</p>
-          )}
-          {errors.langCode && (
-            <p className="text-xs text-rose-600">{errors.langCode.message}</p>
-          )}
-
-          {createMapsTemplate.error?.message && (
-            <p className="text-xs text-rose-600">
-              {createMapsTemplate.error.response?.data.message}{" "}
-            </p>
-          )}
-        </div>
-        <Button
-          isLoading={createMapsTemplate.status === "pending"}
-          disabled={createMapsTemplate.status === "pending"}
-          type="submit"
+        {/* Language Selection */}
+        <Form.Item
+          label="Language"
+          validateStatus={errors.langCode ? 'error' : ''}
+          help={errors.langCode?.message}
+          required
+          style={{ marginTop: '0.3rem' }}
         >
-          Create Template
-        </Button>
-      </div>
-    </form>
+          <Controller
+            name="langCode"
+            control={control}
+            render={({ field }) => (
+              <Select
+                {...field}
+                placeholder="Select language..."
+                style={{ width: '100%' }}
+                status={errors.langCode ? 'error' : ''}
+              >
+                {languages.map(({ code, name }) => (
+                  <Option value={code} key={code}>
+                    {name}
+                  </Option>
+                ))}
+                <Option value="tr">Turkish</Option>
+                <Option value="fr">French</Option>
+              </Select>
+            )}
+          />
+        </Form.Item>
+
+        {/* Error Display */}
+        {createMapsTemplate.error?.message && (
+          <Alert
+            message={createMapsTemplate.error.response?.data.message}
+            type="error"
+            showIcon
+          />
+        )}
+
+        {/* Submit Button */}
+        <Form.Item style={{ textAlign: 'center', marginBottom: 0, marginTop: '0.6rem' }}>
+          <Button
+            type="primary"
+            htmlType="submit"
+            loading={createMapsTemplate.status === "pending"}
+            disabled={createMapsTemplate.status === "pending"}
+            style={{ width: "100%", }}
+            className="create-template-button"
+          >
+            Create Template
+          </Button>
+        </Form.Item>
+      </Space>
+    </Form>
   );
 };

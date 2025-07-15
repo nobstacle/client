@@ -23,6 +23,9 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import Image from "next/image";
 import { useState } from "react";
+import { Typography } from "antd";
+
+const { Text } = Typography;
 
 export const SlideShowDragImage: React.FC<{
   items: { id: number; src: string }[];

@@ -1,5 +1,5 @@
 import * as React from "react";
-import { SubmitHandler, useForm } from "react-hook-form";
+import { SubmitHandler, useForm, Controller } from "react-hook-form";
 import {
   useCompanyControllerGetCompany,
   useTextTemplateControllerGetTextTags,
@@ -8,10 +8,20 @@ import {
 } from "../../../lib/client/api";
 import * as yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
-import Input from "../../Input";
-import { Button } from "../../Button";
+import {
+  Form,
+  Input,
+  Button,
+  Select,
+  Space,
+  Typography,
+  Alert
+} from "antd";
 import { languages } from "../../../constant/languages";
 import { GetWebsiteTemplateRes } from "../../../lib/client/model";
+
+const { Text } = Typography;
+const { Option } = Select;
 
 interface CreateWebsiteTemplateFormFieldValues {
   tagCreate?: string;
@@ -50,8 +60,8 @@ export const CreateWebsiteTemplateForm: React.FC<{
   const company = useCompanyControllerGetCompany();
 
   const {
-    register,
     handleSubmit,
+    control,
     formState: { errors },
   } = useForm<CreateWebsiteTemplateFormFieldValues>({
     resolver: yupResolver(schema),
@@ -65,6 +75,7 @@ export const CreateWebsiteTemplateForm: React.FC<{
 
   const createWebsiteTemplate =
     useWebsiteTemplateControllerCreateWebsiteTemplate();
+
   const handleCreateTextTemplate = (
     data: CreateWebsiteTemplateFormFieldValues,
   ) => {
@@ -96,87 +107,130 @@ export const CreateWebsiteTemplateForm: React.FC<{
   ) => handleCreateTextTemplate(data);
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)}>
-      <div className="mt-3 flex flex-col gap-4">
-        <div className="flex flex-col gap-2">
-          <Input
-            register={register}
-            name="url"
-            label="Url"
-            type="text"
-            required
-            placeholder="Type content here..."
-          />
-        </div>
-        <div className="flex flex-col items-end">
-          <div className="flex w-full flex-col gap-2 ">
-            <Input
-              register={register}
-              name="tagCreate"
-              label="Tag create or select"
-              type="text"
-              required
-              placeholder="Type tag name here..."
-            />
-          </div>
-          <div className="mt-4 flex">
-            <select {...register("tagSelect")}>
-              <option value="">Select tag...</option>
-              {websiteTags.data?.map((value, index) => (
-                <option value={value.tag} key={`${value.tag}-${index}`}>
-                  {value.tag}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
+    <Form layout="vertical" onFinish={handleSubmit(onSubmit)} className="create-template-form customMapForm">
+      <hr />
+      <Space direction="vertical" size="middle" style={{ width: '100%', paddingTop: '1rem' }}>
 
-        <div className="flex flex-col">
-          <label className="text-md text-gray-500">Language</label>
-          <div>
-            <select {...register("langCode")}>
-              <option value="">Select language...</option>
-              {languages.map(({ code, name }) => (
-                <option value={code} key={code}>
-                  {name}
-                </option>
-              ))}
-              <option value="tr">Turkish</option>
-              <option value="fr">French</option>
-            </select>
-          </div>
-        </div>
-
-        <div className="text-center">
-          {errors.url && (
-            <p className="text-xs text-rose-600">{errors.url.message}</p>
-          )}
-          {errors.tagSelect && (
-            <p className="text-xs text-rose-600">
-              {errors.tagCreate?.message || errors.tagSelect?.message}
-            </p>
-          )}
-          {errors.tagCreate && (
-            <p className="text-xs text-rose-600">{errors.tagCreate?.message}</p>
-          )}
-          {errors.langCode && (
-            <p className="text-xs text-rose-600">{errors.langCode.message}</p>
-          )}
-
-          {createWebsiteTemplate.error?.message && (
-            <p className="text-xs text-rose-600">
-              {createWebsiteTemplate.error.response?.data.message}{" "}
-            </p>
-          )}
-        </div>
-        <Button
-          isLoading={createWebsiteTemplate.status === "pending"}
-          disabled={createWebsiteTemplate.status === "pending"}
-          type="submit"
+        {/* URL Field */}
+        <Form.Item
+          label="URL"
+          validateStatus={errors.url ? 'error' : ''}
+          help={errors.url?.message}
+          required
         >
-          Create Template
-        </Button>
-      </div>
-    </form>
+          <Controller
+            name="url"
+            control={control}
+            render={({ field }) => (
+              <Input
+                {...field}
+                placeholder="Type URL here..."
+                status={errors.url ? 'error' : ''}
+              />
+            )}
+          />
+        </Form.Item>
+
+        {/* Tag Creation/Selection */}
+        <Space direction="vertical" size="small" style={{ width: '100%' }}>
+          <Form.Item
+            label="Create a tag"
+            validateStatus={errors.tagCreate ? 'error' : ''}
+            help={errors.tagCreate?.message}
+            required
+          >
+            <Controller
+              name="tagCreate"
+              control={control}
+              render={({ field }) => (
+                <Input
+                  {...field}
+                  placeholder="Type tag name here..."
+                  status={errors.tagCreate ? 'error' : ''}
+                />
+              )}
+            />
+          </Form.Item>
+
+          <Form.Item
+            label="Or select an existing tag"
+            validateStatus={errors.tagSelect ? 'error' : ''}
+            help={errors.tagSelect?.message}
+          >
+            <Controller
+              name="tagSelect"
+              control={control}
+              render={({ field }) => (
+                <Select
+                  {...field}
+                  placeholder="Select tag..."
+                  style={{ width: '100%' }}
+                  status={errors.tagSelect ? 'error' : ''}
+                  allowClear
+                >
+                  {websiteTags.data?.map((value, index) => (
+                    <Option value={value.tag} key={`${value.tag}-${index}`}>
+                      {value.tag}
+                    </Option>
+                  ))}
+                </Select>
+              )}
+            />
+          </Form.Item>
+        </Space>
+
+        {/* Language Selection */}
+        <Form.Item
+          label="Language"
+          validateStatus={errors.langCode ? 'error' : ''}
+          help={errors.langCode?.message}
+          required
+        >
+          <Controller
+            name="langCode"
+            control={control}
+            render={({ field }) => (
+              <Select
+                {...field}
+                placeholder="Select language..."
+                style={{ width: '100%' }}
+                status={errors.langCode ? 'error' : ''}
+              >
+                {languages.map(({ code, name }) => (
+                  <Option value={code} key={code}>
+                    {name}
+                  </Option>
+                ))}
+                <Option value="tr">Turkish</Option>
+                <Option value="fr">French</Option>
+              </Select>
+            )}
+          />
+        </Form.Item>
+
+        {/* Error Display */}
+        {createWebsiteTemplate.error?.message && (
+          <Alert
+            message={createWebsiteTemplate.error.response?.data.message}
+            type="error"
+            showIcon
+          />
+        )}
+
+        {/* Submit Button */}
+        <Form.Item style={{ textAlign: 'center', marginBottom: 0 }}>
+          <Button
+            type="primary"
+            htmlType="submit"
+            loading={createWebsiteTemplate.status === "pending"}
+            disabled={createWebsiteTemplate.status === "pending"}
+            style={{ width: "100%", }}
+            className="create-template-button"
+          >
+            Create Template
+          </Button>
+        </Form.Item>
+      </Space>
+    </Form>
   );
 };

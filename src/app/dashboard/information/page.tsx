@@ -1,21 +1,18 @@
 "use client";
 
 import React, { useEffect, useState, useCallback, useRef } from 'react';
-import { Select, Table, Button, Space, Checkbox, Tag, InputNumber, Typography, Radio, Card, Modal, Form, Input, Upload, Row, Col, Image, message, Spin } from 'antd';
+import { Table, Button, Space, Typography, Card, Modal, Form, Input, Upload, Row, Col, Image, message, Spin } from 'antd';
 import { EditOutlined, DeleteOutlined } from '@ant-design/icons';
-import { useHasHydrated } from "../../../hooks/useHydrated";
 import "../../../styles/base.css";
-import dayjs from 'dayjs';
-import { UploadOutlined, FileTextOutlined, PictureOutlined, BellOutlined } from '@ant-design/icons';
-import { useMutation } from "@tanstack/react-query";
+import { UploadOutlined, FileTextOutlined, PictureOutlined } from '@ant-design/icons';
 import { useSession } from "next-auth/react";
-import { toast, Bounce } from 'react-toastify';
 import "react-toastify/dist/ReactToastify.css";
 import { PlusIcon } from "../../../components/icons/PlusIcon";
 import { FaTrash } from "react-icons/fa";
 import { RiEdit2Fill } from "react-icons/ri";
+import { useSocketContext } from "../../../context/SocketContextProvider";
+import { useSearchParams } from "next/navigation";
 
-const { Option } = Select;
 const { TextArea } = Input;
 const { Text } = Typography;
 
@@ -39,7 +36,6 @@ interface PaginationResponse {
 }
 
 export default function InformationNotes() {
-    const hasHydrated = useHasHydrated();
     let isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [form] = Form.useForm();
@@ -58,10 +54,48 @@ export default function InformationNotes() {
     const observerRef = useRef<IntersectionObserver | null>(null);
     const loadingRef = useRef<HTMLDivElement>(null);
     const debounceRef = useRef<NodeJS.Timeout>();
+    const { socket } = useSocketContext();
+    const { emitUpdateInformation } = useSocketContext();
+    const params = useSearchParams();
 
     let Url = process.env.NEXT_PUBLIC_BACKEND_URL;
     let role = data?.user?.Roles?.[0];
     const ITEMS_PER_PAGE = 10;
+
+
+    useEffect(() => {
+        if (!socket) return;
+
+        const handleConnect = () => {
+            console.log("Socket connected:", socket.id);
+        };
+
+        const handleDisconnect = (reason: string) => {
+            console.warn("Socket disconnected:", reason);
+        };
+
+        const handleError = (err: any) => {
+            console.error("Socket error:", err);
+        };
+
+
+        const handleInformationUpdated = (data: any) => {
+            console.info("🔄 Information updated by another user, refreshing...", data);
+            // fetchInformation(currentPage, searchTerm);
+        };
+
+        socket.on("connect", handleConnect);
+        socket.on("disconnect", handleDisconnect);
+        socket.on("connect_error", handleError);
+        socket.on("information-updated", handleInformationUpdated);
+
+        return () => {
+            socket.off("connect", handleConnect);
+            socket.off("disconnect", handleDisconnect);
+            socket.off("connect_error", handleError);
+            socket.off("information-updated", handleInformationUpdated);
+        };
+    }, [socket, currentPage, searchTerm, params, emitUpdateInformation]);
 
     const columns = [
         {
@@ -268,7 +302,7 @@ export default function InformationNotes() {
         if (data?.user !== undefined) {
             fetchInformation(1, '', true);
         }
-    }, [data, fetchInformation]);
+    }, [data]);
 
     // Cleanup debounce on unmount
     useEffect(() => {
@@ -315,10 +349,13 @@ export default function InformationNotes() {
 
                     if (response.ok) {
                         message.success('Information note deleted successfully');
-                        // Refresh the list from the beginning
+
+                        socket?.emit('dataDeleted', {
+                            itemId: record.id.toString()
+                        });
+
                         setCurrentPage(1);
                         setHasMore(true);
-                        fetchInformation(1, searchTerm, true);
                     } else {
                         throw new Error('Failed to delete');
                     }
@@ -364,12 +401,23 @@ export default function InformationNotes() {
             });
 
             if (response.ok) {
+                const responseData = await response.json();
                 message.success(editRecordData ? 'Information note updated successfully!' : 'Information note created successfully!');
+
+                if (editRecordData) {
+                    socket?.emit('dataUpdated', {
+                        formId: 'information-form',
+                        itemId: editRecordData.id.toString()
+                    });
+                } else {
+                    socket?.emit('dataSaved', {
+                        formId: responseData.id?.toString() || 'information-form'
+                    });
+                }
+
                 handleModalCancel();
-                // Refresh the list from the beginning
                 setCurrentPage(1);
                 setHasMore(true);
-                fetchInformation(1, searchTerm, true);
             } else {
                 const errorData = await response.json();
                 throw new Error(errorData.message || 'Failed to save information note');

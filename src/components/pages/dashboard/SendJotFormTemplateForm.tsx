@@ -28,8 +28,6 @@ const getBackendUrl = () => {
 		: process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
 };
 
-// const dateFormat = 'DD/MM/YYYY';
-
 const schema = yup
 	.object({
 		url: yup.string().url("Invalid URL format"),

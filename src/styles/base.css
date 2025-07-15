@@ -394,8 +394,8 @@ button {
 .ant-btn:hover,
 .ant-btn:focus,
 .ant-btn:active {
-  color: white !important;
-  border-color: inherit !important;
+  color: white;
+  border-color: inherit;
   box-shadow: none !important;
 }
 
@@ -863,4 +863,31 @@ button {
   overflow: hidden;
   text-overflow: ellipsis;
   line-height: 1.2;
+}
+
+.create-template-form {
+  margin-top: 1rem;
+}
+
+.create-template-form .ant-upload-wrapper .ant-upload {
+  width: 100%;
+  display: flex;
+}
+
+.create-template-form .ant-upload-wrapper .ant-upload button {
+  width: 100%;
+}
+
+.create-template-form .create-template-button {
+  background: #3b5998;
+  color: white !important;
+}
+
+.create-template-form .create-template-button:hover {
+  background: #2d4373 !important;
+  color: white !important;
+}
+
+.customMapForm .ant-form-item {
+  margin-bottom: 0.3rem;
 }

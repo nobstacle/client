@@ -1,5 +1,5 @@
 import * as React from "react";
-import { SubmitHandler, useForm } from "react-hook-form";
+import { SubmitHandler, useForm, Controller } from "react-hook-form";
 import {
   getTemplateControllerGetImageTemplatesQueryOptions,
   templateControllerGetImageTemplates,
@@ -10,10 +10,12 @@ import {
 } from "../../../lib/client/api";
 import * as yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
-import Input from "../../Input";
-import { Button } from "../../Button";
+import { Button, Upload, Select, Form, Input, Alert, Typography } from "antd";
+import { UploadOutlined } from "@ant-design/icons";
 import { languages } from "../../../constant/languages";
 import { GetImageTemplateRes } from "../../../lib/client/model";
+
+const { Text } = Typography;
 
 interface CreateImageTemplateFormFieldValues {
   file: any;
@@ -51,9 +53,11 @@ export const CreateImageTemplateForm: React.FC<{
   const company = useCompanyControllerGetCompany();
 
   const {
-    register,
+    control,
     handleSubmit,
     formState: { errors },
+    setValue,
+    watch,
   } = useForm<CreateImageTemplateFormFieldValues>({
     resolver: yupResolver(schema),
   });
@@ -98,82 +102,131 @@ export const CreateImageTemplateForm: React.FC<{
   const onSubmit: SubmitHandler<CreateImageTemplateFormFieldValues> = (data) =>
     handleCreateImageTemplateCreate(data);
 
+  const uploadProps = {
+    accept: "image/png, image/jpeg, image/gif",
+    beforeUpload: (file: File) => {
+      setValue("file", [file]);
+      return false; // Prevent automatic upload
+    },
+    showUploadList: true,
+    maxCount: 1,
+  };
+
+  const tagOptions = imageTags.data?.map((value, index) => ({
+    value: value.tag,
+    label: value.tag,
+  })) || [];
+
+  const languageOptions = [
+    ...languages.map(({ code, name }) => ({
+      value: code,
+      label: name,
+    })),
+    { value: "tr", label: "Turkish" },
+    { value: "fr", label: "French" },
+  ];
+
   return (
-    <form onSubmit={handleSubmit(onSubmit)}>
+    <form onSubmit={handleSubmit(onSubmit)} className="create-template-form">
+      <hr />
       <div className="mt-3 flex flex-col gap-4">
         <div className="flex flex-col gap-2">
-          <Input
-            register={register}
+          <Text>Image to upload</Text>
+          <Controller
             name="file"
-            label="Image to upload"
-            type="file"
-            required
-            accept="image/png, image/jpeg, image/gif"
+            control={control}
+            render={({ field }) => (
+              <Upload {...uploadProps}>
+                <Button style={{ color: '#000' }} icon={<UploadOutlined />}>Upload Image</Button>
+              </Upload>
+            )}
           />
         </div>
-        <div className="flex flex-col items-end">
-          <div className="flex w-full flex-col gap-2 ">
-            <Input
-              register={register}
+
+        <div className="flex flex-col items-start">
+          <div className="flex w-full flex-col gap-2">
+            <Text>Create a tag</Text>
+            <Controller
               name="tagCreate"
-              label="Tag create or select"
-              type="text"
-              required
-              placeholder="Type tag name here..."
+              control={control}
+              render={({ field }) => (
+                <Input
+                  {...field}
+                  placeholder="Type tag name here..."
+                  size="middle"
+                />
+              )}
             />
           </div>
-          <div className="mt-4 flex">
-            <select {...register("tagSelect")}>
-              <option value="">Select tag...</option>
-              {imageTags.data?.map((value, index) => (
-                <option value={value.tag} key={`${value.tag}-${index}`}>
-                  {value.tag}
-                </option>
-              ))}
-            </select>
+          <div className="mt-4" style={{ width: "100%" }}>
+            <Text>Or select an existing tag</Text>
+            <Controller
+              name="tagSelect"
+              control={control}
+              render={({ field }) => (
+                <Select
+                  {...field}
+                  placeholder="Select tag..."
+                  style={{ width: '100%' }}
+                  options={tagOptions}
+                  allowClear
+                />
+              )}
+            />
           </div>
         </div>
 
         <div className="flex flex-col">
-          <label className="text-md text-gray-500">Language</label>
-          <div>
-            <select {...register("langCode")}>
-              <option value="">Select language...</option>
-              {languages.map(({ code, name }) => (
-                <option value={code} key={code}>
-                  {name}
-                </option>
-              ))}
-              <option value="tr">Turkish</option>
-              <option value="fr">French</option>
-            </select>
-          </div>
+          <Text>Language</Text>
+          <Controller
+            name="langCode"
+            control={control}
+            render={({ field }) => (
+              <Select
+                {...field}
+                placeholder="Select language..."
+                style={{ width: "100%" }}
+                options={languageOptions}
+              />
+            )}
+          />
         </div>
 
         <div className="text-center">
           {errors.file && (
-            <p className="text-xs text-rose-600">File is required</p>
+            <Alert message="File is required" type="error" showIcon className="mb-2" />
           )}
           {errors.tagSelect && (
-            <p className="text-xs text-rose-600">Tag is required</p>
+            <Alert message="Tag is required" type="error" showIcon className="mb-2" />
           )}
           {errors.tagCreate && (
-            <p className="text-xs text-rose-600">{errors.tagCreate?.message}</p>
+            <Alert
+              message={errors.tagCreate?.message}
+              type="error"
+              showIcon
+              className="mb-2"
+            />
           )}
           {errors.langCode && (
-            <p className="text-xs text-rose-600">Language is required</p>
+            <Alert message="Language is required" type="error" showIcon className="mb-2" />
           )}
 
           {uploadFile.error?.message && (
-            <p className="text-xs text-rose-600">
-              {uploadFile.error.response?.data.message}{" "}
-            </p>
+            <Alert
+              message={uploadFile.error.response?.data.message}
+              type="error"
+              showIcon
+              className="mb-2"
+            />
           )}
         </div>
+
         <Button
-          isLoading={uploadFile.status === "pending"}
+          type="primary"
+          loading={uploadFile.status === "pending"}
           disabled={uploadFile.status === "pending"}
-          type="submit"
+          htmlType="submit"
+          size="middle"
         >
           Create Template
         </Button>

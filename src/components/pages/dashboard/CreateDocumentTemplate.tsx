@@ -1,9 +1,18 @@
 import * as React from "react";
-import { SubmitHandler, useForm } from "react-hook-form";
+import { SubmitHandler, useForm, Controller } from "react-hook-form";
 import * as yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
-import Input from "../../Input";
-import { Button } from "../../Button";
+import { 
+    Form, 
+    Input, 
+    Select, 
+    Upload, 
+    Button, 
+    Space, 
+    Typography, 
+    message 
+} from "antd";
+import { UploadOutlined, InboxOutlined } from "@ant-design/icons";
 import { languages } from "../../../constant/languages";
 import {
     useCompanyControllerGetCompany,
@@ -14,9 +23,13 @@ import { useSession } from "next-auth/react";
 import { toast, Bounce } from 'react-toastify';
 import "react-toastify/dist/ReactToastify.css";
 
+const { Text } = Typography;
+const { Option } = Select;
+
 interface UploadDocTemplateFormValues {
     file: FileList;
-    docName: string;
+    tagCreate?: string;
+    tagSelect?: string;
     langCode: string;
     templateId: string;
 }
@@ -59,9 +72,21 @@ const createSchema = (isUpdateMode: boolean) =>
                     ].includes(v[0].type);
 
                 }),
-        docName: yup.string().required("Document name is required").max(100, "Document name must be less than 100 characters"),
         langCode: yup.string().required("Language is required"),
-    });
+        tagSelect: yup.string().when("tagCreate", {
+            is: (val: any) => !val || val.length === 0,
+            then: () => yup.string().required("Tag is required"),
+            otherwise: () => yup.string(),
+        }),
+        tagCreate: yup.string().when("tagSelect", {
+            is: (val: any) => !val || val.length === 0,
+            then: () => yup
+                .string()
+                .required("Tag is required")
+                .max(100, "Document name must be less than 100 characters"),
+            otherwise: () => yup.string(),
+        }),
+    }, [["tagCreate", "tagSelect"]]);
 
 export const UploadDocumentTemplateForm: React.FC<{
     onSuccess?: (data: any) => void;
@@ -81,10 +106,12 @@ export const UploadDocumentTemplateForm: React.FC<{
         reset,
         watch,
         setValue,
+        control,
     } = useForm<UploadDocTemplateFormValues>({
         resolver: yupResolver(createSchema(isUpdateMode)),
         defaultValues: {
-            docName: isUpdateMode ? document?.tag || '' : '',
+            tagCreate: isUpdateMode ? document?.tag || '' : '',
+            tagSelect: '',
             langCode: isUpdateMode ? document?.langCode || '' : '',
         }
     });
@@ -92,12 +119,14 @@ export const UploadDocumentTemplateForm: React.FC<{
     // Set default values when document changes (for update mode)
     React.useEffect(() => {
         if (isUpdateMode && document) {
-            setValue('docName', document.tag || '');
+            setValue('tagCreate', document.tag || '');
+            setValue('tagSelect', '');
             setValue('langCode', document.langCode || '');
         } else {
             // Reset form for create mode
             reset({
-                docName: '',
+                tagCreate: '',
+                tagSelect: '',
                 langCode: '',
                 file: undefined,
             });
@@ -184,7 +213,9 @@ export const UploadDocumentTemplateForm: React.FC<{
             formData.append('file', data.file[0]);
         }
 
-        formData.append('tag', data.docName);
+        // Use either tagCreate or tagSelect for the tag value
+        const tagValue = data.tagCreate || data.tagSelect;
+        formData.append('tag', tagValue);
         formData.append('langCode', data.langCode);
         formData.append('defaultLangCode', company.data?.defaultLangCode ?? "en");
 
@@ -200,126 +231,153 @@ export const UploadDocumentTemplateForm: React.FC<{
     // Handler for dropdown selection
     const handleTagSelect = (selectedTag: string) => {
         if (selectedTag) {
-            setValue('docName', selectedTag);
+            setValue('tagSelect', selectedTag);
+            setValue('tagCreate', ''); // Clear the create input when selecting
         }
     };
 
+    // Handler for input change
+    const handleTagCreate = (value: string) => {
+        setValue('tagCreate', value);
+        if (value) {
+            setValue('tagSelect', ''); // Clear the select when typing
+        }
+    };
+
+    // Custom file upload props
+    const uploadProps = {
+        beforeUpload: (file: File) => {
+            // Create a FileList-like object
+            const fileList = [file] as any;
+            fileList.length = 1;
+            setValue('file', fileList);
+            return false; // Prevent automatic upload
+        },
+        maxCount: 1,
+        accept: '.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx',
+        showUploadList: false,
+    };
+
     return (
-        <>
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-                {/* File Upload Section */}
-                <div>
-                    <Input
-                        register={register}
-                        name="file"
-                        label={isUpdateMode ? "Replace Document (Optional)" : "Upload Document"}
-                        type="file"
-                        accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx"
-                        required={!isUpdateMode}
-                    />
-                    {errors.file && (
-                        <p className="text-red-600 text-sm mt-1">
-                            {errors.file.message}
-                        </p>
-                    )}
-
-                    {/* Show current file info in update mode */}
-                    {isUpdateMode && document && !fileInfo && (
-                        <p className="text-sm text-blue-600 mt-1">
-                            Current file: {document.originalName || document.tag}.{document.ext}
-                        </p>
-                    )}
-
-                    {/* Show selected new file info */}
-                    {fileInfo && (
-                        <p className="text-sm text-gray-600 mt-1">
-                            {isUpdateMode ? 'New file selected: ' : 'Selected: '}
-                            {fileInfo.name} ({(fileInfo.size / 1024 / 1024).toFixed(2)} MB)
-                        </p>
-                    )}
-
-                    {/* File type hint */}
-                    <p className="text-xs text-gray-500 mt-1">
+        <Form layout="vertical" onFinish={handleSubmit(onSubmit)} className="create-template-form space-y-4">
+                 <hr />
+            {/* File Upload Section */}
+            <Form.Item
+                label={isUpdateMode ? "Replace Document (Optional)" : "Upload Document"}
+                validateStatus={errors.file ? 'error' : ''}
+                help={errors.file?.message}
+                required={!isUpdateMode}
+            >
+                <Upload.Dragger {...uploadProps}>
+                    <p className="ant-upload-drag-icon">
+                        <InboxOutlined />
+                    </p>
+                    <p className="ant-upload-text">
+                        Click or drag file to this area to upload
+                    </p>
+                    <p className="ant-upload-hint">
                         Accepted formats: PDF, DOC, DOCX, PPT, PPTX, XLS, XLSX (Max 10MB)
                     </p>
+                </Upload.Dragger>
 
-                </div>
+                {/* Show current file info in update mode */}
+                {isUpdateMode && document && !fileInfo && (
+                    <Text type="secondary" className="block mt-2">
+                        Current file: {document.originalName || document.tag}.{document.ext}
+                    </Text>
+                )}
 
-                {/* Document Tag Section */}
-                <div>
-                    <Input
-                        register={register}
-                        name="docName"
-                        label="Document Tag"
-                        placeholder="Enter tag name or select from dropdown..."
-                        required
-                    />
-                    {errors.docName && (
-                        <p className="text-red-600 text-sm mt-1">
-                            {errors.docName.message}
-                        </p>
-                    )}
+                {/* Show selected new file info */}
+                {fileInfo && (
+                    <Text type="secondary" className="block mt-2">
+                        {isUpdateMode ? 'New file selected: ' : 'Selected: '}
+                        {fileInfo.name} ({(fileInfo.size / 1024 / 1024).toFixed(2)} MB)
+                    </Text>
+                )}
+            </Form.Item>
 
-                    {/* Tag Dropdown */}
-                    <div className="mt-2">
-                        <label className="block text-xs font-medium text-gray-600 mb-1">
-                            Or select existing tag:
-                        </label>
-                        <select
-                            onChange={(e) => handleTagSelect(e.target.value)}
-                            className="w-full border border-gray-300 p-2 rounded text-sm"
-                            defaultValue=""
-                        >
-                            <option value="">Select existing tag...</option>
-                            {documentTags.data?.map((value, index) => (
-                                <option value={value.tag} key={`${value.tag}-${index}`}>
-                                    {value.tag}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-                </div>
-
-                {/* Language Selection */}
-                <div>
-                    <label className="block text-sm font-medium mb-1">Language *</label>
-                    <select
-                        {...register("langCode")}
-                        className={`w-full border p-2 rounded ${errors.langCode ? "border-red-500" : "border-gray-300"
-                            }`}
-                        required
+            {/* Document Tag Section */}
+            <Form.Item
+                label="Document Tag"
+                validateStatus={errors.tagCreate || errors.tagSelect ? 'error' : ''}
+                help={errors.tagCreate?.message || errors.tagSelect?.message}
+                required
+            >
+                <Input
+                    placeholder="Type tag name here..."
+                    value={watch('tagCreate') || ''}
+                    onChange={(e) => handleTagCreate(e.target.value)}
+                />
+                
+                {/* Tag Dropdown */}
+                <div className="mt-2">
+                    <Text type="secondary" className="block mb-1">
+                        Or select an existing tag
+                    </Text>
+                    <Select
+                        placeholder="Select existing tag..."
+                        onChange={handleTagSelect}
+                        className="w-full"
+                        allowClear
+                        value={watch('tagSelect') || undefined}
                     >
-                        <option value="">Select language...</option>
-                        {languages.map((l) => (
-                            <option key={l.code} value={l.code}>
-                                {l.name}
-                            </option>
+                        {documentTags.data?.map((value, index) => (
+                            <Option value={value.tag} key={`${value.tag}-${index}`}>
+                                {value.tag}
+                            </Option>
                         ))}
-                        <option value="tr">Turkish</option>
-                        <option value="fr">French</option>
-                    </select>
+                    </Select>
                 </div>
+            </Form.Item>
 
-                {/* Form Actions */}
-                <div className="flex justify-end space-x-2 pt-4">
-                    {onClose && (
+            {/* Language Selection */}
+            <Form.Item
+                label="Language"
+                validateStatus={errors.langCode ? 'error' : ''}
+                help={errors.langCode?.message}
+                required
+            >
+                <Controller
+                    name="langCode"
+                    control={control}
+                    render={({ field }) => (
+                        <Select
+                            {...field}
+                            placeholder="Select language..."
+                                 status={errors.langCode ? "error" : ""}
+                            className="w-full"
+                        >
+                          {languages.map(({ code, name }) => (
+                                            <Option value={code} key={code}>
+                                              {name}
+                                            </Option>
+                                          ))}
+                            <Option value="tr">Turkish</Option>
+                            <Option value="fr">French</Option>
+                        </Select>
+                    )}
+                />
+            </Form.Item>
+
+            {/* Form Actions */}
+                    {/* {onClose && (
                         <Button
                             onClick={onClose}
                             disabled={uploadDocument.isPending}
-                            type="button"
                         >
                             Cancel
                         </Button>
-                    )}
+                    )} */}
                     <Button
-                        isLoading={uploadDocument.isPending}
+                        type="primary"
+                        htmlType="submit"
+                        loading={uploadDocument.isPending}
                         disabled={uploadDocument.isPending}
-                        type="submit"
+                          style={{ width: "100%" }}
+          className="create-template-button"
                     >
                         {isUpdateMode ? 'Update Document' : 'Upload Document'}
                     </Button>
-                </div>
-            </form>
-        </>
+        </Form>
     );
 };

@@ -7,15 +7,18 @@ import {
   useUploadControllerUploadCompanyFile,
   useUploadControllerUploadCompanyFileMany,
 } from "../../../lib/client/api";
-import { Button } from "../../Button";
+import { Button, Upload, Select, Typography, Space, Alert } from "antd";
+import { UploadOutlined } from "@ant-design/icons";
 import { SlideShowDragImage } from "./Slideshow/DragImage";
 import { arrayMove } from "@dnd-kit/sortable";
 import { UniqueIdentifier } from "@dnd-kit/core";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
-import Input from "../../Input";
 import { languages } from "../../../constant/languages";
 import { GetSlideshowTemplateRes } from "../../../lib/client/model";
+
+const { Text } = Typography;
+const { Option } = Select;
 
 interface CreateSlideshowTemplateFormFieldValues {
   langCode: string;
@@ -52,6 +55,8 @@ export const CreateSlideshowTemplateForm: React.FC<{
     register,
     handleSubmit,
     formState: { errors },
+    setValue,
+    watch,
   } = useForm<CreateSlideshowTemplateFormFieldValues>({
     resolver: yupResolver(schema),
   });
@@ -123,91 +128,147 @@ export const CreateSlideshowTemplateForm: React.FC<{
     data,
   ) => handleCreateSlideshowTemplate(data);
 
-  return (
-    <form onSubmit={handleSubmit(onSubmit)}>
-      <div className="mt-3 flex flex-col gap-4">
-        <div className="flex flex-col gap-2">
-          <SlideShowDragImage
-            removeImagePreview={removeImagePreview}
-            sort={sortImages}
-            items={images}
-          />
-        </div>
-        <div>
-          <input
-            name="file"
-            type="file"
-            required
-            onChange={addImagePreview}
-            accept="image/png, image/jpeg"
-          />
-        </div>
+  // Custom upload props to integrate with react-hook-form
+  const uploadProps = {
+    beforeUpload: (file: any) => {
+      const src = URL.createObjectURL(file);
+      setImages([...images, { id: images.length + 1, src, file }]);
+      return false; // Prevent automatic upload
+    },
+    maxCount: 1,
+    accept: "image/png, image/jpeg",
+    showUploadList: false, // We handle the list with SlideShowDragImage
+  };
 
-        <div className="flex flex-col items-end">
-          <div className="flex w-full flex-col gap-2 ">
-            <Input
-              register={register}
-              name="tagCreate"
-              label="Tag create or select"
-              type="text"
-              required
-              placeholder="Type tag name here..."
+  console.info("imagesimages", images);
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)} className="create-template-form">
+      <hr />
+      <Space direction="vertical" size="middle" style={{ width: "100%", paddingTop: '1rem' }}>
+        {images?.length > 0 && (
+          <div>
+            <SlideShowDragImage
+              removeImagePreview={removeImagePreview}
+              sort={sortImages}
+              items={images}
             />
           </div>
-          <div className="mt-4 flex">
-            <select {...register("tagSelect")}>
-              <option value="">Select tag...</option>
+        )}
+        <div>
+          <Text>Image to upload</Text>
+          <Upload {...uploadProps}>
+            <Button style={{ color: '#000' }} icon={<UploadOutlined />}>Add Image</Button>
+          </Upload>
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start" }}>
+          <div style={{ width: "100%" }}>
+            <Text>Create a tag</Text>
+            <input
+              style={{
+                width: "100%",
+                borderRadius: "6px",
+                border: "1px solid #d9d9d9",
+                padding: "8px 11px",
+                fontSize: "14px",
+                outline: "none",
+                transition: "border-color 0.3s",
+              }}
+              {...register("tagCreate")}
+              placeholder="Type tag name here..."
+              onFocus={(e) => {
+                e.target.style.borderColor = "#1890ff";
+              }}
+              onBlur={(e) => {
+                e.target.style.borderColor = "#d9d9d9";
+              }}
+            />
+          </div>
+          <div style={{ marginTop: "16px", width: "100%" }}>
+            <Text>Or select an existing tag</Text>
+            <Select
+              placeholder="Select tag..."
+              style={{ width: '100%' }}
+              {...register("tagSelect")}
+              onChange={(value) => setValue("tagSelect", value)}
+            >
+              <Option value="">Select tag...</Option>
               {slideshowTags.data?.map((value, index) => (
-                <option value={value.tag} key={`${value.tag}-${index}`}>
+                <Option value={value.tag} key={`${value.tag}-${index}`}>
                   {value.tag}
-                </option>
+                </Option>
               ))}
-            </select>
+            </Select>
           </div>
         </div>
 
-        <div className="flex flex-col">
-          <label className="text-md text-gray-500">Language</label>
-          <div>
-            <select {...register("langCode")}>
-              <option value="">Select language...</option>
-              {languages.map(({ code, name }) => (
-                <option value={code} key={code}>
-                  {name}
-                </option>
-              ))}
-              <option value="tr">Turkish</option>
-              <option value="fr">French</option>
-            </select>
-          </div>
+        <div>
+          <Text>Language</Text>
+          <Select
+            placeholder="Select language..."
+            style={{ width: "100%" }}
+            {...register("langCode")}
+            onChange={(value) => setValue("langCode", value)}
+          >
+            <Option value="">Select language...</Option>
+            {languages.map(({ code, name }) => (
+              <Option value={code} key={code}>
+                {name}
+              </Option>
+            ))}
+            <Option value="tr">Turkish</Option>
+            <Option value="fr">French</Option>
+          </Select>
         </div>
 
-        <div className="text-center">
+        <div style={{ textAlign: "center" }}>
           {errors.tagSelect && (
-            <p className="text-xs text-rose-600">Tag is required</p>
+            <Alert
+              message="Tag is required"
+              type="error"
+              showIcon
+              style={{ marginBottom: "8px" }}
+            />
           )}
           {errors.tagCreate && (
-            <p className="text-xs text-rose-600">{errors.tagCreate?.message}</p>
+            <Alert
+              message={errors.tagCreate?.message}
+              type="error"
+              showIcon
+              style={{ marginBottom: "8px" }}
+            />
           )}
           {errors.langCode && (
-            <p className="text-xs text-rose-600">Language is required</p>
+            <Alert
+              message="Language is required"
+              type="error"
+              showIcon
+              style={{ marginBottom: "8px" }}
+            />
           )}
 
           {uploadManyFile.error?.message && (
-            <p className="text-xs text-rose-600">
-              {uploadManyFile.error.response?.data.message}{" "}
-            </p>
+            <Alert
+              message={uploadManyFile.error.response?.data.message}
+              type="error"
+              showIcon
+              style={{ marginBottom: "8px" }}
+            />
           )}
         </div>
 
         <Button
-          type="submit"
-          isLoading={uploadManyFile.status === "pending"}
+          type="primary"
+          htmlType="submit"
+          loading={uploadManyFile.status === "pending"}
           disabled={uploadManyFile.status === "pending" || images.length === 0}
+          style={{ width: "100%", }}
+          className="create-template-button"
         >
           Create Template
         </Button>
-      </div>
+      </Space>
     </form>
   );
 };

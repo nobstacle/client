@@ -38,6 +38,27 @@ export interface ReceivedDocumentContent {
   timestamp?: string;
 }
 
+// Add information update types
+export interface SendInformationUpdatePayloadType {
+  refId: number;
+  langCode: string;
+  refType: string;
+  station: number;
+  contentExtra?: string;
+}
+
+export interface ReceivedInformationContent {
+  id: number;
+  tag: string;
+  url?: string;
+  ext?: string;
+  langCode: string[];
+  station: number;
+  timestamp?: string;
+  content?: string;
+  title?: string;
+}
+
 export const SocketContext = createContext<{
   socket: undefined | Socket<any, any>;
   emitSendTemplate: (data: SendTemplatePayloadType) => void;
@@ -50,6 +71,7 @@ export const SocketContext = createContext<{
   emitSendSurveyAnswer: (data: SendSurveyMessagePayloadType) => void;
   emitSendSurvey: (data: SendSurveyPayloadType) => void;
   emitSendLangCode: (data: SendLangCodeMessagePayloadType) => void;
+  emitUpdateInformation: (data: SendInformationUpdatePayloadType, callback?: (response: any) => void) => void;
   socketConnected: boolean;
 } | null>(null);
 
@@ -120,7 +142,6 @@ export const SocketContextProvider = ({
   };
 
   const onReceivedDocument = (data: any) => {
-
     try {
       const parsedRes = JSON.parse(data);
       if (parsedRes.status === 400) {
@@ -129,7 +150,6 @@ export const SocketContextProvider = ({
       }
 
       const parsedData = parsedRes.data as ReceivedDocumentContent;
-
       setReceivedContent(parsedData);
 
     } catch (error) {
@@ -138,22 +158,84 @@ export const SocketContextProvider = ({
   };
 
   const onReceivedTeamDocument = (data: any) => {
-
     try {
       const parsedRes = JSON.parse(data);
       if (parsedRes.status === 400) {
-        console.warn("⚠️ Document response has error:", parsedRes);
+        console.warn("⚠️ Team document response has error:", parsedRes);
         return;
       }
 
       const parsedData = parsedRes.data as ReceivedDocumentContent;
-
       setReceivedContent(parsedData);
 
     } catch (error) {
-      console.error("❌ Error parsing document response:", error);
+      console.error("❌ Error parsing team document response:", error);
     }
   };
+
+const onInformationUpdated = (data: any) => {
+  try {
+    let parsedData;
+
+    console.info("🔄 Information update received:", data);
+    
+    if (typeof data === 'string') {
+      parsedData = JSON.parse(data);
+    } else {
+      parsedData = data; // Already an object
+    }
+    
+        console.info("CHECKINGIGNGIGNNIGNNIGG", parsedData);
+
+    if (parsedData.status === 400) {
+      console.warn("⚠️ Information update response has error:", parsedData);
+      return;
+    }
+    
+    // Handle the new structure from backend
+    const { action, data: informationData, timestamp, deletedId } = parsedData;
+    
+    console.log(`✅ Information ${action} at ${timestamp}:`, informationData);
+    
+    // Update your state based on the action
+    switch (action) {
+      case 'created':
+        console.log('✅ New information created');
+        if (informationData) {
+          setReceivedContent(informationData as ReceivedInformationContent);
+        }
+        break;
+        
+      case 'updated':
+        console.log('📝 Information updated');
+        if (informationData) {
+          setReceivedContent(informationData as ReceivedInformationContent);
+        }
+        break;
+        
+      case 'deleted':
+        console.log('🗑️ Information deleted');
+        if (deletedId) {
+          console.log(`Deleted information with ID: ${deletedId}`);
+        }
+        if (informationData) {
+          setReceivedContent(informationData as ReceivedInformationContent);
+        }
+        break;
+        
+      default:
+        console.warn('Unknown action:', action);
+        // Fallback to original behavior
+        if (informationData) {
+          setReceivedContent(informationData as ReceivedInformationContent);
+        }
+    }
+
+  } catch (error) {
+    console.error("❌ Error parsing information update response:", error);
+    console.error("❌ Raw data that caused error:", data);
+  }
+};
 
   const onDocumentSentSuccessfully = (data: any) => {
     console.log("📄 Document sent successfully:", data);
@@ -190,21 +272,9 @@ export const SocketContextProvider = ({
       let role = session.data.user.Roles[0];
 
       if (role === "Admin" || role === "Staff") {
-        setReceivedMessage(parsedData)
-        // setReceivedMessage({
-        //   ...parsedData,
-        //   message:
-        //     session.data?.user.Roles?.includes("Admin") ||
-        //       session.data?.user.Roles?.includes("Staff")
-        //       ? parsedData.originalMessage
-        //       : parsedData.message,
-        // });
+        setReceivedMessage(parsedData);
       } else {
-        setReceivedMessage(parsedData)
-        // setReceivedMessage({
-        //   ...parsedData,
-        //   message: parsedData.message,
-        // });
+        setReceivedMessage(parsedData);
       }
     } catch (error) {
       console.error("❌ Error parsing message response:", error);
@@ -291,7 +361,6 @@ export const SocketContextProvider = ({
   };
 
   const onDataSubmitted = (data: any) => {
-
     try {
       const parsedRes = JSON.parse(data);
       if (parsedRes.status === 400) {
@@ -324,6 +393,7 @@ export const SocketContextProvider = ({
     socketClient.on("dataSaved", onDataSubmitted);
     socketClient.on("document-sent-successfully", onReceivedDocument);
     socketClient.on("team-document-sent-successfully", onReceivedTeamDocument);
+    socketClient.on("information-updated", onInformationUpdated);
 
     return () => {
       socketClient.off("disconnect", onDisconnect);
@@ -339,6 +409,7 @@ export const SocketContextProvider = ({
       socketClient.off("dataSaved", onDataSubmitted);
       socketClient.off("document-sent-successfully", onReceivedDocument);
       socketClient.off("team-document-sent-successfully", onReceivedTeamDocument);
+      socketClient.off("information-updated", onInformationUpdated);
     };
   }, [socketClient]);
 
@@ -407,6 +478,21 @@ export const SocketContextProvider = ({
     });
   };
 
+  const emitUpdateInformation = (data: SendInformationUpdatePayloadType, callback?: (response: any) => void) => {
+    if (!socketClient || !socketClient.connected) {
+      console.error("❌ Socket is not connected!");
+      return;
+    }
+
+    console.log("🚀 Emitting update-information with data:", data);
+
+    if (callback) {
+      socketClient.emit("update-information", data, callback);
+    } else {
+      socketClient.emit("update-information", data);
+    }
+  };
+
   const emitSendMessage = (data: SendMessagePayloadType) => {
     if (!socketClient || !socketClient.connected) {
       console.error("❌ Socket is not connected!");
@@ -468,6 +554,7 @@ export const SocketContextProvider = ({
         emitSendSurveyAnswer,
         emitSendSurvey,
         emitSendLangCode,
+        emitUpdateInformation,
         socketConnected,
         emitSendTeamDocument
       }}
