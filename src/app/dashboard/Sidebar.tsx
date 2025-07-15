@@ -14,6 +14,7 @@ import { TextIcon } from "../../components/icons/sidebar/TextIcon";
 import { SettingsIcon } from "../../components/icons/sidebar/SettingsIcon";
 import { MicIcon } from "../../components/icons/MicIcon";
 import { AssignFormsIcon } from "../../components/icons/sidebar/newIcons";
+import { FaBullhorn, FaChartLine, FaRocket, FaBullseye } from 'react-icons/fa';
 
 interface ClientSidebarProps {
     user: Session | null;
@@ -79,6 +80,14 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
                 { title: "Form", href: "/dashboard/form" }
             ],
             roles: ["Admin", "User", "Staff"]
+        },
+            {
+            title: "Promote",
+            icon: <FaBullhorn />,
+            children: [
+                { title: "Upsell", href: "/dashboard/upsell" }
+            ],
+            roles: ["Admin"]
         },
         {
             title: "Settings",
