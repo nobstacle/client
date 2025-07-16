@@ -750,7 +750,7 @@ export default function Handover() {
                                         minHeight: '120px'
                                     }}
                                     showCount
-                                    maxLength={1000}
+                                    maxLength={2000}
                                 />
                             </Form.Item>
                         </div>

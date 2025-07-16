@@ -12,6 +12,7 @@ import { ChatIcon } from "../../components/icons/sidebar/ChatIcon";
 import { SurveyIcon } from "../../components/icons/sidebar/SurveyIcon";
 import { TextIcon } from "../../components/icons/sidebar/TextIcon";
 import { SettingsIcon } from "../../components/icons/sidebar/SettingsIcon";
+import { PromoteIcon } from "../../components/icons/sidebar/PromoteIcon";
 import { MicIcon } from "../../components/icons/MicIcon";
 import { AssignFormsIcon } from "../../components/icons/sidebar/newIcons";
 import { FaBullhorn, FaChartLine, FaRocket, FaBullseye } from 'react-icons/fa';
@@ -81,12 +82,10 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
             ],
             roles: ["Admin", "User", "Staff"]
         },
-            {
+        {
             title: "Promote",
-            icon: <FaBullhorn />,
-            children: [
-                { title: "Upsell", href: "/dashboard/upsell" }
-            ],
+            icon: <PromoteIcon />,
+            children: [{ title: "Upsell", href: "/dashboard/upsell" }],
             roles: ["Admin"]
         },
         {

@@ -226,7 +226,8 @@ export const CreateImageTemplateForm: React.FC<{
           loading={uploadFile.status === "pending"}
           disabled={uploadFile.status === "pending"}
           htmlType="submit"
-          size="middle"
+          style={{ width: "100%", }}
+          className="create-template-button"
         >
           Create Template
         </Button>

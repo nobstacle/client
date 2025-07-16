@@ -4169,3 +4169,353 @@ export const documentTemplateControllerPatchDocumentTemplateOrder = (
 		},
 		options);
 }
+
+
+
+//Package Functions
+
+// Package API Functions
+
+// Create Package
+export const packageControllerCreatePackage = (
+	data: BodyType<CreatePackageReq>,
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>,
+) => {
+	return nobstacleBackendApiInstance<PackageResponse>(
+		{
+			url: `/api/v1/content/package`,
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			data: data
+		},
+		options
+	);
+};
+
+export const getPackageControllerCreatePackageMutationOptions = <
+	TError = ErrorType<HttpExceptionSchema>,
+	TContext = unknown
+>(options?: {
+	mutation?: UseMutationOptions<
+		Awaited<ReturnType<typeof packageControllerCreatePackage>>,
+		TError,
+		{ data: BodyType<CreatePackageReq> },
+		TContext
+	>,
+	request?: SecondParameter<typeof nobstacleBackendApiInstance>
+}): UseMutationOptions<
+	Awaited<ReturnType<typeof packageControllerCreatePackage>>,
+	TError,
+	{ data: BodyType<CreatePackageReq> },
+	TContext
+> => {
+	const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+
+	const mutationFn: MutationFunction<
+		Awaited<ReturnType<typeof packageControllerCreatePackage>>,
+		{ data: BodyType<CreatePackageReq> }
+	> = (props) => {
+		const { data } = props ?? {};
+		return packageControllerCreatePackage(data, requestOptions);
+	};
+
+	return { mutationFn, ...mutationOptions };
+};
+
+export const usePackageControllerCreatePackage = <
+	TError = ErrorType<HttpExceptionSchema>,
+	TContext = unknown
+>(options?: {
+	mutation?: UseMutationOptions<
+		Awaited<ReturnType<typeof packageControllerCreatePackage>>,
+		TError,
+		{ data: BodyType<CreatePackageReq> },
+		TContext
+	>,
+	request?: SecondParameter<typeof nobstacleBackendApiInstance>
+}) => {
+	const mutationOptions = getPackageControllerCreatePackageMutationOptions(options);
+	return useMutation(mutationOptions);
+};
+
+// Update Package
+export const packageControllerUpdatePackage = (
+	id: number,
+	data: BodyType<UpdatePackageReq>,
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>,
+) => {
+	return nobstacleBackendApiInstance<PackageResponse>(
+		{
+			url: `/api/v1/content/package/${id}`,
+			method: 'PATCH',
+			headers: { 'Content-Type': 'application/json' },
+			data: data
+		},
+		options
+	);
+};
+
+export const getPackageControllerUpdatePackageMutationOptions = <
+	TError = ErrorType<HttpExceptionSchema>,
+	TContext = unknown
+>(options?: {
+	mutation?: UseMutationOptions<
+		Awaited<ReturnType<typeof packageControllerUpdatePackage>>,
+		TError,
+		{ id: number; data: BodyType<UpdatePackageReq> },
+		TContext
+	>,
+	request?: SecondParameter<typeof nobstacleBackendApiInstance>
+}): UseMutationOptions<
+	Awaited<ReturnType<typeof packageControllerUpdatePackage>>,
+	TError,
+	{ id: number; data: BodyType<UpdatePackageReq> },
+	TContext
+> => {
+	const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+
+	const mutationFn: MutationFunction<
+		Awaited<ReturnType<typeof packageControllerUpdatePackage>>,
+		{ id: number; data: BodyType<UpdatePackageReq> }
+	> = (props) => {
+		const { id, data } = props ?? {};
+		return packageControllerUpdatePackage(id, data, requestOptions);
+	};
+
+	return { mutationFn, ...mutationOptions };
+};
+
+export const usePackageControllerUpdatePackage = <
+	TError = ErrorType<HttpExceptionSchema>,
+	TContext = unknown
+>(options?: {
+	mutation?: UseMutationOptions<
+		Awaited<ReturnType<typeof packageControllerUpdatePackage>>,
+		TError,
+		{ id: number; data: BodyType<UpdatePackageReq> },
+		TContext
+	>,
+	request?: SecondParameter<typeof nobstacleBackendApiInstance>
+}) => {
+	const mutationOptions = getPackageControllerUpdatePackageMutationOptions(options);
+	return useMutation(mutationOptions);
+};
+
+// Delete Package
+export const packageControllerDeletePackage = (
+	id: number,
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>,
+) => {
+	return nobstacleBackendApiInstance<boolean>(
+		{
+			url: `/api/v1/content/package/${id}`,
+			method: 'DELETE'
+		},
+		options
+	);
+};
+
+export const getPackageControllerDeletePackageMutationOptions = <
+	TError = ErrorType<HttpExceptionSchema>,
+	TContext = unknown
+>(options?: {
+	mutation?: UseMutationOptions<
+		Awaited<ReturnType<typeof packageControllerDeletePackage>>,
+		TError,
+		{ id: number },
+		TContext
+	>,
+	request?: SecondParameter<typeof nobstacleBackendApiInstance>
+}): UseMutationOptions<
+	Awaited<ReturnType<typeof packageControllerDeletePackage>>,
+	TError,
+	{ id: number },
+	TContext
+> => {
+	const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+
+	const mutationFn: MutationFunction<
+		Awaited<ReturnType<typeof packageControllerDeletePackage>>,
+		{ id: number }
+	> = (props) => {
+		const { id } = props ?? {};
+		return packageControllerDeletePackage(id, requestOptions);
+	};
+
+	return { mutationFn, ...mutationOptions };
+};
+
+export const usePackageControllerDeletePackage = <
+	TError = ErrorType<HttpExceptionSchema>,
+	TContext = unknown
+>(options?: {
+	mutation?: UseMutationOptions<
+		Awaited<ReturnType<typeof packageControllerDeletePackage>>,
+		TError,
+		{ id: number },
+		TContext
+	>,
+	request?: SecondParameter<typeof nobstacleBackendApiInstance>
+}) => {
+	const mutationOptions = getPackageControllerDeletePackageMutationOptions(options);
+	return useMutation(mutationOptions);
+};
+
+// Get Package by ID
+export const packageControllerGetPackageById = (
+	id: number,
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>,
+) => {
+	return nobstacleBackendApiInstance<PackageResponse>(
+		{
+			url: `/api/v1/content/package/${id}`,
+			method: 'GET'
+		},
+		options
+	);
+};
+
+export const getPackageControllerGetPackageByIdQueryOptions = <
+	TError = ErrorType<HttpExceptionSchema>
+>(
+	id: number,
+	options?: {
+		query?: UseQueryOptions<
+			Awaited<ReturnType<typeof packageControllerGetPackageById>>,
+			TError
+		>,
+		request?: SecondParameter<typeof nobstacleBackendApiInstance>
+	}
+) => {
+	const { query: queryOptions, request: requestOptions } = options ?? {};
+
+	const queryKey = [`/api/v1/content/package/${id}`];
+	const queryFn = () => packageControllerGetPackageById(id, requestOptions);
+
+	return { queryKey, queryFn, ...queryOptions };
+};
+
+export const usePackageControllerGetPackageById = <
+	TError = ErrorType<HttpExceptionSchema>
+>(
+	id: number,
+	options?: {
+		query?: UseQueryOptions<
+			Awaited<ReturnType<typeof packageControllerGetPackageById>>,
+			TError
+		>,
+		request?: SecondParameter<typeof nobstacleBackendApiInstance>
+	}
+) => {
+	const queryOptions = getPackageControllerGetPackageByIdQueryOptions(id, options);
+	return useQuery(queryOptions);
+};
+
+// Get Package Tags
+export const packageControllerGetPackageTags = (
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>,
+) => {
+	return nobstacleBackendApiInstance<PackageTagResponse[]>(
+		{
+			url: `/api/v1/content/package/tags`,
+			method: 'GET'
+		},
+		options
+	);
+};
+
+export const getPackageControllerGetPackageTagsQueryOptions = <
+	TError = ErrorType<HttpExceptionSchema>
+>(options?: {
+	query?: UseQueryOptions<
+		Awaited<ReturnType<typeof packageControllerGetPackageTags>>,
+		TError
+	>,
+	request?: SecondParameter<typeof nobstacleBackendApiInstance>
+}) => {
+	const { query: queryOptions, request: requestOptions } = options ?? {};
+
+	const queryKey = [`/api/v1/content/package/tags`];
+	const queryFn = () => packageControllerGetPackageTags(requestOptions);
+
+	return { queryKey, queryFn, ...queryOptions };
+};
+
+export const usePackageControllerGetPackageTags = <
+	TError = ErrorType<HttpExceptionSchema>
+>(options?: {
+	query?: UseQueryOptions<
+		Awaited<ReturnType<typeof packageControllerGetPackageTags>>,
+		TError
+	>,
+	request?: SecondParameter<typeof nobstacleBackendApiInstance>
+}) => {
+	const queryOptions = getPackageControllerGetPackageTagsQueryOptions(options);
+	return useQuery(queryOptions);
+};
+
+// List Packages
+export const packageControllerListPackages = (
+	params?: {
+		page?: number;
+		limit?: number;
+		search?: string;
+		tag?: string;
+	},
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>,
+) => {
+	return nobstacleBackendApiInstance<PackageListResponse>(
+		{
+			url: `/api/v1/content/package`,
+			method: 'GET',
+			params: params
+		},
+		options
+	);
+};
+
+export const getPackageControllerListPackagesQueryOptions = <
+	TError = ErrorType<HttpExceptionSchema>
+>(
+	params?: {
+		page?: number;
+		limit?: number;
+		search?: string;
+		tag?: string;
+	},
+	options?: {
+		query?: UseQueryOptions<
+			Awaited<ReturnType<typeof packageControllerListPackages>>,
+			TError
+		>,
+		request?: SecondParameter<typeof nobstacleBackendApiInstance>
+	}
+) => {
+	const { query: queryOptions, request: requestOptions } = options ?? {};
+
+	const queryKey = [`/api/v1/content/package`, params];
+	const queryFn = () => packageControllerListPackages(params, requestOptions);
+
+	return { queryKey, queryFn, ...queryOptions };
+};
+
+export const usePackageControllerListPackages = <
+	TError = ErrorType<HttpExceptionSchema>
+>(
+	params?: {
+		page?: number;
+		limit?: number;
+		search?: string;
+		tag?: string;
+	},
+	options?: {
+		query?: UseQueryOptions<
+			Awaited<ReturnType<typeof packageControllerListPackages>>,
+			TError
+		>,
+		request?: SecondParameter<typeof nobstacleBackendApiInstance>
+	}
+) => {
+	const queryOptions = getPackageControllerListPackagesQueryOptions(params, options);
+	return useQuery(queryOptions);
+};

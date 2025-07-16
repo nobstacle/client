@@ -1,19 +1,30 @@
 "use client";
 import { useState } from "react";
-import { Table, Tag, Card, Pagination, Button } from "antd";
+import { Table, Tag, Card, Pagination } from "antd";
+import Modal from "../../../components/Modal";
 import { FaTrash, FaEdit, FaEye } from "react-icons/fa";
 import Swal from "sweetalert2";
 import "../../../styles/base.css";
 import useTemplateStore from "../../../lib/zustand/store/templateStore";
 import { useHasHydrated } from "../../../hooks/useHydrated";
 import { surveyAnswerValToColor } from "../../../utils";
-import CreatePackageTemplate from "../../../components/pages/dashboard/CreatePackageTemplate";
 import { useSession } from "next-auth/react";
-import { useSurveyAnswerControllerDeleteSurveyAnswer } from "../../../lib/client/api";
+import { useCompanyControllerGetCompany } from "../../../lib/client/api";
 import "../../../styles/base.css";
-
+import { useDisclousure } from "../../../hooks/useDisclosure";
+import { PlusIcon } from "../../../components/icons/PlusIcon";
+import CreatePackageForm from "../../../components/pages/dashboard/CreatePackageTemplateForm";
 export default function Upsell() {
-    // Columns based on the provided table structure
+    const { data: companyData } = useCompanyControllerGetCompany();
+    const { data: userData } = useSession();
+    const { handleClose, handleOpen, isOpen } = useDisclousure();
+    const {
+        handleClose: updateHandleClose,
+        handleOpen: updateHandleOpen,
+        isOpen: updateIsOpen,
+    } = useDisclousure();
+    const { setPackages, packages, searchPackages, setSearchPackages } = useTemplateStore();
+
     const columns = [
         {
             title: "Package Code",
@@ -39,6 +50,38 @@ export default function Upsell() {
             ),
         },
         {
+            title: "Benefits",
+            dataIndex: "packageBenefits",
+            key: "packageBenefits",
+            width: 200,
+            render: (benefits: string[]) => (
+                <div className="truncate" title={benefits?.join(", ")}>
+                    {benefits?.join(", ")}
+                </div>
+            ),
+        },
+        {
+            title: "Purchases",
+            dataIndex: "numberOfPurchase",
+            key: "numberOfPurchase",
+            width: 100,
+            sorter: (a, b) => a.numberOfPurchase - b.numberOfPurchase,
+        },
+        {
+            title: "Tags",
+            dataIndex: "tags",
+            key: "tags",
+            width: 150,
+            render: (tags: string[]) => (
+                <div className="flex flex-wrap gap-1">
+                    {tags?.slice(0, 2).map((tag, index) => (
+                        <Tag key={index} size="small">{tag}</Tag>
+                    ))}
+                    {tags?.length > 2 && <Tag size="small">+{tags.length - 2}</Tag>}
+                </div>
+            ),
+        },
+        {
             title: "Original Price",
             dataIndex: "originalPrice",
             key: "originalPrice",
@@ -53,17 +96,56 @@ export default function Upsell() {
             render: (price: number) => price ? `$${price}` : "N/A",
         },
         {
+            title: "Tax Included",
+            dataIndex: "includesTax",
+            key: "includesTax",
+            width: 100,
+            render: (includesTax: boolean) => (
+                <Tag color={includesTax ? "green" : "orange"}>
+                    {includesTax ? "Yes" : "No"}
+                </Tag>
+            ),
+        },
+        {
+            title: "Tax Info",
+            dataIndex: "taxInformation",
+            key: "taxInformation",
+            width: 150,
+            render: (text: string) => (
+                <div className="truncate" title={text}>
+                    {text}
+                </div>
+            ),
+        },
+        {
+            title: "Tax %",
+            dataIndex: "taxPercentage",
+            key: "taxPercentage",
+            width: 80,
+            render: (percentage: number) => percentage ? `${percentage}%` : "N/A",
+        },
+        {
+            title: "Currency",
+            dataIndex: "currency",
+            key: "currency",
+            width: 80,
+        },
+        {
             title: "Price Algorithm",
             dataIndex: "priceAlgorithm",
             key: "priceAlgorithm",
             width: 150,
         },
         {
-            title: "Purchases",
-            dataIndex: "numberOfPurchase",
-            key: "numberOfPurchase",
-            width: 100,
-            sorter: (a, b) => a.numberOfPurchase - b.numberOfPurchase,
+            title: "Package Alert",
+            dataIndex: "packageAlert",
+            key: "packageAlert",
+            width: 120,
+            render: (alert: string) => (
+                <div className="truncate" title={alert}>
+                    {alert}
+                </div>
+            ),
         },
         {
             title: "Status",
@@ -73,6 +155,34 @@ export default function Upsell() {
             render: (approved: boolean) => (
                 <Tag color={approved ? "green" : "red"}>
                     {approved ? "Approved" : "Pending"}
+                </Tag>
+            ),
+        },
+        {
+            title: "Images",
+            dataIndex: "images",
+            key: "images",
+            width: 80,
+            render: (images: string[]) => (
+                <Tag color={images?.length > 0 ? "blue" : "gray"}>
+                    {images?.length || 0}
+                </Tag>
+            ),
+        },
+        {
+            title: "Button Text",
+            dataIndex: "buttonText",
+            key: "buttonText",
+            width: 120,
+        },
+        {
+            title: "Price Level",
+            dataIndex: "priceLevel",
+            key: "priceLevel",
+            width: 100,
+            render: (level: number) => (
+                <Tag color={level >= 4 ? "red" : level >= 3 ? "orange" : "green"}>
+                    Level {level}
                 </Tag>
             ),
         },
@@ -88,15 +198,23 @@ export default function Upsell() {
             ),
         },
         {
-            title: "Tax Included",
-            dataIndex: "includesTax",
-            key: "includesTax",
+            title: "Incentive %",
+            dataIndex: "incentivePercentage",
+            key: "incentivePercentage",
             width: 100,
-            render: (includesTax: boolean) => (
-                <Tag color={includesTax ? "green" : "orange"}>
-                    {includesTax ? "Yes" : "No"}
-                </Tag>
-            ),
+            render: (percentage: number) => `${percentage}%`,
+        },
+        {
+            title: "Confirmation #",
+            dataIndex: "confirmationNumber",
+            key: "confirmationNumber",
+            width: 120,
+        },
+        {
+            title: "Sold By",
+            dataIndex: "soldBy",
+            key: "soldBy",
+            width: 120,
         },
         {
             title: "Actions",
@@ -143,7 +261,7 @@ export default function Upsell() {
         },
     ];
 
-    // Dummy data based on the table structure
+    // Updated dummy data with new fields
     const sourceAnswers = [
         {
             id: 1,
@@ -157,7 +275,10 @@ export default function Upsell() {
             discountedPrice: 249,
             includesTax: true,
             taxInformation: "GST 18% included",
+            taxPercentage: 18,
+            currency: "USD",
             priceAlgorithm: "Price per person per night",
+            packageAlert: "Limited time offer",
             approved: true,
             images: ["image1.jpg", "image2.jpg"],
             buttonText: "Book Now",
@@ -179,7 +300,10 @@ export default function Upsell() {
             discountedPrice: 0,
             includesTax: false,
             taxInformation: "Tax not included",
+            taxPercentage: 0,
+            currency: "USD",
             priceAlgorithm: "Price per piece per night",
+            packageAlert: "New package",
             approved: false,
             images: ["video1.jpg"],
             buttonText: "Order Now",
@@ -201,7 +325,10 @@ export default function Upsell() {
             discountedPrice: 999,
             includesTax: true,
             taxInformation: "All taxes included",
+            taxPercentage: 12,
+            currency: "USD",
             priceAlgorithm: "Price per person per stay",
+            packageAlert: "Most popular",
             approved: true,
             images: ["wedding1.jpg", "wedding2.jpg", "wedding3.jpg"],
             buttonText: "Reserve Now",
@@ -223,7 +350,10 @@ export default function Upsell() {
             discountedPrice: 720,
             includesTax: true,
             taxInformation: "GST 18% included",
+            taxPercentage: 18,
+            currency: "USD",
             priceAlgorithm: "Price per piece per stay",
+            packageAlert: "Business special",
             approved: true,
             images: ["corporate1.jpg"],
             buttonText: "Contact Us",
@@ -245,7 +375,10 @@ export default function Upsell() {
             discountedPrice: 120,
             includesTax: false,
             taxInformation: "Tax extra",
+            taxPercentage: 0,
+            currency: "USD",
             priceAlgorithm: "Price per person per night",
+            packageAlert: "Book in advance",
             approved: true,
             images: ["portrait1.jpg", "portrait2.jpg"],
             buttonText: "Schedule Session",
@@ -267,7 +400,10 @@ export default function Upsell() {
             discountedPrice: 0,
             includesTax: true,
             taxInformation: "All inclusive pricing",
+            taxPercentage: 10,
+            currency: "USD",
             priceAlgorithm: "Price per piece per night",
+            packageAlert: "Trending package",
             approved: false,
             images: ["social1.jpg"],
             buttonText: "Get Started",
@@ -288,11 +424,39 @@ export default function Upsell() {
         setCurrentPage(page);
     };
 
+    console.info("isOpenisOpenisOpen", isOpen);
+
     return (
         <div className="h-full overflow-y-auto p-4">
+            {userData?.user.Roles?.includes("Admin") && (
+                <Modal
+                    title="Create template"
+                    closeModal={handleClose}
+                    isOpen={isOpen}
+                >
+                    <CreatePackageForm
+                        cb={(template, isUpdate) => {
+                            handleClose();
+                            if (!isUpdate) {
+                                packages.push(template);
+                                setPackages(packages);
+                            } else {
+                                const shallow = [...packages];
+                                const index = shallow.findIndex(
+                                    ({ id }) => id === template.id,
+                                );
+                                shallow[index]["langCode"] = template.langCode;
+                                shallow[index]["origin"] = template.origin;
+                                shallow[index]["destination"] = template.destination;
+                                setPackages(shallow);
+                            }
+                        }}
+                    />
+                </Modal>
+            )}
             <Card className="bg-gray-50">
                 <div className="flex w-full flex-col gap-4 mb-6">
-                    <CreatePackageTemplate />
+                    {/* <CreatePackageTemplate /> */}
                 </div>
                 <div className="p-4 shadow-md rounded-lg customTableWrapper customSurveyTable bg-white">
                     <Table
@@ -301,7 +465,7 @@ export default function Upsell() {
                         dataSource={sourceAnswers}
                         pagination={false}
                         className="jotFormTable"
-                        scroll={{ x: 1500 }}
+                        scroll={{ x: 2500 }}
                     />
                     <div className="flex justify-center mt-6">
                         <Pagination
@@ -315,6 +479,24 @@ export default function Upsell() {
                     </div>
                 </div>
             </Card>
+
+            {userData?.user.Roles?.includes("Admin") && (
+                <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50">
+                    <button
+                        onClick={handleOpen}
+                        className="group relative flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 bg-white/50 backdrop-blur-md hover:bg-white/60 border border-white/20 text-gray-700 hover:text-gray-900 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-white/30"
+                        aria-label="Create new template"
+                    >
+                        <PlusIcon className="w-6 h-6 sm:w-7 sm:h-7 opacity-100" />
+
+                        {/* Tooltip */}
+                        <div className="absolute right-full mr-3 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
+                            Create Template
+                            <div className="absolute top-1/2 left-full w-0 h-0 border-l-4 border-l-gray-900 border-y-4 border-y-transparent transform -translate-y-1/2"></div>
+                        </div>
+                    </button>
+                </div>
+            )}
         </div>
     );
 }
