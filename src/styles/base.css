@@ -891,3 +891,7 @@ button {
 .customMapForm .ant-form-item {
   margin-bottom: 0.3rem;
 }
+
+.packageModal {
+  max-width: 45vw !important;
+}

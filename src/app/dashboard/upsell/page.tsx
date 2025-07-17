@@ -427,12 +427,13 @@ export default function Upsell() {
     console.info("isOpenisOpenisOpen", isOpen);
 
     return (
-        <div className="h-full overflow-y-auto p-4">
+        <div className="h-full overflow-y-auto p-4 customPackageContainer">
             {userData?.user.Roles?.includes("Admin") && (
                 <Modal
                     title="Create template"
                     closeModal={handleClose}
                     isOpen={isOpen}
+                    className="packageModal"
                 >
                     <CreatePackageForm
                         cb={(template, isUpdate) => {

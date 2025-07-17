@@ -6,6 +6,7 @@ interface ModalPropsI {
   closeModal: (v: boolean) => void;
   title: string;
   panelStyleClass?: string;
+  className?: string;
 }
 
 export default function Modal({
@@ -14,6 +15,7 @@ export default function Modal({
   closeModal,
   children,
   panelStyleClass,
+  className
 }: React.PropsWithChildren<ModalPropsI>) {
   return (
     <Transition appear show={isOpen} as={Fragment}>
@@ -42,7 +44,7 @@ export default function Modal({
               leaveTo="opacity-0 scale-95"
             >
               <Dialog.Panel
-                className={`w-full max-w-md transform overflow-hidden rounded-2xl bg-white p-6 text-left align-middle shadow-xl transition-all ${panelStyleClass} `}
+                className={`w-full max-w-md transform customModal overflow-hidden rounded-2xl bg-white p-6 text-left align-middle shadow-xl transition-all ${panelStyleClass} ${className}`}
               >
                 <Dialog.Title
                   as="h3"
