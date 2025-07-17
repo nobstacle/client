@@ -112,6 +112,8 @@ const CreatePackageForm: React.FC<{
   const packageTags = usePackageControllerGetPackageTags();
   const company = useCompanyControllerGetCompany();
 
+  console.info("CHECKING");
+  
   const {
     handleSubmit,
     control,
@@ -682,53 +684,61 @@ const CreatePackageForm: React.FC<{
           <Text strong>Package Details</Text>
           <Divider style={{ margin: '8px 0' }} />
 
-          {/* Benefits */}
-          <Form.Item label="Package Benefits">
-            <Space direction="vertical" style={{ width: '100%' }}>
-              <Space style={{ width: '100%' }}>
-                <Input
-                  value={newBenefit}
-                  onChange={(e) => setNewBenefit(e.target.value)}
-                  placeholder="Add benefit..."
-                  onPressEnter={addBenefit}
-                  style={{ flex: 1 }}
-                />
-                <Button onClick={addBenefit}>Add</Button>
-              </Space>
-              {benefits.map((benefit, index) => (
-                <Space key={index} style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
-                  <Text>{benefit}</Text>
-                  <Button size="small" danger onClick={() => removeBenefit(index)}>
-                    Remove
-                  </Button>
+          <Row gutter={16}>
+            <Col md={12} xs={24}>
+              {/* Benefits */}
+              <Form.Item label="Package Benefits">
+                <Space direction="vertical" style={{ width: '100%' }}>
+                  <Space style={{ width: '100%' }}>
+                    <Input
+                      value={newBenefit}
+                      onChange={(e) => setNewBenefit(e.target.value)}
+                      placeholder="Add benefit..."
+                      onPressEnter={addBenefit}
+                      style={{ flex: 1 }}
+                    />
+                    <Button onClick={addBenefit}>Add</Button>
+                  </Space>
+                  {benefits.map((benefit, index) => (
+                    <Space key={index} style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                      <Text>{benefit}</Text>
+                      <Button size="small" danger onClick={() => removeBenefit(index)}>
+                        Remove
+                      </Button>
+                    </Space>
+                  ))}
                 </Space>
-              ))}
-            </Space>
-          </Form.Item>
+              </Form.Item>
+            </Col>
+            <Col md={12} xs={24}>
+              {/* Tags */}
+              <Form.Item label="Package Tags">
+                <Space direction="vertical" style={{ width: '100%' }}>
+                  <Space style={{ width: '100%' }}>
+                    <Input
+                      value={newTag}
+                      onChange={(e) => setNewTag(e.target.value)}
+                      placeholder="Add tag..."
+                      onPressEnter={addTag}
+                      style={{ flex: 1 }}
+                    />
+                    <Button onClick={addTag}>Add</Button>
+                  </Space>
+                  {tags.map((tag, index) => (
+                    <Space key={index} style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                      <Text>{tag}</Text>
+                      <Button size="small" danger onClick={() => removeTag(index)}>
+                        Remove
+                      </Button>
+                    </Space>
+                  ))}
+                </Space>
+              </Form.Item>
+            </Col>
+          </Row>
 
-          {/* Tags */}
-          <Form.Item label="Package Tags">
-            <Space direction="vertical" style={{ width: '100%' }}>
-              <Space style={{ width: '100%' }}>
-                <Input
-                  value={newTag}
-                  onChange={(e) => setNewTag(e.target.value)}
-                  placeholder="Add tag..."
-                  onPressEnter={addTag}
-                  style={{ flex: 1 }}
-                />
-                <Button onClick={addTag}>Add</Button>
-              </Space>
-              {tags.map((tag, index) => (
-                <Space key={index} style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
-                  <Text>{tag}</Text>
-                  <Button size="small" danger onClick={() => removeTag(index)}>
-                    Remove
-                  </Button>
-                </Space>
-              ))}
-            </Space>
-          </Form.Item>
+
+
 
           {/* Images */}
           <Form.Item label="Package Images">
