@@ -355,7 +355,7 @@ export const Content: React.FC = () => {
     ) {
       return (
         <div className="w-full p-5">
-          <p className="text-center text-4xl" style={{ lineHeight: "3.5rem",whiteSpace: 'pre-wrap' }}>
+          <p className="text-center text-4xl" style={{ lineHeight: "3.5rem", whiteSpace: 'pre-wrap' }}>
             {messageStore.receivedContent?.content ?? ""}
           </p>
         </div>
@@ -721,7 +721,6 @@ export const Content: React.FC = () => {
           <video
             ref={videoElement}
             autoPlay
-            muted
             loop
             playsInline
             key={messageStore.receivedContent?.content ?? ""}
