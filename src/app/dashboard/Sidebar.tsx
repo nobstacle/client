@@ -85,7 +85,7 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
         {
             title: "Promote",
             icon: <PromoteIcon />,
-            children: [{ title: "Upsell", href: "/dashboard/upsell" }],
+            children: [{ title: "Packages", href: "/dashboard/package" }],
             roles: ["Admin"]
         },
         {

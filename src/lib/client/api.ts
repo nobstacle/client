@@ -4183,7 +4183,7 @@ export const packageControllerCreatePackage = (
 ) => {
 	return nobstacleBackendApiInstance<PackageResponse>(
 		{
-			url: `/api/v1/content/package`,
+			url: `/api/v1/uploads/create-package`,
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
 			data: data
@@ -4246,7 +4246,7 @@ export const packageControllerUpdatePackage = (
 ) => {
 	return nobstacleBackendApiInstance<PackageResponse>(
 		{
-			url: `/api/v1/content/package/${id}`,
+			url: `/api/v1/uploads/update-package/${id}`,
 			method: 'PATCH',
 			headers: { 'Content-Type': 'application/json' },
 			data: data

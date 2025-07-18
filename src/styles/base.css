@@ -895,3 +895,17 @@ button {
 .packageModal {
   max-width: 45vw !important;
 }
+
+.image-slideshow-wrapper .ant-image {
+  height: 100%;
+}
+
+.create-package-button {
+  background: #3b5998;
+  color: white !important;
+}
+
+.create-package-button:hover {
+  background: #2d4373 !important;
+  color: white !important;
+}
