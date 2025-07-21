@@ -19,7 +19,7 @@ import QRCode from 'qrcode';
 import "../../../styles/base.css";
 import "antd/dist/reset.css";
 import { useSession } from "next-auth/react";
-import { Card, Button, Tag, Typography } from "antd";
+import { Card, Button, Tag, Typography, Row, Col } from "antd";
 import { InfoCircleOutlined } from "@ant-design/icons";
 
 const { Title, Text } = Typography;
@@ -74,21 +74,21 @@ const PackageCard = ({ packageData, currentImageIndex, setCurrentImageIndex, han
     return Math.round(((original - discounted) / original) * 100);
   };
 
-  const handlePackageClick = (record: any) => {
+  const handlePackageClick = (record) => {
     console.info("recordrecord", record);
     handleClick(record);
   }
 
   return (
     <Card
-      className="w-full max-w-4xl mx-auto shadow-lg rounded-lg overflow-hidden mb-6"
+      className="w-full max-w-6xl mx-auto shadow-lg rounded-lg overflow-hidden mb-6"
       bodyStyle={{ padding: 0 }}
     >
       <div className="flex flex-col md:flex-row">
-        {/* Image Section */}
-        <div className="relative md:w-96 h-64 md:h-80">
+        {/* Image Section - Width increased by 15% (from w-80 to w-92) */}
+        <div className="relative md:w-[400px] h-64 md:h-auto flex-shrink-0">
           {packageData.signedImageUrls && packageData.signedImageUrls.length > 0 ? (
-            <div className="relative w-full h-full">
+            <div className="relative w-full h-full md:h-100">
               <img
                 src={packageData.signedImageUrls[currentImageIndex]?.signedUrl}
                 alt={packageData.signedImageUrls[currentImageIndex]?.alt || 'Package Image'}
@@ -117,92 +117,109 @@ const PackageCard = ({ packageData, currentImageIndex, setCurrentImageIndex, han
 
         {/* Content Section */}
         <div className="flex-1 p-6 flex flex-col justify-between">
-          <div>
-            {/* Header */}
-            <div className="flex justify-between items-start mb-4">
-              <div>
-                <Title level={3} className="text-blue-600 mb-2">
-                  {packageData.packageNames?.en || 'Package'}
-                </Title>
+          {/* Top Section */}
+          <div className="flex justify-between items-start mb-4">
+            {/* Left side - Package info */}
+            <div className="flex-1 pr-4">
+              <Title level={3} className="text-blue-600 mb-2 mt-0">
+                {packageData.packageNames?.en || 'Package'}
+              </Title>
 
-                {/* Tags */}
-                <div className="flex flex-wrap gap-2 mb-4">
-                  {packageData.packageTags?.en?.map((tag, index) => (
-                    <Tag key={index} color="green" className="px-3 py-1">
-                      {tag}
-                    </Tag>
-                  ))}
-                </div>
-              </div>
-
-              <div className="text-right">
-                <div className="bg-gray-100 px-3 py-1 rounded text-sm text-gray-600 mb-2">
-                  Best Seller
-                </div>
-                <Text className="text-sm text-gray-500">
-                  Sold {packageData.numberOfPurchases} times
-                </Text>
-              </div>
-            </div>
-
-            {/* Description */}
-            <div className="mb-4">
-              <Text className="text-gray-700 font-medium mb-2 block">
-                {packageData.packageDescriptions?.en || 'Package Description Text - Multilingual Depending on the selected language'}
-              </Text>
-
-              {/* Benefits */}
-              <div className="space-y-1">
-                {packageData.packageBenefits?.en?.map((benefit, index) => (
-                  <div key={index} className="text-green-600 font-medium">
-                    {benefit}
-                  </div>
+              {/* Tags */}
+              <div className="flex flex-wrap gap-2 mb-4">
+                {packageData.packageTags?.en?.map((tag, index) => (
+                  <Tag key={index} className="px-3 py-1 bg-green-800 text-white border-green-800 rounded">
+                    {tag}
+                  </Tag>
                 ))}
               </div>
             </div>
 
-            {/* Alert */}
-            {packageData.packageAlerts?.en && (
-              <div className="mb-4">
-                <Text className="text-red-600 font-medium">
-                  {packageData.packageAlerts.en}
-                </Text>
-              </div>
-            )}
-          </div>
-
-          {/* Price and Action Section */}
-          <div className="flex justify-between items-end">
-            <div className="flex flex-col">
-              <Text className="text-sm text-gray-500 mb-1">
-                Posting Algorithm
+            {/* Right side - Best seller and sold info */}
+            <div className="text-right flex-shrink-0">
+              <Text className="font-bold text-gray-600 mb-2 block">
+                Best Seller
               </Text>
-              <div className="flex items-center gap-2">
-                <Text className="text-sm text-gray-400 line-through">
-                  {formatCurrency(packageData.originalPrice)}
-                </Text>
-                <Text className="text-2xl font-bold">
-                  {formatCurrency(packageData.discountedPrice)}
-                </Text>
-                <InfoCircleOutlined className="text-gray-400" />
-              </div>
-              {packageData.includesTax && (
-                <Text className="text-sm text-gray-500 mt-1">
-                  {packageData.taxInformation?.en || 'Tax information'}
-                </Text>
-              )}
+              <Text className="text-sm text-gray-500">
+                Sold {packageData.numberOfPurchases || 0} times
+              </Text>
             </div>
-
-            <Button
-              type="primary"
-              size="large"
-              className="bg-blue-600 hover:bg-blue-700 px-8 py-2 h-12"
-              disabled={!packageData.active}
-              onClick={() => handlePackageClick(packageData)}
-            >
-              {packageData.buttonTexts?.en || 'Take this deal'}
-            </Button>
           </div>
+
+          <Row gutter={16}>
+            <Col md={18} xs={24}>
+              {/* Description */}
+              <div className="mb-4">
+                <Text className="text-gray-700 font-bold mb-3 block">
+                  {packageData.packageDescriptions?.en || 'Package Description Text - Multilingual Depending on the selected language'}
+                </Text>
+
+                {/* Benefits */}
+                <div className="space-y-1">
+                  {packageData.packageBenefits?.en?.map((benefit, index) => (
+                    <div key={index} className="text-green-600 font-medium flex items-center">
+                      <span className="mr-2">✓</span>
+                      {benefit}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Alert */}
+              {packageData.packageAlerts?.en && (
+                <div className="mb-4">
+                  <Text className="text-red-600 font-medium">
+                    {packageData.packageAlerts.en}
+                  </Text>
+                </div>
+              )}</Col>
+            <Col md={6} xs={24}>
+              {/* Bottom Section - Price and Button */}
+              <div className="flex justify-between items-end">
+                {/* Left side - Empty space for alignment */}
+                <div></div>
+
+                {/* Right side - Posting Algorithm, Price and Button */}
+                <div className="text-right">
+                  {/* Posting Algorithm Label */}
+                  <Text className="text-sm text-gray-500 mb-1">
+                    Posting Algorithm
+                  </Text>
+
+                  {/* Pricing Block */}
+                  <div className="mb-4">
+                    <div className="flex items-center justify-end gap-2 mb-1">
+                      <Text className="text-sm text-gray-400 line-through">
+                        {formatCurrency(packageData.originalPrice)}
+                      </Text>
+                      <Text className="text-2xl font-bold">
+                        {formatCurrency(packageData.discountedPrice)}
+                      </Text>
+                      <InfoCircleOutlined className="text-gray-400" />
+                    </div>
+                    {packageData.includesTax && (
+                      <Text className="text-sm text-gray-500">
+                        {packageData.taxInformation?.en || 'Tax information'}
+                      </Text>
+                    )}
+                  </div>
+
+                  {/* Button */}
+                  <Button
+                    type="primary"
+                    size="large"
+                    className="bg-blue-600 hover:bg-blue-700 px-8 py-2 h-12"
+                    disabled={!packageData.active}
+                    onClick={() => handlePackageClick(packageData)}
+                  >
+                    {packageData.buttonTexts?.en || 'Take this deal'}
+                  </Button>
+                </div>
+              </div></Col>
+          </Row>
+
+
+
         </div>
       </div>
     </Card>
