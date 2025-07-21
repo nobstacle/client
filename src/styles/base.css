@@ -909,3 +909,11 @@ button {
   background: #2d4373 !important;
   color: white !important;
 }
+
+
+.customPackageCard .ant-card-body {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}

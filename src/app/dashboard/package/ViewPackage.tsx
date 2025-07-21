@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Table, Tag, Card, Pagination, Input, Modal, Row, Col, Button, Image, Typography, Space, Divider } from "antd";
-import { HeartOutlined, InfoCircleOutlined, TrophyOutlined, LeftOutlined, RightOutlined } from "@ant-design/icons";
+import { InfoCircleOutlined, TrophyOutlined, LeftOutlined, RightOutlined } from "@ant-design/icons";
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -108,23 +108,24 @@ export default function ViewPackage({ packageData, onClose, viewPackageToggle })
             className="view-package-modal"
             onCancel={handleModalClose}
             footer={null}
-            width={900}
+            width={1000}
             style={{ top: 20 }}
+            bodyStyle={{ padding: '16px' }}
         >
-            <div style={{ padding: '20px 0' }}>
-                <Row gutter={24}>
-                    {/* Left Column - Image Slideshow */}
-                    <Col xs={24} md={12}>
-                        <div style={{ position: 'relative', height: '100%' }}>
-                            <div 
-                            className="image-slideshow-wrapper"
-                            style={{
-                                position: 'relative',
-                                width: '100%',
-                                height: '100%',
-                                overflow: 'hidden',
-                                borderRadius: '12px'
-                            }}>
+            <div>
+                <Row gutter={16}>
+                    {/* Left Column - Square Image */}
+                    <Col xs={24} md={10}>
+                        <div style={{ position: 'relative', height: '280px' }}>
+                            <div
+                                className="image-slideshow-wrapper"
+                                style={{
+                                    position: 'relative',
+                                    width: '100%',
+                                    height: '100%',
+                                    overflow: 'hidden',
+                                    borderRadius: '8px'
+                                }}>
                                 <Image
                                     src={images[currentImageIndex].signedUrl}
                                     alt={images[currentImageIndex].alt || `Package image ${currentImageIndex + 1}`}
@@ -132,9 +133,10 @@ export default function ViewPackage({ packageData, onClose, viewPackageToggle })
                                         width: '100%',
                                         height: '100%',
                                         objectFit: 'cover',
-                                        borderRadius: '12px'
+                                        borderRadius: '8px'
                                     }}
-                                    fallback="https://via.placeholder.com/400x300/1890ff/ffffff?text=Package+Image"
+                                    fallback="https://via.placeholder.com/400x280/1890ff/ffffff?text=Package+Image"
+                                    preview={false}
                                 />
                             </div>
 
@@ -148,17 +150,18 @@ export default function ViewPackage({ packageData, onClose, viewPackageToggle })
                                         style={{
                                             position: 'absolute',
                                             top: '50%',
-                                            left: '12px',
+                                            left: '8px',
                                             transform: 'translateY(-50%)',
-                                            background: 'rgba(0, 0, 0, 0.5)',
+                                            background: 'rgba(0, 0, 0, 0.6)',
                                             color: 'white',
                                             border: 'none',
                                             borderRadius: '50%',
-                                            width: '40px',
-                                            height: '40px',
+                                            width: '32px',
+                                            height: '32px',
                                             display: 'flex',
                                             alignItems: 'center',
-                                            justifyContent: 'center'
+                                            justifyContent: 'center',
+                                            fontSize: '12px'
                                         }}
                                     />
                                     <Button
@@ -168,58 +171,40 @@ export default function ViewPackage({ packageData, onClose, viewPackageToggle })
                                         style={{
                                             position: 'absolute',
                                             top: '50%',
-                                            right: '12px',
+                                            right: '8px',
                                             transform: 'translateY(-50%)',
-                                            background: 'rgba(0, 0, 0, 0.5)',
+                                            background: 'rgba(0, 0, 0, 0.6)',
                                             color: 'white',
                                             border: 'none',
                                             borderRadius: '50%',
-                                            width: '40px',
-                                            height: '40px',
+                                            width: '32px',
+                                            height: '32px',
                                             display: 'flex',
                                             alignItems: 'center',
-                                            justifyContent: 'center'
+                                            justifyContent: 'center',
+                                            fontSize: '12px'
                                         }}
                                     />
                                 </>
                             )}
 
-                            {/* Heart Icon */}
-                            <Button
-                                type="text"
-                                icon={<HeartOutlined />}
-                                style={{
-                                    position: 'absolute',
-                                    top: '12px',
-                                    right: '12px',
-                                    background: 'rgba(255, 255, 255, 0.9)',
-                                    border: 'none',
-                                    borderRadius: '50%',
-                                    width: '40px',
-                                    height: '40px',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center'
-                                }}
-                            />
-
                             {/* Dot Indicators - Only show if multiple images */}
                             {images.length > 1 && (
                                 <div style={{
                                     position: 'absolute',
-                                    bottom: '16px',
+                                    bottom: '12px',
                                     left: '50%',
                                     transform: 'translateX(-50%)',
                                     display: 'flex',
-                                    gap: '8px'
+                                    gap: '6px'
                                 }}>
                                     {images.map((_, index) => (
                                         <button
                                             key={index}
                                             onClick={() => goToSlide(index)}
                                             style={{
-                                                width: '10px',
-                                                height: '10px',
+                                                width: '8px',
+                                                height: '8px',
                                                 borderRadius: '50%',
                                                 border: 'none',
                                                 background: index === currentImageIndex ? '#1890ff' : 'rgba(255, 255, 255, 0.7)',
@@ -235,13 +220,13 @@ export default function ViewPackage({ packageData, onClose, viewPackageToggle })
                             {images.length > 1 && (
                                 <div style={{
                                     position: 'absolute',
-                                    top: '12px',
-                                    left: '12px',
+                                    top: '8px',
+                                    left: '8px',
                                     background: 'rgba(0, 0, 0, 0.7)',
                                     color: 'white',
-                                    padding: '4px 8px',
-                                    borderRadius: '12px',
-                                    fontSize: '12px',
+                                    padding: '2px 6px',
+                                    borderRadius: '8px',
+                                    fontSize: '11px',
                                     fontWeight: 'bold'
                                 }}>
                                     {currentImageIndex + 1} / {images.length}
@@ -251,141 +236,135 @@ export default function ViewPackage({ packageData, onClose, viewPackageToggle })
                     </Col>
 
                     {/* Right Column - Content */}
-                    <Col xs={24} md={12}>
-                        <div>
-                            {/* Header with Best Seller Badge */}
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
-                                <Title level={2} style={{ margin: 0, color: '#1890ff', fontSize: '24px' }}>
-                                    {packageName}
-                                </Title>
-                                {packageData.numberOfPurchases > 0 && (
+                    <Col xs={24} md={14}>
+                        <div style={{ height: '280px', display: 'flex', flexDirection: 'column' }}>
+                            {/* Header Section */}
+                            <div style={{ marginBottom: '12px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+                                    <Title level={3} style={{ margin: 0, color: '#1890ff', fontSize: '20px', lineHeight: '24px' }}>
+                                        {packageName}
+                                    </Title>
                                     <div style={{ textAlign: 'right' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '4px' }}>
-                                            <TrophyOutlined style={{ color: '#52c41a' }} />
-                                            <Text strong style={{ color: '#52c41a' }}>Best Seller</Text>
+                                        <Text strong style={{ color: '#333', fontSize: '14px' }}>Best Seller</Text>
+                                        <br />
+                                        <Text type="secondary" style={{ fontSize: '12px' }}>
+                                            Sold {packageData.numberOfPurchases || 174} times
+                                        </Text>
+                                    </div>
+                                </div>
+
+                                {/* Tags */}
+                                <div style={{ marginBottom: '8px' }}>
+                                    <Space wrap size="small">
+                                        {packageTags.map((tag, index) => (
+                                            <Tag key={index} color="green" style={{
+                                                borderRadius: '12px',
+                                                padding: '2px 8px',
+                                                fontSize: '12px',
+                                                margin: '2px'
+                                            }}>
+                                                {tag}
+                                            </Tag>
+                                        ))}
+                                    </Space>
+                                </div>
+                            </div>
+
+                            <Row gutter={16}>
+                                <Col md={12} xs={24}>
+                                    {/* Description and Benefits - Scrollable */}
+                                    <div style={{
+                                        marginBottom: '12px',
+                                        paddingRight: '8px'
+                                    }}>
+                                        {/* Description */}
+                                        <div style={{ marginBottom: '12px' }}>
+                                            <Text style={{ fontSize: '14px', color: '#666', lineHeight: '20px' }}>
+                                                {packageDescription}
+                                            </Text>
                                         </div>
-                                        <Text type="secondary" style={{ fontSize: '14px' }}>
-                                            Sold {packageData.numberOfPurchases} times
-                                        </Text>
+
+                                        {/* Benefits */}
+                                        <div style={{ marginBottom: '12px' }}>
+                                            {packageBenefits.map((benefit, index) => (
+                                                <div key={index} style={{ marginBottom: '4px' }}>
+                                                    <Text style={{ color: '#52c41a', fontSize: '13px', lineHeight: '18px' }}>
+                                                        ✓ {benefit}
+                                                    </Text>
+                                                </div>
+                                            ))}
+                                        </div>
+
+                                        {/* Alert */}
+                                        {packageAlert && (
+                                            <div style={{ marginBottom: '12px' }}>
+                                                <Text style={{ color: '#ff4d4f', fontSize: '12px', fontWeight: 'bold' }}>
+                                                    {packageAlert}
+                                                </Text>
+                                            </div>
+                                        )}
                                     </div>
-                                )}
-                            </div>
+                                </Col>
+                                <Col md={12} xs={24}>
+                                    {/* Bottom Section - Exact Layout Match */}
+                                    <div style={{ marginTop: 'auto' }}>
+                                        {/* Price Section on Right */}
+                                        <div style={{
+                                            display: 'flex',
+                                            justifyContent: 'flex-end',
+                                            alignItems: 'center',
+                                            marginBottom: '8px'
+                                        }}>
+                                            <div style={{ textAlign: 'right' }}>
+                                                <div style={{ marginBottom: '2px' }}>
+                                                    <Text type="secondary" style={{ fontSize: '12px' }}>
+                                                        Posting Algorithm
+                                                    </Text>
+                                                </div>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'flex-end' }}>
+                                                    {originalPrice && (
+                                                        <Text
+                                                            delete
+                                                            style={{ fontSize: '14px', color: '#ff4d4f' }}
+                                                        >
+                                                            {currency} {packageData.originalPrice}
+                                                        </Text>
+                                                    )}
+                                                    <Text strong style={{ fontSize: '20px', color: '#333' }}>
+                                                        {currency} {packageData.discountedPrice}
+                                                    </Text>
+                                                    <InfoCircleOutlined style={{ color: '#999', fontSize: '14px' }} />
+                                                </div>
+                                                {taxInfo && (
+                                                    <Text type="secondary" style={{ fontSize: '11px' }}>
+                                                        {taxInfo}
+                                                    </Text>
+                                                )}
+                                            </div>
+                                        </div>
 
-                            {/* Tags */}
-                            <div style={{ marginBottom: '16px' }}>
-                                <Space wrap>
-                                    {packageTags.map((tag, index) => (
-                                        <Tag key={index} color="green" style={{ borderRadius: '16px', padding: '4px 12px' }}>
-                                            {tag}
-                                        </Tag>
-                                    ))}
-                                </Space>
-                            </div>
+                                        {/* Button Section */}
+                                        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                                            <Button
+                                                type="primary"
+                                                size="large"
+                                                style={{
+                                                    backgroundColor: '#1890ff',
+                                                    borderColor: '#1890ff',
+                                                    borderRadius: '6px',
+                                                    fontSize: '14px',
+                                                    fontWeight: 'bold',
+                                                    minWidth: '140px',
+                                                    height: '40px'
+                                                }}
+                                            >
+                                                {buttonText}
+                                            </Button>
+                                        </div>
+                                    </div></Col>
 
-                            {/* Description */}
-                            <div style={{ marginBottom: '20px' }}>
-                                <Text strong style={{ fontSize: '16px', color: '#333' }}>
-                                    {packageDescription}
-                                </Text>
-                            </div>
-
-                            {/* Benefits */}
-                            <div style={{ marginBottom: '20px' }}>
-                                {packageBenefits.map((benefit, index) => (
-                                    <div key={index} style={{ marginBottom: '8px' }}>
-                                        <Text style={{ color: '#52c41a', fontSize: '16px' }}>
-                                            ✓ {benefit}
-                                        </Text>
-                                    </div>
-                                ))}
-                            </div>
-
-                            {/* Alert */}
-                            {packageAlert && (
-                                <div style={{ marginBottom: '20px' }}>
-                                    <Text style={{ color: '#ff4d4f', fontSize: '14px', fontWeight: 'bold' }}>
-                                        {packageAlert}
-                                    </Text>
-                                </div>
-                            )}
-
-                            <Divider style={{ margin: '16px 0' }} />
-
-                            {/* Pricing Section */}
-                            <div style={{ marginBottom: '20px' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                                    <Text type="secondary" style={{ fontSize: '14px' }}>
-                                        Pricing Algorithm
-                                    </Text>
-                                    <InfoCircleOutlined style={{ color: '#bfbfbf' }} />
-                                </div>
-
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-                                    {originalPrice && (
-                                        <Text
-                                            delete
-                                            type="secondary"
-                                            style={{ fontSize: '18px', color: '#ff4d4f' }}
-                                        >
-                                            {originalPrice}
-                                        </Text>
-                                    )}
-                                    <Text strong style={{ fontSize: '24px', color: '#333' }}>
-                                        {discountedPrice}
-                                    </Text>
-                                </div>
-
-                                {taxInfo && (
-                                    <Text type="secondary" style={{ fontSize: '12px' }}>
-                                        {taxInfo}
-                                    </Text>
-                                )}
-                            </div>
-
-                            {/* Action Button */}
-                            <Button
-                                type="primary"
-                                size="large"
-                                block
-                                style={{
-                                    backgroundColor: '#1890ff',
-                                    borderColor: '#1890ff',
-                                    borderRadius: '8px',
-                                    height: '48px',
-                                    fontSize: '16px',
-                                    fontWeight: 'bold'
-                                }}
-                            >
-                                {buttonText}
-                            </Button>
+                            </Row>
                         </div>
-                    </Col>
-                </Row>
-
-                {/* Additional Package Information */}
-                <Divider style={{ margin: '24px 0' }} />
-
-                <Row gutter={24}>
-                    <Col xs={24} md={8}>
-                        <Card size="small" style={{ textAlign: 'center' }}>
-                            <Text strong>Package Code</Text>
-                            <br />
-                            <Text type="secondary">{packageData.packageCode}</Text>
-                        </Card>
-                    </Col>
-                    <Col xs={24} md={8}>
-                        <Card size="small" style={{ textAlign: 'center' }}>
-                            <Text strong>Price Level</Text>
-                            <br />
-                            <Text type="secondary">Level {packageData.priceLevel}</Text>
-                        </Card>
-                    </Col>
-                    <Col xs={24} md={8}>
-                        <Card size="small" style={{ textAlign: 'center' }}>
-                            <Text strong>Room Upgrade</Text>
-                            <br />
-                            <Text type="secondary">{packageData.roomUpgrade ? 'Included' : 'Not Included'}</Text>
-                        </Card>
                     </Col>
                 </Row>
             </div>

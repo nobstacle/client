@@ -18,6 +18,7 @@ export type ReceivedType =
   | "MapTemplateMessage"
   | "Survey"
   | "WebsiteTemplateMessage"
+  | "Packages"
   | "JotFormTemplateMessage";
 
 export interface SendTemplatePayloadType {
@@ -92,4 +93,37 @@ export interface ReceivedResponseType {
   responseData: any; 
   submittedAt?: string;
   source?: "Form" | "Survey" | "API" | string;
+}
+
+// Add package-related types
+export interface SendPackagePayloadType {
+  refId: number;
+  langCode: string;
+  refType: string;
+  station: number;
+  contentExtra?: string;
+}
+
+export interface ReceivedPackageContent {
+  id: number;
+  tag: string;
+  packageCode?: string;
+  packageName?: string;
+  originalPrice?: string;
+  discountedPrice?: string;
+  currency?: string;
+  langCode: string[];
+  station: number;
+  timestamp?: string;
+  content?: string;
+  title?: string;
+  images?: Array<{
+    alt: string;
+    url: string;
+    signedUrl: string;
+    order: number;
+  }>;
+  benefits?: string[];
+  description?: string;
+  active?: boolean;
 }

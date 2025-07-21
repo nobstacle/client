@@ -4247,7 +4247,7 @@ export const packageControllerUpdatePackage = (
 	return nobstacleBackendApiInstance<PackageResponse>(
 		{
 			url: `/api/v1/uploads/update-package/${id}`,
-			method: 'PATCH',
+			method: 'PUT',
 			headers: { 'Content-Type': 'application/json' },
 			data: data
 		},

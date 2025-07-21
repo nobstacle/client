@@ -19,6 +19,10 @@ import QRCode from 'qrcode';
 import "../../../styles/base.css";
 import "antd/dist/reset.css";
 import { useSession } from "next-auth/react";
+import { Card, Button, Tag, Typography } from "antd";
+import { InfoCircleOutlined } from "@ant-design/icons";
+
+const { Title, Text } = Typography;
 
 const IframeWithPrefill = React.memo(({ src, prefillData }: { src: string, prefillData: Record<string, string> }) => {
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -55,6 +59,156 @@ const IframeWithPrefill = React.memo(({ src, prefillData }: { src: string, prefi
   );
 });
 
+const PackageCard = ({ packageData, currentImageIndex, setCurrentImageIndex, handleClick }) => {
+  const formatPrice = (price) => {
+    return new Intl.NumberFormat().format(price / 100);
+  };
+
+  const formatCurrency = (price, currency = 'AED') => {
+    return `${currency} ${formatPrice(price)}`;
+  };
+
+  const getDiscountPercentage = () => {
+    const original = parseInt(packageData.originalPrice);
+    const discounted = parseInt(packageData.discountedPrice);
+    return Math.round(((original - discounted) / original) * 100);
+  };
+
+  const handlePackageClick = (record: any) => {
+    console.info("recordrecord", record);
+    handleClick(record);
+  }
+
+  return (
+    <Card
+      className="w-full max-w-4xl mx-auto shadow-lg rounded-lg overflow-hidden mb-6"
+      bodyStyle={{ padding: 0 }}
+    >
+      <div className="flex flex-col md:flex-row">
+        {/* Image Section */}
+        <div className="relative md:w-96 h-64 md:h-80">
+          {packageData.signedImageUrls && packageData.signedImageUrls.length > 0 ? (
+            <div className="relative w-full h-full">
+              <img
+                src={packageData.signedImageUrls[currentImageIndex]?.signedUrl}
+                alt={packageData.signedImageUrls[currentImageIndex]?.alt || 'Package Image'}
+                className="w-full h-full object-cover"
+              />
+
+              {/* Image Indicators */}
+              {packageData.signedImageUrls.length > 1 && (
+                <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-1">
+                  {packageData.signedImageUrls.map((_, index) => (
+                    <div
+                      key={index}
+                      className={`w-2 h-2 rounded-full ${index === currentImageIndex ? 'bg-white' : 'bg-white/50'
+                        }`}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+              <Text className="text-gray-500">No Image Available</Text>
+            </div>
+          )}
+        </div>
+
+        {/* Content Section */}
+        <div className="flex-1 p-6 flex flex-col justify-between">
+          <div>
+            {/* Header */}
+            <div className="flex justify-between items-start mb-4">
+              <div>
+                <Title level={3} className="text-blue-600 mb-2">
+                  {packageData.packageNames?.en || 'Package'}
+                </Title>
+
+                {/* Tags */}
+                <div className="flex flex-wrap gap-2 mb-4">
+                  {packageData.packageTags?.en?.map((tag, index) => (
+                    <Tag key={index} color="green" className="px-3 py-1">
+                      {tag}
+                    </Tag>
+                  ))}
+                </div>
+              </div>
+
+              <div className="text-right">
+                <div className="bg-gray-100 px-3 py-1 rounded text-sm text-gray-600 mb-2">
+                  Best Seller
+                </div>
+                <Text className="text-sm text-gray-500">
+                  Sold {packageData.numberOfPurchases} times
+                </Text>
+              </div>
+            </div>
+
+            {/* Description */}
+            <div className="mb-4">
+              <Text className="text-gray-700 font-medium mb-2 block">
+                {packageData.packageDescriptions?.en || 'Package Description Text - Multilingual Depending on the selected language'}
+              </Text>
+
+              {/* Benefits */}
+              <div className="space-y-1">
+                {packageData.packageBenefits?.en?.map((benefit, index) => (
+                  <div key={index} className="text-green-600 font-medium">
+                    {benefit}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Alert */}
+            {packageData.packageAlerts?.en && (
+              <div className="mb-4">
+                <Text className="text-red-600 font-medium">
+                  {packageData.packageAlerts.en}
+                </Text>
+              </div>
+            )}
+          </div>
+
+          {/* Price and Action Section */}
+          <div className="flex justify-between items-end">
+            <div className="flex flex-col">
+              <Text className="text-sm text-gray-500 mb-1">
+                Posting Algorithm
+              </Text>
+              <div className="flex items-center gap-2">
+                <Text className="text-sm text-gray-400 line-through">
+                  {formatCurrency(packageData.originalPrice)}
+                </Text>
+                <Text className="text-2xl font-bold">
+                  {formatCurrency(packageData.discountedPrice)}
+                </Text>
+                <InfoCircleOutlined className="text-gray-400" />
+              </div>
+              {packageData.includesTax && (
+                <Text className="text-sm text-gray-500 mt-1">
+                  {packageData.taxInformation?.en || 'Tax information'}
+                </Text>
+              )}
+            </div>
+
+            <Button
+              type="primary"
+              size="large"
+              className="bg-blue-600 hover:bg-blue-700 px-8 py-2 h-12"
+              disabled={!packageData.active}
+              onClick={() => handlePackageClick(packageData)}
+            >
+              {packageData.buttonTexts?.en || 'Take this deal'}
+            </Button>
+          </div>
+        </div>
+      </div>
+    </Card>
+  );
+};
+
 export const Content: React.FC = () => {
   const isFirstTimeOpen = useRef(true);
   const videoElement = React.useRef<HTMLVideoElement | null>(null);
@@ -64,7 +218,6 @@ export const Content: React.FC = () => {
   const hasHydrated = useHasHydrated();
   const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
   const [showQR, setShowQR] = useState(false);
-  const iframeRef = useRef(null);
   const [timer, setTimer] = useState(20);
   const [isClosing, setIsClosing] = useState(false);
   const [loadError, setLoadError] = useState(false);
@@ -79,7 +232,7 @@ export const Content: React.FC = () => {
   const [jotFormUrl, setJotFormUrl] = useState<string | null>(null);
   const [prefillData, setPrefillData] = useState<Record<string, string>>({});
   const [contentKey, setContentKey] = useState(0);
-  const [isDownloading, setIsDownloading] = useState(false);
+  const [packageImageIndexes, setPackageImageIndexes] = useState<Record<number, number>>({});
 
   const defaultSlideshowContent =
     useContentControllerGetDefaultSlideshowContent({
@@ -125,6 +278,7 @@ export const Content: React.FC = () => {
       isFirstTimeOpen.current = false;
     }
   }, [messageStore.receivedType]);
+
 
   useEffect(() => {
     const updateVideoStyles = () => {
@@ -224,7 +378,6 @@ export const Content: React.FC = () => {
     setTimer(0);
   }, []);
 
-
   useEffect(() => {
     let countdown: NodeJS.Timeout;
 
@@ -269,6 +422,41 @@ export const Content: React.FC = () => {
 
     loadFormData();
   }, [messageStore.receivedType, messageStore.receivedContent?.content, data?.user.backendTokens.at]);
+
+  useEffect(() => {
+    if (messageStore.receivedType === 'Packages') {
+      let parseData;
+      try {
+        parseData = JSON.parse(messageStore.receivedContent?.extraContent ?? '[]');
+      } catch (error) {
+        console.error("Error parsing package data:", error);
+        return;
+      }
+
+      const initialIndexes = {};
+      parseData.forEach((pkg, index) => {
+        initialIndexes[pkg.id] = 0;
+      });
+      setPackageImageIndexes(initialIndexes);
+      const intervals = [];
+
+      parseData.forEach((pkg) => {
+        if (pkg.signedImageUrls && pkg.signedImageUrls.length > 1) {
+          const interval = setInterval(() => {
+            setPackageImageIndexes(prev => ({
+              ...prev,
+              [pkg.id]: (prev[pkg.id] + 1) % pkg.signedImageUrls.length
+            }));
+          }, 3000);
+          intervals.push(interval);
+        }
+      });
+
+      return () => {
+        intervals.forEach(interval => clearInterval(interval));
+      };
+    }
+  }, [messageStore.receivedType, messageStore.receivedContent?.extraContent]);
 
   const getFormData = async (url: string): Promise<{ url: string, prefillData: Record<string, string> } | null> => {
     try {
@@ -348,6 +536,63 @@ export const Content: React.FC = () => {
     }
   }, [isLoading]);
 
+  const createUpsellTransaction = async (formData: {
+    packageId: number;
+    confirmationNumber: string;
+    arrivalDate?: Date;
+    departureDate?: Date;
+    numberOfAdults?: number;
+    numberOfChildren?: number;
+  }) => {
+    try {
+      const response = await fetch('/api/create-upsell-transaction', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${data?.user.backendTokens.at}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData)
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error creating upsell transaction:', error);
+      throw error;
+    }
+  };
+
+  const handlePackageClicked = async (packageData: any) => {
+    console.info("INSIDE", packageData);
+
+    try {
+      const confirmationNumber = 0;
+
+      const upsellData = {
+        packageId: packageData.id,
+        confirmationNumber: confirmationNumber,
+        arrivalDate: undefined,
+        departureDate: undefined,
+        numberOfAdults: undefined,
+        numberOfChildren: undefined,
+      };
+
+      const result = await createUpsellTransaction(upsellData);
+
+      console.log('Upsell transaction created successfully:', result);
+      alert('Package purchased successfully!');
+
+      // Handle success - maybe redirect or update UI
+      // window.location.href = '/success';
+
+    } catch (error) {
+      console.error('Failed to create upsell transaction:', error);
+      alert('Failed to purchase package. Please try again.');
+    }
+  };
   if (hasHydrated) {
     if (
       messageStore.receivedType === "TextTemplateMessage" ||
@@ -358,6 +603,39 @@ export const Content: React.FC = () => {
           <p className="text-center text-4xl" style={{ lineHeight: "3.5rem", whiteSpace: 'pre-wrap' }}>
             {messageStore.receivedContent?.content ?? ""}
           </p>
+        </div>
+      );
+    }
+
+    if (messageStore.receivedType === 'Packages') {
+      let parseData;
+      try {
+        parseData = JSON.parse(messageStore.receivedContent?.extraContent ?? '[]');
+      } catch (error) {
+        console.error("Error parsing package data:", error);
+        return (
+          <div className="w-full p-5">
+            <Text className="text-red-500">Error loading package data</Text>
+          </div>
+        );
+      }
+
+      return (
+        <div className="w-full space-y-6" style={{ height: '100%', padding: '3rem', overflow: 'hidden', overflowY: 'scroll' }}>
+          {parseData.map((packageData) => (
+            <PackageCard
+              key={packageData.id}
+              packageData={packageData}
+              currentImageIndex={packageImageIndexes[packageData.id] || 0}
+              setCurrentImageIndex={(index) => {
+                setPackageImageIndexes(prev => ({
+                  ...prev,
+                  [packageData.id]: index
+                }));
+              }}
+              handleClick={(data) => handlePackageClicked(data)}
+            />
+          ))}
         </div>
       );
     }

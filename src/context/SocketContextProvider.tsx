@@ -18,6 +18,7 @@ import {
 } from "../constant/types";
 import { useMessageStore } from "../lib/zustand/store/messageStore";
 import useTemplateStore from "../lib/zustand/store/templateStore";
+import { SendPackagePayloadType, ReceivedPackageContent } from "../constant/types";
 
 // Add document-related types
 export interface SendDocumentPayloadType {
@@ -72,6 +73,7 @@ export const SocketContext = createContext<{
   emitSendSurvey: (data: SendSurveyPayloadType) => void;
   emitSendLangCode: (data: SendLangCodeMessagePayloadType) => void;
   emitUpdateInformation: (data: SendInformationUpdatePayloadType, callback?: (response: any) => void) => void;
+  emitSendPackages: (data: SendPackagePayloadType, callback?: (response: any) => void) => void;
   socketConnected: boolean;
 } | null>(null);
 
@@ -173,69 +175,69 @@ export const SocketContextProvider = ({
     }
   };
 
-const onInformationUpdated = (data: any) => {
-  try {
-    let parsedData;
+  const onInformationUpdated = (data: any) => {
+    try {
+      let parsedData;
 
-    console.info("🔄 Information update received:", data);
-    
-    if (typeof data === 'string') {
-      parsedData = JSON.parse(data);
-    } else {
-      parsedData = data; // Already an object
-    }
-    
-        console.info("CHECKINGIGNGIGNNIGNNIGG", parsedData);
+      console.info("🔄 Information update received:", data);
 
-    if (parsedData.status === 400) {
-      console.warn("⚠️ Information update response has error:", parsedData);
-      return;
-    }
-    
-    // Handle the new structure from backend
-    const { action, data: informationData, timestamp, deletedId } = parsedData;
-    
-    console.log(`✅ Information ${action} at ${timestamp}:`, informationData);
-    
-    // Update your state based on the action
-    switch (action) {
-      case 'created':
-        console.log('✅ New information created');
-        if (informationData) {
-          setReceivedContent(informationData as ReceivedInformationContent);
-        }
-        break;
-        
-      case 'updated':
-        console.log('📝 Information updated');
-        if (informationData) {
-          setReceivedContent(informationData as ReceivedInformationContent);
-        }
-        break;
-        
-      case 'deleted':
-        console.log('🗑️ Information deleted');
-        if (deletedId) {
-          console.log(`Deleted information with ID: ${deletedId}`);
-        }
-        if (informationData) {
-          setReceivedContent(informationData as ReceivedInformationContent);
-        }
-        break;
-        
-      default:
-        console.warn('Unknown action:', action);
-        // Fallback to original behavior
-        if (informationData) {
-          setReceivedContent(informationData as ReceivedInformationContent);
-        }
-    }
+      if (typeof data === 'string') {
+        parsedData = JSON.parse(data);
+      } else {
+        parsedData = data; // Already an object
+      }
 
-  } catch (error) {
-    console.error("❌ Error parsing information update response:", error);
-    console.error("❌ Raw data that caused error:", data);
-  }
-};
+      console.info("CHECKINGIGNGIGNNIGNNIGG", parsedData);
+
+      if (parsedData.status === 400) {
+        console.warn("⚠️ Information update response has error:", parsedData);
+        return;
+      }
+
+      // Handle the new structure from backend
+      const { action, data: informationData, timestamp, deletedId } = parsedData;
+
+      console.log(`✅ Information ${action} at ${timestamp}:`, informationData);
+
+      // Update your state based on the action
+      switch (action) {
+        case 'created':
+          console.log('✅ New information created');
+          if (informationData) {
+            setReceivedContent(informationData as ReceivedInformationContent);
+          }
+          break;
+
+        case 'updated':
+          console.log('📝 Information updated');
+          if (informationData) {
+            setReceivedContent(informationData as ReceivedInformationContent);
+          }
+          break;
+
+        case 'deleted':
+          console.log('🗑️ Information deleted');
+          if (deletedId) {
+            console.log(`Deleted information with ID: ${deletedId}`);
+          }
+          if (informationData) {
+            setReceivedContent(informationData as ReceivedInformationContent);
+          }
+          break;
+
+        default:
+          console.warn('Unknown action:', action);
+          // Fallback to original behavior
+          if (informationData) {
+            setReceivedContent(informationData as ReceivedInformationContent);
+          }
+      }
+
+    } catch (error) {
+      console.error("❌ Error parsing information update response:", error);
+      console.error("❌ Raw data that caused error:", data);
+    }
+  };
 
   const onDocumentSentSuccessfully = (data: any) => {
     console.log("📄 Document sent successfully:", data);
@@ -394,6 +396,7 @@ const onInformationUpdated = (data: any) => {
     socketClient.on("document-sent-successfully", onReceivedDocument);
     socketClient.on("team-document-sent-successfully", onReceivedTeamDocument);
     socketClient.on("information-updated", onInformationUpdated);
+    socketClient.on("received-packages", onReceivedPackages);
 
     return () => {
       socketClient.off("disconnect", onDisconnect);
@@ -410,6 +413,7 @@ const onInformationUpdated = (data: any) => {
       socketClient.off("document-sent-successfully", onReceivedDocument);
       socketClient.off("team-document-sent-successfully", onReceivedTeamDocument);
       socketClient.off("information-updated", onInformationUpdated);
+      socketClient.off("received-packages", onReceivedPackages);
     };
   }, [socketClient]);
 
@@ -429,6 +433,24 @@ const onInformationUpdated = (data: any) => {
       return;
     }
     socketClient.emit("send-template", data);
+  };
+
+  const onReceivedPackages = (data: any) => {
+    try {
+      const parsedRes = JSON.parse(data);
+      if (parsedRes.status === 400) {
+        console.warn("⚠️ Package response has error:", parsedRes);
+        return;
+      }
+
+      const parsedData = parsedRes.data as ReceivedPackageContent;
+      console.info("✅ Received packages:", parsedData);
+
+      setReceivedContent(parsedData);
+
+    } catch (error) {
+      console.error("❌ Error parsing package response:", error);
+    }
   };
 
   const emitSendDocument = (data: SendDocumentPayloadType, callback?: (response: any) => void) => {
@@ -477,6 +499,25 @@ const onInformationUpdated = (data: any) => {
       if (callback) callback(response);
     });
   };
+
+  const emitSendPackages = (
+    data: SendPackagePayloadType,
+    callback?: (response: any) => void
+  ) => {
+    if (!socketClient || !socketClient.connected) {
+      console.error("❌ Socket is not connected!");
+      return;
+    }
+
+    console.log("📦 Emitting send-packages with data:", data);
+
+    if (callback) {
+      socketClient.emit("send-packages", data, callback);
+    } else {
+      socketClient.emit("send-packages", data);
+    }
+  };
+
 
   const emitUpdateInformation = (data: SendInformationUpdatePayloadType, callback?: (response: any) => void) => {
     if (!socketClient || !socketClient.connected) {
@@ -556,7 +597,8 @@ const onInformationUpdated = (data: any) => {
         emitSendLangCode,
         emitUpdateInformation,
         socketConnected,
-        emitSendTeamDocument
+        emitSendTeamDocument,
+        emitSendPackages
       }}
     >
       {children}

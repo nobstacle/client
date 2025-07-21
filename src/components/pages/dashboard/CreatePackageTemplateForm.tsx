@@ -23,7 +23,7 @@ import { languages } from "../../../constant/languages";
 import {
   useCompanyControllerGetCompany,
   usePackageControllerCreatePackage,
-  usePackageControllerUpdatePackage, // Add this import
+  usePackageControllerUpdatePackage, 
   usePackageControllerGetPackageTags,
 } from "../../../lib/client/api";
 
@@ -31,12 +31,6 @@ const { Text } = Typography;
 const { Option } = Select;
 const { TextArea } = Input;
 
-enum PriceAlgorithm {
-  PRICE_PER_PIECE_PER_NIGHT = "PRICE_PER_PIECE_PER_NIGHT",
-  PRICE_PER_PIECE_PER_STAY = "PRICE_PER_PIECE_PER_STAY",
-  PRICE_PER_PERSON_PER_NIGHT = "PRICE_PER_PERSON_PER_NIGHT",
-  PRICE_PER_PERSON_PER_STAY = "PRICE_PER_PERSON_PER_STAY",
-}
 
 interface CreatePackageFormFieldValues {
   packageCode: string;
@@ -44,16 +38,13 @@ interface CreatePackageFormFieldValues {
   discountedPrice?: number;
   includesTax: boolean;
   taxPercentage?: number;
-  priceAlgorithm: PriceAlgorithm;
+  priceAlgorithm: string;
   active: boolean;
   priceLevel?: number;
   roomUpgrade: boolean;
   incentivePercentage?: number;
-  confirmationNumber?: number;
   companyId?: number;
   templateId?: number;
-
-  // Multi-language fields (we'll handle the primary language)
   packageName: string;
   packageDescription?: string;
   packageBenefits: string[];
@@ -62,13 +53,10 @@ interface CreatePackageFormFieldValues {
   currency: string;
   packageAlert?: string;
   buttonText: string;
-
-  // For new tags
   newTag?: string;
   newBenefit?: string;
-
-  // Language selection
   langCode: string;
+  totalPackagesSold?: number; 
 }
 
 const schema = yup.object().shape({
@@ -77,12 +65,11 @@ const schema = yup.object().shape({
   discountedPrice: yup.number().min(0, "Discounted price must be positive"),
   includesTax: yup.boolean().required(),
   taxPercentage: yup.number().min(0).max(100, "Tax percentage must be between 0-100"),
-  priceAlgorithm: yup.string().oneOf(Object.values(PriceAlgorithm)).required("Price algorithm is required"),
+  priceAlgorithm: yup.string().required("Price algorithm is required"),
   active: yup.boolean().required(),
   priceLevel: yup.number().min(1, "Price level must be at least 1"),
   roomUpgrade: yup.boolean().required(),
   incentivePercentage: yup.number().min(0).max(100, "Incentive percentage must be between 0-100"),
-  confirmationNumber: yup.number().min(1),
 
   packageName: yup.string().required("Package name is required").max(100, "Name must be at most 100 characters"),
   packageDescription: yup.string().max(1000, "Description must be at most 1000 characters"),
@@ -91,20 +78,8 @@ const schema = yup.object().shape({
   packageAlert: yup.string().max(200, "Alert text must be at most 200 characters"),
   buttonText: yup.string().required("Button text is required").max(50, "Button text must be at most 50 characters"),
   langCode: yup.string().required("Language is required"),
+  totalPackagesSold: yup.number().min(0, "Total packages sold must be a non-negative number"),
 });
-
-const currencies = [
-  { code: 'USD', name: 'US Dollar' },
-  { code: 'EUR', name: 'Euro' },
-  { code: 'GBP', name: 'British Pound' },
-  { code: 'JPY', name: 'Japanese Yen' },
-  { code: 'CAD', name: 'Canadian Dollar' },
-  { code: 'AUD', name: 'Australian Dollar' },
-  { code: 'CHF', name: 'Swiss Franc' },
-  { code: 'CNY', name: 'Chinese Yuan' },
-  { code: 'INR', name: 'Indian Rupee' },
-  { code: 'TRY', name: 'Turkish Lira' },
-];
 
 interface CreatePackageFormProps {
   cb?: (packageData: any, isUpdate: boolean) => void;
@@ -115,7 +90,7 @@ interface CreatePackageFormProps {
 const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
   cb,
   initialData,
-  isEdit = false
+  isEdit = false,
 }) => {
   const packageTags = usePackageControllerGetPackageTags();
   const company = useCompanyControllerGetCompany();
@@ -140,12 +115,11 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
         discountedPrice: convertFromCents(initialData.discountedPrice) || undefined,
         includesTax: initialData.includesTax || false,
         taxPercentage: initialData.taxPercentage || undefined,
-        priceAlgorithm: initialData.priceAlgorithm || PriceAlgorithm.PRICE_PER_PIECE_PER_NIGHT,
+        priceAlgorithm: initialData.priceAlgorithm || '',
         active: initialData.active || false,
         priceLevel: initialData.priceLevel || undefined,
         roomUpgrade: initialData.roomUpgrade || false,
         incentivePercentage: initialData.incentivePercentage || undefined,
-        confirmationNumber: initialData.confirmationNumber || undefined,
         companyId: initialData.companyId || company.data?.id,
         templateId: initialData.templateId || undefined,
 
@@ -154,7 +128,7 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
         packageBenefits: [],
         packageTags: [],
         taxInformation: getMultilingualValue(initialData.taxInformation),
-        currency: getMultilingualValue(initialData.currencies) || "USD",
+        currency: getMultilingualValue(initialData.currencies) || "AED",
         packageAlert: getMultilingualValue(initialData.packageAlerts),
         buttonText: getMultilingualValue(initialData.buttonTexts) || "Buy Now",
         langCode: company.data?.defaultLangCode || "en",
@@ -166,12 +140,11 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
         discountedPrice: undefined,
         includesTax: false,
         taxPercentage: undefined,
-        priceAlgorithm: PriceAlgorithm.PRICE_PER_PIECE_PER_NIGHT,
+        priceAlgorithm: undefined,
         active: false,
         priceLevel: undefined,
         roomUpgrade: false,
         incentivePercentage: undefined,
-        confirmationNumber: undefined,
         companyId: company.data?.id,
         templateId: undefined,
 
@@ -180,10 +153,11 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
         packageBenefits: [],
         packageTags: [],
         taxInformation: "",
-        currency: "USD",
+        currency: "AED",
         packageAlert: "",
         buttonText: "Buy Now",
         langCode: company.data?.defaultLangCode || "en",
+        totalPackagesSold: 0
       };
     }
   };
@@ -252,10 +226,8 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
     if (data.incentivePercentage) {
       formData.append('incentivePercentage', data.incentivePercentage.toString());
     }
-    if (data.confirmationNumber) {
-      formData.append('confirmationNumber', data.confirmationNumber.toString());
-    }
     formData.append('companyId', (data.companyId || company.data?.id).toString());
+    formData.append('totalPackagesSold', (data.totalPackagesSold || 0).toString());
     if (data.templateId) {
       formData.append('templateId', data.templateId.toString());
     }
@@ -321,7 +293,6 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
   };
 
   const onSubmit: SubmitHandler<CreatePackageFormFieldValues> = (data) => {
-    console.info("datadatadata", data);
     handleCreatePackage(data);
   }
 
@@ -399,7 +370,7 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
                   render={({ field }) => (
                     <Input
                       {...field}
-                      placeholder="Enter unique package code..."
+                      placeholder="Enter unique package code"
                       status={errors.packageCode ? 'error' : ''}
                       disabled={isEdit} // Disable editing package code
                     />
@@ -421,7 +392,7 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
                   render={({ field }) => (
                     <Select
                       {...field}
-                      placeholder="Select language..."
+                      placeholder="Select language"
                       status={errors.langCode ? 'error' : ''}
                     >
                       {languages.map(({ code, name }) => (
@@ -450,7 +421,7 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
                   render={({ field }) => (
                     <Input
                       {...field}
-                      placeholder="Enter package name..."
+                      placeholder="Enter package name"
                       status={errors.packageName ? 'error' : ''}
                     />
                   )}
@@ -471,7 +442,7 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
                   render={({ field }) => (
                     <Input
                       {...field}
-                      placeholder="e.g., Buy Now, Purchase..."
+                      placeholder="e.g., Buy Now, Purchase"
                       status={errors.buttonText ? 'error' : ''}
                     />
                   )}
@@ -481,33 +452,26 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
           </Row>
 
           <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                label="Currency"
-                validateStatus={errors.currency ? 'error' : ''}
-                help={errors.currency?.message}
-                required
-              >
-                <Controller
-                  name="currency"
-                  control={control}
-                  render={({ field }) => (
-                    <Select
-                      {...field}
-                      placeholder="Select currency..."
-                      status={errors.currency ? 'error' : ''}
-                    >
-                      {currencies.map(({ code, name }) => (
-                        <Option value={code} key={code}>
-                          {code} - {name}
-                        </Option>
-                      ))}
-                    </Select>
-                  )}
-                />
-              </Form.Item>
-            </Col>
-
+          <Col span={12}>
+            <Form.Item
+              label="Currency"
+              validateStatus={errors.currency ? 'error' : ''}
+              help={errors.currency?.message}
+              required
+            >
+              <Controller
+                name="currency"
+                control={control}
+                render={({ field }) => (
+                  <Input
+                    {...field}
+                    placeholder="Enter currency code"
+                    status={errors.currency ? 'error' : ''}
+                  />
+                )}
+              />
+            </Form.Item>
+          </Col>
             <Col span={12}>
               <Form.Item
                 label="Price Level"
@@ -520,7 +484,7 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
                   render={({ field }) => (
                     <InputNumber
                       {...field}
-                      placeholder="Enter price level..."
+                      placeholder="Enter price level"
                       style={{ width: '100%' }}
                       status={errors.priceLevel ? 'error' : ''}
                       min={1}
@@ -542,7 +506,7 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
               render={({ field }) => (
                 <TextArea
                   {...field}
-                  placeholder="Enter package description..."
+                  placeholder="Enter package description"
                   rows={4}
                   status={errors.packageDescription ? 'error' : ''}
                 />
@@ -606,61 +570,48 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
           </Row>
 
           <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                label="Price Algorithm"
-                validateStatus={errors.priceAlgorithm ? 'error' : ''}
-                help={errors.priceAlgorithm?.message}
-                required
-              >
-                <Controller
-                  name="priceAlgorithm"
-                  control={control}
-                  render={({ field }) => (
-                    <Select
-                      {...field}
-                      placeholder="Select price algorithm..."
-                      status={errors.priceAlgorithm ? 'error' : ''}
-                    >
-                      <Option value={PriceAlgorithm.PRICE_PER_PIECE_PER_NIGHT}>
-                        Price per piece per night
-                      </Option>
-                      <Option value={PriceAlgorithm.PRICE_PER_PIECE_PER_STAY}>
-                        Price per piece per stay
-                      </Option>
-                      <Option value={PriceAlgorithm.PRICE_PER_PERSON_PER_NIGHT}>
-                        Price per person per night
-                      </Option>
-                      <Option value={PriceAlgorithm.PRICE_PER_PERSON_PER_STAY}>
-                        Price per person per stay
-                      </Option>
-                    </Select>
-                  )}
-                />
-              </Form.Item>
-            </Col>
-
-            <Col span={12}>
-              <Form.Item
-                label="Confirmation Number"
-                validateStatus={errors.confirmationNumber ? 'error' : ''}
-                help={errors.confirmationNumber?.message}
-              >
-                <Controller
-                  name="confirmationNumber"
-                  control={control}
-                  render={({ field }) => (
-                    <InputNumber
-                      {...field}
-                      placeholder="Enter confirmation number..."
-                      style={{ width: '100%' }}
-                      status={errors.confirmationNumber ? 'error' : ''}
-                      min={1}
-                    />
-                  )}
-                />
-              </Form.Item>
-            </Col>
+<Col span={12}>
+  <Form.Item
+    label="Price Algorithm"
+    validateStatus={errors.priceAlgorithm ? 'error' : ''}
+    help={errors.priceAlgorithm?.message}
+    required
+  >
+    <Controller
+      name="priceAlgorithm"
+      control={control}
+      render={({ field }) => (
+        <Input
+          {...field}
+          placeholder="Enter price algorithm"
+          status={errors.priceAlgorithm ? 'error' : ''}
+        />
+      )}
+    />
+  </Form.Item>
+</Col>
+  <Col span={12}>
+    <Form.Item
+      label="Total Packages Sold"
+      validateStatus={errors.totalPackagesSold ? 'error' : ''}
+      help={errors.totalPackagesSold?.message}
+      required
+    >
+      <Controller
+        name="totalPackagesSold" 
+        control={control}
+        render={({ field }) => (
+          <InputNumber
+            {...field}
+            placeholder="Enter total packages sold"
+            style={{ width: '100%' }}
+            status={errors.totalPackagesSold ? 'error' : ''}
+            min={0}
+          />
+        )}
+      />
+    </Form.Item>
+  </Col>
           </Row>
 
           <Row gutter={16}>
@@ -787,7 +738,7 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
                   render={({ field }) => (
                     <TextArea
                       {...field}
-                      placeholder="Enter tax information..."
+                      placeholder="Enter tax information"
                       rows={3}
                       status={errors.taxInformation ? 'error' : ''}
                     />
@@ -808,7 +759,7 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
                   render={({ field }) => (
                     <TextArea
                       {...field}
-                      placeholder="Enter alert message..."
+                      placeholder="Enter alert message"
                       rows={3}
                       status={errors.packageAlert ? 'error' : ''}
                     />
@@ -833,7 +784,7 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
                     <Input
                       value={newBenefit}
                       onChange={(e) => setNewBenefit(e.target.value)}
-                      placeholder="Add benefit..."
+                      placeholder="Add benefit"
                       onPressEnter={addBenefit}
                       style={{ flex: 1 }}
                     />
@@ -858,7 +809,7 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
                     <Input
                       value={newTag}
                       onChange={(e) => setNewTag(e.target.value)}
-                      placeholder="Add tag..."
+                      placeholder="Add tag"
                       onPressEnter={addTag}
                       style={{ flex: 1 }}
                     />

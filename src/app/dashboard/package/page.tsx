@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Table, Tag, Card, Pagination, Input } from "antd";
+import { Table, Tag, Card, Pagination, Input, message } from "antd";
 import Modal from "../../../components/Modal";
 import { FaTrash, FaEdit, FaEye } from "react-icons/fa";
 import Swal from "sweetalert2";
@@ -12,9 +12,8 @@ import { useDisclousure } from "../../../hooks/useDisclosure";
 import { PlusIcon } from "../../../components/icons/PlusIcon";
 import CreatePackageForm from "../../../components/pages/dashboard/CreatePackageTemplateForm";
 import ViewPackage from "./ViewPackage";
-import { set } from "lodash";
 
-export default function Upsell() {
+export default function Package() {
     const { data: userData } = useSession();
     const { handleClose, handleOpen, isOpen } = useDisclousure();
     const [loadingData, setLoadingData] = useState(false);
@@ -28,10 +27,9 @@ export default function Upsell() {
     const { setPackages, packages, searchPackages, setSearchPackages } = useTemplateStore();
     const { data } = useSession();
     let Url = process.env.NEXT_PUBLIC_BACKEND_URL;
-    let role = data?.user?.Roles[0];
     const debounceRef = useRef<NodeJS.Timeout>();
 
-    const fetchPackages = (searchValue: string) => {
+    const fetchPackages = useCallback((searchValue: string = "") => {
         setLoadingData(true);
         fetch(`${Url}/api/v1/uploads/get-all-packages`, {
             headers: { Authorization: `Bearer ${data?.user.backendTokens.at}` },
@@ -49,13 +47,13 @@ export default function Upsell() {
             .finally(() => {
                 setLoadingData(false);
             });
-    };
+    }, [data, Url, setPackages]);
 
     useEffect(() => {
         if (data?.user !== undefined) {
             fetchPackages("");
         }
-    }, [data]);
+    }, [data, fetchPackages]);
 
     // Function to handle opening modal for creating new package
     const handleCreatePackage = () => {
@@ -80,6 +78,37 @@ export default function Upsell() {
         setViewPackageData(null);
         setModalMode('create');
     };
+
+    // Callback function to handle successful create/update operations
+    const handlePackageOperationComplete = useCallback((template, isUpdate) => {
+        handleCloseModal();
+        fetchPackages(searchTerm);
+    }, [fetchPackages, searchTerm]);
+
+
+    const HandlePackageDelete = (record: any) => {
+        setLoadingData(true);
+        let Id = record.id;
+
+        fetch(`${Url}/api/v1/uploads/delete-package/${Id}`, {
+            method: 'DELETE',
+            headers: {
+                Authorization: `Bearer ${data?.user.backendTokens.at}`,
+            },
+        })
+            .then(async (response) => {
+                const text = await response.text();
+                message.success('Package deleted!');
+                fetchPackages("");
+            })
+            .catch((error) => {
+                console.warn("Error deleting package:", error);
+            })
+            .finally(() => {
+                setLoadingData(false);
+            });
+    };
+
 
     const columns = [
         {
@@ -261,12 +290,6 @@ export default function Upsell() {
             render: (percentage: string) => `${percentage}%`,
         },
         {
-            title: "Confirmation #",
-            dataIndex: "confirmationNumber",
-            key: "confirmationNumber",
-            width: 140,
-        },
-        {
             title: "Company",
             dataIndex: ["Company", "name"],
             key: "company",
@@ -311,7 +334,7 @@ export default function Upsell() {
                                 confirmButtonText: "Yes, delete it!"
                             }).then((result) => {
                                 if (result.isConfirmed) {
-                                    Swal.fire("Deleted!", "Package has been deleted.", "success");
+                                    HandlePackageDelete(record);
                                 }
                             });
                         }}
@@ -362,24 +385,13 @@ export default function Upsell() {
                     <CreatePackageForm
                         initialData={editingPackage}
                         isEdit={modalMode === 'edit'}
-                        cb={(template, isUpdate) => {
-                            handleCloseModal();
-                            if (modalMode === 'create') {
-                                const updatedPackages = [...packages, template];
-                                setPackages(updatedPackages);
-                            } else {
-                                const updatedPackages = packages.map(pkg =>
-                                    pkg.id === template.id ? template : pkg
-                                );
-                                setPackages(updatedPackages);
-                            }
-                        }}
+                        cb={handlePackageOperationComplete}
                     />
                 </Modal>
             )}
             <Card className="bg-gray-50">
                 <div className="customSearchWrapper mb-4">
-                    <Card className="w-full customCards">
+                    <Card className="w-full customCards" >
                         <div className="searchInputWidth">
                             <Input placeholder='Search Packages' className='w-full rounded-md p-2' onChange={searchNotes} />
                         </div>
