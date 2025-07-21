@@ -5,7 +5,7 @@ import { SearchOutlined, SendOutlined } from "@ant-design/icons";
 import "../../../styles/base.css";
 import { useSession } from "next-auth/react";
 import "../../../styles/base.css";
-import { useDisclousure } from "../../../hooks/useDisclosure";
+// import { useDisclousure } from "../../../hooks/useDisclosure";
 import { useSocketContext } from "../../../context/SocketContextProvider";
 import { useSearchParams } from "next/navigation";
 import {
@@ -164,7 +164,7 @@ export default function Upsell() {
                 {/* Controls Section */}
                 <Card className="mb-6 shadow-sm">
                     <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
-                        <div className="flex-1 max-w-md">
+                        <div className="flex max-w-md">
                             <Input
                                 placeholder="Search transactions..."
                                 prefix={<SearchOutlined className="text-gray-400" />}
@@ -173,19 +173,14 @@ export default function Upsell() {
                                 className="w-full"
                                 size="large"
                             />
-                        </div>
-
-                        <div className="flex gap-3">
-                            <Button
+                             <Button
                                 type="primary"
                                 icon={<SendOutlined />}
                                 onClick={handlePackageSend}
                                 loading={loadingData}
                                 size="large"
                                 className="flex items-center"
-                            >
-                                Send Packages
-                            </Button>
+                            />
                         </div>
                     </div>
                 </Card>

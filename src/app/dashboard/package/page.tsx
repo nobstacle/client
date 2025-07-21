@@ -147,10 +147,9 @@ export default function Package() {
         },
         {
             title: "Purchases",
-            dataIndex: "numberOfPurchases",
-            key: "numberOfPurchases",
+            dataIndex: "totalPackagesSold",
+            key: "totalPackagesSold",
             width: 140,
-            sorter: (a, b) => a.numberOfPurchases - b.numberOfPurchases,
         },
         {
             title: "Tags",
@@ -166,20 +165,26 @@ export default function Package() {
                 </div>
             ),
         },
-        {
-            title: "Original Price",
-            dataIndex: "originalPrice",
-            key: "originalPrice",
-            width: 120,
-            render: (price: string) => `$${price}`,
-        },
-        {
-            title: "Discounted Price",
-            dataIndex: "discountedPrice",
-            key: "discountedPrice",
-            width: 160,
-            render: (price: string) => price ? `$${price}` : "N/A",
-        },
+ {
+    title: "Original Price",
+    dataIndex: "originalPrice",
+    key: "originalPrice",
+    width: 120,
+    render: (price: string, record: any) => {
+        const currency = record?.currencies?.en || '';
+        return price ? `${currency} ${price}` : "N/A";
+    }
+},
+{
+    title: "Discounted Price",
+    dataIndex: "discountedPrice",
+    key: "discountedPrice",
+    width: 160,
+    render: (price: string, record: any) => {
+        const currency = record?.currencies?.en || '';
+        return price ? `${currency} ${price}` : "N/A";
+    }
+},
         {
             title: "Tax Included",
             dataIndex: "includesTax",
@@ -208,12 +213,6 @@ export default function Package() {
             key: "taxPercentage",
             width: 80,
             render: (percentage: string) => percentage ? `${percentage}%` : "N/A",
-        },
-        {
-            title: "Currency",
-            dataIndex: ["currencies", "en"],
-            key: "currency",
-            width: 100,
         },
         {
             title: "Price Algorithm",

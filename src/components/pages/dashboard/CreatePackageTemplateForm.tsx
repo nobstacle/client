@@ -136,7 +136,7 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
     } else {
       return {
         packageCode: "",
-        originalPrice: 0,
+        originalPrice: undefined,
         discountedPrice: undefined,
         includesTax: false,
         taxPercentage: undefined,
@@ -487,7 +487,7 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
                       placeholder="Enter price level"
                       style={{ width: '100%' }}
                       status={errors.priceLevel ? 'error' : ''}
-                      min={1}
+                      min={0}
                     />
                   )}
                 />
@@ -534,11 +534,11 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
                   render={({ field }) => (
                     <InputNumber
                       {...field}
-                      placeholder="0.00"
+                      placeholder="0"
                       style={{ width: '100%' }}
                       status={errors.originalPrice ? 'error' : ''}
                       min={0}
-                      precision={2}
+                        step={0.01}
                     />
                   )}
                 />
@@ -557,11 +557,11 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
                   render={({ field }) => (
                     <InputNumber
                       {...field}
-                      placeholder="0.00"
+                      placeholder="0"
                       style={{ width: '100%' }}
                       status={errors.discountedPrice ? 'error' : ''}
                       min={0}
-                      precision={2}
+                        step={0.01}
                     />
                   )}
                 />

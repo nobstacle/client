@@ -77,35 +77,71 @@ const PackageCard = ({ packageData, currentImageIndex, setCurrentImageIndex, han
   const handlePackageClick = (record) => {
     console.info("recordrecord", record);
     handleClick(record);
-  }
+  };
+
+  const handlePrevImage = () => {
+    if (packageData.signedImageUrls && packageData.signedImageUrls.length > 0) {
+      setCurrentImageIndex((prev) =>
+        prev === 0 ? packageData.signedImageUrls.length - 1 : prev - 1
+      );
+    }
+  };
+
+  const handleNextImage = () => {
+    if (packageData.signedImageUrls && packageData.signedImageUrls.length > 0) {
+      setCurrentImageIndex((prev) =>
+        prev === packageData.signedImageUrls.length - 1 ? 0 : prev + 1
+      );
+    }
+  };
 
   return (
     <Card
-      className="w-full max-w-6xl mx-auto shadow-lg rounded-lg overflow-hidden mb-6"
+      className="w-full max-w-7xl mx-auto shadow-lg rounded-lg overflow-hidden mb-6"
       bodyStyle={{ padding: 0 }}
     >
-      <div className="flex flex-col md:flex-row">
-        {/* Image Section - Width increased by 15% (from w-80 to w-92) */}
-        <div className="relative md:w-[400px] h-64 md:h-auto flex-shrink-0">
+      <div className="flex flex-col lg:flex-row">
+        {/* Image Section */}
+        <div className="relative md:w-[400px] lg:w-[350px] xl:w-[500px] h-56 sm:h-64 md:h-72 lg:h-auto flex-shrink-0">
           {packageData.signedImageUrls && packageData.signedImageUrls.length > 0 ? (
-            <div className="relative w-full h-full md:h-100">
+            <div className="relative w-full h-full" style={{ padding: '1rem' }}>
               <img
                 src={packageData.signedImageUrls[currentImageIndex]?.signedUrl}
                 alt={packageData.signedImageUrls[currentImageIndex]?.alt || 'Package Image'}
                 className="w-full h-full object-cover"
+                style={{ borderRadius: '8px' }}
               />
 
-              {/* Image Indicators */}
+              {/* Navigation Arrows - Only show if more than one image */}
               {packageData.signedImageUrls.length > 1 && (
-                <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-1">
-                  {packageData.signedImageUrls.map((_, index) => (
-                    <div
-                      key={index}
-                      className={`w-2 h-2 rounded-full ${index === currentImageIndex ? 'bg-white' : 'bg-white/50'
-                        }`}
-                    />
-                  ))}
-                </div>
+                <>
+                  {/* Left Arrow */}
+                  <button
+                    onClick={handlePrevImage}
+                    className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full p-2 transition-all duration-200"
+                    aria-label="Previous image"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M15 18L9 12L15 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </button>
+
+                  {/* Right Arrow */}
+                  <button
+                    onClick={handleNextImage}
+                    className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full p-2 transition-all duration-200"
+                    aria-label="Next image"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M9 18L15 12L9 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </button>
+
+                  {/* Image counter (optional - small text showing current/total) */}
+                  <div className="absolute top-2 right-2 bg-black/50 text-white px-2 py-1 rounded text-xs">
+                    {currentImageIndex + 1} / {packageData.signedImageUrls.length}
+                  </div>
+                </>
               )}
             </div>
           ) : (
@@ -116,19 +152,19 @@ const PackageCard = ({ packageData, currentImageIndex, setCurrentImageIndex, han
         </div>
 
         {/* Content Section */}
-        <div className="flex-1 p-6 flex flex-col justify-between">
+        <div className="flex-1 p-4 sm:p-6 flex flex-col" style={{ paddingLeft:'0.5rem'}}>
           {/* Top Section */}
-          <div className="flex justify-between items-start mb-4">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start mb-4 gap-4">
             {/* Left side - Package info */}
-            <div className="flex-1 pr-4">
-              <Title level={3} className="text-blue-600 mb-2 mt-0">
+            <div className="flex-1">
+              <Title level={3} className="text-blue-600 mb-2 mt-0 text-lg sm:text-xl lg:text-2xl" style={{ color: '#006ce4' }}>
                 {packageData.packageNames?.en || 'Package'}
               </Title>
 
               {/* Tags */}
               <div className="flex flex-wrap gap-2 mb-4">
                 {packageData.packageTags?.en?.map((tag, index) => (
-                  <Tag key={index} className="px-3 py-1 bg-green-800 text-white border-green-800 rounded">
+                  <Tag key={index} className="px-2 sm:px-3 py-1 bg-green-800 text-white border-green-800 rounded text-xs sm:text-sm">
                     {tag}
                   </Tag>
                 ))}
@@ -136,28 +172,30 @@ const PackageCard = ({ packageData, currentImageIndex, setCurrentImageIndex, han
             </div>
 
             {/* Right side - Best seller and sold info */}
-            <div className="text-right flex-shrink-0">
-              <Text className="font-bold text-gray-600 mb-2 block">
+            <div className="text-left sm:text-right flex-shrink-0">
+              <Text className="font-bold text-gray-600 mb-2 block text-sm sm:text-base">
                 Best Seller
               </Text>
-              <Text className="text-sm text-gray-500">
-                Sold {packageData.numberOfPurchases || 0} times
+              <Text className="text-xs sm:text-sm text-gray-500">
+                Sold {packageData.totalPackagesSold || 0} times
               </Text>
             </div>
           </div>
 
-          <Row gutter={16}>
-            <Col md={18} xs={24}>
+          {/* Main Content Area */}
+          <div className="flex flex-col lg:flex-row gap-6 flex-1">
+            {/* Description and Benefits */}
+            <div className="flex-1">
               {/* Description */}
               <div className="mb-4">
-                <Text className="text-gray-700 font-bold mb-3 block">
+                <Text className="text-gray-700 font-bold mb-3 block text-sm sm:text-base">
                   {packageData.packageDescriptions?.en || 'Package Description Text - Multilingual Depending on the selected language'}
                 </Text>
 
                 {/* Benefits */}
                 <div className="space-y-1">
                   {packageData.packageBenefits?.en?.map((benefit, index) => (
-                    <div key={index} className="text-green-600 font-medium flex items-center">
+                    <div key={index} className="text-green-600 font-medium flex items-center text-sm sm:text-base">
                       <span className="mr-2">✓</span>
                       {benefit}
                     </div>
@@ -168,58 +206,52 @@ const PackageCard = ({ packageData, currentImageIndex, setCurrentImageIndex, han
               {/* Alert */}
               {packageData.packageAlerts?.en && (
                 <div className="mb-4">
-                  <Text className="text-red-600 font-medium">
+                  <Text className="text-red-600 font-medium text-sm sm:text-base">
                     {packageData.packageAlerts.en}
                   </Text>
                 </div>
-              )}</Col>
-            <Col md={6} xs={24}>
-              {/* Bottom Section - Price and Button */}
-              <div className="flex justify-between items-end">
-                {/* Left side - Empty space for alignment */}
-                <div></div>
+              )}
+            </div>
 
-                {/* Right side - Posting Algorithm, Price and Button */}
-                <div className="text-right">
-                  {/* Posting Algorithm Label */}
-                  <Text className="text-sm text-gray-500 mb-1">
-                    Posting Algorithm
-                  </Text>
+            {/* Price and Button Section */}
+            <div className="lg:w-44 flex flex-col justify-between">
+              <div className="text-left lg:text-right">
+                {/* Posting Algorithm Label */}
+                <Text className="text-xs sm:text-sm text-gray-500 mb-2 block">
+                  {packageData?.priceAlgorithm}
+                </Text>
 
-                  {/* Pricing Block */}
-                  <div className="mb-4">
-                    <div className="flex items-center justify-end gap-2 mb-1">
-                      <Text className="text-sm text-gray-400 line-through">
-                        {formatCurrency(packageData.originalPrice)}
-                      </Text>
-                      <Text className="text-2xl font-bold">
-                        {formatCurrency(packageData.discountedPrice)}
-                      </Text>
-                      <InfoCircleOutlined className="text-gray-400" />
-                    </div>
-                    {packageData.includesTax && (
-                      <Text className="text-sm text-gray-500">
-                        {packageData.taxInformation?.en || 'Tax information'}
-                      </Text>
-                    )}
+                {/* Pricing Block */}
+                <div className="mb-4">
+                  <div className="flex items-center justify-start lg:justify-end gap-2 mb-1 flex-wrap">
+                    <Text className="text-sm text-gray-400 line-through order-2 lg:order-1">
+                      {formatCurrency(packageData.originalPrice)}
+                    </Text>
+                    <Text className="text-xl sm:text-2xl font-bold order-1 lg:order-2">
+                      {formatCurrency(packageData.discountedPrice)}
+                    </Text>
+                    <InfoCircleOutlined className="text-gray-400 order-3" />
                   </div>
-
-                  {/* Button */}
-                  <Button
-                    type="primary"
-                    size="large"
-                    className="bg-blue-600 hover:bg-blue-700 px-8 py-2 h-12"
-                    disabled={!packageData.active}
-                    onClick={() => handlePackageClick(packageData)}
-                  >
-                    {packageData.buttonTexts?.en || 'Take this deal'}
-                  </Button>
+                  {packageData.includesTax && (
+                    <Text className="text-xs sm:text-sm text-gray-500">
+                      {packageData.taxInformation?.en || 'Tax information'}
+                    </Text>
+                  )}
                 </div>
-              </div></Col>
-          </Row>
 
-
-
+                {/* Button */}
+                <Button
+                  type="primary"
+                  size="large"
+                  className="bg-blue-600 hover:bg-blue-700 px-6 sm:px-8 py-2 h-10 sm:h-12 w-full lg:w-auto text-sm sm:text-base"
+                  disabled={!packageData.active}
+                  onClick={() => handlePackageClick(packageData)}
+                >
+                  {packageData.buttonTexts?.en || 'Take this deal'}
+                </Button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </Card>
@@ -638,7 +670,7 @@ export const Content: React.FC = () => {
       }
 
       return (
-        <div className="w-full space-y-6" style={{ height: '100%', padding: '3rem', overflow: 'hidden', overflowY: 'scroll' }}>
+        <div className="w-full space-y-6" style={{ height: '100%', padding: '3rem 1rem', overflow: 'hidden', overflowY: 'scroll' }}>
           {parseData.map((packageData) => (
             <PackageCard
               key={packageData.id}
