@@ -77,7 +77,11 @@ const schema = yup.object().shape({
   currency: yup.string().required("Currency is required"),
   packageAlert: yup.string().max(200, "Alert text must be at most 200 characters"),
   buttonText: yup.string().required("Button text is required").max(50, "Button text must be at most 50 characters"),
-  langCode: yup.string().required("Language is required"),
+  langCode: yup
+    .array()
+    .of(yup.string().required("Language is required"))
+    .min(1, "At least one language is required")
+    .required("Language is required"),
   totalPackagesSold: yup.number().min(0, "Total packages sold must be a non-negative number"),
 });
 
@@ -131,7 +135,7 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
         currency: getMultilingualValue(initialData.currencies) || "AED",
         packageAlert: getMultilingualValue(initialData.packageAlerts),
         buttonText: getMultilingualValue(initialData.buttonTexts) || "Buy Now",
-        langCode: company.data?.defaultLangCode || "en",
+        langCode: [],
       };
     } else {
       return {
@@ -156,7 +160,7 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
         currency: "AED",
         packageAlert: "",
         buttonText: "Buy Now",
-        langCode: company.data?.defaultLangCode || "en",
+        langCode: [],
         totalPackagesSold: 0
       };
     }
@@ -394,6 +398,8 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
                       {...field}
                       placeholder="Select language"
                       status={errors.langCode ? 'error' : ''}
+                       mode="multiple"
+                       allowClear
                     >
                       {languages.map(({ code, name }) => (
                         <Option value={code} key={code}>

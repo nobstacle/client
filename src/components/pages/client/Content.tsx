@@ -67,7 +67,7 @@ const PackageCard = ({ packageData, handleClick, loadingButton }) => {
   };
 
   const formatCurrency = (price, currency = 'AED') => {
-    return `${currency} ${formatPrice(price)}`;
+    return `${currency} ${price}`;
   };
 
   // const getDiscountPercentage = () => {

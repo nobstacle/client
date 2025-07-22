@@ -371,7 +371,7 @@ export default function Upsell() {
             render: (record: any) => (
                 <div className="text-xs">
                     <div>{record.soldByUser?.email || 'N/A'}</div>
-                    <div className="text-gray-500">ID: {record.soldBy}</div>
+                    {/* <div className="text-gray-500">ID: {record.soldBy}</div> */}
                 </div>
             ),
         },
@@ -524,8 +524,7 @@ export default function Upsell() {
                                 icon={<SendOutlined />}
                                 onClick={handlePackageSend}
                                 loading={loadingData}
-                                className="flex items-center justify-center bg-blue-600 hover:bg-blue-700 rounded-md px-4 py-2 text-white headerButton"
-                                style={{ padding: '0.45rem 1rem !important' }}
+                                className="flex items-center justify-center bg-blue-600 hover:bg-blue-700 rounded-md px-4 py-2 text-white headerButton customHeaderButton"
                             />
                         </div>
                     </div>

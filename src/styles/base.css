@@ -917,3 +917,7 @@ button {
   align-items: center;
   width: 100%;
 }
+
+.customHeaderButton {
+  padding: 0.49rem 1rem !important;
+}

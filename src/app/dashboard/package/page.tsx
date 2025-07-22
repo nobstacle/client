@@ -1,8 +1,8 @@
 "use client";
-import { useState, useEffect, useCallback, useRef } from "react";
-import { Table, Tag, Card, Pagination, Input, message } from "antd";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { Table, Tag, Card, Pagination, Input, message, Select, Button } from "antd";
 import Modal from "../../../components/Modal";
-import { FaTrash, FaEdit, FaEye } from "react-icons/fa";
+import { FaTrash, FaEdit, FaEye, FaSearch, FaTimes } from "react-icons/fa";
 import Swal from "sweetalert2";
 import "../../../styles/base.css";
 import useTemplateStore from "../../../lib/zustand/store/templateStore";
@@ -13,24 +13,44 @@ import { PlusIcon } from "../../../components/icons/PlusIcon";
 import CreatePackageForm from "../../../components/pages/dashboard/CreatePackageTemplateForm";
 import ViewPackage from "./ViewPackage";
 
+const { Option } = Select;
+
 export default function Package() {
     const { data: userData } = useSession();
     const { handleClose, handleOpen, isOpen } = useDisclousure();
     const [loadingData, setLoadingData] = useState(false);
-    const [totalItems, setTotalItems] = useState(false);
+    const [totalItems, setTotalItems] = useState(0);
     const [searchTerm, setSearchTerm] = useState('');
     const [hasMore, setHasMore] = useState(true);
     const [editingPackage, setEditingPackage] = useState(null);
     const [modalMode, setModalMode] = useState('create');
     const [viewPackage, setViewPackage] = useState(false);
     const [viewPackageData, setViewPackageData] = useState(null);
+
+    // Enhanced search states
+    const [searchFilters, setSearchFilters] = useState({
+        searchText: '',
+        status: 'all',
+        priceRange: 'all',
+        priceLevel: 'all',
+        taxIncluded: 'all',
+        roomUpgrade: 'all',
+        sortBy: 'name',
+        sortOrder: 'asc'
+    });
+    const [showAdvancedSearch, setShowAdvancedSearch] = useState(false);
+
     const { setPackages, packages, searchPackages, setSearchPackages } = useTemplateStore();
     const { data } = useSession();
     let Url = process.env.NEXT_PUBLIC_BACKEND_URL;
-    const debounceRef = useRef<NodeJS.Timeout>();
+    const debounceRef = useRef();
 
-    const fetchPackages = useCallback((searchValue: string = "") => {
+    // Original packages data (unfiltered)
+    const [originalPackages, setOriginalPackages] = useState([]);
+
+    const fetchPackages = useCallback(() => {
         setLoadingData(true);
+
         fetch(`${Url}/api/v1/uploads/get-all-packages`, {
             headers: { Authorization: `Bearer ${data?.user.backendTokens.at}` },
         })
@@ -38,8 +58,9 @@ export default function Package() {
                 const text = await response.text();
                 const json = JSON.parse(text);
                 const data = json.data || json;
+                setOriginalPackages(data); // Store original data
                 setPackages(data);
-                setTotalItems(json.pagination?.totalCount);
+                setTotalItems(json.pagination?.totalCount || data.length);
             })
             .catch((error) => {
                 console.warn("Error fetching data:", error);
@@ -49,11 +70,171 @@ export default function Package() {
             });
     }, [data, Url, setPackages]);
 
+    // Enhanced search function
+    const performSearch = useCallback((filters) => {
+        if (!originalPackages.length) return [];
+
+        let filteredPackages = [...originalPackages];
+
+        // Text search across multiple fields
+        if (filters.searchText && filters.searchText.trim() !== '') {
+            const searchLower = filters.searchText.toLowerCase().trim();
+            filteredPackages = filteredPackages.filter(pkg => {
+                const searchFields = [
+                    pkg.packageCode,
+                    pkg.packageNames?.en || pkg.packageNames?.ar || '',
+                    pkg.packageDescriptions?.en || pkg.packageDescriptions?.ar || '',
+                    pkg.priceAlgorithm,
+                    pkg.Company?.name || '',
+                    ...(pkg.packageBenefits?.en || pkg.packageBenefits?.ar || []),
+                    ...(pkg.packageTags?.en || pkg.packageTags?.ar || []),
+                    pkg.buttonTexts?.en || pkg.buttonTexts?.ar || '',
+                    pkg.packageAlerts?.en || pkg.packageAlerts?.ar || ''
+                ];
+
+                return searchFields.some(field =>
+                    field && field.toString().toLowerCase().includes(searchLower)
+                );
+            });
+        }
+
+        // Status filter
+        if (filters.status !== 'all') {
+            const isActive = filters.status === 'active';
+            filteredPackages = filteredPackages.filter(pkg => pkg.active === isActive);
+        }
+
+        // Price range filter
+        if (filters.priceRange !== 'all') {
+            filteredPackages = filteredPackages.filter(pkg => {
+                const price = parseFloat(pkg.discountedPrice || pkg.originalPrice || 0);
+                switch (filters.priceRange) {
+                    case 'low': return price < 1000;
+                    case 'medium': return price >= 1000 && price < 5000;
+                    case 'high': return price >= 5000 && price < 20000;
+                    case 'premium': return price >= 20000;
+                    default: return true;
+                }
+            });
+        }
+
+        // Price level filter
+        if (filters.priceLevel !== 'all') {
+            const level = parseInt(filters.priceLevel);
+            filteredPackages = filteredPackages.filter(pkg => pkg.priceLevel === level);
+        }
+
+        // Tax included filter
+        if (filters.taxIncluded !== 'all') {
+            const includesTax = filters.taxIncluded === 'yes';
+            filteredPackages = filteredPackages.filter(pkg => pkg.includesTax === includesTax);
+        }
+
+        // Room upgrade filter
+        if (filters.roomUpgrade !== 'all') {
+            const hasUpgrade = filters.roomUpgrade === 'yes';
+            filteredPackages = filteredPackages.filter(pkg => pkg.roomUpgrade === hasUpgrade);
+        }
+
+        // Sorting
+        filteredPackages.sort((a, b) => {
+            let aValue, bValue;
+
+            switch (filters.sortBy) {
+                case 'name':
+                    aValue = (a.packageNames?.en || a.packageNames?.ar || '').toLowerCase();
+                    bValue = (b.packageNames?.en || b.packageNames?.ar || '').toLowerCase();
+                    break;
+                case 'code':
+                    aValue = a.packageCode;
+                    bValue = b.packageCode;
+                    break;
+                case 'price':
+                    aValue = parseFloat(a.discountedPrice || a.originalPrice || 0);
+                    bValue = parseFloat(b.discountedPrice || b.originalPrice || 0);
+                    break;
+                case 'purchases':
+                    aValue = a.numberOfPurchases || 0;
+                    bValue = b.numberOfPurchases || 0;
+                    break;
+                case 'created':
+                    aValue = new Date(a.createdAt);
+                    bValue = new Date(b.createdAt);
+                    break;
+                default:
+                    aValue = a.id;
+                    bValue = b.id;
+            }
+
+            if (filters.sortOrder === 'desc') {
+                return aValue > bValue ? -1 : aValue < bValue ? 1 : 0;
+            } else {
+                return aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
+            }
+        });
+
+        return filteredPackages;
+    }, [originalPackages]);
+
+    // Debounced search effect
+    useEffect(() => {
+        if (debounceRef.current) {
+            clearTimeout(debounceRef.current);
+        }
+
+        debounceRef.current = setTimeout(() => {
+            const filtered = performSearch(searchFilters);
+            setPackages(filtered);
+            setTotalItems(filtered.length);
+            setCurrentPage(1); // Reset to first page when searching
+        }, 300);
+
+        return () => {
+            if (debounceRef.current) {
+                clearTimeout(debounceRef.current);
+            }
+        };
+    }, [searchFilters, performSearch, setPackages]);
+
     useEffect(() => {
         if (data?.user !== undefined) {
-            fetchPackages("");
+            fetchPackages();
         }
     }, [data, fetchPackages]);
+
+    // Handle search filter changes
+    const handleFilterChange = (key, value) => {
+        setSearchFilters(prev => ({
+            ...prev,
+            [key]: value
+        }));
+    };
+
+    // Clear all filters
+    const clearAllFilters = () => {
+        setSearchFilters({
+            searchText: '',
+            status: 'all',
+            priceRange: 'all',
+            priceLevel: 'all',
+            taxIncluded: 'all',
+            roomUpgrade: 'all',
+            sortBy: 'name',
+            sortOrder: 'asc'
+        });
+    };
+
+    // Check if any filters are active
+    const hasActiveFilters = useMemo(() => {
+        return searchFilters.searchText !== '' ||
+            searchFilters.status !== 'all' ||
+            searchFilters.priceRange !== 'all' ||
+            searchFilters.priceLevel !== 'all' ||
+            searchFilters.taxIncluded !== 'all' ||
+            searchFilters.roomUpgrade !== 'all' ||
+            searchFilters.sortBy !== 'name' ||
+            searchFilters.sortOrder !== 'asc';
+    }, [searchFilters]);
 
     // Function to handle opening modal for creating new package
     const handleCreatePackage = () => {
@@ -82,11 +263,10 @@ export default function Package() {
     // Callback function to handle successful create/update operations
     const handlePackageOperationComplete = useCallback((template, isUpdate) => {
         handleCloseModal();
-        fetchPackages(searchTerm);
-    }, [fetchPackages, searchTerm]);
+        fetchPackages(); // Refresh data after operations
+    }, [fetchPackages]);
 
-
-    const HandlePackageDelete = (record: any) => {
+    const HandlePackageDelete = (record) => {
         setLoadingData(true);
         let Id = record.id;
 
@@ -99,7 +279,7 @@ export default function Package() {
             .then(async (response) => {
                 const text = await response.text();
                 message.success('Package deleted!');
-                fetchPackages("");
+                fetchPackages();
             })
             .catch((error) => {
                 console.warn("Error deleting package:", error);
@@ -108,7 +288,6 @@ export default function Package() {
                 setLoadingData(false);
             });
     };
-
 
     const columns = [
         {
@@ -122,28 +301,35 @@ export default function Package() {
             dataIndex: ["packageNames", "en"],
             key: "packageName",
             width: 200,
+            render: (text, record) => text || record.packageNames?.ar || 'N/A',
         },
         {
             title: "Description",
             dataIndex: ["packageDescriptions", "en"],
             key: "packageDescription",
             width: 250,
-            render: (text: string) => (
-                <div className="truncate" title={text}>
-                    {text}
-                </div>
-            ),
+            render: (text, record) => {
+                const description = text || record.packageDescriptions?.ar || '';
+                return (
+                    <div className="truncate" title={description}>
+                        {description}
+                    </div>
+                );
+            },
         },
         {
             title: "Benefits",
             dataIndex: ["packageBenefits", "en"],
             key: "packageBenefits",
             width: 200,
-            render: (benefits: string[]) => (
-                <div className="truncate" title={benefits?.join(", ")}>
-                    {benefits?.join(", ")}
-                </div>
-            ),
+            render: (benefits, record) => {
+                const benefitList = benefits || record.packageBenefits?.ar || [];
+                return (
+                    <div className="truncate" title={benefitList?.join(", ")}>
+                        {benefitList?.join(", ")}
+                    </div>
+                );
+            },
         },
         {
             title: "Purchases",
@@ -156,41 +342,45 @@ export default function Package() {
             dataIndex: ["packageTags", "en"],
             key: "tags",
             width: 150,
-            render: (tags: string[]) => (
-                <div className="flex flex-wrap gap-1">
-                    {tags?.slice(0, 2).map((tag, index) => (
-                        <Tag key={index} size="small">{tag}</Tag>
-                    ))}
-                    {tags?.length > 2 && <Tag size="small">+{tags.length - 2}</Tag>}
-                </div>
-            ),
+            render: (tags, record) => {
+                const tagList = tags || record.packageTags?.ar || [];
+                return (
+                    <div className="flex flex-wrap gap-1">
+                        {tagList?.slice(0, 2).map((tag, index) => (
+                            <Tag key={index} size="small">{tag}</Tag>
+                        ))}
+                        {tagList?.length > 2 && <Tag size="small">+{tagList.length - 2}</Tag>}
+                    </div>
+                );
+            },
         },
- {
-    title: "Original Price",
-    dataIndex: "originalPrice",
-    key: "originalPrice",
-    width: 120,
-    render: (price: string, record: any) => {
-        const currency = record?.currencies?.en || '';
-        return price ? `${currency} ${price}` : "N/A";
-    }
-},
-{
-    title: "Discounted Price",
-    dataIndex: "discountedPrice",
-    key: "discountedPrice",
-    width: 160,
-    render: (price: string, record: any) => {
-        const currency = record?.currencies?.en || '';
-        return price ? `${currency} ${price}` : "N/A";
-    }
-},
+        {
+            title: "Original Price",
+            dataIndex: "originalPrice",
+            key: "originalPrice",
+            width: 120,
+            render: (price, record) => {
+                console.info("RECOR", price, record);
+                const currency = record?.currencies?.en || record?.currencies?.ar || '';
+                return price ? `${currency} ${price}` : "N/A";
+            }
+        },
+        {
+            title: "Discounted Price",
+            dataIndex: "discountedPrice",
+            key: "discountedPrice",
+            width: 160,
+            render: (price, record) => {
+                const currency = record?.currencies?.en || record?.currencies?.ar || '';
+                return price ? `${currency} ${price}` : "N/A";
+            }
+        },
         {
             title: "Tax Included",
             dataIndex: "includesTax",
             key: "includesTax",
             width: 140,
-            render: (includesTax: boolean) => (
+            render: (includesTax) => (
                 <Tag color={includesTax ? "green" : "orange"}>
                     {includesTax ? "Yes" : "No"}
                 </Tag>
@@ -201,18 +391,21 @@ export default function Package() {
             dataIndex: ["taxInformation", "en"],
             key: "taxInformation",
             width: 150,
-            render: (text: string) => (
-                <div className="truncate" title={text}>
-                    {text}
-                </div>
-            ),
+            render: (text, record) => {
+                const taxInfo = text || record.taxInformation?.ar || '';
+                return (
+                    <div className="truncate" title={taxInfo}>
+                        {taxInfo}
+                    </div>
+                );
+            },
         },
         {
             title: "Tax %",
             dataIndex: "taxPercentage",
             key: "taxPercentage",
             width: 80,
-            render: (percentage: string) => percentage ? `${percentage}%` : "N/A",
+            render: (percentage) => percentage ? `${percentage}%` : "N/A",
         },
         {
             title: "Price Algorithm",
@@ -225,18 +418,21 @@ export default function Package() {
             dataIndex: ["packageAlerts", "en"],
             key: "packageAlert",
             width: 120,
-            render: (alert: string) => (
-                <div className="truncate" title={alert}>
-                    {alert}
-                </div>
-            ),
+            render: (alert, record) => {
+                const alertText = alert || record.packageAlerts?.ar || '';
+                return (
+                    <div className="truncate" title={alertText}>
+                        {alertText}
+                    </div>
+                );
+            },
         },
         {
             title: "Status",
             dataIndex: "active",
             key: "active",
             width: 100,
-            render: (active: boolean) => (
+            render: (active) => (
                 <Tag color={active ? "green" : "red"}>
                     {active ? "Active" : "Inactive"}
                 </Tag>
@@ -247,7 +443,7 @@ export default function Package() {
             dataIndex: "images",
             key: "images",
             width: 80,
-            render: (images: string[]) => (
+            render: (images) => (
                 <Tag color={images?.length > 0 ? "blue" : "gray"}>
                     {images?.length || 0}
                 </Tag>
@@ -258,13 +454,14 @@ export default function Package() {
             dataIndex: ["buttonTexts", "en"],
             key: "buttonText",
             width: 120,
+            render: (text, record) => text || record.buttonTexts?.ar || 'N/A',
         },
         {
             title: "Price Level",
             dataIndex: "priceLevel",
             key: "priceLevel",
             width: 100,
-            render: (level: number) => (
+            render: (level) => (
                 <Tag color={level >= 4 ? "red" : level >= 3 ? "orange" : "green"}>
                     Level {level}
                 </Tag>
@@ -275,7 +472,7 @@ export default function Package() {
             dataIndex: "roomUpgrade",
             key: "roomUpgrade",
             width: 140,
-            render: (roomUpgrade: boolean) => (
+            render: (roomUpgrade) => (
                 <Tag color={roomUpgrade ? "blue" : "gray"}>
                     {roomUpgrade ? "Yes" : "No"}
                 </Tag>
@@ -286,7 +483,7 @@ export default function Package() {
             dataIndex: "incentivePercentage",
             key: "incentivePercentage",
             width: 120,
-            render: (percentage: string) => `${percentage}%`,
+            render: (percentage) => `${percentage}%`,
         },
         {
             title: "Company",
@@ -325,7 +522,7 @@ export default function Package() {
                         onClick={() => {
                             Swal.fire({
                                 title: "Are you sure?",
-                                text: `Delete package: ${record.packageNames?.en}?`,
+                                text: `Delete package: ${record.packageNames?.en || record.packageNames?.ar}?`,
                                 icon: "warning",
                                 showCancelButton: true,
                                 confirmButtonColor: "#d33",
@@ -350,27 +547,16 @@ export default function Package() {
     const [currentPage, setCurrentPage] = useState(1);
     const pageSize = 10;
 
-    const handlePageChange = (page: number, pageSize: number) => {
+    const handlePageChange = (page, pageSize) => {
         setCurrentPage(page);
     };
 
-    const debouncedSearch = useCallback((searchValue: string) => {
-        if (debounceRef.current) {
-            clearTimeout(debounceRef.current);
-        }
-
-        debounceRef.current = setTimeout(() => {
-            setCurrentPage(1);
-            setHasMore(true);
-            fetchPackages(searchValue);
-        }, 500);
-    }, [fetchPackages]);
-
-    const searchNotes = (e: any) => {
-        const searchValue = e.target.value.toLowerCase().trim();
-        setSearchTerm(searchValue);
-        debouncedSearch(searchValue);
-    }
+    // Get paginated data for display
+    const paginatedPackages = useMemo(() => {
+        const startIndex = (currentPage - 1) * pageSize;
+        const endIndex = startIndex + pageSize;
+        return Array.isArray(packages) ? packages.slice(startIndex, endIndex) : [];
+    }, [packages, currentPage, pageSize]);
 
     return (
         <div className="h-full overflow-y-auto p-4 customPackageContainer">
@@ -388,19 +574,33 @@ export default function Package() {
                     />
                 </Modal>
             )}
+
             <Card className="bg-gray-50">
-                <div className="customSearchWrapper mb-4">
-                    <Card className="w-full customCards" >
-                        <div className="searchInputWidth">
-                            <Input placeholder='Search Packages' className='w-full rounded-md p-2' onChange={searchNotes} />
+                {/* Enhanced Search Section */}
+                <div className="mb-4 space-y-4">
+                    {/* Main Search Bar */}
+                    <Card className="w-full customCards">
+                         <div className="searchInputWidth">
+                            <div className="flex-1 min-w-0">
+                                <Input
+                                    placeholder="Search packages by name, code, description, benefits, tags..."
+                                    className="rounded-md"
+                                    prefix={<FaSearch className="text-gray-400" />}
+                                    value={searchFilters.searchText}
+                                    onChange={(e) => handleFilterChange('searchText', e.target.value)}
+                                    allowClear
+                                />
+                            </div>
                         </div>
                     </Card>
                 </div>
+
+                {/* Table Section */}
                 <div className="p-4 shadow-md rounded-lg customTableWrapper customSurveyTable bg-white">
                     <Table
                         rowKey="id"
                         columns={columns}
-                        dataSource={Array.isArray(packages) ? packages : []}
+                        dataSource={paginatedPackages}
                         pagination={false}
                         className="jotFormTable"
                         scroll={{ x: 2500 }}
@@ -409,11 +609,14 @@ export default function Package() {
                     <div className="flex justify-center mt-6">
                         <Pagination
                             current={currentPage}
-                            total={totalItems}
+                            total={packages?.length || 0}
                             pageSize={pageSize}
                             onChange={handlePageChange}
                             showSizeChanger
                             pageSizeOptions={["10", "20", "50", "100"]}
+                            showTotal={(total, range) =>
+                                `${range[0]}-${range[1]} of ${total} packages`
+                            }
                         />
                     </div>
                 </div>
@@ -438,7 +641,11 @@ export default function Package() {
             )}
 
             {viewPackage !== false && (
-                <ViewPackage packageData={viewPackageData} onClose={handleCloseModal} viewPackageToggle={viewPackage} />
+                <ViewPackage
+                    packageData={viewPackageData}
+                    onClose={handleCloseModal}
+                    viewPackageToggle={viewPackage}
+                />
             )}
         </div>
     );
