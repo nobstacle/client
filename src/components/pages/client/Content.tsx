@@ -213,10 +213,10 @@ const PackageCard = ({ packageData, handleClick, loadingButton }) => {
             {/* Right side - Best seller and sold info */}
             <div className="text-left sm:text-right flex-shrink-0">
               <Text className="font-bold text-gray-600 mb-2 block text-sm sm:text-base">
-                Best Seller
+                {packageData.numberOfPurchases > 1500 ? "Best Seller" : packageData.numberOfPurchases > 1000 && packageData.numberOfPurchases < 1500 ? "Top Seller" : packageData.numberOfPurchases > 500 && packageData.numberOfPurchases < 1000 ? "Popular Deal" : "Limited Offer"}
               </Text>
               <Text className="text-xs sm:text-sm text-gray-500">
-                Sold {packageData.totalPackagesSold || 0} times
+                Sold {packageData.numberOfPurchases || 0} times
               </Text>
             </div>
           </div>

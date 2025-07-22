@@ -147,8 +147,8 @@ export default function Package() {
         },
         {
             title: "Purchases",
-            dataIndex: "totalPackagesSold",
-            key: "totalPackagesSold",
+            dataIndex: "numberOfPurchases",
+            key: "numberOfPurchases",
             width: 140,
         },
         {
