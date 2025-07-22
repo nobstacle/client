@@ -209,9 +209,9 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
 
     // Add all the package data
     formData.append('packageCode', data.packageCode);
-    formData.append('originalPrice', (Math.round(data.originalPrice * 100)).toString());
+    formData.append('originalPrice', data.originalPrice.toString());
     if (data.discountedPrice) {
-      formData.append('discountedPrice', (Math.round(data.discountedPrice * 100)).toString());
+    formData.append('discountedPrice', data.discountedPrice.toString());
     }
     formData.append('includesTax', data.includesTax.toString());
     if (data.taxPercentage) {
@@ -561,7 +561,7 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
                       style={{ width: '100%' }}
                       status={errors.discountedPrice ? 'error' : ''}
                       min={0}
-                        step={0.01}
+                      step={0.01}
                     />
                   )}
                 />

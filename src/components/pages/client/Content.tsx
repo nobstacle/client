@@ -146,7 +146,7 @@ const PackageCard = ({ packageData, handleClick, loadingButton }) => {
     >
       <div className="flex flex-col lg:flex-row">
         {/* Image Section */}
-        <div className="relative md:w-[400px] lg:w-[350px] xl:w-[500px] h-56 sm:h-64 md:h-72 lg:h-auto flex-shrink-0" style={{ maxHeight: '40vh' }}>
+        <div className="relative md:w-[400px] lg:w-[375px] xl:w-[500px] h-56 sm:h-64 md:h-72 lg:h-auto flex-shrink-0" style={{ maxHeight: '40vh' }}>
           {imageArray.length > 0 ? (
             <div className="relative w-full h-full" style={{ padding: '1rem' }}>
               <Carousel
@@ -159,12 +159,12 @@ const PackageCard = ({ packageData, handleClick, loadingButton }) => {
                 style={{ height: '100%' }}
               >
                 {imageArray.map((image, index) => (
-                  <div key={index} className="w-full h-full">
+                  <div key={index} className="w-full h-full" style={{ height:'100%'}}>
                     <img
                       src={image.signedUrl || image.url || image}
                       alt={image.alt || `Package Image ${index + 1}`}
                       className="w-full h-full object-cover"
-                      style={{ borderRadius: '8px', height: 'calc(100% - 2rem)', maxHeight: '35vh' }}
+                      style={{ borderRadius: '8px', height: '100%', maxHeight: '35vh', minHeight:'25vh' }}
                       onError={(e) => {
                         console.error('Image failed to load:', image.signedUrl || image.url || image);
                       }}
@@ -178,7 +178,7 @@ const PackageCard = ({ packageData, handleClick, loadingButton }) => {
 
               {/* Image counter - Only show if more than one image */}
               {hasMultipleImages && (
-                <div className="absolute top-2 right-2 bg-black/50 text-white px-2 py-1 rounded text-xs z-10">
+                <div className="absolute top-2 left-1 bg-black/50 text-white px-2 py-1 rounded text-xs z-10">
                   1 / {imageArray.length}
                 </div>
               )}
@@ -623,6 +623,7 @@ export const Content: React.FC = () => {
     }
   }, [isLoading]);
 
+  
   const createUpsellTransaction = async (formData: {
     packageId: number;
     confirmationNumber: string;
@@ -655,6 +656,7 @@ export const Content: React.FC = () => {
   const handlePackageClicked = async (packageData) => {
     setLoading(true);
     try {
+      let sellingPerson = JSON.parse(messageStore.receivedContent && messageStore.receivedContent.sentBy);
       const confirmationNumber = `CONF-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
 
       const today = new Date();
@@ -671,6 +673,7 @@ export const Content: React.FC = () => {
         departureDate: dayAfterTomorrow.toISOString(),
         numberOfAdults: 2,
         numberOfChildren: 0,
+        soldBy: sellingPerson.id
       };
 
       const result = await createUpsellTransaction(upsellData);
@@ -721,35 +724,41 @@ export const Content: React.FC = () => {
       );
     }
 
-    if (messageStore.receivedType === 'Packages') {
-      let parseData;
-      try {
-        parseData = JSON.parse(messageStore.receivedContent?.extraContent ?? '[]');
-      } catch (error) {
-        console.error("Error parsing package data:", error);
-        return (
-          <div className="w-full p-5">
-            <Text className="text-red-500">Error loading package data</Text>
-          </div>
-        );
-      }
+if (messageStore.receivedType === 'Packages') {
+  let parseData;
+  try {
+    parseData = JSON.parse(messageStore.receivedContent?.extraContent ?? '[]');
+  } catch (error) {
+    console.error("Error parsing package data:", error);
+    return (
+      <div className="w-full p-5">
+        <Text className="text-red-500">Error loading package data</Text>
+      </div>
+    );
+  }
 
-      return (
-        <div
-          className="w-full space-y-6 relative"
-          style={{ height: '100%', padding: '3rem 1rem', overflowY: 'scroll' }}
-        >
-          {parseData.map((packageData) => (
-            <PackageCard
-              key={packageData.id}
-              packageData={packageData}
-              handleClick={(data) => handlePackageClicked(data)}
-              loadingButton={loading}
-            />
-          ))}
-        </div>
-      );
-    }
+  const sortedPackages = parseData.sort((a, b) => {
+    const purchasesA = a.numberOfPurchases || 0;
+    const purchasesB = b.numberOfPurchases || 0;
+    return purchasesB - purchasesA; 
+  });
+
+  return (
+    <div
+      className="w-full space-y-6 relative"
+      style={{ height: '100%', padding: '3rem 1rem', overflowY: 'scroll' }}
+    >
+      {sortedPackages.map((packageData) => (
+        <PackageCard
+          key={packageData.id}
+          packageData={packageData}
+          handleClick={(data) => handlePackageClicked(data)}
+          loadingButton={loading}
+        />
+      ))}
+    </div>
+  );
+}
 
 
     if (messageStore.receivedType === "ChatMessage") {

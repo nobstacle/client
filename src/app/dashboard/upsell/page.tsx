@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Table, Tag, Card, Pagination, Input, message, Button, Typography, Space, Select } from "antd";
-import { SearchOutlined, SendOutlined, UserOutlined, CalendarOutlined } from "@ant-design/icons";
+import { Table, Tag, Card, Pagination, Input, message, Button, Typography, Space, Select, InputNumber, DatePicker, Tooltip } from "antd";
+import { SearchOutlined, SendOutlined, UserOutlined, CalendarOutlined, EditOutlined, SaveOutlined, CloseOutlined } from "@ant-design/icons";
 import "../../../styles/base.css";
 import { useSession } from "next-auth/react";
 import "../../../styles/base.css";
@@ -12,9 +12,7 @@ import {
 } from "../../../lib/client/api";
 import { SendPackagePayloadType } from "../../../constant/types";
 import { UpsellStatusCell } from "../../../components/UpdateStatusCell";
-
-const { Title } = Typography;
-const { Option } = Select;
+import dayjs from 'dayjs';
 
 export default function Upsell() {
     const [loadingData, setLoadingData] = useState(false);
@@ -23,6 +21,8 @@ export default function Upsell() {
     const [transactions, setTransactions] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [hasMore, setHasMore] = useState(true);
+    const [editingRecord, setEditingRecord] = useState<string | null>(null);
+    const [editingData, setEditingData] = useState<any>({});
     const pageSize = 10;
     const { data } = useSession();
     let Url = process.env.NEXT_PUBLIC_BACKEND_URL;
@@ -80,22 +80,134 @@ export default function Upsell() {
         });
     };
 
+    // New function to handle field updates
+    const updateTransactionField = async (id: string, field: string, value: any) => {
+        try {
+            // Handle bulk updates differently
+            let requestBody;
+            if (field === 'bulk' && typeof value === 'object') {
+                // For bulk updates, send the object directly (flattened)
+                requestBody = value;
+            } else {
+                // For single field updates, create the field-value pair
+                requestBody = { [field]: value };
+            }
+
+            const response = await fetch(`${Url}/api/v1/uploads/update-upsell/${id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${data?.user.backendTokens.at}`
+                },
+                body: JSON.stringify(requestBody),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.message || 'Failed to update transaction');
+            }
+
+            message.success('Transaction updated successfully');
+            fetchTransactions(); // Refresh data
+            return true;
+        } catch (error) {
+            console.error('Error updating transaction:', error);
+            message.error(`Failed to update transaction: ${error.message}`);
+            return false;
+        }
+    };
+
+    const handleEdit = (record: any) => {
+        setEditingRecord(record.id);
+        setEditingData({
+            confirmationNumber: record.confirmationNumber,
+            numberOfAdults: record.numberOfAdults,
+            numberOfChildren: record.numberOfChildren,
+            arrivalDate: record.arrivalDate ? dayjs(record.arrivalDate) : null,
+            departureDate: record.departureDate ? dayjs(record.departureDate) : null,
+        });
+    };
+
+    const handleSave = async (record: any) => {
+        const updates = {};
+
+        // Check what fields have changed with better comparison
+        if (editingData.confirmationNumber !== record.confirmationNumber) {
+            updates.confirmationNumber = editingData.confirmationNumber;
+        }
+        if (editingData.numberOfAdults !== record.numberOfAdults) {
+            updates.numberOfAdults = Number(editingData.numberOfAdults);
+        }
+        if (editingData.numberOfChildren !== record.numberOfChildren) {
+            updates.numberOfChildren = Number(editingData.numberOfChildren);
+        }
+
+        // Better date comparison
+        const recordArrivalDate = record.arrivalDate ? dayjs(record.arrivalDate) : null;
+        const recordDepartureDate = record.departureDate ? dayjs(record.departureDate) : null;
+
+        if (editingData.arrivalDate && (!recordArrivalDate || !editingData.arrivalDate.isSame(recordArrivalDate, 'day'))) {
+            updates.arrivalDate = editingData.arrivalDate.toISOString();
+        }
+        if (editingData.departureDate && (!recordDepartureDate || !editingData.departureDate.isSame(recordDepartureDate, 'day'))) {
+            updates.departureDate = editingData.departureDate.toISOString();
+        }
+
+        console.log('Updates to be sent:', updates); // Debug log
+
+        if (Object.keys(updates).length > 0) {
+            const success = await updateTransactionField(record.id, 'bulk', updates);
+            if (success) {
+                setEditingRecord(null);
+                setEditingData({});
+            }
+        } else {
+            // No changes detected
+            message.info('No changes detected');
+            setEditingRecord(null);
+            setEditingData({});
+        }
+    };
+
+    const handleCancel = () => {
+        setEditingRecord(null);
+        setEditingData({});
+    };
+
     const columns = [
         {
-            title: 'ID',
-            dataIndex: 'id',
-            key: 'id',
+            title: 'Station',
+            dataIndex: 'company.stationCount',
+            key: 'company.stationCount',
             width: 80,
             sorter: true,
+            render: (_i, record) => (
+                <>
+                    {record?.company?.stationCount}
+                </>
+            )
         },
         {
             title: 'Confirmation',
             dataIndex: 'confirmationNumber',
             key: 'confirmationNumber',
             width: 200,
-            render: (confirmationNumber: string) => (
-                <span className="font-mono text-xs">{confirmationNumber}</span>
-            ),
+            render: (confirmationNumber: string, record: any) => {
+                const isEditing = editingRecord === record.id;
+
+                return isEditing ? (
+                    <Input
+                        value={editingData.confirmationNumber}
+                        onChange={(e) => setEditingData({ ...editingData, confirmationNumber: e.target.value })}
+                        className="font-mono text-xs"
+                        size="small"
+                    />
+                ) : (
+                    <div className="flex items-center gap-2">
+                        <span className="font-mono text-xs">{confirmationNumber}</span>
+                    </div>
+                );
+            },
         },
         {
             title: 'Package',
@@ -114,54 +226,123 @@ export default function Upsell() {
             dataIndex: 'totalRevenue',
             key: 'totalRevenue',
             width: 120,
-            render: (revenue: number, record: any) => (
-                <div>
-                    <div className="font-medium">
-                        {record.package?.currencies["en"] + " " + revenue?.toLocaleString() || '0'}
+            render: (revenue: number, record: any) => {
+                // Fixed calculation - use proper currency formatting
+                const currency = record.package?.currencies?.en || record.package?.currency || '$';
+                const formattedRevenue = revenue ? revenue.toLocaleString('en-US', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                }) : '0.00';
+                const formattedIncentive = record.totalIncentive ? record.totalIncentive.toLocaleString('en-US', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                }) : '0.00';
+
+                return (
+                    <div>
+                        <div className="font-medium">
+                            {currency} {formattedRevenue}
+                        </div>
+                        <div className="text-xs text-green-600">
+                            Incentive: {currency} {formattedIncentive}
+                        </div>
                     </div>
-                    <div className="text-xs text-green-600">
-                        Incentive: {record.package?.currencies["en"] + " " + record.totalIncentive?.toLocaleString() || '0'}
-                    </div>
-                </div>
-            ),
+                );
+            },
         },
         {
             title: 'Guests',
             key: 'guests',
-            width: 100,
-            render: (record: any) => (
-                <Space direction="vertical" size={0}>
-                    <span className="text-xs">
-                        <UserOutlined /> {record.numberOfAdults || 0} Adults
-                    </span>
-                    {record.numberOfChildren > 0 && (
-                        <span className="text-xs text-gray-500">
-                            {record.numberOfChildren} Children
+            width: 150,
+            render: (record: any) => {
+                const isEditing = editingRecord === record.id;
+
+                return isEditing ? (
+                    <Space direction="vertical" size={0} className="w-full">
+                        <div className="flex items-center gap-2">
+                            <UserOutlined className="text-xs" />
+                            <InputNumber
+                                value={editingData.numberOfAdults}
+                                onChange={(value) => setEditingData({ ...editingData, numberOfAdults: value })}
+                                min={0}
+                                size="small"
+                                className="w-16"
+                            />
+                            <span className="text-xs">Adults</span>
+                        </div>
+                        <div className="flex items-center gap-2 mt-1">
+                            <span className="text-xs w-4"></span>
+                            <InputNumber
+                                value={editingData.numberOfChildren}
+                                onChange={(value) => setEditingData({ ...editingData, numberOfChildren: value })}
+                                min={0}
+                                size="small"
+                                className="w-16"
+                            />
+                            <span className="text-xs">Children</span>
+                        </div>
+                    </Space>
+                ) : (
+                    <Space direction="vertical" size={0}>
+                        <span className="text-xs">
+                            <UserOutlined /> {record.numberOfAdults || 0} Adults
                         </span>
-                    )}
-                </Space>
-            ),
+                        {record.numberOfChildren > 0 && (
+                            <span className="text-xs text-gray-500">
+                                {record.numberOfChildren} Children
+                            </span>
+                        )}
+                    </Space>
+                );
+            },
         },
         {
             title: 'Stay Period',
             key: 'stayPeriod',
             width: 160,
-            render: (record: any) => (
-                <div className="text-xs">
-                    <div>
-                        <CalendarOutlined /> Arrival: {new Date(record.arrivalDate).toLocaleDateString()}
+            render: (record: any) => {
+                const isEditing = editingRecord === record.id;
+
+                return isEditing ? (
+                    <div className="text-xs space-y-2">
+                        <div className="flex items-center gap-2">
+                            <CalendarOutlined />
+                            <span>Arrival:</span>
+                            <DatePicker
+                                value={editingData.arrivalDate}
+                                onChange={(date) => setEditingData({ ...editingData, arrivalDate: date })}
+                                size="small"
+                                format="MM/DD/YYYY"
+                            />
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <span className="w-4"></span>
+                            <span>Departure:</span>
+                            <DatePicker
+                                value={editingData.departureDate}
+                                onChange={(date) => setEditingData({ ...editingData, departureDate: date })}
+                                size="small"
+                                format="MM/DD/YYYY"
+                            />
+                        </div>
                     </div>
-                    <div className="text-gray-500">
-                        Departure: {new Date(record.departureDate).toLocaleDateString()}
+                ) : (
+                    <div className="text-xs">
+                        <div>
+                            <CalendarOutlined /> Arrival: {new Date(record.arrivalDate).toLocaleDateString()}
+                        </div>
+                        <div className="text-gray-500">
+                            Departure: {new Date(record.departureDate).toLocaleDateString()}
+                        </div>
                     </div>
-                </div>
-            ),
+                );
+            },
         },
         {
             title: "Status",
             dataIndex: "approved",
             key: "approved",
-            width: 100,
+            width: 140,
             render: (status: string, record: any) => (
                 <UpsellStatusCell
                     status={status}
@@ -211,6 +392,42 @@ export default function Upsell() {
                 </div>
             ),
         },
+        {
+            title: 'Actions',
+            key: 'actions',
+            width: 80,
+            fixed: 'right',
+            render: (record: any) => {
+                const isEditing = editingRecord === record.id;
+
+                return isEditing ? (
+                    <Space size="small">
+                        <Button
+                            type="primary"
+                            size="small"
+                            icon={<SaveOutlined />}
+                            onClick={() => handleSave(record)}
+                        />
+                        <Button
+                            size="small"
+                            icon={<CloseOutlined />}
+                            onClick={handleCancel}
+                        />
+                    </Space>
+                ) : (
+                    <>
+                        <Tooltip title="Edit Transaction">
+                            <Button
+                                type="text"
+                                size="small"
+                                icon={<EditOutlined />}
+                                onClick={() => handleEdit(record)}
+                            />
+                        </Tooltip>
+                    </>
+                );
+            },
+        }
     ];
 
     const debouncedSearch = useCallback((searchValue: string) => {
@@ -266,6 +483,7 @@ export default function Upsell() {
                     langCode: params.get("lang") || companyData?.defaultLangCode || "en",
                     refType: "Packages",
                     station: Number(params.get("station") ?? 1),
+                    sentBy: JSON.stringify(data.user),
                     contentExtra: JSON.stringify(packageList)
                 } as SendPackagePayloadType, (response) => {
                     console.log("Package send response:", response);
@@ -285,28 +503,29 @@ export default function Upsell() {
             });
     };
 
+    console.info("filteredTransactionsfilteredTransactions", filteredTransactions);
+
     return (
         <div className="min-h-full bg-gray-50">
             <div className="mx-auto p-6">
                 {/* Controls Section */}
                 <Card className="mb-6 shadow-sm">
                     <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
-                        <div className="flex gap-3 max-w-md w-full">
+                        <div className="flex gap-3 max-w-md w-full" style={{ display: 'flex', alignItems: 'center' }}>
                             <Input
                                 placeholder="Search by confirmation, package, email, or status..."
                                 prefix={<SearchOutlined className="text-gray-400" />}
                                 value={searchTerm}
                                 onChange={searchTransactions}
                                 className="flex-1"
-                                size="large"
                             />
                             <Button
                                 type="primary"
                                 icon={<SendOutlined />}
                                 onClick={handlePackageSend}
                                 loading={loadingData}
-                                size="large"
                                 className="flex items-center justify-center bg-blue-600 hover:bg-blue-700 rounded-md px-4 py-2 text-white headerButton"
+                                style={{ padding: '0.45rem 1rem !important' }}
                             />
                         </div>
                     </div>
@@ -322,7 +541,10 @@ export default function Upsell() {
                     </Card>
                     <Card className="text-center">
                         <div className="text-2xl font-bold text-green-600">
-                            {filteredTransactions.reduce((sum: number, t: any) => sum + (t.totalRevenue || 0), 0).toLocaleString()}
+                            {filteredTransactions.reduce((sum: number, t: any) => sum + (Number(t.totalRevenue) || 0), 0).toLocaleString('en-US', {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2
+                            })}
                         </div>
                         <div className="text-gray-600">Total Revenue</div>
                     </Card>
@@ -334,7 +556,10 @@ export default function Upsell() {
                     </Card>
                     <Card className="text-center">
                         <div className="text-2xl font-bold text-purple-600">
-                            {filteredTransactions.reduce((sum: number, t: any) => sum + (t.totalIncentive || 0), 0).toLocaleString()}
+                            {filteredTransactions.reduce((sum: number, t: any) => sum + (Number(t.totalIncentive) || 0), 0).toLocaleString('en-US', {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2
+                            })}
                         </div>
                         <div className="text-gray-600">Total Incentives</div>
                     </Card>
@@ -349,7 +574,7 @@ export default function Upsell() {
                             dataSource={filteredTransactions}
                             pagination={false}
                             loading={loadingData}
-                            scroll={{ x: 1400 }}
+                            scroll={{ x: 1600 }}
                             className="w-full"
                             size="small"
                             bordered={false}

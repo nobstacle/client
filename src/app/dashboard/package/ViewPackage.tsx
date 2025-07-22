@@ -13,8 +13,6 @@ export default function ViewPackage({ packageData, onClose, viewPackageToggle })
         onClose();
     }
 
-    console.info("packageDatapackageData", packageData);
-
     // Get images array with fallback
     const images = packageData?.signedImageUrls?.length > 0
         ? packageData.signedImageUrls

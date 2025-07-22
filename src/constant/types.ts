@@ -102,6 +102,7 @@ export interface SendPackagePayloadType {
   refType: string;
   station: number;
   contentExtra?: string;
+  sentBy: string
 }
 
 export interface ReceivedPackageContent {
