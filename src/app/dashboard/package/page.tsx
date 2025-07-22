@@ -288,8 +288,88 @@ export default function Package() {
                 setLoadingData(false);
             });
     };
+        
+    // Helper function to get the first available language value from an object
+    const getFirstAvailableValue = (langObject, fallback = 'N/A') => {
+        if (!langObject || typeof langObject !== 'object') return fallback;
+        
+        // Priority order: en, ar, then any other language
+        const priorityLangs = ['en', 'ar'];
+        
+        // First try priority languages
+        for (const lang of priorityLangs) {
+            if (langObject[lang] && langObject[lang] !== '') {
+                return langObject[lang];
+            }
+        }
+        
+        // Then try any other available language
+        const availableLangs = Object.keys(langObject);
+        for (const lang of availableLangs) {
+            if (langObject[lang] && langObject[lang] !== '') {
+                return langObject[lang];
+            }
+        }
+        
+        return fallback;
+    };
 
-    const columns = [
+    // Helper function to get all language variants for tooltip display
+    const getAllLanguageVariants = (langObject) => {
+        if (!langObject || typeof langObject !== 'object') return [];
+        
+        return Object.entries(langObject)
+            .filter(([lang, value]) => value && value !== '')
+            .map(([lang, value]) => ({
+                lang: lang.toUpperCase(),
+                value: Array.isArray(value) ? value.join(', ') : value
+            }));
+    };
+
+    // Component to render multi-language content with tooltip
+    const MultiLangCell = ({ langObject, isArray = false, maxDisplay = null, title = null }) => {
+        const primaryValue = isArray 
+            ? getFirstAvailableValue(langObject, []).slice(0, maxDisplay || 10).join(', ')
+            : getFirstAvailableValue(langObject, '');
+        
+        const allVariants = getAllLanguageVariants(langObject);
+        
+        if (allVariants.length === 0) return <span>N/A</span>;
+        
+        const hasMultipleLanguages = allVariants.length > 1;
+        
+        const tooltipContent = allVariants.length > 1 ? (
+            <div className="space-y-1">
+                {allVariants.map(({ lang, value }) => (
+                    <div key={lang}>
+                        <strong>{lang}:</strong> {value}
+                    </div>
+                ))}
+            </div>
+        ) : null;
+        
+                return (
+            <div className="flex items-center gap-2">
+                <div 
+                    className="truncate flex-1" 
+                    title={title || primaryValue}
+                    style={{ direction: /[\u0600-\u06FF]/.test(primaryValue) ? 'rtl' : 'ltr' }}
+                >
+                    {primaryValue}
+                    {isArray && maxDisplay && getFirstAvailableValue(langObject, []).length > maxDisplay && (
+                        <span className="text-gray-500">...</span>
+                    )}
+                </div>
+                {hasMultipleLanguages && (
+                    <Tooltip title={tooltipContent} placement="top">
+                        <FaGlobe className="text-blue-500 text-xs cursor-help flex-shrink-0" />
+                    </Tooltip>
+                )}
+            </div>
+        );
+    }
+
+const columns = [
         {
             title: "Package Code",
             dataIndex: "packageCode",
@@ -298,38 +378,31 @@ export default function Package() {
         },
         {
             title: "Package Name",
-            dataIndex: ["packageNames", "en"],
             key: "packageName",
             width: 200,
-            render: (text, record) => text || record.packageNames?.ar || 'N/A',
+            render: (_, record) => (
+                <MultiLangCell langObject={record.packageNames} />
+            ),
         },
         {
             title: "Description",
-            dataIndex: ["packageDescriptions", "en"],
             key: "packageDescription",
             width: 250,
-            render: (text, record) => {
-                const description = text || record.packageDescriptions?.ar || '';
-                return (
-                    <div className="truncate" title={description}>
-                        {description}
-                    </div>
-                );
-            },
+            render: (_, record) => (
+                <MultiLangCell langObject={record.packageDescriptions} />
+            ),
         },
         {
             title: "Benefits",
-            dataIndex: ["packageBenefits", "en"],
             key: "packageBenefits",
             width: 200,
-            render: (benefits, record) => {
-                const benefitList = benefits || record.packageBenefits?.ar || [];
-                return (
-                    <div className="truncate" title={benefitList?.join(", ")}>
-                        {benefitList?.join(", ")}
-                    </div>
-                );
-            },
+            render: (_, record) => (
+                <MultiLangCell 
+                    langObject={record.packageBenefits} 
+                    isArray={true} 
+                    maxDisplay={2} 
+                />
+            ),
         },
         {
             title: "Purchases",
@@ -339,17 +412,34 @@ export default function Package() {
         },
         {
             title: "Tags",
-            dataIndex: ["packageTags", "en"],
             key: "tags",
             width: 150,
-            render: (tags, record) => {
-                const tagList = tags || record.packageTags?.ar || [];
+            render: (_, record) => {
+                const tags = getFirstAvailableValue(record.packageTags, []);
+                const allVariants = getAllLanguageVariants(record.packageTags);
+                const hasMultipleLanguages = allVariants.length > 1;
+                
                 return (
-                    <div className="flex flex-wrap gap-1">
-                        {tagList?.slice(0, 2).map((tag, index) => (
+                    <div className="flex flex-wrap gap-1 items-center">
+                        {tags.slice(0, 2).map((tag, index) => (
                             <Tag key={index} size="small">{tag}</Tag>
                         ))}
-                        {tagList?.length > 2 && <Tag size="small">+{tagList.length - 2}</Tag>}
+                        {tags.length > 2 && (
+                            <Tag size="small">+{tags.length - 2}</Tag>
+                        )}
+                        {hasMultipleLanguages && (
+                            <Tooltip title={
+                                <div className="space-y-1">
+                                    {allVariants.map(({ lang, value }) => (
+                                        <div key={lang}>
+                                            <strong>{lang}:</strong> {value}
+                                        </div>
+                                    ))}
+                                </div>
+                            }>
+                                <FaGlobe className="text-blue-500 text-xs cursor-help" />
+                            </Tooltip>
+                        )}
                     </div>
                 );
             },
@@ -360,8 +450,7 @@ export default function Package() {
             key: "originalPrice",
             width: 120,
             render: (price, record) => {
-                console.info("RECOR", price, record);
-                const currency = record?.currencies?.en || record?.currencies?.ar || '';
+                const currency = getFirstAvailableValue(record.currencies, '');
                 return price ? `${currency} ${price}` : "N/A";
             }
         },
@@ -371,7 +460,7 @@ export default function Package() {
             key: "discountedPrice",
             width: 160,
             render: (price, record) => {
-                const currency = record?.currencies?.en || record?.currencies?.ar || '';
+                const currency = getFirstAvailableValue(record.currencies, '');
                 return price ? `${currency} ${price}` : "N/A";
             }
         },
@@ -388,17 +477,11 @@ export default function Package() {
         },
         {
             title: "Tax Info",
-            dataIndex: ["taxInformation", "en"],
             key: "taxInformation",
             width: 150,
-            render: (text, record) => {
-                const taxInfo = text || record.taxInformation?.ar || '';
-                return (
-                    <div className="truncate" title={taxInfo}>
-                        {taxInfo}
-                    </div>
-                );
-            },
+            render: (_, record) => (
+                <MultiLangCell langObject={record.taxInformation} />
+            ),
         },
         {
             title: "Tax %",
@@ -415,17 +498,11 @@ export default function Package() {
         },
         {
             title: "Package Alert",
-            dataIndex: ["packageAlerts", "en"],
             key: "packageAlert",
-            width: 120,
-            render: (alert, record) => {
-                const alertText = alert || record.packageAlerts?.ar || '';
-                return (
-                    <div className="truncate" title={alertText}>
-                        {alertText}
-                    </div>
-                );
-            },
+            width: 200,
+            render: (_, record) => (
+                <MultiLangCell langObject={record.packageAlerts} />
+            ),
         },
         {
             title: "Status",
@@ -451,10 +528,11 @@ export default function Package() {
         },
         {
             title: "Button Text",
-            dataIndex: ["buttonTexts", "en"],
             key: "buttonText",
-            width: 120,
-            render: (text, record) => text || record.buttonTexts?.ar || 'N/A',
+            width: 150,
+            render: (_, record) => (
+                <MultiLangCell langObject={record.buttonTexts} />
+            ),
         },
         {
             title: "Price Level",
@@ -483,7 +561,7 @@ export default function Package() {
             dataIndex: "incentivePercentage",
             key: "incentivePercentage",
             width: 120,
-            render: (percentage) => `${percentage}%`,
+            render: (percentage) => percentage ? `${percentage}%` : "N/A",
         },
         {
             title: "Company",
@@ -520,9 +598,10 @@ export default function Package() {
                     <button
                         title="Delete"
                         onClick={() => {
+                            const packageName = getFirstAvailableValue(record.packageNames, 'this package');
                             Swal.fire({
                                 title: "Are you sure?",
-                                text: `Delete package: ${record.packageNames?.en || record.packageNames?.ar}?`,
+                                text: `Delete package: ${packageName}?`,
                                 icon: "warning",
                                 showCancelButton: true,
                                 confirmButtonColor: "#d33",
