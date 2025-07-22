@@ -13,6 +13,7 @@ import {
 import { SendPackagePayloadType } from "../../../constant/types";
 import { UpsellStatusCell } from "../../../components/UpdateStatusCell";
 import dayjs from 'dayjs';
+import { SendIcon } from "../../../components/icons/SendIcon";
 
 export default function Upsell() {
     const [loadingData, setLoadingData] = useState(false);
@@ -478,13 +479,26 @@ export default function Upsell() {
                 let packageList = result?.data;
                 console.log("Response from server:", packageList);
 
+                const selectedLang = params.get("lang") || companyData?.defaultLangCode || "en";
+                const filterPackages = packageList?.filter((item) => {
+                    return (
+                        item?.packageNames?.[selectedLang] != null &&
+                        item?.packageDescriptions?.[selectedLang] != null &&
+                        item?.packageBenefits?.[selectedLang] != null &&
+                        item?.packageTags?.[selectedLang] != null &&
+                        item?.taxInformation?.[selectedLang] != null &&
+                        item?.currencies?.[selectedLang] != null &&
+                        item?.buttonTexts?.[selectedLang] != null &&
+                        item?.packageAlerts?.[selectedLang] != null
+                    );
+                });
                 emitSendPackages({
-                    refId: packageList.length > 0 ? packageList[0].id : 0,
+                    refId: filterPackages.length > 0 ? filterPackages[0].id : 0,
                     langCode: params.get("lang") || companyData?.defaultLangCode || "en",
                     refType: "Packages",
                     station: Number(params.get("station") ?? 1),
                     sentBy: JSON.stringify(data.user),
-                    contentExtra: JSON.stringify(packageList)
+                    contentExtra: JSON.stringify(filterPackages)
                 } as SendPackagePayloadType, (response) => {
                     console.log("Package send response:", response);
                     if (response && (response === true)) {
@@ -503,7 +517,6 @@ export default function Upsell() {
             });
     };
 
-    console.info("filteredTransactionsfilteredTransactions", filteredTransactions);
 
     return (
         <div className="min-h-full bg-gray-50">
@@ -521,7 +534,7 @@ export default function Upsell() {
                             />
                             <Button
                                 type="primary"
-                                icon={<SendOutlined />}
+                                icon={<SendIcon />}
                                 onClick={handlePackageSend}
                                 loading={loadingData}
                                 className="flex items-center justify-center bg-blue-600 hover:bg-blue-700 rounded-md px-4 py-2 text-white headerButton customHeaderButton"

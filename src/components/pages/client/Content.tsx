@@ -59,6 +59,21 @@ const IframeWithPrefill = React.memo(({ src, prefillData }: { src: string, prefi
   );
 });
 
+const getLocalizedContent = (contentObj, fallback = '') => {
+  if (!contentObj || typeof contentObj !== 'object') return fallback;
+
+  // Get all available language keys
+  const availableLanguages = Object.keys(contentObj);
+
+  // If no languages available, return fallback
+  if (availableLanguages.length === 0) return fallback;
+
+  // Priority order: en (English) first, then any other available language
+  const preferredLanguage = availableLanguages.includes('en') ? 'en' : availableLanguages[0];
+
+  return contentObj[preferredLanguage] || fallback;
+};
+
 const PackageCard = ({ packageData, handleClick, loadingButton }) => {
   const carouselRef = useRef();
 
@@ -70,15 +85,19 @@ const PackageCard = ({ packageData, handleClick, loadingButton }) => {
     return `${currency} ${price}`;
   };
 
-  // const getDiscountPercentage = () => {
-  //   const original = parseInt(packageData.originalPrice);
-  //   const discounted = parseInt(packageData.discountedPrice);
-  //   return Math.round(((original - discounted) / original) * 100);
-  // };
-
   const handlePackageClick = (record) => {
     handleClick(record);
   };
+
+  // Get localized content
+  const packageName = getLocalizedContent(packageData.packageNames, 'Package');
+  const packageDescription = getLocalizedContent(packageData.packageDescriptions, 'Package Description Text - Multilingual Depending on the selected language');
+  const packageBenefits = getLocalizedContent(packageData.packageBenefits, []);
+  const packageTags = getLocalizedContent(packageData.packageTags, []);
+  const taxInformation = getLocalizedContent(packageData.taxInformation, '');
+  const packageAlerts = getLocalizedContent(packageData.packageAlerts, '');
+  const buttonText = getLocalizedContent(packageData.buttonTexts, 'Take this deal');
+  const currency = getLocalizedContent(packageData.currencies, 'AED');
 
   // Get image array
   const imageArray = packageData.signedImageUrls || packageData.images || [];
@@ -159,12 +178,12 @@ const PackageCard = ({ packageData, handleClick, loadingButton }) => {
                 style={{ height: '100%' }}
               >
                 {imageArray.map((image, index) => (
-                  <div key={index} className="w-full h-full" style={{ height:'100%'}}>
+                  <div key={index} className="w-full h-full" style={{ height: '100%' }}>
                     <img
                       src={image.signedUrl || image.url || image}
                       alt={image.alt || `Package Image ${index + 1}`}
                       className="w-full h-full object-cover"
-                      style={{ borderRadius: '8px', height: '100%', maxHeight: '35vh', minHeight:'25vh' }}
+                      style={{ borderRadius: '8px', height: '100%', maxHeight: '35vh', minHeight: '35vh' }}
                       onError={(e) => {
                         console.error('Image failed to load:', image.signedUrl || image.url || image);
                       }}
@@ -197,17 +216,19 @@ const PackageCard = ({ packageData, handleClick, loadingButton }) => {
             {/* Left side - Package info */}
             <div className="flex-1">
               <Title level={3} className="text-blue-600 mb-2 mt-0 text-lg sm:text-xl lg:text-2xl" style={{ color: '#006ce4' }}>
-                {packageData.packageNames?.en || 'Package'}
+                {packageName}
               </Title>
 
               {/* Tags */}
-              <div className="flex flex-wrap gap-2 mb-4">
-                {packageData.packageTags?.en?.map((tag, index) => (
-                  <Tag key={index} className="px-2 sm:px-3 py-1 bg-green-800 text-white border-green-800 rounded text-xs sm:text-sm">
-                    {tag}
-                  </Tag>
-                ))}
-              </div>
+              {packageTags.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-4">
+                  {packageTags.map((tag, index) => (
+                    <Tag key={index} className="px-2 sm:px-3 py-1 bg-green-800 text-white border-green-800 rounded text-xs sm:text-sm">
+                      {tag}
+                    </Tag>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Right side - Best seller and sold info */}
@@ -228,25 +249,27 @@ const PackageCard = ({ packageData, handleClick, loadingButton }) => {
               {/* Description */}
               <div className="mb-4">
                 <Text className="text-gray-700 font-bold mb-3 block text-sm sm:text-base">
-                  {packageData.packageDescriptions?.en || 'Package Description Text - Multilingual Depending on the selected language'}
+                  {packageDescription}
                 </Text>
 
                 {/* Benefits */}
-                <div className="space-y-1">
-                  {packageData.packageBenefits?.en?.map((benefit, index) => (
-                    <div key={index} className="text-green-600 font-medium flex items-center text-sm sm:text-base">
-                      <span className="mr-2">✓</span>
-                      {benefit}
-                    </div>
-                  ))}
-                </div>
+                {packageBenefits.length > 0 && (
+                  <div className="space-y-1">
+                    {packageBenefits.map((benefit, index) => (
+                      <div key={index} className="text-green-600 font-medium flex items-center text-sm sm:text-base">
+                        <span className="mr-2">✓</span>
+                        {benefit}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Alert */}
-              {packageData.packageAlerts?.en && (
+              {packageAlerts && (
                 <div className="mb-4">
                   <Text className="text-red-600 font-medium text-sm sm:text-base">
-                    {packageData.packageAlerts.en}
+                    {packageAlerts}
                   </Text>
                 </div>
               )}
@@ -264,14 +287,14 @@ const PackageCard = ({ packageData, handleClick, loadingButton }) => {
                 <div className="mb-4">
                   <div className="flex items-center justify-start lg:justify-end gap-2 mb-1 flex-wrap">
                     <Text className="text-sm text-gray-400 line-through order-2 lg:order-1">
-                      {formatCurrency(packageData.originalPrice)}
+                      {formatCurrency(packageData.originalPrice, currency)}
                     </Text>
                     <Text className="text-xl sm:text-2xl font-bold order-1 lg:order-2">
-                      {formatCurrency(packageData.discountedPrice)}
+                      {formatCurrency(packageData.discountedPrice, currency)}
                     </Text>
                   </div>
                   <Text className="text-xs sm:text-sm text-gray-500">
-                    {packageData.taxInformation?.en || ''}
+                    {taxInformation}
                   </Text>
                 </div>
 
@@ -283,7 +306,7 @@ const PackageCard = ({ packageData, handleClick, loadingButton }) => {
                   disabled={!packageData.active || loadingButton}
                   onClick={() => handlePackageClick(packageData)}
                 >
-                  {loadingButton ? 'Loading..' : packageData.buttonTexts?.en || 'Take this deal'}
+                  {loadingButton ? 'Loading..' : buttonText}
                 </Button>
               </div>
             </div>
@@ -623,7 +646,7 @@ export const Content: React.FC = () => {
     }
   }, [isLoading]);
 
-  
+
   const createUpsellTransaction = async (formData: {
     packageId: number;
     confirmationNumber: string;
@@ -724,42 +747,41 @@ export const Content: React.FC = () => {
       );
     }
 
-if (messageStore.receivedType === 'Packages') {
-  let parseData;
-  try {
-    parseData = JSON.parse(messageStore.receivedContent?.extraContent ?? '[]');
-  } catch (error) {
-    console.error("Error parsing package data:", error);
-    return (
-      <div className="w-full p-5">
-        <Text className="text-red-500">Error loading package data</Text>
-      </div>
-    );
-  }
+    if (messageStore.receivedType === 'Packages') {
+      let parseData;
+      try {
+        parseData = JSON.parse(messageStore.receivedContent?.extraContent ?? '[]');
+      } catch (error) {
+        console.error("Error parsing package data:", error);
+        return (
+          <div className="w-full p-5">
+            <Text className="text-red-500">Error loading package data</Text>
+          </div>
+        );
+      }
 
-  const sortedPackages = parseData.sort((a, b) => {
-    const purchasesA = a.numberOfPurchases || 0;
-    const purchasesB = b.numberOfPurchases || 0;
-    return purchasesB - purchasesA; 
-  });
+      const sortedPackages = parseData.sort((a, b) => {
+        const purchasesA = a.numberOfPurchases || 0;
+        const purchasesB = b.numberOfPurchases || 0;
+        return purchasesB - purchasesA;
+      });
 
-  return (
-    <div
-      className="w-full space-y-6 relative"
-      style={{ height: '100%', padding: '3rem 1rem', overflowY: 'scroll' }}
-    >
-      {sortedPackages.map((packageData) => (
-        <PackageCard
-          key={packageData.id}
-          packageData={packageData}
-          handleClick={(data) => handlePackageClicked(data)}
-          loadingButton={loading}
-        />
-      ))}
-    </div>
-  );
-}
-
+      return (
+        <div
+          className="w-full space-y-6 relative"
+          style={{ height: '100%', padding: '3rem 1rem', overflowY: 'scroll' }}
+        >
+          {sortedPackages.map((packageData) => (
+            <PackageCard
+              key={packageData.id}
+              packageData={packageData}
+              handleClick={(data) => handlePackageClicked(data)}
+              loadingButton={loading}
+            />
+          ))}
+        </div>
+      );
+    }
 
     if (messageStore.receivedType === "ChatMessage") {
       return (
