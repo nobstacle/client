@@ -1,19 +1,20 @@
 "use client";
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Table, Tag, Card, Pagination, Input, message, Button, Typography } from "antd";
-import { SearchOutlined, SendOutlined } from "@ant-design/icons";
+import { Table, Tag, Card, Pagination, Input, message, Button, Typography, Space, Select } from "antd";
+import { SearchOutlined, SendOutlined, UserOutlined, CalendarOutlined } from "@ant-design/icons";
 import "../../../styles/base.css";
 import { useSession } from "next-auth/react";
 import "../../../styles/base.css";
-// import { useDisclousure } from "../../../hooks/useDisclosure";
 import { useSocketContext } from "../../../context/SocketContextProvider";
 import { useSearchParams } from "next/navigation";
 import {
     useCompanyControllerGetCompany,
 } from "../../../lib/client/api";
 import { SendPackagePayloadType } from "../../../constant/types";
+import { UpsellStatusCell } from "../../../components/UpdateStatusCell";
 
 const { Title } = Typography;
+const { Option } = Select;
 
 export default function Upsell() {
     const [loadingData, setLoadingData] = useState(false);
@@ -29,14 +30,17 @@ export default function Upsell() {
     const { emitSendPackages } = useSocketContext();
     const params = useSearchParams();
     const { data: companyData } = useCompanyControllerGetCompany();
+    const isAdmin = data?.user.Roles[0] || false;
 
     const handlePageChange = (page: number, pageSize: number) => {
         setCurrentPage(page);
     };
 
     useEffect(() => {
-        fetchTransactions();
-    }, []);
+        if (data?.user !== undefined) {
+            fetchTransactions();
+        }
+    }, [data]);
 
     const fetchTransactions = useCallback((searchValue: string = "") => {
         setLoadingData(true);
@@ -59,6 +63,23 @@ export default function Upsell() {
             });
     }, [data, Url, setTransactions]);
 
+    const getSalesTypeColor = (type: string) => {
+        switch (type) {
+            case 'ROOM_UPGRADE': return 'blue';
+            case 'PACKAGE_SALE': return 'purple';
+            case 'ADD_ON': return 'cyan';
+            default: return 'default';
+        }
+    };
+
+    const updateStatusAPI = async (id: string, status: string) => {
+        return await fetch(`/api/update-status/${id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status }),
+        });
+    };
+
     const columns = [
         {
             title: 'ID',
@@ -68,35 +89,127 @@ export default function Upsell() {
             sorter: true,
         },
         {
-            title: 'Transaction',
-            dataIndex: 'transaction',
-            key: 'transaction',
+            title: 'Confirmation',
+            dataIndex: 'confirmationNumber',
+            key: 'confirmationNumber',
             width: 200,
+            render: (confirmationNumber: string) => (
+                <span className="font-mono text-xs">{confirmationNumber}</span>
+            ),
         },
         {
-            title: 'Amount',
-            dataIndex: 'amount',
-            key: 'amount',
-            width: 120,
-            render: (amount: number) => `$${amount?.toFixed(2) || '0.00'}`,
+            title: 'Package',
+            dataIndex: 'packageName',
+            key: 'packageName',
+            width: 180,
+            render: (packageName: string, record: any) => (
+                <div>
+                    <div className="font-medium">{packageName}</div>
+                    <div className="text-xs text-gray-500">{record.packageCode}</div>
+                </div>
+            ),
         },
         {
-            title: 'Status',
-            dataIndex: 'status',
-            key: 'status',
+            title: 'Revenue',
+            dataIndex: 'totalRevenue',
+            key: 'totalRevenue',
             width: 120,
-            render: (status: string) => (
-                <Tag color={status === 'completed' ? 'green' : status === 'pending' ? 'orange' : 'red'}>
-                    {status?.toUpperCase() || 'UNKNOWN'}
+            render: (revenue: number, record: any) => (
+                <div>
+                    <div className="font-medium">
+                        {record.package?.currencies["en"] + " " + revenue?.toLocaleString() || '0'}
+                    </div>
+                    <div className="text-xs text-green-600">
+                        Incentive: {record.package?.currencies["en"] + " " + record.totalIncentive?.toLocaleString() || '0'}
+                    </div>
+                </div>
+            ),
+        },
+        {
+            title: 'Guests',
+            key: 'guests',
+            width: 100,
+            render: (record: any) => (
+                <Space direction="vertical" size={0}>
+                    <span className="text-xs">
+                        <UserOutlined /> {record.numberOfAdults || 0} Adults
+                    </span>
+                    {record.numberOfChildren > 0 && (
+                        <span className="text-xs text-gray-500">
+                            {record.numberOfChildren} Children
+                        </span>
+                    )}
+                </Space>
+            ),
+        },
+        {
+            title: 'Stay Period',
+            key: 'stayPeriod',
+            width: 160,
+            render: (record: any) => (
+                <div className="text-xs">
+                    <div>
+                        <CalendarOutlined /> Arrival: {new Date(record.arrivalDate).toLocaleDateString()}
+                    </div>
+                    <div className="text-gray-500">
+                        Departure: {new Date(record.departureDate).toLocaleDateString()}
+                    </div>
+                </div>
+            ),
+        },
+        {
+            title: "Status",
+            dataIndex: "approved",
+            key: "approved",
+            width: 100,
+            render: (status: string, record: any) => (
+                <UpsellStatusCell
+                    status={status}
+                    record={record}
+                    token={data?.user.backendTokens.at}
+                    isAdmin={isAdmin}
+                    onStatusUpdated={fetchTransactions}
+                />
+            ),
+        },
+        {
+            title: 'Sales Type',
+            dataIndex: 'typeOfSales',
+            key: 'typeOfSales',
+            width: 120,
+            render: (type: string) => (
+                <Tag color={getSalesTypeColor(type)}>
+                    {type?.replace('_', ' ') || 'N/A'}
                 </Tag>
             ),
         },
         {
-            title: 'Date',
+            title: 'Sold By',
+            key: 'soldBy',
+            width: 150,
+            render: (record: any) => (
+                <div className="text-xs">
+                    <div>{record.soldByUser?.email || 'N/A'}</div>
+                    <div className="text-gray-500">ID: {record.soldBy}</div>
+                </div>
+            ),
+        },
+        {
+            title: 'Created',
             dataIndex: 'createdAt',
             key: 'createdAt',
-            width: 150,
-            render: (date: string) => new Date(date).toLocaleDateString(),
+            width: 120,
+            render: (date: string) => (
+                <div className="text-xs">
+                    {new Date(date).toLocaleDateString()}
+                    <div className="text-gray-500">
+                        {new Date(date).toLocaleTimeString([], {
+                            hour: '2-digit',
+                            minute: '2-digit'
+                        })}
+                    </div>
+                </div>
+            ),
         },
     ];
 
@@ -117,6 +230,21 @@ export default function Upsell() {
         setSearchTerm(searchValue);
         debouncedSearch(searchValue);
     }
+
+    // Filter transactions based on search term
+    const filteredTransactions = Array.isArray(transactions) ? transactions.filter((transaction: any) => {
+        if (!searchTerm) return true;
+
+        const searchLower = searchTerm.toLowerCase();
+        return (
+            transaction.confirmationNumber?.toLowerCase().includes(searchLower) ||
+            transaction.packageName?.toLowerCase().includes(searchLower) ||
+            transaction.packageCode?.toLowerCase().includes(searchLower) ||
+            transaction.soldByUser?.email?.toLowerCase().includes(searchLower) ||
+            transaction.approved?.toLowerCase().includes(searchLower) ||
+            transaction.typeOfSales?.toLowerCase().includes(searchLower)
+        );
+    }) : [];
 
     const handlePackageSend = () => {
         console.info("Sending packages...");
@@ -160,30 +288,57 @@ export default function Upsell() {
     return (
         <div className="min-h-full bg-gray-50">
             <div className="mx-auto p-6">
-
                 {/* Controls Section */}
                 <Card className="mb-6 shadow-sm">
                     <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
-                        <div className="flex max-w-md">
+                        <div className="flex gap-3 max-w-md w-full">
                             <Input
-                                placeholder="Search transactions..."
+                                placeholder="Search by confirmation, package, email, or status..."
                                 prefix={<SearchOutlined className="text-gray-400" />}
                                 value={searchTerm}
                                 onChange={searchTransactions}
-                                className="w-full"
+                                className="flex-1"
                                 size="large"
                             />
-                             <Button
+                            <Button
                                 type="primary"
                                 icon={<SendOutlined />}
                                 onClick={handlePackageSend}
                                 loading={loadingData}
                                 size="large"
-                                className="flex items-center"
+                                className="flex items-center justify-center bg-blue-600 hover:bg-blue-700 rounded-md px-4 py-2 text-white headerButton"
                             />
                         </div>
                     </div>
                 </Card>
+
+                {/* Stats Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                    <Card className="text-center">
+                        <div className="text-2xl font-bold text-blue-600">
+                            {filteredTransactions.length}
+                        </div>
+                        <div className="text-gray-600">Total Transactions</div>
+                    </Card>
+                    <Card className="text-center">
+                        <div className="text-2xl font-bold text-green-600">
+                            {filteredTransactions.reduce((sum: number, t: any) => sum + (t.totalRevenue || 0), 0).toLocaleString()}
+                        </div>
+                        <div className="text-gray-600">Total Revenue</div>
+                    </Card>
+                    <Card className="text-center">
+                        <div className="text-2xl font-bold text-orange-600">
+                            {filteredTransactions.filter((t: any) => t.approved === 'PENDING').length}
+                        </div>
+                        <div className="text-gray-600">Pending Approval</div>
+                    </Card>
+                    <Card className="text-center">
+                        <div className="text-2xl font-bold text-purple-600">
+                            {filteredTransactions.reduce((sum: number, t: any) => sum + (t.totalIncentive || 0), 0).toLocaleString()}
+                        </div>
+                        <div className="text-gray-600">Total Incentives</div>
+                    </Card>
+                </div>
 
                 {/* Table Section */}
                 <Card className="shadow-sm">
@@ -191,12 +346,12 @@ export default function Upsell() {
                         <Table
                             rowKey="id"
                             columns={columns}
-                            dataSource={Array.isArray(transactions) ? transactions : []}
+                            dataSource={filteredTransactions}
                             pagination={false}
                             loading={loadingData}
-                            scroll={{ x: 1200 }}
+                            scroll={{ x: 1400 }}
                             className="w-full"
-                            size="middle"
+                            size="small"
                             bordered={false}
                             showSorterTooltip={false}
                         />

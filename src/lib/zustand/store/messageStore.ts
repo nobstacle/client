@@ -76,4 +76,14 @@ export const useMessageStore = create<MessageState>((set, get) => ({
   clearReceivedResponse: () => {
     set({ receivedResponse: null });
   },
+
+  reset: () =>
+    set({
+      receivedType: null,
+      receivedContent: null,
+      receivedMessage: [],
+      receivedSurvey: null,
+      receivedLangCode: null,
+      receivedResponse: null,
+    }),
 }));

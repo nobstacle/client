@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import React, { useEffect, useRef, useState, useMemo, useCallback } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import { useMessageStore } from "../../../lib/zustand/store/messageStore";
 import { ChatBox } from "../../ChatBox";
 import { useSocketContext } from "../../../context/SocketContextProvider";
@@ -19,8 +19,8 @@ import QRCode from 'qrcode';
 import "../../../styles/base.css";
 import "antd/dist/reset.css";
 import { useSession } from "next-auth/react";
-import { Card, Button, Tag, Typography, Row, Col } from "antd";
-import { InfoCircleOutlined } from "@ant-design/icons";
+import { Card, Button, Tag, Typography, Carousel, message, Spin } from "antd";
+import { LeftOutlined, RightOutlined } from '@ant-design/icons';
 
 const { Title, Text } = Typography;
 
@@ -59,7 +59,9 @@ const IframeWithPrefill = React.memo(({ src, prefillData }: { src: string, prefi
   );
 });
 
-const PackageCard = ({ packageData, currentImageIndex, setCurrentImageIndex, handleClick }) => {
+const PackageCard = ({ packageData, handleClick, loadingButton }) => {
+  const carouselRef = useRef();
+
   const formatPrice = (price) => {
     return new Intl.NumberFormat().format(price / 100);
   };
@@ -68,32 +70,74 @@ const PackageCard = ({ packageData, currentImageIndex, setCurrentImageIndex, han
     return `${currency} ${formatPrice(price)}`;
   };
 
-  const getDiscountPercentage = () => {
-    const original = parseInt(packageData.originalPrice);
-    const discounted = parseInt(packageData.discountedPrice);
-    return Math.round(((original - discounted) / original) * 100);
-  };
+  // const getDiscountPercentage = () => {
+  //   const original = parseInt(packageData.originalPrice);
+  //   const discounted = parseInt(packageData.discountedPrice);
+  //   return Math.round(((original - discounted) / original) * 100);
+  // };
 
   const handlePackageClick = (record) => {
-    console.info("recordrecord", record);
     handleClick(record);
   };
 
-  const handlePrevImage = () => {
-    if (packageData.signedImageUrls && packageData.signedImageUrls.length > 0) {
-      setCurrentImageIndex((prev) =>
-        prev === 0 ? packageData.signedImageUrls.length - 1 : prev - 1
-      );
-    }
-  };
+  // Get image array
+  const imageArray = packageData.signedImageUrls || packageData.images || [];
+  const hasMultipleImages = imageArray.length > 1;
 
-  const handleNextImage = () => {
-    if (packageData.signedImageUrls && packageData.signedImageUrls.length > 0) {
-      setCurrentImageIndex((prev) =>
-        prev === packageData.signedImageUrls.length - 1 ? 0 : prev + 1
-      );
-    }
-  };
+  // Custom arrow components
+  const CustomPrevArrow = ({ onClick }) => (
+    <button
+      onClick={onClick}
+      className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full w-10 h-10 flex items-center justify-center transition-all duration-200 z-10"
+      aria-label="Previous image"
+      type="button"
+      style={{
+        border: 'none',
+        outline: 'none',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}
+    >
+      <LeftOutlined style={{
+        fontSize: '16px',
+        color: 'white',
+        fontWeight: 'bold',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        margin: 0,
+        padding: 0
+      }} />
+    </button>
+  );
+
+  const CustomNextArrow = ({ onClick }) => (
+    <button
+      onClick={onClick}
+      className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full w-10 h-10 flex items-center justify-center transition-all duration-200 z-10"
+      aria-label="Next image"
+      type="button"
+      style={{
+        border: 'none',
+        outline: 'none',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}
+    >
+      <RightOutlined style={{
+        fontSize: '16px',
+        color: 'white',
+        fontWeight: 'bold',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        margin: 0,
+        padding: 0
+      }} />
+    </button>
+  );
 
   return (
     <Card
@@ -102,46 +146,41 @@ const PackageCard = ({ packageData, currentImageIndex, setCurrentImageIndex, han
     >
       <div className="flex flex-col lg:flex-row">
         {/* Image Section */}
-        <div className="relative md:w-[400px] lg:w-[350px] xl:w-[500px] h-56 sm:h-64 md:h-72 lg:h-auto flex-shrink-0">
-          {packageData.signedImageUrls && packageData.signedImageUrls.length > 0 ? (
+        <div className="relative md:w-[400px] lg:w-[350px] xl:w-[500px] h-56 sm:h-64 md:h-72 lg:h-auto flex-shrink-0" style={{ maxHeight: '40vh' }}>
+          {imageArray.length > 0 ? (
             <div className="relative w-full h-full" style={{ padding: '1rem' }}>
-              <img
-                src={packageData.signedImageUrls[currentImageIndex]?.signedUrl}
-                alt={packageData.signedImageUrls[currentImageIndex]?.alt || 'Package Image'}
-                className="w-full h-full object-cover"
-                style={{ borderRadius: '8px' }}
-              />
-
-              {/* Navigation Arrows - Only show if more than one image */}
-              {packageData.signedImageUrls.length > 1 && (
-                <>
-                  {/* Left Arrow */}
-                  <button
-                    onClick={handlePrevImage}
-                    className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full p-2 transition-all duration-200"
-                    aria-label="Previous image"
-                  >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M15 18L9 12L15 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  </button>
-
-                  {/* Right Arrow */}
-                  <button
-                    onClick={handleNextImage}
-                    className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full p-2 transition-all duration-200"
-                    aria-label="Next image"
-                  >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M9 18L15 12L9 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  </button>
-
-                  {/* Image counter (optional - small text showing current/total) */}
-                  <div className="absolute top-2 right-2 bg-black/50 text-white px-2 py-1 rounded text-xs">
-                    {currentImageIndex + 1} / {packageData.signedImageUrls.length}
+              <Carousel
+                ref={carouselRef}
+                arrows={hasMultipleImages}
+                prevArrow={<CustomPrevArrow />}
+                nextArrow={<CustomNextArrow />}
+                dots={false}
+                infinite={true}
+                style={{ height: '100%' }}
+              >
+                {imageArray.map((image, index) => (
+                  <div key={index} className="w-full h-full">
+                    <img
+                      src={image.signedUrl || image.url || image}
+                      alt={image.alt || `Package Image ${index + 1}`}
+                      className="w-full h-full object-cover"
+                      style={{ borderRadius: '8px', height: 'calc(100% - 2rem)', maxHeight: '35vh' }}
+                      onError={(e) => {
+                        console.error('Image failed to load:', image.signedUrl || image.url || image);
+                      }}
+                      onLoad={() => {
+                        console.log('Image loaded successfully:', image.signedUrl || image.url || image);
+                      }}
+                    />
                   </div>
-                </>
+                ))}
+              </Carousel>
+
+              {/* Image counter - Only show if more than one image */}
+              {hasMultipleImages && (
+                <div className="absolute top-2 right-2 bg-black/50 text-white px-2 py-1 rounded text-xs z-10">
+                  1 / {imageArray.length}
+                </div>
               )}
             </div>
           ) : (
@@ -152,7 +191,7 @@ const PackageCard = ({ packageData, currentImageIndex, setCurrentImageIndex, han
         </div>
 
         {/* Content Section */}
-        <div className="flex-1 p-4 sm:p-6 flex flex-col" style={{ paddingLeft:'0.5rem'}}>
+        <div className="flex-1 p-4 sm:p-6 flex flex-col" style={{ paddingLeft: '0.5rem' }}>
           {/* Top Section */}
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start mb-4 gap-4">
             {/* Left side - Package info */}
@@ -214,8 +253,8 @@ const PackageCard = ({ packageData, currentImageIndex, setCurrentImageIndex, han
             </div>
 
             {/* Price and Button Section */}
-            <div className="lg:w-44 flex flex-col justify-between">
-              <div className="text-left lg:text-right">
+            <div className="lg:w-44 flex flex-col justify-end">
+              <div className="text-left lg:text-right pb-2">
                 {/* Posting Algorithm Label */}
                 <Text className="text-xs sm:text-sm text-gray-500 mb-2 block">
                   {packageData?.priceAlgorithm}
@@ -230,13 +269,10 @@ const PackageCard = ({ packageData, currentImageIndex, setCurrentImageIndex, han
                     <Text className="text-xl sm:text-2xl font-bold order-1 lg:order-2">
                       {formatCurrency(packageData.discountedPrice)}
                     </Text>
-                    <InfoCircleOutlined className="text-gray-400 order-3" />
                   </div>
-                  {packageData.includesTax && (
-                    <Text className="text-xs sm:text-sm text-gray-500">
-                      {packageData.taxInformation?.en || 'Tax information'}
-                    </Text>
-                  )}
+                  <Text className="text-xs sm:text-sm text-gray-500">
+                    {packageData.taxInformation?.en || ''}
+                  </Text>
                 </div>
 
                 {/* Button */}
@@ -244,10 +280,10 @@ const PackageCard = ({ packageData, currentImageIndex, setCurrentImageIndex, han
                   type="primary"
                   size="large"
                   className="bg-blue-600 hover:bg-blue-700 px-6 sm:px-8 py-2 h-10 sm:h-12 w-full lg:w-auto text-sm sm:text-base"
-                  disabled={!packageData.active}
+                  disabled={!packageData.active || loadingButton}
                   onClick={() => handlePackageClick(packageData)}
                 >
-                  {packageData.buttonTexts?.en || 'Take this deal'}
+                  {loadingButton ? 'Loading..' : packageData.buttonTexts?.en || 'Take this deal'}
                 </Button>
               </div>
             </div>
@@ -281,7 +317,9 @@ export const Content: React.FC = () => {
   const [jotFormUrl, setJotFormUrl] = useState<string | null>(null);
   const [prefillData, setPrefillData] = useState<Record<string, string>>({});
   const [contentKey, setContentKey] = useState(0);
+  const [loading, setLoading] = useState(false);
   const [packageImageIndexes, setPackageImageIndexes] = useState<Record<number, number>>({});
+  let Url = process.env.NEXT_PUBLIC_BACKEND_URL;
 
   const defaultSlideshowContent =
     useContentControllerGetDefaultSlideshowContent({
@@ -594,7 +632,7 @@ export const Content: React.FC = () => {
     numberOfChildren?: number;
   }) => {
     try {
-      const response = await fetch('/api/create-upsell-transaction', {
+      const response = await fetch(Url + '/api/v1/uploads/create-upsell-transaction', {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${data?.user.backendTokens.at}`,
@@ -614,34 +652,61 @@ export const Content: React.FC = () => {
     }
   };
 
-  const handlePackageClicked = async (packageData: any) => {
-    console.info("INSIDE", packageData);
-
+  const handlePackageClicked = async (packageData) => {
+    setLoading(true);
     try {
-      const confirmationNumber = 0;
+      const confirmationNumber = `CONF-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+
+      const today = new Date();
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+
+      const dayAfterTomorrow = new Date(tomorrow);
+      dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 1);
 
       const upsellData = {
         packageId: packageData.id,
         confirmationNumber: confirmationNumber,
-        arrivalDate: undefined,
-        departureDate: undefined,
-        numberOfAdults: undefined,
-        numberOfChildren: undefined,
+        arrivalDate: tomorrow.toISOString(),
+        departureDate: dayAfterTomorrow.toISOString(),
+        numberOfAdults: 2,
+        numberOfChildren: 0,
       };
 
       const result = await createUpsellTransaction(upsellData);
-
-      console.log('Upsell transaction created successfully:', result);
-      alert('Package purchased successfully!');
-
-      // Handle success - maybe redirect or update UI
-      // window.location.href = '/success';
-
+      message.success(`Package "${packageData.packageNames?.en}" purchased successfully!\nConfirmation: ${confirmationNumber}`);
+      setLoading(false);
+      setTimeout(() => {
+        messageStore.reset();
+      }, 1000);
     } catch (error) {
+      setLoading(false);
       console.error('Failed to create upsell transaction:', error);
-      alert('Failed to purchase package. Please try again.');
+
+      // Better error handling based on error response
+      let errorMessage = 'Failed to purchase package. Please try again.';
+
+      if (error.response) {
+        switch (error.response.status) {
+          case 400:
+            errorMessage = error.response.data.message || 'Invalid request data.';
+            break;
+          case 401:
+            errorMessage = 'Please log in to make a purchase.';
+            break;
+          case 404:
+            errorMessage = 'Package not found.';
+            break;
+          case 500:
+            errorMessage = 'Server error. Please try again later.';
+            break;
+        }
+      }
+
+      alert(errorMessage);
     }
   };
+
   if (hasHydrated) {
     if (
       messageStore.receivedType === "TextTemplateMessage" ||
@@ -670,24 +735,22 @@ export const Content: React.FC = () => {
       }
 
       return (
-        <div className="w-full space-y-6" style={{ height: '100%', padding: '3rem 1rem', overflow: 'hidden', overflowY: 'scroll' }}>
+        <div
+          className="w-full space-y-6 relative"
+          style={{ height: '100%', padding: '3rem 1rem', overflowY: 'scroll' }}
+        >
           {parseData.map((packageData) => (
             <PackageCard
               key={packageData.id}
               packageData={packageData}
-              currentImageIndex={packageImageIndexes[packageData.id] || 0}
-              setCurrentImageIndex={(index) => {
-                setPackageImageIndexes(prev => ({
-                  ...prev,
-                  [packageData.id]: index
-                }));
-              }}
               handleClick={(data) => handlePackageClicked(data)}
+              loadingButton={loading}
             />
           ))}
         </div>
       );
     }
+
 
     if (messageStore.receivedType === "ChatMessage") {
       return (
