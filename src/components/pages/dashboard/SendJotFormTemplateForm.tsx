@@ -1601,15 +1601,60 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 	};
 
 	const renderFieldInput = (item, value, onChange) => {
+		// Enhanced date field detection
+		const isDateField = (item) => {
+			// Check if it's a date widget type
+			if (item?.type === 'control_widget' && item?.text?.toLowerCase().includes('date')) {
+				return true;
+			}
+
+			// Check if field name contains date-related keywords
+			const nameHasDate = item?.name?.toLowerCase().includes('date') ||
+				item?.name?.toLowerCase().includes('birth') ||
+				item?.name?.toLowerCase().includes('expiry') ||
+				item?.name?.toLowerCase().includes('start');
+
+			// Check if field text contains date-related keywords
+			const textHasDate = item?.text?.toLowerCase().includes('date') ||
+				item?.text?.toLowerCase().includes('birth') ||
+				item?.text?.toLowerCase().includes('expiry') ||
+				item?.text?.toLowerCase().includes('start');
+
+			// Check if subLabel has date format pattern
+			const hasDateFormat = item?.subLabel?.includes('DD/MM/YYYY') ||
+				item?.subLabel?.includes('dd/mm/yyyy') ||
+				item?.subLabel?.includes('MM/DD/YYYY') ||
+				item?.subLabel?.includes('YYYY-MM-DD');
+
+			// Check if validation is set to date
+			const hasDateValidation = item?.validation?.toLowerCase().includes('date');
+
+			// Check if type explicitly mentions date
+			const typeIsDate = item?.type?.includes('date') || item?.type === 'control_datetime';
+
+			return nameHasDate || textHasDate || hasDateFormat || hasDateValidation || typeIsDate;
+		};
+
 		// Date fields
-		if (item?.type === 'control_widget' || item.type.includes("date")) {
+		if (isDateField(item)) {
+			// Determine date format from subLabel or default to DD/MM/YYYY
+			let dateFormat = "DD/MM/YYYY";
+			if (item?.subLabel) {
+				if (item.subLabel.includes('MM/DD/YYYY')) {
+					dateFormat = "MM/DD/YYYY";
+				} else if (item.subLabel.includes('YYYY-MM-DD')) {
+					dateFormat = "YYYY-MM-DD";
+				}
+			}
+
 			return (
 				<DatePicker
 					className="w-full"
-					format="DD/MM/YYYY"
+					format={dateFormat}
 					size="middle"
-					value={value ? dayjs(value, "DD/MM/YYYY") : null}
+					value={value ? dayjs(value, dateFormat) : null}
 					onChange={(date, dateString) => onChange(dateString)}
+					placeholder={item?.subLabel || `Select ${item.text}`}
 				/>
 			);
 		}
@@ -1656,8 +1701,11 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 			);
 		}
 
-		// Email fields
-		if (item.type === 'control_email') {
+		// Email fields - check validation field and field name
+		if (item?.validation === 'Email' ||
+			item?.type === 'control_email' ||
+			item?.name?.toLowerCase().includes('email') ||
+			item?.text?.toLowerCase().includes('email')) {
 			return (
 				<Input
 					type="email"
@@ -1665,20 +1713,39 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 					onChange={(e) => onChange(e.target.value)}
 					className="w-full"
 					size="middle"
-					placeholder={item.subLabel || "Enter email"}
+					placeholder={item?.subLabel || "Enter email address"}
 				/>
 			);
 		}
 
-		// Number fields
-		if (item.type === 'control_number') {
+		// Numeric fields - check validation field
+		if (item?.validation === 'Numeric' ||
+			item?.type === 'control_number' ||
+			item?.name?.toLowerCase().includes('mobile') ||
+			item?.name?.toLowerCase().includes('phone') ||
+			item?.text?.toLowerCase().includes('mobile') ||
+			item?.text?.toLowerCase().includes('phone')) {
 			return (
 				<Input
-					type="number"
+					type="tel"
 					value={value || ''}
 					onChange={(e) => onChange(e.target.value)}
 					className="w-full"
 					size="middle"
+					placeholder={item?.subLabel || `Enter ${item.text}`}
+				/>
+			);
+		}
+
+		// Text area for longer content
+		if (item?.type === 'control_textarea') {
+			return (
+				<Input.TextArea
+					value={value || ''}
+					onChange={(e) => onChange(e.target.value)}
+					className="w-full"
+					size="middle"
+					rows={3}
 					placeholder={`Enter ${item.text}`}
 				/>
 			);
@@ -1691,7 +1758,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 				onChange={(e) => onChange(e.target.value)}
 				className="w-full"
 				size="middle"
-				placeholder={`Enter ${item.text}`}
+				placeholder={item?.subLabel || `Enter ${item.text}`}
 			/>
 		);
 	};
@@ -1769,6 +1836,98 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 			console.error('Error updating field:', error);
 			return false;
 		}
+	};
+
+	const renderFormField = (item, idx, arr) => {
+		const commonProps = {
+			key: item.qid,
+			name: item.text,
+			className: arr.length > 5 ? "mb-2" : "mb-0"
+		};
+
+		// Date fields - check for date in validation, subLabel, or text
+		if (
+			item?.validation === "Date" ||
+			item?.subLabel?.includes("DD/MM/YYYY") ||
+			item?.text?.toLowerCase().includes("date") ||
+			item?.name?.toLowerCase().includes("date")
+		) {
+			return (
+				<Form.Item {...commonProps}>
+					<DatePicker
+						className="w-full"
+						format="DD/MM/YYYY"
+						placeholder={item.text}
+					/>
+				</Form.Item>
+			);
+		}
+
+		// Radio buttons
+		if (item?.type === "control_radio") {
+			const options = item.options ? item.options.split('|') : [];
+			return (
+				<Form.Item {...commonProps}>
+					<Select placeholder={item.text} className="w-full">
+						{options.map((option, optIdx) => (
+							<Option key={optIdx} value={option.trim()}>
+								{option.trim()}
+							</Option>
+						))}
+					</Select>
+				</Form.Item>
+			);
+		}
+
+		// Checkboxes (multi-select)
+		if (item?.type === "control_checkbox") {
+			const options = item.options ? item.options.split('|') : [];
+			return (
+				<Form.Item {...commonProps}>
+					<Select
+						mode="multiple"
+						placeholder={item.text}
+						className="w-full"
+						maxTagCount="responsive"
+					>
+						{options.map((option, optIdx) => (
+							<Option key={optIdx} value={option.trim()}>
+								{option.trim()}
+							</Option>
+						))}
+					</Select>
+				</Form.Item>
+			);
+		}
+
+		// Email fields
+		if (item?.validation === "Email" || item?.text?.toLowerCase().includes("email")) {
+			return (
+				<Form.Item {...commonProps}>
+					<Input
+						type="email"
+						placeholder={item.text}
+						className="w-full"
+					/>
+				</Form.Item>
+			);
+		}
+
+		// Widget fields (photos, signatures, etc.) - skip for search
+		if (item?.type === "control_widget") {
+			return null; // These typically aren't searchable fields
+		}
+
+		// Default text input
+		return (
+			<Form.Item {...commonProps}>
+				<Input
+					placeholder={item.text}
+					type="text"
+					className="w-full"
+				/>
+			</Form.Item>
+		);
 	};
 
 	return (
@@ -1969,46 +2128,29 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 							<div className="col-span-12 lg:col-span-10 space-y-4">
 								<div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-2">
 									{Object.values(selectedFormFields.content)
-										.filter((item) => item?.name?.includes("search"))
+										.filter((item) =>
+											item?.name?.includes("search")
+										)
+										.filter((item) => item?.type !== "control_widget") // Exclude widgets from search
 										.sort((a, b) => a.name.localeCompare(b.name))
-										.map((item, idx, arr) => (
-											<>
-												{item?.type === "control_widget" || item.type.includes("date") ? (
-													<Form.Item
-														key={item.qid}
-														name={item.text}
-														className={arr.length > 5 ? "mb-2" : "mb-0"}
-													>
-														<DatePicker
-															className="w-full"
-															format="DD/MM/YYYY"
-															placeholder={item.text}
-														/>
-													</Form.Item>
-												) : (
-													<Form.Item
-														key={item.qid}
-														name={item.text}
-														className={arr.length > 5 ? "mb-2" : "mb-0"}
-													>
-														<Input
-															placeholder={item.text}
-															type={item?.type || "text"}
-															className="w-full"
-														/>
-													</Form.Item>
-												)}
-											</>
-										))}
+										.map((item, idx, arr) => renderFormField(item, idx, arr))
+										.filter(Boolean) // Remove null values
+									}
 								</div>
 							</div>
 
 							{selectedForm &&
-								Object.values(selectedFormFields.content).some((item) => item?.name?.includes("search")) && (
+								Object.values(selectedFormFields.content).some((item) =>
+									(item?.name?.includes("search") ||
+										item?.name?.includes("listable") ||
+										item?.name?.includes("searchable")) &&
+									item?.type !== "control_widget"
+								) && (
 									<div className="col-span-12 lg:col-span-2 flex justify-end" style={{ height: "100%" }}>
 										<Button
 											className="flex items-center gap-2 w-full lg:w-auto rounded-md text-white transition headerButton"
 											htmlType="submit"
+											style={{ maxHeight: '2.1rem' }}
 										>
 											<FaSearch size={18} />
 										</Button>
@@ -2096,7 +2238,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 												{item?.text}
 												{item.required === 'Yes' && <span className="text-red-500 ml-1">*</span>}
 											</label>
-
+											{console.info("CHECKING", selectedFormFields)}
 											{renderFieldInput(
 												item,
 												manualInputValues[item.name],
