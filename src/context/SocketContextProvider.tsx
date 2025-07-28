@@ -179,15 +179,11 @@ export const SocketContextProvider = ({
     try {
       let parsedData;
 
-      console.info("🔄 Information update received:", data);
-
       if (typeof data === 'string') {
         parsedData = JSON.parse(data);
       } else {
         parsedData = data; // Already an object
       }
-
-      console.info("CHECKINGIGNGIGNNIGNNIGG", parsedData);
 
       if (parsedData.status === 400) {
         console.warn("⚠️ Information update response has error:", parsedData);
@@ -444,8 +440,6 @@ export const SocketContextProvider = ({
       }
 
       const parsedData = parsedRes.data as ReceivedPackageContent;
-      console.info("✅ Received packages:", parsedData);
-
       setReceivedContent(parsedData);
 
     } catch (error) {

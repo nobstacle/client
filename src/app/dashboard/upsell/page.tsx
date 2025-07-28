@@ -465,7 +465,6 @@ export default function Upsell() {
     }) : [];
 
     const handlePackageSend = () => {
-        console.info("Sending packages...");
         setLoadingData(true);
 
         fetch(`${Url}/api/v1/uploads/get-all-packages`, {

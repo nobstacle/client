@@ -80,7 +80,6 @@ export default function InformationNotes() {
 
 
         const handleInformationUpdated = (data: any) => {
-            console.info("🔄 Information updated by another user, refreshing...", data);
             // fetchInformation(currentPage, searchTerm);
         };
 

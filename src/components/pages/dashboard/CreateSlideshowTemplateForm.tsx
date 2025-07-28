@@ -140,7 +140,6 @@ export const CreateSlideshowTemplateForm: React.FC<{
     showUploadList: false, // We handle the list with SlideShowDragImage
   };
 
-  console.info("imagesimages", images);
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="create-template-form">

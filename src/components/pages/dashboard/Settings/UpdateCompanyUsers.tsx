@@ -67,7 +67,6 @@ export const UpdateCompanyUsers: React.FC = () => {
   React.useEffect(() => {
     if (companyUsers.data) {
       const { users: fetchedUsers, totalCount } = companyUsers.data;
-      console.info("HELLO", fetchedUsers, totalCount)
       setTotalUsers(totalCount);
       setTotalPages(Math.ceil(totalCount / pageSize));
 

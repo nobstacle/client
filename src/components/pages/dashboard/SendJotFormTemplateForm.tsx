@@ -2238,7 +2238,6 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 												{item?.text}
 												{item.required === 'Yes' && <span className="text-red-500 ml-1">*</span>}
 											</label>
-											{console.info("CHECKING", selectedFormFields)}
 											{renderFieldInput(
 												item,
 												manualInputValues[item.name],
