@@ -7,7 +7,6 @@ import Swal from "sweetalert2";
 import "../../../styles/base.css";
 import useTemplateStore from "../../../lib/zustand/store/templateStore";
 import { useSession } from "next-auth/react";
-import "../../../styles/base.css";
 import { useDisclousure } from "../../../hooks/useDisclosure";
 import { PlusIcon } from "../../../components/icons/PlusIcon";
 import CreatePackageForm from "../../../components/pages/dashboard/CreatePackageTemplateForm";
