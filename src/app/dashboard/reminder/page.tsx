@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useCallback, useRef } from 'react';
-import { Select, Table, Button, Space, Checkbox, Tag, InputNumber, Typography, Radio, Spin, Card, Modal, Form, Input, Upload, Row, Col, Image, message } from 'antd';
+import { Select, Table, Button, Space, Checkbox, Tag, InputNumber, Typography, Radio, Spin, Card, Modal, Form, Input, Upload, Row, Col, Image, message, Pagination } from 'antd';
 import { EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useHasHydrated } from "../../../hooks/useHydrated";
 import "../../../styles/base.css";
@@ -68,6 +68,7 @@ export default function Reminder() {
     const [searchTerm, setSearchTerm] = useState('');
     const [loadingMore, setLoadingMore] = useState(false);
     const [totalRecords, setTotalRecords] = useState(null);
+    const [pageSize, setPageSize] = useState(10);
     const ITEMS_PER_PAGE = 10;
     const loadingRef = useRef<HTMLDivElement>(null);
     const debounceRef = useRef<NodeJS.Timeout>();
@@ -83,6 +84,7 @@ export default function Reminder() {
         }
 
         try {
+            setNotesList([]);
             const isFirstLoad = page === 1 && !search;
             if (isFirstLoad) {
                 setLoadingData(true);
@@ -92,7 +94,7 @@ export default function Reminder() {
 
             const queryParams = new URLSearchParams({
                 page: page.toString(),
-                limit: ITEMS_PER_PAGE.toString(),
+                limit: pageSize.toString(),
                 ...(search && { search })
             });
 
@@ -130,7 +132,7 @@ export default function Reminder() {
             }
 
             // Use the hasMore from pagination info, fallback to length check
-            const hasMoreData = paginationInfo.hasMore || paginationInfo.hasNext || (processedData.length === ITEMS_PER_PAGE);
+            const hasMoreData = paginationInfo.hasMore || paginationInfo.hasNext || (processedData.length === pageSize);
             setHasMore(hasMoreData);
             setTotalRecords(paginationInfo.totalCount || result.metadata?.totalReminders || 0);
             setCurrentPage(page);
@@ -142,7 +144,7 @@ export default function Reminder() {
             setLoadingData(false);
             setLoadingMore(false);
         }
-    }, [data?.user?.backendTokens?.at, Url]);
+    }, [data?.user?.backendTokens?.at, Url, pageSize]);
 
     // Debounced search function
     const debouncedSearch = useCallback((searchValue: string) => {
@@ -189,9 +191,10 @@ export default function Reminder() {
     // Initial data fetch
     useEffect(() => {
         if (data?.user !== undefined) {
-            fetchNotes(1, '', true);
+            setCurrentPage(1);
+            fetchNotes(1, searchTerm, true);
         }
-    }, [data, fetchNotes]);
+    }, [pageSize, data, fetchNotes, searchTerm]);
 
     useEffect(() => {
         if (!isModalOpen) {
@@ -1410,23 +1413,27 @@ export default function Reminder() {
                                             size="middle"
                                             loading={loadingData}
                                         />
-                                        {(loadingMore || hasMore) && (
-                                            <div
-                                                ref={loadingRef}
-                                                style={{
-                                                    textAlign: 'center',
-                                                    padding: '20px',
-                                                    display: 'flex',
-                                                    justifyContent: 'center',
-                                                    alignItems: 'center'
+                                        <div className="flex justify-center mt-6">
+                                            <Pagination
+                                                current={currentPage}
+                                                total={totalRecords}
+                                                pageSize={pageSize}
+                                                onChange={(page, newPageSize) => {
+                                                    setCurrentPage(page);
+                                                    if (newPageSize !== pageSize) {
+                                                        setPageSize(newPageSize);
+                                                        fetchNotes(1, searchTerm, true);
+                                                    } else {
+                                                        fetchNotes(page, searchTerm, false);
+                                                    }
                                                 }}
-                                            >
-                                                {loadingMore && <Spin size="small" />}
-                                                {!hasMore && notesList.length > 0 && (
-                                                    <Text type="secondary">No more records to load</Text>
-                                                )}
-                                            </div>
-                                        )}
+                                                showSizeChanger
+                                                pageSizeOptions={['10', '20', '50', '100']}
+                                                showTotal={(total, range) =>
+                                                    `${range[0]}-${range[1]} of ${total} items`
+                                                }
+                                            />
+                                        </div>
                                     </>
                                 )}
                             </div>

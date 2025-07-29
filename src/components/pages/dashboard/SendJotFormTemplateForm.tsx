@@ -1845,7 +1845,6 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 			className: arr.length > 5 ? "mb-2" : "mb-0"
 		};
 
-		// Date fields - check for date in validation, subLabel, or text
 		if (
 			item?.validation === "Date" ||
 			item?.subLabel?.includes("DD/MM/YYYY") ||
@@ -1863,9 +1862,10 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 			);
 		}
 
-		// Radio buttons
-		if (item?.type === "control_radio") {
-			const options = item.options ? item.options.split('|') : [];
+		const hasOptions = item?.options && item.options.trim().length > 0;
+		const options = hasOptions ? item.options.split('|') : [];
+
+		if (item?.type === "control_radio" && hasOptions) {
 			return (
 				<Form.Item {...commonProps}>
 					<Select placeholder={item.text} className="w-full">
@@ -1879,9 +1879,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 			);
 		}
 
-		// Checkboxes (multi-select)
-		if (item?.type === "control_checkbox") {
-			const options = item.options ? item.options.split('|') : [];
+		if ((item?.type === "control_checkbox" || hasOptions) && options.length > 1) {
 			return (
 				<Form.Item {...commonProps}>
 					<Select
@@ -1900,7 +1898,20 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 			);
 		}
 
-		// Email fields
+		if (hasOptions && options.length === 1) {
+			return (
+				<Form.Item {...commonProps}>
+					<Select placeholder={item.text} className="w-full">
+						{options.map((option, optIdx) => (
+							<Option key={optIdx} value={option.trim()}>
+								{option.trim()}
+							</Option>
+						))}
+					</Select>
+				</Form.Item>
+			);
+		}
+
 		if (item?.validation === "Email" || item?.text?.toLowerCase().includes("email")) {
 			return (
 				<Form.Item {...commonProps}>
@@ -1913,12 +1924,26 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 			);
 		}
 
-		// Widget fields (photos, signatures, etc.) - skip for search
-		if (item?.type === "control_widget") {
-			return null; // These typically aren't searchable fields
+		if (item?.validation === "Numeric" || item?.text?.toLowerCase().includes("mobile") || item?.text?.toLowerCase().includes("phone")) {
+			return (
+				<Form.Item {...commonProps}>
+					<Input
+						type="tel"
+						placeholder={item.text}
+						className="w-full"
+					/>
+				</Form.Item>
+			);
 		}
 
-		// Default text input
+		if (item?.type === "control_widget") {
+			return null;
+		}
+
+		if (["control_head", "control_pagebreak", "control_button"].includes(item?.type)) {
+			return null;
+		}
+
 		return (
 			<Form.Item {...commonProps}>
 				<Input
@@ -2138,7 +2163,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 									}
 								</div>
 							</div>
-
+							{console.info("selectedFormFields.content", selectedFormFields.content)}
 							{selectedForm &&
 								Object.values(selectedFormFields.content).some((item) =>
 									(item?.name?.includes("search") ||
