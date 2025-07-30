@@ -121,18 +121,27 @@ export default function Reminder() {
                     : item.recurringConfig || {}
             }));
 
+            console.info("processedDataprocessedData", processedData);
+
+            // Fixed sorting: Convert date strings to Date objects for proper comparison
+            const sortedData = processedData.sort((a, b) => {
+                const dateA = new Date(a.updatedAt);
+                const dateB = new Date(b.updatedAt);
+                return dateB.getTime() - dateA.getTime(); // Descending order (most recent first)
+            });
+
             if (reset || page === 1) {
-                setNotesList(processedData);
+                setNotesList(sortedData);
             } else {
                 setNotesList(prev => {
                     const existingIds = new Set(prev.map(item => item.id));
-                    const newItems = processedData.filter(item => !existingIds.has(item.id));
+                    const newItems = sortedData.filter(item => !existingIds.has(item.id));
                     return [...prev, ...newItems];
                 });
             }
 
             // Use the hasMore from pagination info, fallback to length check
-            const hasMoreData = paginationInfo.hasMore || paginationInfo.hasNext || (processedData.length === pageSize);
+            const hasMoreData = paginationInfo.hasMore || paginationInfo.hasNext || (sortedData.length === pageSize);
             setHasMore(hasMoreData);
             setTotalRecords(paginationInfo.totalCount || result.metadata?.totalReminders || 0);
             setCurrentPage(page);
@@ -1364,6 +1373,8 @@ export default function Reminder() {
         setSearchTerm(searchValue);
         debouncedSearch(searchValue);
     }
+
+    console.info("notesListnotesList", notesList);
 
     if (hasHydrated)
         return (
