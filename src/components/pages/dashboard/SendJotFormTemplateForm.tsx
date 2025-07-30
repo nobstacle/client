@@ -516,7 +516,21 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 				return normalized;
 			});
 
-			return normalizedData;
+			const sortedData = normalizedData.sort((a, b) => {
+				const submissionIdA = a.formData?.submission_id;
+				const submissionIdB = b.formData?.submission_id;
+
+				if (!submissionIdA && !submissionIdB) return 0;
+				if (!submissionIdA) return 1;
+				if (!submissionIdB) return -1;
+
+				const numA = parseInt(submissionIdA);
+				const numB = parseInt(submissionIdB);
+
+				return numB - numA;
+			});
+
+			return sortedData;
 		};
 
 		const cleanTableData = normalizeTableData(tableData, listableFields);
