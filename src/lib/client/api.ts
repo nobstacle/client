@@ -1813,8 +1813,6 @@ export const useWebsiteTemplateControllerGetWebsiteTags = <TData = Awaited<Retur
 }
 
 
-
-
 export const slideshowTemplateControllerPatchSlideshowTemplateOne = (
 	tag: string,
 	patchSlideshowTemplateReq: BodyType<PatchSlideshowTemplateReq>,

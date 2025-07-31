@@ -15,6 +15,17 @@ export const metadata: Metadata = {
   title: "Nobstacle",
   description: "Nobstacle",
   manifest: "/manifest.json",
+  themeColor: "#000000",
+  viewport: "width=device-width, initial-scale=1.0",
+  icons: {
+    icon: "/img-192.png",
+    apple: "/img-192.png",
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Nobstacle",
+  },
 };
 
 interface RootLayourPropsI {
@@ -22,12 +33,17 @@ interface RootLayourPropsI {
   session: any;
 }
 
-
 function RootLayout({ children, session }: RootLayourPropsI) {
   return (
     <html lang="en" className={inter.variable}>
-      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-      <meta httpEquiv="Permissions-Policy" content="camera=*, microphone=*, geolocation=*" />
+      <head>
+        <meta name="theme-color" content="#000000" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content="Nobstacle" />
+        <link rel="apple-touch-icon" href="/img-192.png" />
+        <meta httpEquiv="Permissions-Policy" content="camera=*, microphone=*, geolocation=*" />
+      </head>
       <body className={inter.className}>
         <ReactQueryContextProvider>
           <SessionContextProvider session={session}>

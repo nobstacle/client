@@ -19,7 +19,7 @@ import {
 export const TemplateShortcutPicker: React.FC = () => {
   const { emitSendTemplate } = useSocketContext();
   const { company } = useCompanyStore();
-  const { texts, images, videos, slideshows, maps, websites } =
+  const { texts, images, videos, slideshows, maps, websites, documents } =
     useTemplateStore();
   const isHydrated = useHasHydrated();
 
@@ -177,6 +177,28 @@ export const TemplateShortcutPicker: React.FC = () => {
 
         break;
 
+        
+      case "Documents":
+        template = documents.find(
+          (website) =>
+            website.tag === tag &&
+            website.langCode.includes(
+              params.get("lang") || company?.defaultLangCode || "en",
+            ),
+        );
+
+        // if not exist on the selected language try to find default language to send
+        if (!template && company?.defaultLangCode) {
+          template = maps.find(
+            (website) =>
+              website.tag === tag &&
+              website.langCode.includes(company?.defaultLangCode),
+          );
+
+          isExistOnDefaultLanguage = true;
+        }
+
+        break;
       default:
         template = undefined;
     }

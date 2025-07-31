@@ -9,6 +9,7 @@ import {
   useTextTemplateControllerGetTextTags,
   useVideoTemplateControllerGetVideoTags,
   useWebsiteTemplateControllerGetWebsiteTags,
+  useDocumentControllerGetDocumentTags
 } from "../../../../lib/client/api";
 import { ChatType, PostShortcutReq } from "../../../../lib/client/model";
 import useShortcutStore from "../../../../lib/zustand/store/shortcutStore";
@@ -34,6 +35,7 @@ export const ColorShortcutForm: React.FC = () => {
   const videoTags = useVideoTemplateControllerGetVideoTags();
   const mapTags = useMapTemplateControllerGetMapTags();
   const websiteTags = useWebsiteTemplateControllerGetWebsiteTags();
+  const documentTags = useDocumentControllerGetDocumentTags();
 
   React.useEffect(() => {
     const mappedInitial =
@@ -174,7 +176,7 @@ export const ColorShortcutForm: React.FC = () => {
           }}
         >
           <option value="null">Select type...</option>
-          {["Text", "Image", "Video", "Slideshow", "Map", "Website"].map(
+          {["Text", "Image", "Video", "Slideshow", "Map", "Website", "Documents"].map(
             (value, index) => (
               <option value={value} key={`${value}-${index}`}>
                 {value}
@@ -189,8 +191,8 @@ export const ColorShortcutForm: React.FC = () => {
           onChange={(e) =>
             e.currentTarget.value
               ? setTag(
-                  e.currentTarget.value === "null" ? "" : e.currentTarget.value,
-                )
+                e.currentTarget.value === "null" ? "" : e.currentTarget.value,
+              )
               : null
           }
         >
@@ -260,6 +262,18 @@ export const ColorShortcutForm: React.FC = () => {
                   {value.tag}
                 </option>
               ))}
+
+          {currType === "Documents" &&
+            documentTags.data
+              ?.filter(({ langCode }) =>
+                langCode.includes(company?.defaultLangCode ?? "en"),
+              )
+              .map((value, index) => (
+                <option value={value.tag} key={`${value.tag}-${index}`}>
+                  {value.tag}
+                </option>
+              ))}
+              
         </select>
         <button onClick={handleAddLangaugeShortcut} type="button">
           <PlusIcon height="25px" width="25px" />
