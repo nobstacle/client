@@ -209,32 +209,6 @@ export default function Package() {
         }));
     };
 
-    // Clear all filters
-    const clearAllFilters = () => {
-        setSearchFilters({
-            searchText: '',
-            status: 'all',
-            priceRange: 'all',
-            priceLevel: 'all',
-            taxIncluded: 'all',
-            roomUpgrade: 'all',
-            sortBy: 'name',
-            sortOrder: 'asc'
-        });
-    };
-
-    // Check if any filters are active
-    const hasActiveFilters = useMemo(() => {
-        return searchFilters.searchText !== '' ||
-            searchFilters.status !== 'all' ||
-            searchFilters.priceRange !== 'all' ||
-            searchFilters.priceLevel !== 'all' ||
-            searchFilters.taxIncluded !== 'all' ||
-            searchFilters.roomUpgrade !== 'all' ||
-            searchFilters.sortBy !== 'name' ||
-            searchFilters.sortOrder !== 'asc';
-    }, [searchFilters]);
-
     // Function to handle opening modal for creating new package
     const handleCreatePackage = () => {
         setModalMode('create');

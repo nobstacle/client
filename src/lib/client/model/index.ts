@@ -73,3 +73,4 @@ export * from './uploadControllerUploadCompanyFileManyBody';
 export * from './uploadControllerUploadCompanyLogoBody';
 export * from './uploadControllerUploadSpeechToTextFileBody';
 export * from './userControllerGetUsersParams';
+export * from "./getDocumentTemplateRes"

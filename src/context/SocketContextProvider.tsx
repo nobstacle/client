@@ -428,6 +428,7 @@ export const SocketContextProvider = ({
       console.error("❌ Socket is not connected!");
       return;
     }
+
     socketClient.emit("send-template", data);
   };
 

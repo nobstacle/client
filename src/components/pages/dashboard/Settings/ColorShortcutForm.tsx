@@ -176,7 +176,7 @@ export const ColorShortcutForm: React.FC = () => {
           }}
         >
           <option value="null">Select type...</option>
-          {["Text", "Image", "Video", "Slideshow", "Map", "Website", "Documents"].map(
+          {["Text", "Image", "Video", "Slideshow", "Map", "Website", "Document"].map(
             (value, index) => (
               <option value={value} key={`${value}-${index}`}>
                 {value}
@@ -263,7 +263,7 @@ export const ColorShortcutForm: React.FC = () => {
                 </option>
               ))}
 
-          {currType === "Documents" &&
+          {currType === "Document" &&
             documentTags.data
               ?.filter(({ langCode }) =>
                 langCode.includes(company?.defaultLangCode ?? "en"),

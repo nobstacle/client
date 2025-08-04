@@ -16,5 +16,5 @@ export const ChatType = {
   Slideshow: 'Slideshow',
   Map: 'Map',
   Website: 'Website',
-  Documents:'Documents'
+  Document:'Document'
 } as const;

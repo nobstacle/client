@@ -81,7 +81,8 @@ import type {
 	UploadControllerUploadCompanyFileManyBody,
 	UploadControllerUploadCompanyLogoBody,
 	UploadControllerUploadSpeechToTextFileBody,
-	UserControllerGetUsersParams
+	UserControllerGetUsersParams,
+	Temp
 } from './model'
 import { nobstacleBackendApiInstance } from '../custom-instance';
 import type { ErrorType, BodyType } from '../custom-instance';
@@ -3012,9 +3013,6 @@ export const useTemplateControllerGetTextTemplates = <TData = Awaited<ReturnType
 	return query;
 }
 
-
-
-
 export const templateControllerGetImageTemplates = (
 	params?: TemplateControllerGetImageTemplatesParams,
 	options?: SecondParameter<typeof nobstacleBackendApiInstance>, signal?: AbortSignal
@@ -3043,13 +3041,7 @@ export const getTemplateControllerGetImageTemplatesQueryOptions = <TData = Await
 
 	const queryKey = queryOptions?.queryKey ?? getTemplateControllerGetImageTemplatesQueryKey(params);
 
-
-
 	const queryFn: QueryFunction<Awaited<ReturnType<typeof templateControllerGetImageTemplates>>> = ({ signal }) => templateControllerGetImageTemplates(params, requestOptions, signal);
-
-
-
-
 
 	return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<Awaited<ReturnType<typeof templateControllerGetImageTemplates>>, TError, TData> & { queryKey: QueryKey }
 }
@@ -3071,14 +3063,10 @@ export const useTemplateControllerGetImageTemplates = <TData = Awaited<ReturnTyp
 	return query;
 }
 
-
-
-
 export const templateControllerGetVideoTemplates = (
 	params?: TemplateControllerGetVideoTemplatesParams,
 	options?: SecondParameter<typeof nobstacleBackendApiInstance>, signal?: AbortSignal
 ) => {
-
 
 	return nobstacleBackendApiInstance<GetVideoTemplateRes[]>(
 		{
@@ -4516,4 +4504,483 @@ export const usePackageControllerListPackages = <
 ) => {
 	const queryOptions = getPackageControllerListPackagesQueryOptions(params, options);
 	return useQuery(queryOptions);
+};
+
+
+export const templateControllerGetDocumentTemplates = (
+	params?: TemplateControllerGetImageTemplatesParams,
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>, signal?: AbortSignal
+) => {
+
+
+	return nobstacleBackendApiInstance<GetImageTemplateRes[]>(
+		{
+			url: `/api/v1/template/documents`, method: 'GET',
+			params, signal
+		},
+		options);
+}
+
+export const getDocumentControllerGetDocumentTemplatesQueryOptions = <TData = Awaited<ReturnType<typeof templateControllerGetDocumentTemplates>>, TError = ErrorType<HttpExceptionSchema>>(params?: TemplateControllerGetImageTemplatesParams, options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof templateControllerGetDocumentTemplates>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+) => {
+
+	const { query: queryOptions, request: requestOptions } = options ?? {};
+
+	const queryKey = queryOptions?.queryKey ?? templateControllerGetDocumentTemplates(params);
+
+	const queryFn: QueryFunction<Awaited<ReturnType<typeof templateControllerGetDocumentTemplates>>> = ({ signal }) => templateControllerGetDocumentTemplates(params, requestOptions, signal);
+
+	return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<Awaited<ReturnType<typeof templateControllerGetDocumentTemplates>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type TemplateControllerGetDocumentTemplatesQueryResult = NonNullable<Awaited<ReturnType<typeof templateControllerGetDocumentTemplates>>>
+export type TemplateControllerGetDocumentTemplatesQueryError = ErrorType<HttpExceptionSchema>
+
+export const useTemplateControllerGetDocumenttemplates = <TData = Awaited<ReturnType<typeof templateControllerGetDocumentTemplates>>, TError = ErrorType<HttpExceptionSchema>>(
+	params?: TemplateControllerGetImageTemplatesParams, options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof templateControllerGetDocumentTemplates>>, TError, TData>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
+
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } => {
+
+	const queryOptions = getDocumentControllerGetDocumentTemplatesQueryOptions(params, options)
+
+	const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+	query.queryKey = queryOptions.queryKey;
+
+	return query;
+}
+
+export const getTemplateControllerGetDocumentTemplatesQueryKey = (params?: TemplateControllerGetJotformTemplatesParams,) => {
+
+	return [`/api/v1/template/documents`, ...(params ? [params] : [])] as const;
+}
+
+
+
+// Create Category
+export const categoryControllerCreateCategory = (
+	data: BodyType<CreateCategoryReq>,
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>,
+) => {
+	return nobstacleBackendApiInstance<CategoryResponse>(
+		{
+			url: `/api/v1/uploads/create-category`,
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			data: data
+		},
+		options
+	);
+};
+
+export const getCategoryControllerCreateCategoryMutationOptions = <
+	TError = ErrorType<HttpExceptionSchema>,
+	TContext = unknown
+>(options?: {
+	mutation?: UseMutationOptions<
+		Awaited<ReturnType<typeof categoryControllerCreateCategory>>,
+		TError,
+		{ data: BodyType<CreateCategoryReq> },
+		TContext
+	>,
+	request?: SecondParameter<typeof nobstacleBackendApiInstance>
+}): UseMutationOptions<
+	Awaited<ReturnType<typeof categoryControllerCreateCategory>>,
+	TError,
+	{ data: BodyType<CreateCategoryReq> },
+	TContext
+> => {
+	const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+
+	const mutationFn: MutationFunction<
+		Awaited<ReturnType<typeof categoryControllerCreateCategory>>,
+		{ data: BodyType<CreateCategoryReq> }
+	> = (props) => {
+		const { data } = props ?? {};
+		return categoryControllerCreateCategory(data, requestOptions);
+	};
+
+	return { mutationFn, ...mutationOptions };
+};
+
+export const useCategoryControllerCreateCategory = <
+	TError = ErrorType<HttpExceptionSchema>,
+	TContext = unknown
+>(options?: {
+	mutation?: UseMutationOptions<
+		Awaited<ReturnType<typeof categoryControllerCreateCategory>>,
+		TError,
+		{ data: BodyType<CreateCategoryReq> },
+		TContext
+	>,
+	request?: SecondParameter<typeof nobstacleBackendApiInstance>
+}) => {
+	const mutationOptions = getCategoryControllerCreateCategoryMutationOptions(options);
+	return useMutation(mutationOptions);
+};
+
+// Update Category
+export const categoryControllerUpdateCategory = (
+	id: number,
+	data: BodyType<UpdateCategoryReq>,
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>,
+) => {
+	return nobstacleBackendApiInstance<CategoryResponse>(
+		{
+			url: `/api/v1/uploads/update-category/${id}`,
+			method: 'PUT',
+			headers: { 'Content-Type': 'application/json' },
+			data: data
+		},
+		options
+	);
+};
+
+export const getCategoryControllerUpdateCategoryMutationOptions = <
+	TError = ErrorType<HttpExceptionSchema>,
+	TContext = unknown
+>(options?: {
+	mutation?: UseMutationOptions<
+		Awaited<ReturnType<typeof categoryControllerUpdateCategory>>,
+		TError,
+		{ id: number; data: BodyType<UpdateCategoryReq> },
+		TContext
+	>,
+	request?: SecondParameter<typeof nobstacleBackendApiInstance>
+}): UseMutationOptions<
+	Awaited<ReturnType<typeof categoryControllerUpdateCategory>>,
+	TError,
+	{ id: number; data: BodyType<UpdateCategoryReq> },
+	TContext
+> => {
+	const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+
+	const mutationFn: MutationFunction<
+		Awaited<ReturnType<typeof categoryControllerUpdateCategory>>,
+		{ id: number; data: BodyType<UpdateCategoryReq> }
+	> = (props) => {
+		const { id, data } = props ?? {};
+		return categoryControllerUpdateCategory(id, data, requestOptions);
+	};
+
+	return { mutationFn, ...mutationOptions };
+};
+
+export const useCategoryControllerUpdateCategory = <
+	TError = ErrorType<HttpExceptionSchema>,
+	TContext = unknown
+>(options?: {
+	mutation?: UseMutationOptions<
+		Awaited<ReturnType<typeof categoryControllerUpdateCategory>>,
+		TError,
+		{ id: number; data: BodyType<UpdateCategoryReq> },
+		TContext
+	>,
+	request?: SecondParameter<typeof nobstacleBackendApiInstance>
+}) => {
+	const mutationOptions = getCategoryControllerUpdateCategoryMutationOptions(options);
+	return useMutation(mutationOptions);
+};
+
+// Delete Category
+export const categoryControllerDeleteCategory = (
+	id: number,
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>,
+) => {
+	return nobstacleBackendApiInstance<boolean>(
+		{
+			url: `/api/v1/content/category/${id}`,
+			method: 'DELETE'
+		},
+		options
+	);
+};
+
+export const getCategoryControllerDeleteCategoryMutationOptions = <
+	TError = ErrorType<HttpExceptionSchema>,
+	TContext = unknown
+>(options?: {
+	mutation?: UseMutationOptions<
+		Awaited<ReturnType<typeof categoryControllerDeleteCategory>>,
+		TError,
+		{ id: number },
+		TContext
+	>,
+	request?: SecondParameter<typeof nobstacleBackendApiInstance>
+}): UseMutationOptions<
+	Awaited<ReturnType<typeof categoryControllerDeleteCategory>>,
+	TError,
+	{ id: number },
+	TContext
+> => {
+	const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+
+	const mutationFn: MutationFunction<
+		Awaited<ReturnType<typeof categoryControllerDeleteCategory>>,
+		{ id: number }
+	> = (props) => {
+		const { id } = props ?? {};
+		return categoryControllerDeleteCategory(id, requestOptions);
+	};
+
+	return { mutationFn, ...mutationOptions };
+};
+
+export const useCategoryControllerDeleteCategory = <
+	TError = ErrorType<HttpExceptionSchema>,
+	TContext = unknown
+>(options?: {
+	mutation?: UseMutationOptions<
+		Awaited<ReturnType<typeof categoryControllerDeleteCategory>>,
+		TError,
+		{ id: number },
+		TContext
+	>,
+	request?: SecondParameter<typeof nobstacleBackendApiInstance>
+}) => {
+	const mutationOptions = getCategoryControllerDeleteCategoryMutationOptions(options);
+	return useMutation(mutationOptions);
+};
+
+// Get Category by ID
+export const categoryControllerGetCategoryById = (
+	id: number,
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>,
+) => {
+	return nobstacleBackendApiInstance<CategoryResponse>(
+		{
+			url: `/api/v1/content/category/${id}`,
+			method: 'GET'
+		},
+		options
+	);
+};
+
+export const getCategoryControllerGetCategoryByIdQueryOptions = <
+	TError = ErrorType<HttpExceptionSchema>
+>(
+	id: number,
+	options?: {
+		query?: UseQueryOptions<
+			Awaited<ReturnType<typeof categoryControllerGetCategoryById>>,
+			TError
+		>,
+		request?: SecondParameter<typeof nobstacleBackendApiInstance>
+	}
+) => {
+	const { query: queryOptions, request: requestOptions } = options ?? {};
+
+	const queryKey = [`/api/v1/content/category/${id}`];
+	const queryFn = () => categoryControllerGetCategoryById(id, requestOptions);
+
+	return { queryKey, queryFn, ...queryOptions };
+};
+
+export const useCategoryControllerGetCategoryById = <
+	TError = ErrorType<HttpExceptionSchema>
+>(
+	id: number,
+	options?: {
+		query?: UseQueryOptions<
+			Awaited<ReturnType<typeof categoryControllerGetCategoryById>>,
+			TError
+		>,
+		request?: SecondParameter<typeof nobstacleBackendApiInstance>
+	}
+) => {
+	const queryOptions = getCategoryControllerGetCategoryByIdQueryOptions(id, options);
+	return useQuery(queryOptions);
+};
+
+// List Categories
+export const categoryControllerListCategories = (
+	params?: {
+		page?: number;
+		limit?: number;
+		search?: string;
+		soldOut?: boolean;
+		priceLevel?: number;
+	},
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>,
+) => {
+	return nobstacleBackendApiInstance<CategoryListResponse>(
+		{
+			url: `/api/v1/content/get-all-categories`,
+			method: 'GET',
+			params: params
+		},
+		options
+	);
+};
+
+export const getCategoryControllerListCategoriesQueryOptions = <
+	TError = ErrorType<HttpExceptionSchema>
+>(
+	params?: {
+		page?: number;
+		limit?: number;
+		search?: string;
+		soldOut?: boolean;
+		priceLevel?: number;
+	},
+	options?: {
+		query?: UseQueryOptions<
+			Awaited<ReturnType<typeof categoryControllerListCategories>>,
+			TError
+		>,
+		request?: SecondParameter<typeof nobstacleBackendApiInstance>
+	}
+) => {
+	const { query: queryOptions, request: requestOptions } = options ?? {};
+
+	const queryKey = [`/api/v1/content/category`, params];
+	const queryFn = () => categoryControllerListCategories(params, requestOptions);
+
+	return { queryKey, queryFn, ...queryOptions };
+};
+
+export const useCategoryControllerListCategories = <
+	TError = ErrorType<HttpExceptionSchema>
+>(
+	params?: {
+		page?: number;
+		limit?: number;
+		search?: string;
+		soldOut?: boolean;
+		priceLevel?: number;
+	},
+	options?: {
+		query?: UseQueryOptions<
+			Awaited<ReturnType<typeof categoryControllerListCategories>>,
+			TError
+		>,
+		request?: SecondParameter<typeof nobstacleBackendApiInstance>
+	}
+) => {
+	const queryOptions = getCategoryControllerListCategoriesQueryOptions(params, options);
+	return useQuery(queryOptions);
+};
+
+// Get Categories with Packages (if you need this relationship)
+export const categoryControllerGetCategoriesWithPackages = (
+	params?: {
+		page?: number;
+		limit?: number;
+		includePackages?: boolean;
+	},
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>,
+) => {
+	return nobstacleBackendApiInstance<CategoryWithPackagesResponse[]>(
+		{
+			url: `/api/v1/content/category/with-packages`,
+			method: 'GET',
+			params: params
+		},
+		options
+	);
+};
+
+export const getCategoryControllerGetCategoriesWithPackagesQueryOptions = <
+	TError = ErrorType<HttpExceptionSchema>
+>(
+	params?: {
+		page?: number;
+		limit?: number;
+		includePackages?: boolean;
+	},
+	options?: {
+		query?: UseQueryOptions<
+			Awaited<ReturnType<typeof categoryControllerGetCategoriesWithPackages>>,
+			TError
+		>,
+		request?: SecondParameter<typeof nobstacleBackendApiInstance>
+	}
+) => {
+	const { query: queryOptions, request: requestOptions } = options ?? {};
+
+	const queryKey = [`/api/v1/content/category/with-packages`, params];
+	const queryFn = () => categoryControllerGetCategoriesWithPackages(params, requestOptions);
+
+	return { queryKey, queryFn, ...queryOptions };
+};
+
+export const useCategoryControllerGetCategoriesWithPackages = <
+	TError = ErrorType<HttpExceptionSchema>
+>(
+	params?: {
+		page?: number;
+		limit?: number;
+		includePackages?: boolean;
+	},
+	options?: {
+		query?: UseQueryOptions<
+			Awaited<ReturnType<typeof categoryControllerGetCategoriesWithPackages>>,
+			TError
+		>,
+		request?: SecondParameter<typeof nobstacleBackendApiInstance>
+	}
+) => {
+	const queryOptions = getCategoryControllerGetCategoriesWithPackagesQueryOptions(params, options);
+	return useQuery(queryOptions);
+};
+
+// Bulk operations (if needed)
+export const categoryControllerBulkDeleteCategories = (
+	data: { ids: number[] },
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>,
+) => {
+	return nobstacleBackendApiInstance<{ deletedCount: number }>(
+		{
+			url: `/api/v1/content/category/bulk-delete`,
+			method: 'DELETE',
+			data: data
+		},
+		options
+	);
+};
+
+export const getCategoryControllerBulkDeleteCategoriesMutationOptions = <
+	TError = ErrorType<HttpExceptionSchema>,
+	TContext = unknown
+>(options?: {
+	mutation?: UseMutationOptions<
+		Awaited<ReturnType<typeof categoryControllerBulkDeleteCategories>>,
+		TError,
+		{ data: { ids: number[] } },
+		TContext
+	>,
+	request?: SecondParameter<typeof nobstacleBackendApiInstance>
+}): UseMutationOptions<
+	Awaited<ReturnType<typeof categoryControllerBulkDeleteCategories>>,
+	TError,
+	{ data: { ids: number[] } },
+	TContext
+> => {
+	const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+
+	const mutationFn: MutationFunction<
+		Awaited<ReturnType<typeof categoryControllerBulkDeleteCategories>>,
+		{ data: { ids: number[] } }
+	> = (props) => {
+		const { data } = props ?? {};
+		return categoryControllerBulkDeleteCategories(data, requestOptions);
+	};
+
+	return { mutationFn, ...mutationOptions };
+};
+
+export const useCategoryControllerBulkDeleteCategories = <
+	TError = ErrorType<HttpExceptionSchema>,
+	TContext = unknown
+>(options?: {
+	mutation?: UseMutationOptions<
+		Awaited<ReturnType<typeof categoryControllerBulkDeleteCategories>>,
+		TError,
+		{ data: { ids: number[] } },
+		TContext
+	>,
+	request?: SecondParameter<typeof nobstacleBackendApiInstance>
+}) => {
+	const mutationOptions = getCategoryControllerBulkDeleteCategoriesMutationOptions(options);
+	return useMutation(mutationOptions);
 };

@@ -121,8 +121,6 @@ export default function Reminder() {
                     : item.recurringConfig || {}
             }));
 
-            console.info("processedDataprocessedData", processedData);
-
             // Fixed sorting: Convert date strings to Date objects for proper comparison
             const sortedData = processedData.sort((a, b) => {
                 const dateA = new Date(a.updatedAt);
@@ -1373,8 +1371,6 @@ export default function Reminder() {
         setSearchTerm(searchValue);
         debouncedSearch(searchValue);
     }
-
-    console.info("notesListnotesList", notesList);
 
     if (hasHydrated)
         return (

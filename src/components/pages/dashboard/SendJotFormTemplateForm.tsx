@@ -2177,7 +2177,6 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 									}
 								</div>
 							</div>
-							{console.info("selectedFormFields.content", selectedFormFields.content)}
 							{selectedForm &&
 								Object.values(selectedFormFields.content).some((item) =>
 									(item?.name?.includes("search") ||

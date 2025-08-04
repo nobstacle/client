@@ -9,6 +9,7 @@ import {
   GetTextTemplateRes,
   GetVideoTemplateRes,
   GetWebsiteTemplateRes,
+  GetDocumentTemplateRes
 } from "../../client/model";
 import { persist } from "zustand/middleware";
 
@@ -44,7 +45,7 @@ interface BearState {
   setSurveyAnswers: (surveys: GetSurveyAnswerTemplateRes[]) => void;
   surveysAnswer: GetSurveyAnswerTemplateRes[];
   addSurveyAnswer: (survey: GetSurveyAnswerTemplateRes) => void;
-  documents: any[];
+  documents: GetDocumentTemplateRes[];
   setDocuments: (documents: any[]) => void;
   searchDocuments: any[];
   setSearchDocuments: (documents: any[]) => void;

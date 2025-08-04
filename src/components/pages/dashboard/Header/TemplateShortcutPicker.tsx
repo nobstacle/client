@@ -8,6 +8,7 @@ import { useSocketContext } from "../../../../context/SocketContextProvider";
 import useTemplateStore from "../../../../lib/zustand/store/templateStore";
 import {
   ChatType,
+  GetDocumentTemplateRes,
   GetImageTemplateRes,
   GetMapTemplateRes,
   GetSlideshowTemplateRes,
@@ -38,13 +39,14 @@ export const TemplateShortcutPicker: React.FC = () => {
       | GetSlideshowTemplateRes
       | GetMapTemplateRes
       | GetWebsiteTemplateRes
+      | GetDocumentTemplateRes
       | undefined;
     const templateShortcut = templatesShortcuts.filter(
       (templateShortcut) => templateShortcut.id === id,
     );
 
     if (!templateShortcut) return;
-    
+
     let isExistOnDefaultLanguage = false;
 
     switch (type) {
@@ -177,12 +179,12 @@ export const TemplateShortcutPicker: React.FC = () => {
 
         break;
 
-        
-      case "Documents":
+
+      case "Document":
         template = documents.find(
-          (website) =>
-            website.tag === tag &&
-            website.langCode.includes(
+          (document) =>
+            document.tag === tag &&
+            document.langCode.includes(
               params.get("lang") || company?.defaultLangCode || "en",
             ),
         );

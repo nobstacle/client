@@ -646,7 +646,6 @@ export const Content: React.FC = () => {
     }
   }, [isLoading]);
 
-
   const createUpsellTransaction = async (formData: {
     packageId: number;
     confirmationNumber: string;
@@ -815,6 +814,7 @@ export const Content: React.FC = () => {
     }
 
     if (messageStore.receivedType === "Document" ||
+      messageStore.receivedType === "Documents" ||
       messageStore.receivedType === "PdfDocument" ||
       messageStore.receivedType === "WordDocument" ||
       messageStore.receivedType === "ExcelDocument" ||
