@@ -13,6 +13,9 @@ import { PlusIcon } from "../../../components/icons/PlusIcon";
 import CreateCategoryForm from "../../../components/pages/dashboard/CreateCategoryForm";
 import dayjs from 'dayjs';
 import ViewCategoryModal from "./ViewCategory";
+import {
+    useCategoryControllerDeleteCategory,
+} from "../../../lib/client/api";
 
 export default function Category() {
     const { data: userData } = useSession();
@@ -30,12 +33,13 @@ export default function Category() {
     const [editCategoryData, setEditCategoryData] = useState([]);
     const [originalCategoryData, setOriginalCategories] = useState([]);
     const [totalItems, setTotalItems] = useState(0);
+    const deleteCategory = useCategoryControllerDeleteCategory();
 
     const handleFilterChange = (key, value) => {
         // Add your filter logic here
     };
 
-    const fetchPackages = useCallback(() => {
+    const fetchCategories = useCallback(() => {
         setLoadingData(true);
 
         fetch(`${Url}/api/v1/uploads/get-all-categories`, {
@@ -59,9 +63,9 @@ export default function Category() {
 
     useEffect(() => {
         if (data?.user !== undefined) {
-            fetchPackages();
+            fetchCategories();
         }
-    }, [data, fetchPackages]);
+    }, [data, fetchCategories]);
 
     const columns: ColumnsType<any> = [
         {
@@ -140,20 +144,7 @@ export default function Category() {
 
                     <button
                         title="Delete"
-                        onClick={() => {
-                            Swal.fire({
-                                title: "Are you sure?",
-                                icon: "warning",
-                                showCancelButton: true,
-                                confirmButtonColor: "#d33",
-                                cancelButtonColor: "#3085d6",
-                                confirmButtonText: "Yes, delete it!"
-                            }).then((result) => {
-                                if (result.isConfirmed) {
-                                    HandlePackageDelete(record);
-                                }
-                            });
-                        }}
+                        onClick={() => HandlePackageDelete(record)}
                         className="w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center text-white bg-red-700 hover:bg-red-800 focus:ring-4 focus:ring-red-300 font-medium rounded-full text-xs"
                     >
                         <FaTrash size={12} />
@@ -183,15 +174,57 @@ export default function Category() {
 
     const handlePackageOperationComplete = () => {
         setIsOpen(false);
+        fetchCategories();
     }
 
     const handleEditPackage = (record) => {
-        console.info("Edit", record);
+        setEditCategoryData(record);
+        setModalMode('edit');
+        setIsOpen(true);
     }
 
     const HandlePackageDelete = (record) => {
         console.info("Delete", record);
+
+        Swal.fire({
+            title: 'Are you sure?',
+            text: `You are about to delete the category "${record.name}". This action cannot be undone!`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Yes, delete it!',
+            cancelButtonText: 'Cancel'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                deleteCategory.mutate(
+                    { id: record.id },
+                    {
+                        onSuccess: (response) => {
+                            Swal.fire({
+                                title: 'Deleted!',
+                                text: 'Category has been deleted successfully.',
+                                icon: 'success',
+                                timer: 2000,
+                                showConfirmButton: false
+                            });
+                            fetchCategories();
+                        },
+                        onError: (error) => {
+                            Swal.fire({
+                                title: 'Error!',
+                                text: 'Failed to delete category. Please try again.',
+                                icon: 'error',
+                                confirmButtonText: 'OK'
+                            });
+                            console.error('Delete error:', error);
+                        }
+                    }
+                );
+            }
+        });
     }
+
     return (
         <>
             <div className="h-full overflow-y-auto p-4 customPackageContainer">
@@ -204,7 +237,7 @@ export default function Category() {
                     >
                         <CreateCategoryForm
                             initialData={editCategoryData}
-                            isEdit={modalMode === 'edit'}
+                            isEdit={modalMode === 'edit' ? true : false}
                             cb={handlePackageOperationComplete}
                         />
                     </Modal>

@@ -61,7 +61,7 @@ interface CreateCategoryFormProps {
 const CreateCategoryForm: React.FC<CreateCategoryFormProps> = ({
     cb,
     initialData,
-    isEdit = false,
+    isEdit,
 }) => {
     const company = useCompanyControllerGetCompany();
 

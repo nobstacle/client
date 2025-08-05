@@ -2765,17 +2765,11 @@ export const getUploadControllerUploadCompanyFileManyMutationOptions = <TError =
 	): UseMutationOptions<Awaited<ReturnType<typeof uploadControllerUploadCompanyFileMany>>, TError, { data: BodyType<UploadControllerUploadCompanyFileManyBody> }, TContext> => {
 	const { mutation: mutationOptions, request: requestOptions } = options ?? {};
 
-
-
-
 	const mutationFn: MutationFunction<Awaited<ReturnType<typeof uploadControllerUploadCompanyFileMany>>, { data: BodyType<UploadControllerUploadCompanyFileManyBody> }> = (props) => {
 		const { data } = props ?? {};
 
 		return uploadControllerUploadCompanyFileMany(data, requestOptions)
 	}
-
-
-
 
 	return { mutationFn, ...mutationOptions }
 }
@@ -2814,7 +2808,6 @@ export const uploadControllerPatchCompanyFileMany = (
 }
 
 
-
 export const getUploadControllerPatchCompanyFileManyMutationOptions = <TError = ErrorType<HttpExceptionSchema>,
 
 	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof uploadControllerPatchCompanyFileMany>>, TError, { data: BodyType<UploadControllerPatchCompanyFileManyBody> }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
@@ -2822,16 +2815,11 @@ export const getUploadControllerPatchCompanyFileManyMutationOptions = <TError = 
 	const { mutation: mutationOptions, request: requestOptions } = options ?? {};
 
 
-
-
 	const mutationFn: MutationFunction<Awaited<ReturnType<typeof uploadControllerPatchCompanyFileMany>>, { data: BodyType<UploadControllerPatchCompanyFileManyBody> }> = (props) => {
 		const { data } = props ?? {};
 
 		return uploadControllerPatchCompanyFileMany(data, requestOptions)
 	}
-
-
-
 
 	return { mutationFn, ...mutationOptions }
 }
@@ -2874,17 +2862,11 @@ export const getUploadControllerUploadCompanyLogoMutationOptions = <TError = Err
 	): UseMutationOptions<Awaited<ReturnType<typeof uploadControllerUploadCompanyLogo>>, TError, { data: BodyType<UploadControllerUploadCompanyLogoBody> }, TContext> => {
 	const { mutation: mutationOptions, request: requestOptions } = options ?? {};
 
-
-
-
 	const mutationFn: MutationFunction<Awaited<ReturnType<typeof uploadControllerUploadCompanyLogo>>, { data: BodyType<UploadControllerUploadCompanyLogoBody> }> = (props) => {
 		const { data } = props ?? {};
 
 		return uploadControllerUploadCompanyLogo(data, requestOptions)
 	}
-
-
-
 
 	return { mutationFn, ...mutationOptions }
 }
@@ -2920,25 +2902,17 @@ export const uploadControllerUploadSpeechToTextFile = (
 		options);
 }
 
-
-
 export const getUploadControllerUploadSpeechToTextFileMutationOptions = <TError = ErrorType<HttpExceptionSchema>,
 
 	TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof uploadControllerUploadSpeechToTextFile>>, TError, { data: BodyType<UploadControllerUploadSpeechToTextFileBody> }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
 	): UseMutationOptions<Awaited<ReturnType<typeof uploadControllerUploadSpeechToTextFile>>, TError, { data: BodyType<UploadControllerUploadSpeechToTextFileBody> }, TContext> => {
 	const { mutation: mutationOptions, request: requestOptions } = options ?? {};
 
-
-
-
 	const mutationFn: MutationFunction<Awaited<ReturnType<typeof uploadControllerUploadSpeechToTextFile>>, { data: BodyType<UploadControllerUploadSpeechToTextFileBody> }> = (props) => {
 		const { data } = props ?? {};
 
 		return uploadControllerUploadSpeechToTextFile(data, requestOptions)
 	}
-
-
-
 
 	return { mutationFn, ...mutationOptions }
 }
@@ -2961,7 +2935,6 @@ export const templateControllerGetTextTemplates = (
 	params?: TemplateControllerGetTextTemplatesParams,
 	options?: SecondParameter<typeof nobstacleBackendApiInstance>, signal?: AbortSignal
 ) => {
-
 
 	return nobstacleBackendApiInstance<GetTextTemplateRes[]>(
 		{
@@ -2986,12 +2959,7 @@ export const getTemplateControllerGetTextTemplatesQueryOptions = <TData = Awaite
 	const queryKey = queryOptions?.queryKey ?? getTemplateControllerGetTextTemplatesQueryKey(params);
 
 
-
 	const queryFn: QueryFunction<Awaited<ReturnType<typeof templateControllerGetTextTemplates>>> = ({ signal }) => templateControllerGetTextTemplates(params, requestOptions, signal);
-
-
-
-
 
 	return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<Awaited<ReturnType<typeof templateControllerGetTextTemplates>>, TError, TData> & { queryKey: QueryKey }
 }
@@ -3017,7 +2985,6 @@ export const templateControllerGetImageTemplates = (
 	params?: TemplateControllerGetImageTemplatesParams,
 	options?: SecondParameter<typeof nobstacleBackendApiInstance>, signal?: AbortSignal
 ) => {
-
 
 	return nobstacleBackendApiInstance<GetImageTemplateRes[]>(
 		{
@@ -3090,13 +3057,7 @@ export const getTemplateControllerGetVideoTemplatesQueryOptions = <TData = Await
 
 	const queryKey = queryOptions?.queryKey ?? getTemplateControllerGetVideoTemplatesQueryKey(params);
 
-
-
 	const queryFn: QueryFunction<Awaited<ReturnType<typeof templateControllerGetVideoTemplates>>> = ({ signal }) => templateControllerGetVideoTemplates(params, requestOptions, signal);
-
-
-
-
 
 	return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<Awaited<ReturnType<typeof templateControllerGetVideoTemplates>>, TError, TData> & { queryKey: QueryKey }
 }
@@ -3119,8 +3080,6 @@ export const useTemplateControllerGetVideoTemplates = <TData = Awaited<ReturnTyp
 }
 
 
-
-
 export const templateControllerGetSlideshowTemplates = (
 	params?: TemplateControllerGetSlideshowTemplatesParams,
 	options?: SecondParameter<typeof nobstacleBackendApiInstance>, signal?: AbortSignal
@@ -3135,7 +3094,6 @@ export const templateControllerGetSlideshowTemplates = (
 		options);
 }
 
-
 export const getTemplateControllerGetSlideshowTemplatesQueryKey = (params?: TemplateControllerGetSlideshowTemplatesParams,) => {
 
 	return [`/api/v1/template/slideshows`, ...(params ? [params] : [])] as const;
@@ -3149,13 +3107,7 @@ export const getTemplateControllerGetSlideshowTemplatesQueryOptions = <TData = A
 
 	const queryKey = queryOptions?.queryKey ?? getTemplateControllerGetSlideshowTemplatesQueryKey(params);
 
-
-
 	const queryFn: QueryFunction<Awaited<ReturnType<typeof templateControllerGetSlideshowTemplates>>> = ({ signal }) => templateControllerGetSlideshowTemplates(params, requestOptions, signal);
-
-
-
-
 
 	return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<Awaited<ReturnType<typeof templateControllerGetSlideshowTemplates>>, TError, TData> & { queryKey: QueryKey }
 }
@@ -3176,8 +3128,6 @@ export const useTemplateControllerGetSlideshowTemplates = <TData = Awaited<Retur
 
 	return query;
 }
-
-
 
 
 export const templateControllerGetMapTemplates = (
@@ -3207,12 +3157,7 @@ export const getTemplateControllerGetMapTemplatesQueryOptions = <TData = Awaited
 
 	const queryKey = queryOptions?.queryKey ?? getTemplateControllerGetMapTemplatesQueryKey();
 
-
-
 	const queryFn: QueryFunction<Awaited<ReturnType<typeof templateControllerGetMapTemplates>>> = ({ signal }) => templateControllerGetMapTemplates(requestOptions, signal);
-
-
-
 
 
 	return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<Awaited<ReturnType<typeof templateControllerGetMapTemplates>>, TError, TData> & { queryKey: QueryKey }
@@ -3234,8 +3179,6 @@ export const useTemplateControllerGetMapTemplates = <TData = Awaited<ReturnType<
 
 	return query;
 }
-
-
 
 
 export const templateControllerGetWebsiteTemplates = (
@@ -4689,7 +4632,7 @@ export const categoryControllerDeleteCategory = (
 ) => {
 	return nobstacleBackendApiInstance<boolean>(
 		{
-			url: `/api/v1/content/category/${id}`,
+			url: `/api/v1/uploads/delete-category/${id}`,
 			method: 'DELETE'
 		},
 		options
