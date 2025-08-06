@@ -519,7 +519,7 @@ const columns = [
             ),
         },
         {
-            title: "Room Upgrade",
+            title: "Category Upgrade",
             dataIndex: "roomUpgrade",
             key: "roomUpgrade",
             width: 140,

@@ -25,6 +25,7 @@ import {
     CheckCircleOutlined,
     ExclamationCircleOutlined
 } from "@ant-design/icons";
+import { FaChartLine } from "react-icons/fa";
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -47,16 +48,16 @@ export default function ViewCategoryModal({ packageData, onClose, viewCategoryTo
         );
     };
 
-    const getPriceLevelText = (level) => {
-        const levels = {
-            1: { text: "Budget", color: "green" },
-            2: { text: "Standard", color: "blue" },
-            3: { text: "Premium", color: "gold" },
-            4: { text: "Luxury", color: "purple" },
-            5: { text: "Elite", color: "red" }
-        };
-        return levels[level] || { text: "Standard", color: "blue" };
-    };
+    // const getPriceLevelText = (level) => {
+    //     const levels = {
+    //         1: { text: "Budget", color: "green" },
+    //         2: { text: "Standard", color: "blue" },
+    //         3: { text: "Premium", color: "gold" },
+    //         4: { text: "Luxury", color: "purple" },
+    //         5: { text: "Elite", color: "red" }
+    //     };
+    //     return levels[level] || { text: "Standard", color: "blue" };
+    // };
 
     const formatDate = (dateString) => {
         return new Date(dateString).toLocaleDateString('en-US', {
@@ -70,7 +71,7 @@ export default function ViewCategoryModal({ packageData, onClose, viewCategoryTo
 
     if (!packageData) return null;
 
-    const priceLevel = getPriceLevelText(packageData.priceLevel);
+    // const priceLevel = getPriceLevelText(packageData.priceLevel);
     const hasImages = packageData.signedImages && packageData.signedImages.length > 0;
 
     return (
@@ -202,11 +203,11 @@ export default function ViewCategoryModal({ packageData, onClose, viewCategoryTo
 
                     {/* Right Column - Details */}
                     <Col xs={24} md={12}>
-                        <div style={{ padding: '32px', height: '500px', overflowY: 'auto', marginTop: '1rem' }}>
+                        <div style={{ padding: '0px 32px', height: '500px', overflowY: 'auto', marginTop:'1rem' }}>
                             {/* Header */}
                             <Space direction="vertical" size="large" style={{ width: '100%' }}>
                                 <div>
-                                    <Space align="start" style={{ width: '100%', justifyContent: 'space-between' }}>
+                                    <Space align="start" style={{ width: '100%', justifyContent: 'space-between', alignItems: 'center' }}>
                                         <Title level={2} style={{ margin: 0, color: '#1f2937' }}>
                                             {packageData.name}
                                         </Title>
@@ -215,9 +216,6 @@ export default function ViewCategoryModal({ packageData, onClose, viewCategoryTo
                                             text={packageData.soldOut ? "Sold Out" : "Available"}
                                         />
                                     </Space>
-                                    <Text type="secondary" style={{ fontSize: '14px' }}>
-                                        Category ID: #{packageData.id}
-                                    </Text>
                                 </div>
 
                                 <Divider style={{ margin: '8px 0' }} />
@@ -226,15 +224,15 @@ export default function ViewCategoryModal({ packageData, onClose, viewCategoryTo
                                 <Row gutter={[12, 12]}>
                                     <Col span={12}>
                                         <Card size="small" style={{ textAlign: 'center', background: '#f8fafc' }}>
-                                            <Space direction="vertical" size="small">
-                                                <TrophyOutlined style={{ fontSize: '20px', color: priceLevel.color }} />
+                                            <Space direction="vertical" size="small" className="customSpace">
+                                                <FaChartLine style={{ fontSize: '20px', color: '#10b981' }} />
                                                 <div>
                                                     <Text strong style={{ fontSize: '16px' }}>
-                                                        {priceLevel.text}
+                                                        Price Level Value
                                                     </Text>
                                                     <br />
-                                                    <Text type="secondary" style={{ fontSize: '12px' }}>
-                                                        Price Level {packageData.priceLevel}
+                                                    <Text style={{ fontSize: '12px' }}>
+                                                        {packageData.priceLevel}
                                                     </Text>
                                                 </div>
                                             </Space>
@@ -242,15 +240,15 @@ export default function ViewCategoryModal({ packageData, onClose, viewCategoryTo
                                     </Col>
                                     <Col span={12}>
                                         <Card size="small" style={{ textAlign: 'center', background: '#f8fafc' }}>
-                                            <Space direction="vertical" size="small">
+                                            <Space direction="vertical" size="small" className="customSpace">
                                                 <PercentageOutlined style={{ fontSize: '20px', color: '#10b981' }} />
                                                 <div>
                                                     <Text strong style={{ fontSize: '16px' }}>
-                                                        {packageData.taxPercentage}%
+                                                        Tax Rate
                                                     </Text>
                                                     <br />
-                                                    <Text type="secondary" style={{ fontSize: '12px' }}>
-                                                        Tax Rate
+                                                    <Text style={{ fontSize: '12px' }}>
+                                                        {packageData.taxPercentage}%
                                                     </Text>
                                                 </div>
                                             </Space>

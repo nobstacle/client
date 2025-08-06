@@ -921,3 +921,13 @@ button {
 .customHeaderButton {
   padding: 0.49rem 1rem !important;
 }
+
+.customSpace .ant-space-item {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.customSpace svg {
+  color: #10b981;
+}

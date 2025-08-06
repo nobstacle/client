@@ -23,9 +23,10 @@ import { languages } from "../../../constant/languages";
 import {
   useCompanyControllerGetCompany,
   usePackageControllerCreatePackage,
-  usePackageControllerUpdatePackage, 
+  usePackageControllerUpdatePackage,
   usePackageControllerGetPackageTags,
 } from "../../../lib/client/api";
+import { useSession } from "next-auth/react";
 
 const { Text } = Typography;
 const { Option } = Select;
@@ -42,6 +43,8 @@ interface CreatePackageFormFieldValues {
   active: boolean;
   priceLevel?: number;
   roomUpgrade: boolean;
+  from_category?: string;
+  to_category?: string;
   incentivePercentage?: number;
   companyId?: number;
   templateId?: number;
@@ -56,7 +59,7 @@ interface CreatePackageFormFieldValues {
   newTag?: string;
   newBenefit?: string;
   langCode: string;
-  totalPackagesSold?: number; 
+  totalPackagesSold?: number;
 }
 
 const schema = yup.object().shape({
@@ -69,6 +72,16 @@ const schema = yup.object().shape({
   active: yup.boolean().required(),
   priceLevel: yup.number().min(1, "Price level must be at least 1"),
   roomUpgrade: yup.boolean().required(),
+  from_category: yup.string().when('roomUpgrade', {
+    is: true,
+    then: (schema) => schema.required("From category is required when room upgrade is enabled"),
+    otherwise: (schema) => schema.notRequired()
+  }),
+  to_category: yup.string().when('roomUpgrade', {
+    is: true,
+    then: (schema) => schema.required("To category is required when room upgrade is enabled"),
+    otherwise: (schema) => schema.notRequired()
+  }),
   incentivePercentage: yup.number().min(0).max(100, "Incentive percentage must be between 0-100"),
 
   packageName: yup.string().required("Package name is required").max(100, "Name must be at most 100 characters"),
@@ -123,6 +136,8 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
         active: initialData.active || false,
         priceLevel: initialData.priceLevel || undefined,
         roomUpgrade: initialData.roomUpgrade || false,
+        from_category: initialData.from_category || "",
+        to_category: initialData.to_category || "",
         incentivePercentage: initialData.incentivePercentage || undefined,
         companyId: initialData.companyId || company.data?.id,
         templateId: initialData.templateId || undefined,
@@ -148,6 +163,8 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
         active: false,
         priceLevel: undefined,
         roomUpgrade: false,
+        from_category: "",
+        to_category: "",
         incentivePercentage: undefined,
         companyId: company.data?.id,
         templateId: undefined,
@@ -179,14 +196,55 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
 
   const createPackage = usePackageControllerCreatePackage();
   const updatePackage = usePackageControllerUpdatePackage();
-
+  const { data } = useSession();
+  let Url = process.env.NEXT_PUBLIC_BACKEND_URL;
   const [benefits, setBenefits] = React.useState<string[]>([]);
   const [tags, setTags] = React.useState<string[]>([]);
   const [newBenefit, setNewBenefit] = React.useState("");
   const [newTag, setNewTag] = React.useState("");
   const [images, setImages] = React.useState<any[]>([]);
+  const [categoryData, setCategoryData] = React.useState<any[]>([]);
 
   const watchedLangCode = watch("langCode");
+  const watchedRoomUpgrade = watch("roomUpgrade");
+  const watchedFromCategory = watch("from_category");
+  const watchedToCategory = watch("to_category");
+
+  const transformCategoryToOptions = (categories) => {
+    return categories.map(category => ({
+      value: category.id,
+      label: category.name,
+      // Optional: include additional data if needed
+      priceLevel: category.priceLevel,
+      taxPercentage: category.taxPercentage,
+      soldOut: category.soldOut
+    }));
+  };
+
+
+  const getAvailableFromOptions = () => {
+    const options = transformCategoryToOptions(categoryData);
+    return options.filter(option => option.value !== watchedToCategory);
+  };
+
+  const getAvailableToOptions = () => {
+    const options = transformCategoryToOptions(categoryData);
+    return options.filter(option => option.value !== watchedFromCategory);
+  };
+  React.useEffect(() => {
+    fetch(`${Url}/api/v1/uploads/get-all-categories`, {
+      headers: { Authorization: `Bearer ${data?.user.backendTokens.at}` },
+    })
+      .then(async (response) => {
+        const text = await response.text();
+        const json = JSON.parse(text);
+        const data = json.data || json;
+        setCategoryData(data);
+      })
+      .catch((error) => {
+        console.warn("Error fetching data:", error);
+      });
+  }, [data]);
 
   // Initialize form when editing
   React.useEffect(() => {
@@ -215,7 +273,7 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
     formData.append('packageCode', data.packageCode);
     formData.append('originalPrice', data.originalPrice.toString());
     if (data.discountedPrice) {
-    formData.append('discountedPrice', data.discountedPrice.toString());
+      formData.append('discountedPrice', data.discountedPrice.toString());
     }
     formData.append('includesTax', data.includesTax.toString());
     if (data.taxPercentage) {
@@ -227,6 +285,12 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
       formData.append('priceLevel', data.priceLevel.toString());
     }
     formData.append('roomUpgrade', data.roomUpgrade.toString());
+    if (data.from_category) {
+      formData.append('from_category', data.from_category);
+    }
+    if (data.to_category) {
+      formData.append('to_category', data.to_category);
+    }
     if (data.incentivePercentage) {
       formData.append('incentivePercentage', data.incentivePercentage.toString());
     }
@@ -398,8 +462,8 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
                       {...field}
                       placeholder="Select language"
                       status={errors.langCode ? 'error' : ''}
-                       mode="multiple"
-                       allowClear
+                      mode="multiple"
+                      allowClear
                     >
                       {languages.map(({ code, name }) => (
                         <Option value={code} key={code}>
@@ -458,26 +522,26 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
           </Row>
 
           <Row gutter={16}>
-          <Col span={12}>
-            <Form.Item
-              label="Currency"
-              validateStatus={errors.currency ? 'error' : ''}
-              help={errors.currency?.message}
-              required
-            >
-              <Controller
-                name="currency"
-                control={control}
-                render={({ field }) => (
-                  <Input
-                    {...field}
-                    placeholder="Enter currency code"
-                    status={errors.currency ? 'error' : ''}
-                  />
-                )}
-              />
-            </Form.Item>
-          </Col>
+            <Col span={12}>
+              <Form.Item
+                label="Currency"
+                validateStatus={errors.currency ? 'error' : ''}
+                help={errors.currency?.message}
+                required
+              >
+                <Controller
+                  name="currency"
+                  control={control}
+                  render={({ field }) => (
+                    <Input
+                      {...field}
+                      placeholder="Enter currency code"
+                      status={errors.currency ? 'error' : ''}
+                    />
+                  )}
+                />
+              </Form.Item>
+            </Col>
             <Col span={12}>
               <Form.Item
                 label="Price Level"
@@ -544,7 +608,7 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
                       style={{ width: '100%' }}
                       status={errors.originalPrice ? 'error' : ''}
                       min={0}
-                        step={0.01}
+                      step={0.01}
                     />
                   )}
                 />
@@ -576,48 +640,48 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
           </Row>
 
           <Row gutter={16}>
-<Col span={12}>
-  <Form.Item
-    label="Price Algorithm"
-    validateStatus={errors.priceAlgorithm ? 'error' : ''}
-    help={errors.priceAlgorithm?.message}
-    required
-  >
-    <Controller
-      name="priceAlgorithm"
-      control={control}
-      render={({ field }) => (
-        <Input
-          {...field}
-          placeholder="Enter price algorithm"
-          status={errors.priceAlgorithm ? 'error' : ''}
-        />
-      )}
-    />
-  </Form.Item>
-</Col>
-  <Col span={12}>
-    <Form.Item
-      label="Total Packages Sold"
-      validateStatus={errors.totalPackagesSold ? 'error' : ''}
-      help={errors.totalPackagesSold?.message}
-      required
-    >
-      <Controller
-        name="totalPackagesSold" 
-        control={control}
-        render={({ field }) => (
-          <InputNumber
-            {...field}
-            placeholder="Enter total packages sold"
-            style={{ width: '100%' }}
-            status={errors.totalPackagesSold ? 'error' : ''}
-            min={0}
-          />
-        )}
-      />
-    </Form.Item>
-  </Col>
+            <Col span={12}>
+              <Form.Item
+                label="Price Algorithm"
+                validateStatus={errors.priceAlgorithm ? 'error' : ''}
+                help={errors.priceAlgorithm?.message}
+                required
+              >
+                <Controller
+                  name="priceAlgorithm"
+                  control={control}
+                  render={({ field }) => (
+                    <Input
+                      {...field}
+                      placeholder="Enter price algorithm"
+                      status={errors.priceAlgorithm ? 'error' : ''}
+                    />
+                  )}
+                />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                label="Total Packages Sold"
+                validateStatus={errors.totalPackagesSold ? 'error' : ''}
+                help={errors.totalPackagesSold?.message}
+                required
+              >
+                <Controller
+                  name="totalPackagesSold"
+                  control={control}
+                  render={({ field }) => (
+                    <InputNumber
+                      {...field}
+                      placeholder="Enter total packages sold"
+                      style={{ width: '100%' }}
+                      status={errors.totalPackagesSold ? 'error' : ''}
+                      min={0}
+                    />
+                  )}
+                />
+              </Form.Item>
+            </Col>
           </Row>
 
           <Row gutter={16}>
@@ -714,7 +778,7 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
             </Col>
 
             <Col span={12}>
-              <Form.Item label="Room Upgrade">
+              <Form.Item label="Category Upgrade">
                 <Controller
                   name="roomUpgrade"
                   control={control}
@@ -730,6 +794,56 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
               </Form.Item>
             </Col>
           </Row>
+
+          {watchedRoomUpgrade && (
+            <Row gutter={16}>
+              <Col span={12}>
+                <Form.Item
+                  label="From Category"
+                  validateStatus={errors.from_category ? 'error' : ''}
+                  help={errors.from_category?.message}
+                  required
+                >
+                  <Controller
+                    name="from_category"
+                    control={control}
+                    render={({ field }) => (
+                      <Select
+                        {...field}
+                        placeholder="Select from category"
+                        status={errors.from_category ? 'error' : ''}
+                        allowClear
+                        options={getAvailableFromOptions()}
+                      />
+                    )}
+                  />
+                </Form.Item>
+              </Col>
+
+              <Col span={12}>
+                <Form.Item
+                  label="To Category"
+                  validateStatus={errors.to_category ? 'error' : ''}
+                  help={errors.to_category?.message}
+                  required
+                >
+                  <Controller
+                    name="to_category"
+                    control={control}
+                    render={({ field }) => (
+                      <Select
+                        {...field}
+                        placeholder="Select to category"
+                        status={errors.to_category ? 'error' : ''}
+                        allowClear
+                        options={getAvailableToOptions()}
+                      />
+                    )}
+                  />
+                </Form.Item>
+              </Col>
+            </Row>
+          )}
 
           <Row gutter={16}>
             <Col span={12}>
