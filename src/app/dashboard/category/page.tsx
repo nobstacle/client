@@ -69,11 +69,6 @@ export default function Category() {
 
     const columns: ColumnsType<any> = [
         {
-            title: 'ID',
-            dataIndex: 'id',
-            key: 'id',
-        },
-        {
             title: 'Name',
             dataIndex: 'name',
             key: 'name',

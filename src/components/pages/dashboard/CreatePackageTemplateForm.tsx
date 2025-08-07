@@ -16,9 +16,11 @@ import {
   Row,
   Col,
   Upload,
-  message
+  message,
+  Spin,
+  Card
 } from "antd";
-import { UploadOutlined } from "@ant-design/icons";
+import { UploadOutlined, LoadingOutlined } from "@ant-design/icons";
 import { languages } from "../../../constant/languages";
 import {
   useCompanyControllerGetCompany,
@@ -414,406 +416,76 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
 
   const isLoading = createPackage.status === "pending" || updatePackage.status === "pending";
   const error = createPackage.error || updatePackage.error;
+  const loadingIndicator = <LoadingOutlined style={{ fontSize: 24 }} spin />;
 
   return (
-    <Form layout="vertical" onFinish={handleSubmit(onSubmit)} className="create-package-form">
-      <Space direction="vertical" size="middle" style={{ width: '100%', paddingTop: '1rem' }}>
-
-        {/* Basic Information */}
-        <div>
-          <Text strong>Basic Information</Text>
-          <Divider style={{ margin: '8px 0' }} />
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                label="Package Code"
-                validateStatus={errors.packageCode ? 'error' : ''}
-                help={errors.packageCode?.message}
-                required
-              >
-                <Controller
-                  name="packageCode"
-                  control={control}
-                  render={({ field }) => (
-                    <Input
-                      {...field}
-                      placeholder="Enter unique package code"
-                      status={errors.packageCode ? 'error' : ''}
-                      disabled={isEdit} // Disable editing package code
-                    />
-                  )}
-                />
-              </Form.Item>
-            </Col>
-
-            <Col span={12}>
-              <Form.Item
-                label="Language"
-                validateStatus={errors.langCode ? 'error' : ''}
-                help={errors.langCode?.message}
-                required
-              >
-                <Controller
-                  name="langCode"
-                  control={control}
-                  render={({ field }) => (
-                    <Select
-                      {...field}
-                      placeholder="Select language"
-                      status={errors.langCode ? 'error' : ''}
-                      mode="multiple"
-                      allowClear
-                    >
-                      {languages.map(({ code, name }) => (
-                        <Option value={code} key={code}>
-                          {name}
-                        </Option>
-                      ))}
-                    </Select>
-                  )}
-                />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                label="Package Name"
-                validateStatus={errors.packageName ? 'error' : ''}
-                help={errors.packageName?.message}
-                required
-              >
-                <Controller
-                  name="packageName"
-                  control={control}
-                  render={({ field }) => (
-                    <Input
-                      {...field}
-                      placeholder="Enter package name"
-                      status={errors.packageName ? 'error' : ''}
-                    />
-                  )}
-                />
-              </Form.Item>
-            </Col>
-
-            <Col span={12}>
-              <Form.Item
-                label="Button Text"
-                validateStatus={errors.buttonText ? 'error' : ''}
-                help={errors.buttonText?.message}
-                required
-              >
-                <Controller
-                  name="buttonText"
-                  control={control}
-                  render={({ field }) => (
-                    <Input
-                      {...field}
-                      placeholder="e.g., Buy Now, Purchase"
-                      status={errors.buttonText ? 'error' : ''}
-                    />
-                  )}
-                />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                label="Currency"
-                validateStatus={errors.currency ? 'error' : ''}
-                help={errors.currency?.message}
-                required
-              >
-                <Controller
-                  name="currency"
-                  control={control}
-                  render={({ field }) => (
-                    <Input
-                      {...field}
-                      placeholder="Enter currency code"
-                      status={errors.currency ? 'error' : ''}
-                    />
-                  )}
-                />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                label="Price Level"
-                validateStatus={errors.priceLevel ? 'error' : ''}
-                help={errors.priceLevel?.message}
-              >
-                <Controller
-                  name="priceLevel"
-                  control={control}
-                  render={({ field }) => (
-                    <InputNumber
-                      {...field}
-                      placeholder="Enter price level"
-                      style={{ width: '100%' }}
-                      status={errors.priceLevel ? 'error' : ''}
-                      min={0}
-                    />
-                  )}
-                />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Form.Item
-            label="Description"
-            validateStatus={errors.packageDescription ? 'error' : ''}
-            help={errors.packageDescription?.message}
-          >
-            <Controller
-              name="packageDescription"
-              control={control}
-              render={({ field }) => (
-                <TextArea
-                  {...field}
-                  placeholder="Enter package description"
-                  rows={4}
-                  status={errors.packageDescription ? 'error' : ''}
-                />
-              )}
-            />
-          </Form.Item>
+    <div className="create-package-form-wrapper" style={{ position: 'relative' }}>
+      {/* Loading Overlay */}
+      {isLoading && (
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(255, 255, 255, 0.8)',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          borderRadius: '8px'
+        }}>
+          <Spin
+            indicator={loadingIndicator}
+            size="large"
+          />
+          <Text style={{
+            marginTop: '16px',
+            fontSize: '16px',
+            color: '#1890ff',
+            fontWeight: 500
+          }}>
+            {isEdit ? 'Updating package...' : 'Creating package...'}
+          </Text>
+          <Text type="secondary" style={{
+            marginTop: '8px',
+            fontSize: '14px'
+          }}>
+            Please wait while we process your request
+          </Text>
         </div>
+      )}
+      <Form
+        layout="vertical"
+        onFinish={handleSubmit(onSubmit)}
+        className="create-package-form"
+        style={{ opacity: isLoading ? 0.6 : 1 }}
+      >
+        <Space direction="vertical" size="middle" style={{ width: '100%', paddingTop: '1rem' }}>
 
-        {/* Pricing */}
-        <div>
-          <Text strong>Pricing Information</Text>
-          <Divider style={{ margin: '8px 0' }} />
+          {/* Basic Information */}
+          <Card size="small" style={{ backgroundColor: '#fafafa' }}>
+            <Text strong>Basic Information</Text>
+            <Divider style={{ margin: '8px 0' }} />
 
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                label="Original Price"
-                validateStatus={errors.originalPrice ? 'error' : ''}
-                help={errors.originalPrice?.message}
-                required
-              >
-                <Controller
-                  name="originalPrice"
-                  control={control}
-                  render={({ field }) => (
-                    <InputNumber
-                      {...field}
-                      placeholder="0"
-                      style={{ width: '100%' }}
-                      status={errors.originalPrice ? 'error' : ''}
-                      min={0}
-                      step={0.01}
-                    />
-                  )}
-                />
-              </Form.Item>
-            </Col>
-
-            <Col span={12}>
-              <Form.Item
-                label="Discounted Price"
-                validateStatus={errors.discountedPrice ? 'error' : ''}
-                help={errors.discountedPrice?.message}
-              >
-                <Controller
-                  name="discountedPrice"
-                  control={control}
-                  render={({ field }) => (
-                    <InputNumber
-                      {...field}
-                      placeholder="0"
-                      style={{ width: '100%' }}
-                      status={errors.discountedPrice ? 'error' : ''}
-                      min={0}
-                      step={0.01}
-                    />
-                  )}
-                />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                label="Price Algorithm"
-                validateStatus={errors.priceAlgorithm ? 'error' : ''}
-                help={errors.priceAlgorithm?.message}
-                required
-              >
-                <Controller
-                  name="priceAlgorithm"
-                  control={control}
-                  render={({ field }) => (
-                    <Input
-                      {...field}
-                      placeholder="Enter price algorithm"
-                      status={errors.priceAlgorithm ? 'error' : ''}
-                    />
-                  )}
-                />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                label="Total Packages Sold"
-                validateStatus={errors.totalPackagesSold ? 'error' : ''}
-                help={errors.totalPackagesSold?.message}
-                required
-              >
-                <Controller
-                  name="totalPackagesSold"
-                  control={control}
-                  render={({ field }) => (
-                    <InputNumber
-                      {...field}
-                      placeholder="Enter total packages sold"
-                      style={{ width: '100%' }}
-                      status={errors.totalPackagesSold ? 'error' : ''}
-                      min={0}
-                    />
-                  )}
-                />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                label="Tax Percentage"
-                validateStatus={errors.taxPercentage ? 'error' : ''}
-                help={errors.taxPercentage?.message}
-              >
-                <Controller
-                  name="taxPercentage"
-                  control={control}
-                  render={({ field }) => (
-                    <InputNumber
-                      {...field}
-                      placeholder="0"
-                      style={{ width: '100%' }}
-                      status={errors.taxPercentage ? 'error' : ''}
-                      min={0}
-                      max={100}
-                      precision={2}
-                      formatter={(value) => `${value}%`}
-                      parser={(value) => value!.replace('%', '')}
-                    />
-                  )}
-                />
-              </Form.Item>
-            </Col>
-
-            <Col span={12}>
-              <Form.Item
-                label="Incentive Percentage"
-                validateStatus={errors.incentivePercentage ? 'error' : ''}
-                help={errors.incentivePercentage?.message}
-              >
-                <Controller
-                  name="incentivePercentage"
-                  control={control}
-                  render={({ field }) => (
-                    <InputNumber
-                      {...field}
-                      placeholder="0"
-                      style={{ width: '100%' }}
-                      status={errors.incentivePercentage ? 'error' : ''}
-                      min={0}
-                      max={100}
-                      precision={2}
-                      formatter={(value) => `${value}%`}
-                      parser={(value) => value!.replace('%', '')}
-                    />
-                  )}
-                />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Form.Item label="Includes Tax">
-            <Controller
-              name="includesTax"
-              control={control}
-              render={({ field }) => (
-                <Switch
-                  {...field}
-                  checked={field.value}
-                  checkedChildren="Yes"
-                  unCheckedChildren="No"
-                />
-              )}
-            />
-          </Form.Item>
-        </div>
-
-        {/* Status and Settings */}
-        <div>
-          <Text strong>Status & Settings</Text>
-          <Divider style={{ margin: '8px 0' }} />
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item label="Active">
-                <Controller
-                  name="active"
-                  control={control}
-                  render={({ field }) => (
-                    <Switch
-                      {...field}
-                      checked={field.value}
-                      checkedChildren="Active"
-                      unCheckedChildren="Inactive"
-                    />
-                  )}
-                />
-              </Form.Item>
-            </Col>
-
-            <Col span={12}>
-              <Form.Item label="Category Upgrade">
-                <Controller
-                  name="roomUpgrade"
-                  control={control}
-                  render={({ field }) => (
-                    <Switch
-                      {...field}
-                      checked={field.value}
-                      checkedChildren="Yes"
-                      unCheckedChildren="No"
-                    />
-                  )}
-                />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          {watchedRoomUpgrade && (
             <Row gutter={16}>
               <Col span={12}>
                 <Form.Item
-                  label="From Category"
-                  validateStatus={errors.from_category ? 'error' : ''}
-                  help={errors.from_category?.message}
+                  label="Package Code"
+                  validateStatus={errors.packageCode ? 'error' : ''}
+                  help={errors.packageCode?.message}
                   required
                 >
                   <Controller
-                    name="from_category"
+                    name="packageCode"
                     control={control}
                     render={({ field }) => (
-                      <Select
+                      <Input
                         {...field}
-                        placeholder="Select from category"
-                        status={errors.from_category ? 'error' : ''}
-                        allowClear
-                        options={getAvailableFromOptions()}
+                        placeholder="Enter unique package code"
+                        status={errors.packageCode ? 'error' : ''}
+                        disabled={isEdit || isLoading} // Disable editing package code
                       />
                     )}
                   />
@@ -822,182 +494,586 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
 
               <Col span={12}>
                 <Form.Item
-                  label="To Category"
-                  validateStatus={errors.to_category ? 'error' : ''}
-                  help={errors.to_category?.message}
+                  label="Language"
+                  validateStatus={errors.langCode ? 'error' : ''}
+                  help={errors.langCode?.message}
                   required
                 >
                   <Controller
-                    name="to_category"
+                    name="langCode"
                     control={control}
                     render={({ field }) => (
                       <Select
                         {...field}
-                        placeholder="Select to category"
-                        status={errors.to_category ? 'error' : ''}
+                        placeholder="Select language"
+                        status={errors.langCode ? 'error' : ''}
+                        mode="multiple"
+                        disabled={isLoading}
                         allowClear
-                        options={getAvailableToOptions()}
+                      >
+                        {languages.map(({ code, name }) => (
+                          <Option value={code} key={code}>
+                            {name}
+                          </Option>
+                        ))}
+                      </Select>
+                    )}
+                  />
+                </Form.Item>
+              </Col>
+            </Row>
+
+            <Row gutter={16}>
+              <Col span={12}>
+                <Form.Item
+                  label="Package Name"
+                  validateStatus={errors.packageName ? 'error' : ''}
+                  help={errors.packageName?.message}
+                  required
+                >
+                  <Controller
+                    name="packageName"
+                    control={control}
+                    render={({ field }) => (
+                      <Input
+                        {...field}
+                        placeholder="Enter package name"
+                        status={errors.packageName ? 'error' : ''}
+                        disabled={isLoading}
+                      />
+                    )}
+                  />
+                </Form.Item>
+              </Col>
+
+              <Col span={12}>
+                <Form.Item
+                  label="Button Text"
+                  validateStatus={errors.buttonText ? 'error' : ''}
+                  help={errors.buttonText?.message}
+                  required
+                >
+                  <Controller
+                    name="buttonText"
+                    control={control}
+                    render={({ field }) => (
+                      <Input
+                        {...field}
+                        placeholder="e.g., Buy Now, Purchase"
+                        status={errors.buttonText ? 'error' : ''}
+                        disabled={isLoading}
                       />
                     )}
                   />
                 </Form.Item>
               </Col>
             </Row>
+
+            <Row gutter={16}>
+              <Col span={12}>
+                <Form.Item
+                  label="Currency"
+                  validateStatus={errors.currency ? 'error' : ''}
+                  help={errors.currency?.message}
+                  required
+                >
+                  <Controller
+                    name="currency"
+                    control={control}
+                    render={({ field }) => (
+                      <Input
+                        {...field}
+                        placeholder="Enter currency code"
+                        status={errors.currency ? 'error' : ''}
+                        disabled={isLoading}
+                      />
+                    )}
+                  />
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item
+                  label="Price Level"
+                  validateStatus={errors.priceLevel ? 'error' : ''}
+                  help={errors.priceLevel?.message}
+                >
+                  <Controller
+                    name="priceLevel"
+                    control={control}
+                    render={({ field }) => (
+                      <InputNumber
+                        {...field}
+                        placeholder="Enter price level"
+                        style={{ width: '100%' }}
+                        status={errors.priceLevel ? 'error' : ''}
+                        disabled={isLoading}
+                        min={0}
+                      />
+                    )}
+                  />
+                </Form.Item>
+              </Col>
+            </Row>
+
+            <Form.Item
+              label="Description"
+              validateStatus={errors.packageDescription ? 'error' : ''}
+              help={errors.packageDescription?.message}
+            >
+              <Controller
+                name="packageDescription"
+                control={control}
+                render={({ field }) => (
+                  <TextArea
+                    {...field}
+                    placeholder="Enter package description"
+                    rows={4}
+                    status={errors.packageDescription ? 'error' : ''}
+                    disabled={isLoading}
+                  />
+                )}
+              />
+            </Form.Item>
+          </Card>
+
+          {/* Pricing */}
+          <Card size="small" style={{ backgroundColor: '#fafafa' }}>
+            <Text strong>Pricing Information</Text>
+            <Divider style={{ margin: '8px 0' }} />
+
+            <Row gutter={16}>
+              <Col span={12}>
+                <Form.Item
+                  label="Original Price"
+                  validateStatus={errors.originalPrice ? 'error' : ''}
+                  help={errors.originalPrice?.message}
+                  required
+                >
+                  <Controller
+                    name="originalPrice"
+                    control={control}
+                    render={({ field }) => (
+                      <InputNumber
+                        {...field}
+                        placeholder="0"
+                        style={{ width: '100%' }}
+                        status={errors.originalPrice ? 'error' : ''}
+                        min={0}
+                        step={0.01}
+                        disabled={isLoading}
+                      />
+                    )}
+                  />
+                </Form.Item>
+              </Col>
+
+              <Col span={12}>
+                <Form.Item
+                  label="Discounted Price"
+                  validateStatus={errors.discountedPrice ? 'error' : ''}
+                  help={errors.discountedPrice?.message}
+                >
+                  <Controller
+                    name="discountedPrice"
+                    control={control}
+                    render={({ field }) => (
+                      <InputNumber
+                        {...field}
+                        placeholder="0"
+                        style={{ width: '100%' }}
+                        status={errors.discountedPrice ? 'error' : ''}
+                        min={0}
+                        step={0.01}
+                        disabled={isLoading}
+                      />
+                    )}
+                  />
+                </Form.Item>
+              </Col>
+            </Row>
+
+            <Row gutter={16}>
+              <Col span={12}>
+                <Form.Item
+                  label="Price Algorithm"
+                  validateStatus={errors.priceAlgorithm ? 'error' : ''}
+                  help={errors.priceAlgorithm?.message}
+                  required
+                >
+                  <Controller
+                    name="priceAlgorithm"
+                    control={control}
+                    render={({ field }) => (
+                      <Input
+                        {...field}
+                        placeholder="Enter price algorithm"
+                        status={errors.priceAlgorithm ? 'error' : ''}
+                        disabled={isLoading}
+                      />
+                    )}
+                  />
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item
+                  label="Total Packages Sold"
+                  validateStatus={errors.totalPackagesSold ? 'error' : ''}
+                  help={errors.totalPackagesSold?.message}
+                  required
+                >
+                  <Controller
+                    name="totalPackagesSold"
+                    control={control}
+                    render={({ field }) => (
+                      <InputNumber
+                        {...field}
+                        placeholder="Enter total packages sold"
+                        style={{ width: '100%' }}
+                        status={errors.totalPackagesSold ? 'error' : ''}
+                        disabled={isLoading}
+                        min={0}
+                      />
+                    )}
+                  />
+                </Form.Item>
+              </Col>
+            </Row>
+
+            <Row gutter={16}>
+              <Col span={12}>
+                <Form.Item
+                  label="Tax Percentage"
+                  validateStatus={errors.taxPercentage ? 'error' : ''}
+                  help={errors.taxPercentage?.message}
+                >
+                  <Controller
+                    name="taxPercentage"
+                    control={control}
+                    render={({ field }) => (
+                      <InputNumber
+                        {...field}
+                        placeholder="0"
+                        style={{ width: '100%' }}
+                        status={errors.taxPercentage ? 'error' : ''}
+                        min={0}
+                        max={100}
+                        precision={2}
+                        formatter={(value) => `${value}%`}
+                        parser={(value) => value!.replace('%', '')}
+                        disabled={isLoading}
+                      />
+                    )}
+                  />
+                </Form.Item>
+              </Col>
+
+              <Col span={12}>
+                <Form.Item
+                  label="Incentive Percentage"
+                  validateStatus={errors.incentivePercentage ? 'error' : ''}
+                  help={errors.incentivePercentage?.message}
+                >
+                  <Controller
+                    name="incentivePercentage"
+                    control={control}
+                    render={({ field }) => (
+                      <InputNumber
+                        {...field}
+                        placeholder="0"
+                        style={{ width: '100%' }}
+                        status={errors.incentivePercentage ? 'error' : ''}
+                        min={0}
+                        max={100}
+                        precision={2}
+                        formatter={(value) => `${value}%`}
+                        parser={(value) => value!.replace('%', '')}
+                        disabled={isLoading}
+                      />
+                    )}
+                  />
+                </Form.Item>
+              </Col>
+            </Row>
+
+            <Form.Item label="Includes Tax">
+              <Controller
+                name="includesTax"
+                control={control}
+                render={({ field }) => (
+                  <Switch
+                    {...field}
+                    checked={field.value}
+                    checkedChildren="Yes"
+                    unCheckedChildren="No"
+                    disabled={isLoading}
+                  />
+                )}
+              />
+            </Form.Item>
+          </Card>
+
+          {/* Status and Settings */}
+          <Card size="small" style={{ backgroundColor: '#fafafa' }}>
+            <Text strong>Status & Settings</Text>
+            <Divider style={{ margin: '8px 0' }} />
+
+            <Row gutter={16}>
+              <Col span={12}>
+                <Form.Item label="Active">
+                  <Controller
+                    name="active"
+                    control={control}
+                    render={({ field }) => (
+                      <Switch
+                        {...field}
+                        checked={field.value}
+                        checkedChildren="Active"
+                        unCheckedChildren="Inactive"
+                        disabled={isLoading}
+                      />
+                    )}
+                  />
+                </Form.Item>
+              </Col>
+
+              <Col span={12}>
+                <Form.Item label="Category Upgrade">
+                  <Controller
+                    name="roomUpgrade"
+                    control={control}
+                    render={({ field }) => (
+                      <Switch
+                        {...field}
+                        checked={field.value}
+                        checkedChildren="Yes"
+                        unCheckedChildren="No"
+                        disabled={isLoading}
+                      />
+                    )}
+                  />
+                </Form.Item>
+              </Col>
+            </Row>
+
+            {watchedRoomUpgrade && (
+              <Row gutter={16}>
+                <Col span={12}>
+                  <Form.Item
+                    label="From Category"
+                    validateStatus={errors.from_category ? 'error' : ''}
+                    help={errors.from_category?.message}
+                    required
+                  >
+                    <Controller
+                      name="from_category"
+                      control={control}
+                      render={({ field }) => (
+                        <Select
+                          {...field}
+                          placeholder="Select from category"
+                          status={errors.from_category ? 'error' : ''}
+                          allowClear
+                          options={getAvailableFromOptions()}
+                          disabled={isLoading}
+                        />
+                      )}
+                    />
+                  </Form.Item>
+                </Col>
+
+                <Col span={12}>
+                  <Form.Item
+                    label="To Category"
+                    validateStatus={errors.to_category ? 'error' : ''}
+                    help={errors.to_category?.message}
+                    required
+                  >
+                    <Controller
+                      name="to_category"
+                      control={control}
+                      render={({ field }) => (
+                        <Select
+                          {...field}
+                          placeholder="Select to category"
+                          status={errors.to_category ? 'error' : ''}
+                          allowClear
+                          options={getAvailableToOptions()}
+                          disabled={isLoading}
+                        />
+                      )}
+                    />
+                  </Form.Item>
+                </Col>
+              </Row>
+            )}
+
+            <Row gutter={16}>
+              <Col span={12}>
+                <Form.Item
+                  label="Tax Information"
+                  validateStatus={errors.taxInformation ? 'error' : ''}
+                  help={errors.taxInformation?.message}
+                >
+                  <Controller
+                    name="taxInformation"
+                    control={control}
+                    render={({ field }) => (
+                      <TextArea
+                        {...field}
+                        placeholder="Enter tax information"
+                        rows={3}
+                        status={errors.taxInformation ? 'error' : ''}
+                        disabled={isLoading}
+                      />
+                    )}
+                  />
+                </Form.Item>
+              </Col>
+
+              <Col span={12}>
+                <Form.Item
+                  label="Package Alert"
+                  validateStatus={errors.packageAlert ? 'error' : ''}
+                  help={errors.packageAlert?.message}
+                >
+                  <Controller
+                    name="packageAlert"
+                    control={control}
+                    render={({ field }) => (
+                      <TextArea
+                        {...field}
+                        placeholder="Enter alert message"
+                        rows={3}
+                        status={errors.packageAlert ? 'error' : ''}
+                        disabled={isLoading}
+                      />
+                    )}
+                  />
+                </Form.Item>
+              </Col>
+            </Row>
+          </Card>
+
+          {/* Package Details */}
+          <Card size="small" style={{ backgroundColor: '#fafafa' }}>
+            <Text strong>Package Details</Text>
+            <Divider style={{ margin: '8px 0' }} />
+
+            <Row gutter={16}>
+              <Col md={12} xs={24}>
+                {/* Benefits */}
+                <Form.Item label="Package Benefits">
+                  <Space direction="vertical" style={{ width: '100%' }}>
+                    <Space style={{ width: '100%' }}>
+                      <Input
+                        value={newBenefit}
+                        onChange={(e) => setNewBenefit(e.target.value)}
+                        placeholder="Add benefit"
+                        onPressEnter={addBenefit}
+                        style={{ flex: 1 }}
+                        disabled={isLoading}
+                      />
+                      <Button onClick={addBenefit}>Add</Button>
+                    </Space>
+                    {benefits.map((benefit, index) => (
+                      <Space key={index} style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                        <Text>{benefit}</Text>
+                        <Button size="small" danger onClick={() => removeBenefit(index)} disabled={isLoading}>
+                          Remove
+                        </Button>
+                      </Space>
+                    ))}
+                  </Space>
+                </Form.Item>
+              </Col>
+              <Col md={12} xs={24}>
+                {/* Tags */}
+                <Form.Item label="Package Tags">
+                  <Space direction="vertical" style={{ width: '100%' }}>
+                    <Space style={{ width: '100%' }}>
+                      <Input
+                        value={newTag}
+                        onChange={(e) => setNewTag(e.target.value)}
+                        placeholder="Add tag"
+                        onPressEnter={addTag}
+                        style={{ flex: 1 }}
+                        disabled={isLoading}
+                      />
+                      <Button onClick={addTag}>Add</Button>
+                    </Space>
+                    {tags.map((tag, index) => (
+                      <Space key={index} style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                        <Text>{tag}</Text>
+                        <Button size="small" danger onClick={() => removeTag(index)} disabled={isLoading}>
+                          Remove
+                        </Button>
+                      </Space>
+                    ))}
+                  </Space>
+                </Form.Item>
+              </Col>
+            </Row>
+
+            {/* Images */}
+            <Form.Item label="Package Images">
+              <Upload
+                multiple
+                listType="picture"
+                onChange={handleImageUpload}
+                disabled={isLoading}
+                beforeUpload={(file) => {
+                  return false;
+                }}
+                fileList={images.map((img, index) => ({
+                  uid: img.uid || index.toString(),
+                  name: img.name || img.alt || `image-${index}`,
+                  status: 'done',
+                  url: img.url,
+                  originFileObj: img.originFileObj
+                }))}
+                onRemove={(file) => {
+                  const newImages = images.filter(img => img.uid !== file.uid);
+                  setImages(newImages);
+                }}
+              >
+                <Button icon={<UploadOutlined />}>Upload Images</Button>
+              </Upload>
+            </Form.Item>
+          </Card>
+
+          {/* Error Display */}
+          {error?.message && (
+            <Alert
+              message={error.response?.data.message || error.message}
+              type="error"
+              showIcon
+            />
           )}
 
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                label="Tax Information"
-                validateStatus={errors.taxInformation ? 'error' : ''}
-                help={errors.taxInformation?.message}
-              >
-                <Controller
-                  name="taxInformation"
-                  control={control}
-                  render={({ field }) => (
-                    <TextArea
-                      {...field}
-                      placeholder="Enter tax information"
-                      rows={3}
-                      status={errors.taxInformation ? 'error' : ''}
-                    />
-                  )}
-                />
-              </Form.Item>
-            </Col>
-
-            <Col span={12}>
-              <Form.Item
-                label="Package Alert"
-                validateStatus={errors.packageAlert ? 'error' : ''}
-                help={errors.packageAlert?.message}
-              >
-                <Controller
-                  name="packageAlert"
-                  control={control}
-                  render={({ field }) => (
-                    <TextArea
-                      {...field}
-                      placeholder="Enter alert message"
-                      rows={3}
-                      status={errors.packageAlert ? 'error' : ''}
-                    />
-                  )}
-                />
-              </Form.Item>
-            </Col>
-          </Row>
-        </div>
-
-        {/* Package Details */}
-        <div>
-          <Text strong>Package Details</Text>
-          <Divider style={{ margin: '8px 0' }} />
-
-          <Row gutter={16}>
-            <Col md={12} xs={24}>
-              {/* Benefits */}
-              <Form.Item label="Package Benefits">
-                <Space direction="vertical" style={{ width: '100%' }}>
-                  <Space style={{ width: '100%' }}>
-                    <Input
-                      value={newBenefit}
-                      onChange={(e) => setNewBenefit(e.target.value)}
-                      placeholder="Add benefit"
-                      onPressEnter={addBenefit}
-                      style={{ flex: 1 }}
-                    />
-                    <Button onClick={addBenefit}>Add</Button>
-                  </Space>
-                  {benefits.map((benefit, index) => (
-                    <Space key={index} style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
-                      <Text>{benefit}</Text>
-                      <Button size="small" danger onClick={() => removeBenefit(index)}>
-                        Remove
-                      </Button>
-                    </Space>
-                  ))}
-                </Space>
-              </Form.Item>
-            </Col>
-            <Col md={12} xs={24}>
-              {/* Tags */}
-              <Form.Item label="Package Tags">
-                <Space direction="vertical" style={{ width: '100%' }}>
-                  <Space style={{ width: '100%' }}>
-                    <Input
-                      value={newTag}
-                      onChange={(e) => setNewTag(e.target.value)}
-                      placeholder="Add tag"
-                      onPressEnter={addTag}
-                      style={{ flex: 1 }}
-                    />
-                    <Button onClick={addTag}>Add</Button>
-                  </Space>
-                  {tags.map((tag, index) => (
-                    <Space key={index} style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
-                      <Text>{tag}</Text>
-                      <Button size="small" danger onClick={() => removeTag(index)}>
-                        Remove
-                      </Button>
-                    </Space>
-                  ))}
-                </Space>
-              </Form.Item>
-            </Col>
-          </Row>
-
-          {/* Images */}
-          <Form.Item label="Package Images">
-            <Upload
-              multiple
-              listType="picture"
-              onChange={handleImageUpload}
-              beforeUpload={(file) => {
-                return false;
+          {/* Submit Button */}
+          <Form.Item style={{ textAlign: 'center', marginBottom: 0, marginTop: '24px' }}>
+            <Button
+              type="primary"
+              htmlType="submit"
+              loading={isLoading}
+              disabled={isLoading}
+              style={{
+                width: "100%",
+                height: '48px',
+                fontSize: '16px',
+                fontWeight: '600'
               }}
-              fileList={images.map((img, index) => ({
-                uid: img.uid || index.toString(),
-                name: img.name || img.alt || `image-${index}`,
-                status: 'done',
-                url: img.url,
-                originFileObj: img.originFileObj
-              }))}
-              onRemove={(file) => {
-                const newImages = images.filter(img => img.uid !== file.uid);
-                setImages(newImages);
-              }}
+              className="create-package-button"
             >
-              <Button icon={<UploadOutlined />}>Upload Images</Button>
-            </Upload>
+              {isLoading
+                ? (isEdit ? 'Updating...' : 'Creating...')
+                : (isEdit ? 'Update Package' : 'Create Package')
+              }
+            </Button>
           </Form.Item>
-        </div>
-
-        {/* Error Display */}
-        {error?.message && (
-          <Alert
-            message={error.response?.data.message || error.message}
-            type="error"
-            showIcon
-          />
-        )}
-
-        {/* Submit Button */}
-        <Form.Item style={{ textAlign: 'center', marginBottom: 0, marginTop: '1rem' }}>
-          <Button
-            type="primary"
-            htmlType="submit"
-            loading={isLoading}
-            disabled={isLoading}
-            style={{ width: "100%" }}
-            className="create-package-button"
-          >
-            {isEdit ? 'Update Package' : 'Create Package'}
-          </Button>
-        </Form.Item>
-      </Space>
-    </Form>
+        </Space>
+      </Form>
+    </div>
   );
 };
 
