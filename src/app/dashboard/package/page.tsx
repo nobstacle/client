@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
-import { Table, Tag, Card, Pagination, Input, message, Select, Button } from "antd";
+import { Table, Tag, Card, Pagination, Input, message, Select, Tooltip } from "antd";
 import Modal from "../../../components/Modal";
 import { FaTrash, FaEdit, FaEye, FaSearch, FaTimes } from "react-icons/fa";
 import Swal from "sweetalert2";
@@ -11,6 +11,7 @@ import { useDisclousure } from "../../../hooks/useDisclosure";
 import { PlusIcon } from "../../../components/icons/PlusIcon";
 import CreatePackageForm from "../../../components/pages/dashboard/CreatePackageTemplateForm";
 import ViewPackage from "./ViewPackage";
+import { FaGlobe } from "react-icons/fa";
 
 const { Option } = Select;
 
@@ -261,21 +262,21 @@ export default function Package() {
                 setLoadingData(false);
             });
     };
-        
+
     // Helper function to get the first available language value from an object
     const getFirstAvailableValue = (langObject, fallback = 'N/A') => {
         if (!langObject || typeof langObject !== 'object') return fallback;
-        
+
         // Priority order: en, ar, then any other language
         const priorityLangs = ['en', 'ar'];
-        
+
         // First try priority languages
         for (const lang of priorityLangs) {
             if (langObject[lang] && langObject[lang] !== '') {
                 return langObject[lang];
             }
         }
-        
+
         // Then try any other available language
         const availableLangs = Object.keys(langObject);
         for (const lang of availableLangs) {
@@ -283,14 +284,14 @@ export default function Package() {
                 return langObject[lang];
             }
         }
-        
+
         return fallback;
     };
 
     // Helper function to get all language variants for tooltip display
     const getAllLanguageVariants = (langObject) => {
         if (!langObject || typeof langObject !== 'object') return [];
-        
+
         return Object.entries(langObject)
             .filter(([lang, value]) => value && value !== '')
             .map(([lang, value]) => ({
@@ -300,49 +301,42 @@ export default function Package() {
     };
 
     // Component to render multi-language content with tooltip
-    const MultiLangCell = ({ langObject, isArray = false, maxDisplay = null, title = null }) => {
-        const primaryValue = isArray 
-            ? getFirstAvailableValue(langObject, []).slice(0, maxDisplay || 10).join(', ')
-            : getFirstAvailableValue(langObject, '');
-        
-        const allVariants = getAllLanguageVariants(langObject);
-        
-        if (allVariants.length === 0) return <span>N/A</span>;
-        
-        const hasMultipleLanguages = allVariants.length > 1;
-        
-        const tooltipContent = allVariants.length > 1 ? (
-            <div className="space-y-1">
-                {allVariants.map(({ lang, value }) => (
-                    <div key={lang}>
-                        <strong>{lang}:</strong> {value}
-                    </div>
-                ))}
-            </div>
-        ) : null;
-        
-                return (
-            <div className="flex items-center gap-2">
-                <div 
-                    className="truncate flex-1" 
-                    title={title || primaryValue}
-                    style={{ direction: /[\u0600-\u06FF]/.test(primaryValue) ? 'rtl' : 'ltr' }}
-                >
-                    {primaryValue}
-                    {isArray && maxDisplay && getFirstAvailableValue(langObject, []).length > maxDisplay && (
-                        <span className="text-gray-500">...</span>
+    const MultiLangCell = ({ langObject, isArray = false, maxDisplay = 3 }) => {
+        const value = getFirstAvailableValue(langObject, isArray ? [] : '');
+
+        // Handle nested objects
+        const processValue = (val) => {
+            if (Array.isArray(val)) {
+                return val.map(item => {
+                    // If item is an object with language keys, extract the value
+                    if (typeof item === 'object' && item !== null) {
+                        return getFirstAvailableValue(item, '');
+                    }
+                    return item;
+                }).filter(Boolean);
+            }
+            return val;
+        };
+
+        const processedValue = processValue(value);
+
+        if (isArray && Array.isArray(processedValue)) {
+            return (
+                <div>
+                    {processedValue.slice(0, maxDisplay).map((item, index) => (
+                        <Tag key={index} size="small">{item}</Tag>
+                    ))}
+                    {processedValue.length > maxDisplay && (
+                        <span>+{processedValue.length - maxDisplay} more</span>
                     )}
                 </div>
-                {hasMultipleLanguages && (
-                    <Tooltip title={tooltipContent} placement="top">
-                        <FaGlobe className="text-blue-500 text-xs cursor-help flex-shrink-0" />
-                    </Tooltip>
-                )}
-            </div>
-        );
-    }
+            );
+        }
 
-const columns = [
+        return <span>{processedValue || 'N/A'}</span>;
+    };
+
+    const columns = [
         {
             title: "Package Code",
             dataIndex: "packageCode",
@@ -370,10 +364,10 @@ const columns = [
             key: "packageBenefits",
             width: 200,
             render: (_, record) => (
-                <MultiLangCell 
-                    langObject={record.packageBenefits} 
-                    isArray={true} 
-                    maxDisplay={2} 
+                <MultiLangCell
+                    langObject={record.packageBenefits}
+                    isArray={true}
+                    maxDisplay={2}
                 />
             ),
         },
@@ -388,10 +382,21 @@ const columns = [
             key: "tags",
             width: 150,
             render: (_, record) => {
-                const tags = getFirstAvailableValue(record.packageTags, []);
+                let tags = getFirstAvailableValue(record.packageTags, []);
+
+                // Handle nested objects in tags
+                if (Array.isArray(tags)) {
+                    tags = tags.map(tag => {
+                        if (typeof tag === 'object' && tag !== null) {
+                            return getFirstAvailableValue(tag, '');
+                        }
+                        return tag;
+                    }).filter(Boolean);
+                }
+
                 const allVariants = getAllLanguageVariants(record.packageTags);
                 const hasMultipleLanguages = allVariants.length > 1;
-                
+
                 return (
                     <div className="flex flex-wrap gap-1 items-center">
                         {tags.slice(0, 2).map((tag, index) => (
@@ -405,7 +410,7 @@ const columns = [
                                 <div className="space-y-1">
                                     {allVariants.map(({ lang, value }) => (
                                         <div key={lang}>
-                                            <strong>{lang}:</strong> {value}
+                                            <strong>{lang}:</strong> {Array.isArray(value) ? value.join(', ') : value}
                                         </div>
                                     ))}
                                 </div>
@@ -632,7 +637,7 @@ const columns = [
                 <div className="mb-4 space-y-4">
                     {/* Main Search Bar */}
                     <Card className="w-full customCards">
-                         <div className="searchInputWidth">
+                        <div className="searchInputWidth">
                             <div className="flex-1 min-w-0">
                                 <Input
                                     placeholder="Search packages by name, code, description, benefits, tags..."

@@ -7,7 +7,7 @@ import { FaTrash, FaEdit, FaEye, FaSearch, FaTimes } from "react-icons/fa";
 import Swal from "sweetalert2";
 import "../../../styles/base.css";
 import Modal from "../../../components/Modal";
-import useTemplateStore from "../../../lib/zustand/store/templateStore";
+// import useTemplateStore from "../../../lib/zustand/store/templateStore";
 import { useSession } from "next-auth/react";
 import { PlusIcon } from "../../../components/icons/PlusIcon";
 import CreateCategoryForm from "../../../components/pages/dashboard/CreateCategoryForm";

@@ -45,8 +45,8 @@ interface CreatePackageFormFieldValues {
   active: boolean;
   priceLevel?: number;
   roomUpgrade: boolean;
-  from_category?: string;
-  to_category?: string;
+  from_category_id?: number;
+  to_category_id?: number;
   incentivePercentage?: number;
   companyId?: number;
   templateId?: number;
@@ -74,12 +74,12 @@ const schema = yup.object().shape({
   active: yup.boolean().required(),
   priceLevel: yup.number().min(1, "Price level must be at least 1"),
   roomUpgrade: yup.boolean().required(),
-  from_category: yup.string().when('roomUpgrade', {
+  from_category_id: yup.number().when('roomUpgrade', {
     is: true,
     then: (schema) => schema.required("From category is required when room upgrade is enabled"),
     otherwise: (schema) => schema.notRequired()
   }),
-  to_category: yup.string().when('roomUpgrade', {
+  to_category_id: yup.number().when('roomUpgrade', {
     is: true,
     then: (schema) => schema.required("To category is required when room upgrade is enabled"),
     otherwise: (schema) => schema.notRequired()
@@ -114,10 +114,24 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
   const packageTags = usePackageControllerGetPackageTags();
   const company = useCompanyControllerGetCompany();
 
-  // Helper function to get multilingual field value
   const getMultilingualValue = (field: any, fallbackLang = 'en') => {
     if (!field || typeof field !== 'object') return field || '';
-    return field[fallbackLang] || field[Object.keys(field)[0]] || '';
+
+    // Get the first available language value
+    const firstLangValue = field[fallbackLang] || field[Object.keys(field)[0]] || '';
+
+    // Handle nested objects (like in package ID 14)
+    if (Array.isArray(firstLangValue)) {
+      return firstLangValue.map(item => {
+        // If item is an object with language keys, extract the value
+        if (typeof item === 'object' && item !== null) {
+          return item[fallbackLang] || item[Object.keys(item)[0]] || '';
+        }
+        return item;
+      }).filter(Boolean);
+    }
+
+    return firstLangValue;
   };
 
   // Helper function to convert price from cents to dollars
@@ -138,8 +152,8 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
         active: initialData.active || false,
         priceLevel: initialData.priceLevel || undefined,
         roomUpgrade: initialData.roomUpgrade || false,
-        from_category: initialData.from_category || "",
-        to_category: initialData.to_category || "",
+        from_category_id: initialData.from_category_id || "",
+        to_category_id: initialData.to_category_id || "",
         incentivePercentage: initialData.incentivePercentage || undefined,
         companyId: initialData.companyId || company.data?.id,
         templateId: initialData.templateId || undefined,
@@ -165,8 +179,8 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
         active: false,
         priceLevel: undefined,
         roomUpgrade: false,
-        from_category: "",
-        to_category: "",
+        from_category_id: "",
+        to_category_id: "",
         incentivePercentage: undefined,
         companyId: company.data?.id,
         templateId: undefined,
@@ -209,8 +223,8 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
 
   const watchedLangCode = watch("langCode");
   const watchedRoomUpgrade = watch("roomUpgrade");
-  const watchedFromCategory = watch("from_category");
-  const watchedToCategory = watch("to_category");
+  const watchedFromCategory = watch("from_category_id");
+  const watchedToCategory = watch("to_category_id");
 
   const transformCategoryToOptions = (categories) => {
     return categories.map(category => ({
@@ -249,16 +263,21 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
   }, [data]);
 
   // Initialize form when editing
+  // Replace your existing useEffect with this:
   React.useEffect(() => {
     if (isEdit && initialData) {
       reset(getDefaultValues());
 
-      // Set benefits and tags from initial data
+      // Set benefits and tags from initial data with proper handling
       const initialBenefits = getMultilingualValue(initialData.packageBenefits);
       const initialTags = getMultilingualValue(initialData.packageTags);
 
-      setBenefits(Array.isArray(initialBenefits) ? initialBenefits : []);
-      setTags(Array.isArray(initialTags) ? initialTags : []);
+      // Ensure arrays are properly flattened
+      const processedBenefits = Array.isArray(initialBenefits) ? initialBenefits.flat() : [];
+      const processedTags = Array.isArray(initialTags) ? initialTags.flat() : [];
+
+      setBenefits(processedBenefits);
+      setTags(processedTags);
 
       // Set images if available
       if (initialData.images && Array.isArray(initialData.images)) {
@@ -268,6 +287,7 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
   }, [isEdit, initialData, reset]);
 
   const handleCreatePackage = (data: CreatePackageFormFieldValues) => {
+    console.info("OK")
     // Create FormData for multipart/form-data
     const formData = new FormData();
 
@@ -287,11 +307,11 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
       formData.append('priceLevel', data.priceLevel.toString());
     }
     formData.append('roomUpgrade', data.roomUpgrade.toString());
-    if (data.from_category) {
-      formData.append('from_category', data.from_category);
+    if (data.from_category_id) {
+      formData.append('from_category_id', data.from_category_id);
     }
-    if (data.to_category) {
-      formData.append('to_category', data.to_category);
+    if (data.to_category_id) {
+      formData.append('to_category_id', data.to_category_id);
     }
     if (data.incentivePercentage) {
       formData.append('incentivePercentage', data.incentivePercentage.toString());
@@ -363,6 +383,7 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
   };
 
   const onSubmit: SubmitHandler<CreatePackageFormFieldValues> = (data) => {
+    console.info("HELOLOLOlo")
     handleCreatePackage(data);
   }
 
@@ -860,18 +881,18 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
                 <Col span={12}>
                   <Form.Item
                     label="From Category"
-                    validateStatus={errors.from_category ? 'error' : ''}
-                    help={errors.from_category?.message}
+                    validateStatus={errors.from_category_id ? 'error' : ''}
+                    help={errors.from_category_id?.message}
                     required
                   >
                     <Controller
-                      name="from_category"
+                      name="from_category_id"
                       control={control}
                       render={({ field }) => (
                         <Select
                           {...field}
                           placeholder="Select from category"
-                          status={errors.from_category ? 'error' : ''}
+                          status={errors.from_category_id ? 'error' : ''}
                           allowClear
                           options={getAvailableFromOptions()}
                           disabled={isLoading}
@@ -884,18 +905,18 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
                 <Col span={12}>
                   <Form.Item
                     label="To Category"
-                    validateStatus={errors.to_category ? 'error' : ''}
-                    help={errors.to_category?.message}
+                    validateStatus={errors.to_category_id ? 'error' : ''}
+                    help={errors.to_category_id?.message}
                     required
                   >
                     <Controller
-                      name="to_category"
+                      name="to_category_id"
                       control={control}
                       render={({ field }) => (
                         <Select
                           {...field}
                           placeholder="Select to category"
-                          status={errors.to_category ? 'error' : ''}
+                          status={errors.to_category_id ? 'error' : ''}
                           allowClear
                           options={getAvailableToOptions()}
                           disabled={isLoading}

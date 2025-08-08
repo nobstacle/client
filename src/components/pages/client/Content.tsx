@@ -222,7 +222,7 @@ const PackageCard = ({ packageData, handleClick, loadingButton }) => {
               {/* Tags */}
               {packageTags.length > 0 && (
                 <div className="flex flex-wrap gap-2 mb-4">
-                  {packageTags.map((tag, index) => (
+                  {Array.isArray(packageTags) && packageTags.map((tag, index) => (
                     <Tag key={index} className="px-2 sm:px-3 py-1 bg-green-800 text-white border-green-800 rounded text-xs sm:text-sm">
                       {tag}
                     </Tag>
@@ -255,7 +255,7 @@ const PackageCard = ({ packageData, handleClick, loadingButton }) => {
                 {/* Benefits */}
                 {packageBenefits.length > 0 && (
                   <div className="space-y-1">
-                    {packageBenefits.map((benefit, index) => (
+                    {Array.isArray(packageBenefits) && packageBenefits.map((benefit, index) => (
                       <div key={index} className="text-green-600 font-medium flex items-center text-sm sm:text-base">
                         <span className="mr-2">✓</span>
                         {benefit}
@@ -746,42 +746,111 @@ export const Content: React.FC = () => {
       );
     }
 
-    if (messageStore.receivedType === 'Packages') {
-      let parseData;
-      try {
-        parseData = JSON.parse(messageStore.receivedContent?.extraContent ?? '[]');
-      } catch (error) {
-        console.error("Error parsing package data:", error);
-        return (
-          <div className="w-full p-5">
-            <Text className="text-red-500">Error loading package data</Text>
-          </div>
-        );
+if (messageStore.receivedType === 'Packages') {
+  let parseData;
+  try {
+    parseData = JSON.parse(messageStore.receivedContent?.extraContent ?? '[]');
+  } catch (error) {
+    console.error("Error parsing package data:", error);
+    return (
+      <div className="w-full p-5">
+        <Text className="text-red-500">Error loading package data</Text>
+      </div>
+    );
+  }
+
+  // Helper function to safely extract string values from nested objects
+  const extractValue = (obj, defaultValue = '') => {
+    if (typeof obj === 'string') return obj;
+    if (Array.isArray(obj)) return obj;
+    if (obj && typeof obj === 'object') {
+      // Handle nested language objects like {en: "value"} or {en: [{en: ["value"]}]}
+      const enValue = obj.en;
+      if (Array.isArray(enValue)) {
+        return enValue.map(item => extractValue(item)).flat();
       }
-
-      const sortedPackages = parseData.sort((a, b) => {
-        const purchasesA = a.numberOfPurchases || 0;
-        const purchasesB = b.numberOfPurchases || 0;
-        return purchasesB - purchasesA;
-      });
-
-      return (
-        <div
-          className="w-full space-y-6 relative"
-          style={{ height: '100%', padding: '3rem 1rem', overflowY: 'scroll' }}
-        >
-          {sortedPackages.map((packageData) => (
-            <PackageCard
-              key={packageData.id}
-              packageData={packageData}
-              handleClick={(data) => handlePackageClicked(data)}
-              loadingButton={loading}
-            />
-          ))}
-        </div>
-      );
+      return extractValue(enValue, defaultValue);
     }
+    return defaultValue;
+  };
 
+  // Helper function to safely parse deeply nested JSON strings
+  const safeParseTaxInfo = (taxInfo) => {
+    if (typeof taxInfo !== 'string') return extractValue(taxInfo);
+    
+    try {
+      let parsed = taxInfo;
+      // Keep parsing until we get a non-string result or can't parse anymore
+      while (typeof parsed === 'string' && parsed.startsWith('{')) {
+        parsed = JSON.parse(parsed);
+      }
+      return extractValue(parsed);
+    } catch {
+      return taxInfo;
+    }
+  };
+
+  // Helper function to merge category images with package images
+  const mergeImages = (packageImages, toCategory) => {
+    let combinedImages = [...(packageImages || [])];
+    
+    // If to_category_id exists and toCategory has signedImages, merge them
+    if (toCategory && toCategory.signedImages && Array.isArray(toCategory.signedImages)) {
+      // Convert category images to the same format as package images
+      const categoryImages = toCategory.signedImages.map((img, index) => ({
+        alt: `Category image ${index + 1}`,
+        url: img.url,
+        order: (packageImages?.length || 0) + index + 1, // Continue numbering after package images
+        signedUrl: img.signedUrl
+      }));
+      
+      combinedImages = [...combinedImages, ...categoryImages];
+    }
+    
+    return combinedImages;
+  };
+
+  // Clean the package data
+  const cleanedPackages = parseData.map(pkg => ({
+    ...pkg,
+    packageNames: extractValue(pkg.packageNames),
+    packageDescriptions: extractValue(pkg.packageDescriptions),
+    packageBenefits: extractValue(pkg.packageBenefits, []),
+    packageTags: extractValue(pkg.packageTags, []),
+    taxInformation: safeParseTaxInfo(pkg.taxInformation),
+    currencies: extractValue(pkg.currencies),
+    packageAlerts: extractValue(pkg.packageAlerts),
+    buttonTexts: extractValue(pkg.buttonTexts),
+    // Merge images if to_category_id exists
+    signedImageUrls: pkg.to_category_id ? 
+      mergeImages(pkg.signedImageUrls, pkg.toCategory) : 
+      pkg.signedImageUrls
+  }));
+
+  const sortedPackages = cleanedPackages.sort((a, b) => {
+    const purchasesA = a.numberOfPurchases || 0;
+    const purchasesB = b.numberOfPurchases || 0;
+    return purchasesB - purchasesA;
+  });
+
+  console.info("packageDatapackageDatapackageData", sortedPackages);
+  
+  return (
+    <div
+      className="w-full space-y-6 relative"
+      style={{ height: '100%', padding: '3rem 1rem', overflowY: 'scroll' }}
+    >
+      {sortedPackages.map((packageData) => (
+        <PackageCard
+          key={packageData.id}
+          packageData={packageData}
+          handleClick={(data) => handlePackageClicked(data)}
+          loadingButton={loading}
+        />
+      ))}
+    </div>
+  );
+}
     if (messageStore.receivedType === "ChatMessage") {
       return (
         <div className="flex w-full flex-col items-center justify-center gap-2 p-4">

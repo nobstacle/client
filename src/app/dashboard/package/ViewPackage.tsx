@@ -86,15 +86,32 @@ export default function ViewPackage({ packageData, onClose, viewPackageToggle })
         );
     }
 
-    // Extract data with fallbacks
-    const packageName = packageData.packageNames?.en || "Package Name";
-    const packageDescription = packageData.packageDescriptions?.en || "Package Description";
-    const packageBenefits = packageData.packageBenefits?.en || [];
-    const packageTags = packageData.packageTags?.en || [];
-    const packageAlert = packageData.packageAlerts?.en || "";
-    const buttonText = packageData.buttonTexts?.en || "Take this deal";
-    const currency = packageData.currencies?.en || "USD";
-    const taxInfo = packageData.taxInformation?.en || "";
+    const getMultilingualValue = (field, fallbackLang = 'en', defaultValue = '') => {
+        if (!field || typeof field !== 'object') return field || defaultValue;
+
+        const firstLangValue = field[fallbackLang] || field[Object.keys(field)[0]] || defaultValue;
+
+        // Handle nested objects (like in package ID 14)
+        if (Array.isArray(firstLangValue)) {
+            return firstLangValue.map(item => {
+                if (typeof item === 'object' && item !== null) {
+                    return item[fallbackLang] || item[Object.keys(item)[0]] || '';
+                }
+                return item;
+            }).filter(Boolean);
+        }
+
+        return firstLangValue;
+    };
+
+    const packageName = getMultilingualValue(packageData.packageNames, 'en', "Package Name");
+    const packageDescription = getMultilingualValue(packageData.packageDescriptions, 'en', "Package Description");
+    const packageBenefits = getMultilingualValue(packageData.packageBenefits, 'en', []);
+    const packageTags = getMultilingualValue(packageData.packageTags, 'en', []);
+    const packageAlert = getMultilingualValue(packageData.packageAlerts, 'en', "");
+    const buttonText = getMultilingualValue(packageData.buttonTexts, 'en', "Take this deal");
+    const currency = getMultilingualValue(packageData.currencies, 'en', "USD");
+    const taxInfo = getMultilingualValue(packageData.taxInformation, 'en', "");
 
     // Format prices
     const originalPrice = packageData.originalPrice ? `${currency} ${packageData.originalPrice}` : "";
@@ -254,15 +271,12 @@ export default function ViewPackage({ packageData, onClose, viewPackageToggle })
                                 {/* Tags */}
                                 <div style={{ marginBottom: '8px' }}>
                                     <Space wrap size="small">
-                                        {packageTags.map((tag, index) => (
-                                            <Tag key={index} color="green" style={{
-                                                borderRadius: '12px',
-                                                padding: '2px 8px',
-                                                fontSize: '12px',
-                                                margin: '2px'
-                                            }}>
-                                                {tag}
-                                            </Tag>
+                                        {packageBenefits.map((benefit, index) => (
+                                            <div key={index} style={{ marginBottom: '4px' }}>
+                                                <Text style={{ color: '#52c41a', fontSize: '13px', lineHeight: '18px' }}>
+                                                    ✓ {typeof benefit === 'object' ? JSON.stringify(benefit) : benefit}
+                                                </Text>
+                                            </div>
                                         ))}
                                     </Space>
                                 </div>
