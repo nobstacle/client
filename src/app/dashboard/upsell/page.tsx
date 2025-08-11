@@ -15,6 +15,8 @@ import { UpsellStatusCell } from "../../../components/UpdateStatusCell";
 import dayjs from 'dayjs';
 import { SendIcon } from "../../../components/icons/SendIcon";
 
+const { Option } = Select;
+
 export default function Upsell() {
     const [loadingData, setLoadingData] = useState(false);
     const [totalItems, setTotalItems] = useState(0);
@@ -24,6 +26,11 @@ export default function Upsell() {
     const [hasMore, setHasMore] = useState(true);
     const [editingRecord, setEditingRecord] = useState<string | null>(null);
     const [editingData, setEditingData] = useState<any>({});
+    const [categoryData, setCategoryData] = useState([]);
+    const [servicePackages, setServicePackages] = useState([]);
+    const [selectedCategories, setSelectedCategories] = useState([]);
+    const [selectedPackages, setSelectedPackages] = useState([]);
+    const [allPackages, setAllPackages] = useState([]);
     const pageSize = 10;
     const { data } = useSession();
     let Url = process.env.NEXT_PUBLIC_BACKEND_URL;
@@ -42,6 +49,33 @@ export default function Upsell() {
             fetchTransactions();
         }
     }, [data]);
+
+    // Fetch packages outside the send function
+    useEffect(() => {
+        const fetchPackages = async () => {
+            try {
+                const response = await fetch(`${Url}/api/v1/uploads/get-all-packages`, {
+                    method: 'GET',
+                    headers: { Authorization: `Bearer ${data?.user.backendTokens.at}` },
+                });
+                if (response.ok) {
+                    const packageData = await response.json();
+                    setAllPackages(packageData.data || packageData);
+                }
+            } catch (error) {
+                console.error('Error fetching packages:', error);
+            }
+        };
+
+        if (data?.user !== undefined) {
+            fetchPackages();
+        }
+    }, [data, Url]);
+
+    // Packages for dropdown - only those without from/to categories
+    const dropdownPackages = allPackages.filter(pkg =>
+        !pkg.from_category_id && !pkg.to_category_id
+    );
 
     const fetchTransactions = useCallback((searchValue: string = "") => {
         setLoadingData(true);
@@ -71,14 +105,6 @@ export default function Upsell() {
             case 'ADD_ON': return 'cyan';
             default: return 'default';
         }
-    };
-
-    const updateStatusAPI = async (id: string, status: string) => {
-        return await fetch(`/api/update-status/${id}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ status }),
-        });
     };
 
     // New function to handle field updates
@@ -464,65 +490,120 @@ export default function Upsell() {
         );
     }) : [];
 
+    // Function to send filtered package data
+    const sendPackageData = (categoryId = null) => {
+        // Filter out selected packages and apply category filter
+        let filteredPackages = allPackages.filter(pkg =>
+            !selectedPackages.some(selected => selected.id === pkg.id)
+        );
+
+        // If a category is selected, exclude packages that have this category in to_category_id
+        if (categoryId) {
+            filteredPackages = filteredPackages.filter(pkg =>
+                pkg.to_category_id !== categoryId
+            );
+        }
+
+        const selectedLang = params.get("lang") || companyData?.defaultLangCode || "en";
+        const finalFilteredPackages = filteredPackages?.filter((item) => {
+            return (
+                item?.packageNames?.[selectedLang] != null &&
+                item?.packageDescriptions?.[selectedLang] != null &&
+                item?.packageBenefits?.[selectedLang] != null &&
+                item?.packageTags?.[selectedLang] != null &&
+                item?.taxInformation?.[selectedLang] != null &&
+                item?.currencies?.[selectedLang] != null &&
+                item?.buttonTexts?.[selectedLang] != null &&
+                item?.packageAlerts?.[selectedLang] != null
+            );
+        });
+
+        // Send the filtered packages
+        if (finalFilteredPackages.length > 0) {
+            emitSendPackages({
+                refId: finalFilteredPackages[0].id,
+                langCode: selectedLang,
+                refType: "Packages",
+                station: Number(params.get("station") ?? 1),
+                sentBy: JSON.stringify(data.user),
+                contentExtra: JSON.stringify(finalFilteredPackages)
+            } as SendPackagePayloadType, (response) => {
+                console.log("Package send response:", response);
+                if (response && (response === true)) {
+                    message.success("Packages sent successfully!");
+                } else {
+                    message.error("Failed to send packages. Please try again.");
+                }
+            });
+        } else {
+            message.warning("No packages available to send with current filters.");
+        }
+    };
+
     const handlePackageSend = () => {
         setLoadingData(true);
 
-        fetch(`${Url}/api/v1/uploads/get-all-packages`, {
+        // Use the first selected category if any, otherwise null
+        const categoryId = selectedCategories.length > 0 ? selectedCategories[0] : null;
+
+        try {
+            sendPackageData(categoryId);
+        } catch (error) {
+            console.error("Error sending packages:", error);
+            message.error("Failed to send packages. Please try again.");
+        } finally {
+            setLoadingData(false);
+        }
+    };
+
+    const fetchCategories = useCallback(() => {
+        setLoadingData(true);
+
+        fetch(`${Url}/api/v1/uploads/get-all-categories`, {
             headers: { Authorization: `Bearer ${data?.user.backendTokens.at}` },
         })
             .then(async (response) => {
-                if (!response.ok) {
-                    throw new Error('Failed to fetch packages');
-                }
-                const result = await response.json();
-                let packageList = result?.data;
-                console.log("Response from server:", packageList);
-
-                const selectedLang = params.get("lang") || companyData?.defaultLangCode || "en";
-                const filterPackages = packageList?.filter((item) => {
-                    return (
-                        item?.packageNames?.[selectedLang] != null &&
-                        item?.packageDescriptions?.[selectedLang] != null &&
-                        item?.packageBenefits?.[selectedLang] != null &&
-                        item?.packageTags?.[selectedLang] != null &&
-                        item?.taxInformation?.[selectedLang] != null &&
-                        item?.currencies?.[selectedLang] != null &&
-                        item?.buttonTexts?.[selectedLang] != null &&
-                        item?.packageAlerts?.[selectedLang] != null
-                    );
-                });
-                emitSendPackages({
-                    refId: filterPackages.length > 0 ? filterPackages[0].id : 0,
-                    langCode: params.get("lang") || companyData?.defaultLangCode || "en",
-                    refType: "Packages",
-                    station: Number(params.get("station") ?? 1),
-                    sentBy: JSON.stringify(data.user),
-                    contentExtra: JSON.stringify(filterPackages)
-                } as SendPackagePayloadType, (response) => {
-                    console.log("Package send response:", response);
-                    if (response && (response === true)) {
-                        message.success("Packages sent successfully!");
-                    } else {
-                        message.error("Failed to send packages. Please try again.");
-                    }
-                });
+                const text = await response.text();
+                const json = JSON.parse(text);
+                const data = json.data || json;
+                setCategoryData(data);
             })
             .catch((error) => {
-                console.error("Error sending packages:", error);
-                message.error("Failed to send packages. Please try again.");
+                console.warn("Error fetching data:", error);
             })
             .finally(() => {
                 setLoadingData(false);
             });
+    }, [data, Url, setCategoryData]);
+
+    useEffect(() => {
+        if (data?.user !== undefined) {
+            fetchCategories();
+        }
+    }, [data, fetchCategories]);
+
+    const handleCategoryChange = (value) => {
+        setSelectedCategories(value);
     };
 
+    const handleCategoryDeselect = (value) => {
+        setSelectedCategories(prev => prev.filter(id => id !== value));
+    };
+
+    const handlePackageChange = (value) => {
+        setSelectedPackages(value.map(id => allPackages.find(pkg => pkg.id === id)).filter(Boolean));
+    };
+
+    const handlePackageDeselect = (value) => {
+        setSelectedPackages(prev => prev.filter(pkg => pkg.id !== value));
+    };
 
     return (
         <div className="min-h-full bg-gray-50">
             <div className="mx-auto p-6">
                 {/* Controls Section */}
                 <Card className="mb-6 shadow-sm">
-                    <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
+                    <div className="flex flex-col lg:flex-row gap-4 justify-between items-start lg:items-center">
                         <div className="flex gap-3 max-w-md w-full" style={{ display: 'flex', alignItems: 'center' }}>
                             <Input
                                 placeholder="Search by confirmation, package, email, or status..."
@@ -530,6 +611,7 @@ export default function Upsell() {
                                 value={searchTerm}
                                 onChange={searchTransactions}
                                 className="flex-1"
+                                size="large"
                             />
                             <Button
                                 type="primary"
@@ -537,7 +619,78 @@ export default function Upsell() {
                                 onClick={handlePackageSend}
                                 loading={loadingData}
                                 className="flex items-center justify-center bg-blue-600 hover:bg-blue-700 rounded-md px-4 py-2 text-white headerButton customHeaderButton"
+                                size="large"
                             />
+                        </div>
+                        <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto min-w-0">
+                            <div className="flex-1 lg:flex-none lg:min-w-[250px]">
+                                <Select
+                                    placeholder="Select packages to exclude"
+                                    mode="multiple"
+                                    allowClear
+                                    size="large"
+                                    className="w-full"
+                                    maxTagCount="responsive"
+                                    showSearch
+                                    optionFilterProp="children"
+                                    value={selectedPackages.map(pkg => pkg.id)}
+                                    onChange={handlePackageChange}
+                                    onDeselect={handlePackageDeselect}
+                                    dropdownStyle={{ maxHeight: 400, overflow: 'auto' }}
+                                    tagRender={(props) => (
+                                        <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-50 text-blue-800 border border-blue-200">
+                                            {props.label}
+                                            <button
+                                                className="ml-1 text-blue-600 hover:text-blue-800"
+                                                onClick={props.onClose}
+                                            >
+                                                ×
+                                            </button>
+                                        </span>
+                                    )}
+                                >
+                                    {dropdownPackages.map(pkg => (
+                                        <Option key={pkg.id} value={pkg.id}>
+                                            {pkg.packageNames?.en || `Package ${pkg.id}`}
+                                        </Option>
+                                    ))}
+                                </Select>
+                            </div>
+                            <div className="flex-1 lg:flex-none lg:min-w-[250px]">
+                                <Select
+                                    placeholder="Select categories"
+                                    mode="multiple"
+                                    allowClear
+                                    size="large"
+                                    className="w-full"
+                                    maxTagCount="responsive"
+                                    showSearch
+                                    optionFilterProp="children"
+                                    value={selectedCategories}
+                                    onChange={handleCategoryChange}
+                                    onDeselect={handleCategoryDeselect}
+                                    dropdownStyle={{ maxHeight: 400, overflow: 'auto' }}
+                                    tagRender={(props) => (
+                                        <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-green-50 text-green-800 border border-green-200">
+                                            {props.label}
+                                            <button
+                                                className="ml-1 text-green-600 hover:text-green-800"
+                                                onClick={props.onClose}
+                                            >
+                                                ×
+                                            </button>
+                                        </span>
+                                    )}
+                                >
+                                    {categoryData.map((category) => (
+                                        <Option value={category.id} key={category.id}>
+                                            <div className="flex items-center justify-between py-1">
+                                                <span className="font-medium">{category?.name}</span>
+                                            </div>
+                                        </Option>
+                                    ))}
+                                </Select>
+                            </div>
                         </div>
                     </div>
                 </Card>
