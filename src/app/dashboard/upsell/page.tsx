@@ -74,7 +74,7 @@ export default function Upsell() {
 
     // Packages for dropdown - only those without from/to categories
     const dropdownPackages = allPackages.filter(pkg =>
-        !pkg.from_category_id && !pkg.to_category_id
+        pkg.from_category_id !== null && pkg.to_category_id !== null
     );
 
     const fetchTransactions = useCallback((searchValue: string = "") => {
@@ -179,8 +179,6 @@ export default function Upsell() {
         if (editingData.departureDate && (!recordDepartureDate || !editingData.departureDate.isSame(recordDepartureDate, 'day'))) {
             updates.departureDate = editingData.departureDate.toISOString();
         }
-
-        console.log('Updates to be sent:', updates); // Debug log
 
         if (Object.keys(updates).length > 0) {
             const success = await updateTransactionField(record.id, 'bulk', updates);
@@ -528,7 +526,6 @@ export default function Upsell() {
                 sentBy: JSON.stringify(data.user),
                 contentExtra: JSON.stringify(finalFilteredPackages)
             } as SendPackagePayloadType, (response) => {
-                console.log("Package send response:", response);
                 if (response && (response === true)) {
                     message.success("Packages sent successfully!");
                 } else {
@@ -603,30 +600,12 @@ export default function Upsell() {
             <div className="mx-auto p-6">
                 {/* Controls Section */}
                 <Card className="mb-6 shadow-sm">
-                    <div className="flex flex-col lg:flex-row gap-4 justify-between items-start lg:items-center">
-                        <div className="flex gap-3 max-w-md w-full" style={{ display: 'flex', alignItems: 'center' }}>
-                            <Input
-                                placeholder="Search by confirmation, package, email, or status..."
-                                prefix={<SearchOutlined className="text-gray-400" />}
-                                value={searchTerm}
-                                onChange={searchTransactions}
-                                className="flex-1"
-                                size="large"
-                            />
-                            <Button
-                                type="primary"
-                                icon={<SendIcon />}
-                                onClick={handlePackageSend}
-                                loading={loadingData}
-                                className="flex items-center justify-center bg-blue-600 hover:bg-blue-700 rounded-md px-4 py-2 text-white headerButton customHeaderButton"
-                                size="large"
-                            />
-                        </div>
-                        <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto min-w-0">
-                            <div className="flex-1 lg:flex-none lg:min-w-[250px]">
+                    <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center">
+                        {/* Left side - Filter dropdowns (50% width) */}
+                        <div className="w-full lg:w-1/2 flex flex-col sm:flex-row gap-3">
+                            <div className="flex-1">
                                 <Select
                                     placeholder="Select packages to exclude"
-                                    mode="multiple"
                                     allowClear
                                     size="large"
                                     className="w-full"
@@ -656,10 +635,9 @@ export default function Upsell() {
                                     ))}
                                 </Select>
                             </div>
-                            <div className="flex-1 lg:flex-none lg:min-w-[250px]">
+                            <div className="flex-1">
                                 <Select
-                                    placeholder="Select categories"
-                                    mode="multiple"
+                                    placeholder="From Category"
                                     allowClear
                                     size="large"
                                     className="w-full"
@@ -682,15 +660,38 @@ export default function Upsell() {
                                         </span>
                                     )}
                                 >
-                                    {categoryData.map((category) => (
-                                        <Option value={category.id} key={category.id}>
-                                            <div className="flex items-center justify-between py-1">
-                                                <span className="font-medium">{category?.name}</span>
-                                            </div>
-                                        </Option>
-                                    ))}
+                                    {[...categoryData]
+                                        .sort((a, b) => (a.priceLevel || 0) - (b.priceLevel || 0))
+                                        .map((category) => (
+                                            <Option value={category.id} key={category.id}>
+                                                <div className="flex items-center justify-between py-1">
+                                                    <span className="font-medium">{category?.name}</span>
+                                                </div>
+                                            </Option>
+                                        ))
+                                    }
                                 </Select>
                             </div>
+                        </div>
+
+                        {/* Right side - Search input and Send button (50% width) */}
+                        <div className="w-full lg:w-1/2 flex gap-3">
+                            <Input
+                                placeholder="Search by confirmation, package, email, or status..."
+                                prefix={<SearchOutlined className="text-gray-400" />}
+                                value={searchTerm}
+                                onChange={searchTransactions}
+                                className="flex-1"
+                                size="large"
+                            />
+                            <Button
+                                type="primary"
+                                icon={<SendIcon />}
+                                onClick={handlePackageSend}
+                                loading={loadingData}
+                                className="flex items-center justify-center bg-blue-600 hover:bg-blue-700 rounded-md px-4 py-2 text-white headerButton customHeaderButton"
+                                size="large"
+                            />
                         </div>
                     </div>
                 </Card>
