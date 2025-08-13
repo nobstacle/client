@@ -77,12 +77,12 @@ const schema = yup.object().shape({
   from_category_id: yup.number().when('roomUpgrade', {
     is: true,
     then: (schema) => schema.required("From category is required when room upgrade is enabled"),
-    otherwise: (schema) => schema.notRequired()
+    otherwise: (schema) => schema.notRequired().nullable()
   }),
   to_category_id: yup.number().when('roomUpgrade', {
     is: true,
     then: (schema) => schema.required("To category is required when room upgrade is enabled"),
-    otherwise: (schema) => schema.notRequired()
+    otherwise: (schema) => schema.notRequired().nullable()
   }),
   incentivePercentage: yup.number().min(0).max(100, "Incentive percentage must be between 0-100"),
 
@@ -152,8 +152,8 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
         active: initialData.active || false,
         priceLevel: initialData.priceLevel || undefined,
         roomUpgrade: initialData.roomUpgrade || false,
-        from_category_id: initialData.from_category_id || "",
-        to_category_id: initialData.to_category_id || "",
+        from_category_id: initialData.from_category_id || undefined, // Change "" to undefined
+        to_category_id: initialData.to_category_id || undefined,     // Change "" to undefined
         incentivePercentage: initialData.incentivePercentage || undefined,
         companyId: initialData.companyId || company.data?.id,
         templateId: initialData.templateId || undefined,
@@ -179,8 +179,8 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
         active: false,
         priceLevel: undefined,
         roomUpgrade: false,
-        from_category_id: "",
-        to_category_id: "",
+        from_category_id: undefined,
+        to_category_id: undefined,
         incentivePercentage: undefined,
         companyId: company.data?.id,
         templateId: undefined,
@@ -262,8 +262,6 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
       });
   }, [data]);
 
-  // Initialize form when editing
-  // Replace your existing useEffect with this:
   React.useEffect(() => {
     if (isEdit && initialData) {
       reset(getDefaultValues());
@@ -883,7 +881,6 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
                     label="From Category"
                     validateStatus={errors.from_category_id ? 'error' : ''}
                     help={errors.from_category_id?.message}
-                    required
                   >
                     <Controller
                       name="from_category_id"
@@ -907,7 +904,6 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
                     label="To Category"
                     validateStatus={errors.to_category_id ? 'error' : ''}
                     help={errors.to_category_id?.message}
-                    required
                   >
                     <Controller
                       name="to_category_id"

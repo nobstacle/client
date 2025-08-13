@@ -20,7 +20,7 @@ export default function Package() {
     const { handleClose, handleOpen, isOpen } = useDisclousure();
     const [loadingData, setLoadingData] = useState(false);
     const [totalItems, setTotalItems] = useState(0);
-    const [searchTerm, setSearchTerm] = useState('');
+    const [pageSize, setPageSize] = useState(10);
     const [hasMore, setHasMore] = useState(true);
     const [editingPackage, setEditingPackage] = useState(null);
     const [modalMode, setModalMode] = useState('create');
@@ -38,7 +38,6 @@ export default function Package() {
         sortBy: 'name',
         sortOrder: 'asc'
     });
-    const [showAdvancedSearch, setShowAdvancedSearch] = useState(false);
 
     const { setPackages, packages, searchPackages, setSearchPackages } = useTemplateStore();
     const { data } = useSession();
@@ -48,19 +47,36 @@ export default function Package() {
     // Original packages data (unfiltered)
     const [originalPackages, setOriginalPackages] = useState([]);
 
-    const fetchPackages = useCallback(() => {
+    const fetchPackages = useCallback((page = 1, limit = 10) => {
+        if (!data?.user?.backendTokens?.at) return;
+
         setLoadingData(true);
 
-        fetch(`${Url}/api/v1/uploads/get-all-packages`, {
-            headers: { Authorization: `Bearer ${data?.user.backendTokens.at}` },
+        fetch(`${Url}/api/v1/uploads/get-all-packages?page=${page}&limit=${limit}`, {
+            headers: { Authorization: `Bearer ${data.user.backendTokens.at}` },
         })
             .then(async (response) => {
                 const text = await response.text();
                 const json = JSON.parse(text);
-                const data = json.data || json;
-                setOriginalPackages(data); // Store original data
-                setPackages(data);
-                setTotalItems(json.pagination?.totalCount || data.length);
+                const packagesData = json.data || json;
+
+                // For server-side pagination
+                if (page === 1) {
+                    setOriginalPackages(packagesData);
+                    setPackages(packagesData);
+                } else {
+                    setOriginalPackages(packagesData);
+                    setPackages(packagesData);
+                }
+
+                // Set pagination info from server response
+                if (json.pagination) {
+                    setTotalItems(json.pagination.totalCount);
+                    setHasMore(json.pagination.hasNext);
+                } else {
+                    setTotalItems(packagesData.length);
+                    setHasMore(false);
+                }
             })
             .catch((error) => {
                 console.warn("Error fetching data:", error);
@@ -68,13 +84,13 @@ export default function Package() {
             .finally(() => {
                 setLoadingData(false);
             });
-    }, [data, Url, setPackages]);
+    }, [data?.user?.backendTokens?.at, Url]);
 
     // Enhanced search function
-    const performSearch = useCallback((filters) => {
-        if (!originalPackages.length) return [];
+    const performSearch = useCallback((filters, searchData = originalPackages) => {
+        if (!searchData.length) return [];
 
-        let filteredPackages = [...originalPackages];
+        let filteredPackages = [...searchData];
 
         // Text search across multiple fields
         if (filters.searchText && filters.searchText.trim() !== '') {
@@ -176,17 +192,52 @@ export default function Package() {
         return filteredPackages;
     }, [originalPackages]);
 
+    const fetchAllPackagesForSearch = useCallback(() => {
+        if (!data?.user?.backendTokens?.at) return Promise.resolve([]);
+
+        return fetch(`${Url}/api/v1/uploads/get-all-packages?page=1&limit=1000`, {
+            headers: { Authorization: `Bearer ${data.user.backendTokens.at}` },
+        })
+            .then(async (response) => {
+                const text = await response.text();
+                const json = JSON.parse(text);
+                return json.data || json;
+            });
+    }, [data?.user?.backendTokens?.at, Url]);
+
     // Debounced search effect
     useEffect(() => {
         if (debounceRef.current) {
             clearTimeout(debounceRef.current);
         }
 
-        debounceRef.current = setTimeout(() => {
-            const filtered = performSearch(searchFilters);
-            setPackages(filtered);
-            setTotalItems(filtered.length);
-            setCurrentPage(1); // Reset to first page when searching
+        debounceRef.current = setTimeout(async () => {
+            const hasActiveFilters = Object.values(searchFilters).some(value =>
+                value !== 'all' && value !== '' && value !== 'name' && value !== 'asc'
+            );
+
+            if (hasActiveFilters && searchFilters.searchText.trim() !== '') {
+                // Fetch all data for comprehensive search
+                try {
+                    const allPackages = await fetchAllPackagesForSearch();
+                    setOriginalPackages(allPackages);
+                    const filtered = performSearch(searchFilters, allPackages);
+                    setPackages(filtered);
+                    setTotalItems(filtered.length);
+                    setCurrentPage(1);
+                } catch (error) {
+                    console.warn("Error fetching all packages for search:", error);
+                }
+            } else if (!hasActiveFilters && searchFilters.searchText.trim() === '') {
+                // No filters, fetch paginated data
+                fetchPackages(1, pageSize);
+            } else {
+                // Apply filters to current data
+                const filtered = performSearch(searchFilters);
+                setPackages(filtered);
+                setTotalItems(filtered.length);
+                setCurrentPage(1);
+            }
         }, 300);
 
         return () => {
@@ -194,13 +245,13 @@ export default function Package() {
                 clearTimeout(debounceRef.current);
             }
         };
-    }, [searchFilters, performSearch, setPackages]);
+    }, [searchFilters, fetchAllPackagesForSearch, fetchPackages, pageSize]);
 
     useEffect(() => {
-        if (data?.user !== undefined) {
-            fetchPackages();
+        if (data?.user?.backendTokens?.at) {
+            fetchPackages(1, pageSize);
         }
-    }, [data, fetchPackages]);
+    }, [data?.user?.backendTokens?.at, pageSize]);
 
     // Handle search filter changes
     const handleFilterChange = (key, value) => {
@@ -602,18 +653,14 @@ export default function Package() {
 
     // Pagination State
     const [currentPage, setCurrentPage] = useState(1);
-    const pageSize = 10;
 
-    const handlePageChange = (page, pageSize) => {
+    const handlePageChange = (page, newPageSize) => {
         setCurrentPage(page);
+        if (newPageSize !== pageSize) {
+            setPageSize(newPageSize);
+        }
+        fetchPackages(page, newPageSize || pageSize);
     };
-
-    // Get paginated data for display
-    const paginatedPackages = useMemo(() => {
-        const startIndex = (currentPage - 1) * pageSize;
-        const endIndex = startIndex + pageSize;
-        return Array.isArray(packages) ? packages.slice(startIndex, endIndex) : [];
-    }, [packages, currentPage, pageSize]);
 
     return (
         <div className="h-full overflow-y-auto p-4 customPackageContainer">
@@ -657,7 +704,7 @@ export default function Package() {
                     <Table
                         rowKey="id"
                         columns={columns}
-                        dataSource={paginatedPackages}
+                        dataSource={packages}
                         pagination={false}
                         className="jotFormTable"
                         scroll={{ x: 2500 }}
@@ -666,9 +713,10 @@ export default function Package() {
                     <div className="flex justify-center mt-6">
                         <Pagination
                             current={currentPage}
-                            total={packages?.length || 0}
+                            total={totalItems} // This now comes from server response
                             pageSize={pageSize}
                             onChange={handlePageChange}
+                            onShowSizeChange={handlePageChange}
                             showSizeChanger
                             pageSizeOptions={["10", "20", "50", "100"]}
                             showTotal={(total, range) =>
