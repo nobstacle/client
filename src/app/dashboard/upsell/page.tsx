@@ -607,6 +607,7 @@ export default function Upsell() {
                                 <Select
                                     placeholder="Select packages to exclude"
                                     allowClear
+                                    mode="multiple"
                                     size="large"
                                     className="w-full"
                                     maxTagCount="responsive"
