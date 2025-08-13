@@ -60,18 +60,83 @@ const IframeWithPrefill = React.memo(({ src, prefillData }: { src: string, prefi
 });
 
 const getLocalizedContent = (contentObj, fallback = '') => {
-  if (!contentObj || typeof contentObj !== 'object') return fallback;
+  // If contentObj is null or undefined, return fallback
+  if (contentObj == null) return fallback;
 
-  // Get all available language keys
-  const availableLanguages = Object.keys(contentObj);
+  // If contentObj is a string, try to parse it as JSON (handle nested stringified JSON)
+  if (typeof contentObj === 'string') {
+    // If it's an empty string, return fallback
+    if (contentObj.trim() === '') return fallback;
 
-  // If no languages available, return fallback
-  if (availableLanguages.length === 0) return fallback;
+    // Try to parse as JSON if it looks like JSON
+    if (contentObj.startsWith('{') || contentObj.startsWith('[')) {
+      try {
+        let parsed = contentObj;
+        // Keep parsing until we get a non-string result or can't parse anymore
+        while (typeof parsed === 'string' && (parsed.startsWith('{') || parsed.startsWith('['))) {
+          try {
+            const newParsed = JSON.parse(parsed);
+            if (newParsed === parsed) break; // Avoid infinite loop
+            parsed = newParsed;
+          } catch {
+            break;
+          }
+        }
 
-  // Priority order: en (English) first, then any other available language
-  const preferredLanguage = availableLanguages.includes('en') ? 'en' : availableLanguages[0];
+        // If we end up with an object, process it for localization
+        if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
+          const availableLanguages = Object.keys(parsed);
+          if (availableLanguages.length === 0) return fallback;
 
-  return contentObj[preferredLanguage] || fallback;
+          const preferredLanguage = availableLanguages.includes('en') ? 'en' : availableLanguages[0];
+          let result = parsed[preferredLanguage];
+
+          // If the result is still a string that looks like JSON, try parsing it again
+          if (typeof result === 'string' && (result.startsWith('{') || result.startsWith('['))) {
+            return getLocalizedContent(result, fallback);
+          }
+
+          return result || fallback;
+        }
+
+        // If we end up with a string after parsing, return it
+        if (typeof parsed === 'string') {
+          return parsed;
+        }
+
+        // If we end up with an array, return it
+        if (Array.isArray(parsed)) {
+          return parsed;
+        }
+      } catch {
+        // If parsing fails, return the original string
+        return contentObj;
+      }
+    }
+
+    // If it doesn't look like JSON, return the string as-is
+    return contentObj;
+  }
+
+  // If contentObj is an array, return it directly
+  if (Array.isArray(contentObj)) {
+    return contentObj;
+  }
+
+  // Handle localized object (with language keys)
+  if (typeof contentObj === 'object') {
+    const availableLanguages = Object.keys(contentObj);
+
+    // If no languages available, return fallback
+    if (availableLanguages.length === 0) return fallback;
+
+    // Priority order: en (English) first, then any other available language
+    const preferredLanguage = availableLanguages.includes('en') ? 'en' : availableLanguages[0];
+
+    return contentObj[preferredLanguage] || fallback;
+  }
+
+  return fallback;
 };
 
 const PackageCard = ({ packageData, handleClick, loadingButton }) => {
@@ -234,10 +299,10 @@ const PackageCard = ({ packageData, handleClick, loadingButton }) => {
             {/* Right side - Best seller and sold info */}
             <div className="text-left sm:text-right flex-shrink-0">
               <Text className="font-bold text-gray-600 mb-2 block text-sm sm:text-base">
-                {packageData.numberOfPurchases > 1500 ? "Best Seller" : packageData.numberOfPurchases > 1000 && packageData.numberOfPurchases < 1500 ? "Top Seller" : packageData.numberOfPurchases > 500 && packageData.numberOfPurchases < 1000 ? "Popular Deal" : "Limited Offer"}
+                {packageData.totalPackagesSold > 1500 ? "Best Seller" : packageData.totalPackagesSold > 1000 && packageData.totalPackagesSold < 1500 ? "Top Seller" : packageData.totalPackagesSold > 500 && packageData.totalPackagesSold < 1000 ? "Popular Deal" : "Limited Offer"}
               </Text>
               <Text className="text-xs sm:text-sm text-gray-500">
-                Sold {packageData.numberOfPurchases || 0} times
+                Sold {packageData.totalPackagesSold || 0} times
               </Text>
             </div>
           </div>
@@ -746,111 +811,109 @@ export const Content: React.FC = () => {
       );
     }
 
-if (messageStore.receivedType === 'Packages') {
-  let parseData;
-  try {
-    parseData = JSON.parse(messageStore.receivedContent?.extraContent ?? '[]');
-  } catch (error) {
-    console.error("Error parsing package data:", error);
-    return (
-      <div className="w-full p-5">
-        <Text className="text-red-500">Error loading package data</Text>
-      </div>
-    );
-  }
-
-  // Helper function to safely extract string values from nested objects
-  const extractValue = (obj, defaultValue = '') => {
-    if (typeof obj === 'string') return obj;
-    if (Array.isArray(obj)) return obj;
-    if (obj && typeof obj === 'object') {
-      // Handle nested language objects like {en: "value"} or {en: [{en: ["value"]}]}
-      const enValue = obj.en;
-      if (Array.isArray(enValue)) {
-        return enValue.map(item => extractValue(item)).flat();
+    if (messageStore.receivedType === 'Packages') {
+      let parseData;
+      try {
+        parseData = JSON.parse(messageStore.receivedContent?.extraContent ?? '[]');
+      } catch (error) {
+        console.error("Error parsing package data:", error);
+        return (
+          <div className="w-full p-5">
+            <Text className="text-red-500">Error loading package data</Text>
+          </div>
+        );
       }
-      return extractValue(enValue, defaultValue);
-    }
-    return defaultValue;
-  };
 
-  // Helper function to safely parse deeply nested JSON strings
-  const safeParseTaxInfo = (taxInfo) => {
-    if (typeof taxInfo !== 'string') return extractValue(taxInfo);
-    
-    try {
-      let parsed = taxInfo;
-      // Keep parsing until we get a non-string result or can't parse anymore
-      while (typeof parsed === 'string' && parsed.startsWith('{')) {
-        parsed = JSON.parse(parsed);
-      }
-      return extractValue(parsed);
-    } catch {
-      return taxInfo;
-    }
-  };
+      // Helper function to safely extract string values from nested objects
+      const extractValue = (obj, defaultValue = '') => {
+        if (typeof obj === 'string') return obj;
+        if (Array.isArray(obj)) return obj;
+        if (obj && typeof obj === 'object') {
+          // Handle nested language objects like {en: "value"} or {en: [{en: ["value"]}]}
+          const enValue = obj.en;
+          if (Array.isArray(enValue)) {
+            return enValue.map(item => extractValue(item)).flat();
+          }
+          return extractValue(enValue, defaultValue);
+        }
+        return defaultValue;
+      };
 
-  // Helper function to merge category images with package images
-  const mergeImages = (packageImages, toCategory) => {
-    let combinedImages = [...(packageImages || [])];
-    
-    // If to_category_id exists and toCategory has signedImages, merge them
-    if (toCategory && toCategory.signedImages && Array.isArray(toCategory.signedImages)) {
-      // Convert category images to the same format as package images
-      const categoryImages = toCategory.signedImages.map((img, index) => ({
-        alt: `Category image ${index + 1}`,
-        url: img.url,
-        order: (packageImages?.length || 0) + index + 1, // Continue numbering after package images
-        signedUrl: img.signedUrl
+      // Helper function to safely parse deeply nested JSON strings
+      const safeParseTaxInfo = (taxInfo) => {
+        if (typeof taxInfo !== 'string') return extractValue(taxInfo);
+
+        try {
+          let parsed = taxInfo;
+          // Keep parsing until we get a non-string result or can't parse anymore
+          while (typeof parsed === 'string' && parsed.startsWith('{')) {
+            parsed = JSON.parse(parsed);
+          }
+          return extractValue(parsed);
+        } catch {
+          return taxInfo;
+        }
+      };
+
+      // Helper function to merge category images with package images
+      const mergeImages = (packageImages, toCategory) => {
+        let combinedImages = [...(packageImages || [])];
+
+        // If to_category_id exists and toCategory has signedImages, merge them
+        if (toCategory && toCategory.signedImages && Array.isArray(toCategory.signedImages)) {
+          // Convert category images to the same format as package images
+          const categoryImages = toCategory.signedImages.map((img, index) => ({
+            alt: `Category image ${index + 1}`,
+            url: img.url,
+            order: (packageImages?.length || 0) + index + 1, // Continue numbering after package images
+            signedUrl: img.signedUrl
+          }));
+
+          combinedImages = [...combinedImages, ...categoryImages];
+        }
+
+        return combinedImages;
+      };
+
+      // Clean the package data
+      const cleanedPackages = parseData.map(pkg => ({
+        ...pkg,
+        packageNames: extractValue(pkg.packageNames),
+        packageDescriptions: extractValue(pkg.packageDescriptions),
+        packageBenefits: extractValue(pkg.packageBenefits, []),
+        packageTags: extractValue(pkg.packageTags, []),
+        taxInformation: safeParseTaxInfo(pkg.taxInformation),
+        currencies: extractValue(pkg.currencies),
+        packageAlerts: extractValue(pkg.packageAlerts),
+        buttonTexts: extractValue(pkg.buttonTexts),
+        // Merge images if to_category_id exists
+        signedImageUrls: pkg.to_category_id ?
+          mergeImages(pkg.signedImageUrls, pkg.toCategory) :
+          pkg.signedImageUrls
       }));
-      
-      combinedImages = [...combinedImages, ...categoryImages];
+
+      const sortedPackages = cleanedPackages.sort((a, b) => {
+        const purchasesA = a.totalPackagesSold || 0;
+        const purchasesB = b.totalPackagesSold || 0;
+        return purchasesB - purchasesA;
+      });
+
+      return (
+        <div
+          className="w-full space-y-6 relative"
+          style={{ height: '100%', padding: '3rem 1rem', overflowY: 'scroll' }}
+        >
+          {sortedPackages.map((packageData) => (
+            <PackageCard
+              key={packageData.id}
+              packageData={packageData}
+              handleClick={(data) => handlePackageClicked(data)}
+              loadingButton={loading}
+            />
+          ))}
+        </div>
+      );
     }
-    
-    return combinedImages;
-  };
-
-  // Clean the package data
-  const cleanedPackages = parseData.map(pkg => ({
-    ...pkg,
-    packageNames: extractValue(pkg.packageNames),
-    packageDescriptions: extractValue(pkg.packageDescriptions),
-    packageBenefits: extractValue(pkg.packageBenefits, []),
-    packageTags: extractValue(pkg.packageTags, []),
-    taxInformation: safeParseTaxInfo(pkg.taxInformation),
-    currencies: extractValue(pkg.currencies),
-    packageAlerts: extractValue(pkg.packageAlerts),
-    buttonTexts: extractValue(pkg.buttonTexts),
-    // Merge images if to_category_id exists
-    signedImageUrls: pkg.to_category_id ? 
-      mergeImages(pkg.signedImageUrls, pkg.toCategory) : 
-      pkg.signedImageUrls
-  }));
-
-  const sortedPackages = cleanedPackages.sort((a, b) => {
-    const purchasesA = a.numberOfPurchases || 0;
-    const purchasesB = b.numberOfPurchases || 0;
-    return purchasesB - purchasesA;
-  });
-
-  console.info("packageDatapackageDatapackageData", sortedPackages);
-  
-  return (
-    <div
-      className="w-full space-y-6 relative"
-      style={{ height: '100%', padding: '3rem 1rem', overflowY: 'scroll' }}
-    >
-      {sortedPackages.map((packageData) => (
-        <PackageCard
-          key={packageData.id}
-          packageData={packageData}
-          handleClick={(data) => handlePackageClicked(data)}
-          loadingButton={loading}
-        />
-      ))}
-    </div>
-  );
-}
     if (messageStore.receivedType === "ChatMessage") {
       return (
         <div className="flex w-full flex-col items-center justify-center gap-2 p-4">
