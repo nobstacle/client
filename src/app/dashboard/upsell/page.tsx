@@ -654,11 +654,13 @@ export default function Upsell() {
         <div className="min-h-full bg-gray-50">
             <div className="mx-auto p-6">
                 {/* Controls Section */}
+                {/* Controls Section */}
                 <Card className="mb-6 shadow-sm">
                     <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center">
-                        {/* Left side - Filter dropdowns (50% width) */}
+                        {/* Left side - Filter dropdowns and Send button - 50% width */}
                         <div className="w-full lg:w-1/2 flex flex-col sm:flex-row gap-3">
-                            <div className="flex-1">
+                            {/* Package Select - 20% of total width (40% of left section) */}
+                            <div className="flex-[2]">
                                 <Select
                                     placeholder="Select packages to exclude"
                                     allowClear
@@ -691,7 +693,9 @@ export default function Upsell() {
                                     ))}
                                 </Select>
                             </div>
-                            <div className="flex-1">
+
+                            {/* Category Select - 20% of total width (40% of left section) */}
+                            <div className="flex-[2]">
                                 <Select
                                     placeholder="From Category"
                                     allowClear
@@ -728,26 +732,35 @@ export default function Upsell() {
                                     }
                                 </Select>
                             </div>
+
+                            {/* Send Button - 10% of total width (20% of left section) */}
+                            <div className="flex-[1] flex justify-start">
+                                <Button
+                                    type="primary"
+                                    icon={<SendIcon />}
+                                    onClick={handlePackageSend}
+                                    loading={loadingData}
+                                    className="flex items-center justify-center bg-blue-600 hover:bg-blue-700 rounded-md px-4 py-2 text-white headerButton customHeaderButton"
+                                    size="large"
+                                />
+                            </div>
                         </div>
 
-                        {/* Right side - Search input and Send button (50% width) */}
-                        <div className="w-full lg:w-1/2 flex gap-3">
-                            <Input
-                                placeholder="Search by confirmation, package, email, or status..."
-                                prefix={<SearchOutlined className="text-gray-400" />}
-                                value={searchTerm}
-                                onChange={searchTransactions}
-                                className="flex-1"
-                                size="large"
-                            />
-                            <Button
-                                type="primary"
-                                icon={<SendIcon />}
-                                onClick={handlePackageSend}
-                                loading={loadingData}
-                                className="flex items-center justify-center bg-blue-600 hover:bg-blue-700 rounded-md px-4 py-2 text-white headerButton customHeaderButton"
-                                size="large"
-                            />
+                        {/* Right side - Search input - 50% width */}
+                        <div className="w-full lg:w-1/2">
+                            {/* Search Input - 30% of total width (60% of right section) positioned at flex-end */}
+                            <div className="flex justify-end">
+                                <div className="w-3/5">
+                                    <Input
+                                        placeholder="Search by confirmation, package, email, or status..."
+                                        prefix={<SearchOutlined className="text-gray-400" />}
+                                        value={searchTerm}
+                                        onChange={searchTransactions}
+                                        className="w-full"
+                                        size="large"
+                                    />
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </Card>
