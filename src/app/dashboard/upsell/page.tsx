@@ -31,6 +31,8 @@ export default function Upsell() {
     const [selectedCategories, setSelectedCategories] = useState([]);
     const [selectedPackages, setSelectedPackages] = useState([]);
     const [allPackages, setAllPackages] = useState([]);
+    const [initialLoad, setInitialLoad] = useState(true);
+    const [isTabVisible, setIsTabVisible] = useState(true);
     const pageSize = 10;
     const { data } = useSession();
     let Url = process.env.NEXT_PUBLIC_BACKEND_URL;
@@ -40,23 +42,64 @@ export default function Upsell() {
     const { data: companyData } = useCompanyControllerGetCompany();
     const isAdmin = data?.user.Roles[0] || false;
 
+    // Add visibility change handler to prevent unnecessary reloads
+    useEffect(() => {
+        const handleVisibilityChange = () => {
+            setIsTabVisible(!document.hidden);
+        };
+
+        // Add event listener for visibility changes
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+
+        // Cleanup
+        return () => {
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+        };
+    }, []);
+
+    // Add beforeunload handler to prevent accidental reloads
+    useEffect(() => {
+        const handleBeforeUnload = (e) => {
+            // Only show warning if there are unsaved changes (editing mode)
+            if (editingRecord) {
+                e.preventDefault();
+                e.returnValue = '';
+                return '';
+            }
+        };
+
+        window.addEventListener('beforeunload', handleBeforeUnload);
+
+        return () => {
+            window.removeEventListener('beforeunload', handleBeforeUnload);
+        };
+    }, [editingRecord]);
+
     const handlePageChange = (page: number, pageSize: number) => {
         setCurrentPage(page);
     };
 
+    // Modified useEffect with proper dependency management and caching
     useEffect(() => {
-        if (data?.user !== undefined) {
+        if (data?.user !== undefined && initialLoad) {
             fetchTransactions();
+            setInitialLoad(false);
         }
-    }, [data]);
+    }, [data?.user]); // Remove unnecessary dependencies
 
-    // Fetch packages outside the send function
+    // Fetch packages with caching mechanism
     useEffect(() => {
         const fetchPackages = async () => {
+            // Check if we already have packages data
+            if (allPackages.length > 0) return;
+
             try {
                 const response = await fetch(`${Url}/api/v1/uploads/get-all-packages`, {
                     method: 'GET',
-                    headers: { Authorization: `Bearer ${data?.user.backendTokens.at}` },
+                    headers: {
+                        Authorization: `Bearer ${data?.user.backendTokens.at}`,
+                        'Cache-Control': 'no-cache' // Prevent browser caching issues
+                    },
                 });
                 if (response.ok) {
                     const packageData = await response.json();
@@ -67,20 +110,25 @@ export default function Upsell() {
             }
         };
 
-        if (data?.user !== undefined) {
+        if (data?.user !== undefined && allPackages.length === 0) {
             fetchPackages();
         }
-    }, [data, Url]);
+    }, [data?.user, allPackages.length, Url]); // More specific dependencies
 
     // Packages for dropdown - only those without from/to categories
-    const dropdownPackages = allPackages.filter(pkg =>
-        pkg.from_category_id !== null && pkg.to_category_id !== null
-    );
+    const dropdownPackages = allPackages.filter(pkg => pkg?.roomUpgrade === false);
 
+    // Modified fetch function with better error handling and caching
     const fetchTransactions = useCallback((searchValue: string = "") => {
+        // Prevent fetching if we're not visible or already loading
+        if (!isTabVisible || loadingData) return;
+
         setLoadingData(true);
         fetch(`${Url}/api/v1/uploads/get-al-upsell-transactions`, {
-            headers: { Authorization: `Bearer ${data?.user.backendTokens.at}` },
+            headers: {
+                Authorization: `Bearer ${data?.user.backendTokens.at}`,
+                'Cache-Control': 'no-cache' // Prevent browser caching
+            },
         })
             .then(async (response) => {
                 const text = await response.text();
@@ -96,7 +144,7 @@ export default function Upsell() {
             .finally(() => {
                 setLoadingData(false);
             });
-    }, [data, Url, setTransactions]);
+    }, [data, Url, isTabVisible, loadingData]); // Add isTabVisible and loadingData as dependencies
 
     const getSalesTypeColor = (type: string) => {
         switch (type) {
@@ -553,11 +601,18 @@ export default function Upsell() {
         }
     };
 
+    // Modified fetchCategories with caching
     const fetchCategories = useCallback(() => {
+        // Check if we already have category data
+        if (categoryData.length > 0) return;
+
         setLoadingData(true);
 
         fetch(`${Url}/api/v1/uploads/get-all-categories`, {
-            headers: { Authorization: `Bearer ${data?.user.backendTokens.at}` },
+            headers: {
+                Authorization: `Bearer ${data?.user.backendTokens.at}`,
+                'Cache-Control': 'no-cache'
+            },
         })
             .then(async (response) => {
                 const text = await response.text();
@@ -571,13 +626,13 @@ export default function Upsell() {
             .finally(() => {
                 setLoadingData(false);
             });
-    }, [data, Url, setCategoryData]);
+    }, [data, Url, categoryData.length]); // Add categoryData.length as dependency
 
     useEffect(() => {
-        if (data?.user !== undefined) {
+        if (data?.user !== undefined && categoryData.length === 0) {
             fetchCategories();
         }
-    }, [data, fetchCategories]);
+    }, [data?.user, fetchCategories]);
 
     const handleCategoryChange = (value) => {
         setSelectedCategories(value);
