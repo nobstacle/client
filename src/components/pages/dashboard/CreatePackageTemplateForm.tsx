@@ -20,7 +20,7 @@ import {
   Spin,
   Card
 } from "antd";
-import { UploadOutlined, LoadingOutlined } from "@ant-design/icons";
+import { UploadOutlined, LoadingOutlined, PlusOutlined, DeleteOutlined } from "@ant-design/icons";
 import { languages } from "../../../constant/languages";
 import {
   useCompanyControllerGetCompany,
@@ -30,12 +30,12 @@ import {
 } from "../../../lib/client/api";
 import { useSession } from "next-auth/react";
 
-const { Text } = Typography;
+const { Text, Title } = Typography;
 const { Option } = Select;
 const { TextArea } = Input;
 
-
-interface CreatePackageFormFieldValues {
+// Separate interfaces for better type safety
+interface NonMultilingualFields {
   packageCode: string;
   originalPrice: number;
   discountedPrice?: number;
@@ -50,6 +50,10 @@ interface CreatePackageFormFieldValues {
   incentivePercentage?: number;
   companyId?: number;
   templateId?: number;
+  totalPackagesSold?: number;
+}
+
+interface MultilingualFields {
   packageName: string;
   packageDescription?: string;
   packageBenefits: string[];
@@ -58,13 +62,24 @@ interface CreatePackageFormFieldValues {
   currency: string;
   packageAlert?: string;
   buttonText: string;
-  newTag?: string;
-  newBenefit?: string;
-  langCode: string;
-  totalPackagesSold?: number;
 }
 
-const schema = yup.object().shape({
+interface LanguageCard {
+  id: string;
+  langCode: string;
+  data: MultilingualFields;
+  benefits: string[];
+  tags: string[];
+  newBenefit: string;
+  newTag: string;
+}
+
+interface CreatePackageFormFieldValues extends NonMultilingualFields {
+  languageCards: LanguageCard[];
+}
+
+// Schema for non-multilingual fields
+const nonMultilingualSchema = yup.object().shape({
   packageCode: yup.string().required("Package code is required").max(50, "Package code must be at most 50 characters"),
   originalPrice: yup.number().required("Original price is required").min(0, "Price must be positive"),
   discountedPrice: yup.number().min(0, "Discounted price must be positive"),
@@ -85,25 +100,35 @@ const schema = yup.object().shape({
     otherwise: (schema) => schema.notRequired().nullable()
   }),
   incentivePercentage: yup.number().min(0).max(100, "Incentive percentage must be between 0-100"),
+  totalPackagesSold: yup.number().min(0, "Total packages sold must be a non-negative number"),
+});
 
+// Schema for multilingual fields
+const multilingualSchema = yup.object().shape({
   packageName: yup.string().required("Package name is required").max(100, "Name must be at most 100 characters"),
   packageDescription: yup.string().max(1000, "Description must be at most 1000 characters"),
   taxInformation: yup.string().max(500, "Tax information must be at most 500 characters"),
   currency: yup.string().required("Currency is required"),
   packageAlert: yup.string().max(200, "Alert text must be at most 200 characters"),
   buttonText: yup.string().required("Button text is required").max(50, "Button text must be at most 50 characters"),
-  langCode: yup
-    .array()
-    .of(yup.string().required("Language is required"))
+});
+
+// Combined schema
+const schema = nonMultilingualSchema.shape({
+  languageCards: yup.array()
+    .of(yup.object().shape({
+      id: yup.string().required(),
+      langCode: yup.string().required("Language is required"),
+      data: multilingualSchema
+    }))
     .min(1, "At least one language is required")
-    .required("Language is required"),
-  totalPackagesSold: yup.number().min(0, "Total packages sold must be a non-negative number"),
+    .required("Language cards are required"),
 });
 
 interface CreatePackageFormProps {
   cb?: (packageData: any, isUpdate: boolean) => void;
-  initialData?: any; // The package data for editing
-  isEdit?: boolean;  // Whether in edit mode
+  initialData?: any;
+  isEdit?: boolean;
 }
 
 const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
@@ -113,35 +138,76 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
 }) => {
   const packageTags = usePackageControllerGetPackageTags();
   const company = useCompanyControllerGetCompany();
+  const { data: sessionData } = useSession();
+  let Url = process.env.NEXT_PUBLIC_BACKEND_URL;
+
+  const [images, setImages] = React.useState<any[]>([]);
+  const [categoryData, setCategoryData] = React.useState<any[]>([]);
+  const [selectedLanguages, setSelectedLanguages] = React.useState<string[]>([]);
 
   const getMultilingualValue = (field: any, fallbackLang = 'en') => {
     if (!field || typeof field !== 'object') return field || '';
-
-    // Get the first available language value
     const firstLangValue = field[fallbackLang] || field[Object.keys(field)[0]] || '';
-
-    // Handle nested objects (like in package ID 14)
     if (Array.isArray(firstLangValue)) {
       return firstLangValue.map(item => {
-        // If item is an object with language keys, extract the value
         if (typeof item === 'object' && item !== null) {
           return item[fallbackLang] || item[Object.keys(item)[0]] || '';
         }
         return item;
       }).filter(Boolean);
     }
-
     return firstLangValue;
   };
 
-  // Helper function to convert price from cents to dollars
   const convertFromCents = (value: number) => {
     return value ? value / 100 : 0;
   };
 
-  // Set default values based on edit mode
-  const getDefaultValues = () => {
+  const generateId = () => Math.random().toString(36).substr(2, 9);
+
+  const createDefaultLanguageCard = (langCode = '', data: Partial<MultilingualFields> = {}): LanguageCard => {
+    const benefits = Array.isArray(data.packageBenefits) ? [...data.packageBenefits] : [];
+    const tags = Array.isArray(data.packageTags) ? [...data.packageTags] : [];
+
+    return {
+      id: generateId(),
+      langCode,
+      data: {
+        packageName: data.packageName || "",
+        packageDescription: data.packageDescription || "",
+        packageBenefits: benefits,
+        packageTags: tags,
+        taxInformation: data.taxInformation || "",
+        currency: data.currency || "AED",
+        packageAlert: data.packageAlert || "",
+        buttonText: data.buttonText || "Buy Now",
+      },
+      benefits: benefits,
+      tags: tags,
+      newBenefit: "",
+      newTag: "",
+    };
+  };
+
+  const getDefaultValues = (): CreatePackageFormFieldValues => {
     if (isEdit && initialData) {
+      // For edit mode, create language cards from existing data
+      const existingLanguages = Object.keys(initialData.packageNames || {});
+      const languageCards = existingLanguages.map(langCode => {
+        return createDefaultLanguageCard(langCode, {
+          packageName: getMultilingualValue(initialData.packageNames, langCode),
+          packageDescription: getMultilingualValue(initialData.packageDescriptions, langCode),
+          packageBenefits: getMultilingualValue(initialData.packageBenefits, langCode),
+          packageTags: getMultilingualValue(initialData.packageTags, langCode),
+          taxInformation: getMultilingualValue(initialData.taxInformation, langCode),
+          currency: getMultilingualValue(initialData.currencies, langCode),
+          packageAlert: getMultilingualValue(initialData.packageAlerts, langCode),
+          buttonText: getMultilingualValue(initialData.buttonTexts, langCode),
+        });
+      });
+
+      setSelectedLanguages(existingLanguages);
+
       return {
         packageCode: initialData.packageCode || "",
         originalPrice: convertFromCents(initialData.originalPrice) || 0,
@@ -152,30 +218,22 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
         active: initialData.active || false,
         priceLevel: initialData.priceLevel || undefined,
         roomUpgrade: initialData.roomUpgrade || false,
-        from_category_id: initialData.from_category_id || undefined, // Change "" to undefined
-        to_category_id: initialData.to_category_id || undefined,     // Change "" to undefined
+        from_category_id: initialData.from_category_id || undefined,
+        to_category_id: initialData.to_category_id || undefined,
         incentivePercentage: initialData.incentivePercentage || undefined,
         companyId: initialData.companyId || company.data?.id,
         templateId: initialData.templateId || undefined,
-
-        packageName: getMultilingualValue(initialData.packageNames),
-        packageDescription: getMultilingualValue(initialData.packageDescriptions),
-        packageBenefits: [],
-        packageTags: [],
-        taxInformation: getMultilingualValue(initialData.taxInformation),
-        currency: getMultilingualValue(initialData.currencies) || "AED",
-        packageAlert: getMultilingualValue(initialData.packageAlerts),
-        buttonText: getMultilingualValue(initialData.buttonTexts) || "Buy Now",
-        langCode: [],
+        totalPackagesSold: initialData.totalPackagesSold || 0,
+        languageCards: languageCards.length > 0 ? languageCards : [createDefaultLanguageCard()],
       };
     } else {
       return {
         packageCode: "",
-        originalPrice: undefined,
+        originalPrice: 0,
         discountedPrice: undefined,
         includesTax: false,
         taxPercentage: undefined,
-        priceAlgorithm: undefined,
+        priceAlgorithm: "",
         active: false,
         priceLevel: undefined,
         roomUpgrade: false,
@@ -184,17 +242,8 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
         incentivePercentage: undefined,
         companyId: company.data?.id,
         templateId: undefined,
-
-        packageName: "",
-        packageDescription: "",
-        packageBenefits: [],
-        packageTags: [],
-        taxInformation: "",
-        currency: "AED",
-        packageAlert: "",
-        buttonText: "Buy Now",
-        langCode: [],
-        totalPackagesSold: 0
+        totalPackagesSold: 0,
+        languageCards: [createDefaultLanguageCard()],
       };
     }
   };
@@ -204,6 +253,7 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
     control,
     watch,
     reset,
+    setValue,
     formState: { errors },
   } = useForm<CreatePackageFormFieldValues>({
     resolver: yupResolver(schema),
@@ -212,16 +262,8 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
 
   const createPackage = usePackageControllerCreatePackage();
   const updatePackage = usePackageControllerUpdatePackage();
-  const { data } = useSession();
-  let Url = process.env.NEXT_PUBLIC_BACKEND_URL;
-  const [benefits, setBenefits] = React.useState<string[]>([]);
-  const [tags, setTags] = React.useState<string[]>([]);
-  const [newBenefit, setNewBenefit] = React.useState("");
-  const [newTag, setNewTag] = React.useState("");
-  const [images, setImages] = React.useState<any[]>([]);
-  const [categoryData, setCategoryData] = React.useState<any[]>([]);
 
-  const watchedLangCode = watch("langCode");
+  const watchedLanguageCards = watch("languageCards");
   const watchedRoomUpgrade = watch("roomUpgrade");
   const watchedFromCategory = watch("from_category_id");
   const watchedToCategory = watch("to_category_id");
@@ -230,13 +272,11 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
     return categories.map(category => ({
       value: category.id,
       label: category.name,
-      // Optional: include additional data if needed
       priceLevel: category.priceLevel,
       taxPercentage: category.taxPercentage,
       soldOut: category.soldOut
     }));
   };
-
 
   const getAvailableFromOptions = () => {
     const options = transformCategoryToOptions(categoryData);
@@ -247,9 +287,169 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
     const options = transformCategoryToOptions(categoryData);
     return options.filter(option => option.value !== watchedFromCategory);
   };
+
+  const getAvailableLanguages = (currentLangCode?: string) => {
+    return languages.filter(lang =>
+      !selectedLanguages.includes(lang.code) || lang.code === currentLangCode
+    );
+  };
+
+  console.info("getAvailableLanguages",getAvailableLanguages('en'));
+
+  const addLanguageCard = () => {
+    const newCard = createDefaultLanguageCard();
+    const updatedCards = [...watchedLanguageCards, newCard];
+    setValue("languageCards", updatedCards);
+  };
+
+  const removeLanguageCard = (cardId: string) => {
+    const cardToRemove = watchedLanguageCards.find(card => card.id === cardId);
+    if (cardToRemove?.langCode) {
+      setSelectedLanguages(prev => prev.filter(lang => lang !== cardToRemove.langCode));
+    }
+    const updatedCards = watchedLanguageCards.filter(card => card.id !== cardId);
+    setValue("languageCards", updatedCards);
+  };
+
+  const updateLanguageCard = (cardId: string, field: string, value: any) => {
+    const updatedCards = watchedLanguageCards.map(card => {
+      if (card.id === cardId) {
+        if (field === 'langCode') {
+          // Update selected languages
+          const oldLang = card.langCode;
+          if (oldLang) {
+            setSelectedLanguages(prev => prev.filter(lang => lang !== oldLang));
+          }
+          if (value) {
+            setSelectedLanguages(prev => [...prev, value]);
+          }
+        }
+        return { ...card, [field]: value };
+      }
+      return card;
+    });
+    setValue("languageCards", updatedCards, { shouldValidate: true });
+  };
+
+  const updateLanguageCardData = (cardId: string, field: string, value: any) => {
+    const updatedCards = watchedLanguageCards.map(card => {
+      if (card.id === cardId) {
+        return {
+          ...card,
+          data: { ...card.data, [field]: value }
+        };
+      }
+      return card;
+    });
+    setValue("languageCards", updatedCards);
+  };
+
+  const addBenefit = (cardId: string) => {
+    const currentCards = watch("languageCards");
+    const card = currentCards.find(c => c.id === cardId);
+
+    if (card && card.newBenefit && card.newBenefit.trim()) {
+      const newBenefit = card.newBenefit.trim();
+
+      // Check for duplicates
+      if (!card.benefits.includes(newBenefit)) {
+        const updatedCards = currentCards.map(c => {
+          if (c.id === cardId) {
+            const updatedBenefits = [...c.benefits, newBenefit];
+            return {
+              ...c,
+              benefits: updatedBenefits,
+              newBenefit: '',
+              data: {
+                ...c.data,
+                packageBenefits: updatedBenefits
+              }
+            };
+          }
+          return c;
+        });
+
+        setValue("languageCards", updatedCards, { shouldValidate: true });
+      } else {
+        message.warning('This benefit already exists');
+      }
+    }
+  };
+
+  const removeBenefit = (cardId: string, index: number) => {
+    const currentCards = watch("languageCards");
+    const updatedCards = currentCards.map(card => {
+      if (card.id === cardId) {
+        const updatedBenefits = card.benefits.filter((_, i) => i !== index);
+        return {
+          ...card,
+          benefits: updatedBenefits,
+          data: {
+            ...card.data,
+            packageBenefits: updatedBenefits
+          }
+        };
+      }
+      return card;
+    });
+    setValue("languageCards", updatedCards, { shouldValidate: true });
+  };
+
+  const addTag = (cardId: string) => {
+    const currentCards = watch("languageCards");
+    const card = currentCards.find(c => c.id === cardId);
+
+    if (card && card.newTag && card.newTag.trim()) {
+      const newTag = card.newTag.trim();
+
+      // Check for duplicates
+      if (!card.tags.includes(newTag)) {
+        const updatedCards = currentCards.map(c => {
+          if (c.id === cardId) {
+            const updatedTags = [...c.tags, newTag];
+            return {
+              ...c,
+              tags: updatedTags,
+              newTag: '',
+              data: {
+                ...c.data,
+                packageTags: updatedTags
+              }
+            };
+          }
+          return c;
+        });
+
+        setValue("languageCards", updatedCards, { shouldValidate: true });
+      } else {
+        message.warning('This tag already exists');
+      }
+    }
+  };
+
+  const removeTag = (cardId: string, index: number) => {
+    const currentCards = watch("languageCards");
+    const updatedCards = currentCards.map(card => {
+      if (card.id === cardId) {
+        const updatedTags = card.tags.filter((_, i) => i !== index);
+        return {
+          ...card,
+          tags: updatedTags,
+          data: {
+            ...card.data,
+            packageTags: updatedTags
+          }
+        };
+      }
+      return card;
+    });
+    setValue("languageCards", updatedCards, { shouldValidate: true });
+  };
+
+  // Fetch categories
   React.useEffect(() => {
     fetch(`${Url}/api/v1/uploads/get-all-categories`, {
-      headers: { Authorization: `Bearer ${data?.user.backendTokens.at}` },
+      headers: { Authorization: `Bearer ${sessionData?.user.backendTokens.at}` },
     })
       .then(async (response) => {
         const text = await response.text();
@@ -260,24 +460,12 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
       .catch((error) => {
         console.warn("Error fetching data:", error);
       });
-  }, [data]);
+  }, [sessionData]);
 
+  // Reset form when edit mode changes
   React.useEffect(() => {
     if (isEdit && initialData) {
       reset(getDefaultValues());
-
-      // Set benefits and tags from initial data with proper handling
-      const initialBenefits = getMultilingualValue(initialData.packageBenefits);
-      const initialTags = getMultilingualValue(initialData.packageTags);
-
-      // Ensure arrays are properly flattened
-      const processedBenefits = Array.isArray(initialBenefits) ? initialBenefits.flat() : [];
-      const processedTags = Array.isArray(initialTags) ? initialTags.flat() : [];
-
-      setBenefits(processedBenefits);
-      setTags(processedTags);
-
-      // Set images if available
       if (initialData.images && Array.isArray(initialData.images)) {
         setImages(initialData.images);
       }
@@ -285,11 +473,9 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
   }, [isEdit, initialData, reset]);
 
   const handleCreatePackage = (data: CreatePackageFormFieldValues) => {
-    console.info("OK")
-    // Create FormData for multipart/form-data
     const formData = new FormData();
 
-    // Add all the package data
+    // Add non-multilingual fields
     formData.append('packageCode', data.packageCode);
     formData.append('originalPrice', data.originalPrice.toString());
     if (data.discountedPrice) {
@@ -306,10 +492,10 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
     }
     formData.append('roomUpgrade', data.roomUpgrade.toString());
     if (data.from_category_id) {
-      formData.append('from_category_id', data.from_category_id);
+      formData.append('from_category_id', data.from_category_id.toString());
     }
     if (data.to_category_id) {
-      formData.append('to_category_id', data.to_category_id);
+      formData.append('to_category_id', data.to_category_id.toString());
     }
     if (data.incentivePercentage) {
       formData.append('incentivePercentage', data.incentivePercentage.toString());
@@ -320,22 +506,43 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
       formData.append('templateId', data.templateId.toString());
     }
 
-    // Add multi-language JSON fields
-    formData.append('packageNames', JSON.stringify({ [watchedLangCode]: data.packageName }));
-    formData.append('packageDescriptions', JSON.stringify({ [watchedLangCode]: data.packageDescription || "" }));
-    formData.append('packageBenefits', JSON.stringify({ [watchedLangCode]: benefits }));
-    formData.append('packageTags', JSON.stringify({ [watchedLangCode]: tags }));
-    formData.append('taxInformation', JSON.stringify({ [watchedLangCode]: data.taxInformation || "" }));
-    formData.append('currencies', JSON.stringify({ [watchedLangCode]: data.currency }));
-    formData.append('packageAlerts', JSON.stringify({ [watchedLangCode]: data.packageAlert || "" }));
-    formData.append('buttonTexts', JSON.stringify({ [watchedLangCode]: data.buttonText }));
+    // Build multilingual data objects
+    const packageNames: Record<string, string> = {};
+    const packageDescriptions: Record<string, string> = {};
+    const packageBenefits: Record<string, string[]> = {};
+    const packageTags: Record<string, string[]> = {};
+    const taxInformation: Record<string, string> = {};
+    const currencies: Record<string, string> = {};
+    const packageAlerts: Record<string, string> = {};
+    const buttonTexts: Record<string, string> = {};
 
-    // Add images to FormData (only files that have originFileObj)
+    data.languageCards.forEach(card => {
+      if (card.langCode) {
+        packageNames[card.langCode] = card.data.packageName;
+        packageDescriptions[card.langCode] = card.data.packageDescription || "";
+        packageBenefits[card.langCode] = card.benefits;
+        packageTags[card.langCode] = card.tags;
+        taxInformation[card.langCode] = card.data.taxInformation || "";
+        currencies[card.langCode] = card.data.currency;
+        packageAlerts[card.langCode] = card.data.packageAlert || "";
+        buttonTexts[card.langCode] = card.data.buttonText;
+      }
+    });
+
+    // Add multilingual data to FormData
+    formData.append('packageNames', JSON.stringify(packageNames));
+    formData.append('packageDescriptions', JSON.stringify(packageDescriptions));
+    formData.append('packageBenefits', JSON.stringify(packageBenefits));
+    formData.append('packageTags', JSON.stringify(packageTags));
+    formData.append('taxInformation', JSON.stringify(taxInformation));
+    formData.append('currencies', JSON.stringify(currencies));
+    formData.append('packageAlerts', JSON.stringify(packageAlerts));
+    formData.append('buttonTexts', JSON.stringify(buttonTexts));
+
+    // Add images
     images.forEach((image, index) => {
       if (image.originFileObj) {
-        // For newly uploaded files
         formData.append(`images`, image.originFileObj);
-        // Add image metadata
         formData.append(`imageMetadata[${index}]`, JSON.stringify({
           alt: image.alt || image.name,
           order: index + 1
@@ -344,7 +551,6 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
     });
 
     if (isEdit && initialData?.id) {
-      // Update existing package
       updatePackage.mutate(
         { id: initialData.id, data: formData },
         {
@@ -361,7 +567,6 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
         }
       );
     } else {
-      // Create new package
       createPackage.mutate(
         { data: formData },
         {
@@ -381,34 +586,10 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
   };
 
   const onSubmit: SubmitHandler<CreatePackageFormFieldValues> = (data) => {
-    console.info("HELOLOLOlo")
     handleCreatePackage(data);
-  }
-
-  const addBenefit = () => {
-    if (newBenefit.trim()) {
-      setBenefits([...benefits, newBenefit.trim()]);
-      setNewBenefit("");
-    }
-  };
-
-  const addTag = () => {
-    if (newTag.trim()) {
-      setTags([...tags, newTag.trim()]);
-      setNewTag("");
-    }
-  };
-
-  const removeBenefit = (index: number) => {
-    setBenefits(benefits.filter((_, i) => i !== index));
-  };
-
-  const removeTag = (index: number) => {
-    setTags(tags.filter((_, i) => i !== index));
   };
 
   const handleImageUpload = (info: any) => {
-    // Handle file list updates from Upload component
     if (info.fileList) {
       const processedImages = info.fileList.map((file: any, index: number) => ({
         uid: file.uid,
@@ -416,14 +597,12 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
         url: file.url || (file.originFileObj ? URL.createObjectURL(file.originFileObj) : ''),
         alt: file.name,
         order: index + 1,
-        originFileObj: file.originFileObj, // This is the actual file object we need
+        originFileObj: file.originFileObj,
         status: file.status
       }));
-
       setImages(processedImages);
     }
 
-    // Handle individual file status updates
     if (info.file) {
       if (info.file.status === 'done') {
         message.success(`${info.file.name} file uploaded successfully.`);
@@ -455,39 +634,30 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
           zIndex: 1000,
           borderRadius: '8px'
         }}>
-          <Spin
-            indicator={loadingIndicator}
-            size="large"
-          />
-          <Text style={{
-            marginTop: '16px',
-            fontSize: '16px',
-            color: '#1890ff',
-            fontWeight: 500
-          }}>
+          <Spin indicator={loadingIndicator} size="large" />
+          <Text style={{ marginTop: '16px', fontSize: '16px', color: '#1890ff', fontWeight: 500 }}>
             {isEdit ? 'Updating package...' : 'Creating package...'}
           </Text>
-          <Text type="secondary" style={{
-            marginTop: '8px',
-            fontSize: '14px'
-          }}>
+          <Text type="secondary" style={{ marginTop: '8px', fontSize: '14px' }}>
             Please wait while we process your request
           </Text>
         </div>
       )}
+
       <Form
         layout="vertical"
         onFinish={handleSubmit(onSubmit)}
         className="create-package-form"
         style={{ opacity: isLoading ? 0.6 : 1 }}
       >
-        <Space direction="vertical" size="middle" style={{ width: '100%', paddingTop: '1rem' }}>
+        <Space direction="vertical" size="large" style={{ width: '100%', paddingTop: '1rem' }}>
 
-          {/* Basic Information */}
-          <Card size="small" style={{ backgroundColor: '#fafafa' }}>
-            <Text strong>Basic Information</Text>
-            <Divider style={{ margin: '8px 0' }} />
-
+          {/* Non-Multilingual Fields */}
+          <Card
+            title={<Title level={4} style={{ margin: 0 }}>Package Configuration</Title>}
+            size="small"
+            style={{ backgroundColor: '#fafafa' }}
+          >
             <Row gutter={16}>
               <Col span={12}>
                 <Form.Item
@@ -504,163 +674,13 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
                         {...field}
                         placeholder="Enter unique package code"
                         status={errors.packageCode ? 'error' : ''}
-                        disabled={isEdit || isLoading} // Disable editing package code
+                        disabled={isEdit || isLoading}
                       />
                     )}
                   />
                 </Form.Item>
               </Col>
 
-              <Col span={12}>
-                <Form.Item
-                  label="Language"
-                  validateStatus={errors.langCode ? 'error' : ''}
-                  help={errors.langCode?.message}
-                  required
-                >
-                  <Controller
-                    name="langCode"
-                    control={control}
-                    render={({ field }) => (
-                      <Select
-                        {...field}
-                        placeholder="Select language"
-                        status={errors.langCode ? 'error' : ''}
-                        mode="multiple"
-                        disabled={isLoading}
-                        allowClear
-                      >
-                        {languages.map(({ code, name }) => (
-                          <Option value={code} key={code}>
-                            {name}
-                          </Option>
-                        ))}
-                      </Select>
-                    )}
-                  />
-                </Form.Item>
-              </Col>
-            </Row>
-
-            <Row gutter={16}>
-              <Col span={12}>
-                <Form.Item
-                  label="Package Name"
-                  validateStatus={errors.packageName ? 'error' : ''}
-                  help={errors.packageName?.message}
-                  required
-                >
-                  <Controller
-                    name="packageName"
-                    control={control}
-                    render={({ field }) => (
-                      <Input
-                        {...field}
-                        placeholder="Enter package name"
-                        status={errors.packageName ? 'error' : ''}
-                        disabled={isLoading}
-                      />
-                    )}
-                  />
-                </Form.Item>
-              </Col>
-
-              <Col span={12}>
-                <Form.Item
-                  label="Button Text"
-                  validateStatus={errors.buttonText ? 'error' : ''}
-                  help={errors.buttonText?.message}
-                  required
-                >
-                  <Controller
-                    name="buttonText"
-                    control={control}
-                    render={({ field }) => (
-                      <Input
-                        {...field}
-                        placeholder="e.g., Buy Now, Purchase"
-                        status={errors.buttonText ? 'error' : ''}
-                        disabled={isLoading}
-                      />
-                    )}
-                  />
-                </Form.Item>
-              </Col>
-            </Row>
-
-            <Row gutter={16}>
-              <Col span={12}>
-                <Form.Item
-                  label="Currency"
-                  validateStatus={errors.currency ? 'error' : ''}
-                  help={errors.currency?.message}
-                  required
-                >
-                  <Controller
-                    name="currency"
-                    control={control}
-                    render={({ field }) => (
-                      <Input
-                        {...field}
-                        placeholder="Enter currency code"
-                        status={errors.currency ? 'error' : ''}
-                        disabled={isLoading}
-                      />
-                    )}
-                  />
-                </Form.Item>
-              </Col>
-              <Col span={12}>
-                <Form.Item
-                  label="Price Level"
-                  validateStatus={errors.priceLevel ? 'error' : ''}
-                  help={errors.priceLevel?.message}
-                >
-                  <Controller
-                    name="priceLevel"
-                    control={control}
-                    render={({ field }) => (
-                      <InputNumber
-                        {...field}
-                        placeholder="Enter price level"
-                        style={{ width: '100%' }}
-                        status={errors.priceLevel ? 'error' : ''}
-                        disabled={isLoading}
-                        min={0}
-                      />
-                    )}
-                  />
-                </Form.Item>
-              </Col>
-            </Row>
-
-            <Form.Item
-              label="Description"
-              validateStatus={errors.packageDescription ? 'error' : ''}
-              help={errors.packageDescription?.message}
-            >
-              <Controller
-                name="packageDescription"
-                control={control}
-                render={({ field }) => (
-                  <TextArea
-                    {...field}
-                    placeholder="Enter package description"
-                    rows={4}
-                    status={errors.packageDescription ? 'error' : ''}
-                    disabled={isLoading}
-                  />
-                )}
-              />
-            </Form.Item>
-          </Card>
-
-          {/* Pricing */}
-          <Card size="small" style={{ backgroundColor: '#fafafa' }}>
-            <Text strong>Pricing Information</Text>
-            <Divider style={{ margin: '8px 0' }} />
-
-            <Row gutter={16}>
               <Col span={12}>
                 <Form.Item
                   label="Original Price"
@@ -685,7 +705,9 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
                   />
                 </Form.Item>
               </Col>
+            </Row>
 
+            <Row gutter={16}>
               <Col span={12}>
                 <Form.Item
                   label="Discounted Price"
@@ -709,9 +731,7 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
                   />
                 </Form.Item>
               </Col>
-            </Row>
 
-            <Row gutter={16}>
               <Col span={12}>
                 <Form.Item
                   label="Price Algorithm"
@@ -733,33 +753,10 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
                   />
                 </Form.Item>
               </Col>
-              <Col span={12}>
-                <Form.Item
-                  label="Total Packages Sold"
-                  validateStatus={errors.totalPackagesSold ? 'error' : ''}
-                  help={errors.totalPackagesSold?.message}
-                  required
-                >
-                  <Controller
-                    name="totalPackagesSold"
-                    control={control}
-                    render={({ field }) => (
-                      <InputNumber
-                        {...field}
-                        placeholder="Enter total packages sold"
-                        style={{ width: '100%' }}
-                        status={errors.totalPackagesSold ? 'error' : ''}
-                        disabled={isLoading}
-                        min={0}
-                      />
-                    )}
-                  />
-                </Form.Item>
-              </Col>
             </Row>
 
             <Row gutter={16}>
-              <Col span={12}>
+              <Col span={8}>
                 <Form.Item
                   label="Tax Percentage"
                   validateStatus={errors.taxPercentage ? 'error' : ''}
@@ -786,7 +783,7 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
                 </Form.Item>
               </Col>
 
-              <Col span={12}>
+              <Col span={8}>
                 <Form.Item
                   label="Incentive Percentage"
                   validateStatus={errors.incentivePercentage ? 'error' : ''}
@@ -812,32 +809,51 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
                   />
                 </Form.Item>
               </Col>
+
+              <Col span={8}>
+                <Form.Item
+                  label="Price Level"
+                  validateStatus={errors.priceLevel ? 'error' : ''}
+                  help={errors.priceLevel?.message}
+                >
+                  <Controller
+                    name="priceLevel"
+                    control={control}
+                    render={({ field }) => (
+                      <InputNumber
+                        {...field}
+                        placeholder="Enter price level"
+                        style={{ width: '100%' }}
+                        status={errors.priceLevel ? 'error' : ''}
+                        disabled={isLoading}
+                        min={0}
+                      />
+                    )}
+                  />
+                </Form.Item>
+              </Col>
             </Row>
 
-            <Form.Item label="Includes Tax">
-              <Controller
-                name="includesTax"
-                control={control}
-                render={({ field }) => (
-                  <Switch
-                    {...field}
-                    checked={field.value}
-                    checkedChildren="Yes"
-                    unCheckedChildren="No"
-                    disabled={isLoading}
-                  />
-                )}
-              />
-            </Form.Item>
-          </Card>
-
-          {/* Status and Settings */}
-          <Card size="small" style={{ backgroundColor: '#fafafa' }}>
-            <Text strong>Status & Settings</Text>
-            <Divider style={{ margin: '8px 0' }} />
-
             <Row gutter={16}>
-              <Col span={12}>
+              <Col span={8}>
+                <Form.Item label="Includes Tax">
+                  <Controller
+                    name="includesTax"
+                    control={control}
+                    render={({ field }) => (
+                      <Switch
+                        {...field}
+                        checked={field.value}
+                        checkedChildren="Yes"
+                        unCheckedChildren="No"
+                        disabled={isLoading}
+                      />
+                    )}
+                  />
+                </Form.Item>
+              </Col>
+
+              <Col span={8}>
                 <Form.Item label="Active">
                   <Controller
                     name="active"
@@ -855,8 +871,8 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
                 </Form.Item>
               </Col>
 
-              <Col span={12}>
-                <Form.Item label="Category Upgrade">
+              <Col span={8}>
+                <Form.Item label="Room Upgrade">
                   <Controller
                     name="roomUpgrade"
                     control={control}
@@ -924,114 +940,337 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
               </Row>
             )}
 
-            <Row gutter={16}>
-              <Col span={12}>
-                <Form.Item
-                  label="Tax Information"
-                  validateStatus={errors.taxInformation ? 'error' : ''}
-                  help={errors.taxInformation?.message}
-                >
-                  <Controller
-                    name="taxInformation"
-                    control={control}
-                    render={({ field }) => (
-                      <TextArea
-                        {...field}
-                        placeholder="Enter tax information"
-                        rows={3}
-                        status={errors.taxInformation ? 'error' : ''}
-                        disabled={isLoading}
-                      />
-                    )}
+            <Form.Item
+              label="Total Packages Sold"
+              validateStatus={errors.totalPackagesSold ? 'error' : ''}
+              help={errors.totalPackagesSold?.message}
+            >
+              <Controller
+                name="totalPackagesSold"
+                control={control}
+                render={({ field }) => (
+                  <InputNumber
+                    {...field}
+                    placeholder="Enter total packages sold"
+                    style={{ width: '100%' }}
+                    status={errors.totalPackagesSold ? 'error' : ''}
+                    disabled={isLoading}
+                    min={0}
                   />
-                </Form.Item>
-              </Col>
-
-              <Col span={12}>
-                <Form.Item
-                  label="Package Alert"
-                  validateStatus={errors.packageAlert ? 'error' : ''}
-                  help={errors.packageAlert?.message}
-                >
-                  <Controller
-                    name="packageAlert"
-                    control={control}
-                    render={({ field }) => (
-                      <TextArea
-                        {...field}
-                        placeholder="Enter alert message"
-                        rows={3}
-                        status={errors.packageAlert ? 'error' : ''}
-                        disabled={isLoading}
-                      />
-                    )}
-                  />
-                </Form.Item>
-              </Col>
-            </Row>
+                )}
+              />
+            </Form.Item>
           </Card>
 
-          {/* Package Details */}
-          <Card size="small" style={{ backgroundColor: '#fafafa' }}>
-            <Text strong>Package Details</Text>
-            <Divider style={{ margin: '8px 0' }} />
+          {/* Multilingual Fields - Language Cards */}
+          <Card
+            title={
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Title level={4} style={{ margin: 0 }}>Multi-Language Content</Title>
+                <Button
+                  type="dashed"
+                  icon={<PlusOutlined />}
+                  onClick={addLanguageCard}
+                  disabled={isLoading || selectedLanguages.length >= languages.length}
+                >
+                  Add Language
+                </Button>
+              </div>
+            }
+            size="small"
+          >
+            {errors.languageCards && (
+              <Alert
+                message={errors.languageCards.message}
+                type="error"
+                style={{ marginBottom: 16 }}
+              />
+            )}
 
-            <Row gutter={16}>
-              <Col md={12} xs={24}>
-                {/* Benefits */}
-                <Form.Item label="Package Benefits">
-                  <Space direction="vertical" style={{ width: '100%' }}>
-                    <Space style={{ width: '100%' }}>
-                      <Input
-                        value={newBenefit}
-                        onChange={(e) => setNewBenefit(e.target.value)}
-                        placeholder="Add benefit"
-                        onPressEnter={addBenefit}
-                        style={{ flex: 1 }}
-                        disabled={isLoading}
-                      />
-                      <Button onClick={addBenefit}>Add</Button>
-                    </Space>
-                    {benefits.map((benefit, index) => (
-                      <Space key={index} style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
-                        <Text>{benefit}</Text>
-                        <Button size="small" danger onClick={() => removeBenefit(index)} disabled={isLoading}>
+            <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+              {watchedLanguageCards.map((card, index) => (
+                <Card
+                  key={card.id}
+                  type="inner"
+                  size="small"
+                  title={
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <Text strong>Language {index + 1}</Text>
+                        <Select
+                          value={card.langCode}
+                          placeholder="Select Language"
+                          style={{ minWidth: 150 }}
+                          onChange={(value) => updateLanguageCard(card.id, 'langCode', value)}
+                          options={getAvailableLanguages(card.langCode).map(lang => ({
+                            value: lang.code,
+                            label: lang.name
+                          }))}
+                          disabled={isLoading}
+                        />
+                      </div>
+                      {watchedLanguageCards.length > 1 && (
+                        <Button
+                          type="text"
+                          danger
+                          icon={<DeleteOutlined />}
+                          onClick={() => removeLanguageCard(card.id)}
+                          disabled={isLoading}
+                        >
                           Remove
                         </Button>
-                      </Space>
-                    ))}
-                  </Space>
-                </Form.Item>
-              </Col>
-              <Col md={12} xs={24}>
-                {/* Tags */}
-                <Form.Item label="Package Tags">
-                  <Space direction="vertical" style={{ width: '100%' }}>
-                    <Space style={{ width: '100%' }}>
-                      <Input
-                        value={newTag}
-                        onChange={(e) => setNewTag(e.target.value)}
-                        placeholder="Add tag"
-                        onPressEnter={addTag}
-                        style={{ flex: 1 }}
-                        disabled={isLoading}
-                      />
-                      <Button onClick={addTag}>Add</Button>
-                    </Space>
-                    {tags.map((tag, index) => (
-                      <Space key={index} style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
-                        <Text>{tag}</Text>
-                        <Button size="small" danger onClick={() => removeTag(index)} disabled={isLoading}>
-                          Remove
-                        </Button>
-                      </Space>
-                    ))}
-                  </Space>
-                </Form.Item>
-              </Col>
-            </Row>
+                      )}
+                    </div>
+                  }
+                  style={{
+                    backgroundColor: card.langCode ? '#f9f9f9' : '#fff2e8',
+                    border: card.langCode ? '1px solid #d9d9d9' : '1px solid #ffcc99'
+                  }}
+                >
+                  {!card.langCode && (
+                    <Alert
+                      message="Please select a language for this content"
+                      type="warning"
+                      style={{ marginBottom: 16 }}
+                    />
+                  )}
 
-            {/* Images */}
+                  <Row gutter={16}>
+                    <Col span={12}>
+                      <Form.Item
+                        label="Package Name"
+                        validateStatus={errors.languageCards?.[index]?.data?.packageName ? 'error' : ''}
+                        help={errors.languageCards?.[index]?.data?.packageName?.message}
+                        required
+                      >
+                        <Input
+                          value={card.data.packageName}
+                          onChange={(e) => updateLanguageCardData(card.id, 'packageName', e.target.value)}
+                          placeholder="Enter package name"
+                          disabled={isLoading}
+                        />
+                      </Form.Item>
+                    </Col>
+
+                    <Col span={12}>
+                      <Form.Item
+                        label="Button Text"
+                        validateStatus={errors.languageCards?.[index]?.data?.buttonText ? 'error' : ''}
+                        help={errors.languageCards?.[index]?.data?.buttonText?.message}
+                        required
+                      >
+                        <Input
+                          value={card.data.buttonText}
+                          onChange={(e) => updateLanguageCardData(card.id, 'buttonText', e.target.value)}
+                          placeholder="e.g., Buy Now, Purchase"
+                          disabled={isLoading}
+                        />
+                      </Form.Item>
+                    </Col>
+                  </Row>
+
+                  <Row gutter={16}>
+                    <Col span={12}>
+                      <Form.Item
+                        label="Currency"
+                        validateStatus={errors.languageCards?.[index]?.data?.currency ? 'error' : ''}
+                        help={errors.languageCards?.[index]?.data?.currency?.message}
+                        required
+                      >
+                        <Input
+                          value={card.data.currency}
+                          onChange={(e) => updateLanguageCardData(card.id, 'currency', e.target.value)}
+                          placeholder="Enter currency code"
+                          disabled={isLoading}
+                        />
+                      </Form.Item>
+                    </Col>
+
+                    <Col span={12}>
+                      <Form.Item
+                        label="Package Alert"
+                        validateStatus={errors.languageCards?.[index]?.data?.packageAlert ? 'error' : ''}
+                        help={errors.languageCards?.[index]?.data?.packageAlert?.message}
+                      >
+                        <Input
+                          value={card.data.packageAlert}
+                          onChange={(e) => updateLanguageCardData(card.id, 'packageAlert', e.target.value)}
+                          placeholder="Enter alert message"
+                          disabled={isLoading}
+                        />
+                      </Form.Item>
+                    </Col>
+                  </Row>
+
+                  <Form.Item
+                    label="Package Description"
+                    validateStatus={errors.languageCards?.[index]?.data?.packageDescription ? 'error' : ''}
+                    help={errors.languageCards?.[index]?.data?.packageDescription?.message}
+                  >
+                    <TextArea
+                      value={card.data.packageDescription}
+                      onChange={(e) => updateLanguageCardData(card.id, 'packageDescription', e.target.value)}
+                      placeholder="Enter package description"
+                      rows={3}
+                      disabled={isLoading}
+                    />
+                  </Form.Item>
+
+                  <Form.Item
+                    label="Tax Information"
+                    validateStatus={errors.languageCards?.[index]?.data?.taxInformation ? 'error' : ''}
+                    help={errors.languageCards?.[index]?.data?.taxInformation?.message}
+                  >
+                    <TextArea
+                      value={card.data.taxInformation}
+                      onChange={(e) => updateLanguageCardData(card.id, 'taxInformation', e.target.value)}
+                      placeholder="Enter tax information"
+                      rows={2}
+                      disabled={isLoading}
+                    />
+                  </Form.Item>
+
+                  <Row gutter={16}>
+                    <Col span={12}>
+                      <Form.Item label="Package Benefits">
+                        <Space direction="vertical" style={{ width: '100%' }}>
+                          <Space.Compact style={{ display: 'flex', width: '100%' }}>
+                            <Input
+                              value={card.newBenefit || ''}
+                              onChange={(e) => {
+                                const updatedCards = watchedLanguageCards.map(c =>
+                                  c.id === card.id ? { ...c, newBenefit: e.target.value } : c
+                                );
+                                setValue("languageCards", updatedCards);
+                              }}
+                              placeholder="Add benefit"
+                              onPressEnter={() => addBenefit(card.id)}
+                              style={{ flex: 1 }}
+                              disabled={isLoading}
+                            />
+                            <Button
+                              onClick={() => addBenefit(card.id)}
+                              disabled={isLoading || !card.newBenefit?.trim()}
+                              type="primary"
+                            >
+                              Add
+                            </Button>
+                          </Space.Compact>
+
+                          {/* Display added benefits */}
+                          {card.benefits && card.benefits.length > 0 && (
+                            <div style={{
+                              maxHeight: '120px',
+                              overflowY: 'auto',
+                              border: '1px solid #d9d9d9',
+                              borderRadius: '6px',
+                              padding: '8px'
+                            }}>
+                              {card.benefits.map((benefit, benefitIndex) => (
+                                <div key={benefitIndex} style={{
+                                  display: 'flex',
+                                  justifyContent: 'space-between',
+                                  alignItems: 'center',
+                                  padding: '6px 8px',
+                                  margin: '2px 0',
+                                  backgroundColor: '#f0f8ff',
+                                  borderRadius: '4px',
+                                  border: '1px solid #e1f3ff'
+                                }}>
+                                  <Text style={{ flex: 1, fontSize: '13px' }}>{benefit}</Text>
+                                  <Button
+                                    size="small"
+                                    danger
+                                    type="text"
+                                    onClick={() => removeBenefit(card.id, benefitIndex)}
+                                    disabled={isLoading}
+                                    style={{ minWidth: 'auto', padding: '0 4px' }}
+                                  >
+                                    ×
+                                  </Button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </Space>
+                      </Form.Item>
+                    </Col>
+
+                    <Col span={12}>
+                      <Form.Item label="Package Tags">
+                        <Space direction="vertical" style={{ width: '100%' }}>
+                          <Space.Compact style={{ display: 'flex', width: '100%' }}>
+                            <Input
+                              value={card.newTag || ''}
+                              onChange={(e) => {
+                                const updatedCards = watchedLanguageCards.map(c =>
+                                  c.id === card.id ? { ...c, newTag: e.target.value } : c
+                                );
+                                setValue("languageCards", updatedCards);
+                              }}
+                              placeholder="Add tag"
+                              onPressEnter={() => addTag(card.id)}
+                              style={{ flex: 1 }}
+                              disabled={isLoading}
+                            />
+                            <Button
+                              onClick={() => addTag(card.id)}
+                              disabled={isLoading || !card.newTag?.trim()}
+                              type="primary"
+                            >
+                              Add
+                            </Button>
+                          </Space.Compact>
+
+                          {/* Display added tags */}
+                          {card.tags && card.tags.length > 0 && (
+                            <div style={{
+                              maxHeight: '120px',
+                              overflowY: 'auto',
+                              border: '1px solid #d9d9d9',
+                              borderRadius: '6px',
+                              padding: '8px'
+                            }}>
+                              {card.tags.map((tag, tagIndex) => (
+                                <div key={tagIndex} style={{
+                                  display: 'flex',
+                                  justifyContent: 'space-between',
+                                  alignItems: 'center',
+                                  padding: '6px 8px',
+                                  margin: '2px 0',
+                                  backgroundColor: '#fff7e6',
+                                  borderRadius: '4px',
+                                  border: '1px solid #ffe7ba'
+                                }}>
+                                  <Text style={{ flex: 1, fontSize: '13px' }}>{tag}</Text>
+                                  <Button
+                                    size="small"
+                                    danger
+                                    type="text"
+                                    onClick={() => removeTag(card.id, tagIndex)}
+                                    disabled={isLoading}
+                                    style={{ minWidth: 'auto', padding: '0 4px' }}
+                                  >
+                                    ×
+                                  </Button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </Space>
+                      </Form.Item>
+                    </Col>
+                  </Row>
+                </Card>
+              ))}
+            </Space>
+          </Card>
+
+          {/* Images */}
+          <Card
+            title={<Title level={4} style={{ margin: 0 }}>Package Images</Title>}
+            size="small"
+          >
             <Form.Item label="Package Images">
               <Upload
                 multiple
@@ -1053,7 +1292,9 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
                   setImages(newImages);
                 }}
               >
-                <Button icon={<UploadOutlined />}>Upload Images</Button>
+                <Button icon={<UploadOutlined />} disabled={isLoading}>
+                  Upload Images
+                </Button>
               </Upload>
             </Form.Item>
           </Card>
