@@ -43,7 +43,6 @@ interface NonMultilingualFields {
   taxPercentage?: number;
   priceAlgorithm: string;
   active: boolean;
-  priceLevel?: number;
   roomUpgrade: boolean;
   from_category_id?: number;
   to_category_id?: number;
@@ -87,7 +86,6 @@ const nonMultilingualSchema = yup.object().shape({
   taxPercentage: yup.number().min(0).max(100, "Tax percentage must be between 0-100"),
   priceAlgorithm: yup.string().required("Price algorithm is required"),
   active: yup.boolean().required(),
-  priceLevel: yup.number().min(1, "Price level must be at least 1"),
   roomUpgrade: yup.boolean().required(),
   from_category_id: yup.number().when('roomUpgrade', {
     is: true,
@@ -216,7 +214,6 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
         taxPercentage: initialData.taxPercentage || undefined,
         priceAlgorithm: initialData.priceAlgorithm || '',
         active: initialData.active || false,
-        priceLevel: initialData.priceLevel || undefined,
         roomUpgrade: initialData.roomUpgrade || false,
         from_category_id: initialData.from_category_id || undefined,
         to_category_id: initialData.to_category_id || undefined,
@@ -235,7 +232,6 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
         taxPercentage: undefined,
         priceAlgorithm: "",
         active: false,
-        priceLevel: undefined,
         roomUpgrade: false,
         from_category_id: undefined,
         to_category_id: undefined,
@@ -272,7 +268,6 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
     return categories.map(category => ({
       value: category.id,
       label: category.name,
-      priceLevel: category.priceLevel,
       taxPercentage: category.taxPercentage,
       soldOut: category.soldOut
     }));
@@ -487,9 +482,6 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
     }
     formData.append('priceAlgorithm', data.priceAlgorithm);
     formData.append('active', data.active.toString());
-    if (data.priceLevel) {
-      formData.append('priceLevel', data.priceLevel.toString());
-    }
     formData.append('roomUpgrade', data.roomUpgrade.toString());
     if (data.from_category_id) {
       formData.append('from_category_id', data.from_category_id.toString());
@@ -810,7 +802,7 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
                 </Form.Item>
               </Col>
 
-              <Col span={8}>
+              {/* <Col span={8}>
                 <Form.Item
                   label="Price Level"
                   validateStatus={errors.priceLevel ? 'error' : ''}
@@ -831,7 +823,7 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
                     )}
                   />
                 </Form.Item>
-              </Col>
+              </Col> */}
             </Row>
 
             <Row gutter={16}>
@@ -960,6 +952,35 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
                 )}
               />
             </Form.Item>
+                      {/* Images */}
+
+            <Form.Item label="Package Images">
+              <Upload
+                multiple
+                listType="picture"
+                onChange={handleImageUpload}
+                disabled={isLoading}
+                beforeUpload={(file) => {
+                  return false;
+                }}
+                fileList={images.map((img, index) => ({
+                  uid: img.uid || index.toString(),
+                  name: img.name || img.alt || `image-${index}`,
+                  status: 'done',
+                  url: img.url,
+                  originFileObj: img.originFileObj
+                }))}
+                onRemove={(file) => {
+                  const newImages = images.filter(img => img.uid !== file.uid);
+                  setImages(newImages);
+                }}
+              >
+                <Button icon={<UploadOutlined />} disabled={isLoading}>
+                  Upload Images
+                </Button>
+              </Upload>
+            </Form.Item>
+
           </Card>
 
           {/* Multilingual Fields - Language Cards */}
@@ -1264,39 +1285,6 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
                 </Card>
               ))}
             </Space>
-          </Card>
-
-          {/* Images */}
-          <Card
-            title={<Title level={4} style={{ margin: 0 }}>Package Images</Title>}
-            size="small"
-          >
-            <Form.Item label="Package Images">
-              <Upload
-                multiple
-                listType="picture"
-                onChange={handleImageUpload}
-                disabled={isLoading}
-                beforeUpload={(file) => {
-                  return false;
-                }}
-                fileList={images.map((img, index) => ({
-                  uid: img.uid || index.toString(),
-                  name: img.name || img.alt || `image-${index}`,
-                  status: 'done',
-                  url: img.url,
-                  originFileObj: img.originFileObj
-                }))}
-                onRemove={(file) => {
-                  const newImages = images.filter(img => img.uid !== file.uid);
-                  setImages(newImages);
-                }}
-              >
-                <Button icon={<UploadOutlined />} disabled={isLoading}>
-                  Upload Images
-                </Button>
-              </Upload>
-            </Form.Item>
           </Card>
 
           {/* Error Display */}
