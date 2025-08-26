@@ -705,7 +705,7 @@ const hasActiveFilters = values.length > 0 && values.some(value =>
                     <Table
                         rowKey="id"
                         columns={columns}
-                        dataSource={packages}
+                        dataSource={packages || []}
                         pagination={false}
                         className="jotFormTable"
                         scroll={{ x: 2500 }}
