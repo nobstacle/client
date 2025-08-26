@@ -212,9 +212,10 @@ export default function Package() {
         }
 
         debounceRef.current = setTimeout(async () => {
-            const hasActiveFilters = Object.values(searchFilters).some(value =>
-                value !== 'all' && value !== '' && value !== 'name' && value !== 'asc'
-            );
+let values = Object.values(searchFilters || {});
+const hasActiveFilters = values.length > 0 && values.some(value =>
+    value !== 'all' && value !== '' && value !== 'name' && value !== 'asc'
+);
 
             if (hasActiveFilters && searchFilters.searchText.trim() !== '') {
                 // Fetch all data for comprehensive search
