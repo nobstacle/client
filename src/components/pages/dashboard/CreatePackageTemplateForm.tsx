@@ -61,6 +61,8 @@ interface MultilingualFields {
   currency: string;
   packageAlert?: string;
   buttonText: string;
+  soldOutText?: string;
+  popularityText?: string;
 }
 
 interface LanguageCard {
@@ -109,6 +111,8 @@ const multilingualSchema = yup.object().shape({
   currency: yup.string().required("Currency is required"),
   packageAlert: yup.string().max(200, "Alert text must be at most 200 characters"),
   buttonText: yup.string().required("Button text is required").max(50, "Button text must be at most 50 characters"),
+  soldOutText: yup.string().max(100, "Sold out text must be at most 100 characters"),
+  popularityText: yup.string().max(100, "Popularity text must be at most 100 characters"),
 });
 
 // Combined schema
@@ -158,7 +162,13 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
   };
 
   const convertFromCents = (value: number) => {
-    return value ? value / 100 : 0;
+    return value ? parseFloat((value / 100).toFixed(2)) : 0;
+  };
+
+  const cleanNumber = (value: number | undefined): string | undefined => {
+    if (value === undefined || value === null) return undefined;
+    const cleaned = parseFloat(value.toString());
+    return isNaN(cleaned) ? undefined : cleaned.toString();
   };
 
   const generateId = () => Math.random().toString(36).substr(2, 9);
@@ -179,6 +189,8 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
         currency: data.currency || "AED",
         packageAlert: data.packageAlert || "",
         buttonText: data.buttonText || "Buy Now",
+        soldOutText: data.soldOutText || "",
+        popularityText: data.popularityText || "",
       },
       benefits: benefits,
       tags: tags,
@@ -201,6 +213,8 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
           currency: getMultilingualValue(initialData.currencies, langCode),
           packageAlert: getMultilingualValue(initialData.packageAlerts, langCode),
           buttonText: getMultilingualValue(initialData.buttonTexts, langCode),
+          soldOutText: getMultilingualValue(initialData.soldOutTexts, langCode),
+          popularityText: getMultilingualValue(initialData.popularityTexts, langCode),
         });
       });
 
@@ -289,7 +303,7 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
     );
   };
 
-  console.info("getAvailableLanguages",getAvailableLanguages('en'));
+  console.info("getAvailableLanguages", getAvailableLanguages('en'));
 
   const addLanguageCard = () => {
     const newCard = createDefaultLanguageCard();
@@ -467,22 +481,40 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
     }
   }, [isEdit, initialData, reset]);
 
+  // Complete updated handleCreatePackage function with precision fixes
   const handleCreatePackage = (data: CreatePackageFormFieldValues) => {
     const formData = new FormData();
 
-    // Add non-multilingual fields
+    // Helper function to clean numbers and avoid floating point precision issues
+    const cleanNumber = (value: number | undefined): string | undefined => {
+      if (value === undefined || value === null || isNaN(value)) return undefined;
+      // Use parseFloat and toFixed to ensure clean decimal representation
+      const cleaned = parseFloat(value.toString());
+      return isNaN(cleaned) ? undefined : cleaned.toString();
+    };
+
+    // Add non-multilingual fields with proper number cleaning
     formData.append('packageCode', data.packageCode);
-    formData.append('originalPrice', data.originalPrice.toString());
+
+    const cleanOriginalPrice = cleanNumber(data.originalPrice);
+    if (cleanOriginalPrice) formData.append('originalPrice', cleanOriginalPrice);
+
     if (data.discountedPrice) {
-      formData.append('discountedPrice', data.discountedPrice.toString());
+      const cleanDiscountedPrice = cleanNumber(data.discountedPrice);
+      if (cleanDiscountedPrice) formData.append('discountedPrice', cleanDiscountedPrice);
     }
+
     formData.append('includesTax', data.includesTax.toString());
+
     if (data.taxPercentage) {
-      formData.append('taxPercentage', data.taxPercentage.toString());
+      const cleanTaxPercentage = cleanNumber(data.taxPercentage);
+      if (cleanTaxPercentage) formData.append('taxPercentage', cleanTaxPercentage);
     }
+
     formData.append('priceAlgorithm', data.priceAlgorithm);
     formData.append('active', data.active.toString());
     formData.append('roomUpgrade', data.roomUpgrade.toString());
+
     if (data.from_category_id) {
       formData.append('from_category_id', data.from_category_id.toString());
     }
@@ -490,15 +522,18 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
       formData.append('to_category_id', data.to_category_id.toString());
     }
     if (data.incentivePercentage) {
-      formData.append('incentivePercentage', data.incentivePercentage.toString());
+      const cleanIncentivePercentage = cleanNumber(data.incentivePercentage);
+      if (cleanIncentivePercentage) formData.append('incentivePercentage', cleanIncentivePercentage);
     }
+
     formData.append('companyId', (data.companyId || company.data?.id).toString());
     formData.append('totalPackagesSold', (data.totalPackagesSold || 0).toString());
+
     if (data.templateId) {
       formData.append('templateId', data.templateId.toString());
     }
 
-    // Build multilingual data objects
+    // Build multilingual data objects - UPDATED WITH NEW FIELDS
     const packageNames: Record<string, string> = {};
     const packageDescriptions: Record<string, string> = {};
     const packageBenefits: Record<string, string[]> = {};
@@ -507,6 +542,8 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
     const currencies: Record<string, string> = {};
     const packageAlerts: Record<string, string> = {};
     const buttonTexts: Record<string, string> = {};
+    const soldOutTexts: Record<string, string> = {};      // NEW
+    const popularityTexts: Record<string, string> = {};   // NEW
 
     data.languageCards.forEach(card => {
       if (card.langCode) {
@@ -518,10 +555,12 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
         currencies[card.langCode] = card.data.currency;
         packageAlerts[card.langCode] = card.data.packageAlert || "";
         buttonTexts[card.langCode] = card.data.buttonText;
+        soldOutTexts[card.langCode] = card.data.soldOutText || "";      // NEW
+        popularityTexts[card.langCode] = card.data.popularityText || ""; // NEW
       }
     });
 
-    // Add multilingual data to FormData
+    // Add multilingual data to FormData - UPDATED WITH NEW FIELDS
     formData.append('packageNames', JSON.stringify(packageNames));
     formData.append('packageDescriptions', JSON.stringify(packageDescriptions));
     formData.append('packageBenefits', JSON.stringify(packageBenefits));
@@ -530,6 +569,8 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
     formData.append('currencies', JSON.stringify(currencies));
     formData.append('packageAlerts', JSON.stringify(packageAlerts));
     formData.append('buttonTexts', JSON.stringify(buttonTexts));
+    formData.append('soldOutTexts', JSON.stringify(soldOutTexts));         // NEW
+    formData.append('popularityTexts', JSON.stringify(popularityTexts));   // NEW
 
     // Add images
     images.forEach((image, index) => {
@@ -542,6 +583,7 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
       }
     });
 
+    // Submit the form data
     if (isEdit && initialData?.id) {
       updatePackage.mutate(
         { id: initialData.id, data: formData },
@@ -952,7 +994,7 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
                 )}
               />
             </Form.Item>
-                      {/* Images */}
+            {/* Images */}
 
             <Form.Item label="Package Images">
               <Upload
@@ -1123,6 +1165,52 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
                     </Col>
                   </Row>
 
+                  <Row gutter={16}>
+                    <Col span={8}>
+                      <Form.Item
+                        label="Package Alert"
+                        validateStatus={errors.languageCards?.[index]?.data?.packageAlert ? 'error' : ''}
+                        help={errors.languageCards?.[index]?.data?.packageAlert?.message}
+                      >
+                        <Input
+                          value={card.data.packageAlert}
+                          onChange={(e) => updateLanguageCardData(card.id, 'packageAlert', e.target.value)}
+                          placeholder="Enter alert message"
+                          disabled={isLoading}
+                        />
+                      </Form.Item>
+                    </Col>
+
+                    <Col span={8}>
+                      <Form.Item
+                        label="Sold Out Text"
+                        validateStatus={errors.languageCards?.[index]?.data?.soldOutText ? 'error' : ''}
+                        help={errors.languageCards?.[index]?.data?.soldOutText?.message}
+                      >
+                        <Input
+                          value={card.data.soldOutText}
+                          onChange={(e) => updateLanguageCardData(card.id, 'soldOutText', e.target.value)}
+                          placeholder="e.g., Sold Out, Out of Stock"
+                          disabled={isLoading}
+                        />
+                      </Form.Item>
+                    </Col>
+
+                    <Col span={8}>
+                      <Form.Item
+                        label="Popularity Text"
+                        validateStatus={errors.languageCards?.[index]?.data?.popularityText ? 'error' : ''}
+                        help={errors.languageCards?.[index]?.data?.popularityText?.message}
+                      >
+                        <Input
+                          value={card.data.popularityText}
+                          onChange={(e) => updateLanguageCardData(card.id, 'popularityText', e.target.value)}
+                          placeholder="e.g., Popular, Best Seller"
+                          disabled={isLoading}
+                        />
+                      </Form.Item>
+                    </Col>
+                  </Row>
                   <Form.Item
                     label="Package Description"
                     validateStatus={errors.languageCards?.[index]?.data?.packageDescription ? 'error' : ''}
