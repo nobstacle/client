@@ -50,6 +50,8 @@ interface NonMultilingualFields {
   companyId?: number;
   templateId?: number;
   totalPackagesSold?: number;
+  calculationMethod: string;
+  priceExcludingTax: number
 }
 
 interface MultilingualFields {
@@ -79,11 +81,22 @@ interface CreatePackageFormFieldValues extends NonMultilingualFields {
   languageCards: LanguageCard[];
 }
 
+const CALCULATION_METHODS = [
+  { value: "price_per_night", label: "Price per night" },
+  { value: "price_per_stay", label: "Price per stay" },
+  { value: "price_per_person_per_night", label: "Price per person per night" },
+  { value: "price_per_adult_per_night", label: "Price per adult per night" },
+  { value: "price_per_child_per_night", label: "Price per child per night" },
+  { value: "price_per_person_per_stay", label: "Price per person per stay" },
+  { value: "price_per_piece", label: "Price per piece" },
+];
+
 // Schema for non-multilingual fields
 const nonMultilingualSchema = yup.object().shape({
   packageCode: yup.string().required("Package code is required").max(50, "Package code must be at most 50 characters"),
   originalPrice: yup.number().required("Original price is required").min(0, "Price must be positive"),
   discountedPrice: yup.number().min(0, "Discounted price must be positive"),
+  priceExcludingTax: yup.number().min(0, "Price exlusing tax must be positive"),
   includesTax: yup.boolean().required(),
   taxPercentage: yup.number().min(0).max(100, "Tax percentage must be between 0-100"),
   priceAlgorithm: yup.string().required("Price algorithm is required"),
@@ -101,6 +114,10 @@ const nonMultilingualSchema = yup.object().shape({
   }),
   incentivePercentage: yup.number().min(0).max(100, "Incentive percentage must be between 0-100"),
   totalPackagesSold: yup.number().min(0, "Total packages sold must be a non-negative number"),
+  calculationMethod: yup.string().required("Calculation method is required").oneOf(
+    CALCULATION_METHODS.map(method => method.value),
+    "Invalid calculation method"
+  ),
 });
 
 // Schema for multilingual fields
@@ -132,6 +149,7 @@ interface CreatePackageFormProps {
   initialData?: any;
   isEdit?: boolean;
 }
+
 
 const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
   cb,
@@ -199,6 +217,7 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
     };
   };
 
+
   const getDefaultValues = (): CreatePackageFormFieldValues => {
     if (isEdit && initialData) {
       // For edit mode, create language cards from existing data
@@ -224,6 +243,7 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
         packageCode: initialData.packageCode || "",
         originalPrice: convertFromCents(initialData.originalPrice) || 0,
         discountedPrice: convertFromCents(initialData.discountedPrice) || undefined,
+        priceExcludingTax: convertFromCents(initialData.priceExcludingTax) || undefined,
         includesTax: initialData.includesTax || false,
         taxPercentage: initialData.taxPercentage || undefined,
         priceAlgorithm: initialData.priceAlgorithm || '',
@@ -235,12 +255,15 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
         companyId: initialData.companyId || company.data?.id,
         templateId: initialData.templateId || undefined,
         totalPackagesSold: initialData.totalPackagesSold || 0,
+        calculationMethod: initialData.calculationMethod || CALCULATION_METHODS[0].value,
         languageCards: languageCards.length > 0 ? languageCards : [createDefaultLanguageCard()],
+
       };
     } else {
       return {
         packageCode: "",
         originalPrice: 0,
+        priceExcludingTax: undefined,
         discountedPrice: undefined,
         includesTax: false,
         taxPercentage: undefined,
@@ -253,6 +276,7 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
         companyId: company.data?.id,
         templateId: undefined,
         totalPackagesSold: 0,
+        calculationMethod: CALCULATION_METHODS[0].value,
         languageCards: [createDefaultLanguageCard()],
       };
     }
@@ -514,6 +538,7 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
     formData.append('priceAlgorithm', data.priceAlgorithm);
     formData.append('active', data.active.toString());
     formData.append('roomUpgrade', data.roomUpgrade.toString());
+    formData.append('calculationMethod', data.calculationMethod);
 
     if (data.from_category_id) {
       formData.append('from_category_id', data.from_category_id.toString());
@@ -717,22 +742,19 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
 
               <Col span={12}>
                 <Form.Item
-                  label="Original Price"
-                  validateStatus={errors.originalPrice ? 'error' : ''}
-                  help={errors.originalPrice?.message}
+                  label="Price Algorithm"
+                  validateStatus={errors.priceAlgorithm ? 'error' : ''}
+                  help={errors.priceAlgorithm?.message}
                   required
                 >
                   <Controller
-                    name="originalPrice"
+                    name="priceAlgorithm"
                     control={control}
                     render={({ field }) => (
-                      <InputNumber
+                      <Input
                         {...field}
-                        placeholder="0"
-                        style={{ width: '100%' }}
-                        status={errors.originalPrice ? 'error' : ''}
-                        min={0}
-                        step={0.01}
+                        placeholder="Enter price algorithm"
+                        status={errors.priceAlgorithm ? 'error' : ''}
                         disabled={isLoading}
                       />
                     )}
@@ -765,22 +787,24 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
                   />
                 </Form.Item>
               </Col>
-
               <Col span={12}>
                 <Form.Item
-                  label="Price Algorithm"
-                  validateStatus={errors.priceAlgorithm ? 'error' : ''}
-                  help={errors.priceAlgorithm?.message}
+                  label="Original Price"
+                  validateStatus={errors.originalPrice ? 'error' : ''}
+                  help={errors.originalPrice?.message}
                   required
                 >
                   <Controller
-                    name="priceAlgorithm"
+                    name="originalPrice"
                     control={control}
                     render={({ field }) => (
-                      <Input
+                      <InputNumber
                         {...field}
-                        placeholder="Enter price algorithm"
-                        status={errors.priceAlgorithm ? 'error' : ''}
+                        placeholder="0"
+                        style={{ width: '100%' }}
+                        status={errors.originalPrice ? 'error' : ''}
+                        min={0}
+                        step={0.01}
                         disabled={isLoading}
                       />
                     )}
@@ -790,6 +814,30 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
             </Row>
 
             <Row gutter={16}>
+              <Col span={8}>
+                <Form.Item
+                  label="Price excluding tax"
+                  validateStatus={errors.priceExcludingTax ? 'error' : ''}
+                  help={errors.priceExcludingTax?.message}
+                >
+                  <Controller
+                    name="priceExcludingTax"
+                    control={control}
+                    render={({ field }) => (
+                      <InputNumber
+                        {...field}
+                        placeholder="0"
+                        style={{ width: '100%' }}
+                        status={errors.priceExcludingTax ? 'error' : ''}
+                        min={0}
+                        step={0.01}
+                        disabled={isLoading}
+                      />
+                    )}
+                  />
+                </Form.Item>
+              </Col>
+
               <Col span={8}>
                 <Form.Item
                   label="Tax Percentage"
@@ -974,26 +1022,53 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
               </Row>
             )}
 
-            <Form.Item
-              label="Total Packages Sold"
-              validateStatus={errors.totalPackagesSold ? 'error' : ''}
-              help={errors.totalPackagesSold?.message}
-            >
-              <Controller
-                name="totalPackagesSold"
-                control={control}
-                render={({ field }) => (
-                  <InputNumber
-                    {...field}
-                    placeholder="Enter total packages sold"
-                    style={{ width: '100%' }}
-                    status={errors.totalPackagesSold ? 'error' : ''}
-                    disabled={isLoading}
-                    min={0}
+            <Row gutter={16}>
+              <Col span={12}>
+                <Form.Item
+                  label="Calculation Method"
+                  validateStatus={errors.calculationMethod ? 'error' : ''}
+                  help={errors.calculationMethod?.message}
+                  required
+                >
+                  <Controller
+                    name="calculationMethod"
+                    control={control}
+                    render={({ field }) => (
+                      <Select
+                        {...field}
+                        placeholder="Select calculation method"
+                        status={errors.calculationMethod ? 'error' : ''}
+                        options={CALCULATION_METHODS}
+                        disabled={isLoading}
+                        style={{ width: '100%' }}
+                      />
+                    )}
                   />
-                )}
-              />
-            </Form.Item>
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item
+                  label="Total Packages Sold"
+                  validateStatus={errors.totalPackagesSold ? 'error' : ''}
+                  help={errors.totalPackagesSold?.message}
+                >
+                  <Controller
+                    name="totalPackagesSold"
+                    control={control}
+                    render={({ field }) => (
+                      <InputNumber
+                        {...field}
+                        placeholder="Enter total packages sold"
+                        style={{ width: '100%' }}
+                        status={errors.totalPackagesSold ? 'error' : ''}
+                        disabled={isLoading}
+                        min={0}
+                      />
+                    )}
+                  />
+                </Form.Item></Col>
+            </Row>
+
             {/* Images */}
 
             <Form.Item label="Package Images">
@@ -1166,22 +1241,7 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
                   </Row>
 
                   <Row gutter={16}>
-                    <Col span={8}>
-                      <Form.Item
-                        label="Package Alert"
-                        validateStatus={errors.languageCards?.[index]?.data?.packageAlert ? 'error' : ''}
-                        help={errors.languageCards?.[index]?.data?.packageAlert?.message}
-                      >
-                        <Input
-                          value={card.data.packageAlert}
-                          onChange={(e) => updateLanguageCardData(card.id, 'packageAlert', e.target.value)}
-                          placeholder="Enter alert message"
-                          disabled={isLoading}
-                        />
-                      </Form.Item>
-                    </Col>
-
-                    <Col span={8}>
+                    <Col span={12}>
                       <Form.Item
                         label="Sold Out Text"
                         validateStatus={errors.languageCards?.[index]?.data?.soldOutText ? 'error' : ''}
@@ -1196,7 +1256,7 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
                       </Form.Item>
                     </Col>
 
-                    <Col span={8}>
+                    <Col span={12}>
                       <Form.Item
                         label="Popularity Text"
                         validateStatus={errors.languageCards?.[index]?.data?.popularityText ? 'error' : ''}

@@ -141,6 +141,7 @@ const getLocalizedContent = (contentObj, fallback = '') => {
 
 const PackageCard = ({ packageData, handleClick, loadingButton }) => {
   const carouselRef = useRef();
+  const [currentSlide, setCurrentSlide] = useState(0); // Track current slide
 
   const formatPrice = (price) => {
     return new Intl.NumberFormat().format(price / 100);
@@ -162,11 +163,35 @@ const PackageCard = ({ packageData, handleClick, loadingButton }) => {
   const taxInformation = getLocalizedContent(packageData.taxInformation, '');
   const packageAlerts = getLocalizedContent(packageData.packageAlerts, '');
   const buttonText = getLocalizedContent(packageData.buttonTexts, 'Take this deal');
+  const soldOutText = getLocalizedContent(packageData.soldOutTexts, 'Sold Out');
   const currency = getLocalizedContent(packageData.currencies, 'AED');
 
-  // Get image array
-  const imageArray = packageData.signedImageUrls || packageData.images || [];
+  // Check if package is sold out
+  const isSoldOut = packageData.toCategory?.soldOut === true;
+
+  // Get image array and deduplicate
+  const rawImageArray = packageData.signedImageUrls || packageData.images || [];
+
+  // Deduplicate images based on signedUrl or url
+  const imageArray = rawImageArray.filter((image, index, self) => {
+    const currentUrl = image.signedUrl || image.url || image;
+    return index === self.findIndex(img => {
+      const imgUrl = img.signedUrl || img.url || img;
+      return imgUrl === currentUrl;
+    });
+  });
+
   const hasMultipleImages = imageArray.length > 1;
+
+  // Reset currentSlide when imageArray changes
+  useEffect(() => {
+    setCurrentSlide(0);
+  }, [imageArray.length]);
+
+  // Carousel change handler
+  const handleSlideChange = (currentSlideIndex) => {
+    setCurrentSlide(currentSlideIndex);
+  };
 
   // Custom arrow components
   const CustomPrevArrow = ({ onClick }) => (
@@ -239,16 +264,24 @@ const PackageCard = ({ packageData, handleClick, loadingButton }) => {
                 prevArrow={<CustomPrevArrow />}
                 nextArrow={<CustomNextArrow />}
                 dots={false}
-                infinite={true}
+                infinite={hasMultipleImages} // Only infinite if multiple images
                 style={{ height: '100%' }}
+                afterChange={handleSlideChange} // Track slide changes
+                beforeChange={(from, to) => setCurrentSlide(to)} // Update immediately on change
               >
                 {imageArray.map((image, index) => (
-                  <div key={index} className="w-full h-full" style={{ height: '100%' }}>
+                  <div key={`${packageData.id}-${index}`} className="w-full h-full" style={{ height: '100%' }}>
                     <img
                       src={image.signedUrl || image.url || image}
                       alt={image.alt || `Package Image ${index + 1}`}
                       className="w-full h-full object-cover"
-                      style={{ borderRadius: '8px', height: '100%', maxHeight: '35vh', minHeight: '35vh' }}
+                      style={{
+                        borderRadius: '8px',
+                        height: '100%',
+                        maxHeight: '35vh',
+                        minHeight: '35vh',
+                        filter: isSoldOut ? 'grayscale(100%) brightness(0.7)' : 'none' // Gray out if sold out
+                      }}
                       onError={(e) => {
                         console.error('Image failed to load:', image.signedUrl || image.url || image);
                       }}
@@ -263,7 +296,16 @@ const PackageCard = ({ packageData, handleClick, loadingButton }) => {
               {/* Image counter - Only show if more than one image */}
               {hasMultipleImages && (
                 <div className="absolute top-2 left-1 bg-black/50 text-white px-2 py-1 rounded text-xs z-10">
-                  1 / {imageArray.length}
+                  {currentSlide + 1} / {imageArray.length}
+                </div>
+              )}
+
+              {/* Sold Out Overlay */}
+              {isSoldOut && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-lg">
+                  <div className="bg-red-600 text-white px-4 py-2 rounded-lg font-bold text-lg shadow-lg">
+                    {soldOutText}
+                  </div>
                 </div>
               )}
             </div>
@@ -280,7 +322,7 @@ const PackageCard = ({ packageData, handleClick, loadingButton }) => {
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start mb-4 gap-4">
             {/* Left side - Package info */}
             <div className="flex-1">
-              <Title level={3} className="text-blue-600 mb-2 mt-0 text-lg sm:text-xl lg:text-2xl" style={{ color: '#006ce4' }}>
+              <Title level={3} className={`mb-2 mt-0 text-lg sm:text-xl lg:text-2xl ${isSoldOut ? 'text-gray-500' : 'text-blue-600'}`} style={{ color: isSoldOut ? '#9ca3af' : '#006ce4' }}>
                 {packageName}
               </Title>
 
@@ -288,7 +330,7 @@ const PackageCard = ({ packageData, handleClick, loadingButton }) => {
               {packageTags.length > 0 && (
                 <div className="flex flex-wrap gap-2 mb-4">
                   {Array.isArray(packageTags) && packageTags.map((tag, index) => (
-                    <Tag key={index} className="px-2 sm:px-3 py-1 bg-green-800 text-white border-green-800 rounded text-xs sm:text-sm">
+                    <Tag key={index} className={`px-2 sm:px-3 py-1 border-green-800 rounded text-xs sm:text-sm ${isSoldOut ? 'bg-gray-400 text-gray-600 border-gray-400' : 'bg-green-800 text-white'}`}>
                       {tag}
                     </Tag>
                   ))}
@@ -296,10 +338,15 @@ const PackageCard = ({ packageData, handleClick, loadingButton }) => {
               )}
             </div>
 
-            {/* Right side - Best seller and sold info */}
+            {/* Right side - Best seller/sold out and sold info */}
             <div className="text-left sm:text-right flex-shrink-0">
-              <Text className="font-bold text-gray-600 mb-2 block text-sm sm:text-base">
-                {packageData.totalPackagesSold > 1500 ? "Best Seller" : packageData.totalPackagesSold > 1000 && packageData.totalPackagesSold < 1500 ? "Top Seller" : packageData.totalPackagesSold > 500 && packageData.totalPackagesSold < 1000 ? "Popular Deal" : "Limited Offer"}
+              <Text className={`font-bold mb-2 block text-sm sm:text-base ${isSoldOut ? 'text-red-600' : 'text-gray-600'}`}>
+                {isSoldOut ? soldOutText : (
+                  packageData.totalPackagesSold > 1500 ? "Best Seller" :
+                    packageData.totalPackagesSold > 1000 && packageData.totalPackagesSold < 1500 ? "Top Seller" :
+                      packageData.totalPackagesSold > 500 && packageData.totalPackagesSold < 1000 ? "Popular Deal" :
+                        "Limited Offer"
+                )}
               </Text>
               <Text className="text-xs sm:text-sm text-gray-500">
                 Sold {packageData.totalPackagesSold || 0} times
@@ -313,7 +360,7 @@ const PackageCard = ({ packageData, handleClick, loadingButton }) => {
             <div className="flex-1">
               {/* Description */}
               <div className="mb-4">
-                <Text className="text-gray-700 font-bold mb-3 block text-sm sm:text-base">
+                <Text className={`font-bold mb-3 block text-sm sm:text-base ${isSoldOut ? 'text-gray-500' : 'text-gray-700'}`}>
                   {packageDescription}
                 </Text>
 
@@ -321,7 +368,7 @@ const PackageCard = ({ packageData, handleClick, loadingButton }) => {
                 {packageBenefits.length > 0 && (
                   <div className="space-y-1">
                     {Array.isArray(packageBenefits) && packageBenefits.map((benefit, index) => (
-                      <div key={index} className="text-green-600 font-medium flex items-center text-sm sm:text-base">
+                      <div key={index} className={`font-medium flex items-center text-sm sm:text-base ${isSoldOut ? 'text-gray-400' : 'text-green-600'}`}>
                         <span className="mr-2">✓</span>
                         {benefit}
                       </div>
@@ -333,7 +380,7 @@ const PackageCard = ({ packageData, handleClick, loadingButton }) => {
               {/* Alert */}
               {packageAlerts && (
                 <div className="mb-4">
-                  <Text className="text-red-600 font-medium text-sm sm:text-base">
+                  <Text className={`font-medium text-sm sm:text-base ${isSoldOut ? 'text-gray-400' : 'text-red-600'}`}>
                     {packageAlerts}
                   </Text>
                 </div>
@@ -344,21 +391,21 @@ const PackageCard = ({ packageData, handleClick, loadingButton }) => {
             <div className="lg:w-44 flex flex-col justify-end">
               <div className="text-left lg:text-right pb-2">
                 {/* Posting Algorithm Label */}
-                <Text className="text-xs sm:text-sm text-gray-500 mb-2 block">
+                <Text className={`text-xs sm:text-sm mb-2 block ${isSoldOut ? 'text-gray-400' : 'text-gray-500'}`}>
                   {packageData?.priceAlgorithm}
                 </Text>
 
                 {/* Pricing Block */}
                 <div className="mb-4">
                   <div className="flex items-center justify-start lg:justify-end gap-2 mb-1 flex-wrap">
-                    <Text className="text-sm text-gray-400 line-through order-2 lg:order-1">
+                    <Text className={`text-sm line-through order-2 lg:order-1 ${isSoldOut ? 'text-gray-300' : 'text-gray-400'}`}>
                       {formatCurrency(packageData.originalPrice, currency)}
                     </Text>
-                    <Text className="text-xl sm:text-2xl font-bold order-1 lg:order-2">
+                    <Text className={`text-xl sm:text-2xl font-bold order-1 lg:order-2 ${isSoldOut ? 'text-gray-400' : 'text-black'}`}>
                       {formatCurrency(packageData.discountedPrice, currency)}
                     </Text>
                   </div>
-                  <Text className="text-xs sm:text-sm text-gray-500">
+                  <Text className={`text-xs sm:text-sm ${isSoldOut ? 'text-gray-400' : 'text-gray-500'}`}>
                     {taxInformation}
                   </Text>
                 </div>
@@ -367,11 +414,14 @@ const PackageCard = ({ packageData, handleClick, loadingButton }) => {
                 <Button
                   type="primary"
                   size="large"
-                  className="bg-blue-600 hover:bg-blue-700 px-6 sm:px-8 py-2 h-10 sm:h-12 w-full lg:w-auto text-sm sm:text-base"
-                  disabled={!packageData.active || loadingButton}
-                  onClick={() => handlePackageClick(packageData)}
+                  className={`px-6 sm:px-8 py-2 h-10 sm:h-12 w-full lg:w-auto text-sm sm:text-base ${isSoldOut
+                    ? 'bg-gray-400 hover:bg-gray-400 cursor-not-allowed'
+                    : 'bg-blue-600 hover:bg-blue-700'
+                    }`}
+                  disabled={!packageData.active || loadingButton || isSoldOut}
+                  onClick={() => !isSoldOut && handlePackageClick(packageData)}
                 >
-                  {loadingButton ? 'Loading..' : buttonText}
+                  {loadingButton ? 'Loading..' : (isSoldOut ? soldOutText : buttonText)}
                 </Button>
               </div>
             </div>
@@ -897,7 +947,9 @@ export const Content: React.FC = () => {
         const purchasesB = b.totalPackagesSold || 0;
         return purchasesB - purchasesA;
       });
-
+      console.info(
+        "sortedPackagessortedPackages", sortedPackages
+      )
       return (
         <div
           className="w-full space-y-6 relative"
