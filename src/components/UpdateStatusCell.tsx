@@ -49,7 +49,7 @@ export const UpsellStatusCell = ({ status, record, token, isAdmin, onStatusUpdat
     }
   };
 
-  return isAdmin ? (
+  return isAdmin === 'Admin' ? (
     <Select
       defaultValue={status}
       style={{ width: 120 }}

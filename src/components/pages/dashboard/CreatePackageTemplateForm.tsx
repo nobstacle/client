@@ -12,7 +12,7 @@ import {
   Alert,
   InputNumber,
   Switch,
-  Divider,
+  // Divider,
   Row,
   Col,
   Upload,
@@ -164,6 +164,7 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
   const [images, setImages] = React.useState<any[]>([]);
   const [categoryData, setCategoryData] = React.useState<any[]>([]);
   const [selectedLanguages, setSelectedLanguages] = React.useState<string[]>([]);
+  const [isInitialized, setIsInitialized] = React.useState(false);
 
   const getMultilingualValue = (field: any, fallbackLang = 'en') => {
     if (!field || typeof field !== 'object') return field || '';
@@ -182,6 +183,8 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
   const convertFromCents = (value: number) => {
     return value ? parseFloat((value / 100).toFixed(2)) : 0;
   };
+
+  console.info("EDITTTTTTTTT", initialData);
 
   const cleanNumber = (value: number | undefined): string | undefined => {
     if (value === undefined || value === null) return undefined;
@@ -218,7 +221,7 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
   };
 
 
-  const getDefaultValues = (): CreatePackageFormFieldValues => {
+  const getDefaultValues = React.useCallback((): CreatePackageFormFieldValues => {
     if (isEdit && initialData) {
       // For edit mode, create language cards from existing data
       const existingLanguages = Object.keys(initialData.packageNames || {});
@@ -237,7 +240,7 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
         });
       });
 
-      setSelectedLanguages(existingLanguages);
+      // setSelectedLanguages(existingLanguages);
 
       return {
         packageCode: initialData.packageCode || "",
@@ -280,7 +283,7 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
         languageCards: [createDefaultLanguageCard()],
       };
     }
-  };
+  }, [isEdit, initialData, company.data?.id]);
 
   const {
     handleSubmit,
@@ -479,6 +482,26 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
     setValue("languageCards", updatedCards, { shouldValidate: true });
   };
 
+  // Initialize form data only once for edit mode
+  React.useEffect(() => {
+    if (isEdit && initialData && !isInitialized) {
+      // Set selected languages from initial data
+      const existingLanguages = Object.keys(initialData.packageNames || {});
+      setSelectedLanguages(existingLanguages);
+
+      // Set images from initial data
+      if (initialData.images && Array.isArray(initialData.images)) {
+        setImages(initialData.images);
+      }
+
+      // Reset form with default values
+      reset(getDefaultValues());
+
+      // Mark as initialized to prevent re-runs
+      setIsInitialized(true);
+    }
+  }, [isEdit, initialData, isInitialized]);
+
   // Fetch categories
   React.useEffect(() => {
     fetch(`${Url}/api/v1/uploads/get-all-categories`, {
@@ -495,6 +518,7 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
       });
   }, [sessionData]);
 
+  // Reset form when edit mode changes
   // Reset form when edit mode changes
   React.useEffect(() => {
     if (isEdit && initialData) {
@@ -753,7 +777,7 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
                     render={({ field }) => (
                       <Input
                         {...field}
-                        placeholder="Enter price algorithm"
+                        placeholder="e.g. Price per Day, Price per Person"
                         status={errors.priceAlgorithm ? 'error' : ''}
                         disabled={isLoading}
                       />
@@ -764,29 +788,6 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
             </Row>
 
             <Row gutter={16}>
-              <Col span={12}>
-                <Form.Item
-                  label="Discounted Price"
-                  validateStatus={errors.discountedPrice ? 'error' : ''}
-                  help={errors.discountedPrice?.message}
-                >
-                  <Controller
-                    name="discountedPrice"
-                    control={control}
-                    render={({ field }) => (
-                      <InputNumber
-                        {...field}
-                        placeholder="0"
-                        style={{ width: '100%' }}
-                        status={errors.discountedPrice ? 'error' : ''}
-                        min={0}
-                        step={0.01}
-                        disabled={isLoading}
-                      />
-                    )}
-                  />
-                </Form.Item>
-              </Col>
               <Col span={12}>
                 <Form.Item
                   label="Original Price"
@@ -803,6 +804,29 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
                         placeholder="0"
                         style={{ width: '100%' }}
                         status={errors.originalPrice ? 'error' : ''}
+                        min={0}
+                        step={0.01}
+                        disabled={isLoading}
+                      />
+                    )}
+                  />
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item
+                  label="Selling Price"
+                  validateStatus={errors.discountedPrice ? 'error' : ''}
+                  help={errors.discountedPrice?.message}
+                >
+                  <Controller
+                    name="discountedPrice"
+                    control={control}
+                    render={({ field }) => (
+                      <InputNumber
+                        {...field}
+                        placeholder="0"
+                        style={{ width: '100%' }}
+                        status={errors.discountedPrice ? 'error' : ''}
                         min={0}
                         step={0.01}
                         disabled={isLoading}
@@ -954,7 +978,7 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
               </Col>
 
               <Col span={8}>
-                <Form.Item label="Room Upgrade">
+                <Form.Item label="Category Upgrade">
                   <Controller
                     name="roomUpgrade"
                     control={control}

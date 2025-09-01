@@ -739,7 +739,7 @@ export default function Upsell() {
                                     onClick={handlePackageSend}
                                     loading={loadingData}
                                     className="flex items-center justify-center bg-blue-600 hover:bg-blue-700 rounded-md px-4 py-2 text-white headerButton"
-                                    // size="large"
+                                // size="large"
                                 />
                             </div>
                         </div>
@@ -755,7 +755,7 @@ export default function Upsell() {
                                         value={searchTerm}
                                         onChange={searchTransactions}
                                         className="w-full"
-                                        // size="large"
+                                    // size="large"
                                     />
                                 </div>
                             </div>

@@ -273,6 +273,7 @@ const hasActiveFilters = values.length > 0 && values.some(value =>
     // Function to handle opening modal for editing package
     const handleEditPackage = (packageData) => {
         setModalMode('edit');
+        console.info("packageDatapackageData",packageData);
         setEditingPackage(packageData);
         handleOpen();
     };
