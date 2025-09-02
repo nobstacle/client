@@ -212,10 +212,10 @@ export default function Package() {
         }
 
         debounceRef.current = setTimeout(async () => {
-let values = Object.values(searchFilters || {});
-const hasActiveFilters = values.length > 0 && values.some(value =>
-    value !== 'all' && value !== '' && value !== 'name' && value !== 'asc'
-);
+            let values = Object.values(searchFilters || {});
+            const hasActiveFilters = values.length > 0 && values.some(value =>
+                value !== 'all' && value !== '' && value !== 'name' && value !== 'asc'
+            );
 
             if (hasActiveFilters && searchFilters.searchText.trim() !== '') {
                 // Fetch all data for comprehensive search
@@ -273,7 +273,6 @@ const hasActiveFilters = values.length > 0 && values.some(value =>
     // Function to handle opening modal for editing package
     const handleEditPackage = (packageData) => {
         setModalMode('edit');
-        console.info("packageDatapackageData",packageData);
         setEditingPackage(packageData);
         handleOpen();
     };
@@ -706,7 +705,7 @@ const hasActiveFilters = values.length > 0 && values.some(value =>
                     <Table
                         rowKey="id"
                         columns={columns}
-                        dataSource={packages || []}
+                        dataSource={Array.isArray(packages) ? packages : []}
                         pagination={false}
                         className="jotFormTable"
                         scroll={{ x: 2500 }}

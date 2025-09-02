@@ -41,7 +41,6 @@ interface NonMultilingualFields {
   discountedPrice?: number;
   includesTax: boolean;
   taxPercentage?: number;
-  priceAlgorithm: string;
   active: boolean;
   roomUpgrade: boolean;
   from_category_id?: number;
@@ -65,6 +64,7 @@ interface MultilingualFields {
   buttonText: string;
   soldOutText?: string;
   popularityText?: string;
+  priceAlgorithms: string;
 }
 
 interface LanguageCard {
@@ -99,7 +99,6 @@ const nonMultilingualSchema = yup.object().shape({
   priceExcludingTax: yup.number().min(0, "Price exlusing tax must be positive"),
   includesTax: yup.boolean().required(),
   taxPercentage: yup.number().min(0).max(100, "Tax percentage must be between 0-100"),
-  priceAlgorithm: yup.string().required("Price algorithm is required"),
   active: yup.boolean().required(),
   roomUpgrade: yup.boolean().required(),
   from_category_id: yup.number().when('roomUpgrade', {
@@ -130,6 +129,7 @@ const multilingualSchema = yup.object().shape({
   buttonText: yup.string().required("Button text is required").max(50, "Button text must be at most 50 characters"),
   soldOutText: yup.string().max(100, "Sold out text must be at most 100 characters"),
   popularityText: yup.string().max(100, "Popularity text must be at most 100 characters"),
+  priceAlgorithms: yup.string().required("Price algorithm is required"),
 });
 
 // Combined schema
@@ -184,8 +184,6 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
     return value ? parseFloat((value / 100).toFixed(2)) : 0;
   };
 
-  console.info("EDITTTTTTTTT", initialData);
-
   const cleanNumber = (value: number | undefined): string | undefined => {
     if (value === undefined || value === null) return undefined;
     const cleaned = parseFloat(value.toString());
@@ -212,6 +210,7 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
         buttonText: data.buttonText || "Buy Now",
         soldOutText: data.soldOutText || "",
         popularityText: data.popularityText || "",
+        priceAlgorithms: data.priceAlgorithms || "",
       },
       benefits: benefits,
       tags: tags,
@@ -237,6 +236,7 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
           buttonText: getMultilingualValue(initialData.buttonTexts, langCode),
           soldOutText: getMultilingualValue(initialData.soldOutTexts, langCode),
           popularityText: getMultilingualValue(initialData.popularityTexts, langCode),
+          priceAlgorithms: getMultilingualValue(initialData.priceAlgorithms, langCode),
         });
       });
 
@@ -244,12 +244,11 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
 
       return {
         packageCode: initialData.packageCode || "",
-        originalPrice: convertFromCents(initialData.originalPrice) || 0,
-        discountedPrice: convertFromCents(initialData.discountedPrice) || undefined,
-        priceExcludingTax: convertFromCents(initialData.priceExcludingTax) || undefined,
+        originalPrice: initialData.originalPrice || 0,
+        discountedPrice: initialData.discountedPrice || undefined,
+        priceExcludingTax: initialData.priceExcludingTax || undefined,
         includesTax: initialData.includesTax || false,
         taxPercentage: initialData.taxPercentage || undefined,
-        priceAlgorithm: initialData.priceAlgorithm || '',
         active: initialData.active || false,
         roomUpgrade: initialData.roomUpgrade || false,
         from_category_id: initialData.from_category_id || undefined,
@@ -270,7 +269,6 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
         discountedPrice: undefined,
         includesTax: false,
         taxPercentage: undefined,
-        priceAlgorithm: "",
         active: false,
         roomUpgrade: false,
         from_category_id: undefined,
@@ -329,8 +327,6 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
       !selectedLanguages.includes(lang.code) || lang.code === currentLangCode
     );
   };
-
-  console.info("getAvailableLanguages", getAvailableLanguages('en'));
 
   const addLanguageCard = () => {
     const newCard = createDefaultLanguageCard();
@@ -490,8 +486,8 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
       setSelectedLanguages(existingLanguages);
 
       // Set images from initial data
-      if (initialData.images && Array.isArray(initialData.images)) {
-        setImages(initialData.images);
+      if (initialData.signedImageUrls && Array.isArray(initialData.signedImageUrls)) {
+        setImages(initialData.signedImageUrls);
       }
 
       // Reset form with default values
@@ -519,12 +515,11 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
   }, [sessionData]);
 
   // Reset form when edit mode changes
-  // Reset form when edit mode changes
   React.useEffect(() => {
     if (isEdit && initialData) {
       reset(getDefaultValues());
-      if (initialData.images && Array.isArray(initialData.images)) {
-        setImages(initialData.images);
+      if (initialData.signedImageUrls && Array.isArray(initialData.signedImageUrls)) {
+        setImages(initialData.signedImageUrls);
       }
     }
   }, [isEdit, initialData, reset]);
@@ -537,7 +532,7 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
     const cleanNumber = (value: number | undefined): string | undefined => {
       if (value === undefined || value === null || isNaN(value)) return undefined;
       // Use parseFloat and toFixed to ensure clean decimal representation
-      const cleaned = parseFloat(value.toString());
+      const cleaned = parseFloat(value.toString()); cleanNumber
       return isNaN(cleaned) ? undefined : cleaned.toString();
     };
 
@@ -553,13 +548,14 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
     }
 
     formData.append('includesTax', data.includesTax.toString());
+    formData.append('priceExcludingTax', cleanNumber(data.priceExcludingTax));
+
 
     if (data.taxPercentage) {
       const cleanTaxPercentage = cleanNumber(data.taxPercentage);
       if (cleanTaxPercentage) formData.append('taxPercentage', cleanTaxPercentage);
     }
 
-    formData.append('priceAlgorithm', data.priceAlgorithm);
     formData.append('active', data.active.toString());
     formData.append('roomUpgrade', data.roomUpgrade.toString());
     formData.append('calculationMethod', data.calculationMethod);
@@ -591,8 +587,9 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
     const currencies: Record<string, string> = {};
     const packageAlerts: Record<string, string> = {};
     const buttonTexts: Record<string, string> = {};
-    const soldOutTexts: Record<string, string> = {};      // NEW
-    const popularityTexts: Record<string, string> = {};   // NEW
+    const soldOutTexts: Record<string, string> = {};
+    const popularityTexts: Record<string, string> = {};
+    const priceAlgorithms: Record<string, string> = {};
 
     data.languageCards.forEach(card => {
       if (card.langCode) {
@@ -604,8 +601,9 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
         currencies[card.langCode] = card.data.currency;
         packageAlerts[card.langCode] = card.data.packageAlert || "";
         buttonTexts[card.langCode] = card.data.buttonText;
-        soldOutTexts[card.langCode] = card.data.soldOutText || "";      // NEW
-        popularityTexts[card.langCode] = card.data.popularityText || ""; // NEW
+        soldOutTexts[card.langCode] = card.data.soldOutText || "";
+        popularityTexts[card.langCode] = card.data.popularityText || "";
+        priceAlgorithms[card.langCode] = card.data.priceAlgorithms || "";
       }
     });
 
@@ -618,8 +616,9 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
     formData.append('currencies', JSON.stringify(currencies));
     formData.append('packageAlerts', JSON.stringify(packageAlerts));
     formData.append('buttonTexts', JSON.stringify(buttonTexts));
-    formData.append('soldOutTexts', JSON.stringify(soldOutTexts));         // NEW
-    formData.append('popularityTexts', JSON.stringify(popularityTexts));   // NEW
+    formData.append('soldOutTexts', JSON.stringify(soldOutTexts));
+    formData.append('popularityTexts', JSON.stringify(popularityTexts));
+    formData.append('priceAlgorithms', JSON.stringify(priceAlgorithms));
 
     // Add images
     images.forEach((image, index) => {
@@ -742,7 +741,7 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
             style={{ backgroundColor: '#fafafa' }}
           >
             <Row gutter={16}>
-              <Col span={12}>
+              <Col span={8}>
                 <Form.Item
                   label="Package Code"
                   validateStatus={errors.packageCode ? 'error' : ''}
@@ -763,32 +762,7 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
                   />
                 </Form.Item>
               </Col>
-
-              <Col span={12}>
-                <Form.Item
-                  label="Price Algorithm"
-                  validateStatus={errors.priceAlgorithm ? 'error' : ''}
-                  help={errors.priceAlgorithm?.message}
-                  required
-                >
-                  <Controller
-                    name="priceAlgorithm"
-                    control={control}
-                    render={({ field }) => (
-                      <Input
-                        {...field}
-                        placeholder="e.g. Price per Day, Price per Person"
-                        status={errors.priceAlgorithm ? 'error' : ''}
-                        disabled={isLoading}
-                      />
-                    )}
-                  />
-                </Form.Item>
-              </Col>
-            </Row>
-
-            <Row gutter={16}>
-              <Col span={12}>
+              <Col span={8}>
                 <Form.Item
                   label="Original Price"
                   validateStatus={errors.originalPrice ? 'error' : ''}
@@ -812,7 +786,7 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
                   />
                 </Form.Item>
               </Col>
-              <Col span={12}>
+              <Col span={8}>
                 <Form.Item
                   label="Selling Price"
                   validateStatus={errors.discountedPrice ? 'error' : ''}
@@ -1108,7 +1082,7 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
                   uid: img.uid || index.toString(),
                   name: img.name || img.alt || `image-${index}`,
                   status: 'done',
-                  url: img.url,
+                  url: img.signedUrl ? img.signedUrl : img.url,
                   originFileObj: img.originFileObj
                 }))}
                 onRemove={(file) => {
@@ -1198,6 +1172,21 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
                   )}
 
                   <Row gutter={16}>
+                    <Col span={12}>
+                      <Form.Item
+                        label="Price Algorithm"
+                        validateStatus={errors.languageCards?.[index]?.data?.priceAlgorithms ? 'error' : ''}
+                        help={errors.languageCards?.[index]?.data?.priceAlgorithms?.message}
+                        required
+                      >
+                        <Input
+                          value={card.data.priceAlgorithms}
+                          onChange={(e) => updateLanguageCardData(card.id, 'priceAlgorithms', e.target.value)}
+                          placeholder="e.g. Price per Day, Price per Person"
+                          disabled={isLoading}
+                        />
+                      </Form.Item>
+                    </Col>
                     <Col span={12}>
                       <Form.Item
                         label="Package Name"
