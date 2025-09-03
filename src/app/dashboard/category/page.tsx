@@ -262,7 +262,7 @@ export default function Category() {
                         <Table
                             rowKey="id"
                             columns={columns}
-                            dataSource={categoryData}
+                            dataSource={Array.isArray(categoryData) ? categoryData : []}
                             pagination={false}
                             className="jotFormTable"
                             scroll={{ x: 1200 }}

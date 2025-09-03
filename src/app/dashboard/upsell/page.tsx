@@ -14,6 +14,8 @@ import { SendPackagePayloadType } from "../../../constant/types";
 import { UpsellStatusCell } from "../../../components/UpdateStatusCell";
 import dayjs from 'dayjs';
 import { SendIcon } from "../../../components/icons/SendIcon";
+import { MdDelete } from "react-icons/md";
+import Swal from "sweetalert2";
 
 const { Option } = Select;
 
@@ -200,6 +202,58 @@ export default function Upsell() {
             numberOfChildren: record.numberOfChildren,
             arrivalDate: record.arrivalDate ? dayjs(record.arrivalDate) : null,
             departureDate: record.departureDate ? dayjs(record.departureDate) : null,
+        });
+    };
+    const handleDelete = (record) => {
+        console.log("delete", record);
+
+        Swal.fire({
+            title: 'Are you sure?',
+            text: `You are about to delete the transaction "${record.packageName}". This action cannot be undone!`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Yes, delete it!',
+            cancelButtonText: 'Cancel'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                setLoadingData(true);
+
+                 fetch(`${Url}/api/v1/uploads/delete-upsell/${record.id}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${data?.user.backendTokens.at}`
+                    }
+                })
+                    .then((res) => {
+                        if (!res.ok) throw new Error("Failed to delete");
+                        return res.json();
+                    })
+                    .then(() => {
+                        Swal.fire({
+                            title: 'Deleted!',
+                            text: 'transaction has been deleted successfully.',
+                            icon: 'success',
+                            timer: 2000,
+                            showConfirmButton: false
+                        });
+                        fetchTransactions();
+                    })
+                    .catch((error) => {
+                        Swal.fire({
+                            title: 'Error!',
+                            text: 'Failed to delete transaction. Please try again.',
+                            icon: 'error',
+                            confirmButtonText: 'OK'
+                        });
+                        console.error('Delete error:', error);
+                    })
+                    .finally(() => {
+                        setLoadingData(false);
+                    });
+            }
         });
     };
 
@@ -465,39 +519,52 @@ export default function Upsell() {
                 </div>
             ),
         },
-        {
-            title: 'Actions',
-            key: 'actions',
-            width: 80,
-            fixed: 'right',
+      {
+        title: 'Actions',
+        key: 'actions',
+        width: 80,
+        fixed: 'right',
             render: (record: any) => {
                 const isEditing = editingRecord === record.id;
 
-                return isEditing ? (
-                    <Space size="small">
+                return (
+                <Space size="small">
+                    {isEditing ? (
+                    <>
                         <Button
-                            type="primary"
-                            size="small"
-                            icon={<SaveOutlined />}
-                            onClick={() => handleSave(record)}
+                        type="primary"
+                        size="small"
+                        icon={<SaveOutlined />}
+                        onClick={() => handleSave(record)}
                         />
                         <Button
-                            size="small"
-                            icon={<CloseOutlined />}
-                            onClick={handleCancel}
+                        size="small"
+                        icon={<CloseOutlined />}
+                        onClick={handleCancel}
                         />
-                    </Space>
-                ) : (
+                    </>
+                    ) : (
                     <>
                         <Tooltip title="Edit Transaction">
-                            <Button
-                                type="text"
-                                size="small"
-                                icon={<EditOutlined />}
-                                onClick={() => handleEdit(record)}
-                            />
+                        <Button
+                            type="text"
+                            size="small"
+                            icon={<EditOutlined />}
+                            onClick={() => handleEdit(record)}
+                        />
+                        </Tooltip>
+                        <Tooltip title="Delete Transaction">
+                        <button
+                            title="Delete"
+                            onClick={() => handleDelete(record)}
+                            className="text-gray-500 "
+                        >
+                            <MdDelete />
+                        </button>
                         </Tooltip>
                     </>
+                    )}
+                </Space>
                 );
             },
         }

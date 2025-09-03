@@ -1143,6 +1143,11 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
                             label: lang.name
                           }))}
                           disabled={isLoading}
+                          showSearch
+                          optionFilterProp="label"
+                          filterOption={(input, option) =>
+                            (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                          }
                         />
                       </div>
                       {watchedLanguageCards.length > 1 && (
@@ -1172,21 +1177,6 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
                   )}
 
                   <Row gutter={16}>
-                    <Col span={12}>
-                      <Form.Item
-                        label="Price Algorithm"
-                        validateStatus={errors.languageCards?.[index]?.data?.priceAlgorithms ? 'error' : ''}
-                        help={errors.languageCards?.[index]?.data?.priceAlgorithms?.message}
-                        required
-                      >
-                        <Input
-                          value={card.data.priceAlgorithms}
-                          onChange={(e) => updateLanguageCardData(card.id, 'priceAlgorithms', e.target.value)}
-                          placeholder="e.g. Price per Day, Price per Person"
-                          disabled={isLoading}
-                        />
-                      </Form.Item>
-                    </Col>
                     <Col span={12}>
                       <Form.Item
                         label="Package Name"
@@ -1298,19 +1288,41 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
                     />
                   </Form.Item>
 
-                  <Form.Item
-                    label="Tax Information"
-                    validateStatus={errors.languageCards?.[index]?.data?.taxInformation ? 'error' : ''}
-                    help={errors.languageCards?.[index]?.data?.taxInformation?.message}
-                  >
-                    <TextArea
-                      value={card.data.taxInformation}
-                      onChange={(e) => updateLanguageCardData(card.id, 'taxInformation', e.target.value)}
-                      placeholder="Enter tax information"
-                      rows={2}
-                      disabled={isLoading}
-                    />
-                  </Form.Item>
+                  <Row gutter={16}>
+                    <Col span={12}>
+                      <Form.Item
+                        label="Price Algorithm"
+                        validateStatus={errors.languageCards?.[index]?.data?.priceAlgorithms ? 'error' : ''}
+                        help={errors.languageCards?.[index]?.data?.priceAlgorithms?.message}
+                        required
+                      >
+                        <Input
+                          value={card.data.priceAlgorithms}
+                          onChange={(e) =>
+                            updateLanguageCardData(card.id, 'priceAlgorithms', e.target.value)
+                          }
+                          placeholder="e.g. Price per Day, Price per Person"
+                          disabled={isLoading}
+                        />
+                      </Form.Item>
+                    </Col>
+
+                    <Col span={12}>
+                      <Form.Item
+                        label="Tax Information"
+                        validateStatus={errors.languageCards?.[index]?.data?.taxInformation ? 'error' : ''}
+                        help={errors.languageCards?.[index]?.data?.taxInformation?.message}
+                      >
+                      <TextArea
+                        value={card.data.taxInformation}
+                        onChange={(e) => updateLanguageCardData(card.id, 'taxInformation', e.target.value)}
+                        placeholder="Enter tax information"
+                        rows={1}
+                        disabled={isLoading}
+                      />
+                      </Form.Item>
+                    </Col>
+                  </Row>
 
                   <Row gutter={16}>
                     <Col span={12}>

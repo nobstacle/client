@@ -814,7 +814,7 @@ export const Content: React.FC = () => {
       };
 
       const result = await createUpsellTransaction(upsellData);
-      message.success(`Package "${packageData.packageNames?.en}" purchased successfully!\nConfirmation: ${confirmationNumber}`);
+      message.success(`Package "${packageData.packageNames}" purchased successfully!\nConfirmation: ${confirmationNumber}`);
       setLoading(false);
       setTimeout(() => {
         messageStore.reset();
