@@ -59,7 +59,7 @@ const IframeWithPrefill = React.memo(({ src, prefillData }: { src: string, prefi
   );
 });
 
-const getLocalizedContent = (contentObj, fallback = '') => {
+const getLocalizedContent = (contentObj, langCode = 'en', fallback = '') => {
   // If contentObj is null or undefined, return fallback
   if (contentObj == null) return fallback;
 
@@ -88,12 +88,21 @@ const getLocalizedContent = (contentObj, fallback = '') => {
           const availableLanguages = Object.keys(parsed);
           if (availableLanguages.length === 0) return fallback;
 
-          const preferredLanguage = availableLanguages.includes('en') ? 'en' : availableLanguages[0];
-          let result = parsed[preferredLanguage];
+          // Priority order: requested langCode first, then 'en' (English), then any other available language
+          let preferredLanguage;
+          if (availableLanguages.includes(langCode)) {
+            preferredLanguage = langCode;
+          } else if (availableLanguages.includes('en')) {
+            preferredLanguage = 'en';
+          } else {
+            preferredLanguage = availableLanguages[0];
+          }
 
+          let result = parsed[preferredLanguage];
+          console.info("result", result)
           // If the result is still a string that looks like JSON, try parsing it again
           if (typeof result === 'string' && (result.startsWith('{') || result.startsWith('['))) {
-            return getLocalizedContent(result, fallback);
+            return getLocalizedContent(result, langCode, fallback);
           }
 
           return result || fallback;
@@ -130,8 +139,15 @@ const getLocalizedContent = (contentObj, fallback = '') => {
     // If no languages available, return fallback
     if (availableLanguages.length === 0) return fallback;
 
-    // Priority order: en (English) first, then any other available language
-    const preferredLanguage = availableLanguages.includes('en') ? 'en' : availableLanguages[0];
+    // Priority order: requested langCode first, then 'en' (English), then any other available language
+    let preferredLanguage;
+    if (availableLanguages.includes(langCode)) {
+      preferredLanguage = langCode;
+    } else if (availableLanguages.includes('en')) {
+      preferredLanguage = 'en';
+    } else {
+      preferredLanguage = availableLanguages[0];
+    }
 
     return contentObj[preferredLanguage] || fallback;
   }
@@ -139,9 +155,9 @@ const getLocalizedContent = (contentObj, fallback = '') => {
   return fallback;
 };
 
-const PackageCard = ({ packageData, handleClick, loadingButton }) => {
+const PackageCard = ({ packageData, handleClick, loadingButton, langCode = 'en' }) => {
   const carouselRef = useRef();
-  const [currentSlide, setCurrentSlide] = useState(0); // Track current slide
+  const [currentSlide, setCurrentSlide] = useState(0);
 
   const formatPrice = (price) => {
     return new Intl.NumberFormat().format(price / 100);
@@ -155,16 +171,23 @@ const PackageCard = ({ packageData, handleClick, loadingButton }) => {
     handleClick(record);
   };
 
-  // Get localized content
-  const packageName = getLocalizedContent(packageData.packageNames, 'Package');
-  const packageDescription = getLocalizedContent(packageData.packageDescriptions, 'Package Description Text - Multilingual Depending on the selected language');
-  const packageBenefits = getLocalizedContent(packageData.packageBenefits, []);
-  const packageTags = getLocalizedContent(packageData.packageTags, []);
-  const taxInformation = getLocalizedContent(packageData.taxInformation, '');
-  const packageAlerts = getLocalizedContent(packageData.packageAlerts, '');
-  const buttonText = getLocalizedContent(packageData.buttonTexts, 'Take this deal');
-  const soldOutText = getLocalizedContent(packageData.soldOutTexts, 'Sold Out');
-  const currency = getLocalizedContent(packageData.currencies, 'AED');
+  // Get localized content using the langCode - now this will work properly
+  const packageName = getLocalizedContent(packageData.packageNames, langCode, 'Package');
+  const packageDescription = getLocalizedContent(packageData.packageDescriptions, langCode, 'Package Description');
+  const packageBenefits = getLocalizedContent(packageData.packageBenefits, langCode, []);
+  const packageTags = getLocalizedContent(packageData.packageTags, langCode, []);
+  const taxInformation = getLocalizedContent(packageData.taxInformation, langCode, '');
+  const packageAlerts = getLocalizedContent(packageData.packageAlerts, langCode, '');
+  const buttonText = getLocalizedContent(packageData.buttonTexts, langCode, 'Take this deal');
+  const soldOutText = getLocalizedContent(packageData.soldOutTexts, langCode, 'Sold Out');
+  const currency = getLocalizedContent(packageData.currencies, langCode, 'AED');
+  const priceAlgorithm = getLocalizedContent(packageData.priceAlgorithms, langCode, 'Price per unit');
+
+  // Debug logging
+  console.log('PackageCard - langCode:', langCode);
+  console.log('PackageCard - packageNames raw:', packageData.packageNames);
+  console.log('PackageCard - packageName localized:', packageName);
+  console.log('PackageCard - packageDescription localized:', packageDescription);
 
   // Check if package is sold out
   const isSoldOut = packageData.toCategory?.soldOut === true;
@@ -264,10 +287,10 @@ const PackageCard = ({ packageData, handleClick, loadingButton }) => {
                 prevArrow={<CustomPrevArrow />}
                 nextArrow={<CustomNextArrow />}
                 dots={false}
-                infinite={hasMultipleImages} // Only infinite if multiple images
+                infinite={hasMultipleImages}
                 style={{ height: '100%' }}
-                afterChange={handleSlideChange} // Track slide changes
-                beforeChange={(from, to) => setCurrentSlide(to)} // Update immediately on change
+                afterChange={handleSlideChange}
+                beforeChange={(from, to) => setCurrentSlide(to)}
               >
                 {imageArray.map((image, index) => (
                   <div key={`${packageData.id}-${index}`} className="w-full h-full" style={{ height: '100%' }}>
@@ -280,7 +303,7 @@ const PackageCard = ({ packageData, handleClick, loadingButton }) => {
                         height: '100%',
                         maxHeight: '35vh',
                         minHeight: '35vh',
-                        filter: isSoldOut ? 'grayscale(100%) brightness(0.7)' : 'none' // Gray out if sold out
+                        filter: isSoldOut ? 'grayscale(100%) brightness(0.7)' : 'none'
                       }}
                       onError={(e) => {
                         console.error('Image failed to load:', image.signedUrl || image.url || image);
@@ -390,9 +413,9 @@ const PackageCard = ({ packageData, handleClick, loadingButton }) => {
             {/* Price and Button Section */}
             <div className="lg:w-44 flex flex-col justify-end">
               <div className="text-left lg:text-right pb-2">
-                {/* Posting Algorithm Label */}
+                {/* Price Algorithm Label */}
                 <Text className={`text-xs sm:text-sm mb-2 block ${isSoldOut ? 'text-gray-400' : 'text-gray-500'}`}>
-                  {packageData?.priceAlgorithm}
+                  {priceAlgorithm}
                 </Text>
 
                 {/* Pricing Block */}
@@ -874,36 +897,37 @@ export const Content: React.FC = () => {
         );
       }
 
+      const currentLangCode = messageStore.receivedContent?.langCode || 'en';
+
       // Helper function to safely extract string values from nested objects
-      const extractValue = (obj, defaultValue = '') => {
-        if (typeof obj === 'string') return obj;
-        if (Array.isArray(obj)) return obj;
-        if (obj && typeof obj === 'object') {
-          // Handle nested language objects like {en: "value"} or {en: [{en: ["value"]}]}
-          const enValue = obj.en;
-          if (Array.isArray(enValue)) {
-            return enValue.map(item => extractValue(item)).flat();
-          }
-          return extractValue(enValue, defaultValue);
-        }
-        return defaultValue;
-      };
+      // const extractValue = (obj, defaultValue = '') => {
+      //   if (typeof obj === 'string') return obj;
+      //   if (Array.isArray(obj)) return obj;
+      //   if (obj && typeof obj === 'object') {
+      //     const enValue = obj.en;
+      //     if (Array.isArray(enValue)) {
+      //       return enValue.map(item => extractValue(item)).flat();
+      //     }
+      //     return extractValue(enValue, defaultValue);
+      //   }
+      //   return defaultValue;
+      // };
 
       // Helper function to safely parse deeply nested JSON strings
-      const safeParseTaxInfo = (taxInfo) => {
-        if (typeof taxInfo !== 'string') return extractValue(taxInfo);
+      // const safeParseTaxInfo = (taxInfo) => {
+      //   if (typeof taxInfo !== 'string') return extractValue(taxInfo);
 
-        try {
-          let parsed = taxInfo;
-          // Keep parsing until we get a non-string result or can't parse anymore
-          while (typeof parsed === 'string' && parsed.startsWith('{')) {
-            parsed = JSON.parse(parsed);
-          }
-          return extractValue(parsed);
-        } catch {
-          return taxInfo;
-        }
-      };
+      //   try {
+      //     let parsed = taxInfo;
+      //     // Keep parsing until we get a non-string result or can't parse anymore
+      //     while (typeof parsed === 'string' && parsed.startsWith('{')) {
+      //       parsed = JSON.parse(parsed);
+      //     }
+      //     return extractValue(parsed);
+      //   } catch {
+      //     return taxInfo;
+      //   }
+      // };
 
       // Helper function to merge category images with package images
       const mergeImages = (packageImages, toCategory) => {
@@ -925,24 +949,32 @@ export const Content: React.FC = () => {
         return combinedImages;
       };
 
-      // Clean the package data
-      const cleanedPackages = parseData.map(pkg => ({
+      const processedPackages = parseData.map(pkg => ({
         ...pkg,
-        packageNames: extractValue(pkg.packageNames),
-        packageDescriptions: extractValue(pkg.packageDescriptions),
-        packageBenefits: extractValue(pkg.packageBenefits, []),
-        packageTags: extractValue(pkg.packageTags, []),
-        taxInformation: safeParseTaxInfo(pkg.taxInformation),
-        currencies: extractValue(pkg.currencies),
-        packageAlerts: extractValue(pkg.packageAlerts),
-        buttonTexts: extractValue(pkg.buttonTexts),
-        // Merge images if to_category_id exists
+        // Only merge images if to_category_id exists - keep everything else as-is
         signedImageUrls: pkg.to_category_id ?
           mergeImages(pkg.signedImageUrls, pkg.toCategory) :
           pkg.signedImageUrls
       }));
 
-      const sortedPackages = cleanedPackages.sort((a, b) => {
+      // Clean the package data
+      // const cleanedPackages = parseData.map(pkg => ({
+      //   ...pkg,
+      //   packageNames: extractValue(pkg.packageNames),
+      //   packageDescriptions: extractValue(pkg.packageDescriptions),
+      //   packageBenefits: extractValue(pkg.packageBenefits, []),
+      //   packageTags: extractValue(pkg.packageTags, []),
+      //   taxInformation: safeParseTaxInfo(pkg.taxInformation),
+      //   currencies: extractValue(pkg.currencies),
+      //   packageAlerts: extractValue(pkg.packageAlerts),
+      //   buttonTexts: extractValue(pkg.buttonTexts),
+      //   // Merge images if to_category_id exists
+      //   signedImageUrls: pkg.to_category_id ?
+      //     mergeImages(pkg.signedImageUrls, pkg.toCategory) :
+      //     pkg.signedImageUrls
+      // }));
+
+      const sortedPackages = processedPackages.sort((a, b) => {
         const purchasesA = a.totalPackagesSold || 0;
         const purchasesB = b.totalPackagesSold || 0;
         return purchasesB - purchasesA;
@@ -959,6 +991,7 @@ export const Content: React.FC = () => {
             <PackageCard
               key={packageData.id}
               packageData={packageData}
+              langCode={currentLangCode}
               handleClick={(data) => handlePackageClicked(data)}
               loadingButton={loading}
             />

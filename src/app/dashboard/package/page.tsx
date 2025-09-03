@@ -12,6 +12,10 @@ import { PlusIcon } from "../../../components/icons/PlusIcon";
 import CreatePackageForm from "../../../components/pages/dashboard/CreatePackageTemplateForm";
 import ViewPackage from "./ViewPackage";
 import { FaGlobe } from "react-icons/fa";
+import {
+    useCompanyControllerGetCompany,
+} from "../../../lib/client/api";
+import { useSearchParams } from "next/navigation";
 
 const { Option } = Select;
 
@@ -26,6 +30,14 @@ export default function Package() {
     const [modalMode, setModalMode] = useState('create');
     const [viewPackage, setViewPackage] = useState(false);
     const [viewPackageData, setViewPackageData] = useState(null);
+    const { data: companyData } = useCompanyControllerGetCompany();
+    const [selectedLanguage, setSelectedLanguage] = useState('en');
+    const params = useSearchParams();
+
+    useEffect(() => {
+        console.info(params.get("lang"));
+        setSelectedLanguage(params.get("lang") || companyData?.defaultLangCode);
+    }, [companyData, params]);
 
     // Enhanced search states
     const [searchFilters, setSearchFilters] = useState({
@@ -388,7 +400,47 @@ export default function Package() {
         return <span>{processedValue || 'N/A'}</span>;
     };
 
+    const checkLanguageAvailability = (packageData, langCode) => {
+        if (!packageData || !langCode) return false;
+
+        const fieldsToCheck = [
+            packageData.packageNames,
+            packageData.packageDescriptions,
+            packageData.packageBenefits,
+            packageData.packageTags,
+            packageData.taxInformation,
+            packageData.packageAlerts,
+            packageData.buttonTexts,
+            packageData.soldOutTexts,
+            packageData.popularityTexts,
+            packageData.currencies
+        ];
+
+        const availableFields = fieldsToCheck.filter(field => {
+            if (!field || typeof field !== 'object') return false;
+            return field[langCode] && field[langCode] !== '' &&
+                (Array.isArray(field[langCode]) ? field[langCode].length > 0 : true);
+        });
+
+        return availableFields.length >= 3;
+    };
+
     const columns = [
+        {
+            title: "Availability",
+            dataIndex: "",
+            key: "",
+            width: 120,
+            render: (_, record) => {
+                const isAvailable = checkLanguageAvailability(record, selectedLanguage);
+
+                return (
+                    <div className="flex items-center gap-2">
+                        <div className={`w-3 h-3 rounded-full ${isAvailable ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                    </div>
+                );
+            },
+        },
         {
             title: "Package Code",
             dataIndex: "packageCode",
