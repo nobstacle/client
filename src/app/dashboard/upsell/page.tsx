@@ -205,8 +205,6 @@ export default function Upsell() {
         });
     };
     const handleDelete = (record) => {
-        console.log("delete", record);
-
         Swal.fire({
             title: 'Are you sure?',
             text: `You are about to delete the transaction "${record.packageName}". This action cannot be undone!`,
