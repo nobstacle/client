@@ -121,15 +121,15 @@ const nonMultilingualSchema = yup.object().shape({
 
 // Schema for multilingual fields
 const multilingualSchema = yup.object().shape({
-  packageName: yup.string().required("Package name is required").max(100, "Name must be at most 100 characters"),
+  // packageName: yup.string().required("Package name is required").max(100, "Name must be at most 100 characters"),
   packageDescription: yup.string().max(1000, "Description must be at most 1000 characters"),
   taxInformation: yup.string().max(500, "Tax information must be at most 500 characters"),
-  currency: yup.string().required("Currency is required"),
+  // currency: yup.string().required("Currency is required"),
   packageAlert: yup.string().max(200, "Alert text must be at most 200 characters"),
-  buttonText: yup.string().required("Button text is required").max(50, "Button text must be at most 50 characters"),
+  // buttonText: yup.string().required("Button text is required").max(50, "Button text must be at most 50 characters"),
   soldOutText: yup.string().max(100, "Sold out text must be at most 100 characters"),
   popularityText: yup.string().max(100, "Popularity text must be at most 100 characters"),
-  priceAlgorithms: yup.string().required("Price algorithm is required"),
+  // priceAlgorithms: yup.string().required("Price algorithm is required"),
 });
 
 // Combined schema
@@ -205,9 +205,9 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
         packageBenefits: benefits,
         packageTags: tags,
         taxInformation: data.taxInformation || "",
-        currency: data.currency || "AED",
+        currency: data.currency || "",
         packageAlert: data.packageAlert || "",
-        buttonText: data.buttonText || "Buy Now",
+        buttonText: data.buttonText || "",
         soldOutText: data.soldOutText || "",
         popularityText: data.popularityText || "",
         priceAlgorithms: data.priceAlgorithms || "",
@@ -1069,7 +1069,7 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
 
             {/* Images */}
 
-            <Form.Item label="Package Images">
+            <Form.Item label="Package Images" required>
               <Upload
                 multiple
                 listType="picture"
@@ -1182,7 +1182,6 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
                         label="Package Name"
                         validateStatus={errors.languageCards?.[index]?.data?.packageName ? 'error' : ''}
                         help={errors.languageCards?.[index]?.data?.packageName?.message}
-                        required
                       >
                         <Input
                           value={card.data.packageName}
@@ -1198,7 +1197,6 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
                         label="Button Text"
                         validateStatus={errors.languageCards?.[index]?.data?.buttonText ? 'error' : ''}
                         help={errors.languageCards?.[index]?.data?.buttonText?.message}
-                        required
                       >
                         <Input
                           value={card.data.buttonText}
@@ -1216,7 +1214,6 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
                         label="Currency"
                         validateStatus={errors.languageCards?.[index]?.data?.currency ? 'error' : ''}
                         help={errors.languageCards?.[index]?.data?.currency?.message}
-                        required
                       >
                         <Input
                           value={card.data.currency}
@@ -1294,7 +1291,6 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
                         label="Price Algorithm"
                         validateStatus={errors.languageCards?.[index]?.data?.priceAlgorithms ? 'error' : ''}
                         help={errors.languageCards?.[index]?.data?.priceAlgorithms?.message}
-                        required
                       >
                         <Input
                           value={card.data.priceAlgorithms}

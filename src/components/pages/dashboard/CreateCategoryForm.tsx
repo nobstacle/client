@@ -105,19 +105,19 @@ const CreateCategoryForm: React.FC<CreateCategoryFormProps> = ({
     React.useEffect(() => {
         if (isEdit && initialData) {
             reset(getDefaultValues());
-
             // Set images if available
-            if (initialData.images && Array.isArray(initialData.images)) {
-                const existingImages = initialData.images.map((imagePath: string, index: number) => ({
-                    uid: `existing-${index}`,
-                    name: imagePath.split('/').pop() || `image-${index}`,
-                    url: imagePath, // Assuming this is the full URL or you need to construct it
-                    status: 'done',
-                }));
-                setImages(existingImages);
+            if (initialData.signedImages && Array.isArray(initialData.signedImages)) {
+                    const existingImages = initialData.signedImages.map((img: any, index: number) => ({
+                        uid: `existing-${index}`,
+                        name: img.url.split('/').pop() || `image-${index}`,
+                        url: img.signedUrl,
+                        thumbUrl: img.signedUrl,
+                        status: "done",
+                    }));
+             setImages(existingImages);
             }
         }
-    }, [isEdit, initialData, reset]);
+        }, [isEdit, initialData, reset]);
 
     const handleCreateCategory = (data: CreateCategoryFormFieldValues) => {
         // Create FormData for multipart/form-data
@@ -411,7 +411,8 @@ const CreateCategoryForm: React.FC<CreateCategoryFormProps> = ({
                                     name: img.name || `image-${index}`,
                                     status: 'done',
                                     url: img.url,
-                                    originFileObj: img.originFileObj
+                                    originFileObj: img.originFileObj,
+                                    thumbUrl: img.thumbUrl || img.url, 
                                 }))}
                                 onRemove={(file) => {
                                     if (!isLoading) {
