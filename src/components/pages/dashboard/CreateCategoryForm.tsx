@@ -426,6 +426,7 @@ const CreateCategoryForm: React.FC<CreateCategoryFormProps> = ({
                                     icon={<UploadOutlined />}
                                     disabled={isLoading}
                                     size="large"
+                                    style={{color:"black"}}
                                 >
                                     Upload Images (Max 10)
                                 </Button>
