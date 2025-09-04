@@ -34,7 +34,7 @@ export default function Upsell() {
     const [selectedPackages, setSelectedPackages] = useState([]);
     const [allPackages, setAllPackages] = useState([]);
     const [initialLoad, setInitialLoad] = useState(true);
-    const [isTabVisible, setIsTabVisible] = useState(true);
+    const [dataLoaded, setDataLoaded] = useState(false); // Add this to track if data is loaded
     const pageSize = 10;
     const { data } = useSession();
     let Url = process.env.NEXT_PUBLIC_BACKEND_URL;
@@ -44,22 +44,21 @@ export default function Upsell() {
     const { data: companyData } = useCompanyControllerGetCompany();
     const isAdmin = data?.user.Roles[0] || false;
 
-    // Add visibility change handler to prevent unnecessary reloads
+    // REMOVE OR DISABLE the visibility change handler that causes reloads
+    // Comment out or remove this entire useEffect
+    /*
     useEffect(() => {
         const handleVisibilityChange = () => {
             setIsTabVisible(!document.hidden);
         };
-
-        // Add event listener for visibility changes
         document.addEventListener('visibilitychange', handleVisibilityChange);
-
-        // Cleanup
         return () => {
             document.removeEventListener('visibilitychange', handleVisibilityChange);
         };
     }, []);
+    */
 
-    // Add beforeunload handler to prevent accidental reloads
+    // Keep only the beforeunload handler for preventing accidental reloads
     useEffect(() => {
         const handleBeforeUnload = (e) => {
             // Only show warning if there are unsaved changes (editing mode)
@@ -81,13 +80,13 @@ export default function Upsell() {
         setCurrentPage(page);
     };
 
-    // Modified useEffect with proper dependency management and caching
+    // Modified useEffect - only load once when component mounts
     useEffect(() => {
-        if (data?.user !== undefined && initialLoad) {
+        if (data?.user !== undefined && !dataLoaded) {
             fetchTransactions();
-            setInitialLoad(false);
+            setDataLoaded(true); // Mark as loaded
         }
-    }, [data?.user]); // Remove unnecessary dependencies
+    }, [data?.user, dataLoaded]); // Add dataLoaded as dependency
 
     // Fetch packages with caching mechanism
     useEffect(() => {
@@ -100,7 +99,7 @@ export default function Upsell() {
                     method: 'GET',
                     headers: {
                         Authorization: `Bearer ${data?.user.backendTokens.at}`,
-                        'Cache-Control': 'no-cache' // Prevent browser caching issues
+                        'Cache-Control': 'no-cache'
                     },
                 });
                 if (response.ok) {
@@ -115,21 +114,18 @@ export default function Upsell() {
         if (data?.user !== undefined && allPackages.length === 0) {
             fetchPackages();
         }
-    }, [data?.user, allPackages.length, Url]); // More specific dependencies
+    }, [data?.user, allPackages.length, Url]);
 
     // Packages for dropdown - only those without from/to categories
     const dropdownPackages = allPackages.filter(pkg => pkg?.roomUpgrade === false);
 
-    // Modified fetch function with better error handling and caching
+    // Modified fetch function - remove visibility and loading checks that cause issues
     const fetchTransactions = useCallback((searchValue: string = "") => {
-        // Prevent fetching if we're not visible or already loading
-        if (!isTabVisible || loadingData) return;
-
         setLoadingData(true);
         fetch(`${Url}/api/v1/uploads/get-al-upsell-transactions`, {
             headers: {
                 Authorization: `Bearer ${data?.user.backendTokens.at}`,
-                'Cache-Control': 'no-cache' // Prevent browser caching
+                'Cache-Control': 'no-cache'
             },
         })
             .then(async (response) => {
@@ -146,7 +142,7 @@ export default function Upsell() {
             .finally(() => {
                 setLoadingData(false);
             });
-    }, [data, Url, isTabVisible, loadingData]); // Add isTabVisible and loadingData as dependencies
+    }, [data, Url]); // Remove problematic dependencies
 
     const getSalesTypeColor = (type: string) => {
         switch (type) {
@@ -204,6 +200,7 @@ export default function Upsell() {
             departureDate: record.departureDate ? dayjs(record.departureDate) : null,
         });
     };
+
     const handleDelete = (record) => {
         Swal.fire({
             title: 'Are you sure?',
@@ -352,7 +349,6 @@ export default function Upsell() {
             key: 'totalRevenue',
             width: 120,
             render: (revenue: number, record: any) => {
-                // Fixed calculation - use proper currency formatting
                 const currency = record.package?.currencies?.en || record.package?.currency || '$';
                 const formattedRevenue = revenue ? revenue.toLocaleString('en-US', {
                     minimumFractionDigits: 2,
@@ -496,7 +492,6 @@ export default function Upsell() {
             render: (record: any) => (
                 <div className="text-xs">
                     <div>{record.soldByUser?.email || 'N/A'}</div>
-                    {/* <div className="text-gray-500">ID: {record.soldBy}</div> */}
                 </div>
             ),
         },
@@ -517,52 +512,52 @@ export default function Upsell() {
                 </div>
             ),
         },
-      {
-        title: 'Actions',
-        key: 'actions',
-        width: 80,
-        fixed: 'right',
+        {
+            title: 'Actions',
+            key: 'actions',
+            width: 80,
+            fixed: 'right',
             render: (record: any) => {
                 const isEditing = editingRecord === record.id;
 
                 return (
-                <Space size="small">
-                    {isEditing ? (
-                    <>
-                        <Button
-                        type="primary"
-                        size="small"
-                        icon={<SaveOutlined />}
-                        onClick={() => handleSave(record)}
-                        />
-                        <Button
-                        size="small"
-                        icon={<CloseOutlined />}
-                        onClick={handleCancel}
-                        />
-                    </>
-                    ) : (
-                    <>
-                        <Tooltip title="Edit Transaction">
-                        <Button
-                            type="text"
+                    <Space size="small">
+                        {isEditing ? (
+                        <>
+                            <Button
+                            type="primary"
                             size="small"
-                            icon={<EditOutlined />}
-                            onClick={() => handleEdit(record)}
-                        />
-                        </Tooltip>
-                        <Tooltip title="Delete Transaction">
-                        <button
-                            title="Delete"
-                            onClick={() => handleDelete(record)}
-                            className="text-gray-500 "
-                        >
-                            <MdDelete />
-                        </button>
-                        </Tooltip>
-                    </>
-                    )}
-                </Space>
+                            icon={<SaveOutlined />}
+                            onClick={() => handleSave(record)}
+                            />
+                            <Button
+                            size="small"
+                            icon={<CloseOutlined />}
+                            onClick={handleCancel}
+                            />
+                        </>
+                        ) : (
+                        <>
+                            <Tooltip title="Edit Transaction">
+                            <Button
+                                type="text"
+                                size="small"
+                                icon={<EditOutlined />}
+                                onClick={() => handleEdit(record)}
+                            />
+                            </Tooltip>
+                            <Tooltip title="Delete Transaction">
+                            <button
+                                title="Delete"
+                                onClick={() => handleDelete(record)}
+                                className="text-gray-500 "
+                            >
+                                <MdDelete />
+                            </button>
+                            </Tooltip>
+                        </>
+                        )}
+                    </Space>
                 );
             },
         }
@@ -603,12 +598,10 @@ export default function Upsell() {
 
     // Function to send filtered package data
     const sendPackageData = (categoryId = null) => {
-        // Filter out selected packages and apply category filter
         let filteredPackages = allPackages.filter(pkg =>
             !selectedPackages.some(selected => selected.id === pkg.id)
         );
 
-        // If a category is selected, exclude packages that have this category in to_category_id
         if (categoryId) {
             filteredPackages = filteredPackages.filter(pkg =>
                 pkg.to_category_id !== categoryId
@@ -629,7 +622,6 @@ export default function Upsell() {
             );
         });
 
-        // Send the filtered packages
         if (finalFilteredPackages.length > 0) {
             emitSendPackages({
                 refId: finalFilteredPackages[0].id,
@@ -653,7 +645,6 @@ export default function Upsell() {
     const handlePackageSend = () => {
         setLoadingData(true);
 
-        // Use the first selected category if any, otherwise null
         const categoryId = selectedCategories.length > 0 ? selectedCategories[0] : null;
 
         try {
@@ -668,7 +659,6 @@ export default function Upsell() {
 
     // Modified fetchCategories with caching
     const fetchCategories = useCallback(() => {
-        // Check if we already have category data
         if (categoryData.length > 0) return;
 
         setLoadingData(true);
@@ -691,7 +681,7 @@ export default function Upsell() {
             .finally(() => {
                 setLoadingData(false);
             });
-    }, [data, Url, categoryData.length]); // Add categoryData.length as dependency
+    }, [data, Url, categoryData.length]);
 
     useEffect(() => {
         if (data?.user !== undefined && categoryData.length === 0) {
@@ -718,7 +708,6 @@ export default function Upsell() {
     return (
         <div className="min-h-full bg-gray-50">
             <div className="mx-auto p-6">
-                {/* Controls Section */}
                 {/* Controls Section */}
                 <Card className="mb-6 shadow-sm">
                     <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center">
@@ -804,7 +793,6 @@ export default function Upsell() {
                                     onClick={handlePackageSend}
                                     loading={loadingData}
                                     className="flex items-center justify-center bg-blue-600 hover:bg-blue-700 rounded-md px-4 py-2 text-white headerButton"
-                                // size="large"
                                 />
                             </div>
                         </div>
@@ -820,7 +808,6 @@ export default function Upsell() {
                                         value={searchTerm}
                                         onChange={searchTransactions}
                                         className="w-full"
-                                    // size="large"
                                     />
                                 </div>
                             </div>

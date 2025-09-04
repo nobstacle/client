@@ -372,7 +372,7 @@ const PackageCard = ({ packageData, handleClick, loadingButton, langCode = 'en' 
                 )}
               </Text>
               <Text className="text-xs sm:text-sm text-gray-500">
-                Sold {packageData.totalPackagesSold || 0} times
+                 {packageData.totalPackagesSold || 0} purchases
               </Text>
             </div>
           </div>

@@ -15,7 +15,7 @@ export default function ViewPackage({ packageData, onClose, viewPackageToggle })
     }
 
     console.info("Package Data in ViewPackage:", packageData);
-    
+
     // Get images array with fallback
     const images = packageData?.signedImageUrls?.length > 0
         ? packageData.signedImageUrls
@@ -89,25 +89,27 @@ export default function ViewPackage({ packageData, onClose, viewPackageToggle })
     // Get all available languages from the package data
     const getAvailableLanguages = () => {
         const languages = new Set();
-        
+
         // Check all multilingual fields to find available languages
         const multilingualFields = [
             'packageNames',
-            'packageDescriptions', 
+            'packageDescriptions',
             'packageBenefits',
             'packageTags',
             'packageAlerts',
             'buttonTexts',
             'currencies',
-            'taxInformation'
+            'taxInformation',
+            'soldOutTexts',
+            'popularityTexts'
         ];
-        
+
         multilingualFields.forEach(field => {
             if (packageData[field] && typeof packageData[field] === 'object') {
                 Object.keys(packageData[field]).forEach(lang => languages.add(lang));
             }
         });
-        
+
         return Array.from(languages);
     };
 
@@ -116,7 +118,7 @@ export default function ViewPackage({ packageData, onClose, viewPackageToggle })
     const getMultilingualValue = (field, language, defaultValue = '') => {
         if (!field || typeof field !== 'object') return field || defaultValue;
 
-        const langValue = field[language] || defaultValue;
+        const langValue = field[language] || field[Object.keys(field)[0]] || defaultValue;
 
         // Handle nested objects and arrays
         if (Array.isArray(langValue)) {
@@ -129,80 +131,6 @@ export default function ViewPackage({ packageData, onClose, viewPackageToggle })
         }
 
         return langValue;
-    };
-
-    // Localized text function
-    const getLocalizedText = (key, language, value = null) => {
-        const localizations = {
-            'bestSeller': {
-                'en': 'Best Seller',
-                'ar': 'الأكثر مبيعاً',
-                'fr': 'Meilleure Vente',
-                'es': 'Más Vendido',
-                'de': 'Bestseller',
-                'zh-CN': '最畅销',
-                'ja': 'ベストセラー',
-                'ko': '베스트셀러',
-                'ru': 'Хит продаж',
-                'pt': 'Mais Vendido',
-                'it': 'Più Venduto',
-                'hi': 'सबसे ज्यादा बिकने वाला',
-                'he': 'הנמכר ביותר',
-                'fa': 'پرفروش‌ترین',
-                'ur': 'سب سے زیادہ فروخت',
-                'tr': 'En Çok Satan',
-                'nl': 'Bestseller',
-                'sv': 'Bästsäljare',
-                'th': 'ขายดีที่สุด',
-                'vi': 'Bán Chạy Nhất'
-            },
-            'soldTimes': {
-                'en': `Sold ${value} times`,
-                'ar': `تم البيع ${value} مرة`,
-                'fr': `Vendu ${value} fois`,
-                'es': `Vendido ${value} veces`,
-                'de': `${value} mal verkauft`,
-                'zh-CN': `已售出${value}次`,
-                'ja': `${value}回販売`,
-                'ko': `${value}번 판매됨`,
-                'ru': `Продано ${value} раз`,
-                'pt': `Vendido ${value} vezes`,
-                'it': `Venduto ${value} volte`,
-                'hi': `${value} बार बेचा गया`,
-                'he': `נמכר ${value} פעמים`,
-                'fa': `${value} بار فروخته شده`,
-                'ur': `${value} بار فروخت ہوا`,
-                'tr': `${value} kez satıldı`,
-                'nl': `${value} keer verkocht`,
-                'sv': `Såld ${value} gånger`,
-                'th': `ขายแล้ว ${value} ครั้ง`,
-                'vi': `Đã bán ${value} lần`
-            },
-            'postingAlgorithm': {
-                'en': 'Posting Algorithm',
-                'ar': 'خوارزمية النشر',
-                'fr': 'Algorithme de Publication',
-                'es': 'Algoritmo de Publicación',
-                'de': 'Veröffentlichungsalgorithmus',
-                'zh-CN': '发布算法',
-                'ja': '投稿アルゴリズム',
-                'ko': '게시 알고리즘',
-                'ru': 'Алгоритм публикации',
-                'pt': 'Algoritmo de Publicação',
-                'it': 'Algoritmo di Pubblicazione',
-                'hi': 'पोस्टिंग एल्गोरिदम',
-                'he': 'אלגוריתם פרסום',
-                'fa': 'الگوریتم انتشار',
-                'ur': 'پوسٹنگ الگورتھم',
-                'tr': 'Yayınlama Algoritması',
-                'nl': 'Plaatsingsalgoritme',
-                'sv': 'Publiceringsalgoritm',
-                'th': 'อัลกอริทึมการโพสต์',
-                'vi': 'Thuật toán Đăng bài'
-            }
-        };
-
-        return localizations[key]?.[language] || localizations[key]?.['en'] || key;
     };
 
     // Image slideshow component (shared between all language cards)
@@ -328,14 +256,17 @@ export default function ViewPackage({ packageData, onClose, viewPackageToggle })
 
     // Language card component
     const LanguageCard = ({ language }) => {
-        const packageName = getMultilingualValue(packageData.packageNames, language, "Package Name");
-        const packageDescription = getMultilingualValue(packageData.packageDescriptions, language, "Package Description");
+        const packageName = getMultilingualValue(packageData.packageNames, language, '');
+        const packageDescription = getMultilingualValue(packageData.packageDescriptions, language, '');
         const packageBenefits = getMultilingualValue(packageData.packageBenefits, language, []);
         const packageTags = getMultilingualValue(packageData.packageTags, language, []);
-        const packageAlert = getMultilingualValue(packageData.packageAlerts, language, "");
-        const buttonText = getMultilingualValue(packageData.buttonTexts, language, "Take this deal");
-        const currency = getMultilingualValue(packageData.currencies, language, "USD");
-        const taxInfo = getMultilingualValue(packageData.taxInformation, language, "");
+        const packageAlert = getMultilingualValue(packageData.packageAlerts, language, '');
+        const buttonText = getMultilingualValue(packageData.buttonTexts, language, '');
+        const currency = getMultilingualValue(packageData.currencies, language, '');
+        const taxInfo = getMultilingualValue(packageData.taxInformation, language, '');
+        const soldOutText = getMultilingualValue(packageData.soldOutTexts, language, '');
+        const popularityText = getMultilingualValue(packageData.popularityTexts, language, '');
+        const priceAlgorithm = getMultilingualValue(packageData.priceAlgorithms, language, '');
 
         // Determine text direction based on language
         const rtlLanguages = ['ar', 'he', 'fa', 'ur', 'ps', 'sd', 'ug', 'yi'];
@@ -355,10 +286,10 @@ export default function ViewPackage({ packageData, onClose, viewPackageToggle })
                         <div style={{ height: '280px', display: 'flex', flexDirection: 'column' }}>
                             {/* Header Section */}
                             <div style={{ marginBottom: '12px' }}>
-                                <div style={{ 
-                                    display: 'flex', 
-                                    justifyContent: 'space-between', 
-                                    alignItems: 'flex-start', 
+                                <div style={{
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'flex-start',
                                     marginBottom: '8px',
                                     flexDirection: isRTL ? 'row-reverse' : 'row'
                                 }}>
@@ -366,28 +297,34 @@ export default function ViewPackage({ packageData, onClose, viewPackageToggle })
                                         {packageName}
                                     </Title>
                                     <div style={{ textAlign: isRTL ? 'left' : 'right' }}>
-                                        <Text strong style={{ color: '#333', fontSize: '14px' }}>
-                                            {getLocalizedText('bestSeller', language)}
-                                        </Text>
-                                        <br />
-                                        <Text type="secondary" style={{ fontSize: '12px' }}>
-                                            {getLocalizedText('soldTimes', language, packageData.totalPackagesSold || 22)}
-                                        </Text>
+                                        {popularityText && (
+                                            <>
+                                                <Text strong style={{ color: '#333', fontSize: '14px' }}>
+                                                    {popularityText}
+                                                </Text>
+                                                <br />
+                                            </>
+                                        )}
+                                        {packageData.totalPackagesSold && (
+                                            <Text type="secondary" style={{ fontSize: '12px' }}>
+                                                Sold {packageData.totalPackagesSold} times
+                                            </Text>
+                                        )}
                                     </div>
                                 </div>
 
                                 {/* Tags */}
-                                <div style={{ marginBottom: '8px' }}>
-                                    <Space wrap size="small" direction={isRTL ? 'rtl' : 'ltr'}>
-                                        {packageBenefits.map((benefit, index) => (
-                                            <div key={index} style={{ marginBottom: '4px' }}>
-                                                <Text style={{ color: '#52c41a', fontSize: '13px', lineHeight: '18px' }}>
-                                                    {isRTL ? '✓' : '✓'} {typeof benefit === 'object' ? JSON.stringify(benefit) : benefit}
-                                                </Text>
-                                            </div>
-                                        ))}
-                                    </Space>
-                                </div>
+                                {packageTags && packageTags.length > 0 && (
+                                    <div style={{ marginBottom: '8px' }}>
+                                        <Space wrap size="small" direction={isRTL ? 'rtl' : 'ltr'}>
+                                            {packageTags.map((tag, index) => (
+                                                <Tag key={index} color="blue" style={{ fontSize: '12px' }}>
+                                                    {tag}
+                                                </Tag>
+                                            ))}
+                                        </Space>
+                                    </div>
+                                )}
                             </div>
 
                             <Row gutter={16}>
@@ -399,22 +336,26 @@ export default function ViewPackage({ packageData, onClose, viewPackageToggle })
                                         paddingLeft: isRTL ? '8px' : '0'
                                     }}>
                                         {/* Description */}
-                                        <div style={{ marginBottom: '12px' }}>
-                                            <Text style={{ fontSize: '14px', color: '#666', lineHeight: '20px' }}>
-                                                {packageDescription}
-                                            </Text>
-                                        </div>
+                                        {packageDescription && (
+                                            <div style={{ marginBottom: '12px' }}>
+                                                <Text style={{ fontSize: '14px', color: '#666', lineHeight: '20px' }}>
+                                                    {packageDescription}
+                                                </Text>
+                                            </div>
+                                        )}
 
                                         {/* Benefits */}
-                                        <div style={{ marginBottom: '12px' }}>
-                                            {packageBenefits.map((benefit, index) => (
-                                                <div key={index} style={{ marginBottom: '4px' }}>
-                                                    <Text style={{ color: '#52c41a', fontSize: '13px', lineHeight: '18px' }}>
-                                                        ✓ {benefit}
-                                                    </Text>
-                                                </div>
-                                            ))}
-                                        </div>
+                                        {packageBenefits && packageBenefits.length > 0 && (
+                                            <div style={{ marginBottom: '12px' }}>
+                                                {packageBenefits.map((benefit, index) => (
+                                                    <div key={index} style={{ marginBottom: '4px' }}>
+                                                        <Text style={{ color: '#52c41a', fontSize: '13px', lineHeight: '18px' }}>
+                                                            ✓ {benefit}
+                                                        </Text>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
 
                                         {/* Alert */}
                                         {packageAlert && (
@@ -437,19 +378,21 @@ export default function ViewPackage({ packageData, onClose, viewPackageToggle })
                                             marginBottom: '8px'
                                         }}>
                                             <div style={{ textAlign: isRTL ? 'left' : 'right' }}>
-                                                <div style={{ marginBottom: '2px' }}>
-                                                    <Text type="secondary" style={{ fontSize: '12px' }}>
-                                                        {getLocalizedText('postingAlgorithm', language)}
-                                                    </Text>
-                                                </div>
-                                                <div style={{ 
-                                                    display: 'flex', 
-                                                    alignItems: 'center', 
-                                                    gap: '8px', 
+                                                {priceAlgorithm && (
+                                                    <div style={{ marginBottom: '2px' }}>
+                                                        <Text type="secondary" style={{ fontSize: '12px' }}>
+                                                            {priceAlgorithm}
+                                                        </Text>
+                                                    </div>
+                                                )}
+                                                <div style={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: '8px',
                                                     justifyContent: isRTL ? 'flex-start' : 'flex-end',
                                                     flexDirection: isRTL ? 'row-reverse' : 'row'
                                                 }}>
-                                                    {packageData.originalPrice && (
+                                                    {packageData.originalPrice && packageData.originalPrice !== packageData.discountedPrice && (
                                                         <Text
                                                             delete
                                                             style={{ fontSize: '14px', color: '#ff4d4f' }}
@@ -458,7 +401,7 @@ export default function ViewPackage({ packageData, onClose, viewPackageToggle })
                                                         </Text>
                                                     )}
                                                     <Text strong style={{ fontSize: '20px', color: '#333' }}>
-                                                        {currency} {packageData.discountedPrice}
+                                                        {currency} {packageData.discountedPrice || packageData.originalPrice}
                                                     </Text>
                                                     <InfoCircleOutlined style={{ color: '#999', fontSize: '14px' }} />
                                                 </div>
@@ -471,25 +414,27 @@ export default function ViewPackage({ packageData, onClose, viewPackageToggle })
                                         </div>
 
                                         {/* Button Section */}
-                                        <div style={{ 
-                                            display: 'flex', 
-                                            justifyContent: isRTL ? 'flex-start' : 'flex-end' 
+                                        <div style={{
+                                            display: 'flex',
+                                            justifyContent: isRTL ? 'flex-start' : 'flex-end'
                                         }}>
-                                            <Button
-                                                type="primary"
-                                                size="large"
-                                                style={{
-                                                    backgroundColor: '#1890ff',
-                                                    borderColor: '#1890ff',
-                                                    borderRadius: '6px',
-                                                    fontSize: '14px',
-                                                    fontWeight: 'bold',
-                                                    minWidth: '140px',
-                                                    height: '40px'
-                                                }}
-                                            >
-                                                {buttonText}
-                                            </Button>
+                                            {buttonText && (
+                                                <Button
+                                                    type="primary"
+                                                    size="large"
+                                                    style={{
+                                                        backgroundColor: '#1890ff',
+                                                        borderColor: '#1890ff',
+                                                        borderRadius: '6px',
+                                                        fontSize: '14px',
+                                                        fontWeight: 'bold',
+                                                        minWidth: '140px',
+                                                        height: '40px'
+                                                    }}
+                                                >
+                                                    {buttonText}
+                                                </Button>
+                                            )}
                                         </div>
                                     </div>
                                 </Col>
@@ -505,13 +450,13 @@ export default function ViewPackage({ packageData, onClose, viewPackageToggle })
     const getLanguageName = (langCode) => {
         const languageNames = {
             'af': 'Afrikaans',
-            'sq': 'Albanian', 
+            'sq': 'Albanian',
             'am': 'Amharic',
             'ar': 'العربية',
             'hy': 'Armenian',
             'az': 'Azerbaijani',
             'eu': 'Basque',
-            'ba': 'Batest',
+            'ba': 'Bashkir',
             'be': 'Belarusian',
             'bn': 'Bengali',
             'bs': 'Bosnian',
