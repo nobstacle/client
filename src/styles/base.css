@@ -931,3 +931,54 @@ button {
 .customSpace svg {
   color: #10b981;
 }
+.clamp-2 {
+  font-size: 14px;
+  color: #666;
+  line-height: 20px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;  
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis; 
+  width: 100%;
+}
+
+.image-slideshow-wrapper .slick-prev,
+.image-slideshow-wrapper .slick-next {
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  z-index: 10;
+  width: 32px;
+  height: 32px;
+  /* background: rgba(0, 0, 0, 0.5); */
+  border-radius: 50%;
+  border: none;
+  display: flex;               
+  align-items: center;          
+  justify-content: center; 
+}
+
+.image-slideshow-wrapper .slick-prev::before,
+.image-slideshow-wrapper .slick-next::before {
+  font-size: 18px;
+  /* color: #fff; */
+  opacity: 1;
+  line-height: 1;
+}
+
+.image-slideshow-wrapper .slick-prev {
+  left: 8px;
+}
+.image-slideshow-wrapper .slick-next {
+  right: 8px;
+}
+/* .slick-initialized {
+  overflow: hidden;
+  width: 100%;
+  height: 280px;
+}  */
+
+
+
+
+

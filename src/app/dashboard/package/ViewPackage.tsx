@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Table, Tag, Card, Pagination, Input, Modal, Row, Col, Button, Image, Typography, Space, Divider, Tabs } from "antd";
+import { Table, Tag, Card, Pagination, Input, Modal, Row, Col, Button, Image, Typography, Space, Divider, Tabs,Carousel } from "antd";
 import { InfoCircleOutlined, TrophyOutlined, LeftOutlined, RightOutlined } from "@ant-design/icons";
 
 const { Title, Text, Paragraph } = Typography;
@@ -133,126 +133,51 @@ export default function ViewPackage({ packageData, onClose, viewPackageToggle })
         return langValue;
     };
 
-    // Image slideshow component (shared between all language cards)
-    const ImageSlideshow = () => (
-        <div style={{ position: 'relative', height: '280px' }}>
-            <div
-                className="image-slideshow-wrapper"
-                style={{
-                    position: 'relative',
-                    width: '100%',
-                    height: '100%',
-                    overflow: 'hidden',
-                    borderRadius: '8px'
-                }}>
-                <Image
-                    src={images[currentImageIndex].signedUrl}
-                    alt={images[currentImageIndex].alt || `Package image ${currentImageIndex + 1}`}
-                    style={{
-                        width: '100%',
-                        height: '100%',
-                        objectFit: 'cover',
-                        borderRadius: '8px'
-                    }}
-                    fallback="https://via.placeholder.com/400x280/1890ff/ffffff?text=Package+Image"
-                    preview={false}
-                />
-            </div>
+const mergedImages = [
+  ...(packageData.images || []).map(img => ({
+    signedUrl: img.signedUrl || img.url,
+    alt: img.alt || img.originalName || "Package Image"
+  })),
+  ...(packageData.toCategory?.signedImages || []).map(img => {
+    if (typeof img === "string") {
+      return { signedUrl: img, alt: "Category Image" };
+    }
+    return { signedUrl: img.signedUrl || img.url, alt: img.alt || "Category Image" };
+  })
+];
 
-            {/* Navigation Arrows - Only show if multiple images */}
-            {images.length > 1 && (
-                <>
-                    <Button
-                        type="text"
-                        icon={<LeftOutlined />}
-                        onClick={goToPrevious}
-                        style={{
-                            position: 'absolute',
-                            top: '50%',
-                            left: '8px',
-                            transform: 'translateY(-50%)',
-                            background: 'rgba(0, 0, 0, 0.6)',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '50%',
-                            width: '32px',
-                            height: '32px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: '12px'
-                        }}
-                    />
-                    <Button
-                        type="text"
-                        icon={<RightOutlined />}
-                        onClick={goToNext}
-                        style={{
-                            position: 'absolute',
-                            top: '50%',
-                            right: '8px',
-                            transform: 'translateY(-50%)',
-                            background: 'rgba(0, 0, 0, 0.6)',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '50%',
-                            width: '32px',
-                            height: '32px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: '12px'
-                        }}
-                    />
-                </>
-            )}
 
-            {/* Dot Indicators - Only show if multiple images */}
-            {images.length > 1 && (
-                <div style={{
-                    position: 'absolute',
-                    bottom: '12px',
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    display: 'flex',
-                    gap: '6px'
-                }}>
-                    {images.map((_, index) => (
-                        <button
-                            key={index}
-                            onClick={() => goToSlide(index)}
-                            style={{
-                                width: '8px',
-                                height: '8px',
-                                borderRadius: '50%',
-                                border: 'none',
-                                background: index === currentImageIndex ? '#1890ff' : 'rgba(255, 255, 255, 0.7)',
-                                cursor: 'pointer',
-                                transition: 'background-color 0.3s ease'
-                            }}
-                        />
-                    ))}
-                </div>
-            )}
+const ImageSlideshow = ({ images }) => {
+  if (!images || images.length === 0) return null;
 
-            {/* Image Counter */}
-            {images.length > 1 && (
-                <div style={{
-                    position: 'absolute',
-                    top: '8px',
-                    left: '8px',
-                    background: 'rgba(0, 0, 0, 0.7)',
-                    color: 'white',
-                    padding: '2px 6px',
-                    borderRadius: '8px',
-                    fontSize: '11px',
-                    fontWeight: 'bold'
-                }}>
-                    {currentImageIndex + 1} / {images.length}
-                </div>
-            )}
-        </div>
-    );
+  return (
+    <div className="image-slideshow-wrapper" style={{ position: "relative", height: "280px", width: "100%" }}>
+      <Carousel
+        arrows
+        dots
+        infinite
+      >
+        {images.map((img, index) => (
+          <div key={index}>
+            <Image
+              src={img.signedUrl}
+              alt={img.alt || `Image ${index + 1}`}
+              preview={false}
+              fallback="https://via.placeholder.com/400x280/1890ff/ffffff?text=Image+Not+Available"
+              style={{
+                width: "100%",
+                height: "280px",
+                objectFit: "cover",
+                borderRadius: "8px"
+              }}
+            />
+          </div>
+        ))}
+      </Carousel>
+    </div>
+  );
+};
+
 
     // Language card component
     const LanguageCard = ({ language }) => {
@@ -278,7 +203,7 @@ export default function ViewPackage({ packageData, onClose, viewPackageToggle })
                 <Row gutter={16}>
                     {/* Left Column - Square Image */}
                     <Col xs={24} md={10}>
-                        <ImageSlideshow />
+                        <ImageSlideshow images={mergedImages} />
                     </Col>
 
                     {/* Right Column - Content */}
@@ -338,7 +263,7 @@ export default function ViewPackage({ packageData, onClose, viewPackageToggle })
                                         {/* Description */}
                                         {packageDescription && (
                                             <div style={{ marginBottom: '12px' }}>
-                                                <Text style={{ fontSize: '14px', color: '#666', lineHeight: '20px' }}>
+                                                <Text style={{ fontSize: '14px', color: '#666', lineHeight: '20px' }} className="clamp-2">
                                                     {packageDescription}
                                                 </Text>
                                             </div>

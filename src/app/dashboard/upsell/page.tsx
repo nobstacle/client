@@ -638,7 +638,7 @@ export default function Upsell() {
                 }
             });
         } else {
-            message.warning("No packages available to send with current filters.");
+            message.warning("No packages available on selected language.");
         }
     };
 

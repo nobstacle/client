@@ -573,10 +573,12 @@ export default function Package() {
             render: (percentage) => percentage ? `${percentage}%` : "N/A",
         },
         {
-            title: "Price Algorithm",
-            dataIndex: "priceAlgorithm",
-            key: "priceAlgorithm",
-            width: 220,
+        title: "Price Algorithm",
+        key: "priceAlgorithm",
+        width: 220,
+        render: (_, record) => (
+            <MultiLangCell langObject={record.priceAlgorithms} />
+        ),
         },
         {
             title: "Package Alert",

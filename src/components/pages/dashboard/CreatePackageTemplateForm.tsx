@@ -65,6 +65,7 @@ interface MultilingualFields {
   soldOutText?: string;
   popularityText?: string;
   priceAlgorithms: string;
+  purchaseText?: string;
 }
 
 interface LanguageCard {
@@ -211,6 +212,7 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
         soldOutText: data.soldOutText || "",
         popularityText: data.popularityText || "",
         priceAlgorithms: data.priceAlgorithms || "",
+        purchaseText: data.purchaseText || "",
       },
       benefits: benefits,
       tags: tags,
@@ -1255,7 +1257,20 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
                         />
                       </Form.Item>
                     </Col>
-
+                   <Col span={12}>
+                      <Form.Item
+                        label="Purchase Text"
+                        validateStatus={errors.languageCards?.[index]?.data?.purchaseText ? 'error' : ''}
+                        help={errors.languageCards?.[index]?.data?.purchaseText?.message}
+                      >
+                        <Input
+                          value={card.data.purchaseText}
+                          onChange={(e) => updateLanguageCardData(card.id, 'purchaseText', e.target.value)}
+                          placeholder="e.g., Purchase, Sold"
+                          disabled={isLoading}
+                        />
+                      </Form.Item>
+                    </Col>
                     <Col span={12}>
                       <Form.Item
                         label="Popularity Text"
