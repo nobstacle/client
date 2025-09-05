@@ -827,12 +827,12 @@ export const Content: React.FC = () => {
       dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 1);
 
       const upsellData = {
-        packageId: packageData.id,
+        packageId: packageData.id, 
         confirmationNumber: confirmationNumber,
         arrivalDate: tomorrow.toISOString(),
         departureDate: dayAfterTomorrow.toISOString(),
         numberOfAdults: 2,
-        numberOfChildren: 0,
+        numberOfChildren: 0, 
         soldBy: sellingPerson.id
       };
 
@@ -898,36 +898,6 @@ export const Content: React.FC = () => {
       }
 
       const currentLangCode = messageStore.receivedContent?.langCode || 'en';
-
-      // Helper function to safely extract string values from nested objects
-      // const extractValue = (obj, defaultValue = '') => {
-      //   if (typeof obj === 'string') return obj;
-      //   if (Array.isArray(obj)) return obj;
-      //   if (obj && typeof obj === 'object') {
-      //     const enValue = obj.en;
-      //     if (Array.isArray(enValue)) {
-      //       return enValue.map(item => extractValue(item)).flat();
-      //     }
-      //     return extractValue(enValue, defaultValue);
-      //   }
-      //   return defaultValue;
-      // };
-
-      // Helper function to safely parse deeply nested JSON strings
-      // const safeParseTaxInfo = (taxInfo) => {
-      //   if (typeof taxInfo !== 'string') return extractValue(taxInfo);
-
-      //   try {
-      //     let parsed = taxInfo;
-      //     // Keep parsing until we get a non-string result or can't parse anymore
-      //     while (typeof parsed === 'string' && parsed.startsWith('{')) {
-      //       parsed = JSON.parse(parsed);
-      //     }
-      //     return extractValue(parsed);
-      //   } catch {
-      //     return taxInfo;
-      //   }
-      // };
 
       // Helper function to merge category images with package images
       const mergeImages = (packageImages, toCategory) => {

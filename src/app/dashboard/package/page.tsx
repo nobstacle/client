@@ -365,14 +365,12 @@ export default function Package() {
     };
 
     // Component to render multi-language content with tooltip
-    const MultiLangCell = ({ langObject, isArray = false, maxDisplay = 3 }) => {
+    const MultiLangCell = ({ langObject, isArray = false, maxDisplay = 3, maxLength = 100 }) => {
         const value = getFirstAvailableValue(langObject, isArray ? [] : '');
 
-        // Handle nested objects
         const processValue = (val) => {
             if (Array.isArray(val)) {
                 return val.map(item => {
-                    // If item is an object with language keys, extract the value
                     if (typeof item === 'object' && item !== null) {
                         return getFirstAvailableValue(item, '');
                     }
@@ -384,11 +382,18 @@ export default function Package() {
 
         const processedValue = processValue(value);
 
+        const truncate = (text) => {
+            if (typeof text === 'string' && text.length > maxLength) {
+                return text.substring(0, maxLength) + '...';
+            }
+            return text;
+        };
+
         if (isArray && Array.isArray(processedValue)) {
             return (
                 <div>
                     {processedValue.slice(0, maxDisplay).map((item, index) => (
-                        <Tag key={index} size="small">{item}</Tag>
+                        <Tag key={index} size="small">{truncate(item)}</Tag>
                     ))}
                     {processedValue.length > maxDisplay && (
                         <span>+{processedValue.length - maxDisplay} more</span>
@@ -397,8 +402,9 @@ export default function Package() {
             );
         }
 
-        return <span>{processedValue || 'N/A'}</span>;
+        return <span>{truncate(processedValue) || 'N/A'}</span>;
     };
+
 
     const checkLanguageAvailability = (packageData, langCode) => {
         if (!packageData || !langCode) return false;
@@ -460,7 +466,7 @@ export default function Package() {
             key: "packageDescription",
             width: 250,
             render: (_, record) => (
-                <MultiLangCell langObject={record.packageDescriptions} />
+                <MultiLangCell langObject={record.packageDescriptions} maxLength={100} />
             ),
         },
         {
@@ -573,12 +579,12 @@ export default function Package() {
             render: (percentage) => percentage ? `${percentage}%` : "N/A",
         },
         {
-        title: "Price Algorithm",
-        key: "priceAlgorithm",
-        width: 220,
-        render: (_, record) => (
-            <MultiLangCell langObject={record.priceAlgorithms} />
-        ),
+            title: "Price Algorithm",
+            key: "priceAlgorithm",
+            width: 220,
+            render: (_, record) => (
+                <MultiLangCell langObject={record.priceAlgorithms} />
+            ),
         },
         {
             title: "Package Alert",

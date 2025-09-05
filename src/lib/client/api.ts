@@ -7,7 +7,7 @@
 import {
 	useMutation,
 	useQuery
-} from '@tanstack/react-query'
+} from '@tanstack/react-query';
 import type {
 	MutationFunction,
 	QueryFunction,
@@ -15,7 +15,7 @@ import type {
 	UseMutationOptions,
 	UseQueryOptions,
 	UseQueryResult
-} from '@tanstack/react-query'
+} from '@tanstack/react-query';
 import type {
 	ContentControllerFindOneParams,
 	ContentRes,
@@ -2613,7 +2613,6 @@ export const companyControllerGetCompany = (
 
 	options?: SecondParameter<typeof nobstacleBackendApiInstance>, signal?: AbortSignal
 ) => {
-
 
 	return nobstacleBackendApiInstance<GetCompanyRes>(
 		{

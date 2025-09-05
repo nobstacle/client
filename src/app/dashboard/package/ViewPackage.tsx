@@ -232,7 +232,7 @@ const ImageSlideshow = ({ images }) => {
                                         )}
                                         {packageData.totalPackagesSold && (
                                             <Text type="secondary" style={{ fontSize: '12px' }}>
-                                                Sold {packageData.totalPackagesSold} times
+                                                {packageData.totalPackagesSold} purchases
                                             </Text>
                                         )}
                                     </div>

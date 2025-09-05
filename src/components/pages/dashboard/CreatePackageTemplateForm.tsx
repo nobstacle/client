@@ -623,16 +623,17 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
     formData.append('priceAlgorithms', JSON.stringify(priceAlgorithms));
 
     // Add images
-    images.forEach((image, index) => {
-      if (image.originFileObj) {
-        formData.append(`images`, image.originFileObj);
-        formData.append(`imageMetadata[${index}]`, JSON.stringify({
-          alt: image.alt || image.name,
-          order: index + 1
-        }));
-      }
-    });
-
+    if (images && images.length > 0) {
+      images.forEach((image, index) => {
+        if (image.originFileObj) {
+          formData.append(`images`, image.originFileObj);
+          formData.append(`imageMetadata[${index}]`, JSON.stringify({
+            alt: image.alt || image.name,
+            order: index + 1
+          }));
+        }
+      });
+    }
     // Submit the form data
     if (isEdit && initialData?.id) {
       updatePackage.mutate(
@@ -1071,7 +1072,7 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
 
             {/* Images */}
 
-            <Form.Item label="Package Images" required>
+            <Form.Item label="Package Images">
               <Upload
                 multiple
                 listType="picture"
@@ -1257,7 +1258,7 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
                         />
                       </Form.Item>
                     </Col>
-                   <Col span={12}>
+                    <Col span={12}>
                       <Form.Item
                         label="Purchase Text"
                         validateStatus={errors.languageCards?.[index]?.data?.purchaseText ? 'error' : ''}
@@ -1324,13 +1325,13 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
                         validateStatus={errors.languageCards?.[index]?.data?.taxInformation ? 'error' : ''}
                         help={errors.languageCards?.[index]?.data?.taxInformation?.message}
                       >
-                      <TextArea
-                        value={card.data.taxInformation}
-                        onChange={(e) => updateLanguageCardData(card.id, 'taxInformation', e.target.value)}
-                        placeholder="Enter tax information"
-                        rows={1}
-                        disabled={isLoading}
-                      />
+                        <TextArea
+                          value={card.data.taxInformation}
+                          onChange={(e) => updateLanguageCardData(card.id, 'taxInformation', e.target.value)}
+                          placeholder="Enter tax information"
+                          rows={1}
+                          disabled={isLoading}
+                        />
                       </Form.Item>
                     </Col>
                   </Row>
