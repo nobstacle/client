@@ -158,6 +158,7 @@ const getLocalizedContent = (contentObj, langCode = 'en', fallback = '') => {
 const PackageCard = ({ packageData, handleClick, loadingButton, langCode = 'en' }) => {
   const carouselRef = useRef();
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [expanded, setExpanded] = useState(false);
 
   const formatPrice = (price) => {
     return new Intl.NumberFormat().format(price / 100);
@@ -270,6 +271,33 @@ const PackageCard = ({ packageData, handleClick, loadingButton, langCode = 'en' 
       }} />
     </button>
   );
+    const charLimit = 120;
+      let displayText = packageDescription;
+    if (!expanded && packageDescription?.length > charLimit) {
+      displayText = (
+        <>
+          {packageDescription.slice(0, charLimit)}...{" "}
+          <button
+            onClick={() => setExpanded(true)}
+            className="text-blue-500 font-medium hover:underline"
+          >
+            Show More
+          </button>
+        </>
+      );
+    } else if (expanded) {
+      displayText = (
+        <>
+          {packageDescription}{" "}
+          <button
+            onClick={() => setExpanded(false)}
+            className="ml-2 text-blue-500 font-medium hover:underline"
+          >
+            Show Less
+          </button>
+        </>
+      );
+    }
 
   return (
     <Card
@@ -278,7 +306,7 @@ const PackageCard = ({ packageData, handleClick, loadingButton, langCode = 'en' 
     >
       <div className="flex flex-col lg:flex-row">
         {/* Image Section */}
-        <div className="relative md:w-[400px] lg:w-[375px] xl:w-[500px] h-56 sm:h-64 md:h-72 lg:h-auto flex-shrink-0" style={{ maxHeight: '40vh' }}>
+        <div className="relative w-full lg:w-[375px] xl:w-[500px]  flex-shrink-0" >
           {imageArray.length > 0 ? (
             <div className="relative w-full h-full" style={{ padding: '1rem' }}>
               <Carousel
@@ -340,7 +368,7 @@ const PackageCard = ({ packageData, handleClick, loadingButton, langCode = 'en' 
         </div>
 
         {/* Content Section */}
-        <div className="flex-1 p-4 sm:p-6 flex flex-col" style={{ paddingLeft: '0.5rem' }}>
+        <div className="flex-1 p-4 sm:p-6 flex flex-col mt-4 lg:mt-0" >
           {/* Top Section */}
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start mb-4 gap-4">
             {/* Left side - Package info */}
@@ -383,10 +411,9 @@ const PackageCard = ({ packageData, handleClick, loadingButton, langCode = 'en' 
             <div className="flex-1">
               {/* Description */}
               <div className="mb-4">
-                <Text className={`font-bold mb-3 block text-sm sm:text-base ${isSoldOut ? 'text-gray-500' : 'text-gray-700'}`}>
-                  {packageDescription}
+                 <Text className="font-bold mb-3 block text-sm sm:text-base text-gray-700">
+                  {displayText}
                 </Text>
-
                 {/* Benefits */}
                 {packageBenefits.length > 0 && (
                   <div className="space-y-1">
@@ -437,23 +464,25 @@ const PackageCard = ({ packageData, handleClick, loadingButton, langCode = 'en' 
                 <Button
                   type="primary"
                   size="large"
-                  className={`px-6 sm:px-8 py-2 h-10 sm:h-12 w-full lg:w-auto text-sm sm:text-base ${isSoldOut
-                    ? 'bg-gray-400 hover:bg-gray-400 cursor-not-allowed'
-                    : 'bg-blue-600 hover:bg-blue-700'
-                    }`}
+                  className={`!px-6 !sm:!px-8 py-2 h-10 sm:h-12 min-w-[150px] w-full  text-sm sm:text-base flex justify-center items-center ${
+                    isSoldOut
+                      ? 'bg-gray-400 hover:bg-gray-400 cursor-not-allowed'
+                      : 'bg-blue-600 hover:bg-blue-700'
+                  }`}
                   disabled={!packageData.active || loadingButton || isSoldOut}
                   onClick={() => !isSoldOut && handlePackageClick(packageData)}
                 >
                   {loadingButton ? 'Loading..' : (isSoldOut ? soldOutText : buttonText)}
                 </Button>
+
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
-    </Card>
-  );
-};
+      </Card>
+    );
+  };
 
 export const Content: React.FC = () => {
   const isFirstTimeOpen = useRef(true);

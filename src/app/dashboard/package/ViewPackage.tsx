@@ -9,6 +9,8 @@ const { TabPane } = Tabs;
 export default function ViewPackage({ packageData, onClose, viewPackageToggle }) {
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
     const slideInterval = useRef(null);
+    const [expanded, setExpanded] = useState(false);
+
 
     const handleModalClose = () => {
         onClose();
@@ -192,7 +194,15 @@ const ImageSlideshow = ({ images }) => {
         const soldOutText = getMultilingualValue(packageData.soldOutTexts, language, '');
         const popularityText = getMultilingualValue(packageData.popularityTexts, language, '');
         const priceAlgorithm = getMultilingualValue(packageData.priceAlgorithms, language, '');
+        const maxChars = 200;
 
+        const toggleExpand = () => setExpanded(!expanded);
+
+        // Truncate text manually for "Show more" inline
+        const displayText =
+            !expanded && packageDescription.length > maxChars
+            ? packageDescription.slice(0, maxChars) + '... '
+            : packageDescription;
         // Determine text direction based on language
         const rtlLanguages = ['ar', 'he', 'fa', 'ur', 'ps', 'sd', 'ug', 'yi'];
         const isRTL = rtlLanguages.includes(language);
@@ -208,7 +218,7 @@ const ImageSlideshow = ({ images }) => {
 
                     {/* Right Column - Content */}
                     <Col xs={24} md={14}>
-                        <div style={{ height: '280px', display: 'flex', flexDirection: 'column' }}>
+                     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                             {/* Header Section */}
                             <div style={{ marginBottom: '12px' }}>
                                 <div style={{
@@ -263,8 +273,16 @@ const ImageSlideshow = ({ images }) => {
                                         {/* Description */}
                                         {packageDescription && (
                                             <div style={{ marginBottom: '12px' }}>
-                                                <Text style={{ fontSize: '14px', color: '#666', lineHeight: '20px' }} className="clamp-2">
-                                                    {packageDescription}
+                                                 <Text style={{ fontSize: '14px', color: '#666', lineHeight: '20px' }}>
+                                                    {displayText}
+                                                    {packageDescription.length > maxChars && (
+                                                    <span
+                                                        onClick={toggleExpand}
+                                                        style={{ color: '#1890ff', cursor: 'pointer' }}
+                                                    >
+                                                        {expanded ? ' Show less' : ' Show more'}
+                                                    </span>
+                                                    )}
                                                 </Text>
                                             </div>
                                         )}
