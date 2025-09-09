@@ -301,12 +301,12 @@ const PackageCard = ({ packageData, handleClick, loadingButton, langCode = 'en' 
 
   return (
     <Card
-      className="w-full max-w-7xl mx-auto shadow-lg rounded-lg overflow-hidden mb-6"
+      className="w-full mx-auto shadow-lg rounded-lg overflow-hidden mb-6"
       bodyStyle={{ padding: 0 }}
     >
-      <div className="flex flex-col lg:flex-row">
+      <div className="flex flex-col md:flex-row lg:flex-row ">
         {/* Image Section */}
-        <div className="relative w-full lg:w-[375px] xl:w-[500px]  flex-shrink-0" >
+        <div className="relative w-full md:w-[300px] lg:w-[375px] xl:w-[500px] flex-shrink-0" >
           {imageArray.length > 0 ? (
             <div className="relative w-full h-full" style={{ padding: '1rem' }}>
               <Carousel
@@ -368,7 +368,7 @@ const PackageCard = ({ packageData, handleClick, loadingButton, langCode = 'en' 
         </div>
 
         {/* Content Section */}
-        <div className="flex-1 p-4 sm:p-6 flex flex-col mt-4 lg:mt-0" >
+        <div className="flex-1 p-4 sm:p-6 flex flex-col mt-4 md:mt-0" >
           {/* Top Section */}
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start mb-4 gap-4">
             {/* Left side - Package info */}
@@ -868,9 +868,9 @@ export const Content: React.FC = () => {
       const result = await createUpsellTransaction(upsellData);
       message.success(`Package "${packageData.packageNames}" purchased successfully!\nConfirmation: ${confirmationNumber}`);
       setLoading(false);
-      setTimeout(() => {
-        messageStore.reset();
-      }, 1000);
+      // setTimeout(() => {
+      //   messageStore.reset();
+      // }, 1000);
     } catch (error) {
       setLoading(false);
       console.error('Failed to create upsell transaction:', error);
