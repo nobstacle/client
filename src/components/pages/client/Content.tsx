@@ -19,7 +19,7 @@ import QRCode from 'qrcode';
 import "../../../styles/base.css";
 import "antd/dist/reset.css";
 import { useSession } from "next-auth/react";
-import { Card, Button, Tag, Typography, Carousel, message, Spin } from "antd";
+import { Card, Button, Tag, Typography, Carousel, message, Modal, Image } from "antd";
 import { LeftOutlined, RightOutlined } from '@ant-design/icons';
 
 const { Title, Text } = Typography;
@@ -159,6 +159,7 @@ const PackageCard = ({ packageData, handleClick, loadingButton, langCode = 'en' 
   const carouselRef = useRef();
   const [currentSlide, setCurrentSlide] = useState(0);
   const [expanded, setExpanded] = useState(false);
+  const [isModalOpen, setisIsModalOpen] = useState(false);
 
   const formatPrice = (price) => {
     return new Intl.NumberFormat().format(price / 100);
@@ -181,14 +182,13 @@ const PackageCard = ({ packageData, handleClick, loadingButton, langCode = 'en' 
   const packageAlerts = getLocalizedContent(packageData.packageAlerts, langCode, '');
   const buttonText = getLocalizedContent(packageData.buttonTexts, langCode, 'Take this deal');
   const soldOutText = getLocalizedContent(packageData.soldOutTexts, langCode, 'Sold Out');
+  const purchaseText = getLocalizedContent(packageData.purchaseText, langCode, 'Purchase Text');
   const currency = getLocalizedContent(packageData.currencies, langCode, 'AED');
   const priceAlgorithm = getLocalizedContent(packageData.priceAlgorithms, langCode, 'Price per unit');
 
-  // Debug logging
-  console.log('PackageCard - langCode:', langCode);
-  console.log('PackageCard - packageNames raw:', packageData.packageNames);
-  console.log('PackageCard - packageName localized:', packageName);
-  console.log('PackageCard - packageDescription localized:', packageDescription);
+  const closeModal = () => {
+    setisIsModalOpen(false);
+  }
 
   // Check if package is sold out
   const isSoldOut = packageData.toCategory?.soldOut === true;
@@ -299,16 +299,208 @@ const PackageCard = ({ packageData, handleClick, loadingButton, langCode = 'en' 
       );
     }
 
+    const openBigModal = () => {
+      setisIsModalOpen(true);
+    }
+
   return (
-    <Card
-      className="w-full mx-auto shadow-lg rounded-lg overflow-hidden mb-6"
-      bodyStyle={{ padding: 0 }}
-    >
-      <div className="flex flex-col md:flex-row lg:flex-row ">
-        {/* Image Section */}
-        <div className="relative w-full md:w-[300px] lg:w-[375px] xl:w-[500px] flex-shrink-0" >
+    <>
+
+      <Card
+        className=" w-full max-w-7xl mx-auto shadow-lg rounded-lg overflow-hidden mb-6"
+        bodyStyle={{ padding: 0 }}
+      >
+        <div className="flex flex-col md:flex-row lg:flex-row ">
+          {/* Image Section */}
+          <div className="relative w-full md:w-[300px] lg:w-[375px] xl:w-[500px] flex-shrink-0" >
+            {imageArray.length > 0 ? (
+              <div className="relative w-full h-full" style={{ padding: '1rem' }} onClick={openBigModal}>
+                <Carousel
+                  ref={carouselRef}
+                  arrows={hasMultipleImages}
+                  prevArrow={<CustomPrevArrow />}
+                  nextArrow={<CustomNextArrow />}
+                  dots={false}
+                  infinite={hasMultipleImages}
+                  style={{ height: '100%' }}
+                  afterChange={handleSlideChange}
+                  beforeChange={(from, to) => setCurrentSlide(to)}
+                >
+                  {imageArray.map((image, index) => (
+                    <div key={`${packageData.id}-${index}`} className="w-full h-full" style={{ height: '100%' }}>
+                      <img
+                        src={image.signedUrl || image.url || image}
+                        alt={image.alt || `Package Image ${index + 1}`}
+                        className="w-full h-full object-cover"
+                        style={{
+                          borderRadius: '8px',
+                          height: '100%',
+                          maxHeight: '35vh',
+                          minHeight: '35vh',
+                          filter: isSoldOut ? 'grayscale(100%) brightness(0.7)' : 'none'
+                        }}
+                        onError={(e) => {
+                          console.error('Image failed to load:', image.signedUrl || image.url || image);
+                        }}
+                        onLoad={() => {
+                          console.log('Image loaded successfully:', image.signedUrl || image.url || image);
+                        }}
+                      />
+                    </div>
+                  ))}
+                </Carousel>
+
+                {/* Image counter - Only show if more than one image */}
+                {hasMultipleImages && (
+                  <div className="absolute top-2 left-1 bg-black/50 text-white px-2 py-1 rounded text-xs z-10">
+                    {currentSlide + 1} / {imageArray.length}
+                  </div>
+                )}
+
+                {/* Sold Out Overlay */}
+                {isSoldOut && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-lg">
+                    <div className="bg-red-600 text-white px-4 py-2 rounded-lg font-bold text-lg shadow-lg">
+                      {soldOutText}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                <Text className="text-gray-500">No Image Available</Text>
+              </div>
+            )}
+          </div>
+
+          {/* Content Section */}
+          <div className="flex-1 p-4 sm:p-6 flex sm:flex-col  mt-4 md:mt-0" >
+            {/* Top Section */}
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start mb-4 gap-4">
+              {/* Left side - Package info */}
+              <div className="flex-1">
+                <Title level={3} className={`mb-2 mt-0 text-lg sm:text-xl lg:text-2xl ${isSoldOut ? 'text-gray-500' : 'text-blue-600'}`} style={{ color: isSoldOut ? '#9ca3af' : '#006ce4' }}>
+                  {packageName}
+                </Title>
+
+                {/* Tags */}
+                {packageTags.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    {Array.isArray(packageTags) && packageTags.map((tag, index) => (
+                      <Tag key={index} className={`px-2 sm:px-3 py-1 border-green-800 rounded text-xs sm:text-sm ${isSoldOut ? 'bg-gray-400 text-gray-600 border-gray-400' : 'bg-green-800 text-white'}`}>
+                        {tag}
+                      </Tag>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Right side - Best seller/sold out and sold info */}
+              <div className="text-left sm:text-right flex-shrink-0">
+                <Text className={`font-bold mb-2 block text-sm sm:text-base ${isSoldOut ? 'text-red-600' : 'text-gray-600'}`}>
+                  {isSoldOut ? soldOutText : (
+                    packageData.totalPackagesSold > 1500 ? "Best Seller" :
+                      packageData.totalPackagesSold > 1000 && packageData.totalPackagesSold < 1500 ? "Top Seller" :
+                        packageData.totalPackagesSold > 500 && packageData.totalPackagesSold < 1000 ? "Popular Deal" :
+                          "Limited Offer"
+                  )}
+                </Text>
+                <Text className="text-xs sm:text-sm text-gray-500">
+                  {packageData.totalPackagesSold || 0} {purchaseText}
+                </Text>
+              </div>
+            </div>
+
+            {/* Main Content Area */}
+            <div className="flex flex-col sm:flex-row lg:flex-row gap-6 flex-1">
+              {/* Description and Benefits */}
+              <div className="flex-1">
+                {/* Description */}
+                <div className="mb-4">
+                  <Text className="font-bold mb-3 block text-sm sm:text-base text-gray-700">
+                    {displayText}
+                  </Text>
+                  {/* Benefits */}
+                  {packageBenefits.length > 0 && (
+                    <div className="space-y-1">
+                      {Array.isArray(packageBenefits) && packageBenefits.map((benefit, index) => (
+                        <div key={index} className={`font-medium flex items-center text-sm sm:text-base ${isSoldOut ? 'text-gray-400' : 'text-green-600'}`}>
+                          <span className="mr-2">✓</span>
+                          {benefit}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Alert */}
+                {packageAlerts && (
+                  <div className="mb-4">
+                    <Text className={`font-medium text-sm sm:text-base ${isSoldOut ? 'text-gray-400' : 'text-red-600'}`}>
+                      {packageAlerts}
+                    </Text>
+                  </div>
+                )}
+              </div>
+
+              {/* Price and Button Section */}
+              <div className="lg:w-44 flex flex-col justify-end">
+                <div className="text-left lg:text-right pb-2">
+                  {/* Price Algorithm Label */}
+                  <Text className={`text-xs sm:text-sm mb-2 block ${isSoldOut ? 'text-gray-400' : 'text-gray-500'}`}>
+                    {priceAlgorithm}
+                  </Text>
+
+                  {/* Pricing Block */}
+                  <div className="mb-4">
+                    <div className="flex items-center justify-start lg:justify-end gap-2 mb-1 flex-wrap">
+                      <Text className={`text-sm line-through order-2 lg:order-1 ${isSoldOut ? 'text-gray-300' : 'text-gray-400'}`}>
+                        {formatCurrency(packageData.originalPrice, currency)}
+                      </Text>
+                      <Text className={`text-xl sm:text-2xl font-bold order-1 lg:order-2 ${isSoldOut ? 'text-gray-400' : 'text-black'}`}>
+                        {formatCurrency(packageData.discountedPrice, currency)}
+                      </Text>
+                    </div>
+                    <Text className={`text-xs sm:text-sm ${isSoldOut ? 'text-gray-400' : 'text-gray-500'}`}>
+                      {taxInformation}
+                    </Text>
+                  </div>
+
+                  {/* Button */}
+                  <Button
+                    type="primary"
+                    size="large"
+                    className={`!px-6 !sm:!px-8 py-2 h-10 sm:h-12 min-w-[150px] w-full  text-sm sm:text-base flex justify-center items-center ${isSoldOut
+                      ? 'bg-gray-400 hover:bg-gray-400 cursor-not-allowed'
+                      : 'bg-blue-600 hover:bg-blue-700'
+                      }`}
+                    disabled={!packageData.active || loadingButton || isSoldOut}
+                    onClick={() => !isSoldOut && handlePackageClick(packageData)}
+                  >
+                    {loadingButton ? 'Loading..' : (isSoldOut ? soldOutText : buttonText)}
+                  </Button>
+
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Card>
+      <Modal
+        open={isModalOpen}
+        onCancel={closeModal}
+        footer={false}
+        width="90%" // modal ka width bada kar diya
+        bodyStyle={{ height: '80vh', padding: '1rem' }} // modal ke andar content ke liye height
+        style={{ top: 20 }}
+      >
+        <>
           {imageArray.length > 0 ? (
-            <div className="relative w-full h-full" style={{ padding: '1rem' }}>
+            <div
+              className="relative w-full h-full"
+              style={{ height: '100%', width:'100%' }}
+              onClick={openBigModal}
+            >
               <Carousel
                 ref={carouselRef}
                 arrows={hasMultipleImages}
@@ -316,42 +508,37 @@ const PackageCard = ({ packageData, handleClick, loadingButton, langCode = 'en' 
                 nextArrow={<CustomNextArrow />}
                 dots={false}
                 infinite={hasMultipleImages}
-                style={{ height: '100%' }}
+                style={{ height: '100%',width:'100%' }}
                 afterChange={handleSlideChange}
                 beforeChange={(from, to) => setCurrentSlide(to)}
+                className="package-modal-carousel"
               >
                 {imageArray.map((image, index) => (
-                  <div key={`${packageData.id}-${index}`} className="w-full h-full" style={{ height: '100%' }}>
-                    <img
+                  <div className="w-full h-full flex items-center justify-center">
+                    <Image
+                      preview={false} // important
                       src={image.signedUrl || image.url || image}
                       alt={image.alt || `Package Image ${index + 1}`}
-                      className="w-full h-full object-cover"
+                      className="object-contain w-full h-full"
                       style={{
-                        borderRadius: '8px',
+                        width: '100%',
                         height: '100%',
-                        maxHeight: '35vh',
-                        minHeight: '35vh',
-                        filter: isSoldOut ? 'grayscale(100%) brightness(0.7)' : 'none'
-                      }}
-                      onError={(e) => {
-                        console.error('Image failed to load:', image.signedUrl || image.url || image);
-                      }}
-                      onLoad={() => {
-                        console.log('Image loaded successfully:', image.signedUrl || image.url || image);
+                        maxHeight: '75vh',
+                        borderRadius: '8px',
+                        filter: isSoldOut ? 'grayscale(100%) brightness(0.7)' : 'none',
                       }}
                     />
                   </div>
+
                 ))}
               </Carousel>
 
-              {/* Image counter - Only show if more than one image */}
               {hasMultipleImages && (
                 <div className="absolute top-2 left-1 bg-black/50 text-white px-2 py-1 rounded text-xs z-10">
                   {currentSlide + 1} / {imageArray.length}
                 </div>
               )}
 
-              {/* Sold Out Overlay */}
               {isSoldOut && (
                 <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-lg">
                   <div className="bg-red-600 text-white px-4 py-2 rounded-lg font-bold text-lg shadow-lg">
@@ -365,124 +552,11 @@ const PackageCard = ({ packageData, handleClick, loadingButton, langCode = 'en' 
               <Text className="text-gray-500">No Image Available</Text>
             </div>
           )}
-        </div>
-
-        {/* Content Section */}
-        <div className="flex-1 p-4 sm:p-6 flex flex-col mt-4 md:mt-0" >
-          {/* Top Section */}
-          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start mb-4 gap-4">
-            {/* Left side - Package info */}
-            <div className="flex-1">
-              <Title level={3} className={`mb-2 mt-0 text-lg sm:text-xl lg:text-2xl ${isSoldOut ? 'text-gray-500' : 'text-blue-600'}`} style={{ color: isSoldOut ? '#9ca3af' : '#006ce4' }}>
-                {packageName}
-              </Title>
-
-              {/* Tags */}
-              {packageTags.length > 0 && (
-                <div className="flex flex-wrap gap-2 mb-4">
-                  {Array.isArray(packageTags) && packageTags.map((tag, index) => (
-                    <Tag key={index} className={`px-2 sm:px-3 py-1 border-green-800 rounded text-xs sm:text-sm ${isSoldOut ? 'bg-gray-400 text-gray-600 border-gray-400' : 'bg-green-800 text-white'}`}>
-                      {tag}
-                    </Tag>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Right side - Best seller/sold out and sold info */}
-            <div className="text-left sm:text-right flex-shrink-0">
-              <Text className={`font-bold mb-2 block text-sm sm:text-base ${isSoldOut ? 'text-red-600' : 'text-gray-600'}`}>
-                {isSoldOut ? soldOutText : (
-                  packageData.totalPackagesSold > 1500 ? "Best Seller" :
-                    packageData.totalPackagesSold > 1000 && packageData.totalPackagesSold < 1500 ? "Top Seller" :
-                      packageData.totalPackagesSold > 500 && packageData.totalPackagesSold < 1000 ? "Popular Deal" :
-                        "Limited Offer"
-                )}
-              </Text>
-              <Text className="text-xs sm:text-sm text-gray-500">
-                 {packageData.totalPackagesSold || 0} purchases
-              </Text>
-            </div>
-          </div>
-
-          {/* Main Content Area */}
-          <div className="flex flex-col lg:flex-row gap-6 flex-1">
-            {/* Description and Benefits */}
-            <div className="flex-1">
-              {/* Description */}
-              <div className="mb-4">
-                 <Text className="font-bold mb-3 block text-sm sm:text-base text-gray-700">
-                  {displayText}
-                </Text>
-                {/* Benefits */}
-                {packageBenefits.length > 0 && (
-                  <div className="space-y-1">
-                    {Array.isArray(packageBenefits) && packageBenefits.map((benefit, index) => (
-                      <div key={index} className={`font-medium flex items-center text-sm sm:text-base ${isSoldOut ? 'text-gray-400' : 'text-green-600'}`}>
-                        <span className="mr-2">✓</span>
-                        {benefit}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Alert */}
-              {packageAlerts && (
-                <div className="mb-4">
-                  <Text className={`font-medium text-sm sm:text-base ${isSoldOut ? 'text-gray-400' : 'text-red-600'}`}>
-                    {packageAlerts}
-                  </Text>
-                </div>
-              )}
-            </div>
-
-            {/* Price and Button Section */}
-            <div className="lg:w-44 flex flex-col justify-end">
-              <div className="text-left lg:text-right pb-2">
-                {/* Price Algorithm Label */}
-                <Text className={`text-xs sm:text-sm mb-2 block ${isSoldOut ? 'text-gray-400' : 'text-gray-500'}`}>
-                  {priceAlgorithm}
-                </Text>
-
-                {/* Pricing Block */}
-                <div className="mb-4">
-                  <div className="flex items-center justify-start lg:justify-end gap-2 mb-1 flex-wrap">
-                    <Text className={`text-sm line-through order-2 lg:order-1 ${isSoldOut ? 'text-gray-300' : 'text-gray-400'}`}>
-                      {formatCurrency(packageData.originalPrice, currency)}
-                    </Text>
-                    <Text className={`text-xl sm:text-2xl font-bold order-1 lg:order-2 ${isSoldOut ? 'text-gray-400' : 'text-black'}`}>
-                      {formatCurrency(packageData.discountedPrice, currency)}
-                    </Text>
-                  </div>
-                  <Text className={`text-xs sm:text-sm ${isSoldOut ? 'text-gray-400' : 'text-gray-500'}`}>
-                    {taxInformation}
-                  </Text>
-                </div>
-
-                {/* Button */}
-                <Button
-                  type="primary"
-                  size="large"
-                  className={`!px-6 !sm:!px-8 py-2 h-10 sm:h-12 min-w-[150px] w-full  text-sm sm:text-base flex justify-center items-center ${
-                    isSoldOut
-                      ? 'bg-gray-400 hover:bg-gray-400 cursor-not-allowed'
-                      : 'bg-blue-600 hover:bg-blue-700'
-                  }`}
-                  disabled={!packageData.active || loadingButton || isSoldOut}
-                  onClick={() => !isSoldOut && handlePackageClick(packageData)}
-                >
-                  {loadingButton ? 'Loading..' : (isSoldOut ? soldOutText : buttonText)}
-                </Button>
-
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </Card>
-    );
-  };
+        </>
+      </Modal>
+    </>
+  );
+};
 
 export const Content: React.FC = () => {
   const isFirstTimeOpen = useRef(true);

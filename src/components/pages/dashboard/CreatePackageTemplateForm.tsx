@@ -63,9 +63,9 @@ interface MultilingualFields {
   packageAlert?: string;
   buttonText: string;
   soldOutText?: string;
+  purchaseText?: string;
   popularityText?: string;
   priceAlgorithms: string;
-  purchaseText?: string;
 }
 
 interface LanguageCard {
@@ -129,6 +129,7 @@ const multilingualSchema = yup.object().shape({
   packageAlert: yup.string().max(200, "Alert text must be at most 200 characters"),
   // buttonText: yup.string().required("Button text is required").max(50, "Button text must be at most 50 characters"),
   soldOutText: yup.string().max(100, "Sold out text must be at most 100 characters"),
+  purchaseText: yup.string().max(100, "purchaseText  text must be at most 100 characters"),
   popularityText: yup.string().max(100, "Popularity text must be at most 100 characters"),
   // priceAlgorithms: yup.string().required("Price algorithm is required"),
 });
@@ -237,6 +238,7 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
           packageAlert: getMultilingualValue(initialData.packageAlerts, langCode),
           buttonText: getMultilingualValue(initialData.buttonTexts, langCode),
           soldOutText: getMultilingualValue(initialData.soldOutTexts, langCode),
+          purchaseText: getMultilingualValue(initialData.purchaseText, langCode),
           popularityText: getMultilingualValue(initialData.popularityTexts, langCode),
           priceAlgorithms: getMultilingualValue(initialData.priceAlgorithms, langCode),
         });
@@ -590,6 +592,7 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
     const packageAlerts: Record<string, string> = {};
     const buttonTexts: Record<string, string> = {};
     const soldOutTexts: Record<string, string> = {};
+    const purchaseText: Record<string, string> = {};
     const popularityTexts: Record<string, string> = {};
     const priceAlgorithms: Record<string, string> = {};
 
@@ -604,6 +607,7 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
         packageAlerts[card.langCode] = card.data.packageAlert || "";
         buttonTexts[card.langCode] = card.data.buttonText;
         soldOutTexts[card.langCode] = card.data.soldOutText || "";
+        purchaseText[card.langCode] = card.data.purchaseText || "";
         popularityTexts[card.langCode] = card.data.popularityText || "";
         priceAlgorithms[card.langCode] = card.data.priceAlgorithms || "";
       }
@@ -619,6 +623,7 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
     formData.append('packageAlerts', JSON.stringify(packageAlerts));
     formData.append('buttonTexts', JSON.stringify(buttonTexts));
     formData.append('soldOutTexts', JSON.stringify(soldOutTexts));
+    formData.append('purchaseText', JSON.stringify(purchaseText));
     formData.append('popularityTexts', JSON.stringify(popularityTexts));
     formData.append('priceAlgorithms', JSON.stringify(priceAlgorithms));
 

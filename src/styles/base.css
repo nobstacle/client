@@ -1002,3 +1002,13 @@ button {
   max-height: none !important;  
   overflow: visible !important; 
 }
+.package-modal-carousel .ant-image {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.package-modal-carousel .ant-image-img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain; /* ya cover agar poora fill chahiye */
+}
