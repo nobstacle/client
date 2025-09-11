@@ -183,6 +183,7 @@ const PackageCard = ({ packageData, handleClick, loadingButton, langCode = 'en' 
   const buttonText = getLocalizedContent(packageData.buttonTexts, langCode, 'Take this deal');
   const soldOutText = getLocalizedContent(packageData.soldOutTexts, langCode, 'Sold Out');
   const purchaseText = getLocalizedContent(packageData.purchaseText, langCode, 'Purchase Text');
+  const popularityTexts = getLocalizedContent(packageData.popularityTexts, langCode, 'Popular');
   const currency = getLocalizedContent(packageData.currencies, langCode, 'AED');
   const priceAlgorithm = getLocalizedContent(packageData.priceAlgorithms, langCode, 'Price per unit');
 
@@ -398,12 +399,13 @@ const PackageCard = ({ packageData, handleClick, loadingButton, langCode = 'en' 
               {/* Right side - Best seller/sold out and sold info */}
               <div className="text-left sm:text-right flex-shrink-0">
                 <Text className={`font-bold mb-2 block text-sm sm:text-base ${isSoldOut ? 'text-red-600' : 'text-gray-600'}`}>
-                  {isSoldOut ? soldOutText : (
+                  {popularityTexts}
+                  {/* {isSoldOut ? soldOutText : (
                     packageData.totalPackagesSold > 1500 ? "Best Seller" :
                       packageData.totalPackagesSold > 1000 && packageData.totalPackagesSold < 1500 ? "Top Seller" :
                         packageData.totalPackagesSold > 500 && packageData.totalPackagesSold < 1000 ? "Popular Deal" :
                           "Limited Offer"
-                  )}
+                  )} */}
                 </Text>
                 <Text className="text-xs sm:text-sm text-gray-500">
                   {packageData.totalPackagesSold || 0} {purchaseText}
