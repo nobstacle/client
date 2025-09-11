@@ -183,7 +183,7 @@ const PackageCard = ({ packageData, handleClick, loadingButton, langCode = 'en' 
   const buttonText = getLocalizedContent(packageData.buttonTexts, langCode, 'Take this deal');
   const soldOutText = getLocalizedContent(packageData.soldOutTexts, langCode, 'Sold Out');
   const purchaseText = getLocalizedContent(packageData.purchaseText, langCode, 'Purchase Text');
-  const popularityTexts = getLocalizedContent(packageData.popularityTexts, langCode, 'Popular');
+  const popularityTexts = getLocalizedContent(packageData.popularityTexts, langCode, '');
   const currency = getLocalizedContent(packageData.currencies, langCode, 'AED');
   const priceAlgorithm = getLocalizedContent(packageData.priceAlgorithms, langCode, 'Price per unit');
 
@@ -315,7 +315,7 @@ const PackageCard = ({ packageData, handleClick, loadingButton, langCode = 'en' 
           {/* Image Section */}
           <div className="relative w-full md:w-[300px] lg:w-[375px] xl:w-[500px] flex-shrink-0" >
             {imageArray.length > 0 ? (
-              <div className="relative w-full h-full" style={{ padding: '1rem' }} onClick={openBigModal}>
+              <div className="relative w-full h-full" style={{ padding: '1rem' }} >
                 <Carousel
                   ref={carouselRef}
                   arrows={hasMultipleImages}
@@ -346,6 +346,7 @@ const PackageCard = ({ packageData, handleClick, loadingButton, langCode = 'en' 
                         onLoad={() => {
                           console.log('Image loaded successfully:', image.signedUrl || image.url || image);
                         }}
+                        onClick={openBigModal}
                       />
                     </div>
                   ))}
