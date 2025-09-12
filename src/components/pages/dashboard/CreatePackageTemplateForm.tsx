@@ -29,6 +29,7 @@ import {
   usePackageControllerGetPackageTags,
 } from "../../../lib/client/api";
 import { useSession } from "next-auth/react";
+import { TranslationOutlined } from "@ant-design/icons";
 
 const { Text, Title } = Typography;
 const { Option } = Select;
@@ -167,6 +168,7 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
   const [categoryData, setCategoryData] = React.useState<any[]>([]);
   const [selectedLanguages, setSelectedLanguages] = React.useState<string[]>([]);
   const [isInitialized, setIsInitialized] = React.useState(false);
+  const [isTranslating, setIsTranslating] = React.useState<string | null>(null);
 
   const getMultilingualValue = (field: any, fallbackLang = 'en') => {
     if (!field || typeof field !== 'object') return field || '';
@@ -180,6 +182,119 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
       }).filter(Boolean);
     }
     return firstLangValue;
+  };
+
+  const handleImportTranslation = async (targetCardId: string) => {
+    const sourceCard = watchedLanguageCards[0];
+    const targetCard = watchedLanguageCards.find(card => card.id === targetCardId);
+
+    if (!sourceCard || !targetCard || !sourceCard.langCode || !targetCard.langCode) {
+      message.error('Please ensure both source and target languages are selected');
+      return;
+    }
+
+    if (!sourceCard.data.packageName || !sourceCard.data.buttonText) {
+      message.error('Please fill in at least the package name and button text in the first language before importing');
+      return;
+    }
+
+    setIsTranslating(targetCardId);
+
+    try {
+      // Collect all texts to translate
+      const textsToTranslate = [
+        sourceCard.data.packageName,
+        sourceCard.data.packageDescription || '',
+        sourceCard.data.taxInformation || '',
+        sourceCard.data.packageAlert || '',
+        sourceCard.data.buttonText,
+        sourceCard.data.soldOutText || '',
+        sourceCard.data.purchaseText || '',
+        sourceCard.data.popularityText || '',
+        sourceCard.data.priceAlgorithms || '',
+        ...sourceCard.benefits,
+        ...sourceCard.tags,
+      ];
+
+
+      const response = await fetch(`${Url}/api/v1/uploads/translate-bulk`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${sessionData?.user.backendTokens.at}`,
+        },
+        body: JSON.stringify({
+          texts: textsToTranslate,
+          targetLanguage: targetCard.langCode,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Translation failed: ${response.status}`);
+      }
+
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error || 'Translation failed');
+      }
+
+      // Extract translations from the API response
+      const allTranslations = result.translations.map(t => t.translatedText);
+      const benefitsStartIndex = 9;
+      const tagsStartIndex = benefitsStartIndex + sourceCard.benefits.length;
+
+      const [
+        translatedName,
+        translatedDescription,
+        translatedTaxInfo,
+        translatedAlert,
+        translatedButtonText,
+        translatedSoldOutText,
+        translatedPurchaseText,
+        translatedPopularityText,
+        translatedPriceAlgorithms,
+      ] = allTranslations.slice(0, 9);
+
+      const translatedBenefits = allTranslations.slice(benefitsStartIndex, tagsStartIndex);
+      const translatedTags = allTranslations.slice(tagsStartIndex);
+
+      // Update the target card with translated content
+      const updatedCards = watchedLanguageCards.map(card => {
+        if (card.id === targetCardId) {
+          return {
+            ...card,
+            data: {
+              ...card.data,
+              packageName: translatedName,
+              packageDescription: translatedDescription,
+              taxInformation: translatedTaxInfo,
+              packageAlert: translatedAlert,
+              buttonText: translatedButtonText,
+              soldOutText: translatedSoldOutText,
+              purchaseText: translatedPurchaseText,
+              popularityText: translatedPopularityText,
+              priceAlgorithms: translatedPriceAlgorithms,
+              currency: sourceCard.data.currency,
+              packageBenefits: translatedBenefits,
+              packageTags: translatedTags,
+            },
+            benefits: translatedBenefits,
+            tags: translatedTags,
+          };
+        }
+        return card;
+      });
+
+      setValue("languageCards", updatedCards, { shouldValidate: true });
+      message.success('Translation imported successfully!');
+
+    } catch (error) {
+      console.error('Translation error:', error);
+      message.error('Failed to translate content. Please try again or fill manually.');
+    } finally {
+      setIsTranslating(null);
+    }
   };
 
   const convertFromCents = (value: number) => {
@@ -897,29 +1012,6 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
                   />
                 </Form.Item>
               </Col>
-
-              {/* <Col span={8}>
-                <Form.Item
-                  label="Price Level"
-                  validateStatus={errors.priceLevel ? 'error' : ''}
-                  help={errors.priceLevel?.message}
-                >
-                  <Controller
-                    name="priceLevel"
-                    control={control}
-                    render={({ field }) => (
-                      <InputNumber
-                        {...field}
-                        placeholder="Enter price level"
-                        style={{ width: '100%' }}
-                        status={errors.priceLevel ? 'error' : ''}
-                        disabled={isLoading}
-                        min={0}
-                      />
-                    )}
-                  />
-                </Form.Item>
-              </Col> */}
             </Row>
 
             <Row gutter={16}>
@@ -1157,6 +1249,23 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
                             (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
                           }
                         />
+
+                        {/* Import Translation Button - Only show for non-first cards */}
+                        {index > 0 && watchedLanguageCards[0]?.langCode && card.langCode && (
+                          <Button
+                            type="default"
+                            size="small"
+                            icon={isTranslating === card.id ? <LoadingOutlined /> : <TranslationOutlined />}
+                            onClick={() => handleImportTranslation(card.id)}
+                            disabled={isLoading || isTranslating === card.id || !watchedLanguageCards[0]?.data?.packageName}
+                            style={{
+                              borderColor: '#52c41a',
+                              color: '#52c41a',
+                            }}
+                          >
+                            {isTranslating === card.id ? 'Translating...' : 'Import Translation'}
+                          </Button>
+                        )}
                       </div>
                       {watchedLanguageCards.length > 1 && (
                         <Button
