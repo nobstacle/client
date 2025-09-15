@@ -30,6 +30,7 @@ import {
 } from "../../../lib/client/api";
 import { useSession } from "next-auth/react";
 import { TranslationOutlined } from "@ant-design/icons";
+import useTemplateStore from "@/lib/zustand/store/templateStore";
 
 const { Text, Title } = Typography;
 const { Option } = Select;
@@ -169,6 +170,8 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
   const [selectedLanguages, setSelectedLanguages] = React.useState<string[]>([]);
   const [isInitialized, setIsInitialized] = React.useState(false);
   const [isTranslating, setIsTranslating] = React.useState<string | null>(null);
+  const [selectedVideos, setSelectedVideos] = React.useState<number[]>([]);
+  const { videos, setVideos, setSearchVideos, searchVideos } = useTemplateStore();
 
   const getMultilingualValue = (field: any, fallbackLang = 'en') => {
     if (!field || typeof field !== 'object') return field || '';
@@ -600,6 +603,9 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
   // Initialize form data only once for edit mode
   React.useEffect(() => {
     if (isEdit && initialData && !isInitialized) {
+    if (initialData.videos?.length > 0) {
+        setSelectedVideos(initialData.videos.map(v => v.id));
+    }
       // Set selected languages from initial data
       const existingLanguages = Object.keys(initialData.packageNames || {});
       setSelectedLanguages(existingLanguages);
@@ -692,6 +698,19 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
 
     formData.append('companyId', (data.companyId || company.data?.id).toString());
     formData.append('totalPackagesSold', (data.totalPackagesSold || 0).toString());
+
+    if (selectedVideos && selectedVideos.length > 0) {
+        selectedVideos.forEach((videoId, index) => {
+        formData.append("videoIds[]", videoId.toString());
+
+        // Optional metadata if required
+        formData.append(`videoMetadata[${index}]`, JSON.stringify({
+          tag: videos.find(v => v.id === videoId)?.tag || `Video ${videoId}`,
+          order: index + 1
+        }));
+      });
+    }
+
 
     if (data.templateId) {
       formData.append('templateId', data.templateId.toString());
@@ -1196,6 +1215,53 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
               </Upload>
             </Form.Item>
 
+            <Form.Item label="Package Videos">
+              <Select
+                mode="multiple"
+                showSearch
+                placeholder="Select videos"
+                value={selectedVideos}
+                onChange={(values) => setSelectedVideos(values)}
+                style={{ width: "100%" }}
+                optionLabelProp="label"
+              >
+                {videos.map((video) => (
+                  <Select.Option
+                    key={video.id}
+                    value={video.id}
+                    label={video.tag || `Video ${video.id}`}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <video
+                        src={video.url}
+                        width="80"
+                        height="50"
+                        style={{ objectFit: "cover", borderRadius: 4 }}
+                      />
+                      <span>{video.tag || `Video ${video.id}`}</span>
+                    </div>
+                  </Select.Option>
+                ))}
+              </Select>
+
+              {selectedVideos.length > 0 && (
+                <div style={{ marginTop: 12, display: "flex", gap: 12, flexWrap: "wrap" }}>
+                  {selectedVideos.map((videoId) => {
+                    const vid = videos.find((v) => v.id === videoId || v.id === videoId?.id);
+                    return (
+                      <video
+                        key={videoId}
+                        src={vid?.url}
+                        width="160"
+                        height="90"
+                        controls
+                        style={{ borderRadius: 8, border: "1px solid #ddd" }}
+                      />
+                    );
+                  })}
+                </div>
+              )}
+            </Form.Item>
           </Card>
 
           {/* Multilingual Fields - Language Cards */}
