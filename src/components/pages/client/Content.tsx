@@ -197,21 +197,31 @@ const PackageCard = ({ packageData, handleClick, loadingButton, langCode = 'en' 
   // Get image array and deduplicate
   const rawImageArray = packageData.signedImageUrls || packageData.images || [];
 
-  // Deduplicate images based on signedUrl or url
-  const imageArray = rawImageArray.filter((image, index, self) => {
-    const currentUrl = image.signedUrl || image.url || image;
-    return index === self.findIndex(img => {
-      const imgUrl = img.signedUrl || img.url || img;
-      return imgUrl === currentUrl;
-    });
-  });
+  // Build media array (images + videos)
+  const mediaArray = [
+    ...(packageData.signedImageUrls?.length
+      ? packageData.signedImageUrls
+      : packageData.images || []
+    ).map((img) => ({
+      type: "image",
+      url: img.signedUrl || img.url || img,
+      alt: img.alt || "Package Image",
+      order: img.order || 0,
+    })),
+    ...(packageData.videos || []).map((vid, idx) => ({
+      type: "video",
+      url: vid.url,
+      alt: vid.tag || "Package Video",
+      order: vid.order || idx + 1,
+    })),
+  ].sort((a, b) => (a.order || 0) - (b.order || 0));
 
-  const hasMultipleImages = imageArray.length > 1;
+  const hasMultipleImages = mediaArray.length > 1;
 
   // Reset currentSlide when imageArray changes
   useEffect(() => {
     setCurrentSlide(0);
-  }, [imageArray.length]);
+  }, [mediaArray.length]);
 
   // Carousel change handler
   const handleSlideChange = (currentSlideIndex) => {
@@ -314,7 +324,7 @@ const PackageCard = ({ packageData, handleClick, loadingButton, langCode = 'en' 
         <div className="flex flex-col md:flex-row lg:flex-row ">
           {/* Image Section */}
           <div className="relative w-full md:w-[300px] lg:w-[375px] xl:w-[500px] flex-shrink-0" >
-            {imageArray.length > 0 ? (
+            {mediaArray.length > 0 ? (
               <div className="relative w-full h-full" style={{ padding: '1rem' }} >
                 <Carousel
                   ref={carouselRef}
@@ -327,11 +337,12 @@ const PackageCard = ({ packageData, handleClick, loadingButton, langCode = 'en' 
                   afterChange={handleSlideChange}
                   beforeChange={(from, to) => setCurrentSlide(to)}
                 >
-                  {imageArray.map((image, index) => (
-                    <div key={`${packageData.id}-${index}`} className="w-full h-full" style={{ height: '100%' }}>
+                 {mediaArray.map((item, index) => (
+                  <div key={`${packageData.id}-${index}`} className="w-full h-full flex items-center justify-center">
+                    {item.type === "image" ? (
                       <img
-                        src={image.signedUrl || image.url || image}
-                        alt={image.alt || `Package Image ${index + 1}`}
+                        src={item.url}
+                        alt={item.alt}
                         className="w-full h-full object-cover"
                         style={{
                           borderRadius: '8px',
@@ -340,22 +351,34 @@ const PackageCard = ({ packageData, handleClick, loadingButton, langCode = 'en' 
                           minHeight: '35vh',
                           filter: isSoldOut ? 'grayscale(100%) brightness(0.7)' : 'none'
                         }}
-                        onError={(e) => {
-                          console.error('Image failed to load:', image.signedUrl || image.url || image);
-                        }}
-                        onLoad={() => {
-                          console.log('Image loaded successfully:', image.signedUrl || image.url || image);
-                        }}
                         onClick={openBigModal}
                       />
-                    </div>
-                  ))}
+                    ) : (
+                      <video
+                        autoPlay
+                        muted
+                        loop
+                        playsInline
+                        src={item.url}
+                        className="w-full h-full object-contain"
+                        style={{
+                          borderRadius: '8px',
+                          height: '100%',
+                          maxHeight: '35vh',
+                          minHeight: '35vh',
+                        }}
+                         onClick={openBigModal}
+                      />
+                    )}
+                  </div>
+                ))}
+
                 </Carousel>
 
                 {/* Image counter - Only show if more than one image */}
                 {hasMultipleImages && (
                   <div className="absolute top-2 left-1 bg-black/50 text-white px-2 py-1 rounded text-xs z-10">
-                    {currentSlide + 1} / {imageArray.length}
+                    {currentSlide + 1} / {mediaArray.length}
                   </div>
                 )}
 
@@ -493,16 +516,15 @@ const PackageCard = ({ packageData, handleClick, loadingButton, langCode = 'en' 
         open={isModalOpen}
         onCancel={closeModal}
         footer={false}
-        width="90%" // modal ka width bada kar diya
-        bodyStyle={{ height: '80vh', padding: '1rem' }} // modal ke andar content ke liye height
+        width="90%"
+        bodyStyle={{ height: '80vh', padding: '1rem' }}
         style={{ top: 20 }}
       >
         <>
-          {imageArray.length > 0 ? (
+          {mediaArray.length > 0 ? (
             <div
               className="relative w-full h-full"
-              style={{ height: '100%', width:'100%' }}
-              onClick={openBigModal}
+              style={{ height: '100%', width: '100%' }}
             >
               <Carousel
                 ref={carouselRef}
@@ -511,34 +533,50 @@ const PackageCard = ({ packageData, handleClick, loadingButton, langCode = 'en' 
                 nextArrow={<CustomNextArrow />}
                 dots={false}
                 infinite={hasMultipleImages}
-                style={{ height: '100%',width:'100%' }}
+                style={{ height: '100%', width: '100%' }}
                 afterChange={handleSlideChange}
                 beforeChange={(from, to) => setCurrentSlide(to)}
                 className="package-modal-carousel"
               >
-                {imageArray.map((image, index) => (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <Image
-                      preview={false} // important
-                      src={image.signedUrl || image.url || image}
-                      alt={image.alt || `Package Image ${index + 1}`}
-                      className="object-contain w-full h-full"
-                      style={{
-                        width: '100%',
-                        height: '100%',
-                        maxHeight: '75vh',
-                        borderRadius: '8px',
-                        filter: isSoldOut ? 'grayscale(100%) brightness(0.7)' : 'none',
-                      }}
-                    />
+                {mediaArray.map((item, index) => (
+                  <div key={`modal-media-${index}`} className="w-full h-full flex items-center justify-center">
+                    {item.type === "image" ? (
+                      <Image
+                        preview={false}
+                        src={item.url}
+                        alt={item.alt || `Package Image ${index + 1}`}
+                        className="object-contain w-full h-full"
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          maxHeight: "75vh",
+                          borderRadius: "8px",
+                          filter: isSoldOut ? "grayscale(100%) brightness(0.7)" : "none",
+                        }}
+                      />
+                    ) : (
+                     <video
+                        autoPlay
+                        muted
+                        loop
+                        playsInline
+                        src={item.url}
+                        className="object-contain w-full h-full"
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          maxHeight: "75vh",
+                          borderRadius: "8px",
+                        }}
+                      />
+                    )}
                   </div>
-
                 ))}
               </Carousel>
 
               {hasMultipleImages && (
                 <div className="absolute top-2 left-1 bg-black/50 text-white px-2 py-1 rounded text-xs z-10">
-                  {currentSlide + 1} / {imageArray.length}
+                  {currentSlide + 1} / {mediaArray.length}
                 </div>
               )}
 
@@ -552,7 +590,7 @@ const PackageCard = ({ packageData, handleClick, loadingButton, langCode = 'en' 
             </div>
           ) : (
             <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-              <Text className="text-gray-500">No Image Available</Text>
+              <Text className="text-gray-500">No Media Available</Text>
             </div>
           )}
         </>
