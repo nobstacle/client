@@ -85,13 +85,13 @@ interface CreatePackageFormFieldValues extends NonMultilingualFields {
 }
 
 const CALCULATION_METHODS = [
-  { value: "price_per_night", label: "Price per night" },
-  { value: "price_per_stay", label: "Price per stay" },
-  { value: "price_per_person_per_night", label: "Price per person per night" },
-  { value: "price_per_adult_per_night", label: "Price per adult per night" },
-  { value: "price_per_child_per_night", label: "Price per child per night" },
-  { value: "price_per_person_per_stay", label: "Price per person per stay" },
-  { value: "price_per_piece", label: "Price per piece" },
+  { value: "PRICE_PER_NIGHT", label: "Price per night" },
+  { value: "PRICE_PER_STAY", label: "Price per stay" },
+  { value: "PRICE_PER_PERSON_PER_NIGHT", label: "Price per person per night" },
+  { value: "PRICE_PER_ADULT_PER_NIGHT", label: "Price per adult per night" },
+  { value: "PRICE_PER_CHILD_PER_NIGHT", label: "Price per child per night" },
+  { value: "PRICE_PER_PERSON_PER_STAY", label: "Price per person per stay" },
+  { value: "PRICE_PER_PIECE", label: "Price per piece" },
 ];
 
 // Schema for non-multilingual fields
