@@ -935,6 +935,7 @@ export const Content: React.FC = () => {
     departureDate?: Date;
     numberOfAdults?: number;
     numberOfChildren?: number;
+    station?:number
   }) => {
     try {
       const response = await fetch(Url + '/api/v1/uploads/create-upsell-transaction', {
@@ -977,11 +978,12 @@ export const Content: React.FC = () => {
         departureDate: dayAfterTomorrow.toISOString(),
         numberOfAdults: 2,
         numberOfChildren: 0, 
-        soldBy: sellingPerson.id
+        soldBy: sellingPerson.id,
+        station: parseInt(params.get("station"))
       };
 
       const result = await createUpsellTransaction(upsellData);
-      message.success(`Package "${packageData.packageNames}" purchased successfully!\nConfirmation: ${confirmationNumber}`);
+      message.success(`Package "${packageData?.packageNames?.en || ''}" purchased successfully!\nConfirmation: ${confirmationNumber}`);
       setLoading(false);
       // setTimeout(() => {
       //   messageStore.reset();

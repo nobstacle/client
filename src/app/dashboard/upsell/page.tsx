@@ -43,6 +43,7 @@ export default function Upsell() {
     const params = useSearchParams();
     const { data: companyData } = useCompanyControllerGetCompany();
     const isAdmin = data?.user.Roles[0] || false;
+    // const { transactions, setTransactions } = useSocketContext();
 
     // REMOVE OR DISABLE the visibility change handler that causes reloads
     // Comment out or remove this entire useEffect
@@ -305,7 +306,7 @@ export default function Upsell() {
             sorter: true,
             render: (_i, record) => (
                 <>
-                    {record?.company?.stationCount}
+                    {record?.station}
                 </>
             )
         },
