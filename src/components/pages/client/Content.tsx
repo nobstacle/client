@@ -282,37 +282,37 @@ const PackageCard = ({ packageData, handleClick, loadingButton, langCode = 'en' 
       }} />
     </button>
   );
-    const charLimit = 120;
-      let displayText = packageDescription;
-    if (!expanded && packageDescription?.length > charLimit) {
-      displayText = (
-        <>
-          {packageDescription.slice(0, charLimit)}...{" "}
-          <button
-            onClick={() => setExpanded(true)}
-            className="text-blue-500 font-medium hover:underline"
-          >
-            Show More
-          </button>
-        </>
-      );
-    } else if (expanded) {
-      displayText = (
-        <>
-          {packageDescription}{" "}
-          <button
-            onClick={() => setExpanded(false)}
-            className="ml-2 text-blue-500 font-medium hover:underline"
-          >
-            Show Less
-          </button>
-        </>
-      );
-    }
+  const charLimit = 120;
+  let displayText = packageDescription;
+  if (!expanded && packageDescription?.length > charLimit) {
+    displayText = (
+      <>
+        {packageDescription.slice(0, charLimit)}...{" "}
+        <button
+          onClick={() => setExpanded(true)}
+          className="text-blue-500 font-medium hover:underline"
+        >
+          Show More
+        </button>
+      </>
+    );
+  } else if (expanded) {
+    displayText = (
+      <>
+        {packageDescription}{" "}
+        <button
+          onClick={() => setExpanded(false)}
+          className="ml-2 text-blue-500 font-medium hover:underline"
+        >
+          Show Less
+        </button>
+      </>
+    );
+  }
 
-    const openBigModal = () => {
-      setisIsModalOpen(true);
-    }
+  const openBigModal = () => {
+    setisIsModalOpen(true);
+  }
 
   return (
     <>
@@ -337,41 +337,41 @@ const PackageCard = ({ packageData, handleClick, loadingButton, langCode = 'en' 
                   afterChange={handleSlideChange}
                   beforeChange={(from, to) => setCurrentSlide(to)}
                 >
-                 {mediaArray.map((item, index) => (
-                  <div key={`${packageData.id}-${index}`} className="w-full h-full flex items-center justify-center">
-                    {item.type === "image" ? (
-                      <img
-                        src={item.url}
-                        alt={item.alt}
-                        className="w-full h-full object-cover"
-                        style={{
-                          borderRadius: '8px',
-                          height: '100%',
-                          maxHeight: '35vh',
-                          minHeight: '35vh',
-                          filter: isSoldOut ? 'grayscale(100%) brightness(0.7)' : 'none'
-                        }}
-                        onClick={openBigModal}
-                      />
-                    ) : (
-                      <video
-                        autoPlay
-                        muted
-                        loop
-                        playsInline
-                        src={item.url}
-                        className="w-full h-full object-contain"
-                        style={{
-                          borderRadius: '8px',
-                          height: '100%',
-                          maxHeight: '35vh',
-                          minHeight: '35vh',
-                        }}
-                         onClick={openBigModal}
-                      />
-                    )}
-                  </div>
-                ))}
+                  {mediaArray.map((item, index) => (
+                    <div key={`${packageData.id}-${index}`} className="w-full h-full flex items-center justify-center">
+                      {item.type === "image" ? (
+                        <img
+                          src={item.url}
+                          alt={item.alt}
+                          className="w-full h-full object-cover"
+                          style={{
+                            borderRadius: '8px',
+                            height: '100%',
+                            maxHeight: '35vh',
+                            minHeight: '35vh',
+                            filter: isSoldOut ? 'grayscale(100%) brightness(0.7)' : 'none'
+                          }}
+                          onClick={openBigModal}
+                        />
+                      ) : (
+                        <video
+                          autoPlay
+                          muted
+                          loop
+                          playsInline
+                          src={item.url}
+                          className="w-full h-full object-contain"
+                          style={{
+                            borderRadius: '8px',
+                            height: '100%',
+                            maxHeight: '35vh',
+                            minHeight: '35vh',
+                          }}
+                          onClick={openBigModal}
+                        />
+                      )}
+                    </div>
+                  ))}
 
                 </Carousel>
 
@@ -555,7 +555,7 @@ const PackageCard = ({ packageData, handleClick, loadingButton, langCode = 'en' 
                         }}
                       />
                     ) : (
-                     <video
+                      <video
                         autoPlay
                         muted
                         loop
@@ -761,7 +761,10 @@ export const Content: React.FC = () => {
       }
     };
 
-    generateQR();
+    if (messageStore.receivedType === ("JotFormMessage" as any) || messageStore.receivedType === 'Website' || messageStore.receivedType === 'WebsiteTemplateMessage') {
+      generateQR();
+    }
+
   }, [messageStore.receivedContent?.content]);
 
   const handleCloseQR = useCallback(() => {
@@ -935,7 +938,7 @@ export const Content: React.FC = () => {
     departureDate?: Date;
     numberOfAdults?: number;
     numberOfChildren?: number;
-    station?:number
+    station?: number
   }) => {
     try {
       const response = await fetch(Url + '/api/v1/uploads/create-upsell-transaction', {
@@ -972,12 +975,12 @@ export const Content: React.FC = () => {
       dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 1);
 
       const upsellData = {
-        packageId: packageData.id, 
+        packageId: packageData.id,
         confirmationNumber: confirmationNumber,
         arrivalDate: tomorrow.toISOString(),
         departureDate: dayAfterTomorrow.toISOString(),
         numberOfAdults: 2,
-        numberOfChildren: 0, 
+        numberOfChildren: 0,
         soldBy: sellingPerson.id,
         station: parseInt(params.get("station"))
       };
@@ -1679,10 +1682,17 @@ export const Content: React.FC = () => {
     messageStore.receivedType === "WebsiteTemplateMessage"
   ) {
     return (
-      <iframe
-        className="h-full w-full"
-        src={messageStore.receivedContent?.content ?? ""}
-      />
+      <Card>
+        <img
+          src={qrCodeUrl}
+          alt="QR Code"
+          className="w-96 h-96 object-cover"
+        />
+      </Card>
+      // <iframe
+      //   className="h-full w-full"
+      //   src={messageStore.receivedContent?.content ?? ""}
+      // />
     );
   }
 
