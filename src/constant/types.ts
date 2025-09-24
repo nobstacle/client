@@ -46,7 +46,7 @@ export interface SendMessagePayloadType {
   station: number;
   refType: ReceivedType;
   langCode: string;
-    uuid?: boolean;
+  uuid?: boolean;
 }
 
 export type ReceivedTemplateContent = {
@@ -90,7 +90,7 @@ export interface SendLangCodeMessagePayloadType {
 export interface ReceivedResponseType {
   id: number | string;
   station: number;
-  responseData: any; 
+  responseData: any;
   submittedAt?: string;
   source?: "Form" | "Survey" | "API" | string;
 }
@@ -127,4 +127,12 @@ export interface ReceivedPackageContent {
   benefits?: string[];
   description?: string;
   active?: boolean;
+}
+
+export interface ReceivedUpsellPackageContent {
+  id: number;
+  type: string;
+  langCode: string[];
+  station: number;
+
 }

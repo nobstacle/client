@@ -16,6 +16,7 @@ import dayjs from 'dayjs';
 import { SendIcon } from "../../../components/icons/SendIcon";
 import { MdDelete } from "react-icons/md";
 import Swal from "sweetalert2";
+import { useMessageStore } from "../../../lib/zustand/store/messageStore";
 
 const { Option } = Select;
 
@@ -43,6 +44,7 @@ export default function Upsell() {
     const params = useSearchParams();
     const { data: companyData } = useCompanyControllerGetCompany();
     const isAdmin = data?.user.Roles[0] || false;
+    const { receivedContent } = useMessageStore();
     // const { transactions, setTransactions } = useSocketContext();
 
     // REMOVE OR DISABLE the visibility change handler that causes reloads
@@ -216,7 +218,7 @@ export default function Upsell() {
             if (result.isConfirmed) {
                 setLoadingData(true);
 
-                 fetch(`${Url}/api/v1/uploads/delete-upsell/${record.id}`, {
+                fetch(`${Url}/api/v1/uploads/delete-upsell/${record.id}`, {
                     method: 'DELETE',
                     headers: {
                         'Content-Type': 'application/json',
@@ -524,39 +526,39 @@ export default function Upsell() {
                 return (
                     <Space size="small">
                         {isEditing ? (
-                        <>
-                            <Button
-                            type="primary"
-                            size="small"
-                            icon={<SaveOutlined />}
-                            onClick={() => handleSave(record)}
-                            />
-                            <Button
-                            size="small"
-                            icon={<CloseOutlined />}
-                            onClick={handleCancel}
-                            />
-                        </>
+                            <>
+                                <Button
+                                    type="primary"
+                                    size="small"
+                                    icon={<SaveOutlined />}
+                                    onClick={() => handleSave(record)}
+                                />
+                                <Button
+                                    size="small"
+                                    icon={<CloseOutlined />}
+                                    onClick={handleCancel}
+                                />
+                            </>
                         ) : (
-                        <>
-                            <Tooltip title="Edit Transaction">
-                            <Button
-                                type="text"
-                                size="small"
-                                icon={<EditOutlined />}
-                                onClick={() => handleEdit(record)}
-                            />
-                            </Tooltip>
-                            <Tooltip title="Delete Transaction">
-                            <button
-                                title="Delete"
-                                onClick={() => handleDelete(record)}
-                                className="text-gray-500 "
-                            >
-                                <MdDelete />
-                            </button>
-                            </Tooltip>
-                        </>
+                            <>
+                                <Tooltip title="Edit Transaction">
+                                    <Button
+                                        type="text"
+                                        size="small"
+                                        icon={<EditOutlined />}
+                                        onClick={() => handleEdit(record)}
+                                    />
+                                </Tooltip>
+                                <Tooltip title="Delete Transaction">
+                                    <button
+                                        title="Delete"
+                                        onClick={() => handleDelete(record)}
+                                        className="text-gray-500 "
+                                    >
+                                        <MdDelete />
+                                    </button>
+                                </Tooltip>
+                            </>
                         )}
                     </Space>
                 );
@@ -705,6 +707,15 @@ export default function Upsell() {
     const handlePackageDeselect = (value) => {
         setSelectedPackages(prev => prev.filter(pkg => pkg.id !== value));
     };
+
+    useEffect(() => {
+        if (receivedContent) {
+
+            if (dataLoaded && receivedContent && receivedContent?.length > 0) {
+                setTransactions(receivedContent);
+            }
+        }
+    }, [receivedContent, data?.user, dataLoaded, fetchTransactions]);
 
     return (
         <div className="min-h-full bg-gray-50">

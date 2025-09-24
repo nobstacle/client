@@ -18,7 +18,7 @@ import {
 } from "../constant/types";
 import { useMessageStore } from "../lib/zustand/store/messageStore";
 import useTemplateStore from "../lib/zustand/store/templateStore";
-import { SendPackagePayloadType, ReceivedPackageContent } from "../constant/types";
+import { SendPackagePayloadType, ReceivedPackageContent, ReceivedUpsellPackageContent } from "../constant/types";
 
 // Add document-related types
 export interface SendDocumentPayloadType {
@@ -193,36 +193,27 @@ export const SocketContextProvider = ({
       // Handle the new structure from backend
       const { action, data: informationData, timestamp, deletedId } = parsedData;
 
-      console.log(`✅ Information ${action} at ${timestamp}:`, informationData);
-
       // Update your state based on the action
       switch (action) {
         case 'created':
-          console.log('✅ New information created');
           if (informationData) {
             setReceivedContent(informationData as ReceivedInformationContent);
           }
           break;
 
         case 'updated':
-          console.log('📝 Information updated');
           if (informationData) {
             setReceivedContent(informationData as ReceivedInformationContent);
           }
           break;
 
         case 'deleted':
-          console.log('🗑️ Information deleted');
-          if (deletedId) {
-            console.log(`Deleted information with ID: ${deletedId}`);
-          }
           if (informationData) {
             setReceivedContent(informationData as ReceivedInformationContent);
           }
           break;
 
         default:
-          console.warn('Unknown action:', action);
           // Fallback to original behavior
           if (informationData) {
             setReceivedContent(informationData as ReceivedInformationContent);
@@ -235,33 +226,33 @@ export const SocketContextProvider = ({
     }
   };
 
-  const onDocumentSentSuccessfully = (data: any) => {
-    console.log("📄 Document sent successfully:", data);
+  // const onDocumentSentSuccessfully = (data: any) => {
+  //   console.log("📄 Document sent successfully:", data);
 
-    try {
-      const parsedRes = JSON.parse(data);
-      if (parsedRes.status === 400) {
-        console.warn("⚠️ Document send response has error:", parsedRes);
-        return;
-      }
+  //   try {
+  //     const parsedRes = JSON.parse(data);
+  //     if (parsedRes.status === 400) {
+  //       console.warn("⚠️ Document send response has error:", parsedRes);
+  //       return;
+  //     }
 
-      console.log("✅ Document sent successfully:", parsedRes);
+  //     console.log("✅ Document sent successfully:", parsedRes);
 
-      // If you need to trigger a template emission after document is sent, do it here
-      if (parsedRes.data) {
-        // Emit send-template instead of received-template
-        emitSendTemplate({
-          refId: parsedRes.data.id,
-          refType: 'Document',
-          station: parsedRes.data.station,
-          langCode: parsedRes.data.langCode || 'en'
-        });
-      }
+  //     // If you need to trigger a template emission after document is sent, do it here
+  //     if (parsedRes.data) {
+  //       // Emit send-template instead of received-template
+  //       emitSendTemplate({
+  //         refId: parsedRes.data.id,
+  //         refType: 'Document',
+  //         station: parsedRes.data.station,
+  //         langCode: parsedRes.data.langCode || 'en'
+  //       });
+  //     }
 
-    } catch (error) {
-      console.error("❌ Error parsing document send response:", error);
-    }
-  };
+  //   } catch (error) {
+  //     console.error("❌ Error parsing document send response:", error);
+  //   }
+  // };
 
   const onReceivedMessage = (data: any) => {
     try {
@@ -349,7 +340,6 @@ export const SocketContextProvider = ({
       }
 
       const parsedData = parsedRes.data as ReceivedTemplateContent;
-      console.log("✅ Parsed JotForm Data:", parsedData);
 
       setReceivedContent(parsedData);
 
@@ -393,6 +383,7 @@ export const SocketContextProvider = ({
     socketClient.on("team-document-sent-successfully", onReceivedTeamDocument);
     socketClient.on("information-updated", onInformationUpdated);
     socketClient.on("received-packages", onReceivedPackages);
+    socketClient.on("received-upsell-transaction", onRecievedUpsellPackage);
 
     return () => {
       socketClient.off("disconnect", onDisconnect);
@@ -410,6 +401,7 @@ export const SocketContextProvider = ({
       socketClient.off("team-document-sent-successfully", onReceivedTeamDocument);
       socketClient.off("information-updated", onInformationUpdated);
       socketClient.off("received-packages", onReceivedPackages);
+      socketClient.on("received-upsell-transaction", onRecievedUpsellPackage);
     };
   }, [socketClient]);
 
@@ -443,6 +435,22 @@ export const SocketContextProvider = ({
       const parsedData = parsedRes.data as ReceivedPackageContent;
       setReceivedContent(parsedData);
 
+    } catch (error) {
+      console.error("❌ Error parsing package response:", error);
+    }
+  };
+
+  const onRecievedUpsellPackage = (payload: any) => {
+    try {
+      console.info("Received upsell transaction data:", payload);
+
+      // payload.data is now an array of objects
+      if (Array.isArray(payload.data)) {
+        setReceivedContent(payload.data);
+      } else {
+        console.warn("Expected array but received:", typeof payload.data);
+        setReceivedContent([payload.data]);
+      }
     } catch (error) {
       console.error("❌ Error parsing package response:", error);
     }
