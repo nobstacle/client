@@ -19,6 +19,7 @@ export type ReceivedType =
   | "Survey"
   | "WebsiteTemplateMessage"
   | "Packages"
+  | "WebsiteTemplateQr"
   | "JotFormTemplateMessage";
 
 export interface SendTemplatePayloadType {

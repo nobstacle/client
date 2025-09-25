@@ -118,6 +118,17 @@ export default function Dashboard() {
     });
   };
 
+    const sendWebsiteTemplateQR = (url: string) => {
+      console.info("Helloo")
+    emitSendTemplate({
+      refId: 1,
+      langCode: params.get("lang") || companyData?.defaultLangCode || "en",
+      refType: "WebsiteTemplateQr",
+      station: Number(params.get("station") ?? 1),
+      directContent: url,
+    });
+  };
+
   const websitesSource = searchWebsites.length > 0 ? searchWebsites : websites;
 
   if (hasHydrated)
@@ -125,7 +136,7 @@ export default function Dashboard() {
       <div className="flex h-full w-full flex-col justify-start gap-4 overflow-y-auto  p-6">
         <div className="flex w-full flex-col gap-4">
           <div className="flex w-full flex-col items-end gap-4 ">
-            <SendWebsiteTemplateForm onSend={sendWebsiteTemplateMessage} />
+            <SendWebsiteTemplateForm onSend={sendWebsiteTemplateMessage} onsendQr={sendWebsiteTemplateQR} />
           </div>
         </div>
         {websitesSource.length > 0 && (

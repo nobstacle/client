@@ -20,7 +20,7 @@ import "../../../styles/base.css";
 import "antd/dist/reset.css";
 import { useSession } from "next-auth/react";
 import { Card, Button, Tag, Typography, Carousel, message, Modal, Image } from "antd";
-import { LeftOutlined, RightOutlined ,ExpandAltOutlined} from '@ant-design/icons';
+import { LeftOutlined, RightOutlined, ExpandAltOutlined } from '@ant-design/icons';
 
 const { Title, Text } = Typography;
 
@@ -323,7 +323,7 @@ const PackageCard = ({ packageData, handleClick, loadingButton, langCode = 'en' 
       >
         <div className="flex flex-col md:flex-row lg:flex-row ">
           {/* Image Section */}
-       <div className="relative w-full md:w-[300px] lg:w-[375px] xl:w-[500px] flex-shrink-0 flex items-center justify-center min-h-[35vh]">
+          <div className="relative w-full md:w-[300px] lg:w-[375px] xl:w-[500px] flex-shrink-0 flex items-center justify-center min-h-[35vh]">
             {mediaArray.length > 0 ? (
               <div className="relative w-full " style={{ padding: '1rem' }} >
                 <Carousel
@@ -343,7 +343,7 @@ const PackageCard = ({ packageData, handleClick, loadingButton, langCode = 'en' 
                       className="w-full h-full flex items-center justify-center relative"
                     >
                       {item.type === "image" ? (
-                        <img  
+                        <img
                           src={item.url}
                           alt={item.alt}
                           className="w-full h-full object-cover object-center"
@@ -680,6 +680,7 @@ export const Content: React.FC = () => {
     }
   }, [messageStore.receivedType]);
 
+  console.info("messageStore.receivedTypemessageStore.receivedType", messageStore.receivedType);
 
   useEffect(() => {
     const updateVideoStyles = () => {
@@ -770,7 +771,7 @@ export const Content: React.FC = () => {
       }
     };
 
-    if (messageStore.receivedType === ("JotFormMessage" as any) || messageStore.receivedType === 'Website' || messageStore.receivedType === 'WebsiteTemplateMessage') {
+    if (messageStore.receivedType === ("JotFormMessage" as any) || messageStore.receivedType === 'WebsiteTemplateQr') {
       generateQR();
     }
 
@@ -1127,6 +1128,7 @@ export const Content: React.FC = () => {
         </div>
       );
     }
+
     if (messageStore.receivedType === "ChatMessage") {
       return (
         <div className="flex w-full flex-col items-center justify-center gap-2 p-4">
@@ -1688,20 +1690,24 @@ export const Content: React.FC = () => {
 
   if (
     messageStore.receivedType === "Website" ||
+    messageStore.receivedType === "WebsiteTemplateQr" ||
     messageStore.receivedType === "WebsiteTemplateMessage"
   ) {
     return (
-      <Card>
-        <img
-          src={qrCodeUrl}
-          alt="QR Code"
-          className="w-96 h-96 object-cover"
+      messageStore.receivedType === 'WebsiteTemplateQr' ? (
+        <Card>
+          <img
+            src={qrCodeUrl}
+            alt="QR Code"
+            className="w-96 h-96 object-cover"
+          />
+        </Card>
+      ) : (
+        <iframe
+          className="h-full w-full"
+          src={messageStore.receivedContent?.content ?? ""}
         />
-      </Card>
-      // <iframe
-      //   className="h-full w-full"
-      //   src={messageStore.receivedContent?.content ?? ""}
-      // />
+      )
     );
   }
 
