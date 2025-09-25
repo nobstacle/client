@@ -20,7 +20,7 @@ import "../../../styles/base.css";
 import "antd/dist/reset.css";
 import { useSession } from "next-auth/react";
 import { Card, Button, Tag, Typography, Carousel, message, Modal, Image } from "antd";
-import { LeftOutlined, RightOutlined } from '@ant-design/icons';
+import { LeftOutlined, RightOutlined ,ExpandAltOutlined} from '@ant-design/icons';
 
 const { Title, Text } = Typography;
 
@@ -323,9 +323,9 @@ const PackageCard = ({ packageData, handleClick, loadingButton, langCode = 'en' 
       >
         <div className="flex flex-col md:flex-row lg:flex-row ">
           {/* Image Section */}
-          <div className="relative w-full md:w-[300px] lg:w-[375px] xl:w-[500px] flex-shrink-0" >
+       <div className="relative w-full md:w-[300px] lg:w-[375px] xl:w-[500px] flex-shrink-0 flex items-center justify-center min-h-[35vh]">
             {mediaArray.length > 0 ? (
-              <div className="relative w-full h-full" style={{ padding: '1rem' }} >
+              <div className="relative w-full " style={{ padding: '1rem' }} >
                 <Carousel
                   ref={carouselRef}
                   arrows={hasMultipleImages}
@@ -338,12 +338,15 @@ const PackageCard = ({ packageData, handleClick, loadingButton, langCode = 'en' 
                   beforeChange={(from, to) => setCurrentSlide(to)}
                 >
                   {mediaArray.map((item, index) => (
-                    <div key={`${packageData.id}-${index}`} className="w-full h-full flex items-center justify-center">
+                    <div
+                      key={`${packageData.id}-${index}`}
+                      className="w-full h-full flex items-center justify-center relative"
+                    >
                       {item.type === "image" ? (
-                        <img
+                        <img  
                           src={item.url}
                           alt={item.alt}
-                          className="w-full h-full object-cover"
+                          className="w-full h-full object-cover object-center"
                           style={{
                             borderRadius: '8px',
                             height: '100%',
@@ -351,7 +354,6 @@ const PackageCard = ({ packageData, handleClick, loadingButton, langCode = 'en' 
                             minHeight: '35vh',
                             filter: isSoldOut ? 'grayscale(100%) brightness(0.7)' : 'none'
                           }}
-                          onClick={openBigModal}
                         />
                       ) : (
                         <video
@@ -360,19 +362,26 @@ const PackageCard = ({ packageData, handleClick, loadingButton, langCode = 'en' 
                           loop
                           playsInline
                           src={item.url}
-                          className="w-full h-full object-contain"
+                          className="w-full h-full object-cover object-center"
                           style={{
                             borderRadius: '8px',
                             height: '100%',
                             maxHeight: '35vh',
                             minHeight: '35vh',
                           }}
-                          onClick={openBigModal}
                         />
                       )}
+
+                      {/*Expand Icon Top Right */}
+                      <div
+                        className="absolute top-2 right-2 bg-black/50 p-2 rounded-full cursor-pointer hover:bg-black/70 transition"
+                        onClick={openBigModal}
+                        style={{ height: "36px", width: "35px", textAlign: "center" }}
+                      >
+                        <ExpandAltOutlined style={{ color: "white", fontSize: "16px" }} />
+                      </div>
                     </div>
                   ))}
-
                 </Carousel>
 
                 {/* Image counter - Only show if more than one image */}
