@@ -10,7 +10,7 @@ import {
 } from "../../../lib/client/api";
 import useTemplateStore from "../../../lib/zustand/store/templateStore";
 import { useSearchParams } from "next/navigation";
-import { Card } from "../../../components/Card";
+// import { Card } from "../../../components/Card";
 import { useSocketContext } from "../../../context/SocketContextProvider";
 import { ChatType } from "../../../constant/types";
 import { useSession } from "next-auth/react";
@@ -114,7 +114,7 @@ export default function MapsDashboard() {
     });
   };
 
-    const onsendQr = (origin: string, destination: string) => {
+  const onsendQr = (origin: string, destination: string) => {
     emitSendTemplate({
       refId: 1,
       langCode: params.get("lang") || companyData?.defaultLangCode || "en",
