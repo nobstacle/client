@@ -9,6 +9,8 @@ import {
 import { Autocomplete, useJsApiLoader } from "@react-google-maps/api";
 import { SendIcon } from "@/components/icons/SendIcon";
 import "../../../styles/base.css";
+import { IoQrCode } from "react-icons/io5";
+
 interface SendMapTemplateFormFieldValues {
   origin: string;
   destination: string;
@@ -21,7 +23,8 @@ const schema = yup.object().shape({
 
 export const SendMapForm: React.FC<{
   onSend: (origin: string, destination: string) => void;
-}> = ({ onSend }) => {
+  onsendQr: (origin: string, destination: string) => void;
+}> = ({ onSend, onsendQr }) => {
   const { isLoaded } = useJsApiLoader({
     googleMapsApiKey: "AIzaSyBB5xoUCTVJoyYUy-4r7LAySR8SpfaVsHA",
     libraries: ["places"],
@@ -59,6 +62,8 @@ export const SendMapForm: React.FC<{
   const onSubmit: SubmitHandler<SendMapTemplateFormFieldValues> = (data) => {
     onSend(data.origin, data.destination);
   };
+
+  const handleSendQr: SubmitHandler<SendMapTemplateFormFieldValues> = (data) => onsendQr(data.origin, data.destination);
 
   if (!isLoaded) {
     return <p>Loading...</p>;
@@ -119,6 +124,16 @@ export const SendMapForm: React.FC<{
                 disabled={createMapsTemplate.status === "pending"}
                 icon={<SendIcon size={20} />}
                 className="headerButton"
+              />
+            </Form.Item>
+            <Form.Item style={{ marginBottom: 0 }} >
+              <AntdButton
+                type="primary"
+                loading={createMapsTemplate.status === "pending"}
+                disabled={createMapsTemplate.status === "pending"}
+                icon={<IoQrCode size={20} />}
+                className="headerButton"
+                onClick={handleSubmit(handleSendQr)}
               />
             </Form.Item>
           </Col>

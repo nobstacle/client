@@ -15,6 +15,7 @@ export type ReceivedType =
   | ChatType
   | "TextTemplateMessage"
   | "ChatMessage"
+  | "MapTemplateQr"
   | "MapTemplateMessage"
   | "Survey"
   | "WebsiteTemplateMessage"

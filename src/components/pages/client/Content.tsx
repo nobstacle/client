@@ -88,7 +88,6 @@ const getLocalizedContent = (contentObj, langCode = 'en', fallback = '') => {
           const availableLanguages = Object.keys(parsed);
           if (availableLanguages.length === 0) return fallback;
 
-          // Priority order: requested langCode first, then 'en' (English), then any other available language
           let preferredLanguage;
           if (availableLanguages.includes(langCode)) {
             preferredLanguage = langCode;
@@ -99,8 +98,6 @@ const getLocalizedContent = (contentObj, langCode = 'en', fallback = '') => {
           }
 
           let result = parsed[preferredLanguage];
-          console.info("result", result)
-          // If the result is still a string that looks like JSON, try parsing it again
           if (typeof result === 'string' && (result.startsWith('{') || result.startsWith('['))) {
             return getLocalizedContent(result, langCode, fallback);
           }
@@ -680,8 +677,6 @@ export const Content: React.FC = () => {
     }
   }, [messageStore.receivedType]);
 
-  console.info("messageStore.receivedTypemessageStore.receivedType", messageStore.receivedType);
-
   useEffect(() => {
     const updateVideoStyles = () => {
       if (!videoElement.current) return;
@@ -748,6 +743,58 @@ export const Content: React.FC = () => {
       window.removeEventListener("orientationchange", handleResize);
     };
   }, [messageStore.receivedContent?.content]);
+
+  useEffect(() => {
+    const generateQR = async () => {
+      let content = '';
+
+      // Handle different message types
+      if (messageStore.receivedType === "MapTemplateQr") {
+        const origin = messageStore.receivedContent?.content;
+        const destination = messageStore.receivedContent?.extraContent;
+
+        if (origin && destination) {
+          // Create Google Maps directions URL for QR code
+          const googleMapsUrl = `https://www.google.com/maps/dir/${encodeURIComponent(origin)}/${encodeURIComponent(destination)}`;
+          content = googleMapsUrl;
+
+        } else if (origin) {
+          content = origin;
+        } else if (destination) {
+          content = destination;
+        }
+      } else {
+        // For other types, use the existing logic
+        content = messageStore.receivedContent?.content;
+      }
+
+      if (content) {
+        try {
+          const url = await QRCode.toDataURL(content);
+          setQrCodeUrl(url);
+          const wdthSize = window.innerWidth;
+          if (wdthSize > 650) {
+            setIsClosing(false);
+            setContentKey(prev => prev + 1);
+            setTimeout(() => {
+              setShowQR(true);
+            }, 3000);
+          }
+        } catch (err) {
+          console.error("Failed to generate QR code", err);
+        }
+      }
+    };
+
+    if (
+      messageStore.receivedType === ("JotFormMessage" as any) ||
+      messageStore.receivedType === 'WebsiteTemplateQr' ||
+      messageStore.receivedType === 'MapTemplateQr'
+    ) {
+      generateQR();
+    }
+
+  }, [messageStore.receivedContent?.content, messageStore.receivedContent?.extraContent]);
 
   useEffect(() => {
     const generateQR = async () => {
@@ -995,12 +1042,9 @@ export const Content: React.FC = () => {
         station: parseInt(params.get("station"))
       };
 
-      const result = await createUpsellTransaction(upsellData);
+      await createUpsellTransaction(upsellData);
       message.success(`Package "${packageData?.packageNames?.en || ''}" purchased successfully!\nConfirmation: ${confirmationNumber}`);
       setLoading(false);
-      // setTimeout(() => {
-      //   messageStore.reset();
-      // }, 1000);
     } catch (error) {
       setLoading(false);
       console.error('Failed to create upsell transaction:', error);
@@ -1080,37 +1124,17 @@ export const Content: React.FC = () => {
 
       const processedPackages = parseData.map(pkg => ({
         ...pkg,
-        // Only merge images if to_category_id exists - keep everything else as-is
         signedImageUrls: pkg.to_category_id ?
           mergeImages(pkg.signedImageUrls, pkg.toCategory) :
           pkg.signedImageUrls
       }));
-
-      // Clean the package data
-      // const cleanedPackages = parseData.map(pkg => ({
-      //   ...pkg,
-      //   packageNames: extractValue(pkg.packageNames),
-      //   packageDescriptions: extractValue(pkg.packageDescriptions),
-      //   packageBenefits: extractValue(pkg.packageBenefits, []),
-      //   packageTags: extractValue(pkg.packageTags, []),
-      //   taxInformation: safeParseTaxInfo(pkg.taxInformation),
-      //   currencies: extractValue(pkg.currencies),
-      //   packageAlerts: extractValue(pkg.packageAlerts),
-      //   buttonTexts: extractValue(pkg.buttonTexts),
-      //   // Merge images if to_category_id exists
-      //   signedImageUrls: pkg.to_category_id ?
-      //     mergeImages(pkg.signedImageUrls, pkg.toCategory) :
-      //     pkg.signedImageUrls
-      // }));
 
       const sortedPackages = processedPackages.sort((a, b) => {
         const purchasesA = a.totalPackagesSold || 0;
         const purchasesB = b.totalPackagesSold || 0;
         return purchasesB - purchasesA;
       });
-      console.info(
-        "sortedPackagessortedPackages", sortedPackages
-      )
+
       return (
         <div
           className="w-full space-y-6 relative"
@@ -1518,14 +1542,25 @@ export const Content: React.FC = () => {
 
     if (
       messageStore.receivedType === "Map" ||
+      messageStore.receivedType === "MapTemplateQr" ||
       messageStore.receivedType === "MapTemplateMessage"
     ) {
       return (
-        <SimpleMap
-          destination={messageStore.receivedContent?.extraContent ?? ""}
-          origin={messageStore.receivedContent?.content ?? ""}
-          languageCode={messageStore.receivedContent?.langCode ?? "en"}
-        />
+        messageStore.receivedType === "MapTemplateQr" ? (
+          <Card>
+            <img
+              src={qrCodeUrl}
+              alt="QR Code"
+              className="w-96 h-96 object-cover"
+            />
+          </Card>
+        ) : (
+          <SimpleMap
+            destination={messageStore.receivedContent?.extraContent ?? ""}
+            origin={messageStore.receivedContent?.content ?? ""}
+            languageCode={messageStore.receivedContent?.langCode ?? "en"}
+          />
+        )
       );
     }
   }

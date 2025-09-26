@@ -114,6 +114,17 @@ export default function MapsDashboard() {
     });
   };
 
+    const onsendQr = (origin: string, destination: string) => {
+    emitSendTemplate({
+      refId: 1,
+      langCode: params.get("lang") || companyData?.defaultLangCode || "en",
+      refType: "MapTemplateQr",
+      station: Number(params.get("station") ?? 1),
+      directContent: origin,
+      contentExtra: destination,
+    });
+  };
+
   const mapsSource = searchMaps.length > 0 ? searchMaps : maps;
 
   if (hasHydrated)
@@ -121,7 +132,7 @@ export default function MapsDashboard() {
       <div
         className={`flex h-full w-full flex-col justify-start gap-4 overflow-y-auto ${isMobile ? 'p-2' : 'p-6'}`}>
         <div>
-          <SendMapForm onSend={sendMapTemplateMessage} />
+          <SendMapForm onSend={sendMapTemplateMessage} onsendQr={onsendQr} />
         </div>
         {mapsSource.length > 0 && (
           <div className="w-full">
