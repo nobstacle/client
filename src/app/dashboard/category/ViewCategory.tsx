@@ -12,7 +12,10 @@ import {
     Card,
     Badge,
     Button,
-    Tooltip
+    Tooltip,
+    Collapse,
+    List,
+    Tabs
 } from "antd";
 import {
     InfoCircleOutlined,
@@ -23,11 +26,20 @@ import {
     DollarOutlined,
     PercentageOutlined,
     CheckCircleOutlined,
-    ExclamationCircleOutlined
+    ExclamationCircleOutlined,
+    // PackageOutlined,
+    TagsOutlined,
+    GiftOutlined,
+    StarOutlined,
+    PlayCircleOutlined,
+    PictureOutlined
 } from "@ant-design/icons";
 import { FaChartLine } from "react-icons/fa";
+import { FiPackage } from "react-icons/fi";
 
 const { Title, Text, Paragraph } = Typography;
+const { Panel } = Collapse;
+const { TabPane } = Tabs;
 
 export default function ViewCategoryModal({ packageData, onClose, viewCategoryToggle }) {
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -48,17 +60,6 @@ export default function ViewCategoryModal({ packageData, onClose, viewCategoryTo
         );
     };
 
-    // const getPriceLevelText = (level) => {
-    //     const levels = {
-    //         1: { text: "Budget", color: "green" },
-    //         2: { text: "Standard", color: "blue" },
-    //         3: { text: "Premium", color: "gold" },
-    //         4: { text: "Luxury", color: "purple" },
-    //         5: { text: "Elite", color: "red" }
-    //     };
-    //     return levels[level] || { text: "Standard", color: "blue" };
-    // };
-
     const formatDate = (dateString) => {
         return new Date(dateString).toLocaleDateString('en-US', {
             year: 'numeric',
@@ -69,10 +70,193 @@ export default function ViewCategoryModal({ packageData, onClose, viewCategoryTo
         });
     };
 
+    const formatPrice = (price) => {
+        return new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: 'USD'
+        }).format(price);
+    };
+
+    const getCalculationMethodText = (method) => {
+        const methods = {
+            'PRICE_PER_NIGHT': 'Per Night',
+            'PRICE_PER_DAY': 'Per Day',
+            'FIXED_PRICE': 'Fixed Price',
+            'PRICE_PER_PERSON': 'Per Person'
+        };
+        return methods[method] || method;
+    };
+
+    const renderPackageCard = (pkg, relationType) => {
+        const relationTypeColors = {
+            'packages': 'blue',
+            'fromCategoryPackages': 'green',
+            'toCategoryPackages': 'orange'
+        };
+
+        const relationTypeTexts = {
+            'packages': 'Main Package',
+            'fromCategoryPackages': 'Source Package',
+            'toCategoryPackages': 'Destination Package'
+        };
+
+        return (
+            <Card
+                key={pkg.id}
+                size="small"
+                style={{ marginBottom: '12px' }}
+                title={
+                    <Space>
+                        <FiPackage />
+                        <Text strong>{pkg.packageNames?.en || `Package ${pkg.packageCode}`}</Text>
+                        <Tag color={relationTypeColors[relationType]}>
+                            {relationTypeTexts[relationType]}
+                        </Tag>
+                    </Space>
+                }
+                extra={
+                    <Badge
+                        status={pkg.active ? "success" : "error"}
+                        text={pkg.active ? "Active" : "Inactive"}
+                    />
+                }
+            >
+                <Row gutter={[12, 8]}>
+                    <Col span={12}>
+                        <Text type="secondary">Package Code:</Text>
+                        <br />
+                        <Text strong>{pkg.packageCode}</Text>
+                    </Col>
+                    <Col span={12}>
+                        <Text type="secondary">Calculation Method:</Text>
+                        <br />
+                        <Text>{getCalculationMethodText(pkg.calculationMethod)}</Text>
+                    </Col>
+                    <Col span={12}>
+                        <Text type="secondary">Original Price:</Text>
+                        <br />
+                        <Text strong style={{ color: '#f50' }}>
+                            {formatPrice(pkg.originalPrice)} {pkg.currencies?.en || ''}
+                        </Text>
+                    </Col>
+                    <Col span={12}>
+                        <Text type="secondary">Discounted Price:</Text>
+                        <br />
+                        <Text strong style={{ color: '#52c41a' }}>
+                            {formatPrice(pkg.discountedPrice)} {pkg.currencies?.en || ''}
+                        </Text>
+                    </Col>
+                    <Col span={12}>
+                        <Text type="secondary">Tax Percentage:</Text>
+                        <br />
+                        <Text>{pkg.taxPercentage}%</Text>
+                    </Col>
+                    <Col span={12}>
+                        <Text type="secondary">Total Sold:</Text>
+                        <br />
+                        <Text strong>{pkg.totalPackagesSold}</Text>
+                    </Col>
+                </Row>
+
+                {/* Package Description */}
+                {pkg.packageDescriptions?.en && (
+                    <div style={{ marginTop: '12px' }}>
+                        <Text type="secondary">Description:</Text>
+                        <Paragraph style={{ marginBottom: '8px' }}>
+                            {pkg.packageDescriptions.en}
+                        </Paragraph>
+                    </div>
+                )}
+
+                {/* Package Benefits */}
+                {pkg.packageBenefits?.en && pkg.packageBenefits.en.length > 0 && (
+                    <div style={{ marginTop: '12px' }}>
+                        <Text type="secondary">Benefits:</Text>
+                        <div style={{ marginTop: '4px' }}>
+                            {pkg.packageBenefits.en.map((benefit, index) => (
+                                <Tag key={index} color="blue" style={{ margin: '2px' }}>
+                                    {benefit}
+                                </Tag>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {/* Package Tags */}
+                {pkg.packageTags?.en && pkg.packageTags.en.length > 0 && (
+                    <div style={{ marginTop: '12px' }}>
+                        <Text type="secondary">Tags:</Text>
+                        <div style={{ marginTop: '4px' }}>
+                            {pkg.packageTags.en.map((tag, index) => (
+                                <Tag key={index} color="green" style={{ margin: '2px' }}>
+                                    <TagsOutlined /> {tag}
+                                </Tag>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {/* Media Information */}
+                <Row gutter={[12, 8]} style={{ marginTop: '12px' }}>
+                    <Col span={12}>
+                        <Space>
+                            <PictureOutlined style={{ color: '#1890ff' }} />
+                            <Text type="secondary">Images: {pkg.images?.length || 0}</Text>
+                        </Space>
+                    </Col>
+                    <Col span={12}>
+                        <Space>
+                            <PlayCircleOutlined style={{ color: '#f50' }} />
+                            <Text type="secondary">Videos: {pkg.videos?.length || 0}</Text>
+                        </Space>
+                    </Col>
+                </Row>
+
+                {/* Special Features */}
+                <Row gutter={[12, 8]} style={{ marginTop: '8px' }}>
+                    {pkg.roomUpgrade && (
+                        <Col span={12}>
+                            <Tag color="gold" icon={<StarOutlined />}>
+                                Room Upgrade Available
+                            </Tag>
+                        </Col>
+                    )}
+                    {pkg.incentivePercentage > 0 && (
+                        <Col span={12}>
+                            <Tag color="purple">
+                                {pkg.incentivePercentage}% Incentive
+                            </Tag>
+                        </Col>
+                    )}
+                </Row>
+
+                {/* Purchase and Alert Information */}
+                {(pkg.packageAlerts?.en || pkg.popularityTexts?.en) && (
+                    <div style={{ marginTop: '12px' }}>
+                        {pkg.packageAlerts?.en && (
+                            <Tag color="orange" style={{ marginBottom: '4px' }}>
+                                {pkg.packageAlerts.en}
+                            </Tag>
+                        )}
+                        {pkg.popularityTexts?.en && (
+                            <Tag color="red" style={{ marginBottom: '4px' }}>
+                                {pkg.popularityTexts.en}
+                            </Tag>
+                        )}
+                    </div>
+                )}
+            </Card>
+        );
+    };
+
     if (!packageData) return null;
 
-    // const priceLevel = getPriceLevelText(packageData.priceLevel);
     const hasImages = packageData.signedImages && packageData.signedImages.length > 0;
+    const allPackages = [
+        ...(packageData.packages || []),
+        ...(packageData.fromCategoryPackages || []),
+        ...(packageData.toCategoryPackages || [])
+    ];
 
     return (
         <Modal
@@ -80,17 +264,18 @@ export default function ViewCategoryModal({ packageData, onClose, viewCategoryTo
             className="view-category-modal"
             onCancel={handleModalClose}
             footer={null}
-            width={1000}
+            width={1200}
             style={{ top: 20 }}
             bodyStyle={{ padding: 0 }}
+            title={null}
         >
             <div style={{ overflow: 'hidden', borderRadius: '8px' }}>
-                <Row gutter={0} style={{ minHeight: '500px' }}>
+                <Row gutter={0} style={{ minHeight: '600px' }}>
                     {/* Left Column - Image Gallery */}
-                    <Col xs={24} md={12}>
+                    <Col xs={24} md={10}>
                         <div style={{
                             position: 'relative',
-                            height: '500px',
+                            height: '600px',
                             background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                             display: 'flex',
                             alignItems: 'center',
@@ -202,8 +387,8 @@ export default function ViewCategoryModal({ packageData, onClose, viewCategoryTo
                     </Col>
 
                     {/* Right Column - Details */}
-                    <Col xs={24} md={12}>
-                        <div style={{ padding: '0px 32px', height: '500px', overflowY: 'auto', marginTop:'1rem' }}>
+                    <Col xs={24} md={14}>
+                        <div style={{ padding: '16px 24px', height: '600px', overflowY: 'auto' }}>
                             {/* Header */}
                             <Space direction="vertical" size="large" style={{ width: '100%' }}>
                                 <div>
@@ -222,13 +407,13 @@ export default function ViewCategoryModal({ packageData, onClose, viewCategoryTo
 
                                 {/* Key Information Cards */}
                                 <Row gutter={[12, 12]}>
-                                    <Col span={12}>
+                                    <Col span={8}>
                                         <Card size="small" style={{ textAlign: 'center', background: '#f8fafc' }}>
                                             <Space direction="vertical" size="small" className="customSpace">
                                                 <FaChartLine style={{ fontSize: '20px', color: '#10b981' }} />
                                                 <div>
-                                                    <Text strong style={{ fontSize: '16px' }}>
-                                                        Price Level Value
+                                                    <Text strong style={{ fontSize: '14px' }}>
+                                                        Price Level
                                                     </Text>
                                                     <br />
                                                     <Text style={{ fontSize: '12px' }}>
@@ -238,12 +423,12 @@ export default function ViewCategoryModal({ packageData, onClose, viewCategoryTo
                                             </Space>
                                         </Card>
                                     </Col>
-                                    <Col span={12}>
+                                    <Col span={8}>
                                         <Card size="small" style={{ textAlign: 'center', background: '#f8fafc' }}>
                                             <Space direction="vertical" size="small" className="customSpace">
                                                 <PercentageOutlined style={{ fontSize: '20px', color: '#10b981' }} />
                                                 <div>
-                                                    <Text strong style={{ fontSize: '16px' }}>
+                                                    <Text strong style={{ fontSize: '14px' }}>
                                                         Tax Rate
                                                     </Text>
                                                     <br />
@@ -254,39 +439,102 @@ export default function ViewCategoryModal({ packageData, onClose, viewCategoryTo
                                             </Space>
                                         </Card>
                                     </Col>
+                                    <Col span={8}>
+                                        <Card size="small" style={{ textAlign: 'center', background: '#f8fafc' }}>
+                                            <Space direction="vertical" size="small" className="customSpace">
+                                                <FiPackage style={{ fontSize: '20px', color: '#10b981' }} />
+                                                <div>
+                                                    <Text strong style={{ fontSize: '14px' }}>
+                                                        Total Packages
+                                                    </Text>
+                                                    <br />
+                                                    <Text style={{ fontSize: '12px' }}>
+                                                        {packageData.packageCounts?.totalPackages || 0}
+                                                    </Text>
+                                                </div>
+                                            </Space>
+                                        </Card>
+                                    </Col>
                                 </Row>
 
-                                {/* Package Information */}
+                                {/* Package Counts Breakdown */}
                                 <Card
                                     title={
                                         <Space>
                                             <InfoCircleOutlined />
-                                            <Text strong>Package Details</Text>
+                                            <Text strong>Package Summary</Text>
                                         </Space>
                                     }
                                     size="small"
                                     style={{ background: '#fafafa' }}
                                 >
-                                    <Space direction="vertical" size="middle" style={{ width: '100%' }}>
-                                        <Row justify="space-between">
-                                            <Text>Total Packages:</Text>
-                                            <Text strong>{packageData.packages?.length || 0}</Text>
-                                        </Row>
-                                        <Row justify="space-between">
-                                            <Text>Total Images:</Text>
-                                            <Text strong>{packageData.signedImages?.length || 0}</Text>
-                                        </Row>
-                                        <Row justify="space-between">
-                                            <Text>Status:</Text>
-                                            <Tag
-                                                color={packageData.soldOut ? "red" : "green"}
-                                                icon={packageData.soldOut ? <ExclamationCircleOutlined /> : <CheckCircleOutlined />}
-                                            >
-                                                {packageData.soldOut ? "Sold Out" : "Available"}
-                                            </Tag>
-                                        </Row>
-                                    </Space>
+                                    <Row gutter={[16, 8]}>
+                                        <Col span={8}>
+                                            <div style={{ textAlign: 'center' }}>
+                                                <Text type="secondary">Main Packages</Text>
+                                                <br />
+                                                <Text strong style={{ color: '#1890ff' }}>
+                                                    {packageData.packageCounts?.packages || 0}
+                                                </Text>
+                                            </div>
+                                        </Col>
+                                        <Col span={8}>
+                                            <div style={{ textAlign: 'center' }}>
+                                                <Text type="secondary">Source Packages</Text>
+                                                <br />
+                                                <Text strong style={{ color: '#52c41a' }}>
+                                                    {packageData.packageCounts?.fromCategoryPackages || 0}
+                                                </Text>
+                                            </div>
+                                        </Col>
+                                        <Col span={8}>
+                                            <div style={{ textAlign: 'center' }}>
+                                                <Text type="secondary">Destination Packages</Text>
+                                                <br />
+                                                <Text strong style={{ color: '#fa8c16' }}>
+                                                    {packageData.packageCounts?.toCategoryPackages || 0}
+                                                </Text>
+                                            </div>
+                                        </Col>
+                                    </Row>
                                 </Card>
+
+                                {/* Package Details Tabs */}
+                                {allPackages.length > 0 && (
+                                    <Card
+                                        title={
+                                            <Space>
+                                                <FiPackage />
+                                                <Text strong>Package Details</Text>
+                                            </Space>
+                                        }
+                                        size="small"
+                                    >
+                                        <Tabs defaultActiveKey="1" size="small">
+                                            {packageData.packages && packageData.packages.length > 0 && (
+                                                <TabPane tab={`Main Packages (${packageData.packages.length})`} key="1">
+                                                    <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
+                                                        {packageData.packages.map(pkg => renderPackageCard(pkg, 'packages'))}
+                                                    </div>
+                                                </TabPane>
+                                            )}
+                                            {packageData.fromCategoryPackages && packageData.fromCategoryPackages.length > 0 && (
+                                                <TabPane tab={`Source Packages (${packageData.fromCategoryPackages.length})`} key="2">
+                                                    <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
+                                                        {packageData.fromCategoryPackages.map(pkg => renderPackageCard(pkg, 'fromCategoryPackages'))}
+                                                    </div>
+                                                </TabPane>
+                                            )}
+                                            {packageData.toCategoryPackages && packageData.toCategoryPackages.length > 0 && (
+                                                <TabPane tab={`Destination Packages (${packageData.toCategoryPackages.length})`} key="3">
+                                                    <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
+                                                        {packageData.toCategoryPackages.map(pkg => renderPackageCard(pkg, 'toCategoryPackages'))}
+                                                    </div>
+                                                </TabPane>
+                                            )}
+                                        </Tabs>
+                                    </Card>
+                                )}
 
                                 {/* Timestamps */}
                                 <Card
@@ -321,27 +569,14 @@ export default function ViewCategoryModal({ packageData, onClose, viewCategoryTo
 
                                 {/* Action Buttons */}
                                 <div style={{ marginTop: 'auto', paddingTop: '16px' }}>
-                                    <Row gutter={12}>
-                                        <Col span={12}>
-                                            <Button
-                                                type="primary"
-                                                block
-                                                disabled={packageData.soldOut}
-                                                style={{ height: '40px' }}
-                                            >
-                                                {packageData.soldOut ? "Sold Out" : "View Packages"}
-                                            </Button>
-                                        </Col>
-                                        <Col span={12}>
-                                            <Button
-                                                block
-                                                onClick={handleModalClose}
-                                                style={{ height: '40px' }}
-                                            >
-                                                Close
-                                            </Button>
-                                        </Col>
-                                    </Row>
+                                    <Button
+                                        block
+                                        onClick={handleModalClose}
+                                        style={{ height: '40px' }}
+                                        type="primary"
+                                    >
+                                        Close
+                                    </Button>
                                 </div>
                             </Space>
                         </div>
