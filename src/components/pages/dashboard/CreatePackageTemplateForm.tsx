@@ -52,7 +52,6 @@ interface NonMultilingualFields {
   templateId?: number;
   totalPackagesSold?: number;
   calculationMethod: string;
-  priceExcludingTax: number
 }
 
 interface MultilingualFields {
@@ -99,7 +98,6 @@ const nonMultilingualSchema = yup.object().shape({
   packageCode: yup.string().required("Package code is required").max(50, "Package code must be at most 50 characters"),
   originalPrice: yup.number().required("Original price is required").min(0, "Price must be positive"),
   discountedPrice: yup.number().min(0, "Discounted price must be positive"),
-  priceExcludingTax: yup.number().min(0, "Price exlusing tax must be positive"),
   includesTax: yup.boolean().required(),
   taxPercentage: yup.number().min(0).max(100, "Tax percentage must be between 0-100"),
   active: yup.boolean().required(),
@@ -368,7 +366,6 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
         packageCode: initialData.packageCode || "",
         originalPrice: initialData.originalPrice || 0,
         discountedPrice: initialData.discountedPrice || undefined,
-        priceExcludingTax: initialData.priceExcludingTax || undefined,
         includesTax: initialData.includesTax || false,
         taxPercentage: initialData.taxPercentage || undefined,
         active: initialData.active || false,
@@ -387,7 +384,6 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
       return {
         packageCode: "",
         originalPrice: 0,
-        priceExcludingTax: undefined,
         discountedPrice: undefined,
         includesTax: false,
         taxPercentage: undefined,
@@ -673,8 +669,6 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
     }
 
     formData.append('includesTax', data.includesTax.toString());
-    formData.append('priceExcludingTax', cleanNumber(data.priceExcludingTax));
-
 
     if (data.taxPercentage) {
       const cleanTaxPercentage = cleanNumber(data.taxPercentage);
@@ -954,30 +948,6 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
             </Row>
 
             <Row gutter={16}>
-              <Col span={8}>
-                <Form.Item
-                  label="Price excluding tax"
-                  validateStatus={errors.priceExcludingTax ? 'error' : ''}
-                  help={errors.priceExcludingTax?.message}
-                >
-                  <Controller
-                    name="priceExcludingTax"
-                    control={control}
-                    render={({ field }) => (
-                      <InputNumber
-                        {...field}
-                        placeholder="0"
-                        style={{ width: '100%' }}
-                        status={errors.priceExcludingTax ? 'error' : ''}
-                        min={0}
-                        step={0.01}
-                        disabled={isLoading}
-                      />
-                    )}
-                  />
-                </Form.Item>
-              </Col>
-
               <Col span={8}>
                 <Form.Item
                   label="Tax Percentage"

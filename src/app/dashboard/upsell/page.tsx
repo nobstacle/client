@@ -30,12 +30,10 @@ export default function Upsell() {
     const [editingRecord, setEditingRecord] = useState<string | null>(null);
     const [editingData, setEditingData] = useState<any>({});
     const [categoryData, setCategoryData] = useState([]);
-    const [servicePackages, setServicePackages] = useState([]);
     const [selectedCategories, setSelectedCategories] = useState([]);
     const [selectedPackages, setSelectedPackages] = useState([]);
     const [allPackages, setAllPackages] = useState([]);
-    const [initialLoad, setInitialLoad] = useState(true);
-    const [dataLoaded, setDataLoaded] = useState(false); // Add this to track if data is loaded
+    const [dataLoaded, setDataLoaded] = useState(false); 
     const pageSize = 10;
     const { data } = useSession();
     let Url = process.env.NEXT_PUBLIC_BACKEND_URL;
@@ -45,21 +43,6 @@ export default function Upsell() {
     const { data: companyData } = useCompanyControllerGetCompany();
     const isAdmin = data?.user.Roles[0] || false;
     const { receivedContent } = useMessageStore();
-    // const { transactions, setTransactions } = useSocketContext();
-
-    // REMOVE OR DISABLE the visibility change handler that causes reloads
-    // Comment out or remove this entire useEffect
-    /*
-    useEffect(() => {
-        const handleVisibilityChange = () => {
-            setIsTabVisible(!document.hidden);
-        };
-        document.addEventListener('visibilitychange', handleVisibilityChange);
-        return () => {
-            document.removeEventListener('visibilitychange', handleVisibilityChange);
-        };
-    }, []);
-    */
 
     // Keep only the beforeunload handler for preventing accidental reloads
     useEffect(() => {
