@@ -6,6 +6,7 @@ import useShortcutStore from "../../../../lib/zustand/store/shortcutStore";
 import useCompanyStore from "../../../../lib/zustand/store/companyStore";
 import { useSocketContext } from "../../../../context/SocketContextProvider";
 import useTemplateStore from "../../../../lib/zustand/store/templateStore";
+import * as Io5Icons from "react-icons/io5";
 import {
   ChatType,
   GetDocumentTemplateRes,
@@ -26,6 +27,11 @@ export const TemplateShortcutPicker: React.FC = () => {
 
   const params = useSearchParams();
   const { templatesShortcuts } = useShortcutStore();
+
+  const renderIcon = (iconName: string) => {
+    const IconComponent = (Io5Icons as any)[iconName];
+    return IconComponent ? <IconComponent size={25} /> : null;
+  };
 
   const handleOnSendTemplateClick = (
     id: number,
@@ -168,7 +174,7 @@ export const TemplateShortcutPicker: React.FC = () => {
 
         // if not exist on the selected language try to find default language to send
         if (!template && company?.defaultLangCode) {
-          template = maps.find(
+          template = websites.find(
             (website) =>
               website.tag === tag &&
               website.langCode.includes(company?.defaultLangCode),
@@ -191,10 +197,10 @@ export const TemplateShortcutPicker: React.FC = () => {
 
         // if not exist on the selected language try to find default language to send
         if (!template && company?.defaultLangCode) {
-          template = maps.find(
-            (website) =>
-              website.tag === tag &&
-              website.langCode.includes(company?.defaultLangCode),
+          template = documents.find(
+            (document) =>
+              document.tag === tag &&
+              document.langCode.includes(company?.defaultLangCode),
           );
 
           isExistOnDefaultLanguage = true;
@@ -233,9 +239,10 @@ export const TemplateShortcutPicker: React.FC = () => {
               handleOnSendTemplateClick(res.id, res.key as any, res.value)
             }
             title={`${res.value}/${res.key}`}
-            className="block h-[25px] w-[25px] rounded-full"
-            style={{ backgroundColor: res.extraValue ?? "#fff" }}
-          />
+            className="flex h-[25px] w-[25px] items-center justify-center"
+          >
+            {renderIcon(res.extraValue ?? "IoAdd")}
+          </span>
         ))}
     </div>
   );
