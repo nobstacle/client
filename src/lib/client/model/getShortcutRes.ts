@@ -13,4 +13,5 @@ export interface GetShortcutRes {
   order?: number | null;
   type: GetShortcutResType;
   value: string;
+  color: string;
 }

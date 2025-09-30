@@ -28,9 +28,9 @@ export const TemplateShortcutPicker: React.FC = () => {
   const params = useSearchParams();
   const { templatesShortcuts } = useShortcutStore();
 
-  const renderIcon = (iconName: string) => {
+  const renderIcon = (iconName: string, color?: string) => {
     const IconComponent = (Io5Icons as any)[iconName];
-    return IconComponent ? <IconComponent size={25} /> : null;
+    return IconComponent ? <IconComponent size={25} color={color || "white"} /> : null;
   };
 
   const handleOnSendTemplateClick = (
@@ -231,19 +231,20 @@ export const TemplateShortcutPicker: React.FC = () => {
   return (
     <div className="flex cursor-pointer gap-2">
       {templatesShortcuts
-        .sort((a, b) => a.order! - b.order!)
-        .map((res) => (
-          <span
-            key={res.id}
-            onClick={() =>
-              handleOnSendTemplateClick(res.id, res.key as any, res.value)
-            }
-            title={`${res.value}/${res.key}`}
-            className="flex h-[25px] w-[25px] items-center justify-center"
-          >
-            {renderIcon(res.extraValue ?? "IoAdd")}
-          </span>
+          .sort((a, b) => a.order! - b.order!)
+          .map((res) => (
+            <span
+              key={res.id}
+              onClick={() =>
+                handleOnSendTemplateClick(res.id, res.key as any, res.value)
+              }
+              title={`${res.value}/${res.key}`}
+              className="flex h-[25px] w-[25px] items-center justify-center"
+            >
+              {renderIcon(res.extraValue ?? "IoAdd", res.color)}
+            </span>
         ))}
+
     </div>
   );
 };

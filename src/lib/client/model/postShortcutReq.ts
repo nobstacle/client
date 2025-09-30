@@ -12,4 +12,5 @@ export interface PostShortcutReq {
   order?: number;
   type: PostShortcutReqType;
   value: string;
+  color?:string
 }

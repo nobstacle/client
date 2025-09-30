@@ -21,12 +21,14 @@ export const ColorShortcutForm: React.FC = () => {
   const { company } = useCompanyStore();
   const { templatesShortcuts, setTemplatesShortcuts } = useShortcutStore();
   const [currShortcuts, setCurrShortcuts] = React.useState<
-    { icon: string; tag: string; type: ChatType; order: number }[]
+    { icon: string; tag: string; type: ChatType; order: number; color?: string }[]
   >([]);
   const [currType, setType] = React.useState<ChatType>();
   const [currTag, setTag] = React.useState<string>("");
   const [selectedIcon, setSelectedIcon] = React.useState<string>("IoAdd");
+  const [selectedColor, setSelectedColor] = React.useState<string>("#000000");
   const [showIconPicker, setShowIconPicker] = React.useState<boolean>(false);
+  const [iconSearchQuery, setIconSearchQuery] = React.useState<string>("");
 
   const [error, setError] = React.useState<string>("");
 
@@ -44,11 +46,20 @@ export const ColorShortcutForm: React.FC = () => {
     (name) => !name.includes("Outline") && !name.includes("Sharp")
   );
 
+  const filteredIconKeys = React.useMemo(() => {
+    if (!iconSearchQuery.trim()) return iconKeys;
+    const query = iconSearchQuery.toLowerCase();
+    return iconKeys.filter((iconName) =>
+      iconName.toLowerCase().includes(query)
+    );
+  }, [iconSearchQuery, iconKeys]);
+
   React.useEffect(() => {
     const mappedInitial =
-      templatesShortcuts.map(({ order, key, value, extraValue }) => {
+      templatesShortcuts.map(({ order, key, value, extraValue, extraValue2 }) => {
         return {
           icon: extraValue ?? "IoAdd",
+          color: extraValue2 ?? "#000000",
           order: order ?? 0,
           tag: value,
           type: key as any,
@@ -66,7 +77,13 @@ export const ColorShortcutForm: React.FC = () => {
 
     setCurrShortcuts((prev) => [
       ...prev,
-      { icon: selectedIcon, tag: currTag, type: currType, order: prev.length },
+      { 
+        icon: selectedIcon, 
+        tag: currTag, 
+        type: currType, 
+        order: prev.length,
+        color: selectedColor 
+      },
     ]);
   };
 
@@ -81,6 +98,7 @@ export const ColorShortcutForm: React.FC = () => {
           key: shortcut.type,
           order: index + 1,
           extraValue: shortcut.icon,
+          color: shortcut.color,
         };
       },
     );
@@ -113,15 +131,6 @@ export const ColorShortcutForm: React.FC = () => {
       return isValid;
     }
 
-    const isIconExist = currShortcuts.some(
-      (currShortcut) => currShortcut.icon === selectedIcon,
-    );
-
-    if (isIconExist) {
-      setError("The icon is already assigned");
-      return isValid;
-    }
-
     const isTemplateAssigned = currShortcuts.some(
       (currShortcut) => currShortcut.tag === currTag && currShortcut.type === currType,
     );
@@ -140,9 +149,9 @@ export const ColorShortcutForm: React.FC = () => {
     return isValid;
   };
 
-  const renderIcon = (iconName: string) => {
+  const renderIcon = (iconName: string, color?: string) => {
     const IconComponent = (Io5Icons as any)[iconName];
-    return IconComponent ? <IconComponent size={20} /> : null;
+    return IconComponent ? <IconComponent size={20} style={{ color: color || "#000000" }} /> : null;
   };
 
   return (
@@ -163,31 +172,59 @@ export const ColorShortcutForm: React.FC = () => {
             onFocus={() => (error ? setError("") : null)}
             className="flex h-10 items-center justify-center gap-2 rounded border border-gray-300 px-4 hover:bg-gray-50"
           >
-            {renderIcon(selectedIcon)}
+            {renderIcon(selectedIcon, selectedColor)}
             <span className="text-sm">Select Icon</span>
           </button>
           {showIconPicker && (
-            <div className="absolute z-10 mt-1 max-h-60 w-64 overflow-y-auto rounded border border-gray-300 bg-white shadow-lg">
-              <div className="grid grid-cols-6 gap-2 p-2">
-                {iconKeys.map((iconName) => (
-                  <button
-                    key={iconName}
-                    type="button"
-                    onClick={() => {
-                      setSelectedIcon(iconName);
-                      setShowIconPicker(false);
-                    }}
-                    className={`flex h-10 w-10 items-center justify-center rounded hover:bg-gray-100 ${
-                      selectedIcon === iconName ? "bg-blue-100" : ""
-                    }`}
-                    title={iconName.replace("Io", "")}
-                  >
-                    {renderIcon(iconName)}
-                  </button>
-                ))}
+            <div className="absolute z-10 mt-1 w-64 rounded border border-gray-300 bg-white shadow-lg">
+              <div className="border-b border-gray-200 p-2">
+                <input
+                  type="text"
+                  placeholder="Search icons..."
+                  value={iconSearchQuery}
+                  onChange={(e) => setIconSearchQuery(e.target.value)}
+                  className="w-full rounded border border-gray-300 px-2 py-1 text-sm focus:border-blue-500 focus:outline-none"
+                />
+              </div>
+              <div className="max-h-60 overflow-y-auto">
+                <div className="grid grid-cols-6 gap-2 p-2">
+                  {filteredIconKeys.length > 0 ? (
+                    filteredIconKeys.map((iconName) => (
+                      <button
+                        key={iconName}
+                        type="button"
+                        onClick={() => {
+                          setSelectedIcon(iconName);
+                          setShowIconPicker(false);
+                          setIconSearchQuery("");
+                        }}
+                        className={`flex h-10 w-10 items-center justify-center rounded hover:bg-gray-100 ${
+                          selectedIcon === iconName ? "bg-blue-100" : ""
+                        }`}
+                        title={iconName.replace("Io", "")}
+                      >
+                        {renderIcon(iconName, "#000000")}
+                      </button>
+                    ))
+                  ) : (
+                    <div className="col-span-6 py-4 text-center text-sm text-gray-500">
+                      No icons found
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           )}
+        </div>
+
+        <div className="flex items-center gap-2">
+          <input
+            type="color"
+            value={selectedColor}
+            onChange={(e) => setSelectedColor(e.target.value)}
+            className="h-10 w-16 cursor-pointer rounded border border-gray-300"
+            title="Select icon color"
+          />
         </div>
 
         <select
@@ -312,21 +349,21 @@ export const ColorShortcutForm: React.FC = () => {
       </div>
 
       <div className="flex flex-wrap gap-4">
-        {currShortcuts.map((res) => (
+        {currShortcuts.map((res, index) => (
           <div
-            key={`${res.icon}-${res.tag}`}
+            key={`${res.icon}-${res.tag}-${index}`}
             className="flex cursor-pointer items-center gap-2 rounded-lg border border-gray-300 px-3 py-2"
             onClick={() => {
               if (error !== "") {
                 setError("");
               }
               setCurrShortcuts((prev) =>
-                prev.filter(({ icon }) => icon !== res.icon),
+                prev.filter((_, i) => i !== index),
               );
             }}
           >
             <span title={`${res.type}/${res.tag}`}>
-              {renderIcon(res.icon)}
+              {renderIcon(res.icon, res.color)}
             </span>
             <label className="cursor-pointer">{res.tag}</label>
           </div>
