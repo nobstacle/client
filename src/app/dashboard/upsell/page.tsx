@@ -17,6 +17,7 @@ import { SendIcon } from "../../../components/icons/SendIcon";
 import { MdDelete } from "react-icons/md";
 import Swal from "sweetalert2";
 import { useMessageStore } from "../../../lib/zustand/store/messageStore";
+import { FaGlobe } from "react-icons/fa";
 
 const { Option } = Select;
 
@@ -281,7 +282,13 @@ export default function Upsell() {
         setEditingRecord(null);
         setEditingData({});
     };
-
+    const getAllLanguageVariants = (obj: Record<string, any> | null | undefined) => {
+    if (!obj || typeof obj !== 'object') return [];
+    
+    return Object.entries(obj)
+        .filter(([key, value]) => value !== null && value !== undefined && value !== '')
+        .map(([lang, value]) => ({ lang, value }));
+    };
     const columns = [
         {
             title: 'Station',
@@ -322,12 +329,38 @@ export default function Upsell() {
             dataIndex: 'packageName',
             key: 'packageName',
             width: 180,
-            render: (packageName: string, record: any) => (
-                <div>
-                    <div className="font-medium">{packageName}</div>
-                    <div className="text-xs text-gray-500">{record.packageCode}</div>
-                </div>
-            ),
+            render: (packageName: string, record: any) => {
+                // Get multilingual package names from nested package object
+                const packageNames = record.package?.packageNames;
+                const allVariants = getAllLanguageVariants(packageNames);
+                const hasMultipleLanguages = allVariants.length > 1;
+
+                return (
+                    <div className="flex items-center gap-2">
+                        <div>
+                            <div className="font-medium">{packageName}</div>
+                            <div className="text-xs text-gray-500">{record.packageCode}</div>
+                        </div>
+
+                        {hasMultipleLanguages && (
+                            <Tooltip
+                                title={
+                                    <div className="space-y-1">
+                                        {allVariants.map(({ lang, value }) => (
+                                            <div key={lang}>
+                                                <strong>{lang.toUpperCase()}:</strong>{" "}
+                                                {Array.isArray(value) ? value.join(", ") : value}
+                                            </div>
+                                        ))}
+                                    </div>
+                                }
+                            >
+                                <FaGlobe className="text-blue-500 text-xs cursor-help" />
+                            </Tooltip>
+                        )}
+                    </div>
+                );
+            },
         },
         {
             title: 'Revenue',

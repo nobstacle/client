@@ -46,20 +46,37 @@ export const ColorShortcutForm: React.FC = () => {
     (name) => !name.includes("Outline") && !name.includes("Sharp")
   );
 
+  const iconKeywords: Record<string, string[]> = {
+    IoAdd: ["plus", "add", "new", "create"],
+    IoHome: ["house", "home", "main"],
+    IoHeart: ["love", "like", "favorite"],
+    IoStar: ["favorite", "rating", "bookmark"],
+    IoTrash: ["delete", "remove", "bin", "garbage"],
+    IoSearch: ["find", "magnify", "look"],
+    IoSettings: ["config", "preferences", "options", "gear"],
+  };
+
   const filteredIconKeys = React.useMemo(() => {
     if (!iconSearchQuery.trim()) return iconKeys;
     const query = iconSearchQuery.toLowerCase();
-    return iconKeys.filter((iconName) =>
-      iconName.toLowerCase().includes(query)
-    );
-  }, [iconSearchQuery, iconKeys]);
+    
+    return iconKeys.filter((iconName) => {
+      // Check icon name
+      if (iconName.toLowerCase().includes(query)) return true;
+      
+      // Check keywords
+      const keywords = iconKeywords[iconName] || [];
+      return keywords.some(keyword => keyword.includes(query));
+    });
+  }, [iconSearchQuery, iconKeys]);  
+  
 
   React.useEffect(() => {
     const mappedInitial =
-      templatesShortcuts.map(({ order, key, value, extraValue, extraValue2 }) => {
+      templatesShortcuts.map(({ order, key, value, extraValue, color }) => {
         return {
           icon: extraValue ?? "IoAdd",
-          color: extraValue2 ?? "#000000",
+          color: color,
           order: order ?? 0,
           tag: value,
           type: key as any,
