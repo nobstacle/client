@@ -367,6 +367,8 @@ export default function Package() {
     // Component to render multi-language content with tooltip
     const MultiLangCell = ({ langObject, isArray = false, maxDisplay = 3, maxLength = 100 }) => {
         const value = getFirstAvailableValue(langObject, isArray ? [] : '');
+        const allVariants = getAllLanguageVariants(langObject);
+        const hasMultipleLanguages = allVariants.length > 1;
 
         const processValue = (val) => {
             if (Array.isArray(val)) {
@@ -391,18 +393,48 @@ export default function Package() {
 
         if (isArray && Array.isArray(processedValue)) {
             return (
-                <div>
+                <div className="flex flex-wrap gap-1 items-center">
                     {processedValue.slice(0, maxDisplay).map((item, index) => (
                         <Tag key={index} size="small">{truncate(item)}</Tag>
                     ))}
                     {processedValue.length > maxDisplay && (
-                        <span>+{processedValue.length - maxDisplay} more</span>
+                        <Tag size="small">+{processedValue.length - maxDisplay}</Tag>
+                    )}
+                    {hasMultipleLanguages && (
+                        <Tooltip title={
+                            <div className="space-y-1">
+                                {allVariants.map(({ lang, value }) => (
+                                    <div key={lang}>
+                                        <strong>{lang}:</strong> {Array.isArray(value) ? value.join(', ') : value}
+                                    </div>
+                                ))}
+                            </div>
+                        }>
+                            <FaGlobe className="text-blue-500 text-xs cursor-help" />
+                        </Tooltip>
                     )}
                 </div>
             );
         }
 
-        return <span>{truncate(processedValue) || 'N/A'}</span>;
+        return (
+            <div className="flex items-center gap-2">
+                <span>{truncate(processedValue) || 'N/A'}</span>
+                {hasMultipleLanguages && (
+                    <Tooltip title={
+                        <div className="space-y-1">
+                            {allVariants.map(({ lang, value }) => (
+                                <div key={lang}>
+                                    <strong>{lang}:</strong> {value}
+                                </div>
+                            ))}
+                        </div>
+                    }>
+                        <FaGlobe className="text-blue-500 text-xs cursor-help" />
+                    </Tooltip>
+                )}
+            </div>
+        );
     };
 
 

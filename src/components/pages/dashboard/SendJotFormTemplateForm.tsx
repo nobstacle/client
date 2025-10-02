@@ -98,6 +98,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 	// let userROle = userData?.user?.Roles[0];
 	const [isMobile, setIsMobile] = useState(false);
 	const userRole = userData?.user?.Roles?.[0];
+	const [exportLoading, setExportLoading] = useState(false);
 
 	useEffect(() => {
 		const handleResize = () => {
@@ -1852,6 +1853,80 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 		}
 	};
 
+	
+	const handleExportToExcel = async () => {
+		if (!selectedForm) {
+			toast.error("Please select a form first");
+			return;
+		}
+
+		setExportLoading(true);
+
+		try {
+			const Url = getBackendUrl();
+			let API_URL = `${Url}/api/jotform/export/${selectedForm}`;
+
+			// Add search parameters if any
+			if (lastSearchedValue && lastSearchedValue !== "") {
+				const encodedSearch = encodeURIComponent(lastSearchedValue);
+				API_URL += `?search=${encodedSearch}`;
+			}
+
+			// Add filter parameters
+			if (selectedFilter && selectedFilter !== 'all') {
+				const separator = API_URL.includes('?') ? '&' : '?';
+				API_URL += `${separator}filter=${selectedFilter}`;
+			}
+
+			// Make the API call
+			const response = await axios.get(API_URL, {
+				responseType: 'blob'
+			});
+
+			// Create download link
+			const url = window.URL.createObjectURL(new Blob([response.data]));
+			const link = document.createElement('a');
+			link.href = url;
+
+			// Generate filename with timestamp
+			const timestamp = new Date().toISOString().split('T')[0];
+			const formName = assignedForms.find(f => f.form_id === selectedForm)?.form_name || 'form';
+			link.setAttribute('download', `${formName}_${timestamp}.xlsx`);
+
+			document.body.appendChild(link);
+			link.click();
+			document.body.removeChild(link);
+			window.URL.revokeObjectURL(url);
+
+			toast.success('Data exported successfully!', {
+				position: "bottom-right",
+				autoClose: 5000,
+				hideProgressBar: false,
+				closeOnClick: false,
+				pauseOnHover: true,
+				draggable: true,
+				progress: undefined,
+				theme: "colored",
+				transition: Bounce,
+			});
+		} catch (error) {
+			console.error('Export error:', error);
+			toast.error('Failed to export data. Please try again.', {
+				position: "bottom-right",
+				autoClose: 5000,
+				hideProgressBar: false,
+				closeOnClick: false,
+				pauseOnHover: true,
+				draggable: true,
+				progress: undefined,
+				theme: "colored",
+				transition: Bounce,
+			});
+		} finally {
+			setExportLoading(false);
+		}
+	};
+
 	const renderFormField = (item, idx, arr) => {
 		const commonProps = {
 			key: item.qid,
@@ -2222,6 +2297,15 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 								</label>
 							))}
 						</div>
+						<Tooltip title="Export to Excel">
+							<Button
+								onClick={handleExportToExcel}
+								icon={<FaFileDownload size={20} color="#fff" />}
+								type="primary"
+								className="headerButton"
+								loading={exportLoading}
+							/>
+						</Tooltip>
 					</div>
 					{loader ? (
 						<div className="flex items-center justify-center py-10">
