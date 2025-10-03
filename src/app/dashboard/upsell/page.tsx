@@ -327,6 +327,7 @@ export default function Upsell() {
         setEditingRecord(null);
         setEditingData({});
     };
+
     const getAllLanguageVariants = (obj: Record<string, any> | null | undefined) => {
         if (!obj || typeof obj !== 'object') return [];
 
@@ -334,6 +335,7 @@ export default function Upsell() {
             .filter(([key, value]) => value !== null && value !== undefined && value !== '')
             .map(([lang, value]) => ({ lang, value }));
     };
+
     const columns = [
         {
             title: 'Station',
@@ -941,16 +943,8 @@ export default function Upsell() {
                         {/* Export Button and Pagination Container */}
                         {totalItems > 0 && (
                             <div className="flex justify-between items-center mt-6 pt-4 border-t border-gray-100">
-                                {/* Export Button - Left Side */}
-                                <Button
-                                    type="default"
-                                    icon={<FaFileDownload />}
-                                    onClick={handleExportToExcel}
-                                    loading={exportLoading}
-                                    className="flex items-center gap-2"
-                                >
-                                    Export to Excel
-                                </Button>
+                                {/* Empty div for left spacing */}
+                                <div className="w-32"></div>
 
                                 {/* Pagination - Center */}
                                 <Pagination
@@ -966,8 +960,17 @@ export default function Upsell() {
                                     }
                                 />
 
-                                {/* Empty div for flex spacing */}
-                                <div className="w-32"></div>
+                                {/* Export Button - Right Side */}
+                                <Button
+                                    type="default"
+                                    icon={<FaFileDownload />}
+                                    onClick={handleExportToExcel}
+                                    loading={exportLoading}
+                                    className="flex items-center justify-center bg-blue-600 hover:bg-blue-700 rounded-md px-4 py-2 text-white exportButton"
+                                >
+                                    Export
+                                </Button>
+
                             </div>
                         )}
                     </div>

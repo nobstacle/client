@@ -265,6 +265,25 @@ button {
   width: 55px !important;
 }
 
+.exportButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  background: #3b5998;
+  color: white;
+  padding: 0.3rem 1rem;
+  border: none !important;
+  outline: none !important;
+}
+
+.exportButton:hover {
+  background: #2d4373 !important;
+  color: white !important;
+  border: none !important;
+  outline: none !important;
+}
+
 .headerButton:hover {
   background: #2d4373 !important;
 }
