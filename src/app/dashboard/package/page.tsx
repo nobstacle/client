@@ -365,6 +365,7 @@ export default function Package() {
     };
 
     // Component to render multi-language content with tooltip
+    // Update the MultiLangCell component:
     const MultiLangCell = ({ langObject, isArray = false, maxDisplay = 3, maxLength = 100 }) => {
         const value = getFirstAvailableValue(langObject, isArray ? [] : '');
         const allVariants = getAllLanguageVariants(langObject);
@@ -391,52 +392,55 @@ export default function Package() {
             return text;
         };
 
-        if (isArray && Array.isArray(processedValue)) {
-            return (
-                <div className="flex flex-wrap gap-1 items-center">
-                    {processedValue.slice(0, maxDisplay).map((item, index) => (
-                        <Tag key={index} size="small">{truncate(item)}</Tag>
-                    ))}
-                    {processedValue.length > maxDisplay && (
-                        <Tag size="small">+{processedValue.length - maxDisplay}</Tag>
-                    )}
-                    {hasMultipleLanguages && (
-                        <Tooltip title={
-                            <div className="space-y-1">
-                                {allVariants.map(({ lang, value }) => (
-                                    <div key={lang}>
-                                        <strong>{lang}:</strong> {Array.isArray(value) ? value.join(', ') : value}
-                                    </div>
-                                ))}
+        // Check if there's actual content
+        const hasContent = isArray
+            ? (Array.isArray(processedValue) && processedValue.length > 0)
+            : (processedValue && processedValue !== '-');
+
+        // Language icon component - only show if there's content AND multiple languages
+        const LanguageIcon = () => (
+            hasContent && hasMultipleLanguages && (
+                <Tooltip title={
+                    <div className="space-y-1">
+                        {allVariants.map(({ lang, value }) => (
+                            <div key={lang}>
+                                <strong>{lang}:</strong> {Array.isArray(value) ? value.join(', ') : value}
                             </div>
-                        }>
-                            <FaGlobe className="text-blue-500 text-xs cursor-help" />
-                        </Tooltip>
-                    )}
+                        ))}
+                    </div>
+                }>
+                    <FaGlobe className="text-blue-500 cursor-help flex-shrink-0" style={{ fontSize: '14px' }} />
+                </Tooltip>
+            )
+        );
+
+        if (isArray && Array.isArray(processedValue)) {
+            if (processedValue.length === 0) {
+                return <span>-</span>;
+            }
+
+            return (
+                <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap gap-1">
+                        {processedValue.slice(0, maxDisplay).map((item, index) => (
+                            <Tag key={index} size="small">{truncate(item)}</Tag>
+                        ))}
+                        {processedValue.length > maxDisplay && (
+                            <Tag size="small">+{processedValue.length - maxDisplay}</Tag>
+                        )}
+                    </div>
+                    <LanguageIcon />
                 </div>
             );
         }
 
         return (
             <div className="flex items-center gap-2">
-                <span>{truncate(processedValue) || 'N/A'}</span>
-                {hasMultipleLanguages && (
-                    <Tooltip title={
-                        <div className="space-y-1">
-                            {allVariants.map(({ lang, value }) => (
-                                <div key={lang}>
-                                    <strong>{lang}:</strong> {value}
-                                </div>
-                            ))}
-                        </div>
-                    }>
-                        <FaGlobe className="text-blue-500 text-xs cursor-help" />
-                    </Tooltip>
-                )}
+                <span className="flex-1">{truncate(processedValue) || 'N/A'}</span>
+                <LanguageIcon />
             </div>
         );
     };
-
 
     const checkLanguageAvailability = (packageData, langCode) => {
         if (!packageData || !langCode) return false;
@@ -483,7 +487,7 @@ export default function Package() {
             title: "Package Code",
             dataIndex: "packageCode",
             key: "packageCode",
-            width: 120,
+            width: 140,
         },
         {
             title: "Package Name",
@@ -522,11 +526,10 @@ export default function Package() {
         {
             title: "Tags",
             key: "tags",
-            width: 150,
+            width: 200,
             render: (_, record) => {
                 let tags = getFirstAvailableValue(record.packageTags, []);
 
-                // Handle nested objects in tags
                 if (Array.isArray(tags)) {
                     tags = tags.map(tag => {
                         if (typeof tag === 'object' && tag !== null) {
@@ -536,17 +539,21 @@ export default function Package() {
                     }).filter(Boolean);
                 }
 
+
                 const allVariants = getAllLanguageVariants(record.packageTags);
                 const hasMultipleLanguages = allVariants.length > 1;
 
                 return (
-                    <div className="flex flex-wrap gap-1 items-center">
-                        {tags.slice(0, 2).map((tag, index) => (
-                            <Tag key={index} size="small">{tag}</Tag>
-                        ))}
-                        {tags.length > 2 && (
-                            <Tag size="small">+{tags.length - 2}</Tag>
-                        )}
+                    tags?.length > 0 ? (
+                                            <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap gap-1">
+                            {tags.slice(0, 2).map((tag, index) => (
+                                <Tag key={index} size="small">{tag}</Tag>
+                            ))}
+                            {tags.length > 2 && (
+                                <Tag size="small">+{tags.length - 2}</Tag>
+                            )}
+                        </div>
                         {hasMultipleLanguages && (
                             <Tooltip title={
                                 <div className="space-y-1">
@@ -557,10 +564,13 @@ export default function Package() {
                                     ))}
                                 </div>
                             }>
-                                <FaGlobe className="text-blue-500 text-xs cursor-help" />
+                                <FaGlobe className="text-blue-500 cursor-help flex-shrink-0" style={{ fontSize: '14px' }} />
                             </Tooltip>
                         )}
                     </div>
+                    ) : (
+                        <span>-</span>
+                    )
                 );
             },
         },
@@ -568,7 +578,7 @@ export default function Package() {
             title: "Original Price",
             dataIndex: "originalPrice",
             key: "originalPrice",
-            width: 120,
+            width: 150,
             render: (price, record) => {
                 const currency = getFirstAvailableValue(record.currencies, '');
                 return price ? `${currency} ${price}` : "N/A";
@@ -578,7 +588,7 @@ export default function Package() {
             title: "Discounted Price",
             dataIndex: "discountedPrice",
             key: "discountedPrice",
-            width: 160,
+            width: 180,
             render: (price, record) => {
                 const currency = getFirstAvailableValue(record.currencies, '');
                 return price ? `${currency} ${price}` : "N/A";
@@ -598,7 +608,7 @@ export default function Package() {
         {
             title: "Tax Info",
             key: "taxInformation",
-            width: 150,
+            width: 180,
             render: (_, record) => (
                 <MultiLangCell langObject={record.taxInformation} />
             ),
@@ -651,7 +661,7 @@ export default function Package() {
         {
             title: "Button Text",
             key: "buttonText",
-            width: 150,
+            width: 180,
             render: (_, record) => (
                 <MultiLangCell langObject={record.buttonTexts} />
             ),
@@ -671,7 +681,7 @@ export default function Package() {
             title: "Category Upgrade",
             dataIndex: "roomUpgrade",
             key: "roomUpgrade",
-            width: 140,
+            width: 150,
             render: (roomUpgrade) => (
                 <Tag color={roomUpgrade ? "blue" : "gray"}>
                     {roomUpgrade ? "Yes" : "No"}

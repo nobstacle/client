@@ -1853,7 +1853,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 		}
 	};
 
-	
+
 	const handleExportToExcel = async () => {
 		if (!selectedForm) {
 			toast.error("Please select a form first");
@@ -1864,18 +1864,28 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 
 		try {
 			const Url = getBackendUrl();
-			let API_URL = `${Url}/api/jotform/export/${selectedForm}`;
+
+			// Extract listable field text labels
+			const listableFields = selectedFormFields?.content
+				? Object.values(selectedFormFields.content)
+					.filter((field: any) => field.name.includes('listable'))
+					.map((field: any) => field.text)
+				: [];
+
+			// Encode listable fields as query parameter
+			const encodedFields = encodeURIComponent(JSON.stringify(listableFields));
+
+			let API_URL = `${Url}/api/jotform/export/${selectedForm}?listableFields=${encodedFields}`;
 
 			// Add search parameters if any
 			if (lastSearchedValue && lastSearchedValue !== "") {
 				const encodedSearch = encodeURIComponent(lastSearchedValue);
-				API_URL += `?search=${encodedSearch}`;
+				API_URL += `&search=${encodedSearch}`;
 			}
 
 			// Add filter parameters
 			if (selectedFilter && selectedFilter !== 'all') {
-				const separator = API_URL.includes('?') ? '&' : '?';
-				API_URL += `${separator}filter=${selectedFilter}`;
+				API_URL += `&filter=${selectedFilter}`;
 			}
 
 			// Make the API call
@@ -1926,7 +1936,6 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 			setExportLoading(false);
 		}
 	};
-
 	const renderFormField = (item, idx, arr) => {
 		const commonProps = {
 			key: item.qid,

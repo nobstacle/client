@@ -358,6 +358,9 @@ const PackageCard = ({ packageData, handleClick, loadingButton, langCode = 'en' 
                           muted
                           loop
                           playsInline
+                          webkit-playsinline="true"
+                          x-webkit-airplay="allow"
+                          preload="metadata"
                           src={item.url}
                           className="w-full h-full object-cover object-center"
                           style={{
@@ -366,7 +369,36 @@ const PackageCard = ({ packageData, handleClick, loadingButton, langCode = 'en' 
                             maxHeight: '35vh',
                             minHeight: '35vh',
                           }}
+                          // Prevent fullscreen on iOS
+                          onLoadedMetadata={(e) => {
+                            const video = e.currentTarget;
+                            video.setAttribute('playsinline', 'true');
+                            video.setAttribute('webkit-playsinline', 'true');
+                          }}
+                          // Additional handler to prevent fullscreen
+                          onPlay={(e) => {
+                            const video = e.currentTarget;
+                            if (video.webkitEnterFullscreen) {
+                              // Prevent webkit fullscreen
+                              video.style.width = '100%';
+                              video.style.height = '100%';
+                            }
+                          }}
                         />
+                        // <video
+                        //   autoPlay
+                        //   muted
+                        //   loop
+                        //   playsInline
+                        //   src={item.url}
+                        //   className="w-full h-full object-cover object-center"
+                        //   style={{
+                        //     borderRadius: '8px',
+                        //     height: '100%',
+                        //     maxHeight: '35vh',
+                        //     minHeight: '35vh',
+                        //   }}
+                        // />
                       )}
 
                       {/*Expand Icon Top Right */}
@@ -670,6 +702,21 @@ export const Content: React.FC = () => {
       }
     }
   }, [messageStore.receivedMessage.length, chatBoxRef.current]);
+
+  const videoStyles = `
+  video::-webkit-media-controls-start-playback-button {
+    display: none !important;
+  }
+  
+  video::-webkit-media-controls-fullscreen-button {
+    display: none !important;
+  }
+  
+  video {
+    -webkit-playsinline: true;
+    object-fit: cover;
+  }
+`;
 
   useEffect(() => {
     if (messageStore.receivedType && isFirstTimeOpen.current === true) {
@@ -1147,6 +1194,7 @@ export const Content: React.FC = () => {
               langCode={currentLangCode}
               handleClick={(data) => handlePackageClicked(data)}
               loadingButton={loading}
+
             />
           ))}
         </div>

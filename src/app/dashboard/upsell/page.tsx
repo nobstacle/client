@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Table, Tag, Card, Pagination, Input, message, Button, Typography, Space, Select, InputNumber, DatePicker, Tooltip } from "antd";
+import { Table, Tag, Card, Pagination, Input, message, Button, Space, Select, InputNumber, DatePicker, Tooltip } from "antd";
 import { SearchOutlined, SendOutlined, UserOutlined, CalendarOutlined, EditOutlined, SaveOutlined, CloseOutlined } from "@ant-design/icons";
 import "../../../styles/base.css";
 import { useSession } from "next-auth/react";
@@ -17,7 +17,7 @@ import { SendIcon } from "../../../components/icons/SendIcon";
 import { MdDelete } from "react-icons/md";
 import Swal from "sweetalert2";
 import { useMessageStore } from "../../../lib/zustand/store/messageStore";
-import { FaGlobe } from "react-icons/fa";
+import { FaGlobe, FaFileDownload } from "react-icons/fa";
 
 const { Option } = Select;
 
@@ -34,7 +34,7 @@ export default function Upsell() {
     const [selectedCategories, setSelectedCategories] = useState([]);
     const [selectedPackages, setSelectedPackages] = useState([]);
     const [allPackages, setAllPackages] = useState([]);
-    const [dataLoaded, setDataLoaded] = useState(false); 
+    const [dataLoaded, setDataLoaded] = useState(false);
     const pageSize = 10;
     const { data } = useSession();
     let Url = process.env.NEXT_PUBLIC_BACKEND_URL;
@@ -44,6 +44,7 @@ export default function Upsell() {
     const { data: companyData } = useCompanyControllerGetCompany();
     const isAdmin = data?.user.Roles[0] || false;
     const { receivedContent } = useMessageStore();
+    const [exportLoading, setExportLoading] = useState(false);
 
     // Keep only the beforeunload handler for preventing accidental reloads
     useEffect(() => {
@@ -177,6 +178,50 @@ export default function Upsell() {
         }
     };
 
+    const handleExportToExcel = async () => {
+        setExportLoading(true);
+
+        try {
+            const response = await fetch(`${Url}/api/v1/uploads/export-upsell-transactions`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${data?.user.backendTokens.at}`,
+                },
+                body: JSON.stringify({
+                    searchTerm: searchTerm,
+                    // Send any other filter criteria you might add later
+                }),
+            });
+
+            if (!response.ok) {
+                throw new Error('Export failed');
+            }
+
+            // Get the blob from response
+            const blob = await response.blob();
+
+            // Create download link
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `upsell-transactions-${new Date().toISOString().split('T')[0]}.xlsx`;
+            document.body.appendChild(a);
+            a.click();
+
+            // Cleanup
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+
+            message.success('Export completed successfully');
+        } catch (error) {
+            console.error('Export error:', error);
+            message.error('Failed to export data');
+        } finally {
+            setExportLoading(false);
+        }
+    };
+
     const handleEdit = (record: any) => {
         setEditingRecord(record.id);
         setEditingData({
@@ -283,11 +328,11 @@ export default function Upsell() {
         setEditingData({});
     };
     const getAllLanguageVariants = (obj: Record<string, any> | null | undefined) => {
-    if (!obj || typeof obj !== 'object') return [];
-    
-    return Object.entries(obj)
-        .filter(([key, value]) => value !== null && value !== undefined && value !== '')
-        .map(([lang, value]) => ({ lang, value }));
+        if (!obj || typeof obj !== 'object') return [];
+
+        return Object.entries(obj)
+            .filter(([key, value]) => value !== null && value !== undefined && value !== '')
+            .map(([lang, value]) => ({ lang, value }));
     };
     const columns = [
         {
@@ -893,9 +938,21 @@ export default function Upsell() {
                             showSorterTooltip={false}
                         />
 
-                        {/* Pagination */}
+                        {/* Export Button and Pagination Container */}
                         {totalItems > 0 && (
-                            <div className="flex justify-center mt-6 pt-4 border-t border-gray-100">
+                            <div className="flex justify-between items-center mt-6 pt-4 border-t border-gray-100">
+                                {/* Export Button - Left Side */}
+                                <Button
+                                    type="default"
+                                    icon={<FaFileDownload />}
+                                    onClick={handleExportToExcel}
+                                    loading={exportLoading}
+                                    className="flex items-center gap-2"
+                                >
+                                    Export to Excel
+                                </Button>
+
+                                {/* Pagination - Center */}
                                 <Pagination
                                     current={currentPage}
                                     total={totalItems}
@@ -908,6 +965,9 @@ export default function Upsell() {
                                         `${range[0]}-${range[1]} of ${total} transactions`
                                     }
                                 />
+
+                                {/* Empty div for flex spacing */}
+                                <div className="w-32"></div>
                             </div>
                         )}
                     </div>
