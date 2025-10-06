@@ -493,29 +493,112 @@ export default function Package() {
             title: "Package Name",
             key: "packageName",
             width: 200,
-            render: (_, record) => (
-                <MultiLangCell langObject={record.packageNames} />
-            ),
+            render: (_, record) => {
+                const allVariants = getAllLanguageVariants(record.packageNames);
+                const hasMultipleLanguages = allVariants.length > 1;
+                const displayValue = getFirstAvailableValue(record.packageNames);
+
+                return (
+                    <div className="relative">
+                        {hasMultipleLanguages && (
+                            <Tooltip title={
+                                <div className="space-y-1">
+                                    {allVariants.map(({ lang, value }) => (
+                                        <div key={lang}>
+                                            <strong>{lang}:</strong> {value}
+                                        </div>
+                                    ))}
+                                </div>
+                            }>
+                                <FaGlobe className="absolute top-0 right-0 text-blue-500 cursor-help" style={{ fontSize: '14px' }} />
+                            </Tooltip>
+                        )}
+                        <div className="pr-5">
+                            <span>{displayValue}</span>
+                        </div>
+                    </div>
+                );
+            },
         },
         {
             title: "Description",
             key: "packageDescription",
             width: 250,
-            render: (_, record) => (
-                <MultiLangCell langObject={record.packageDescriptions} maxLength={100} />
-            ),
+            render: (_, record) => {
+                const allVariants = getAllLanguageVariants(record.packageDescriptions);
+                const hasMultipleLanguages = allVariants.length > 1;
+                const displayValue = getFirstAvailableValue(record.packageDescriptions);
+                const truncatedValue = displayValue.length > 100 ? displayValue.substring(0, 100) + '...' : displayValue;
+
+                return (
+                    <div className="relative">
+                        {hasMultipleLanguages && (
+                            <Tooltip title={
+                                <div className="space-y-1">
+                                    {allVariants.map(({ lang, value }) => (
+                                        <div key={lang}>
+                                            <strong>{lang}:</strong> {value}
+                                        </div>
+                                    ))}
+                                </div>
+                            }>
+                                <FaGlobe className="absolute top-0 right-0 text-blue-500 cursor-help" style={{ fontSize: '14px' }} />
+                            </Tooltip>
+                        )}
+                        <div className="pr-5">
+                            <span>{truncatedValue}</span>
+                        </div>
+                    </div>
+                );
+            },
         },
         {
             title: "Benefits",
             key: "packageBenefits",
             width: 200,
-            render: (_, record) => (
-                <MultiLangCell
-                    langObject={record.packageBenefits}
-                    isArray={true}
-                    maxDisplay={2}
-                />
-            ),
+            render: (_, record) => {
+                let benefits = getFirstAvailableValue(record.packageBenefits, []);
+
+                if (Array.isArray(benefits)) {
+                    benefits = benefits.map(benefit => {
+                        if (typeof benefit === 'object' && benefit !== null) {
+                            return getFirstAvailableValue(benefit, '');
+                        }
+                        return benefit;
+                    }).filter(Boolean);
+                }
+
+                const allVariants = getAllLanguageVariants(record.packageBenefits);
+                const hasMultipleLanguages = allVariants.length > 1;
+
+                return benefits?.length > 0 ? (
+                    <div className="relative">
+                        {hasMultipleLanguages && (
+                            <Tooltip title={
+                                <div className="space-y-1">
+                                    {allVariants.map(({ lang, value }) => (
+                                        <div key={lang}>
+                                            <strong>{lang}:</strong> {Array.isArray(value) ? value.join(', ') : value}
+                                        </div>
+                                    ))}
+                                </div>
+                            }>
+                                <FaGlobe className="absolute top-0 right-0 text-blue-500 cursor-help" style={{ fontSize: '14px' }} />
+                            </Tooltip>
+                        )}
+                        <div className="flex flex-wrap gap-1 pr-5">
+                            {benefits.slice(0, 2).map((benefit, index) => (
+                                <Tag key={index} size="small">{benefit}</Tag>
+                            ))}
+                            {benefits.length > 2 && (
+                                <Tag size="small">+{benefits.length - 2}</Tag>
+                            )}
+                        </div>
+                    </div>
+                ) : (
+                    <span>-</span>
+                );
+            },
         },
         {
             title: "Purchases",
@@ -539,35 +622,35 @@ export default function Package() {
                     }).filter(Boolean);
                 }
 
-
                 const allVariants = getAllLanguageVariants(record.packageTags);
                 const hasMultipleLanguages = allVariants.length > 1;
 
                 return (
                     tags?.length > 0 ? (
-                                            <div className="flex items-center gap-2">
-                        <div className="flex flex-wrap gap-1">
-                            {tags.slice(0, 2).map((tag, index) => (
-                                <Tag key={index} size="small">{tag}</Tag>
-                            ))}
-                            {tags.length > 2 && (
-                                <Tag size="small">+{tags.length - 2}</Tag>
+                        <div className="relative">
+                            {hasMultipleLanguages && (
+                                <Tooltip title={
+                                    <div className="space-y-1">
+                                        {allVariants.map(({ lang, value }) => (
+                                            <div key={lang}>
+                                                <strong>{lang}:</strong> {Array.isArray(value) ? value.join(', ') : value}
+                                            </div>
+                                        ))}
+                                    </div>
+                                }>
+                                    <FaGlobe className="absolute top-0 right-0 text-blue-500 cursor-help" style={{ fontSize: '14px' }} />
+                                </Tooltip>
                             )}
+
+                            <div className="flex flex-wrap gap-1 pr-5">
+                                {tags.slice(0, 2).map((tag, index) => (
+                                    <Tag key={index} size="small">{tag}</Tag>
+                                ))}
+                                {tags.length > 2 && (
+                                    <Tag size="small">+{tags.length - 2}</Tag>
+                                )}
+                            </div>
                         </div>
-                        {hasMultipleLanguages && (
-                            <Tooltip title={
-                                <div className="space-y-1">
-                                    {allVariants.map(({ lang, value }) => (
-                                        <div key={lang}>
-                                            <strong>{lang}:</strong> {Array.isArray(value) ? value.join(', ') : value}
-                                        </div>
-                                    ))}
-                                </div>
-                            }>
-                                <FaGlobe className="text-blue-500 cursor-help flex-shrink-0" style={{ fontSize: '14px' }} />
-                            </Tooltip>
-                        )}
-                    </div>
                     ) : (
                         <span>-</span>
                     )
@@ -609,9 +692,32 @@ export default function Package() {
             title: "Tax Info",
             key: "taxInformation",
             width: 180,
-            render: (_, record) => (
-                <MultiLangCell langObject={record.taxInformation} />
-            ),
+            render: (_, record) => {
+                const allVariants = getAllLanguageVariants(record.taxInformation);
+                const hasMultipleLanguages = allVariants.length > 1;
+                const displayValue = getFirstAvailableValue(record.taxInformation);
+
+                return (
+                    <div className="relative">
+                        {hasMultipleLanguages && (
+                            <Tooltip title={
+                                <div className="space-y-1">
+                                    {allVariants.map(({ lang, value }) => (
+                                        <div key={lang}>
+                                            <strong>{lang}:</strong> {value}
+                                        </div>
+                                    ))}
+                                </div>
+                            }>
+                                <FaGlobe className="absolute top-0 right-0 text-blue-500 cursor-help" style={{ fontSize: '14px' }} />
+                            </Tooltip>
+                        )}
+                        <div className="pr-5">
+                            <span>{displayValue || 'N/A'}</span>
+                        </div>
+                    </div>
+                );
+            },
         },
         {
             title: "Tax %",
@@ -624,17 +730,63 @@ export default function Package() {
             title: "Price Algorithm",
             key: "priceAlgorithm",
             width: 220,
-            render: (_, record) => (
-                <MultiLangCell langObject={record.priceAlgorithms} />
-            ),
+            render: (_, record) => {
+                const allVariants = getAllLanguageVariants(record.priceAlgorithms);
+                const hasMultipleLanguages = allVariants.length > 1;
+                const displayValue = getFirstAvailableValue(record.priceAlgorithms);
+
+                return (
+                    <div className="relative">
+                        {hasMultipleLanguages && (
+                            <Tooltip title={
+                                <div className="space-y-1">
+                                    {allVariants.map(({ lang, value }) => (
+                                        <div key={lang}>
+                                            <strong>{lang}:</strong> {value}
+                                        </div>
+                                    ))}
+                                </div>
+                            }>
+                                <FaGlobe className="absolute top-0 right-0 text-blue-500 cursor-help" style={{ fontSize: '14px' }} />
+                            </Tooltip>
+                        )}
+                        <div className="pr-5">
+                            <span>{displayValue || 'N/A'}</span>
+                        </div>
+                    </div>
+                );
+            },
         },
         {
             title: "Package Alert",
             key: "packageAlert",
             width: 200,
-            render: (_, record) => (
-                <MultiLangCell langObject={record.packageAlerts} />
-            ),
+            render: (_, record) => {
+                const allVariants = getAllLanguageVariants(record.packageAlerts);
+                const hasMultipleLanguages = allVariants.length > 1;
+                const displayValue = getFirstAvailableValue(record.packageAlerts);
+
+                return (
+                    <div className="relative">
+                        {hasMultipleLanguages && (
+                            <Tooltip title={
+                                <div className="space-y-1">
+                                    {allVariants.map(({ lang, value }) => (
+                                        <div key={lang}>
+                                            <strong>{lang}:</strong> {value}
+                                        </div>
+                                    ))}
+                                </div>
+                            }>
+                                <FaGlobe className="absolute top-0 right-0 text-blue-500 cursor-help" style={{ fontSize: '14px' }} />
+                            </Tooltip>
+                        )}
+                        <div className="pr-5">
+                            <span>{displayValue || 'N/A'}</span>
+                        </div>
+                    </div>
+                );
+            },
         },
         {
             title: "Status",
@@ -662,9 +814,32 @@ export default function Package() {
             title: "Button Text",
             key: "buttonText",
             width: 180,
-            render: (_, record) => (
-                <MultiLangCell langObject={record.buttonTexts} />
-            ),
+            render: (_, record) => {
+                const allVariants = getAllLanguageVariants(record.buttonTexts);
+                const hasMultipleLanguages = allVariants.length > 1;
+                const displayValue = getFirstAvailableValue(record.buttonTexts);
+
+                return (
+                    <div className="relative">
+                        {hasMultipleLanguages && (
+                            <Tooltip title={
+                                <div className="space-y-1">
+                                    {allVariants.map(({ lang, value }) => (
+                                        <div key={lang}>
+                                            <strong>{lang}:</strong> {value}
+                                        </div>
+                                    ))}
+                                </div>
+                            }>
+                                <FaGlobe className="absolute top-0 right-0 text-blue-500 cursor-help" style={{ fontSize: '14px' }} />
+                            </Tooltip>
+                        )}
+                        <div className="pr-5">
+                            <span>{displayValue || 'N/A'}</span>
+                        </div>
+                    </div>
+                );
+            },
         },
         {
             title: "Price Level",

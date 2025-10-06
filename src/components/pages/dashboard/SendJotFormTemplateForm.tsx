@@ -1869,6 +1869,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 			const listableFields = selectedFormFields?.content
 				? Object.values(selectedFormFields.content)
 					.filter((field: any) => field.name.includes('listable'))
+					.sort((a: any, b: any) => a.name.localeCompare(b.name))
 					.map((field: any) => field.text)
 				: [];
 
