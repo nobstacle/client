@@ -149,10 +149,24 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 
 		const handleConnect = () => {
 			console.log("Socket connected:", socket.id);
+			// Refresh data after reconnection
+			if (selectedForm) {
+				getTableResponse(
+					selectedForm,
+					currentPage,
+					itemsPerPage,
+					lastSearchRef.current,
+					filterRef.current
+				);
+			}
 		};
 
 		const handleDisconnect = (reason: string) => {
 			console.warn("Socket disconnected:", reason);
+			// Auto-reconnect if not intentional
+			if (reason === "io server disconnect") {
+				socket.connect();
+			}
 		};
 
 		const handleError = (err: any) => {
@@ -1021,6 +1035,20 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 		resolver: yupResolver(schema),
 	});
 
+	useEffect(() => {
+		const checkSession = async () => {
+			if (!userData?.user?.id) {
+				// Session expired, redirect to login
+				toast.warning('Session expired. Please login again.');
+				// Add redirect logic here if needed
+			}
+		};
+
+		const interval = setInterval(checkSession, 60000); // Check every minute
+
+		return () => clearInterval(interval);
+	}, [userData]);
+
 	const sendJotFormMessage = (content: string, uuid: string) => {
 		const params = getUrlParams();
 		emitSendJotForm(
@@ -1853,7 +1881,6 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 		}
 	};
 
-
 	const handleExportToExcel = async () => {
 		if (!selectedForm) {
 			toast.error("Please select a form first");
@@ -1937,6 +1964,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 			setExportLoading(false);
 		}
 	};
+	
 	const renderFormField = (item, idx, arr) => {
 		const commonProps = {
 			key: item.qid,
@@ -2320,6 +2348,16 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 					{loader ? (
 						<div className="flex items-center justify-center py-10">
 							<p className="text-gray-500 text-lg">Loading...</p>
+						</div>
+					) : !tableResponse?.data || tableResponse.data.length === 0 ? (
+						<div className="flex flex-col items-center justify-center py-10">
+							<p className="text-gray-500 text-lg mb-4">No data available</p>
+							<Button
+								onClick={() => window.location.reload()}
+								type="primary"
+							>
+								Refresh Page
+							</Button>
 						</div>
 					) : (
 						<TableComponent
