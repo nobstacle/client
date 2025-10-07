@@ -389,7 +389,7 @@ export default function Upsell() {
                             <div className="text-xs text-gray-500">{record.packageCode}</div>
                         </div>
 
-                        {hasMultipleLanguages && (
+                        {/* {hasMultipleLanguages && (
                             <Tooltip
                                 title={
                                     <div className="space-y-1">
@@ -404,7 +404,7 @@ export default function Upsell() {
                             >
                                 <FaGlobe className="text-blue-500 text-xs cursor-help" />
                             </Tooltip>
-                        )}
+                        )} */}
                     </div>
                 );
             },

@@ -1037,3 +1037,7 @@ button {
 .view-category-modal .ant-modal-close {
   display: none !important;
 }
+
+.customChatButton .ant-btn-icon {
+  font-size: 20px;
+}

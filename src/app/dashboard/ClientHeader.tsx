@@ -7,6 +7,7 @@ import { HeaderLanguagePicker } from "../../components/pages/dashboard/Header/La
 import { LanguageShortcutPicker } from "../../components/pages/dashboard/Header/LanguageShortcutPicker";
 import { TemplateShortcutPicker } from "../../components/pages/dashboard/Header/TemplateShortcutPicker";
 import { StationPicker } from "../../components/pages/dashboard/Header/StationPicker";
+import { ChatBot } from "../../components/pages/dashboard/Header/chatBot";
 
 const ClientHeader = () => {
     const [drawerOpen, setDrawerOpen] = useState(false);
@@ -94,6 +95,9 @@ const ClientHeader = () => {
                     </div>
 
                     <div className="flex items-center">
+                        <div className="bg-white/10 backdrop-blur-sm rounded-lg" style={{ padding: '0.2rem', marginRight: '1rem' }}>
+                            <ChatBot />
+                        </div>
                         <div className="bg-white/10 backdrop-blur-sm rounded-lg px-4 py-2">
                             <StationPicker />
                         </div>
