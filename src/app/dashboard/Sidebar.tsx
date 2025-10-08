@@ -7,6 +7,19 @@ import { ClientLink } from "../../components/pages/dashboard/Sidebar/ClientLink"
 import { Logout } from "../../components/pages/dashboard/Header/Logout";
 import { CompanyLogo } from "../../components/pages/dashboard/Header/CompanyLogo";
 import { LogoutIcon } from "../../components/icons/sidebar/LogoutIcon";
+import {
+    IoImage,
+    IoImages,
+    IoPlay,
+    IoGlobe,
+    IoDocuments,
+    IoMap,
+    IoChatboxEllipses,
+    IoSpeedometer,
+    IoDocumentText,
+    IoWallet,
+    IoPeople
+} from 'react-icons/io5';
 
 interface ClientSidebarProps {
     user: Session | null;
@@ -17,6 +30,9 @@ interface MenuItem {
     href: string;
     roles?: string[];
     condition?: boolean;
+    icon?: React.ReactNode;
+    iconColor?: string;
+    textColor?: string;
 }
 
 interface SettingsItem {
@@ -39,18 +55,80 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
     const [mounted, setMounted] = useState(false);
     const pathname = usePathname();
 
-    // Flattened menu structure
+    // Flattened menu structure with icons
     const menuItems: MenuItem[] = [
-        { title: "Image", href: "/dashboard/image", roles: ["Admin", "User", "Staff"] },
-        { title: "Slideshow", href: "/dashboard/slideshow", roles: ["Admin", "User", "Staff"] },
-        { title: "Video", href: "/dashboard/video", roles: ["Admin", "User", "Staff"] },
-        { title: "Website", href: "/dashboard/website", roles: ["Admin", "User", "Staff"] },
-        { title: "Document", href: "/dashboard/documents", roles: ["Admin", "User", "Staff"] },
-        { title: "Map", href: "/dashboard/maps", roles: ["Admin", "User", "Staff"] },
-        { title: "Text", href: "/dashboard/text", roles: ["Admin", "User", "Staff"] },
-        { title: "Survey", href: "/dashboard/survey", roles: ["Admin", "User", "Staff"] },
-        { title: "Upsell", href: "/dashboard/upsell", roles: ["Admin", "User", "Staff"] },
-        { title: "Forms", href: "/dashboard/form", roles: ["Admin", "User", "Staff"] },
+        {
+            title: "Image",
+            href: "/dashboard/image",
+            roles: ["Admin", "User", "Staff"],
+            icon: <IoImage size={18} />,
+            iconColor: "white"
+        },
+        {
+            title: "Slideshow",
+            href: "/dashboard/slideshow",
+            roles: ["Admin", "User", "Staff"],
+            icon: <IoImages size={18} />,
+            iconColor: "white"
+        },
+        {
+            title: "Video",
+            href: "/dashboard/video",
+            roles: ["Admin", "User", "Staff"],
+            icon: <IoPlay size={18} />,
+            iconColor: "white"
+        },
+        {
+            title: "Website",
+            href: "/dashboard/website",
+            roles: ["Admin", "User", "Staff"],
+            icon: <IoGlobe size={18} />,
+            iconColor: "white"
+        },
+        {
+            title: "Document",
+            href: "/dashboard/documents",
+            roles: ["Admin", "User", "Staff"],
+            icon: <IoDocuments size={18} />,
+            iconColor: "white"
+        },
+        {
+            title: "Map",
+            href: "/dashboard/maps",
+            roles: ["Admin", "User", "Staff"],
+            icon: <IoMap size={18} />,
+            iconColor: "white"
+        },
+        {
+            title: "Text",
+            href: "/dashboard/text",
+            roles: ["Admin", "User", "Staff"],
+            icon: <IoChatboxEllipses size={18} />,
+            iconColor: "white"
+        },
+        {
+            title: "Survey",
+            href: "/dashboard/survey",
+            roles: ["Admin", "User", "Staff"],
+            icon: <IoSpeedometer size={18} />,
+            iconColor: "white"
+        },
+        {
+            title: "Upsell",
+            href: "/dashboard/upsell",
+            roles: ["Admin", "User", "Staff"],
+            icon: <IoWallet size={18} />,
+            iconColor: "#F6C6AD",
+            textColor: "#F6C6AD"
+        },
+        {
+            title: "Forms",
+            href: "/dashboard/form",
+            roles: ["Admin", "User", "Staff"],
+            icon: <IoDocumentText size={18} />,
+            iconColor: "#D9F2D0",
+            textColor: "#D9F2D0"
+        },
     ];
 
     // Team submenu
@@ -132,22 +210,30 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
         if (item.condition !== undefined && !item.condition) return null;
 
         const isActive = item.href === pathname;
+        const textColor = item.textColor || (isActive ? 'white' : 'white');
 
         return (
             <li key={item.title} className="w-full" onClick={closeSidebar}>
                 <div
                     className={`
-                        flex items-center px-6 py-3 transition-colors duration-200 cursor-pointer
+                        flex items-center gap-3 px-6 py-3 transition-colors duration-200 cursor-pointer
                         ${isActive
-                            ? 'bg-white/10 text-white border-l-4 border-white'
-                            : 'text-white/90 hover:bg-white/5 hover:text-white border-l-4 border-transparent'
+                            ? 'bg-white/10 border-l-4 border-white'
+                            : 'hover:bg-white/5 border-l-4 border-transparent'
                         }
                     `}
+                    style={{ color: item.textColor || '#fff' }}
                 >
+                    {item.icon && (
+                        <span style={{ color: item.iconColor || 'white' }}>
+                            {item.icon}
+                        </span>
+                    )}
                     <ClientLink
                         href={item.href}
                         title={item.title}
                         className="flex-1 text-sm font-normal"
+                        style={{ color: item.textColor }}
                     />
                 </div>
             </li>
@@ -305,7 +391,7 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
                                 <div
                                     onClick={toggleTeam}
                                     className={`
-                                        flex items-center justify-between px-6 py-3 cursor-pointer
+                                        flex items-center justify-between gap-3 px-6 py-3 cursor-pointer
                                         transition-colors duration-200
                                         ${isTeamActive || teamExpanded
                                             ? 'bg-white/10 text-white border-l-4 border-white'
@@ -313,7 +399,10 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
                                         }
                                     `}
                                 >
-                                    <span className="text-sm font-normal">Team</span>
+                                    <div className="flex items-center gap-3 flex-1">
+                                        <IoPeople size={18} />
+                                        <span className="text-sm font-normal">Team</span>
+                                    </div>
                                     <svg
                                         className={`w-4 h-4 transition-transform duration-300 ${teamExpanded ? 'rotate-180' : ''}`}
                                         fill="none"

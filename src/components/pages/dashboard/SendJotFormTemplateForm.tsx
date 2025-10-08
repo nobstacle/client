@@ -1,5 +1,5 @@
 import { yupResolver } from "@hookform/resolvers/yup";
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import * as yup from "yup";
 import { useSocketContext } from "../../../context/SocketContextProvider";
@@ -19,6 +19,7 @@ import { DatePicker, Input, Form } from 'antd';
 import dayjs from 'dayjs';
 import { IoQrCode } from "react-icons/io5";
 import Papa from 'papaparse';
+import { debounce } from 'lodash';
 
 const { Option } = Select;
 
@@ -65,6 +66,7 @@ interface TableComponentProps {
 	selectedFormFields: any[];
 	totalItems: number;
 	onUpdateField?: (recordId: string, fieldName: string, newValue: string) => Promise<boolean>;
+	listableFields: any[];
 }
 
 export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => void }) => {
@@ -99,6 +101,8 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 	const [isMobile, setIsMobile] = useState(false);
 	const userRole = userData?.user?.Roles?.[0];
 	const [exportLoading, setExportLoading] = useState(false);
+	const abortControllerRef = useRef<AbortController | null>(null);
+	const [selectedFormFields, setSelectedFormFields] = useState<FormFields | null>(null);
 
 	useEffect(() => {
 		const handleResize = () => {
@@ -118,6 +122,13 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 		}
 		return new URLSearchParams();
 	};
+
+	const debouncedSearch = useCallback(
+		debounce((formId, page, size, searchValue, filter) => {
+			getTableResponse(formId, page, size, searchValue, filter);
+		}, 500), // Wait 500ms after user stops typing
+		[]
+	);
 
 	useEffect(() => {
 		lastSearchRef.current = lastSearchedValue;
@@ -251,7 +262,8 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 		});
 	};
 
-	const TableComponent: React.FC<TableComponentProps> = ({
+
+	const TableComponent = React.memo<TableComponentProps>(({
 		tableData,
 		uniqueKeys,
 		currentPage,
@@ -259,7 +271,8 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 		totalPages,
 		setCurrentPage,
 		selectedFormFields,
-		onUpdateField
+		onUpdateField,
+		listableFields
 	}) => {
 		const [downloadingPDF, setDownloadingPDF] = useState<number | null>(null);
 		const [editingCell, setEditingCell] = useState<{
@@ -492,12 +505,10 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 			);
 		};
 
-		// Filtered and sorted form fields
-		const listableFields = selectedFormFields !== undefined && Object.values(selectedFormFields).filter((field: any) =>
-			field.name.includes('listable')
-		);
+		const normalizeTableData = useCallback((data: any, labelFields: any) => {
+			if (!data || !labelFields) return [];
 
-		const normalizeTableData = (data: any, labelFields: any) => {
+			// Pre-compute field label map
 			const fieldLabelMap: Record<string, string> = {};
 			labelFields.forEach((field: any) => {
 				fieldLabelMap[field.name] = field.text;
@@ -505,33 +516,22 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 
 			// Normalize entries
 			const normalizedData = data.map((entry: any) => {
-				const normalized: Record<string, any> = {};
+				const normalized: Record<string, any> = {
+					formData: entry.formData
+				};
 
 				for (let key in entry) {
-					if (key === "formData") {
-						normalized.formData = entry.formData;
-						continue;
-					}
+					if (key === "formData") continue;
 
 					const mappedKey = fieldLabelMap[key] || key;
-					let value = entry[key];
-
-					// Try parsing widget metadata
-					try {
-						if (typeof value === "string" && value.includes("widget_metadata")) {
-							value = JSON.parse(value);
-						}
-					} catch (e) {
-						console.warn("Invalid JSON for key:", key);
-					}
-
-					normalized[mappedKey] = value;
+					normalized[mappedKey] = entry[key];
 				}
 
 				return normalized;
 			});
 
-			const sortedData = normalizedData.sort((a, b) => {
+			// Sort by submission ID
+			return normalizedData.sort((a, b) => {
 				const submissionIdA = a.formData?.submission_id;
 				const submissionIdB = b.formData?.submission_id;
 
@@ -539,14 +539,9 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 				if (!submissionIdA) return 1;
 				if (!submissionIdB) return -1;
 
-				const numA = parseInt(submissionIdA);
-				const numB = parseInt(submissionIdB);
-
-				return numB - numA;
+				return parseInt(submissionIdB) - parseInt(submissionIdA);
 			});
-
-			return sortedData;
-		};
+		}, []);
 
 		const cleanTableData = normalizeTableData(tableData, listableFields);
 
@@ -624,9 +619,11 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 			}
 		};
 
-		const sortedListableFields = Array.isArray(listableFields)
-			? [...listableFields].sort((a: any, b: any) => a.name.localeCompare(b.name))
-			: [];
+		const sortedListableFields = useMemo(() => {
+			return Array.isArray(listableFields)
+				? [...listableFields].sort((a: any, b: any) => a.name.localeCompare(b.name))
+				: [];
+		}, [listableFields]);
 
 		// Desktop Table Columns
 		const columns = [
@@ -953,7 +950,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 				</div>
 			</div>
 		);
-	};
+	});
 
 	const handleChange = (name: string, value: any) => {
 		setInputValues((prev: any) => ({
@@ -962,7 +959,13 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 		}));
 	};
 
-	const [selectedFormFields, setSelectedFormFields] = useState<FormFields | null>(null);
+	const listableFields = useMemo(() => {
+		if (!selectedFormFields?.content) return [];
+
+		return Object.values(selectedFormFields.content)
+			.filter((field: any) => field.name.includes('listable'))
+			.sort((a: any, b: any) => a.name.localeCompare(b.name));
+	}, [selectedFormFields?.content]);
 
 	const getAssignedFormByID = async (company_id: number) => {
 		const Url = getBackendUrl();
@@ -985,17 +988,40 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 
 	const fetchFormQuestions = async (form_id: string | null) => {
 		if (!form_id) return;
+
+		// Check cache first
+		const cacheKey = `form_questions_${form_id}`;
+		const cached = localStorage.getItem(cacheKey);
+
+		if (cached) {
+			const { data, timestamp } = JSON.parse(cached);
+			const fiveMinutes = 5 * 60 * 1000;
+
+			// Use cache if less than 5 minutes old
+			if (Date.now() - timestamp < fiveMinutes) {
+				setSelectedFormFields(data || { content: [] });
+				return;
+			}
+		}
+
 		try {
 			const API_KEY = process.env.NEXT_PUBLIC_JOTFORM_API_KEY;
 			const response = await fetch(
 				`https://api.jotform.com/form/${form_id}/questions?apiKey=${API_KEY}`
 			);
+
 			if (!response.ok) {
 				throw new Error(`HTTP error! Status: ${response.status}`);
 			}
 
 			const data = await response.json();
 			setSelectedFormFields(data || { content: [] });
+
+			// Cache the result
+			localStorage.setItem(cacheKey, JSON.stringify({
+				data: data || { content: [] },
+				timestamp: Date.now()
+			}));
 		} catch (error: any) {
 			console.error({ error });
 			setSelectedFormFields({ content: [] });
@@ -1087,6 +1113,10 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 	};
 
 	const getTableResponse = async (form_id: string | null, page: number, limit: number = 10, search: any = "", filter: string) => {
+		if (abortControllerRef.current) {
+			abortControllerRef.current.abort();
+		}
+		abortControllerRef.current = new AbortController();
 		const Url = getBackendUrl();
 		let API_URL = `${Url}/api/jotform/responses/${form_id}?page=${page}&limit=${limit}`;
 
@@ -1107,7 +1137,9 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 		}
 
 		try {
-			const response = await axios.get(API_URL);
+			const response = await axios.get(API_URL, {
+				signal: abortControllerRef.current.signal
+			});
 
 			if (response.status === 200) {
 				const data = response.data.items ? response.data.items : response.data;
@@ -1964,7 +1996,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 			setExportLoading(false);
 		}
 	};
-	
+
 	const renderFormField = (item, idx, arr) => {
 		const commonProps = {
 			key: item.qid,
@@ -2372,6 +2404,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 							selectedFormFields={selectedFormFields?.content || []}
 							totalItems={totalItems}
 							onUpdateField={updateFieldValue}
+							listableFields={listableFields}
 						/>
 					)}
 				</div>
