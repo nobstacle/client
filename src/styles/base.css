@@ -1031,7 +1031,6 @@ button {
   width: 100% !important;
   height: 100% !important;
   object-fit: contain;
-  /* ya cover agar poora fill chahiye */
 }
 
 .view-category-modal .ant-modal-close {
@@ -1040,4 +1039,27 @@ button {
 
 .customChatButton .ant-btn-icon {
   font-size: 20px;
+}
+
+.upsellMainWrapper .customRightHeaderCol .ant-space {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+@media screen and (max-width: 1600px) {
+  .upsellMainWrapper .customRightHeaderCol .customDateRangePicker {
+    max-width: 240px !important;
+    min-width: 200px !important;
+  }
+}
+
+.upsellMainWrapper .customMultiSelect .ant-select-selector {
+  border-radius: 0.375rem !important;
+}
+
+.customModalBtn {
+  background: transparent;
+  border: none;
+  box-shadow: none;
 }

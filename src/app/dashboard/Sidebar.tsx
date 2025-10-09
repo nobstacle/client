@@ -18,7 +18,8 @@ import {
     IoSpeedometer,
     IoDocumentText,
     IoWallet,
-    IoPeople
+    IoPeople,
+    IoSettings
 } from 'react-icons/io5';
 
 interface ClientSidebarProps {
@@ -444,7 +445,10 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
                                         }
                                     `}
                                 >
-                                    <span className="text-sm font-normal">Settings</span>
+                                    <div className="flex items-center gap-3 flex-1">
+                                        <IoSettings size={18} />
+                                        <span className="text-sm font-normal">Settings</span>
+                                    </div>
                                     <svg
                                         className={`w-4 h-4 transition-transform duration-300 ${settingsExpanded ? 'rotate-180' : ''}`}
                                         fill="none"

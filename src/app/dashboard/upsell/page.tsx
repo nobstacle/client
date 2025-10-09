@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Table, Tag, Card, Pagination, Input, message, Button, Space, Select, InputNumber, DatePicker, Tooltip } from "antd";
-import { SearchOutlined, SendOutlined, UserOutlined, CalendarOutlined, EditOutlined, SaveOutlined, CloseOutlined } from "@ant-design/icons";
+import { Table, Tag, Card, Pagination, Input, message, Button, Space, Select, InputNumber, DatePicker, Tooltip, Row, Col, Modal } from "antd";
+import { SearchOutlined, UserOutlined, CalendarOutlined, EditOutlined, SaveOutlined, CloseOutlined, FilterOutlined } from "@ant-design/icons";
 import "../../../styles/base.css";
 import { useSession } from "next-auth/react";
 import "../../../styles/base.css";
@@ -12,13 +12,14 @@ import {
 } from "../../../lib/client/api";
 import { SendPackagePayloadType } from "../../../constant/types";
 import { UpsellStatusCell } from "../../../components/UpdateStatusCell";
-import dayjs from 'dayjs';
 import { SendIcon } from "../../../components/icons/SendIcon";
 import { MdDelete } from "react-icons/md";
 import Swal from "sweetalert2";
 import { useMessageStore } from "../../../lib/zustand/store/messageStore";
-import { FaGlobe, FaFileDownload } from "react-icons/fa";
+import { FaFileDownload } from "react-icons/fa";
+import dayjs from 'dayjs';
 
+const { RangePicker } = DatePicker;
 const { Option } = Select;
 
 export default function Upsell() {
@@ -45,11 +46,15 @@ export default function Upsell() {
     const isAdmin = data?.user.Roles[0] || false;
     const { receivedContent } = useMessageStore();
     const [exportLoading, setExportLoading] = useState(false);
+    const [detailModal, setDetailModal] = useState(false);
+    const [selectedModalTitle, setSelectedModalTitle] = useState(null);
+    const [dateRange, setDateRange] = useState(null);
+    const [selectedPackage, setSelectedPackage] = useState(undefined);
+    const [selectedStatus, setSelectedStatus] = useState(undefined);
 
     // Keep only the beforeunload handler for preventing accidental reloads
     useEffect(() => {
         const handleBeforeUnload = (e) => {
-            // Only show warning if there are unsaved changes (editing mode)
             if (editingRecord) {
                 e.preventDefault();
                 e.returnValue = '';
@@ -388,23 +393,6 @@ export default function Upsell() {
                             <div className="font-medium">{packageName}</div>
                             <div className="text-xs text-gray-500">{record.packageCode}</div>
                         </div>
-
-                        {/* {hasMultipleLanguages && (
-                            <Tooltip
-                                title={
-                                    <div className="space-y-1">
-                                        {allVariants.map(({ lang, value }) => (
-                                            <div key={lang}>
-                                                <strong>{lang.toUpperCase()}:</strong>{" "}
-                                                {Array.isArray(value) ? value.join(", ") : value}
-                                            </div>
-                                        ))}
-                                    </div>
-                                }
-                            >
-                                <FaGlobe className="text-blue-500 text-xs cursor-help" />
-                            </Tooltip>
-                        )} */}
                     </div>
                 );
             },
@@ -629,6 +617,30 @@ export default function Upsell() {
         }
     ];
 
+    const topSellingProducts = [
+        { rank: 1, name: "Deluxe Room", revenue: "AED 132521" },
+        { rank: 2, name: "Corner Suite", revenue: "AED 122856" },
+        { rank: 3, name: "1 Bedroom Apartment", revenue: "AED 99522" }
+    ];
+
+    const topSellers = [
+        { rank: 1, name: "John Doe", revenue: "AED 132521" },
+        { rank: 2, name: "Jane Doe", revenue: "AED 128856" },
+        { rank: 3, name: "Chris Martin", revenue: "AED 99522" }
+    ];
+
+    const topIncentives = [
+        { rank: 1, name: "John Doe", amount: "AED 751" },
+        { rank: 2, name: "Jane Doe", amount: "AED 655" },
+        { rank: 3, name: "Chris Martin", amount: "AED 513" }
+    ];
+
+    const topSales = [
+        { rank: 1, confirmation: "1521354412", revenue: "AED 4855" },
+        { rank: 2, confirmation: "656413212", revenue: "AED 4111" },
+        { rank: 3, confirmation: "532156412", revenue: "AED 3188" }
+    ];
+
     const debouncedSearch = useCallback((searchValue: string) => {
         if (debounceRef.current) {
             clearTimeout(debounceRef.current);
@@ -780,21 +792,71 @@ export default function Upsell() {
         }
     }, [receivedContent, data?.user, dataLoaded, fetchTransactions]);
 
+    const viewDetails = (title) => {
+        setDetailModal(true);
+        setSelectedModalTitle(title);
+    }
+
+    const handleOk = () => {
+        setDetailModal(false);
+    };
+
+    const handleCancelModal = () => {
+        setDetailModal(false);
+    };
+
+    const RankingCard = ({ title, data, color }) => (
+        <Card
+            className="hover:shadow-lg transition-shadow duration-300"
+            bodyStyle={{ padding: '20px' }}
+        >
+            <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                    <div className={`w-2 h-2 rounded-full bg-${color}-500`}></div>
+                    <h3 className="text-sm font-semibold text-gray-700 m-0">{title}</h3>
+                </div>
+                <div>
+                    <Button onClick={() => viewDetails(title)} className="customModalBtn">View All</Button>
+                </div>
+            </div>
+            <Space direction="vertical" size="middle" className="w-full">
+                {data.map((item) => (
+                    <div key={item.rank} className="flex items-center justify-between hover:bg-gray-50 p-2 rounded-lg transition-colors cursor-pointer">
+                        <div className="flex items-center gap-3">
+                            <span className={`flex items-center justify-center w-6 h-6 bg-${color}-100 text-${color}-600 rounded-full text-xs font-bold`}>
+                                {item.rank}
+                            </span>
+                            <span className="text-sm text-gray-700">{item.name || item.confirmation}</span>
+                        </div>
+                        <span className="text-sm font-medium text-gray-900">{item.revenue || item.amount}</span>
+                    </div>
+                ))}
+            </Space>
+        </Card>
+    );
+
+    const rangePresets = [
+        { label: 'Today', value: [dayjs().startOf('day'), dayjs().endOf('day')] },
+        { label: 'Yesterday', value: [dayjs().subtract(1, 'day').startOf('day'), dayjs().subtract(1, 'day').endOf('day')] },
+        { label: 'Last 7 Days', value: [dayjs().subtract(6, 'day').startOf('day'), dayjs().endOf('day')] },
+        { label: 'Last 30 Days', value: [dayjs().subtract(29, 'day').startOf('day'), dayjs().endOf('day')] },
+        { label: 'Last 6 Months', value: [dayjs().subtract(6, 'month').startOf('day'), dayjs().endOf('day')] },
+    ];
+
     return (
-        <div className="min-h-full bg-gray-50">
-            <div className="mx-auto p-6">
+        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-6">
+            <div className="mx-auto space-y-6 upsellMainWrapper">
                 {/* Controls Section */}
-                <Card className="mb-6 shadow-sm">
-                    <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center">
-                        {/* Left side - Filter dropdowns and Send button - 50% width */}
-                        <div className="w-full lg:w-1/2 flex flex-col sm:flex-row gap-3">
-                            {/* Package Select - 20% of total width (40% of left section) */}
-                            <div className="flex-[2]">
+                <Card className="shadow-sm">
+                    <Row gutter={[12, 12]}>
+                        {/* Package Selection & Category with Send Button */}
+                        <Col xs={24} sm={24} md={12} lg={8}>
+                            <Space.Compact className="w-full" style={{ gap: '1rem' }}>
                                 <Select
                                     placeholder="Select packages to exclude"
                                     allowClear
                                     mode="multiple"
-                                    className="w-full"
+                                    className="w-full customMultiSelect"
                                     maxTagCount="responsive"
                                     showSearch
                                     optionFilterProp="children"
@@ -820,14 +882,10 @@ export default function Upsell() {
                                         </Option>
                                     ))}
                                 </Select>
-                            </div>
-
-                            {/* Category Select - 20% of total width (40% of left section) */}
-                            <div className="flex-[2]">
                                 <Select
                                     placeholder="From Category"
                                     allowClear
-                                    className="w-full"
+                                    className="w-full customMultiSelect"
                                     maxTagCount="responsive"
                                     showSearch
                                     optionFilterProp="children"
@@ -858,36 +916,67 @@ export default function Upsell() {
                                         ))
                                     }
                                 </Select>
-                            </div>
-
-                            {/* Send Button - 10% of total width (20% of left section) */}
-                            <div className="flex-[1] flex justify-start">
                                 <Button
                                     type="primary"
                                     icon={<SendIcon />}
                                     onClick={handlePackageSend}
                                     loading={loadingData}
+                                    style={{ borderRadius: '0.375rem' }}
                                     className="flex items-center justify-center bg-blue-600 hover:bg-blue-700 rounded-md px-4 py-2 text-white headerButton"
                                 />
-                            </div>
-                        </div>
+                            </Space.Compact>
+                        </Col>
 
-                        {/* Right side - Search input - 50% width */}
-                        <div className="w-full lg:w-1/2">
-                            {/* Search Input - 30% of total width (60% of right section) positioned at flex-end */}
-                            <div className="flex justify-end">
-                                <div className="w-3/5">
-                                    <Input
-                                        placeholder="Search by confirmation, package, email, or status..."
-                                        prefix={<SearchOutlined className="text-gray-400" />}
-                                        value={searchTerm}
-                                        onChange={searchTransactions}
-                                        className="w-full"
-                                    />
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+
+                        {/* Filters Row */}
+                        <Col xs={24} sm={24} md={24} lg={16} className="customRightHeaderCol">
+                            <Space wrap className="w-full" size={[8, 8]}>
+                                {/* Search Input */}
+                                <Input
+                                    placeholder="Search by confirmation, package, email, or status..."
+                                    prefix={<SearchOutlined className="text-gray-400" />}
+                                    value={searchTerm}
+                                    onChange={searchTransactions}
+                                    className="w-full"
+                                />
+
+                                <Select
+                                    placeholder="Packages"
+                                    suffixIcon={<FilterOutlined />}
+                                    value={selectedPackage}
+                                    onChange={setSelectedPackage}
+                                    style={{ minWidth: 120, width: '100%', maxWidth: 150 }}
+                                    allowClear
+                                >
+                                    {dropdownPackages.map(pkg => (
+                                        <Option key={pkg.id} value={pkg.id}>
+                                            {pkg.packageNames?.en || `Package ${pkg.id}`}
+                                        </Option>
+                                    ))}
+                                </Select>
+                                <Select
+                                    placeholder="Status"
+                                    suffixIcon={<FilterOutlined />}
+                                    value={selectedStatus}
+                                    onChange={setSelectedStatus}
+                                    style={{ minWidth: 120, width: '100%', maxWidth: 150 }}
+                                    allowClear
+                                >
+                                    <Option value="pending">Pending</Option>
+                                    <Option value="approved">Approved</Option>
+                                    <Option value="rejected">Rejected</Option>
+                                </Select>
+                                <RangePicker
+                                    value={dateRange}
+                                    onChange={setDateRange}
+                                    className="customDateRangePicker"
+                                    style={{ minWidth: 240, width: '100%', maxWidth: 300 }}
+                                    format="MMM DD, YYYY"
+                                    presets={rangePresets}
+                                />
+                            </Space>
+                        </Col>
+                    </Row>
                 </Card>
 
                 {/* Stats Cards */}
@@ -923,6 +1012,22 @@ export default function Upsell() {
                         <div className="text-gray-600">Total Incentives</div>
                     </Card>
                 </div>
+
+                {/* Top Performance Cards */}
+                <Row gutter={[16, 16]}>
+                    <Col xs={24} sm={12} lg={6}>
+                        <RankingCard title="Top Selling Products" data={topSellingProducts} color="blue" />
+                    </Col>
+                    <Col xs={24} sm={12} lg={6}>
+                        <RankingCard title="Top Sellers" data={topSellers} color="green" />
+                    </Col>
+                    <Col xs={24} sm={12} lg={6}>
+                        <RankingCard title="Top Incentive" data={topIncentives} color="purple" />
+                    </Col>
+                    <Col xs={24} sm={12} lg={6}>
+                        <RankingCard title="Top Sales" data={topSales} color="orange" />
+                    </Col>
+                </Row>
 
                 {/* Table Section */}
                 <Card className="shadow-sm">
@@ -970,12 +1075,20 @@ export default function Upsell() {
                                 >
                                     Export
                                 </Button>
-
                             </div>
                         )}
                     </div>
                 </Card>
             </div>
+            <Modal
+                title={selectedModalTitle || "Details"}
+                closable={{ 'aria-label': 'Custom Close Button' }}
+                open={detailModal}
+                onOk={handleOk}
+                onCancel={handleCancelModal}
+            >
+            </Modal>
         </div>
+
     );
 }
