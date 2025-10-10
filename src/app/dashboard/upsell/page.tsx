@@ -83,32 +83,33 @@ export default function Upsell() {
     }, [data?.user, dataLoaded]); // Add dataLoaded as dependency
 
     // Fetch packages with caching mechanism
-    useEffect(() => {
-        const fetchPackages = async () => {
-            // Check if we already have packages data
-            if (allPackages.length > 0) return;
+useEffect(() => {
+    const fetchPackages = async () => {
+        // Check if we already have packages data
+        if (allPackages.length > 0) return;
 
-            try {
-                const response = await fetch(`${Url}/api/v1/uploads/get-all-packages`, {
-                    method: 'GET',
-                    headers: {
-                        Authorization: `Bearer ${data?.user.backendTokens.at}`,
-                        'Cache-Control': 'no-cache'
-                    },
-                });
-                if (response.ok) {
-                    const packageData = await response.json();
-                    setAllPackages(packageData.data || packageData);
-                }
-            } catch (error) {
-                console.error('Error fetching packages:', error);
+        try {
+            // Add limit parameter to get all packages
+            const response = await fetch(`${Url}/api/v1/uploads/get-all-packages?limit=9999`, {
+                method: 'GET',
+                headers: {
+                    Authorization: `Bearer ${data?.user.backendTokens.at}`,
+                    'Cache-Control': 'no-cache'
+                },
+            });
+            if (response.ok) {
+                const packageData = await response.json();
+                setAllPackages(packageData.data || packageData);
             }
-        };
-
-        if (data?.user !== undefined && allPackages.length === 0) {
-            fetchPackages();
+        } catch (error) {
+            console.error('Error fetching packages:', error);
         }
-    }, [data?.user, allPackages.length, Url]);
+    };
+
+    if (data?.user !== undefined && allPackages.length === 0) {
+        fetchPackages();
+    }
+}, [data?.user, allPackages.length, Url]);
 
     // Packages for dropdown - only those without from/to categories
     const dropdownPackages = allPackages.filter(pkg => pkg?.roomUpgrade === false);
