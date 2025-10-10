@@ -18,6 +18,7 @@ import Swal from "sweetalert2";
 import { useMessageStore } from "../../../lib/zustand/store/messageStore";
 import { FaFileDownload } from "react-icons/fa";
 import dayjs from 'dayjs';
+import { IoExpandSharp } from "react-icons/io5";
 
 const { RangePicker } = DatePicker;
 const { Option } = Select;
@@ -620,25 +621,25 @@ export default function Upsell() {
     const topSellingProducts = [
         { rank: 1, name: "Deluxe Room", revenue: "AED 132521" },
         { rank: 2, name: "Corner Suite", revenue: "AED 122856" },
-        { rank: 3, name: "1 Bedroom Apartment", revenue: "AED 99522" }
+        { rank: 3, name: "1 Bedroom Apartment", revenue: "AED 99522" },
+        { rank: 3, name: "1 Bedroom Apartment", revenue: "AED 99522" },
+        { rank: 3, name: "1 Bedroom Apartment", revenue: "AED 99522" },
     ];
 
     const topSellers = [
         { rank: 1, name: "John Doe", revenue: "AED 132521" },
         { rank: 2, name: "Jane Doe", revenue: "AED 128856" },
-        { rank: 3, name: "Chris Martin", revenue: "AED 99522" }
+        { rank: 3, name: "Chris Martin", revenue: "AED 99522" },
+        { rank: 3, name: "Chris Martin", revenue: "AED 99522" },
+        { rank: 3, name: "Chris Martin", revenue: "AED 99522" },
     ];
 
     const topIncentives = [
         { rank: 1, name: "John Doe", amount: "AED 751" },
         { rank: 2, name: "Jane Doe", amount: "AED 655" },
-        { rank: 3, name: "Chris Martin", amount: "AED 513" }
-    ];
-
-    const topSales = [
-        { rank: 1, confirmation: "1521354412", revenue: "AED 4855" },
-        { rank: 2, confirmation: "656413212", revenue: "AED 4111" },
-        { rank: 3, confirmation: "532156412", revenue: "AED 3188" }
+        { rank: 3, name: "Chris Martin", amount: "AED 513" },
+        { rank: 3, name: "Chris Martin", amount: "AED 513" },
+        { rank: 3, name: "Chris Martin", amount: "AED 513" },
     ];
 
     const debouncedSearch = useCallback((searchValue: string) => {
@@ -805,30 +806,51 @@ export default function Upsell() {
         setDetailModal(false);
     };
 
-    const RankingCard = ({ title, data, color }) => (
+    // Updated RankingCard with stats in header - Optimized for 5 records
+    const RankingCard = ({ title, data, color, statValue, statLabel }) => (
         <Card
             className="hover:shadow-lg transition-shadow duration-300"
-            bodyStyle={{ padding: '20px' }}
+            bodyStyle={{ padding: '12px' }}
         >
-            <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                    <div className={`w-2 h-2 rounded-full bg-${color}-500`}></div>
-                    <h3 className="text-sm font-semibold text-gray-700 m-0">{title}</h3>
+            <div className="mb-2">
+                {/* Stats Header - Compact */}
+                <div className="text-center mb-2 pb-2 border-b border-gray-200">
+                    <div className={`text-2xl font-bold text-${color}-600 mb-0.5`}>
+                        {statValue}
+                    </div>
+                    <div className="text-xs text-gray-600">{statLabel}</div>
                 </div>
-                <div>
-                    <Button onClick={() => viewDetails(title)} className="customModalBtn">View All</Button>
+
+                {/* Title and View All - Compact */}
+                <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-1.5">
+                        <div className={`w-1.5 h-1.5 rounded-full bg-${color}-500`}></div>
+                        <h3 className="text-xs font-semibold text-gray-700 m-0">{title}</h3>
+                    </div>
+                    <div>
+                        <Button
+                            onClick={() => viewDetails(title)}
+                            className="customModalBtn text-xs h-6 px-2"
+                            size="small"
+                        >
+                            View<IoExpandSharp />
+                        </Button>
+                    </div>
                 </div>
             </div>
-            <Space direction="vertical" size="middle" className="w-full">
-                {data.map((item) => (
-                    <div key={item.rank} className="flex items-center justify-between hover:bg-gray-50 p-2 rounded-lg transition-colors cursor-pointer">
-                        <div className="flex items-center gap-3">
-                            <span className={`flex items-center justify-center w-6 h-6 bg-${color}-100 text-${color}-600 rounded-full text-xs font-bold`}>
+            <Space direction="vertical" size={2} className="w-full">
+                {data.slice(0, 5).map((item) => (
+                    <div
+                        key={item.rank}
+                        className="flex items-center justify-between hover:bg-gray-50 px-1.5 py-1 rounded transition-colors cursor-pointer"
+                    >
+                        <div className="flex items-center gap-2">
+                            <span className={`flex items-center justify-center w-4 h-4 bg-${color}-100 text-${color}-600 rounded-full text-[10px] font-bold`}>
                                 {item.rank}
                             </span>
-                            <span className="text-sm text-gray-700">{item.name || item.confirmation}</span>
+                            <span className="text-xs text-gray-700 truncate">{item.name || item.confirmation}</span>
                         </div>
-                        <span className="text-sm font-medium text-gray-900">{item.revenue || item.amount}</span>
+                        <span className="text-xs font-medium text-gray-900 whitespace-nowrap ml-2">{item.revenue || item.amount}</span>
                     </div>
                 ))}
             </Space>
@@ -838,10 +860,23 @@ export default function Upsell() {
     const rangePresets = [
         { label: 'Today', value: [dayjs().startOf('day'), dayjs().endOf('day')] },
         { label: 'Yesterday', value: [dayjs().subtract(1, 'day').startOf('day'), dayjs().subtract(1, 'day').endOf('day')] },
-        { label: 'Last 7 Days', value: [dayjs().subtract(6, 'day').startOf('day'), dayjs().endOf('day')] },
-        { label: 'Last 30 Days', value: [dayjs().subtract(29, 'day').startOf('day'), dayjs().endOf('day')] },
-        { label: 'Last 6 Months', value: [dayjs().subtract(6, 'month').startOf('day'), dayjs().endOf('day')] },
+        { label: 'This Month', value: [dayjs().startOf('month'), dayjs().endOf('month')] },
+        { label: 'Previous Month', value: [dayjs().subtract(1, 'month').startOf('month'), dayjs().subtract(1, 'month').endOf('month')] },
+        { label: 'This Year', value: [dayjs().startOf('year'), dayjs().endOf('year')] },
+        { label: 'Previous Year', value: [dayjs().subtract(1, 'year').startOf('year'), dayjs().subtract(1, 'year').endOf('year')] },
     ];
+
+    // Calculate stats for the cards
+    const totalTransactions = filteredTransactions.length;
+    const totalRevenue = filteredTransactions.reduce((sum: number, t: any) => sum + (Number(t.totalRevenue) || 0), 0).toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    });
+    const pendingApproval = filteredTransactions.filter((t: any) => t.approved === 'PENDING').length;
+    const totalIncentives = filteredTransactions.reduce((sum: number, t: any) => sum + (Number(t.totalIncentive) || 0), 0).toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    });
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-6">
@@ -927,7 +962,6 @@ export default function Upsell() {
                             </Space.Compact>
                         </Col>
 
-
                         {/* Filters Row */}
                         <Col xs={24} sm={24} md={24} lg={16} className="customRightHeaderCol">
                             <Space wrap className="w-full" size={[8, 8]}>
@@ -942,13 +976,16 @@ export default function Upsell() {
 
                                 <Select
                                     placeholder="Packages"
+                                    mode="multiple"
+                                    maxTagCount="responsive"
+                                    allowClear
                                     suffixIcon={<FilterOutlined />}
                                     value={selectedPackage}
                                     onChange={setSelectedPackage}
                                     style={{ minWidth: 120, width: '100%', maxWidth: 150 }}
                                     allowClear
                                 >
-                                    {dropdownPackages.map(pkg => (
+                                    {allPackages.map(pkg => (
                                         <Option key={pkg.id} value={pkg.id}>
                                             {pkg.packageNames?.en || `Package ${pkg.id}`}
                                         </Option>
@@ -979,59 +1016,67 @@ export default function Upsell() {
                     </Row>
                 </Card>
 
-                {/* Stats Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                    <Card className="text-center">
-                        <div className="text-2xl font-bold text-blue-600">
-                            {filteredTransactions.length}
-                        </div>
-                        <div className="text-gray-600">Total Transactions</div>
-                    </Card>
-                    <Card className="text-center">
-                        <div className="text-2xl font-bold text-green-600">
-                            {filteredTransactions.reduce((sum: number, t: any) => sum + (Number(t.totalRevenue) || 0), 0).toLocaleString('en-US', {
-                                minimumFractionDigits: 2,
-                                maximumFractionDigits: 2
-                            })}
-                        </div>
-                        <div className="text-gray-600">Total Revenue</div>
-                    </Card>
-                    <Card className="text-center">
-                        <div className="text-2xl font-bold text-orange-600">
-                            {filteredTransactions.filter((t: any) => t.approved === 'PENDING').length}
-                        </div>
-                        <div className="text-gray-600">Pending Approval</div>
-                    </Card>
-                    <Card className="text-center">
-                        <div className="text-2xl font-bold text-purple-600">
-                            {filteredTransactions.reduce((sum: number, t: any) => sum + (Number(t.totalIncentive) || 0), 0).toLocaleString('en-US', {
-                                minimumFractionDigits: 2,
-                                maximumFractionDigits: 2
-                            })}
-                        </div>
-                        <div className="text-gray-600">Total Incentives</div>
-                    </Card>
-                </div>
-
-                {/* Top Performance Cards */}
+                {/* Top Performance Cards with Stats */}
                 <Row gutter={[16, 16]}>
                     <Col xs={24} sm={12} lg={6}>
-                        <RankingCard title="Top Selling Products" data={topSellingProducts} color="blue" />
+                        <RankingCard
+                            title="Top Selling Products"
+                            data={topSellingProducts}
+                            color="blue"
+                            statValue={totalRevenue}
+                            statLabel="Total Revenue"
+                        />
                     </Col>
                     <Col xs={24} sm={12} lg={6}>
-                        <RankingCard title="Top Sellers" data={topSellers} color="green" />
+                        <RankingCard
+                            title="Top Sellers"
+                            data={topSellers}
+                            color="green"
+                            statValue={totalTransactions}
+                            statLabel="Total Transactions"
+                        />
                     </Col>
                     <Col xs={24} sm={12} lg={6}>
-                        <RankingCard title="Top Incentive" data={topIncentives} color="purple" />
+                        <RankingCard
+                            title="Top Incentive"
+                            data={topIncentives}
+                            color="purple"
+                            statValue={totalIncentives}
+                            statLabel="Total Incentives"
+                        />
                     </Col>
                     <Col xs={24} sm={12} lg={6}>
-                        <RankingCard title="Top Sales" data={topSales} color="orange" />
+                        <RankingCard
+                            title="Pending Approvals"
+                            data={topSellingProducts.slice(0, 5)}
+                            color="orange"
+                            statValue={pendingApproval}
+                            statLabel="Awaiting Approval"
+                        />
                     </Col>
                 </Row>
 
                 {/* Table Section */}
-                <Card className="shadow-sm">
+                <Card className="shadow-sm customUpsellCard">
                     <div className="overflow-hidden">
+                        {/* Header with Title and Export Button */}
+                        <div className="flex justify-between items-center mb-4 pb-4 border-b border-gray-100">
+                            <h2 className="text-xl font-semibold text-gray-800">Transactions List</h2>
+
+                            {/* Export Button - Top Right */}
+                            {totalItems > 0 && (
+                                <Button
+                                    type="default"
+                                    icon={<FaFileDownload />}
+                                    onClick={handleExportToExcel}
+                                    loading={exportLoading}
+                                    className="flex items-center justify-center bg-blue-600 hover:bg-blue-700 rounded-md px-4 py-2 text-white exportButton"
+                                >
+                                    Export
+                                </Button>
+                            )}
+                        </div>
+
                         <Table
                             rowKey="id"
                             columns={columns}
@@ -1045,13 +1090,9 @@ export default function Upsell() {
                             showSorterTooltip={false}
                         />
 
-                        {/* Export Button and Pagination Container */}
+                        {/* Pagination Container - Centered */}
                         {totalItems > 0 && (
-                            <div className="flex justify-between items-center mt-6 pt-4 border-t border-gray-100">
-                                {/* Empty div for left spacing */}
-                                <div className="w-32"></div>
-
-                                {/* Pagination - Center */}
+                            <div className="flex justify-center items-center mt-6 pt-4 border-t border-gray-100">
                                 <Pagination
                                     current={currentPage}
                                     total={totalItems}
@@ -1064,17 +1105,6 @@ export default function Upsell() {
                                         `${range[0]}-${range[1]} of ${total} transactions`
                                     }
                                 />
-
-                                {/* Export Button - Right Side */}
-                                <Button
-                                    type="default"
-                                    icon={<FaFileDownload />}
-                                    onClick={handleExportToExcel}
-                                    loading={exportLoading}
-                                    className="flex items-center justify-center bg-blue-600 hover:bg-blue-700 rounded-md px-4 py-2 text-white exportButton"
-                                >
-                                    Export
-                                </Button>
                             </div>
                         )}
                     </div>
@@ -1089,6 +1119,5 @@ export default function Upsell() {
             >
             </Modal>
         </div>
-
     );
 }

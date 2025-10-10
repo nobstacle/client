@@ -1062,4 +1062,11 @@ button {
   background: transparent;
   border: none;
   box-shadow: none;
+  color: #3b5998 !important;
+  font-weight: 700;
+  font-size: 11px;
+}
+
+.customUpsellCard .ant-card-body {
+  padding-top: 14px;
 }

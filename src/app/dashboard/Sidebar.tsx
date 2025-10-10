@@ -252,8 +252,8 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
                     className={`
                         flex items-center px-10 py-2.5 transition-colors duration-200 cursor-pointer
                         ${isActive
-                            ? 'bg-white/10 text-white'
-                            : 'text-white/80 hover:bg-white/5 hover:text-white'
+                            ? 'bg-white/10 text-white border-l-4 border-white'
+                            : 'text-white/80 hover:bg-white/5 hover:text-white border-l-4 border-transparent'
                         }
                     `}
                 >
@@ -278,8 +278,8 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
                     className={`
                         flex items-center px-10 py-2.5 transition-colors duration-200 cursor-pointer
                         ${isActive
-                            ? 'bg-white/10 text-white'
-                            : 'text-white/80 hover:bg-white/5 hover:text-white'
+                            ? 'bg-white/10 text-white border-l-4 border-white'
+                            : 'text-white/80 hover:bg-white/5 hover:text-white border-l-4 border-transparent'
                         }
                     `}
                 >
@@ -311,7 +311,7 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
                 </div>
             </div>
         );
-    }
+    };
 
     const hasTeamAccess = teamItems.some(item => hasAccess(item.roles));
     const isTeamActive = teamItems.some(item => item.href === pathname);
@@ -394,10 +394,7 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
                                     className={`
                                         flex items-center justify-between gap-3 px-6 py-3 cursor-pointer
                                         transition-colors duration-200
-                                        ${isTeamActive || teamExpanded
-                                            ? 'bg-white/10 text-white border-l-4 border-white'
-                                            : 'text-white/90 hover:bg-white/5 hover:text-white border-l-4 border-transparent'
-                                        }
+                                        text-white/90 hover:bg-white/5 hover:text-white border-l-4 border-transparent
                                     `}
                                 >
                                     <div className="flex items-center gap-3 flex-1">
@@ -439,10 +436,7 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
                                     className={`
                                         flex items-center justify-between px-6 py-3 cursor-pointer
                                         transition-colors duration-200
-                                        ${isSettingsActive || settingsExpanded
-                                            ? 'bg-white/10 text-white border-l-4 border-white'
-                                            : 'text-white/90 hover:bg-white/5 hover:text-white border-l-4 border-transparent'
-                                        }
+                                        text-white/90 hover:bg-white/5 hover:text-white border-l-4 border-transparent
                                     `}
                                 >
                                     <div className="flex items-center gap-3 flex-1">
