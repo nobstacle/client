@@ -52,6 +52,19 @@ export default function Upsell() {
     const [dateRange, setDateRange] = useState(null);
     const [selectedPackage, setSelectedPackage] = useState(undefined);
     const [selectedStatus, setSelectedStatus] = useState(undefined);
+    const [dashboardLoading, setDashboardLoading] = useState(false);
+    const [dashboardData, setDashboardData] = useState({
+        topSellingProducts: [],
+        topSellers: [],
+        topIncentives: [],
+        pendingApprovals: [],
+        stats: {
+            totalTransactions: 0,
+            totalRevenue: '0.00',
+            totalIncentives: '0.00',
+            pendingCount: 0,
+        },
+    });
 
     // Keep only the beforeunload handler for preventing accidental reloads
     useEffect(() => {
@@ -74,6 +87,61 @@ export default function Upsell() {
         setCurrentPage(page);
     };
 
+    const fetchDashboardData = useCallback(async () => {
+        setDashboardLoading(true);
+        try {
+            // Build query parameters
+            const queryParams = new URLSearchParams();
+
+            if (dateRange && dateRange[0] && dateRange[1]) {
+                queryParams.append('startDate', dateRange[0].toISOString());
+                queryParams.append('endDate', dateRange[1].toISOString());
+            }
+
+            if (selectedPackage) {
+                queryParams.append('packageId', selectedPackage.toString());
+            }
+
+            if (selectedStatus) {
+                queryParams.append('status', selectedStatus);
+            }
+
+            if (companyData?.id) {
+                queryParams.append('companyId', companyData.id.toString());
+            }
+
+            const response = await fetch(
+                `${Url}/api/v1/uploads/get-dashboard-data`,
+                {
+                    headers: {
+                        Authorization: `Bearer ${data?.user.backendTokens.at}`,
+                        'Cache-Control': 'no-cache',
+                    },
+                }
+            );
+
+            if (response.ok) {
+                const result = await response.json();
+                if (result.success && result.data) {
+                    setDashboardData(result.data);
+                }
+            } else {
+                message.error('Failed to fetch dashboard data');
+            }
+        } catch (error) {
+            console.error('Error fetching dashboard data:', error);
+            message.error('Error loading dashboard data');
+        } finally {
+            setDashboardLoading(false);
+        }
+    }, [dateRange, selectedPackage, selectedStatus, companyData?.id, data?.user, Url]);
+
+    useEffect(() => {
+        if (data?.user !== undefined && dataLoaded) {
+            fetchDashboardData();
+        }
+    }, [dateRange, selectedPackage, selectedStatus, data?.user, dataLoaded, fetchDashboardData]);
+
     // Modified useEffect - only load once when component mounts
     useEffect(() => {
         if (data?.user !== undefined && !dataLoaded) {
@@ -83,33 +151,33 @@ export default function Upsell() {
     }, [data?.user, dataLoaded]); // Add dataLoaded as dependency
 
     // Fetch packages with caching mechanism
-useEffect(() => {
-    const fetchPackages = async () => {
-        // Check if we already have packages data
-        if (allPackages.length > 0) return;
+    useEffect(() => {
+        const fetchPackages = async () => {
+            // Check if we already have packages data
+            if (allPackages.length > 0) return;
 
-        try {
-            // Add limit parameter to get all packages
-            const response = await fetch(`${Url}/api/v1/uploads/get-all-packages?limit=9999`, {
-                method: 'GET',
-                headers: {
-                    Authorization: `Bearer ${data?.user.backendTokens.at}`,
-                    'Cache-Control': 'no-cache'
-                },
-            });
-            if (response.ok) {
-                const packageData = await response.json();
-                setAllPackages(packageData.data || packageData);
+            try {
+                // Add limit parameter to get all packages
+                const response = await fetch(`${Url}/api/v1/uploads/get-all-packages?limit=9999`, {
+                    method: 'GET',
+                    headers: {
+                        Authorization: `Bearer ${data?.user.backendTokens.at}`,
+                        'Cache-Control': 'no-cache'
+                    },
+                });
+                if (response.ok) {
+                    const packageData = await response.json();
+                    setAllPackages(packageData.data || packageData);
+                }
+            } catch (error) {
+                console.error('Error fetching packages:', error);
             }
-        } catch (error) {
-            console.error('Error fetching packages:', error);
-        }
-    };
+        };
 
-    if (data?.user !== undefined && allPackages.length === 0) {
-        fetchPackages();
-    }
-}, [data?.user, allPackages.length, Url]);
+        if (data?.user !== undefined && allPackages.length === 0) {
+            fetchPackages();
+        }
+    }, [data?.user, allPackages.length, Url]);
 
     // Packages for dropdown - only those without from/to categories
     const dropdownPackages = allPackages.filter(pkg => pkg?.roomUpgrade === false);
@@ -678,18 +746,10 @@ useEffect(() => {
 
     // Function to send filtered package data
     const sendPackageData = (categoryId = null) => {
-        let filteredPackages = allPackages.filter(pkg =>
-            !selectedPackages.some(selected => selected.id === pkg.id)
-        );
-
-        if (categoryId) {
-            filteredPackages = filteredPackages.filter(pkg =>
-                pkg.to_category_id !== categoryId
-            );
-        }
-
         const selectedLang = params.get("lang") || companyData?.defaultLangCode || "en";
-        const finalFilteredPackages = filteredPackages?.filter((item) => {
+
+        // First filter by language requirements
+        let filteredPackages = allPackages.filter((item) => {
             return (
                 item?.packageNames?.[selectedLang] != null &&
                 item?.packageDescriptions?.[selectedLang] != null &&
@@ -702,14 +762,28 @@ useEffect(() => {
             );
         });
 
-        if (finalFilteredPackages.length > 0) {
+        // Then filter out selected packages
+        filteredPackages = filteredPackages.filter(pkg =>
+            !selectedPackages.some(selected => selected.id === pkg.id)
+        );
+
+        console.info("categoryIdcategoryId", categoryId);
+
+        // Finally filter by category if provided
+        if (categoryId) {
+            filteredPackages = filteredPackages.filter(pkg =>
+                pkg.from_category_id === categoryId
+            );
+        }
+
+        if (filteredPackages.length > 0) {
             emitSendPackages({
-                refId: finalFilteredPackages[0].id,
+                refId: filteredPackages[0].id,
                 langCode: selectedLang,
                 refType: "Packages",
                 station: Number(params.get("station") ?? 1),
                 sentBy: JSON.stringify(data.user),
-                contentExtra: JSON.stringify(finalFilteredPackages)
+                contentExtra: JSON.stringify(filteredPackages)
             } as SendPackagePayloadType, (response) => {
                 if (response && (response === true)) {
                     message.success("Packages sent successfully!");
@@ -725,7 +799,7 @@ useEffect(() => {
     const handlePackageSend = () => {
         setLoadingData(true);
 
-        const categoryId = selectedCategories.length > 0 ? selectedCategories[0] : null;
+        const categoryId = selectedCategories.length > 0 ? selectedCategories[0] : selectedCategories;
 
         try {
             sendPackageData(categoryId);
@@ -849,7 +923,7 @@ useEffect(() => {
                             <span className={`flex items-center justify-center w-4 h-4 bg-${color}-100 text-${color}-600 rounded-full text-[10px] font-bold`}>
                                 {item.rank}
                             </span>
-                            <span className="text-xs text-gray-700 truncate">{item.name || item.confirmation}</span>
+                            <span className="text-xs text-gray-700 truncate" style={{maxWidth:'8vw'}}>{item.name || item.confirmation}</span>
                         </div>
                         <span className="text-xs font-medium text-gray-900 whitespace-nowrap ml-2">{item.revenue || item.amount}</span>
                     </div>
@@ -867,17 +941,74 @@ useEffect(() => {
         { label: 'Previous Year', value: [dayjs().subtract(1, 'year').startOf('year'), dayjs().subtract(1, 'year').endOf('year')] },
     ];
 
-    // Calculate stats for the cards
-    const totalTransactions = filteredTransactions.length;
-    const totalRevenue = filteredTransactions.reduce((sum: number, t: any) => sum + (Number(t.totalRevenue) || 0), 0).toLocaleString('en-US', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-    });
-    const pendingApproval = filteredTransactions.filter((t: any) => t.approved === 'PENDING').length;
-    const totalIncentives = filteredTransactions.reduce((sum: number, t: any) => sum + (Number(t.totalIncentive) || 0), 0).toLocaleString('en-US', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-    });
+    const getDetailData = () => {
+        switch (selectedModalTitle) {
+            case 'Top Selling Products':
+                return dashboardData.topSellingProducts;
+            case 'Top Sellers':
+                return dashboardData.topSellers;
+            case 'Top Incentive':
+                return dashboardData.topIncentives;
+            case 'Pending Approvals':
+                return dashboardData.pendingApprovals;
+            default:
+                return [];
+        }
+    };
+
+    const renderDetailContent = () => {
+        const data = getDetailData();
+
+        if (!data || data.length === 0) {
+            return <div className="text-center py-8 text-gray-500">No data available</div>;
+        }
+
+        return (
+            <div className="space-y-2">
+                {data.map((item, index) => (
+                    <div
+                        key={index}
+                        className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg border border-gray-100"
+                    >
+                        <div className="flex items-center gap-3">
+                            <span className="flex items-center justify-center w-8 h-8 bg-blue-100 text-blue-600 rounded-full text-sm font-bold">
+                                {item.rank}
+                            </span>
+                            <div>
+                                <div className="font-medium text-gray-900">
+                                    {item.name || item.confirmation}
+                                </div>
+                                {item.email && (
+                                    <div className="text-xs text-gray-500">{item.email}</div>
+                                )}
+                                {item.code && (
+                                    <div className="text-xs text-gray-500">{item.code}</div>
+                                )}
+                                {item.soldBy && (
+                                    <div className="text-xs text-gray-500">Sold by: {item.soldBy}</div>
+                                )}
+                            </div>
+                        </div>
+                        <div className="text-right">
+                            <div className="font-semibold text-gray-900">
+                                {item.revenue || item.amount}
+                            </div>
+                            {item.transactionCount && (
+                                <div className="text-xs text-gray-500">
+                                    {item.transactionCount} transactions
+                                </div>
+                            )}
+                            {item.count && (
+                                <div className="text-xs text-gray-500">
+                                    {item.count} sales
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                ))}
+            </div>
+        );
+    };
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-6">
@@ -1022,36 +1153,36 @@ useEffect(() => {
                     <Col xs={24} sm={12} lg={6}>
                         <RankingCard
                             title="Top Selling Products"
-                            data={topSellingProducts}
+                            data={dashboardData.topSellingProducts}
                             color="blue"
-                            statValue={totalRevenue}
+                            statValue={dashboardData.stats.totalRevenue}
                             statLabel="Total Revenue"
                         />
                     </Col>
                     <Col xs={24} sm={12} lg={6}>
                         <RankingCard
                             title="Top Sellers"
-                            data={topSellers}
+                            data={dashboardData.topSellers}
                             color="green"
-                            statValue={totalTransactions}
+                            statValue={dashboardData.stats.totalTransactions}
                             statLabel="Total Transactions"
                         />
                     </Col>
                     <Col xs={24} sm={12} lg={6}>
                         <RankingCard
                             title="Top Incentive"
-                            data={topIncentives}
+                            data={dashboardData.topIncentives}
                             color="purple"
-                            statValue={totalIncentives}
+                            statValue={dashboardData.stats.totalIncentives}
                             statLabel="Total Incentives"
                         />
                     </Col>
                     <Col xs={24} sm={12} lg={6}>
                         <RankingCard
                             title="Pending Approvals"
-                            data={topSellingProducts.slice(0, 5)}
+                            data={dashboardData.pendingApprovals}
                             color="orange"
-                            statValue={pendingApproval}
+                            statValue={dashboardData.stats.pendingCount}
                             statLabel="Awaiting Approval"
                         />
                     </Col>
@@ -1118,6 +1249,7 @@ useEffect(() => {
                 onOk={handleOk}
                 onCancel={handleCancelModal}
             >
+                {renderDetailContent()}
             </Modal>
         </div>
     );

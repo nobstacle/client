@@ -103,6 +103,8 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 	const [exportLoading, setExportLoading] = useState(false);
 	const abortControllerRef = useRef<AbortController | null>(null);
 	const [selectedFormFields, setSelectedFormFields] = useState<FormFields | null>(null);
+	const [isSearchActive, setIsSearchActive] = useState(false);
+	const [currentSearchTerm, setCurrentSearchTerm] = useState<any>("");
 
 	useEffect(() => {
 		const handleResize = () => {
@@ -1112,15 +1114,50 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 		return url;
 	};
 
-	const getTableResponse = async (form_id: string | null, page: number, limit: number = 10, search: any = "", filter: string) => {
+	const getTableResponse = async (
+		form_id: string | null,
+		page: number,
+		limit: number = 10,
+		search: any = "",
+		filter: string
+	) => {
 		if (abortControllerRef.current) {
 			abortControllerRef.current.abort();
 		}
 		abortControllerRef.current = new AbortController();
 		const Url = getBackendUrl();
-		let API_URL = `${Url}/api/jotform/responses/${form_id}?page=${page}&limit=${limit}`;
 
-		if (search && (typeof search === 'string' ? search !== "" : search.length > 0)) {
+		// Check if search is active
+		const hasSearch = search && (typeof search === 'string' ? search !== "" : search.length > 0);
+
+		console.log('Search active:', hasSearch);
+		console.log('Search term:', search);
+
+		// When search changes, always start from page 1
+		let actualPage = page;
+		if (search && search !== currentSearchTerm) {
+			actualPage = 1;
+			setCurrentPage(1);
+			setCurrentSearchTerm(search);
+			setIsSearchActive(true);
+			console.log('Search changed, resetting to page 1');
+		} else if (!search && isSearchActive) {
+			// Search was cleared, reset to page 1
+			actualPage = 1;
+			setCurrentPage(1);
+			setIsSearchActive(false);
+			setCurrentSearchTerm("");
+			console.log('Search cleared, resetting to page 1');
+		}
+
+		// When searching, always use page 1 (backend will return all results)
+		const apiPage = hasSearch ? 1 : actualPage;
+
+		console.log(`API call - Page: ${apiPage}, Limit: ${limit}, HasSearch: ${hasSearch}`);
+
+		let API_URL = `${Url}/api/jotform/responses/${form_id}?page=${apiPage}&limit=${limit}`;
+
+		if (hasSearch) {
 			let searchArray = search;
 
 			if (typeof search === 'string') {
@@ -1132,6 +1169,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 			const encodedSearch = encodeURIComponent(JSON.stringify(searchArray));
 			API_URL += `&search=${encodedSearch}`;
 		}
+
 		if (filter) {
 			API_URL += `&filter=${filter}`;
 		}
@@ -1143,7 +1181,26 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 
 			if (response.status === 200) {
 				const data = response.data.items ? response.data.items : response.data;
-				setTotalPages(response.data.totalPages);
+				const isSearchActive = response.data.isSearchActive || hasSearch;
+
+				console.log('Response received:', {
+					totalItems: response.data.totalItems,
+					totalPages: response.data.totalPages,
+					itemsReceived: data.length,
+					isSearchActive
+				});
+
+				// When search is active, backend returns all results on one page
+				if (isSearchActive) {
+					setTotalPages(1);
+					setCurrentPage(1);
+					setPageSize(data.length); // Set page size to match all results
+					console.log(`Search results: Showing all ${data.length} matching records`);
+				} else {
+					setTotalPages(response.data.totalPages);
+					console.log(`Normal pagination: Page ${currentPage} of ${response.data.totalPages}`);
+				}
+
 				setTotalItems(response?.data?.totalItems);
 
 				if (data && data.length > 0) {
@@ -1157,7 +1214,6 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 								return acc;
 							}, {});
 						} else {
-							// Handle JotForm data with "pretty" format
 							const parsedData = JSON.parse(item.data);
 
 							if (parsedData.pretty) {
@@ -1171,12 +1227,10 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 									}
 								});
 							} else {
-								// If no pretty format, use the parsed data directly
 								prettyData = { ...parsedData };
 							}
 						}
 
-						// Add form metadata
 						prettyData.formData = {
 							submission_id: item?.submissionId,
 							form_id: item?.formId,
@@ -1203,12 +1257,15 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 				console.error('Unexpected response status:', response.status);
 			}
 		} catch (error: any) {
+			if (axios.isCancel(error)) {
+				console.log('Request canceled:', error.message);
+				return;
+			}
 			setTableResponse({ data: [], uniqueKeys: [] });
 			setLoader(false);
 			console.error('Error fetching form data:', error);
 		}
 	};
-
 	const handleFormChange = (value: string) => {
 		setLoader(true);
 		setValue("url", value);
@@ -1432,10 +1489,25 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 			? JSON.stringify(formattedData)
 			: "";
 
+		// CHANGE: Update these state variables
 		setCurrentPage(1);
 		setLastSearchedValue(searchParams);
+		setCurrentSearchTerm(searchParams); // ADD THIS LINE
+		setIsSearchActive(!!searchParams);  // ADD THIS LINE
+
+		// Call with page 1
 		getTableResponse(selectedForm, 1, 10, searchParams, selectedFilter);
 	};
+
+	const handleClearSearch = () => {
+		form.resetFields();
+		setCurrentPage(1);
+		setLastSearchedValue("");
+		setCurrentSearchTerm("");
+		setIsSearchActive(false);
+		getTableResponse(selectedForm, 1, 10, "", selectedFilter);
+	};
+
 
 	const handleSampleCSVDownload = () => {
 		if (
@@ -1487,7 +1559,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 		setSelectedFilter(value);
 		setCurrentPage(1);
 		setTableKey((prev) => prev + 1);
-		getTableResponse(selectedForm || null, 1, 10, lastSearchedValue, value);
+		getTableResponse(selectedForm || null, 1, 10, currentSearchTerm, value);
 	};
 
 	const handleFileClick = () => {
@@ -2329,7 +2401,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 										item?.name?.includes("searchable")) &&
 									item?.type !== "control_widget"
 								) && (
-									<div className="col-span-12 lg:col-span-2 flex justify-end" style={{ height: "100%" }}>
+									<div className="col-span-12 lg:col-span-2 flex justify-end gap-2" style={{ height: "100%" }}>
 										<Button
 											className="flex items-center gap-2 w-full lg:w-auto rounded-md text-white transition headerButton"
 											htmlType="submit"
@@ -2337,6 +2409,15 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 										>
 											<FaSearch size={18} />
 										</Button>
+										{(lastSearchedValue || currentSearchTerm) && (
+											<Button
+												className="flex items-center gap-2 w-full lg:w-auto rounded-md text-white transition"
+												onClick={handleClearSearch}
+												style={{ maxHeight: '2.1rem', backgroundColor: '#DC2626' }}
+											>
+												<FaTimes size={18} />
+											</Button>
+										)}
 									</div>
 								)}
 						</div>
