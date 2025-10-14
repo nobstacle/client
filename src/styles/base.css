@@ -1070,3 +1070,7 @@ button {
 .customUpsellCard .ant-card-body {
   padding-top: 14px;
 }
+
+.customMultiSelect .ant-select-dropdown {
+    max-height: none !important;
+}

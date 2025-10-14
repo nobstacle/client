@@ -1,6 +1,7 @@
 import * as React from "react";
-import { PlusIcon } from "../../../icons/PlusIcon";
-import { Button } from "../../../Button";
+import { Button, Select, Input, Tag, Row, Col, Card, Space, Popover, Alert } from "antd";
+import { PlusOutlined, DeleteOutlined, SearchOutlined } from "@ant-design/icons";
+import * as Io5Icons from "react-icons/io5";
 import {
   useImageTemplateControllerGetImageTags,
   useMapTemplateControllerGetMapTags,
@@ -14,8 +15,6 @@ import {
 import { ChatType, PostShortcutReq } from "../../../../lib/client/model";
 import useShortcutStore from "../../../../lib/zustand/store/shortcutStore";
 import useCompanyStore from "../../../../lib/zustand/store/companyStore";
-import * as Io5Icons from "react-icons/io5";
-
 
 export const ColorShortcutForm: React.FC = () => {
   const { company } = useCompanyStore();
@@ -29,7 +28,6 @@ export const ColorShortcutForm: React.FC = () => {
   const [selectedColor, setSelectedColor] = React.useState<string>("#000000");
   const [showIconPicker, setShowIconPicker] = React.useState<boolean>(false);
   const [iconSearchQuery, setIconSearchQuery] = React.useState<string>("");
-
   const [error, setError] = React.useState<string>("");
 
   const createShortcutMany = useShortcutControllerCreateShortcutMany();
@@ -59,17 +57,13 @@ export const ColorShortcutForm: React.FC = () => {
   const filteredIconKeys = React.useMemo(() => {
     if (!iconSearchQuery.trim()) return iconKeys;
     const query = iconSearchQuery.toLowerCase();
-    
+
     return iconKeys.filter((iconName) => {
-      // Check icon name
       if (iconName.toLowerCase().includes(query)) return true;
-      
-      // Check keywords
       const keywords = iconKeywords[iconName] || [];
-      return keywords.some(keyword => keyword.includes(query));
+      return keywords.some((keyword) => keyword.includes(query));
     });
-  }, [iconSearchQuery, iconKeys]);  
-  
+  }, [iconSearchQuery, iconKeys]);
 
   React.useEffect(() => {
     const mappedInitial =
@@ -94,12 +88,12 @@ export const ColorShortcutForm: React.FC = () => {
 
     setCurrShortcuts((prev) => [
       ...prev,
-      { 
-        icon: selectedIcon, 
-        tag: currTag, 
-        type: currType, 
+      {
+        icon: selectedIcon,
+        tag: currTag,
+        type: currType,
         order: prev.length,
-        color: selectedColor 
+        color: selectedColor,
       },
     ]);
   };
@@ -117,7 +111,7 @@ export const ColorShortcutForm: React.FC = () => {
           extraValue: shortcut.icon,
           color: shortcut.color,
         };
-      },
+      }
     );
 
     createShortcutMany.mutate(
@@ -126,7 +120,7 @@ export const ColorShortcutForm: React.FC = () => {
         onSuccess: (data) => {
           setTemplatesShortcuts(data);
         },
-      },
+      }
     );
   };
 
@@ -149,7 +143,8 @@ export const ColorShortcutForm: React.FC = () => {
     }
 
     const isTemplateAssigned = currShortcuts.some(
-      (currShortcut) => currShortcut.tag === currTag && currShortcut.type === currType,
+      (currShortcut) =>
+        currShortcut.tag === currTag && currShortcut.type === currType
     );
 
     if (isTemplateAssigned) {
@@ -168,234 +163,251 @@ export const ColorShortcutForm: React.FC = () => {
 
   const renderIcon = (iconName: string, color?: string) => {
     const IconComponent = (Io5Icons as any)[iconName];
-    return IconComponent ? <IconComponent size={20} style={{ color: color || "#000000" }} /> : null;
+    return IconComponent ? (
+      <IconComponent size={20} style={{ color: color || "#000000" }} />
+    ) : null;
   };
 
-  return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        handleSubmit();
-      }}
-      className="flex w-full flex-col gap-4"
-      autoComplete="off"
-    >
-      <label className="font-extrabold text-gray-400">Template Shortcuts</label>
-      <div className="flex justify-items-end gap-4">
-        <div className="relative">
-          <button
-            type="button"
-            onClick={() => setShowIconPicker(!showIconPicker)}
-            onFocus={() => (error ? setError("") : null)}
-            className="flex h-10 items-center justify-center gap-2 rounded border border-gray-300 px-4 hover:bg-gray-50"
-          >
-            {renderIcon(selectedIcon, selectedColor)}
-            <span className="text-sm">Select Icon</span>
-          </button>
-          {showIconPicker && (
-            <div className="absolute z-10 mt-1 w-64 rounded border border-gray-300 bg-white shadow-lg">
-              <div className="border-b border-gray-200 p-2">
-                <input
-                  type="text"
-                  placeholder="Search icons..."
-                  value={iconSearchQuery}
-                  onChange={(e) => setIconSearchQuery(e.target.value)}
-                  className="w-full rounded border border-gray-300 px-2 py-1 text-sm focus:border-blue-500 focus:outline-none"
-                />
-              </div>
-              <div className="max-h-60 overflow-y-auto">
-                <div className="grid grid-cols-6 gap-2 p-2">
-                  {filteredIconKeys.length > 0 ? (
-                    filteredIconKeys.map((iconName) => (
-                      <button
-                        key={iconName}
-                        type="button"
-                        onClick={() => {
-                          setSelectedIcon(iconName);
-                          setShowIconPicker(false);
-                          setIconSearchQuery("");
-                        }}
-                        className={`flex h-10 w-10 items-center justify-center rounded hover:bg-gray-100 ${
-                          selectedIcon === iconName ? "bg-blue-100" : ""
-                        }`}
-                        title={iconName.replace("Io", "")}
-                      >
-                        {renderIcon(iconName, "#000000")}
-                      </button>
-                    ))
-                  ) : (
-                    <div className="col-span-6 py-4 text-center text-sm text-gray-500">
-                      No icons found
-                    </div>
-                  )}
-                </div>
-              </div>
+  const getTagOptions = () => {
+    const typeToDataMap: Record<string, any> = {
+      Text: textTags.data,
+      Image: imageTags.data,
+      Video: videoTags.data,
+      Slideshow: slideshowTags.data,
+      Map: mapTags.data,
+      Website: websiteTags.data,
+      Document: documentTags.data,
+    };
+
+    const data = typeToDataMap[currType || ""];
+    if (!data) return [];
+
+    return data
+      .filter(({ langCode }: any) =>
+        langCode.includes(company?.defaultLangCode ?? "en")
+      )
+      .map((value: any) => ({
+        label: value.tag,
+        value: value.tag,
+      }));
+  };
+
+  const iconPickerContent = (
+    <div style={{ width: 320 }}>
+      <Input
+        placeholder="Search icons..."
+        value={iconSearchQuery}
+        onChange={(e) => setIconSearchQuery(e.target.value)}
+        prefix={<SearchOutlined />}
+        style={{ marginBottom: 8 }}
+      />
+      <div style={{ maxHeight: 280, overflowY: "auto" }}>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(6, 1fr)",
+            gap: 8,
+          }}
+        >
+          {filteredIconKeys.length > 0 ? (
+            filteredIconKeys.map((iconName) => (
+              <Button
+                key={iconName}
+                type={selectedIcon === iconName ? "primary" : "default"}
+                onClick={() => {
+                  setSelectedIcon(iconName);
+                  setShowIconPicker(false);
+                  setIconSearchQuery("");
+                }}
+                style={{
+                  height: 40,
+                  width: 40,
+                  padding: 0,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+                title={iconName.replace("Io", "")}
+              >
+                {renderIcon(iconName, "#000000")}
+              </Button>
+            ))
+          ) : (
+            <div
+              style={{
+                gridColumn: "1 / -1",
+                textAlign: "center",
+                padding: "16px 0",
+                color: "#999",
+              }}
+            >
+              No icons found
             </div>
           )}
         </div>
-
-        <div className="flex items-center gap-2">
-          <input
-            type="color"
-            value={selectedColor}
-            onChange={(e) => setSelectedColor(e.target.value)}
-            className="h-10 w-16 cursor-pointer rounded border border-gray-300"
-            title="Select icon color"
-          />
-        </div>
-
-        <select
-          onFocus={() => (error ? setError("") : null)}
-          onBlur={() => (error ? setError("") : null)}
-          onChange={(e) => {
-            if (e.currentTarget.value) {
-              if (currType !== e.currentTarget.value) {
-                setTag("");
-              }
-              setType(
-                (e.currentTarget.value === "null"
-                  ? undefined
-                  : e.currentTarget.value) as any,
-              );
-            }
-          }}
-        >
-          <option value="null">Select type...</option>
-          {["Text", "Image", "Video", "Slideshow", "Map", "Website", "Document"].map(
-            (value, index) => (
-              <option value={value} key={`${value}-${index}`}>
-                {value}
-              </option>
-            ),
-          )}
-        </select>
-
-        <select
-          onFocus={() => (error ? setError("") : null)}
-          onBlur={() => (error ? setError("") : null)}
-          onChange={(e) =>
-            e.currentTarget.value
-              ? setTag(
-                e.currentTarget.value === "null" ? "" : e.currentTarget.value,
-              )
-              : null
-          }
-        >
-          <option value="null">Select tag...</option>
-          {currType === "Text" &&
-            textTags.data
-              ?.filter(({ langCode }) =>
-                langCode.includes(company?.defaultLangCode ?? "en"),
-              )
-              .map((value, index) => (
-                <option value={value.tag} key={`${value.tag}-${index}`}>
-                  {value.tag}
-                </option>
-              ))}
-
-          {currType === "Image" &&
-            imageTags.data
-              ?.filter(({ langCode }) =>
-                langCode.includes(company?.defaultLangCode ?? "en"),
-              )
-              .map((value, index) => (
-                <option value={value.tag} key={`${value.tag}-${index}`}>
-                  {value.tag}
-                </option>
-              ))}
-
-          {currType === "Video" &&
-            videoTags.data
-              ?.filter(({ langCode }) =>
-                langCode.includes(company?.defaultLangCode ?? "en"),
-              )
-              .map((value, index) => (
-                <option value={value.tag} key={`${value.tag}-${index}`}>
-                  {value.tag}
-                </option>
-              ))}
-
-          {currType === "Slideshow" &&
-            slideshowTags.data
-              ?.filter(({ langCode }) =>
-                langCode.includes(company?.defaultLangCode ?? "en"),
-              )
-              .map((value, index) => (
-                <option value={value.tag} key={`${value.tag}-${index}`}>
-                  {value.tag}
-                </option>
-              ))}
-
-          {currType === "Map" &&
-            mapTags.data
-              ?.filter(({ langCode }) =>
-                langCode.includes(company?.defaultLangCode ?? "en"),
-              )
-              .map((value, index) => (
-                <option value={value.tag} key={`${value.tag}-${index}`}>
-                  {value.tag}
-                </option>
-              ))}
-
-          {currType === "Website" &&
-            websiteTags.data
-              ?.filter(({ langCode }) =>
-                langCode.includes(company?.defaultLangCode ?? "en"),
-              )
-              .map((value, index) => (
-                <option value={value.tag} key={`${value.tag}-${index}`}>
-                  {value.tag}
-                </option>
-              ))}
-
-          {currType === "Document" &&
-            documentTags.data
-              ?.filter(({ langCode }) =>
-                langCode.includes(company?.defaultLangCode ?? "en"),
-              )
-              .map((value, index) => (
-                <option value={value.tag} key={`${value.tag}-${index}`}>
-                  {value.tag}
-                </option>
-              ))}
-        </select>
-
-        <button onClick={handleAddLangaugeShortcut} type="button">
-          <PlusIcon height="25px" width="25px" />
-        </button>
       </div>
+    </div>
+  );
 
-      <div className="flex flex-wrap gap-4">
-        {currShortcuts.map((res, index) => (
+  return (
+    <Card style={{ width: '100%' }}>
+      <Space direction="vertical" size="large" style={{ width: "100%" }}>
+        <div>
           <div
-            key={`${res.icon}-${res.tag}-${index}`}
-            className="flex cursor-pointer items-center gap-2 rounded-lg border border-gray-300 px-3 py-2"
-            onClick={() => {
-              if (error !== "") {
-                setError("");
-              }
-              setCurrShortcuts((prev) =>
-                prev.filter((_, i) => i !== index),
-              );
+            style={{
+              fontWeight: 700,
+              color: "#9ca3af",
+              marginBottom: 16,
+              fontSize: 16,
             }}
           >
-            <span title={`${res.type}/${res.tag}`}>
-              {renderIcon(res.icon, res.color)}
-            </span>
-            <label className="cursor-pointer">{res.tag}</label>
+            Template Shortcuts
           </div>
-        ))}
-      </div>
-      {error && <p className="text-center text-xs text-danger">{error}.</p>}
 
-      <Button
-        type="submit"
-        className="rounded-xl  bg-primary p-2 text-white"
-        disabled={createShortcutMany.isPending}
-        isLoading={createShortcutMany.isPending}
-      >
-        Save
-      </Button>
-    </form>
+          <Row gutter={[16, 16]}>
+            <Col xs={24} sm={12} md={6} lg={6}>
+              <Popover
+                content={iconPickerContent}
+                trigger="click"
+                open={showIconPicker}
+                onOpenChange={setShowIconPicker}
+                placement="bottomLeft"
+              >
+                <Button
+                  block
+                  style={{ height: 40 }}
+                  onFocus={() => (error ? setError("") : null)}
+                >
+                  <Space>
+                    {renderIcon(selectedIcon, selectedColor)}
+                    <span>Select Icon</span>
+                  </Space>
+                </Button>
+              </Popover>
+            </Col>
+
+            <Col xs={24} sm={12} md={6} lg={3}>
+              <Input
+                type="color"
+                value={selectedColor}
+                onChange={(e) => setSelectedColor(e.target.value)}
+                style={{ height: 40, cursor: "pointer" }}
+                title="Select icon color"
+              />
+            </Col>
+
+            <Col xs={24} sm={12} md={6} lg={5}>
+              <Select
+                placeholder="Select type..."
+                style={{ width: "100%" }}
+                size="large"
+                onFocus={() => (error ? setError("") : null)}
+                onChange={(value) => {
+                  if (currType !== value) {
+                    setTag("");
+                  }
+                  setType(value as ChatType);
+                }}
+                value={currType}
+                options={[
+                  "Text",
+                  "Image",
+                  "Video",
+                  "Slideshow",
+                  "Map",
+                  "Website",
+                  "Document",
+                ].map((value) => ({
+                  label: value,
+                  value: value,
+                }))}
+              />
+            </Col>
+
+            <Col xs={24} sm={12} md={6} lg={6}>
+              <Select
+                placeholder="Select tag..."
+                style={{ width: "100%" }}
+                size="large"
+                onFocus={() => (error ? setError("") : null)}
+                onChange={(value) => setTag(value)}
+                value={currTag || undefined}
+                options={getTagOptions()}
+                disabled={!currType}
+              />
+            </Col>
+
+            <Col xs={24} sm={24} md={24} lg={4}>
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={handleAddLangaugeShortcut}
+                style={{ height: 40, width: "100%" }}
+              >
+                Add
+              </Button>
+            </Col>
+          </Row>
+        </div>
+
+        {currShortcuts.length > 0 && (
+          <div>
+            <Space size={[8, 16]} wrap>
+              {currShortcuts.map((res, index) => (
+                <Tag
+                  key={`${res.icon}-${res.tag}-${index}`}
+                  closable
+                  onClose={() => {
+                    if (error !== "") {
+                      setError("");
+                    }
+                    setCurrShortcuts((prev) =>
+                      prev.filter((_, i) => i !== index)
+                    );
+                  }}
+                  style={{
+                    padding: "8px 12px",
+                    fontSize: 14,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                  }}
+                  closeIcon={<DeleteOutlined />}
+                >
+                  <Space>
+                    <span title={`${res.type}/${res.tag}`}>
+                      {renderIcon(res.icon, res.color)}
+                    </span>
+                    <span>{res.tag}</span>
+                  </Space>
+                </Tag>
+              ))}
+            </Space>
+          </div>
+        )}
+
+        {error && (
+          <Alert
+            message={error}
+            type="error"
+            showIcon
+            style={{ textAlign: "center" }}
+          />
+        )}
+
+        <Button
+          type="primary"
+          htmlType="submit"
+          block
+          size="large"
+          loading={createShortcutMany.isPending}
+          disabled={createShortcutMany.isPending}
+          onClick={handleSubmit}
+        >
+          Save
+        </Button>
+      </Space>
+    </Card>
   );
 };

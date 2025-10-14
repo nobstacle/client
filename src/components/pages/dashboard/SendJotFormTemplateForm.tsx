@@ -991,21 +991,6 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 	const fetchFormQuestions = async (form_id: string | null) => {
 		if (!form_id) return;
 
-		// Check cache first
-		const cacheKey = `form_questions_${form_id}`;
-		const cached = localStorage.getItem(cacheKey);
-
-		if (cached) {
-			const { data, timestamp } = JSON.parse(cached);
-			const fiveMinutes = 5 * 60 * 1000;
-
-			// Use cache if less than 5 minutes old
-			if (Date.now() - timestamp < fiveMinutes) {
-				setSelectedFormFields(data || { content: [] });
-				return;
-			}
-		}
-
 		try {
 			const API_KEY = process.env.NEXT_PUBLIC_JOTFORM_API_KEY;
 			const response = await fetch(
@@ -1018,12 +1003,6 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 
 			const data = await response.json();
 			setSelectedFormFields(data || { content: [] });
-
-			// Cache the result
-			localStorage.setItem(cacheKey, JSON.stringify({
-				data: data || { content: [] },
-				timestamp: Date.now()
-			}));
 		} catch (error: any) {
 			console.error({ error });
 			setSelectedFormFields({ content: [] });
@@ -1045,6 +1024,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 	useEffect(() => {
 		if (userData?.user?.id) {
 			getAssignedFormByID(userData?.user?.companyId)
+			setPageSize(10);
 		}
 	}, [userData])
 
@@ -1128,32 +1108,28 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 		const Url = getBackendUrl();
 
 		// Check if search is active
-		const hasSearch = search && (typeof search === 'string' ? search !== "" : search.length > 0);
+		const hasSearch = search && (typeof search === 'string' ? search.trim() !== "" : search.length > 0);
 
-		console.log('Search active:', hasSearch);
-		console.log('Search term:', search);
+		console.log('API Call Debug:', { page, limit, hasSearch, search, filter });
 
 		// When search changes, always start from page 1
 		let actualPage = page;
-		if (search && search !== currentSearchTerm) {
+		if (hasSearch && search !== currentSearchTerm) {
 			actualPage = 1;
 			setCurrentPage(1);
 			setCurrentSearchTerm(search);
 			setIsSearchActive(true);
-			console.log('Search changed, resetting to page 1');
-		} else if (!search && isSearchActive) {
-			// Search was cleared, reset to page 1
+			setPageSize(10); // RESET page size for search
+		} else if (!hasSearch && isSearchActive) {
 			actualPage = 1;
 			setCurrentPage(1);
 			setIsSearchActive(false);
 			setCurrentSearchTerm("");
-			console.log('Search cleared, resetting to page 1');
+			setPageSize(10); // RESET page size when clearing search
 		}
 
-		// When searching, always use page 1 (backend will return all results)
-		const apiPage = hasSearch ? 1 : actualPage;
-
-		console.log(`API call - Page: ${apiPage}, Limit: ${limit}, HasSearch: ${hasSearch}`);
+		// Use actual page for API call (don't override with 1 for search)
+		const apiPage = actualPage;
 
 		let API_URL = `${Url}/api/jotform/responses/${form_id}?page=${apiPage}&limit=${limit}`;
 
@@ -1181,27 +1157,16 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 
 			if (response.status === 200) {
 				const data = response.data.items ? response.data.items : response.data;
-				const isSearchActive = response.data.isSearchActive || hasSearch;
 
-				console.log('Response received:', {
+				console.log('Response Debug:', {
 					totalItems: response.data.totalItems,
 					totalPages: response.data.totalPages,
 					itemsReceived: data.length,
-					isSearchActive
+					currentPage: actualPage
 				});
 
-				// When search is active, backend returns all results on one page
-				if (isSearchActive) {
-					setTotalPages(1);
-					setCurrentPage(1);
-					setPageSize(data.length); // Set page size to match all results
-					console.log(`Search results: Showing all ${data.length} matching records`);
-				} else {
-					setTotalPages(response.data.totalPages);
-					console.log(`Normal pagination: Page ${currentPage} of ${response.data.totalPages}`);
-				}
-
-				setTotalItems(response?.data?.totalItems);
+				setTotalPages(response.data.totalPages || 1);
+				setTotalItems(response?.data?.totalItems || 0);
 
 				if (data && data.length > 0) {
 					const tableData = data.map((item: any) => {
@@ -1251,10 +1216,6 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 					setTableResponse({ data: [], uniqueKeys: [] });
 					setLoader(false);
 				}
-			} else {
-				setTableResponse({ data: [], uniqueKeys: [] });
-				setLoader(false);
-				console.error('Unexpected response status:', response.status);
 			}
 		} catch (error: any) {
 			if (axios.isCancel(error)) {
@@ -1266,12 +1227,17 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 			console.error('Error fetching form data:', error);
 		}
 	};
+
 	const handleFormChange = (value: string) => {
 		setLoader(true);
 		setValue("url", value);
 		setSelectedForm(value);
 		setCurrentPage(1);
-		getTableResponse(value || null, 1, 10, lastSearchedValue, selectedFilter);
+		setPageSize(10);
+		setLastSearchedValue("");
+		setCurrentSearchTerm("");
+		setIsSearchActive(false);
+		getTableResponse(value || null, 1, 10, "", selectedFilter);
 	};
 
 	async function onSubmit(event: React.MouseEvent<HTMLButtonElement, MouseEvent>) {
@@ -1558,6 +1524,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 
 		setSelectedFilter(value);
 		setCurrentPage(1);
+		setPageSize(10);
 		setTableKey((prev) => prev + 1);
 		getTableResponse(selectedForm || null, 1, 10, currentSearchTerm, value);
 	};

@@ -1,5 +1,5 @@
 import * as React from "react";
-import { SubmitHandler, useForm } from "react-hook-form";
+import { SubmitHandler, useForm, Controller } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
 import {
@@ -7,8 +7,16 @@ import {
   useShortcutControllerPatchShortcut,
   useSlideshowTemplateControllerGetTextTags,
 } from "../../../../lib/client/api";
-import { Button } from "../../../Button";
 import useShortcutStore from "../../../../lib/zustand/store/shortcutStore";
+import {
+  Card,
+  Form,
+  Select,
+  Button,
+  Alert,
+  Spin,
+  Space,
+} from "antd";
 
 const schema = yup
   .object()
@@ -30,11 +38,10 @@ export const DefaultSlideshowShortcutForm: React.FC = () => {
   const shortcutPatch = useShortcutControllerPatchShortcut();
 
   const {
-    register,
     handleSubmit,
     formState: { errors },
     setValue,
-    reset,
+    control,
   } = useForm<FormValues>({
     resolver: yupResolver(schema),
     defaultValues: { tag: "" },
@@ -57,7 +64,7 @@ export const DefaultSlideshowShortcutForm: React.FC = () => {
           onSuccess: (res) => {
             setDefaultSlideshowShortcut(res[0]);
           },
-        },
+        }
       );
     } else {
       shortcutPatch.mutate(
@@ -72,7 +79,7 @@ export const DefaultSlideshowShortcutForm: React.FC = () => {
           onSuccess: (res) => {
             setDefaultSlideshowShortcut(res);
           },
-        },
+        }
       );
     }
   };
@@ -81,61 +88,111 @@ export const DefaultSlideshowShortcutForm: React.FC = () => {
     if (slideshowTags.isSuccess && defaulSlideshowShortcut?.value) {
       setValue("tag", defaulSlideshowShortcut.value);
     }
-  }, [defaulSlideshowShortcut?.value, slideshowTags.isSuccess]);
+  }, [defaulSlideshowShortcut?.value, slideshowTags.isSuccess, setValue]);
 
   const onSubmit: SubmitHandler<FormValues> = (data) =>
     handleDefaultSlideshow(data);
 
   if (slideshowTags.data?.length === 0) return null;
-  if (slideshowTags.isPending) return null;
+
+  const isLoading =
+    shortcutCreate.status === "pending" ||
+    shortcutPatch.status === "pending" ||
+    slideshowTags.isPending;
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-2">
-      <label className="font-extrabold text-gray-400">
-        Default Slideshow Shortcut{" "}
-      </label>
-      <div className="mt-4 flex">
-        <select {...register("tag")}>
-          <option value="" label="Select tag...">
-            Select tag...
-          </option>
-          {slideshowTags.data?.map((value, index) => (
-            <option value={value.tag} key={`${value.tag}-${index}`}>
-              {value.tag}
-            </option>
-          ))}
-        </select>
-      </div>
+    <Card className="shadow-sm w-full">
+      <Spin spinning={isLoading} tip="Saving...">
+        <Space direction="vertical" style={{ width: "100%" }} size="large">
+          <div>
+            <h3 className="text-lg font-bold text-gray-900 mb-1">
+              Default Slideshow Shortcut
+            </h3>
+            <p className="text-sm text-gray-500">
+              Select a default slideshow tag for quick access
+            </p>
+          </div>
 
-      <div className="text-center">
-        {errors.tag?.message && (
-          <p className="text-xs text-rose-600">
-            {errors.tag.message.toString()}
-          </p>
-        )}
-      </div>
+          <div style={{ width: "100%" }}>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Slideshow Tag <span className="text-red-500">*</span>
+              </label>
+              <Controller
+                name="tag"
+                control={control}
+                render={({ field }) => (
+                  <>
+                    <Select
+                      placeholder="Select tag..."
+                      value={field.value || undefined}
+                      onChange={(value) => field.onChange(value)}
+                      options={
+                        slideshowTags.data?.map((item) => ({
+                          value: item.tag,
+                          label: item.tag,
+                        })) || []
+                      }
+                      size="large"
+                      style={{ width: "100%" }}
+                      status={errors.tag ? "error" : ""}
+                    />
+                    {errors.tag?.message && (
+                      <div className="text-red-500 text-sm mt-2">
+                        {errors.tag.message.toString()}
+                      </div>
+                    )}
+                  </>
+                )}
+              />
+            </div>
 
-      <Button
-        type="submit"
-        className="rounded-xl  bg-primary p-2 text-white"
-        disabled={
-          shortcutCreate.status === "pending" ||
-          shortcutPatch.status === "pending"
-        }
-        isLoading={
-          shortcutCreate.status === "pending" ||
-          shortcutPatch.status === "pending"
-        }
-      >
-        Save
-      </Button>
+            {shortcutCreate.error?.response?.data.message && (
+              <Alert
+                message="Error"
+                description={
+                  typeof shortcutCreate.error.response.data.message === "string"
+                    ? shortcutCreate.error.response.data.message.charAt(0).toUpperCase() +
+                      shortcutCreate.error.response.data.message.slice(1)
+                    : JSON.stringify(shortcutCreate.error.response.data.message)
+                }
+                type="error"
+                showIcon
+                closable
+                className="mb-4"
+              />
+            )}
 
-      {shortcutCreate.error?.response?.data.message && (
-        <p className="text-center text-xs text-rose-600">
-          {shortcutCreate.error.response.data.message.charAt(0).toUpperCase() +
-            shortcutCreate.error.response.data.message.slice(1)}
-        </p>
-      )}
-    </form>
+            {shortcutPatch.error?.response?.data.message && (
+              <Alert
+                message="Error"
+                description={
+                  typeof shortcutPatch.error.response.data.message === "string"
+                    ? shortcutPatch.error.response.data.message.charAt(0).toUpperCase() +
+                      shortcutPatch.error.response.data.message.slice(1)
+                    : JSON.stringify(shortcutPatch.error.response.data.message)
+                }
+                type="error"
+                showIcon
+                closable
+                className="mb-4"
+              />
+            )}
+
+            <Button
+              type="primary"
+              size="large"
+              loading={isLoading}
+              disabled={isLoading}
+              block
+              onClick={handleSubmit(onSubmit)}
+              className="h-10 font-semibold"
+            >
+              Save
+            </Button>
+          </div>
+        </Space>
+      </Spin>
+    </Card>
   );
 };

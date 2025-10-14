@@ -1,7 +1,6 @@
 import * as React from "react";
 import useCompanyStore from "../../../../lib/zustand/store/companyStore";
 import { PlusIcon } from "../../../icons/PlusIcon";
-import { Button } from "../../../Button";
 import {
   getUserControllerGetUsersQueryKey,
   useUserControllerCreateCompanyUser,
@@ -12,6 +11,20 @@ import {
 import { GetUserResRolesItem } from "../../../../lib/client/model";
 import { useSession } from "next-auth/react";
 import { AxiosError } from "axios";
+import {
+  Table,
+  Card,
+  Button,
+  Space,
+  Alert,
+  Pagination,
+  Spin,
+  Empty,
+  Select,
+  Input,
+  Form,
+} from "antd";
+import { DeleteOutlined, PlusOutlined } from "@ant-design/icons";
 
 export const UpdateCompanyUsers: React.FC = () => {
   const userPatchOne = useUserControllerPatchOne();
@@ -27,7 +40,6 @@ export const UpdateCompanyUsers: React.FC = () => {
   const [pageSize] = React.useState(10);
   const [totalPages, setTotalPages] = React.useState(0);
   const [totalUsers, setTotalUsers] = React.useState(0);
-
 
   const companyUsers = useUserControllerGetUsers(
     {
@@ -45,9 +57,8 @@ export const UpdateCompanyUsers: React.FC = () => {
         }),
         gcTime: 10 * 60 * 1000,
       },
-    },
+    }
   );
-
 
   const [isLoading, setIsLoading] = React.useState(false);
   const [errorMessage, setErrorMessage] = React.useState<string[]>([]);
@@ -78,7 +89,7 @@ export const UpdateCompanyUsers: React.FC = () => {
           password: undefined,
           action: "initial" as const,
           role: Roles && Roles?.length > 0 ? Roles[0] : "User",
-        })),
+        }))
       );
     }
   }, [companyUsers.data, pageSize]);
@@ -92,7 +103,7 @@ export const UpdateCompanyUsers: React.FC = () => {
           password: undefined,
           action: "initial",
           role: Roles && Roles?.length > 0 ? Roles[0] : "User",
-        })),
+        }))
       );
     }
   }, [initialCompanyUsers]);
@@ -100,7 +111,7 @@ export const UpdateCompanyUsers: React.FC = () => {
   const handleInputChange = (
     index: number,
     field: "email" | "password" | "role",
-    value: any,
+    value: any
   ) => {
     if (errorMessage.length !== 0) {
       setErrorMessage([]);
@@ -133,11 +144,11 @@ export const UpdateCompanyUsers: React.FC = () => {
   const handleSubmit = async () => {
     const shallowUsers = [...users];
     const updateUsers = shallowUsers.filter(
-      ({ action }) => action === "initial-updated",
+      ({ action }) => action === "initial-updated"
     );
     const addUsers = shallowUsers.filter(
       ({ action, email, password }) =>
-        action === "add" && Boolean(email) && Boolean(password),
+        action === "add" && Boolean(email) && Boolean(password)
     );
     const deleteUsers = [...deletedUsers];
 
@@ -149,10 +160,11 @@ export const UpdateCompanyUsers: React.FC = () => {
             id: id as number,
             data: {
               email: email,
-              password: password && password?.length > 0 ? password : undefined,
+              password:
+                password && password?.length > 0 ? password : undefined,
               Roles: role,
             },
-          }),
+          })
         ),
         ...addUsers.map(({ email, password, role }) =>
           userCreate.mutateAsync({
@@ -161,7 +173,7 @@ export const UpdateCompanyUsers: React.FC = () => {
               email: email ?? "",
               Roles: role,
             },
-          }),
+          })
         ),
         ...deleteUsers.map((id) => userDeleteOne.mutateAsync({ id })),
       ]);
@@ -178,7 +190,7 @@ export const UpdateCompanyUsers: React.FC = () => {
             password: undefined,
             action: "initial" as const,
             role: Roles && Roles?.length > 0 ? Roles[0] : "User",
-          })),
+          }))
         );
       }
 
@@ -214,98 +226,185 @@ export const UpdateCompanyUsers: React.FC = () => {
 
   if (userSession.status === "loading") return null;
 
-  return (
-    <div className="mt-4 flex w-full flex-col gap-4">
-      <div className="flex justify-between items-center">
-        <label className="font-extrabold text-gray-400">Company Users</label>
-        <div className="text-sm text-gray-500">
-          Total: {totalUsers} users
-        </div>
-      </div>
-
-      {companyUsers.isLoading && (
-        <div className="text-center py-4">Loading users...</div>
-      )}
-
-      {companyUsers.error && (
-        <div className="text-red-500 text-sm">
-          Error loading users: {companyUsers.error.message}
-        </div>
-      )}
-
-      {users?.map((user, index) => (
-        <CompanyUserItem
-          onChange={handleInputChange}
-          key={`user-${user.id}`}
-          user={{
-            id: user.id,
-            email: user.email,
-            password: user.password,
-            role: user.role,
-            isMe: userSession.data?.user.id === user.id,
-          }}
-          index={index}
-          onDelete={handleOnDelete}
+  const tableColumns = [
+    {
+      title: "Email",
+      dataIndex: "email",
+      key: "email",
+      width: "40%",
+      render: (text: string, record: any, index: number) => (
+        <Input
+          type="email"
+          value={users[index]?.email ?? ""}
+          onChange={(e) => handleInputChange(index, "email", e.target.value)}
+          placeholder="Enter email"
+          required
         />
-      ))}
-
-      <button onClick={handleAddUser}>
-        <PlusIcon width="15px" />
-      </button>
-
-      {errorMessage.map((msg, index) => (
-        <p className="text-xs text-red-500" key={index}>
-          {msg}
-        </p>
-      ))}
-
-      {/* Pagination Controls */}
-      {totalPages > 1 && (
-        <div className="flex justify-center items-center gap-2 py-4">
+      ),
+    },
+    {
+      title: "Password",
+      dataIndex: "password",
+      key: "password",
+      width: "30%",
+      render: (text: string, record: any, index: number) => (
+        <Input.Password
+          value={users[index]?.password ?? ""}
+          onChange={(e) => handleInputChange(index, "password", e.target.value)}
+          placeholder="Enter password"
+        />
+      ),
+    },
+    {
+      title: "Role",
+      dataIndex: "role",
+      key: "role",
+      width: "20%",
+      render: (text: string, record: any, index: number) => {
+        const isMe = userSession.data?.user.id === users[index]?.id;
+        if (isMe) {
+          return <span className="text-gray-500">{text}</span>;
+        }
+        return (
+          <Select
+            value={users[index]?.role || "User"}
+            onChange={(value) => handleInputChange(index, "role", value)}
+            options={Object.keys(GetUserResRolesItem).map((role) => ({
+              value: role,
+              label:
+                role === "Admin" ? "Admin" : role === "User" ? "Guest" : "User",
+            }))}
+            style={{ width: "100%" }}
+          />
+        );
+      },
+    },
+    {
+      title: "Action",
+      key: "action",
+      width: "10%",
+      render: (text: string, record: any, index: number) => {
+        const isMe = userSession.data?.user.id === users[index]?.id;
+        if (isMe) {
+          return null;
+        }
+        return (
           <Button
-            onClick={() => handlePageChange(currentPage - 1)}
-            disabled={currentPage === 1}
-            className="px-3 py-1 text-sm"
-          >
-            Previous
-          </Button>
+            type="text"
+            danger
+            size="small"
+            icon={<DeleteOutlined />}
+            onClick={() => handleOnDelete(index)}
+          />
+        );
+      },
+    },
+  ];
 
-          <div className="flex gap-1">
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-              <Button
-                key={page}
-                onClick={() => handlePageChange(page)}
-                className={`px-3 py-1 text-sm ${currentPage === page
-                    ? 'bg-primary text-white'
-                    : 'bg-gray-200 text-gray-700'
-                  }`}
-              >
-                {page}
-              </Button>
-            ))}
+  return (
+    <div className="w-full">
+      <Card className="shadow-sm">
+        <div className="mb-6">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+            <div>
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900">
+                Company Users
+              </h2>
+              <p className="text-gray-500 text-xs sm:text-sm mt-1">
+                Total: {totalUsers} users
+              </p>
+            </div>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={handleAddUser}
+              size="large"
+            >
+              Add User
+            </Button>
           </div>
 
-          <Button
-            onClick={() => handlePageChange(currentPage + 1)}
-            disabled={currentPage === totalPages}
-            className="px-3 py-1 text-sm"
-          >
-            Next
-          </Button>
+          {errorMessage.length > 0 && (
+            <Alert
+              message="Error"
+              description={errorMessage.join(", ")}
+              type="error"
+              showIcon
+              closable
+              onClose={() => setErrorMessage([])}
+              className="mb-4"
+            />
+          )}
         </div>
-      )}
 
-      <div className="w-full">
-        <Button
-          onClick={handleSubmit}
-          type="submit"
-          className="w-full rounded-xl bg-primary p-2 text-white"
-          isLoading={isLoading}
-          disabled={isLoading}
-        >
-          Save
-        </Button>
-      </div>
+        {companyUsers.isLoading && (
+          <div className="text-center py-8">
+            <Spin tip="Loading users..." />
+          </div>
+        )}
+
+        {companyUsers.error && (
+          <Alert
+            message="Error loading users"
+            description={companyUsers.error.message}
+            type="error"
+            showIcon
+            className="mb-4"
+          />
+        )}
+
+        {!companyUsers.isLoading && (
+          <Spin spinning={isLoading} tip="Saving changes...">
+            <div className="overflow-x-auto">
+              <Table
+                columns={tableColumns}
+                dataSource={users.map((user, index) => ({
+                  key: `user-${user.id}`,
+                  index,
+                  ...user,
+                }))}
+                pagination={false}
+                locale={{
+                  emptyText: (
+                    <Empty
+                      description="No users found"
+                      style={{ marginTop: "40px", marginBottom: "40px" }}
+                    />
+                  ),
+                }}
+                scroll={{ x: 600 }}
+                size="middle"
+              />
+            </div>
+
+            {totalPages > 1 && (
+              <div className="flex justify-center mt-6">
+                <Pagination
+                  current={currentPage}
+                  total={totalUsers}
+                  pageSize={pageSize}
+                  onChange={handlePageChange}
+                  showSizeChanger={false}
+                />
+              </div>
+            )}
+
+            <div className="mt-6">
+              <Button
+                type="primary"
+                size="large"
+                onClick={handleSubmit}
+                loading={isLoading}
+                disabled={isLoading}
+                block
+                className="h-10 font-semibold"
+              >
+                Save Changes
+              </Button>
+            </div>
+          </Spin>
+        )}
+      </Card>
     </div>
   );
 };
@@ -322,7 +421,7 @@ const CompanyUserItem: React.FC<{
   onChange: (
     index: number,
     field: "email" | "password" | "role",
-    value: string,
+    value: string
   ) => void;
   onDelete: (index: number) => void;
 }> = ({ user, index, onChange, onDelete }) => {
@@ -362,7 +461,9 @@ const CompanyUserItem: React.FC<{
               <option
                 key={role}
                 value={role}
-                label={role === "Admin" ? "Admin" : role === "User" ? "Guest" : "User"}
+                label={
+                  role === "Admin" ? "Admin" : role === "User" ? "Guest" : "User"
+                }
               />
             ))}
           </select>

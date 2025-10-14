@@ -1,14 +1,27 @@
 import * as React from "react";
+import {
+  Form,
+  Input,
+  Button,
+  Space,
+  Tag,
+  AutoComplete,
+  Alert,
+  Spin,
+  Card,
+  Row,
+  Col,
+  Divider,
+} from "antd";
+import { PlusOutlined, DeleteOutlined } from "@ant-design/icons";
 import { languages } from "../../../../constant/languages";
-import { PlusIcon } from "../../../icons/PlusIcon";
-import { Button } from "../../../Button";
 import { useShortcutControllerCreateShortcutMany } from "../../../../lib/client/api";
-import { GetShortcutRes, PostShortcutReq } from "../../../../lib/client/model";
+import { PostShortcutReq } from "../../../../lib/client/model";
 import useShortcutStore from "../../../../lib/zustand/store/shortcutStore";
 
 export const LanguageShortcutForm: React.FC = () => {
   const { languagesShortcuts, setLanguagesShortcuts } = useShortcutStore();
-  const inputRef = React.useRef<HTMLInputElement>(null);
+  const [form] = Form.useForm();
   const [currLanguages, setCurrLanguages] = React.useState<
     { lang: string; order: number }[]
   >([]);
@@ -24,20 +37,34 @@ export const LanguageShortcutForm: React.FC = () => {
     setCurrLanguages(mappedInitial);
   }, [languagesShortcuts]);
 
-  const handleAddLangaugeShortcut = () => {
-    const language = inputRef.current?.value;
+  const languageOptions = languages.map(({ name, code }) => ({
+    label: `${name} (${code})`,
+    value: code,
+  }));
+
+  const handleAddLanguageShortcut = () => {
+    const language = form.getFieldValue("language");
     const isValid = validateLanguage(language);
 
     if (!isValid) return;
 
     setCurrLanguages((prev) => [
       ...prev,
-      { lang: language!, order: prev.length },
+      { lang: language, order: prev.length },
     ]);
+    form.setFieldValue("language", undefined);
+  };
+
+  const handleRemoveLanguage = (lang: string) => {
+    setCurrLanguages((prev) => prev.filter((fil) => fil.lang !== lang));
+    setError("");
   };
 
   const handleSubmit = () => {
-    if (currLanguages.length === 0) return;
+    if (currLanguages.length === 0) {
+      setError("Please add at least one language");
+      return;
+    }
 
     const postShortCutReqArray: PostShortcutReq[] = currLanguages.map(
       (language, index) => {
@@ -47,7 +74,7 @@ export const LanguageShortcutForm: React.FC = () => {
           key: language.lang,
           order: index + 1,
         };
-      },
+      }
     );
 
     createShortcutMany.mutate(
@@ -55,8 +82,10 @@ export const LanguageShortcutForm: React.FC = () => {
       {
         onSuccess: (data) => {
           setLanguagesShortcuts(data);
+          setError("");
+          form.setFieldValue("language", undefined);
         },
-      },
+      }
     );
   };
 
@@ -64,7 +93,7 @@ export const LanguageShortcutForm: React.FC = () => {
     let isValid = false;
 
     if (!language) {
-      setError("You must select language to add");
+      setError("You must select a language to add");
       return isValid;
     }
 
@@ -73,90 +102,121 @@ export const LanguageShortcutForm: React.FC = () => {
       .includes(language);
 
     if (!isLanguagesInclude) {
-      setError("You must select valid language to add");
+      setError("You must select a valid language to add");
       return isValid;
     }
 
     const isInclude = currLanguages.some((crr) => crr.lang === language);
 
-    if (isInclude) return isValid;
+    if (isInclude) {
+      setError("This language is already added");
+      return isValid;
+    }
 
     if (currLanguages.length === 7) {
-      setError("You can't add more than 7 language shortcut");
+      setError("You can't add more than 7 language shortcuts");
       return isValid;
     }
 
     isValid = true;
+    setError("");
 
     return isValid;
   };
 
+  const sortedLanguages = currLanguages.sort((a, b) => a.order - b.order);
+
   return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        handleSubmit();
-      }}
-      className="flex w-full flex-col gap-4"
-      autoComplete="off"
+    <Card
+      className="w-full"
+      title={<span className="text-lg font-bold">Language Shortcuts</span>}
+      bordered={false}
+      style={{ boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)" }}
     >
-      <label className="font-extrabold text-gray-400">
-        Languages Shortcuts
-      </label>
-      <div className="flex justify-items-end gap-4">
-        <input
-          placeholder="Add language shortcut"
-          list="languages"
-          name="browser"
-          id="browser"
-          autoComplete="off"
-          defaultValue="en"
-          ref={inputRef}
-          onFocus={() => (error ? setError("") : null)}
-          onBlur={() => (error ? setError("") : null)}
-        />
-        <datalist id="languages">
-          {languages.map(({ name, code }) => (
-            <option value={code} label={name} />
-          ))}
-        </datalist>
-
-        <button onClick={handleAddLangaugeShortcut} type="button">
-          <PlusIcon height="25px" width="25px" />
-        </button>
-      </div>
-
-      <div className="flex gap-4">
-        {currLanguages
-          .sort((a, b) => a.order - b.order)
-          .map((res) => (
-            <>
-              <label htmlFor={res.lang}>{res.lang} </label>
-              <input
-                className="cursor-pointer"
-                id={`${res.lang}-${res.order}`}
-                onClick={(e) => {
-                  if (error !== "") {
-                    setError("");
-                  }
-                  setCurrLanguages((prev) => prev.filter((fil) => fil != res));
+      <Spin spinning={createShortcutMany.isPending}>
+        <Form form={form} layout="vertical" onFinish={handleSubmit}>
+          <Form.Item
+            label="Add Language"
+            tooltip="Add up to 7 languages for quick access"
+            name="language"
+          >
+            <Space.Compact style={{ width: "100%" }}>
+              <AutoComplete
+                style={{ width: "calc(100% - 44px)" }}
+                placeholder="Search and select a language..."
+                options={languageOptions}
+                filterOption={(inputValue, option) =>
+                  option?.label
+                    ?.toString()
+                    .toLowerCase()
+                    .includes(inputValue.toLowerCase()) ?? false
+                }
+                onFocus={() => setError("")}
+                onBlur={() => setError("")}
+                onChange={() => setError("")}
+                onSelect={(value) => {
+                  form.setFieldValue("language", value);
                 }}
-                type="radio"
-                checked
               />
-            </>
-          ))}
-      </div>
-      {error && <p className="text-center text-xs text-danger">{error}.</p>}
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={handleAddLanguageShortcut}
+                style={{ width: "44px" }}
+              />
+            </Space.Compact>
+          </Form.Item>
 
-      <Button
-        type="submit"
-        className="rounded-xl  bg-primary p-2 text-white"
-        disabled={createShortcutMany.isPending}
-        isLoading={createShortcutMany.isPending}
-      >
-        Save
-      </Button>
-    </form>
+          {error && (
+            <Alert
+              message={error}
+              type="error"
+              showIcon
+              closable
+              onClose={() => setError("")}
+              style={{ marginBottom: "16px" }}
+            />
+          )}
+
+          {sortedLanguages.length > 0 && (
+            <Form.Item label={`Selected Languages (${sortedLanguages.length}/7)`}>
+              <Space wrap style={{ width: "100%" }}>
+                {sortedLanguages.map((res) => (
+                  <Tag
+                    key={res.lang}
+                    closable
+                    onClose={() => handleRemoveLanguage(res.lang)}
+                    icon={<DeleteOutlined />}
+                    color="blue"
+                    style={{
+                      padding: "4px 12px",
+                      fontSize: "14px",
+                      cursor: "pointer",
+                    }}
+                  >
+                    {res.lang.toUpperCase()}
+                  </Tag>
+                ))}
+              </Space>
+            </Form.Item>
+          )}
+
+          <Divider />
+
+          <Form.Item>
+            <Button
+              type="primary"
+              htmlType="submit"
+              size="large"
+              block
+              loading={createShortcutMany.isPending}
+              disabled={currLanguages.length === 0 || createShortcutMany.isPending}
+            >
+              Save Language Shortcuts
+            </Button>
+          </Form.Item>
+        </Form>
+      </Spin>
+    </Card>
   );
 };

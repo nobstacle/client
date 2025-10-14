@@ -94,12 +94,13 @@ export default function Upsell() {
             const queryParams = new URLSearchParams();
 
             if (dateRange && dateRange[0] && dateRange[1]) {
+                // Convert dayjs objects to ISO strings properly
                 queryParams.append('startDate', dateRange[0].toISOString());
                 queryParams.append('endDate', dateRange[1].toISOString());
             }
 
-            if (selectedPackage) {
-                queryParams.append('packageId', selectedPackage.toString());
+            if (selectedPackage && Array.isArray(selectedPackage) && selectedPackage.length > 0) {
+                selectedPackage.forEach(id => queryParams.append('packageId', id.toString()));
             }
 
             if (selectedStatus) {
@@ -110,15 +111,14 @@ export default function Upsell() {
                 queryParams.append('companyId', companyData.id.toString());
             }
 
-            const response = await fetch(
-                `${Url}/api/v1/uploads/get-dashboard-data`,
-                {
-                    headers: {
-                        Authorization: `Bearer ${data?.user.backendTokens.at}`,
-                        'Cache-Control': 'no-cache',
-                    },
-                }
-            );
+            const url = `${Url}/api/v1/uploads/get-dashboard-data?${queryParams.toString()}`;
+
+            const response = await fetch(url, {
+                headers: {
+                    Authorization: `Bearer ${data?.user.backendTokens.at}`,
+                    'Cache-Control': 'no-cache',
+                },
+            });
 
             if (response.ok) {
                 const result = await response.json();
@@ -217,41 +217,40 @@ export default function Upsell() {
     };
 
     // New function to handle field updates
-    const updateTransactionField = async (id: string, field: string, value: any) => {
-        try {
-            // Handle bulk updates differently
-            let requestBody;
-            if (field === 'bulk' && typeof value === 'object') {
-                // For bulk updates, send the object directly (flattened)
-                requestBody = value;
-            } else {
-                // For single field updates, create the field-value pair
-                requestBody = { [field]: value };
-            }
-
-            const response = await fetch(`${Url}/api/v1/uploads/update-upsell/${id}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${data?.user.backendTokens.at}`
-                },
-                body: JSON.stringify(requestBody),
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.message || 'Failed to update transaction');
-            }
-
-            message.success('Transaction updated successfully');
-            fetchTransactions(); // Refresh data
-            return true;
-        } catch (error) {
-            console.error('Error updating transaction:', error);
-            message.error(`Failed to update transaction: ${error.message}`);
-            return false;
+const updateTransactionField = async (id: string, field: string, value: any) => {
+    try {
+        let requestBody;
+        if (field === 'bulk' && typeof value === 'object') {
+            requestBody = value;
+        } else {
+            requestBody = { [field]: value };
         }
-    };
+
+        const response = await fetch(`${Url}/api/v1/uploads/update-upsell/${id}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${data?.user.backendTokens.at}`
+            },
+            body: JSON.stringify(requestBody),
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.message || 'Failed to update transaction');
+        }
+
+        message.success('Transaction updated successfully');
+        fetchTransactions();
+        await fetchDashboardData(); 
+        
+        return true;
+    } catch (error) {
+        console.error('Error updating transaction:', error);
+        message.error(`Failed to update transaction: ${error.message}`);
+        return false;
+    }
+};
 
     const handleExportToExcel = async () => {
         setExportLoading(true);
@@ -359,44 +358,42 @@ export default function Upsell() {
         });
     };
 
-    const handleSave = async (record: any) => {
-        const updates = {};
+const handleSave = async (record: any) => {
+    const updates = {};
 
-        // Check what fields have changed with better comparison
-        if (editingData.confirmationNumber !== record.confirmationNumber) {
-            updates.confirmationNumber = editingData.confirmationNumber;
-        }
-        if (editingData.numberOfAdults !== record.numberOfAdults) {
-            updates.numberOfAdults = Number(editingData.numberOfAdults);
-        }
-        if (editingData.numberOfChildren !== record.numberOfChildren) {
-            updates.numberOfChildren = Number(editingData.numberOfChildren);
-        }
+    if (editingData.confirmationNumber !== record.confirmationNumber) {
+        updates.confirmationNumber = editingData.confirmationNumber;
+    }
+    if (editingData.numberOfAdults !== record.numberOfAdults) {
+        updates.numberOfAdults = Number(editingData.numberOfAdults);
+    }
+    if (editingData.numberOfChildren !== record.numberOfChildren) {
+        updates.numberOfChildren = Number(editingData.numberOfChildren);
+    }
 
-        // Better date comparison
-        const recordArrivalDate = record.arrivalDate ? dayjs(record.arrivalDate) : null;
-        const recordDepartureDate = record.departureDate ? dayjs(record.departureDate) : null;
+    const recordArrivalDate = record.arrivalDate ? dayjs(record.arrivalDate) : null;
+    const recordDepartureDate = record.departureDate ? dayjs(record.departureDate) : null;
 
-        if (editingData.arrivalDate && (!recordArrivalDate || !editingData.arrivalDate.isSame(recordArrivalDate, 'day'))) {
-            updates.arrivalDate = editingData.arrivalDate.toISOString();
-        }
-        if (editingData.departureDate && (!recordDepartureDate || !editingData.departureDate.isSame(recordDepartureDate, 'day'))) {
-            updates.departureDate = editingData.departureDate.toISOString();
-        }
+    if (editingData.arrivalDate && (!recordArrivalDate || !editingData.arrivalDate.isSame(recordArrivalDate, 'day'))) {
+        updates.arrivalDate = editingData.arrivalDate.toISOString();
+    }
+    if (editingData.departureDate && (!recordDepartureDate || !editingData.departureDate.isSame(recordDepartureDate, 'day'))) {
+        updates.departureDate = editingData.departureDate.toISOString();
+    }
 
-        if (Object.keys(updates).length > 0) {
-            const success = await updateTransactionField(record.id, 'bulk', updates);
-            if (success) {
-                setEditingRecord(null);
-                setEditingData({});
-            }
-        } else {
-            // No changes detected
-            message.info('No changes detected');
+    if (Object.keys(updates).length > 0) {
+        const success = await updateTransactionField(record.id, 'bulk', updates);
+        if (success) {
             setEditingRecord(null);
             setEditingData({});
+            await fetchDashboardData();
         }
-    };
+    } else {
+        message.info('No changes detected');
+        setEditingRecord(null);
+        setEditingData({});
+    }
+};
 
     const handleCancel = () => {
         setEditingRecord(null);
@@ -668,6 +665,7 @@ export default function Upsell() {
                                         size="small"
                                         icon={<EditOutlined />}
                                         onClick={() => handleEdit(record)}
+                                        disabled={record?.approved === "APPROVED"}
                                     />
                                 </Tooltip>
                                 <Tooltip title="Delete Transaction">
@@ -687,62 +685,79 @@ export default function Upsell() {
         }
     ];
 
-    const topSellingProducts = [
-        { rank: 1, name: "Deluxe Room", revenue: "AED 132521" },
-        { rank: 2, name: "Corner Suite", revenue: "AED 122856" },
-        { rank: 3, name: "1 Bedroom Apartment", revenue: "AED 99522" },
-        { rank: 3, name: "1 Bedroom Apartment", revenue: "AED 99522" },
-        { rank: 3, name: "1 Bedroom Apartment", revenue: "AED 99522" },
-    ];
+    const fetchTransactionsWithSearch = useCallback((searchValue: string = "") => {
+    setLoadingData(true);
+    const url = new URL(`${Url}/api/v1/uploads/get-al-upsell-transactions`);
+    
+    if (searchValue) {
+        url.searchParams.append('search', searchValue);
+    }
+    
+    fetch(url.toString(), {
+        headers: {
+            Authorization: `Bearer ${data?.user.backendTokens.at}`,
+            'Cache-Control': 'no-cache'
+        },
+    })
+        .then(async (response) => {
+            const text = await response.text();
+            const json = JSON.parse(text);
+            const data = json.data || json;
+            setTransactions(data);
+            setTotalItems(json.pagination?.totalCount || 0);
+        })
+        .catch((error) => {
+            console.warn("Error fetching data:", error);
+            message.error("Failed to fetch transactions");
+        })
+        .finally(() => {
+            setLoadingData(false);
+        });
+}, [data, Url]);
 
-    const topSellers = [
-        { rank: 1, name: "John Doe", revenue: "AED 132521" },
-        { rank: 2, name: "Jane Doe", revenue: "AED 128856" },
-        { rank: 3, name: "Chris Martin", revenue: "AED 99522" },
-        { rank: 3, name: "Chris Martin", revenue: "AED 99522" },
-        { rank: 3, name: "Chris Martin", revenue: "AED 99522" },
-    ];
-
-    const topIncentives = [
-        { rank: 1, name: "John Doe", amount: "AED 751" },
-        { rank: 2, name: "Jane Doe", amount: "AED 655" },
-        { rank: 3, name: "Chris Martin", amount: "AED 513" },
-        { rank: 3, name: "Chris Martin", amount: "AED 513" },
-        { rank: 3, name: "Chris Martin", amount: "AED 513" },
-    ];
-
-    const debouncedSearch = useCallback((searchValue: string) => {
-        if (debounceRef.current) {
-            clearTimeout(debounceRef.current);
-        }
-
-        debounceRef.current = setTimeout(() => {
-            setCurrentPage(1);
-            setHasMore(true);
-            fetchTransactions(searchValue);
-        }, 500);
-    }, [fetchTransactions]);
-
-    const searchTransactions = (e: any) => {
-        const searchValue = e.target.value.toLowerCase().trim();
-        setSearchTerm(searchValue);
-        debouncedSearch(searchValue);
+const debouncedSearch = useCallback((searchValue: string) => {
+    if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
     }
 
-    // Filter transactions based on search term
-    const filteredTransactions = Array.isArray(transactions) ? transactions.filter((transaction: any) => {
-        if (!searchTerm) return true;
+    debounceRef.current = setTimeout(() => {
+        // Send search to backend
+        fetchTransactionsWithSearch(searchValue);
+    }, 500);
+}, []);
 
-        const searchLower = searchTerm.toLowerCase();
-        return (
-            transaction.confirmationNumber?.toLowerCase().includes(searchLower) ||
-            transaction.packageName?.toLowerCase().includes(searchLower) ||
-            transaction.packageCode?.toLowerCase().includes(searchLower) ||
-            transaction.soldByUser?.email?.toLowerCase().includes(searchLower) ||
-            transaction.approved?.toLowerCase().includes(searchLower) ||
-            transaction.typeOfSales?.toLowerCase().includes(searchLower)
-        );
-    }) : [];
+const searchTransactions = (e: any) => {
+    const searchValue = e.target.value.trim().toLowerCase();
+    setSearchTerm(searchValue);
+    setCurrentPage(1);
+    debouncedSearch(searchValue);
+};
+
+    // Filter transactions based on search term
+const filteredTransactions = Array.isArray(transactions) ? transactions.filter((transaction: any) => {
+    // Only client-side filtering for ROOM_UPGRADE type
+    if (transaction.typeOfSales !== 'ROOM_UPGRADE') return false;
+
+    // Package filter (client-side)
+    if (selectedPackage && Array.isArray(selectedPackage) && selectedPackage.length > 0) {
+        if (!selectedPackage.includes(transaction.package?.id)) return false;
+    }
+
+    // Status filter (client-side)
+    if (selectedStatus) {
+        if (transaction.approved?.toLowerCase() !== selectedStatus.toLowerCase()) return false;
+    }
+
+    // Date filter (client-side)
+    if (dateRange && dateRange[0] && dateRange[1]) {
+        const transactionDate = new Date(transaction.createdAt);
+        const startDate = new Date(dateRange[0].toISOString());
+        const endDate = new Date(dateRange[1].toISOString());
+        if (transactionDate < startDate || transactionDate > endDate) return false;
+    }
+
+    return true;
+}) : [];
 
     // Function to send filtered package data
     const sendPackageData = (categoryId = null) => {
@@ -917,13 +932,13 @@ export default function Upsell() {
                 {data.slice(0, 5).map((item) => (
                     <div
                         key={item.rank}
-                        className="flex items-center justify-between hover:bg-gray-50 px-1.5 py-1 rounded transition-colors cursor-pointer"
+                        className="flex items-center justify-between hover:bg-gray-50 px-1.5 py-1 rounded transition-colors"
                     >
                         <div className="flex items-center gap-2">
                             <span className={`flex items-center justify-center w-4 h-4 bg-${color}-100 text-${color}-600 rounded-full text-[10px] font-bold`}>
                                 {item.rank}
                             </span>
-                            <span className="text-xs text-gray-700 truncate" style={{maxWidth:'8vw'}}>{item.name || item.confirmation}</span>
+                            <span className="text-xs text-gray-700 truncate" style={{ maxWidth: '8vw' }}>{item.name || item.confirmation}</span>
                         </div>
                         <span className="text-xs font-medium text-gray-900 whitespace-nowrap ml-2">{item.revenue || item.amount}</span>
                     </div>
@@ -1059,7 +1074,11 @@ export default function Upsell() {
                                     value={selectedCategories}
                                     onChange={handleCategoryChange}
                                     onDeselect={handleCategoryDeselect}
-                                    dropdownStyle={{ maxHeight: 400, overflow: 'auto' }}
+                                    dropdownStyle={{
+                                        maxHeight: 300,
+                                        overflow: 'auto',
+                                        minHeight: 200
+                                    }}
                                     tagRender={(props) => (
                                         <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-green-50 text-green-800 border border-green-200">
                                             {props.label}
