@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Table, Tag, Card, Pagination, Input, message, Button, Space, Select, InputNumber, DatePicker, Tooltip, Row, Col, Modal } from "antd";
+import { Table, Tag, Card, Pagination, Input, message, Button, Space, Select, InputNumber, DatePicker, Tooltip, Row, Col, Modal, Divider } from "antd";
 import { SearchOutlined, UserOutlined, CalendarOutlined, EditOutlined, SaveOutlined, CloseOutlined, FilterOutlined } from "@ant-design/icons";
 import "../../../styles/base.css";
 import { useSession } from "next-auth/react";
@@ -90,11 +90,9 @@ export default function Upsell() {
     const fetchDashboardData = useCallback(async () => {
         setDashboardLoading(true);
         try {
-            // Build query parameters
             const queryParams = new URLSearchParams();
 
             if (dateRange && dateRange[0] && dateRange[1]) {
-                // Convert dayjs objects to ISO strings properly
                 queryParams.append('startDate', dateRange[0].toISOString());
                 queryParams.append('endDate', dateRange[1].toISOString());
             }
@@ -115,7 +113,7 @@ export default function Upsell() {
 
             const response = await fetch(url, {
                 headers: {
-                    Authorization: `Bearer ${data?.user.backendTokens.at}`,
+                    Authorization: `Bearer ${data?.user?.backendTokens?.at}`,
                     'Cache-Control': 'no-cache',
                 },
             });
@@ -134,34 +132,17 @@ export default function Upsell() {
         } finally {
             setDashboardLoading(false);
         }
-    }, [dateRange, selectedPackage, selectedStatus, companyData?.id, data?.user, Url]);
+    }, [dateRange, selectedPackage, selectedStatus, companyData?.id, data?.user?.backendTokens?.at, Url]);
 
-    useEffect(() => {
-        if (data?.user !== undefined && dataLoaded) {
-            fetchDashboardData();
-        }
-    }, [dateRange, selectedPackage, selectedStatus, data?.user, dataLoaded, fetchDashboardData]);
-
-    // Modified useEffect - only load once when component mounts
-    useEffect(() => {
-        if (data?.user !== undefined && !dataLoaded) {
-            fetchTransactions();
-            setDataLoaded(true); // Mark as loaded
-        }
-    }, [data?.user, dataLoaded]); // Add dataLoaded as dependency
-
-    // Fetch packages with caching mechanism
     useEffect(() => {
         const fetchPackages = async () => {
-            // Check if we already have packages data
             if (allPackages.length > 0) return;
 
             try {
-                // Add limit parameter to get all packages
                 const response = await fetch(`${Url}/api/v1/uploads/get-all-packages?limit=9999`, {
                     method: 'GET',
                     headers: {
-                        Authorization: `Bearer ${data?.user.backendTokens.at}`,
+                        Authorization: `Bearer ${data?.user?.backendTokens?.at}`,
                         'Cache-Control': 'no-cache'
                     },
                 });
@@ -174,10 +155,10 @@ export default function Upsell() {
             }
         };
 
-        if (data?.user !== undefined && allPackages.length === 0) {
+        if (data?.user?.backendTokens?.at && allPackages.length === 0) {
             fetchPackages();
         }
-    }, [data?.user, allPackages.length, Url]);
+    }, [data?.user?.backendTokens?.at, allPackages.length, Url]);
 
     // Packages for dropdown - only those without from/to categories
     const dropdownPackages = allPackages.filter(pkg => pkg?.roomUpgrade === false);
@@ -187,15 +168,15 @@ export default function Upsell() {
         setLoadingData(true);
         fetch(`${Url}/api/v1/uploads/get-al-upsell-transactions`, {
             headers: {
-                Authorization: `Bearer ${data?.user.backendTokens.at}`,
+                Authorization: `Bearer ${data?.user?.backendTokens?.at}`,
                 'Cache-Control': 'no-cache'
             },
         })
             .then(async (response) => {
                 const text = await response.text();
                 const json = JSON.parse(text);
-                const data = json.data || json;
-                setTransactions(data);
+                const responseData = json.data || json;
+                setTransactions(responseData);
                 setTotalItems(json.pagination?.totalCount || 0);
             })
             .catch((error) => {
@@ -205,7 +186,15 @@ export default function Upsell() {
             .finally(() => {
                 setLoadingData(false);
             });
-    }, [data, Url]); // Remove problematic dependencies
+    }, [data?.user?.backendTokens?.at, Url]);
+
+
+    useEffect(() => {
+        if (data?.user?.backendTokens?.at && !dataLoaded) {
+            fetchTransactions();
+            setDataLoaded(true);
+        }
+    }, [data?.user?.backendTokens?.at, dataLoaded, fetchTransactions]);
 
     const getSalesTypeColor = (type: string) => {
         switch (type) {
@@ -217,40 +206,40 @@ export default function Upsell() {
     };
 
     // New function to handle field updates
-const updateTransactionField = async (id: string, field: string, value: any) => {
-    try {
-        let requestBody;
-        if (field === 'bulk' && typeof value === 'object') {
-            requestBody = value;
-        } else {
-            requestBody = { [field]: value };
+    const updateTransactionField = async (id: string, field: string, value: any) => {
+        try {
+            let requestBody;
+            if (field === 'bulk' && typeof value === 'object') {
+                requestBody = value;
+            } else {
+                requestBody = { [field]: value };
+            }
+
+            const response = await fetch(`${Url}/api/v1/uploads/update-upsell/${id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${data?.user.backendTokens.at}`
+                },
+                body: JSON.stringify(requestBody),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.message || 'Failed to update transaction');
+            }
+
+            message.success('Transaction updated successfully');
+            fetchTransactions();
+            await fetchDashboardData();
+
+            return true;
+        } catch (error) {
+            console.error('Error updating transaction:', error);
+            message.error(`Failed to update transaction: ${error.message}`);
+            return false;
         }
-
-        const response = await fetch(`${Url}/api/v1/uploads/update-upsell/${id}`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${data?.user.backendTokens.at}`
-            },
-            body: JSON.stringify(requestBody),
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw new Error(errorData.message || 'Failed to update transaction');
-        }
-
-        message.success('Transaction updated successfully');
-        fetchTransactions();
-        await fetchDashboardData(); 
-        
-        return true;
-    } catch (error) {
-        console.error('Error updating transaction:', error);
-        message.error(`Failed to update transaction: ${error.message}`);
-        return false;
-    }
-};
+    };
 
     const handleExportToExcel = async () => {
         setExportLoading(true);
@@ -358,42 +347,42 @@ const updateTransactionField = async (id: string, field: string, value: any) => 
         });
     };
 
-const handleSave = async (record: any) => {
-    const updates = {};
+    const handleSave = async (record: any) => {
+        const updates = {};
 
-    if (editingData.confirmationNumber !== record.confirmationNumber) {
-        updates.confirmationNumber = editingData.confirmationNumber;
-    }
-    if (editingData.numberOfAdults !== record.numberOfAdults) {
-        updates.numberOfAdults = Number(editingData.numberOfAdults);
-    }
-    if (editingData.numberOfChildren !== record.numberOfChildren) {
-        updates.numberOfChildren = Number(editingData.numberOfChildren);
-    }
+        if (editingData.confirmationNumber !== record.confirmationNumber) {
+            updates.confirmationNumber = editingData.confirmationNumber;
+        }
+        if (editingData.numberOfAdults !== record.numberOfAdults) {
+            updates.numberOfAdults = Number(editingData.numberOfAdults);
+        }
+        if (editingData.numberOfChildren !== record.numberOfChildren) {
+            updates.numberOfChildren = Number(editingData.numberOfChildren);
+        }
 
-    const recordArrivalDate = record.arrivalDate ? dayjs(record.arrivalDate) : null;
-    const recordDepartureDate = record.departureDate ? dayjs(record.departureDate) : null;
+        const recordArrivalDate = record.arrivalDate ? dayjs(record.arrivalDate) : null;
+        const recordDepartureDate = record.departureDate ? dayjs(record.departureDate) : null;
 
-    if (editingData.arrivalDate && (!recordArrivalDate || !editingData.arrivalDate.isSame(recordArrivalDate, 'day'))) {
-        updates.arrivalDate = editingData.arrivalDate.toISOString();
-    }
-    if (editingData.departureDate && (!recordDepartureDate || !editingData.departureDate.isSame(recordDepartureDate, 'day'))) {
-        updates.departureDate = editingData.departureDate.toISOString();
-    }
+        if (editingData.arrivalDate && (!recordArrivalDate || !editingData.arrivalDate.isSame(recordArrivalDate, 'day'))) {
+            updates.arrivalDate = editingData.arrivalDate.toISOString();
+        }
+        if (editingData.departureDate && (!recordDepartureDate || !editingData.departureDate.isSame(recordDepartureDate, 'day'))) {
+            updates.departureDate = editingData.departureDate.toISOString();
+        }
 
-    if (Object.keys(updates).length > 0) {
-        const success = await updateTransactionField(record.id, 'bulk', updates);
-        if (success) {
+        if (Object.keys(updates).length > 0) {
+            const success = await updateTransactionField(record.id, 'bulk', updates);
+            if (success) {
+                setEditingRecord(null);
+                setEditingData({});
+                await fetchDashboardData();
+            }
+        } else {
+            message.info('No changes detected');
             setEditingRecord(null);
             setEditingData({});
-            await fetchDashboardData();
         }
-    } else {
-        message.info('No changes detected');
-        setEditingRecord(null);
-        setEditingData({});
-    }
-};
+    };
 
     const handleCancel = () => {
         setEditingRecord(null);
@@ -665,14 +654,15 @@ const handleSave = async (record: any) => {
                                         size="small"
                                         icon={<EditOutlined />}
                                         onClick={() => handleEdit(record)}
-                                        disabled={record?.approved === "APPROVED"}
+                                        disabled={record?.approved === "APPROVED" || (data?.user.Roles[0] === "User" && record?.soldByUser?.id !== data?.user.id)}
                                     />
                                 </Tooltip>
                                 <Tooltip title="Delete Transaction">
                                     <button
                                         title="Delete"
                                         onClick={() => handleDelete(record)}
-                                        className="text-gray-500 "
+                                        className="text-gray-500"
+                                        disabled={data?.user.Roles[0] === "User" ? true : false}
                                     >
                                         <MdDelete />
                                     </button>
@@ -686,78 +676,101 @@ const handleSave = async (record: any) => {
     ];
 
     const fetchTransactionsWithSearch = useCallback((searchValue: string = "") => {
-    setLoadingData(true);
-    const url = new URL(`${Url}/api/v1/uploads/get-al-upsell-transactions`);
-    
-    if (searchValue) {
-        url.searchParams.append('search', searchValue);
-    }
-    
-    fetch(url.toString(), {
-        headers: {
-            Authorization: `Bearer ${data?.user.backendTokens.at}`,
-            'Cache-Control': 'no-cache'
-        },
-    })
-        .then(async (response) => {
-            const text = await response.text();
-            const json = JSON.parse(text);
-            const data = json.data || json;
-            setTransactions(data);
-            setTotalItems(json.pagination?.totalCount || 0);
+        setLoadingData(true);
+        const url = new URL(`${Url}/api/v1/uploads/get-al-upsell-transactions`);
+
+        if (searchValue) {
+            url.searchParams.append('search', searchValue);
+        }
+
+        if (selectedPackage && Array.isArray(selectedPackage) && selectedPackage.length > 0) {
+            selectedPackage.forEach(id => url.searchParams.append('packageId', id.toString()));
+        }
+
+        if (selectedStatus) {
+            url.searchParams.append('approved', selectedStatus.toUpperCase());
+        }
+
+        if (dateRange && dateRange[0] && dateRange[1]) {
+            url.searchParams.append('startDate', dateRange[0].toISOString());
+            url.searchParams.append('endDate', dateRange[1].toISOString());
+        }
+
+        url.searchParams.append('page', currentPage.toString());
+        url.searchParams.append('limit', pageSize.toString());
+
+        fetch(url.toString(), {
+            headers: {
+                Authorization: `Bearer ${data?.user?.backendTokens?.at}`,
+                'Cache-Control': 'no-cache'
+            },
         })
-        .catch((error) => {
-            console.warn("Error fetching data:", error);
-            message.error("Failed to fetch transactions");
-        })
-        .finally(() => {
-            setLoadingData(false);
-        });
-}, [data, Url]);
+            .then(async (response) => {
+                const text = await response.text();
+                const json = JSON.parse(text);
+                const responseData = json.data || json;
+                setTransactions(responseData);
+                setTotalItems(json.pagination?.totalCount || responseData.length);
+            })
+            .catch((error) => {
+                console.warn("Error fetching data:", error);
+                message.error("Failed to fetch transactions");
+            })
+            .finally(() => {
+                setLoadingData(false);
+            });
+    }, [data?.user?.backendTokens?.at, Url, selectedPackage, selectedStatus, dateRange, currentPage, pageSize]);
 
-const debouncedSearch = useCallback((searchValue: string) => {
-    if (debounceRef.current) {
-        clearTimeout(debounceRef.current);
-    }
+    useEffect(() => {
+        if (data?.user?.backendTokens?.at && dataLoaded) {
+            fetchTransactionsWithSearch(searchTerm);
+        }
+    }, [selectedPackage, selectedStatus, dateRange, currentPage, data?.user?.backendTokens?.at, dataLoaded, fetchTransactionsWithSearch, searchTerm]);
 
-    debounceRef.current = setTimeout(() => {
-        // Send search to backend
-        fetchTransactionsWithSearch(searchValue);
-    }, 500);
-}, []);
+    const debouncedSearch = useCallback((searchValue: string) => {
+        if (debounceRef.current) {
+            clearTimeout(debounceRef.current);
+        }
 
-const searchTransactions = (e: any) => {
-    const searchValue = e.target.value.trim().toLowerCase();
-    setSearchTerm(searchValue);
-    setCurrentPage(1);
-    debouncedSearch(searchValue);
-};
+        debounceRef.current = setTimeout(() => {
+            fetchTransactionsWithSearch(searchValue);
+        }, 500);
+    }, [fetchTransactionsWithSearch]);
+
+    const searchTransactions = (e: any) => {
+        const searchValue = e.target.value.trim();
+        setSearchTerm(searchValue);
+        setCurrentPage(1);
+        debouncedSearch(searchValue);
+    };
 
     // Filter transactions based on search term
-const filteredTransactions = Array.isArray(transactions) ? transactions.filter((transaction: any) => {
-    // Only client-side filtering for ROOM_UPGRADE type
-    if (transaction.typeOfSales !== 'ROOM_UPGRADE') return false;
+    const filteredTransactions = Array.isArray(transactions) ? transactions.filter((transaction: any) => {
+        // Only client-side filtering for ROOM_UPGRADE type
+        if (transaction.typeOfSales !== 'ROOM_UPGRADE') return false;
 
-    // Package filter (client-side)
-    if (selectedPackage && Array.isArray(selectedPackage) && selectedPackage.length > 0) {
-        if (!selectedPackage.includes(transaction.package?.id)) return false;
-    }
+        // Package filter (client-side)
+        if (selectedPackage && Array.isArray(selectedPackage) && selectedPackage.length > 0) {
+            if (!selectedPackage.includes(transaction.package?.id)) return false;
+        }
 
-    // Status filter (client-side)
-    if (selectedStatus) {
-        if (transaction.approved?.toLowerCase() !== selectedStatus.toLowerCase()) return false;
-    }
+        // Status filter (client-side)
+        if (selectedStatus) {
+            if (transaction.approved?.toLowerCase() !== selectedStatus.toLowerCase()) return false;
+        }
 
-    // Date filter (client-side)
-    if (dateRange && dateRange[0] && dateRange[1]) {
-        const transactionDate = new Date(transaction.createdAt);
-        const startDate = new Date(dateRange[0].toISOString());
-        const endDate = new Date(dateRange[1].toISOString());
-        if (transactionDate < startDate || transactionDate > endDate) return false;
-    }
+        // Date filter (client-side)
+        if (dateRange && dateRange[0] && dateRange[1]) {
+            const transactionDate = new Date(transaction.createdAt);
+            const startDate = new Date(dateRange[0].toISOString());
+            const endDate = new Date(dateRange[1].toISOString());
+            if (transactionDate < startDate || transactionDate > endDate) return false;
+        }
 
-    return true;
-}) : [];
+        return true;
+    }) : [];
+
+    console.info("fffff", filteredTransactions);
 
     // Function to send filtered package data
     const sendPackageData = (categoryId = null) => {
@@ -777,15 +790,15 @@ const filteredTransactions = Array.isArray(transactions) ? transactions.filter((
             );
         });
 
-        // Then filter out selected packages
-        filteredPackages = filteredPackages.filter(pkg =>
-            !selectedPackages.some(selected => selected.id === pkg.id)
-        );
-
-        console.info("categoryIdcategoryId", categoryId);
+        if (selectedPackages && selectedPackages?.length > 0) {
+            // Then filter out selected packages
+            filteredPackages = filteredPackages.filter(pkg =>
+                !selectedPackages.some(selected => selected.id === pkg.id)
+            );
+        }
 
         // Finally filter by category if provided
-        if (categoryId) {
+        if (categoryId && categoryId?.length > 0) {
             filteredPackages = filteredPackages.filter(pkg =>
                 pkg.from_category_id === categoryId
             );
@@ -834,15 +847,15 @@ const filteredTransactions = Array.isArray(transactions) ? transactions.filter((
 
         fetch(`${Url}/api/v1/uploads/get-all-categories`, {
             headers: {
-                Authorization: `Bearer ${data?.user.backendTokens.at}`,
+                Authorization: `Bearer ${data?.user?.backendTokens?.at}`,
                 'Cache-Control': 'no-cache'
             },
         })
             .then(async (response) => {
                 const text = await response.text();
                 const json = JSON.parse(text);
-                const data = json.data || json;
-                setCategoryData(data);
+                const responseData = json.data || json;
+                setCategoryData(responseData);
             })
             .catch((error) => {
                 console.warn("Error fetching data:", error);
@@ -850,13 +863,13 @@ const filteredTransactions = Array.isArray(transactions) ? transactions.filter((
             .finally(() => {
                 setLoadingData(false);
             });
-    }, [data, Url, categoryData.length]);
+    }, [data?.user?.backendTokens?.at, Url, categoryData.length]);
 
     useEffect(() => {
-        if (data?.user !== undefined && categoryData.length === 0) {
+        if (data?.user?.backendTokens?.at && categoryData.length === 0) {
             fetchCategories();
         }
-    }, [data?.user, fetchCategories]);
+    }, [data?.user?.backendTokens?.at, categoryData.length, fetchCategories]);
 
     const handleCategoryChange = (value) => {
         setSelectedCategories(value);
@@ -914,7 +927,7 @@ const filteredTransactions = Array.isArray(transactions) ? transactions.filter((
                 {/* Title and View All - Compact */}
                 <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-1.5">
-                        <div className={`w-1.5 h-1.5 rounded-full bg-${color}-500`}></div>
+                        {/* <div className={`w-1.5 h-1.5 rounded-full bg-${color}-500`}></div> */}
                         <h3 className="text-xs font-semibold text-gray-700 m-0">{title}</h3>
                     </div>
                     <div>
@@ -935,7 +948,7 @@ const filteredTransactions = Array.isArray(transactions) ? transactions.filter((
                         className="flex items-center justify-between hover:bg-gray-50 px-1.5 py-1 rounded transition-colors"
                     >
                         <div className="flex items-center gap-2">
-                            <span className={`flex items-center justify-center w-4 h-4 bg-${color}-100 text-${color}-600 rounded-full text-[10px] font-bold`}>
+                            <span className={`flex items-center justify-center w-4 h-4 text-${color}-600 text-[10px] font-bold`}>
                                 {item.rank}
                             </span>
                             <span className="text-xs text-gray-700 truncate" style={{ maxWidth: '8vw' }}>{item.name || item.confirmation}</span>
@@ -1200,9 +1213,9 @@ const filteredTransactions = Array.isArray(transactions) ? transactions.filter((
                         <RankingCard
                             title="Pending Approvals"
                             data={dashboardData.pendingApprovals}
-                            color="orange"
+                            color="red"
                             statValue={dashboardData.stats.pendingCount}
-                            statLabel="Awaiting Approval"
+                            statLabel="Pending Approval"
                         />
                     </Col>
                 </Row>
@@ -1265,10 +1278,15 @@ const filteredTransactions = Array.isArray(transactions) ? transactions.filter((
                 title={selectedModalTitle || "Details"}
                 closable={{ 'aria-label': 'Custom Close Button' }}
                 open={detailModal}
-                onOk={handleOk}
+                footer={false}
+                // onOk={handleOk}
                 onCancel={handleCancelModal}
             >
                 {renderDetailContent()}
+                <Divider />
+                <div className="flex justify-center align-items-center">
+                    <Button onClick={handleOk} className="customBtn">Close</Button>
+                </div>
             </Modal>
         </div>
     );

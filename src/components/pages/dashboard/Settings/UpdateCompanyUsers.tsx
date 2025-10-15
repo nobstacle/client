@@ -272,7 +272,7 @@ export const UpdateCompanyUsers: React.FC = () => {
             options={Object.keys(GetUserResRolesItem).map((role) => ({
               value: role,
               label:
-                role === "Admin" ? "Admin" : role === "User" ? "Guest" : "User",
+                role === "Admin" ? "Admin" : role === "User" ? "Client" : "User",
             }))}
             style={{ width: "100%" }}
           />
@@ -319,6 +319,7 @@ export const UpdateCompanyUsers: React.FC = () => {
               icon={<PlusOutlined />}
               onClick={handleAddUser}
               size="large"
+              className="customBtn"
             >
               Add User
             </Button>
@@ -397,7 +398,7 @@ export const UpdateCompanyUsers: React.FC = () => {
                 loading={isLoading}
                 disabled={isLoading}
                 block
-                className="h-10 font-semibold"
+                className="h-10 font-semibold customBtn"
               >
                 Save Changes
               </Button>
@@ -462,7 +463,7 @@ const CompanyUserItem: React.FC<{
                 key={role}
                 value={role}
                 label={
-                  role === "Admin" ? "Admin" : role === "User" ? "Guest" : "User"
+                  role === "Admin" ? "Admin" : role === "User" ? "Client" : "User"
                 }
               />
             ))}

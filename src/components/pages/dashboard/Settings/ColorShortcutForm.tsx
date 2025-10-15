@@ -343,6 +343,7 @@ export const ColorShortcutForm: React.FC = () => {
                 icon={<PlusOutlined />}
                 onClick={handleAddLangaugeShortcut}
                 style={{ height: 40, width: "100%" }}
+                className="customBtn"
               >
                 Add
               </Button>
@@ -404,6 +405,7 @@ export const ColorShortcutForm: React.FC = () => {
           loading={createShortcutMany.isPending}
           disabled={createShortcutMany.isPending}
           onClick={handleSubmit}
+          className="customBtn"
         >
           Save
         </Button>

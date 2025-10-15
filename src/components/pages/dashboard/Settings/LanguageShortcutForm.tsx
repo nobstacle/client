@@ -163,6 +163,7 @@ export const LanguageShortcutForm: React.FC = () => {
                 icon={<PlusOutlined />}
                 onClick={handleAddLanguageShortcut}
                 style={{ width: "44px" }}
+                className="customBtn"
               />
             </Space.Compact>
           </Form.Item>
@@ -211,6 +212,7 @@ export const LanguageShortcutForm: React.FC = () => {
               block
               loading={createShortcutMany.isPending}
               disabled={currLanguages.length === 0 || createShortcutMany.isPending}
+              className="customBtn"
             >
               Save Language Shortcuts
             </Button>

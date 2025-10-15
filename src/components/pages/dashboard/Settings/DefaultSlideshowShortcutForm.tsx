@@ -186,7 +186,7 @@ export const DefaultSlideshowShortcutForm: React.FC = () => {
               disabled={isLoading}
               block
               onClick={handleSubmit(onSubmit)}
-              className="h-10 font-semibold"
+              className="h-10 font-semibold customBtn"
             >
               Save
             </Button>

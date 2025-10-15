@@ -18,8 +18,8 @@ export const metadata: Metadata = {
   themeColor: "#000000",
   viewport: "width=device-width, initial-scale=1.0",
   icons: {
-    icon: "/img-192.png",
-    apple: "/img-192.png",
+    icon: "/Icon_Light.png",
+    apple: "/Icon_Light.png",
   },
   appleWebApp: {
     capable: true,
@@ -41,9 +41,11 @@ function RootLayout({ children, session }: RootLayourPropsI) {
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="Nobstacle" />
-        <link rel="apple-touch-icon" href="/img-192.png" />
+        <link rel="apple-touch-icon" href="/Icon_Light.png" />
+        <link rel="icon" type="image/svg+xml" href="/Icon_Light.png" />
         <meta httpEquiv="Permissions-Policy" content="camera=*, microphone=*, geolocation=*" />
       </head>
+
       <body className={inter.className}>
         <ReactQueryContextProvider>
           <SessionContextProvider session={session}>

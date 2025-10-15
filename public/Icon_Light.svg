@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Layer_1" xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:x="http://ns.adobe.com/Extensibility/1.0/" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 1920 1080">
+  <!-- Generator: Adobe Illustrator 29.8.2, SVG Export Plug-In . SVG Version: 2.1.1 Build 3)  -->
+  <defs>
+    <style>
+      .st0 {
+        fill: url(#linear-gradient1);
+      }
+
+      .st1 {
+        fill: none;
+      }
+
+      .st2 {
+        fill: #fff;
+        isolation: isolate;
+        opacity: 0;
+      }
+
+      .st3 {
+        fill: url(#linear-gradient3);
+      }
+
+      .st3, .st4, .st5 {
+        fill-rule: evenodd;
+      }
+
+      .st4 {
+        fill: url(#linear-gradient);
+      }
+
+      .st6 {
+        clip-path: url(#clippath);
+      }
+
+      .st5 {
+        fill: url(#linear-gradient2);
+      }
+    </style>
+    <linearGradient id="linear-gradient" x1="725.7" y1="376.8" x2="1221.3" y2="376.8" gradientTransform="translate(0 158.7)" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#73cbd4"/>
+      <stop offset="1" stop-color="#728ac5"/>
+    </linearGradient>
+    <clipPath id="clippath">
+      <path class="st1" d="M925.6,378.6c59.1,0,110.5,32.6,137.3,80.9h42c64.1,0,116.5,52.4,116.5,116.5s-52.4,116.5-116.5,116.5h-301.4c-42.8,0-77.7-35-77.7-77.7s17.7-56.8,43.2-69.6c-.2-3.2-.3-6.4-.3-9.6,0-86.7,70.3-156.9,156.9-156.9h0Z"/>
+    </clipPath>
+    <linearGradient id="linear-gradient1" x1="725.7" y1="376.8" x2="1221.3" y2="376.8" gradientTransform="translate(0 158.7)" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#73cbd4"/>
+      <stop offset="1" stop-color="#728ac5"/>
+    </linearGradient>
+    <linearGradient id="linear-gradient2" x1="803.2" y1="417.4" x2="1221.1" y2="417.4" gradientTransform="translate(0 158.7)" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#fdc043"/>
+      <stop offset="1" stop-color="#ed367c"/>
+    </linearGradient>
+    <linearGradient id="linear-gradient3" x1="725.5" y1="455" x2="1104.6" y2="455" gradientTransform="translate(0 158.7)" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#a375b2"/>
+      <stop offset="1" stop-color="#684fa0"/>
+    </linearGradient>
+  </defs>
+  <g>
+    <path id="SVGID" class="st4" d="M925.6,378.6c59.1,0,110.5,32.6,137.3,80.9h42c64.1,0,116.5,52.4,116.5,116.5h0c0,64.1-52.4,116.5-116.5,116.5h-301.4c-42.8,0-77.7-35-77.7-77.7h0c0-30.4,17.7-56.8,43.2-69.6-.2-3.2-.3-6.4-.3-9.6,0-86.7,70.3-156.9,156.9-156.9h0Z"/>
+    <g class="st6">
+      <rect id="SVGID1" class="st0" x="725.7" y="378.6" width="495.6" height="313.9"/>
+    </g>
+  </g>
+  <path id="SVGID2" class="st5" d="M1062.7,459.7c-176.3,0-143.1,196.9-259.4,233h301.4c64.1,0,116.5-52.4,116.5-116.5s-52.4-116.5-116.5-116.5h-42Z"/>
+  <path id="SVGID3" class="st3" d="M1104.6,692.7h-301.4c-42.8,0-77.7-35-77.7-77.7h0c0-30.4,17.7-56.8,43.2-69.6,101.6-58.7,194.1,147.3,335.9,147.3h0Z"/>
+  <path class="st2" d="M1096.4,458.9s-34.1,162.1-203.6,185.3c0,0-81.3,0-96.3,48.8l304.7-.4s117,4.5,121.1-123.1c0,0-4.1-108.9-126-110.5h0Z"/>
+</svg>

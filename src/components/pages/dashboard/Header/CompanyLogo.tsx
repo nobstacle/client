@@ -46,12 +46,13 @@ export const CompanyLogo: React.FC = () => {
             );
           }
         }}
-        src="/nobstacle-logo.png"
+        src="/Logo_Dark.svg"
         style={{
           cursor: template ? "pointer" : "default",
           width: "100%",
           height: "100%",
-          objectFit: "contain",
+          objectFit: "cover",
+          transform: "scale(1.3)",
         }}
       />
     );
