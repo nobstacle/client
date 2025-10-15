@@ -770,8 +770,6 @@ export default function Upsell() {
         return true;
     }) : [];
 
-    console.info("fffff", filteredTransactions);
-
     // Function to send filtered package data
     const sendPackageData = (categoryId = null) => {
         const selectedLang = params.get("lang") || companyData?.defaultLangCode || "en";
@@ -870,6 +868,12 @@ export default function Upsell() {
             fetchCategories();
         }
     }, [data?.user?.backendTokens?.at, categoryData.length, fetchCategories]);
+
+    useEffect(() => {
+        if (data?.user?.backendTokens?.at && dataLoaded) {
+            fetchDashboardData();
+        }
+    }, [data?.user?.backendTokens?.at, dataLoaded, fetchDashboardData]);
 
     const handleCategoryChange = (value) => {
         setSelectedCategories(value);
