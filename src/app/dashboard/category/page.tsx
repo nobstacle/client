@@ -7,7 +7,6 @@ import { FaTrash, FaEdit, FaEye, FaSearch, FaTimes } from "react-icons/fa";
 import Swal from "sweetalert2";
 import "../../../styles/base.css";
 import Modal from "../../../components/Modal";
-// import useTemplateStore from "../../../lib/zustand/store/templateStore";
 import { useSession } from "next-auth/react";
 import { PlusIcon } from "../../../components/icons/PlusIcon";
 import CreateCategoryForm from "../../../components/pages/dashboard/CreateCategoryForm";
@@ -31,35 +30,48 @@ export default function Category() {
     const debounceRef = useRef();
     const [isOpen, setIsOpen] = useState(false);
     const [editCategoryData, setEditCategoryData] = useState([]);
-    const [originalCategoryData, setOriginalCategories] = useState([]);
     const [totalItems, setTotalItems] = useState(0);
+    const [searchText, setSearchText] = useState('');
     const deleteCategory = useCategoryControllerDeleteCategory();
-
-    const handleFilterChange = (key, value) => {
-        // Add your filter logic here
-    };
 
     const fetchCategories = useCallback(() => {
         setLoadingData(true);
 
-        fetch(`${Url}/api/v1/uploads/get-all-categories`, {
+        // Build query parameters for server-side pagination
+        const params = new URLSearchParams({
+            page: currentPage.toString(),
+            limit: pageSize.toString(),
+        });
+
+        // Add search parameter if exists
+        if (searchText) {
+            params.append('search', searchText);
+        }
+
+        fetch(`${Url}/api/v1/uploads/get-all-categories?${params.toString()}`, {
             headers: { Authorization: `Bearer ${data?.user.backendTokens.at}` },
         })
             .then(async (response) => {
                 const text = await response.text();
                 const json = JSON.parse(text);
-                const data = json.data || json;
-                setOriginalCategories(data); // Store original data
-                setCategoryData(data);
-                setTotalItems(json.pagination?.totalCount || data.length);
+
+                // Handle both response formats
+                if (json.data) {
+                    setCategoryData(json.data);
+                    setTotalItems(json.total || json.pagination?.totalCount || json.data.length);
+                } else {
+                    setCategoryData(json);
+                    setTotalItems(json.length);
+                }
             })
             .catch((error) => {
                 console.warn("Error fetching data:", error);
+                message.error("Failed to fetch categories");
             })
             .finally(() => {
                 setLoadingData(false);
             });
-    }, [data, Url, setCategoryData]);
+    }, [data, Url, currentPage, pageSize, searchText]);
 
     useEffect(() => {
         if (data?.user !== undefined) {
@@ -154,6 +166,20 @@ export default function Category() {
         setPageSize(size);
     }
 
+    // Debounced search handler
+    const handleSearchChange = (e) => {
+        const value = e.target.value;
+        setSearchText(value);
+
+        if (debounceRef.current) {
+            clearTimeout(debounceRef.current);
+        }
+
+        debounceRef.current = setTimeout(() => {
+            setCurrentPage(1);
+        }, 500);
+    };
+
     const handleCreateCategory = () => {
         setModalMode('create');
         setEditCategoryData([]);
@@ -179,8 +205,6 @@ export default function Category() {
     }
 
     const HandlePackageDelete = (record) => {
-        console.info("Delete", record);
-
         Swal.fire({
             title: 'Are you sure?',
             text: `You are about to delete the category "${record.name}". This action cannot be undone!`,
@@ -248,8 +272,8 @@ export default function Category() {
                                         placeholder="Search categories by name, code, description, benefits, tags..."
                                         className="rounded-md"
                                         prefix={<FaSearch className="text-gray-400" />}
-                                        //   value={searchFilters.searchText}
-                                        onChange={(e) => handleFilterChange('searchText', e.target.value)}
+                                        value={searchText}
+                                        onChange={handleSearchChange}
                                         allowClear
                                     />
                                 </div>
@@ -271,13 +295,13 @@ export default function Category() {
                         <div className="flex justify-center mt-6">
                             <Pagination
                                 current={currentPage}
-                                total={categoryData?.length || 0}
+                                total={totalItems}
                                 pageSize={pageSize}
                                 onChange={handlePageChange}
                                 showSizeChanger
                                 pageSizeOptions={["10", "20", "50", "100"]}
                                 showTotal={(total, range) =>
-                                    `${range[0]}-${range[1]} of ${total} packages`
+                                    `${range[0]}-${range[1]} of ${total} categories`
                                 }
                             />
                         </div>

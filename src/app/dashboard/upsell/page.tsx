@@ -843,7 +843,7 @@ export default function Upsell() {
 
         setLoadingData(true);
 
-        fetch(`${Url}/api/v1/uploads/get-all-categories`, {
+        fetch(`${Url}/api/v1/uploads/get-all-categories?fetchAll=true&limit=100`, {
             headers: {
                 Authorization: `Bearer ${data?.user?.backendTokens?.at}`,
                 'Cache-Control': 'no-cache'
@@ -1108,7 +1108,7 @@ export default function Upsell() {
                                         </span>
                                     )}
                                 >
-                                    {[...categoryData]
+                                    {(Array.isArray(categoryData) ? [...categoryData] : [])
                                         .sort((a, b) => (a.priceLevel || 0) - (b.priceLevel || 0))
                                         .map((category) => (
                                             <Option value={category.id} key={category.id}>
