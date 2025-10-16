@@ -188,6 +188,10 @@ export default function Upsell() {
             });
     }, [data?.user?.backendTokens?.at, Url]);
 
+    const refreshTransactions = async () => {
+        await fetchTransactions();
+        await fetchDashboardData();
+    }
 
     useEffect(() => {
         if (data?.user?.backendTokens?.at && !dataLoaded) {
@@ -230,8 +234,12 @@ export default function Upsell() {
             }
 
             message.success('Transaction updated successfully');
-            fetchTransactions();
-            await fetchDashboardData();
+
+            // Refresh both transactions and dashboard data
+            await Promise.all([
+                fetchTransactionsWithSearch(searchTerm),
+                fetchDashboardData()
+            ]);
 
             return true;
         } catch (error) {
@@ -580,7 +588,7 @@ export default function Upsell() {
                     record={record}
                     token={data?.user.backendTokens.at}
                     isAdmin={isAdmin}
-                    onStatusUpdated={fetchTransactions}
+                    onStatusUpdated={refreshTransactions}
                 />
             ),
         },
@@ -661,10 +669,13 @@ export default function Upsell() {
                                     <button
                                         title="Delete"
                                         onClick={() => handleDelete(record)}
-                                        className="text-gray-500"
-                                        disabled={data?.user.Roles[0] === "Staff" ? true : false}
+                                        className={`transition-colors ${data?.user.Roles[0] === "Staff"
+                                            ? "text-gray-300 cursor-not-allowed"
+                                            : "text-gray-500 hover:text-red-600 cursor-pointer"
+                                            }`}
+                                        disabled={data?.user.Roles[0] === "Staff"}
                                     >
-                                        <MdDelete />
+                                        <MdDelete className={data?.user.Roles[0] === "Staff" ? "opacity-40" : ""} />
                                     </button>
                                 </Tooltip>
                             </>
@@ -771,6 +782,7 @@ export default function Upsell() {
     // }) : [];
 
     // Function to send filtered package data
+    // Function to send filtered package data
     const sendPackageData = (categoryId = null) => {
         const selectedLang = params.get("lang") || companyData?.defaultLangCode || "en";
 
@@ -795,11 +807,13 @@ export default function Upsell() {
             );
         }
 
-        // Finally filter by category if provided
         if (categoryId && categoryId !== null) {
-            filteredPackages = filteredPackages.filter(pkg =>
-                pkg.from_category_id === categoryId
-            );
+            filteredPackages = filteredPackages.filter(pkg => {
+                if (pkg.roomUpgrade === true) {
+                    return pkg.from_category_id === categoryId;
+                }
+                return true;
+            });
         }
 
         if (filteredPackages.length > 0) {
