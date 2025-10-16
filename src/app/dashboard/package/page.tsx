@@ -555,7 +555,7 @@ export default function Package() {
         {
             title: "Benefits",
             key: "packageBenefits",
-            width: 200,
+            width: 220,
             render: (_, record) => {
                 let benefits = getFirstAvailableValue(record.packageBenefits, []);
 
@@ -571,8 +571,30 @@ export default function Package() {
                 const allVariants = getAllLanguageVariants(record.packageBenefits);
                 const hasMultipleLanguages = allVariants.length > 1;
 
+                // Truncate long benefit text
+                const truncateBenefit = (text, maxLength = 20) => {
+                    if (text.length > maxLength) {
+                        return text.substring(0, maxLength) + '...';
+                    }
+                    return text;
+                };
+
                 return benefits?.length > 0 ? (
-                    <div className="relative">
+                    <div className="flex items-start gap-2">
+                        <div className="flex flex-wrap gap-1 flex-1 min-w-0">
+                            {benefits.slice(0, 2).map((benefit, index) => (
+                                <Tooltip key={index} title={benefit.length > 20 ? benefit : null}>
+                                    <Tag size="small" className="max-w-full overflow-hidden text-ellipsis whitespace-nowrap">
+                                        {truncateBenefit(benefit)}
+                                    </Tag>
+                                </Tooltip>
+                            ))}
+                            {benefits.length > 2 && (
+                                <Tooltip title={benefits.slice(2).join(', ')}>
+                                    <Tag size="small">+{benefits.length - 2}</Tag>
+                                </Tooltip>
+                            )}
+                        </div>
                         {hasMultipleLanguages && (
                             <Tooltip title={
                                 <div className="space-y-1">
@@ -583,17 +605,9 @@ export default function Package() {
                                     ))}
                                 </div>
                             }>
-                                <FaGlobe className="absolute top-0 right-0 text-blue-500 cursor-help" style={{ fontSize: '14px' }} />
+                                <FaGlobe className="text-blue-500 cursor-help flex-shrink-0" style={{ fontSize: '14px' }} />
                             </Tooltip>
                         )}
-                        <div className="flex flex-wrap gap-1 pr-5">
-                            {benefits.slice(0, 2).map((benefit, index) => (
-                                <Tag key={index} size="small">{benefit}</Tag>
-                            ))}
-                            {benefits.length > 2 && (
-                                <Tag size="small">+{benefits.length - 2}</Tag>
-                            )}
-                        </div>
                     </div>
                 ) : (
                     <span>-</span>
@@ -609,7 +623,7 @@ export default function Package() {
         {
             title: "Tags",
             key: "tags",
-            width: 200,
+            width: 220,
             render: (_, record) => {
                 let tags = getFirstAvailableValue(record.packageTags, []);
 
@@ -625,9 +639,31 @@ export default function Package() {
                 const allVariants = getAllLanguageVariants(record.packageTags);
                 const hasMultipleLanguages = allVariants.length > 1;
 
+                // Truncate long tag text
+                const truncateTag = (text, maxLength = 20) => {
+                    if (text.length > maxLength) {
+                        return text.substring(0, maxLength) + '...';
+                    }
+                    return text;
+                };
+
                 return (
                     tags?.length > 0 ? (
-                        <div className="relative">
+                        <div className="flex items-start gap-2">
+                            <div className="flex flex-wrap gap-1 flex-1 min-w-0">
+                                {tags.slice(0, 2).map((tag, index) => (
+                                    <Tooltip key={index} title={tag.length > 20 ? tag : null}>
+                                        <Tag size="small" className="max-w-full overflow-hidden text-ellipsis whitespace-nowrap">
+                                            {truncateTag(tag)}
+                                        </Tag>
+                                    </Tooltip>
+                                ))}
+                                {tags.length > 2 && (
+                                    <Tooltip title={tags.slice(2).join(', ')}>
+                                        <Tag size="small">+{tags.length - 2}</Tag>
+                                    </Tooltip>
+                                )}
+                            </div>
                             {hasMultipleLanguages && (
                                 <Tooltip title={
                                     <div className="space-y-1">
@@ -638,18 +674,9 @@ export default function Package() {
                                         ))}
                                     </div>
                                 }>
-                                    <FaGlobe className="absolute top-0 right-0 text-blue-500 cursor-help" style={{ fontSize: '14px' }} />
+                                    <FaGlobe className="text-blue-500 cursor-help flex-shrink-0" style={{ fontSize: '14px' }} />
                                 </Tooltip>
                             )}
-
-                            <div className="flex flex-wrap gap-1 pr-5">
-                                {tags.slice(0, 2).map((tag, index) => (
-                                    <Tag key={index} size="small">{tag}</Tag>
-                                ))}
-                                {tags.length > 2 && (
-                                    <Tag size="small">+{tags.length - 2}</Tag>
-                                )}
-                            </div>
                         </div>
                     ) : (
                         <span>-</span>

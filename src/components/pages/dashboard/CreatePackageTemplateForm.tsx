@@ -621,7 +621,7 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
 
   // Fetch categories
   React.useEffect(() => {
-    fetch(`${Url}/api/v1/uploads/get-all-categories`, {
+    fetch(`${Url}/api/v1/uploads/get-all-categories?fetchAll=true&limit=100`, {
       headers: { Authorization: `Bearer ${sessionData?.user.backendTokens.at}` },
     })
       .then(async (response) => {

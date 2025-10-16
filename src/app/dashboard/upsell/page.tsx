@@ -33,7 +33,7 @@ export default function Upsell() {
     const [editingRecord, setEditingRecord] = useState<string | null>(null);
     const [editingData, setEditingData] = useState<any>({});
     const [categoryData, setCategoryData] = useState([]);
-    const [selectedCategories, setSelectedCategories] = useState([]);
+    const [selectedCategories, setSelectedCategories] = useState(null);
     const [selectedPackages, setSelectedPackages] = useState([]);
     const [allPackages, setAllPackages] = useState([]);
     const [dataLoaded, setDataLoaded] = useState(false);
@@ -654,7 +654,7 @@ export default function Upsell() {
                                         size="small"
                                         icon={<EditOutlined />}
                                         onClick={() => handleEdit(record)}
-                                        disabled={record?.approved === "APPROVED" || (data?.user.Roles[0] === "User" && record?.soldByUser?.id !== data?.user.id)}
+                                        disabled={record?.approved === "APPROVED" || (data?.user.Roles[0] === "Staff" && record?.soldByUser?.id !== data?.user.id)}
                                     />
                                 </Tooltip>
                                 <Tooltip title="Delete Transaction">
@@ -662,7 +662,7 @@ export default function Upsell() {
                                         title="Delete"
                                         onClick={() => handleDelete(record)}
                                         className="text-gray-500"
-                                        disabled={data?.user.Roles[0] === "User" ? true : false}
+                                        disabled={data?.user.Roles[0] === "Staff" ? true : false}
                                     >
                                         <MdDelete />
                                     </button>
@@ -745,30 +745,30 @@ export default function Upsell() {
     };
 
     // Filter transactions based on search term
-    const filteredTransactions = Array.isArray(transactions) ? transactions.filter((transaction: any) => {
-        // Only client-side filtering for ROOM_UPGRADE type
-        if (transaction.typeOfSales !== 'ROOM_UPGRADE') return false;
+    // const filteredTransactions = Array.isArray(transactions) ? transactions.filter((transaction: any) => {
+    //     // Only client-side filtering for ROOM_UPGRADE type
+    //     if (transaction.typeOfSales !== 'ROOM_UPGRADE') return false;
 
-        // Package filter (client-side)
-        if (selectedPackage && Array.isArray(selectedPackage) && selectedPackage.length > 0) {
-            if (!selectedPackage.includes(transaction.package?.id)) return false;
-        }
+    //     // Package filter (client-side)
+    //     if (selectedPackage && Array.isArray(selectedPackage) && selectedPackage.length > 0) {
+    //         if (!selectedPackage.includes(transaction.package?.id)) return false;
+    //     }
 
-        // Status filter (client-side)
-        if (selectedStatus) {
-            if (transaction.approved?.toLowerCase() !== selectedStatus.toLowerCase()) return false;
-        }
+    //     // Status filter (client-side)
+    //     if (selectedStatus) {
+    //         if (transaction.approved?.toLowerCase() !== selectedStatus.toLowerCase()) return false;
+    //     }
 
-        // Date filter (client-side)
-        if (dateRange && dateRange[0] && dateRange[1]) {
-            const transactionDate = new Date(transaction.createdAt);
-            const startDate = new Date(dateRange[0].toISOString());
-            const endDate = new Date(dateRange[1].toISOString());
-            if (transactionDate < startDate || transactionDate > endDate) return false;
-        }
+    //     // Date filter (client-side)
+    //     if (dateRange && dateRange[0] && dateRange[1]) {
+    //         const transactionDate = new Date(transaction.createdAt);
+    //         const startDate = new Date(dateRange[0].toISOString());
+    //         const endDate = new Date(dateRange[1].toISOString());
+    //         if (transactionDate < startDate || transactionDate > endDate) return false;
+    //     }
 
-        return true;
-    }) : [];
+    //     return true;
+    // }) : [];
 
     // Function to send filtered package data
     const sendPackageData = (categoryId = null) => {
@@ -796,7 +796,7 @@ export default function Upsell() {
         }
 
         // Finally filter by category if provided
-        if (categoryId && categoryId?.length > 0) {
+        if (categoryId && categoryId !== null) {
             filteredPackages = filteredPackages.filter(pkg =>
                 pkg.from_category_id === categoryId
             );
@@ -825,7 +825,7 @@ export default function Upsell() {
     const handlePackageSend = () => {
         setLoadingData(true);
 
-        const categoryId = selectedCategories.length > 0 ? selectedCategories[0] : selectedCategories;
+        const categoryId = selectedCategories !== null ? selectedCategories : null;
 
         try {
             sendPackageData(categoryId);
@@ -1170,6 +1170,7 @@ export default function Upsell() {
                                     <Option value="pending">Pending</Option>
                                     <Option value="approved">Approved</Option>
                                     <Option value="rejected">Rejected</Option>
+                                    <Option value="cancelled">Cancelled</Option>
                                 </Select>
                                 <RangePicker
                                     value={dateRange}
@@ -1248,7 +1249,7 @@ export default function Upsell() {
                         <Table
                             rowKey="id"
                             columns={columns}
-                            dataSource={filteredTransactions}
+                            dataSource={transactions}
                             pagination={false}
                             loading={loadingData}
                             scroll={{ x: 1600 }}
