@@ -62,6 +62,7 @@ function RootLayout({ children, session }: RootLayourPropsI) {
               pauseOnHover
               theme="colored"
               transition={Bounce}
+              style={{ position: 'fixed' }}
             />
           </SessionContextProvider>
         </ReactQueryContextProvider>

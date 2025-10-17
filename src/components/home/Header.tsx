@@ -4,10 +4,14 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { signIn } from "next-auth/react";
+import SignInModal from "./SignIn";
+import {Button} from "antd";
 
 export default function Header() {
   const [scrolled, setScrolled] = useState(false);
   const [navVisible, setNavVisible] = useState(false);
+ const [signInOpen, setSignInOpen] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
@@ -19,7 +23,15 @@ export default function Header() {
 
   const closeNav = () => setNavVisible(false);
 
+   const handleSignIn = async () => {
+    await signIn("credentials", { 
+      redirect: true, 
+      callbackUrl: "/" 
+    });
+  };
+
   return (
+    <>
     <header className={`site-header ${scrolled ? 'scrolled' : ''}`}>
       <div className="container header-container">
         <Link href="/" className="logo" aria-label="Nobstacle homepage">
@@ -50,7 +62,7 @@ export default function Header() {
         </nav>
 
         <div className="nav-actions">
-          <a href="#" className="signin-link">Sign In</a>
+          <Button className="signin-link" onClick={() => setSignInOpen(true)} >Sign In</Button>
           <a href="#contact" className="cta-button-header">Book a Demo</a>
           <button 
             className="mobile-nav-toggle" 
@@ -64,5 +76,7 @@ export default function Header() {
         </div>
       </div>
     </header>
+     <SignInModal isOpen={signInOpen} onClose={() => setSignInOpen(false)} />
+     </>
   );
 }

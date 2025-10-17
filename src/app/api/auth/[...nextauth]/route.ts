@@ -75,7 +75,9 @@ export const authOptions: AuthOptions = {
     },
   },
   secret: "asdfgh1234",
-  pages: { signOut: "/" },
+  pages: {
+    signOut: "/",
+  },
 };
 
 const handler = NextAuth(authOptions);
