@@ -1,4 +1,5 @@
-// components/Footer.tsx
+import { FaTwitter, FaLinkedin, FaFacebook } from 'react-icons/fa';
+
 interface FooterProps {
   onPrivacyClick: () => void;
   onTermsClick: () => void;
@@ -31,9 +32,9 @@ export default function Footer({ onPrivacyClick, onTermsClick }: FooterProps) {
           <div className="footer-col">
             <h4>Follow Us</h4>
             <div className="social-links">
-              <a href="#" aria-label="Twitter"><ion-icon name="logo-twitter"></ion-icon></a>
-              <a href="#" aria-label="LinkedIn"><ion-icon name="logo-linkedin"></ion-icon></a>
-              <a href="#" aria-label="Facebook"><ion-icon name="logo-facebook"></ion-icon></a>
+              <a href="#" aria-label="Twitter"><FaTwitter /></a>
+              <a href="https://www.linkedin.com/company/109410250" target="_blank" aria-label="LinkedIn"><FaLinkedin /></a>
+              <a href="#" aria-label="Facebook"><FaFacebook /></a>
             </div>
           </div>
         </div>
