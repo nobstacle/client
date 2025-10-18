@@ -16,6 +16,7 @@ export default function Hero() {
     return () => clearInterval(interval);
   }, []);
 
+  
   return (
     <section className="hero" id="hero">
       <div className="container">
