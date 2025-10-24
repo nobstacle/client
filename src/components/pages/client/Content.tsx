@@ -354,6 +354,7 @@ const PackageCard = ({ packageData, handleClick, loadingButton, langCode = 'en' 
                         />
                       ) : (
                         <video
+                        autoPlay
                           muted
                           loop
                           playsInline

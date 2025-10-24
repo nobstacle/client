@@ -11,15 +11,6 @@ export default function Contact() {
       calendlyScript.async = true;
       document.body.appendChild(calendlyScript);
     }
-
-    // Load JotForm into the specific container
-    const jotformContainer = document.getElementById('jotform-container');
-    if (jotformContainer && !jotformContainer.querySelector('script')) {
-      const jotformScript = document.createElement('script');
-      jotformScript.src = 'https://form.jotform.com/jsform/252644934510052';
-      jotformScript.async = true;
-      jotformContainer.appendChild(jotformScript);
-    }
   }, []);
 
   return (
@@ -30,8 +21,24 @@ export default function Contact() {
           <p>Book a demo or drop us a line. We're excited to show you what Nobstacle can do for your business.</p>
         </div>
         <div className="contact-layout">
-          <div className="contact-form-wrapper animate-on-scroll embed-container" id="jotform-container">
-            {/* JotForm will be injected here */}
+          <div className="contact-form-wrapper animate-on-scroll embed-container">
+            {/* Use iframe embed instead of script injection */}
+            <iframe
+              id="JotFormIFrame-252644934510052"
+              title="Contact Form"
+              onLoad={() => window.parent.scrollTo(0,0)}
+              allowTransparency={true}
+              allow="geolocation; microphone; camera; fullscreen"
+              src="https://form.jotform.com/252644934510052"
+              frameBorder="0"
+              style={{
+                minWidth: '100%',
+                maxWidth: '100%',
+                height: '539px',
+                border: 'none',
+              }}
+              scrolling="no"
+            />
           </div>
           <div className="calendly-widget-wrapper animate-on-scroll embed-container" style={{ transitionDelay: '0.2s' }}>
             <div 

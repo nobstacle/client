@@ -19,6 +19,16 @@ export default function Home() {
   const [privacyModalOpen, setPrivacyModalOpen] = useState(false);
   const [termsModalOpen, setTermsModalOpen] = useState(false);
 
+  // Scroll to top on mount
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+    if ('scrollRestoration' in window.history) {
+      window.history.scrollRestoration = 'manual';
+    }
+  }, []);
+
   useEffect(() => {
     const animatedElements = document.querySelectorAll('.animate-on-scroll');
     const observer = new IntersectionObserver(
@@ -49,11 +59,11 @@ export default function Home() {
       <Pricing />
       <FAQ />
       <Contact />
-      <Footer 
+      <Footer
         onPrivacyClick={() => setPrivacyModalOpen(true)}
         onTermsClick={() => setTermsModalOpen(true)}
       />
-      
+
       <Modal
         isOpen={privacyModalOpen}
         onClose={() => setPrivacyModalOpen(false)}

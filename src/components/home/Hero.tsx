@@ -1,12 +1,13 @@
 // components/Hero.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function Hero() {
   const words = ['images', 'slideshows', 'documents', 'videos', 'forms', 'promotions', 'QR codes', 'websites', 'maps', 'text'];
   const [currentIndex, setCurrentIndex] = useState(0);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -14,6 +15,15 @@ export default function Hero() {
     }, 2500);
 
     return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    // Ensure video plays on mobile devices
+    if (videoRef.current) {
+      videoRef.current.play().catch(error => {
+        console.log('Video autoplay failed:', error);
+      });
+    }
   }, []);
 
   
@@ -24,7 +34,7 @@ export default function Hero() {
           <div className="hero-text-content">
             <h2 className="animated-headline">
               Display your{' '}
-              <span className="inline-block h-20 align-bottom relative overflow-hidden" style={{ minWidth: '280px' }}>
+              <span className="h-20 align-bottom relative overflow-hidden" style={{ minWidth: '280px', marginLeft:'8px' }}>
                 <AnimatePresence mode="wait">
                   <motion.span
                     key={currentIndex}
@@ -48,12 +58,14 @@ export default function Hero() {
           </div>
           <div className="hero-video-container">
             <video
+              ref={videoRef}
               src="/NobstacleVideo.mp4"
               poster="/NobstacleVideo.jpg"
               autoPlay
               muted
               loop
-              playsInPlace
+              playsInline
+              preload="metadata"
             />
           </div>
         </div>
