@@ -32,9 +32,9 @@ export default function Hero() {
       <div className="container">
         <div className="hero-grid">
           <div className="hero-text-content">
-            <h2 className="animated-headline">
+    <h2 className="animated-headline">
               Display your{' '}
-              <span className="inline-block align-bottom relative customAutoTextMobile" style={{ height: '1.2em', verticalAlign: 'bottom' }}>
+              <span className="inline-block relative customAutoTextMobile" style={{ minHeight: '1.2em', verticalAlign: 'bottom' }}>
                 <AnimatePresence mode="wait">
                   <motion.span
                     key={currentIndex}
@@ -42,7 +42,7 @@ export default function Hero() {
                     animate={{ y: 0, opacity: 1 }}
                     exit={{ y: '-100%', opacity: 0 }}
                     transition={{ duration: 0.6, ease: "easeInOut" }}
-                    className="absolute left-0 bottom-0 whitespace-nowrap"
+                    className="inline-block whitespace-nowrap"
                     style={{ color: '#3b5998' }}
                   >
                     {words[currentIndex]}
