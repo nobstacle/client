@@ -1231,3 +1231,11 @@ section {
 .Toastify {
   display: none;
 }
+
+@media screen and (max-width: 768px) {
+  .customAutoTextMobile {
+    width: 100%;
+    min-width: 100px;
+    max-width: 200px;
+  }
+}
