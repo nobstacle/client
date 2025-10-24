@@ -1085,3 +1085,8 @@ button {
   background: #203153 !important;
   border: none;
 }
+
+
+.customPaddingCards {
+  padding: 0.2rem 0.5rem;
+}

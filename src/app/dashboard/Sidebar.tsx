@@ -251,12 +251,12 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
             <li key={item.title} className="w-full" onClick={closeSidebar}>
                 <div
                     className={`
-                        flex items-center px-10 py-2.5 transition-colors duration-200 cursor-pointer
-                        ${isActive
+        flex items-center pl-10 pr-0 py-2.5 pr-2 transition-colors duration-200 cursor-pointer
+        ${isActive
                             ? 'bg-white/10 text-white border-l-4 border-white'
                             : 'text-white/80 hover:bg-white/5 hover:text-white border-l-4 border-transparent'
                         }
-                    `}
+    `}
                 >
                     <ClientLink
                         href={item.href}
@@ -277,7 +277,7 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
             <li key={item.title} className="w-full" onClick={closeSidebar}>
                 <div
                     className={`
-                        flex items-center px-10 py-2.5 transition-colors duration-200 cursor-pointer
+                        flex items-center pl-10 py-2.5 pr-2 transition-colors duration-200 cursor-pointer
                         ${isActive
                             ? 'bg-white/10 text-white border-l-4 border-white'
                             : 'text-white/80 hover:bg-white/5 hover:text-white border-l-4 border-transparent'

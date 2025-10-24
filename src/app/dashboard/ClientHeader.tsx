@@ -58,22 +58,6 @@ const ClientHeader = () => {
                         />
                     </div>
                 </nav>
-
-                {/* Second Line: Language Radio Buttons (Left) - Station Dropdown (Right) */}
-                {/* <div className="h-12 w-full px-4 py-2 border-b border-gray-100">
-                    <div className="flex h-full w-full items-center justify-between">
-                        <div className="flex-1">
-                            <div className="bg-white/10 backdrop-blur-sm rounded-lg px-3 py-1 inline-block">
-                                <LanguageShortcutPicker />
-                            </div>
-                        </div>
-                        <div className="ml-4">
-                            <div className="bg-white/10 backdrop-blur-sm rounded-lg px-3 py-1">
-                                <StationPicker />
-                            </div>
-                        </div>
-                    </div>
-                </div> */}
             </div>
 
             {/* Desktop Header */}

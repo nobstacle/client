@@ -34,22 +34,22 @@ export default function Hero() {
           <div className="hero-text-content">
             <h2 className="animated-headline">
               Display your{' '}
-              <span className="h-20 align-bottom relative overflow-hidden" style={{ minWidth: '280px', marginLeft:'8px' }}>
+              <span className="inline-block align-bottom relative overflow-hidden" style={{ height: '1.2em', minWidth: '280px', verticalAlign: 'bottom' }}>
                 <AnimatePresence mode="wait">
                   <motion.span
                     key={currentIndex}
-                    initial={{ y: 80, opacity: 0 }}
+                    initial={{ y: '100%', opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
-                    exit={{ y: -80, opacity: 0 }}
+                    exit={{ y: '-100%', opacity: 0 }}
                     transition={{ duration: 0.6, ease: "easeInOut" }}
-                    className="absolute left-0 bottom-0"
+                    className="absolute left-0 bottom-0 whitespace-nowrap"
                     style={{ color: '#3b5998' }}
                   >
                     {words[currentIndex]}
                   </motion.span>
                 </AnimatePresence>
               </span>
-              <br />on your customer screen<br />instantly
+              {' '}on your customer screen instantly
             </h2>
             <div className="hero-buttons">
               <a href="#contact" className="cta-button">Book a Demo</a>

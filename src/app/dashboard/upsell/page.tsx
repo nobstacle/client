@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Table, Tag, Card, Pagination, Input, message, Button, Space, Select, InputNumber, DatePicker, Tooltip, Row, Col, Modal, Divider } from "antd";
+import { Table, Tag, Card, Pagination, Input, message, Button, Space, Spin, Select, InputNumber, DatePicker, Tooltip, Row, Col, Modal, Divider } from "antd";
 import { SearchOutlined, UserOutlined, CalendarOutlined, EditOutlined, SaveOutlined, CloseOutlined, FilterOutlined } from "@ant-design/icons";
 import "../../../styles/base.css";
 import { useSession } from "next-auth/react";
@@ -18,7 +18,7 @@ import Swal from "sweetalert2";
 import { useMessageStore } from "../../../lib/zustand/store/messageStore";
 import { FaFileDownload } from "react-icons/fa";
 import dayjs from 'dayjs';
-import { IoExpandSharp } from "react-icons/io5";
+import { LeftOutlined, RightOutlined, TrophyOutlined, RiseOutlined } from "@ant-design/icons";
 
 const { RangePicker } = DatePicker;
 const { Option } = Select;
@@ -29,7 +29,6 @@ export default function Upsell() {
     const [currentPage, setCurrentPage] = useState(1);
     const [transactions, setTransactions] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
-    const [hasMore, setHasMore] = useState(true);
     const [editingRecord, setEditingRecord] = useState<string | null>(null);
     const [editingData, setEditingData] = useState<any>({});
     const [categoryData, setCategoryData] = useState([]);
@@ -54,6 +53,7 @@ export default function Upsell() {
     const [selectedStatus, setSelectedStatus] = useState(undefined);
     const [dashboardLoading, setDashboardLoading] = useState(false);
     const [dashboardData, setDashboardData] = useState({
+        personalPerformance: [],
         topSellingProducts: [],
         topSellers: [],
         topIncentives: [],
@@ -686,6 +686,179 @@ export default function Upsell() {
         }
     ];
 
+    const PersonalPerformanceCard = ({ data, loading }) => {
+        return (
+            <Card
+                className="hover:shadow-lg transition-shadow duration-300 h-full"
+                bodyStyle={{ padding: '16px' }}
+            >
+                <div className="text-center mb-3">
+                    <div className="flex items-center justify-center gap-2 mb-2">
+                        <TrophyOutlined className="text-yellow-500 text-xl" />
+                        <h3 className="text-sm font-semibold text-gray-700 m-0">Your Performance</h3>
+                    </div>
+                </div>
+
+                {loading ? (
+                    <div className="text-center py-8">
+                        <Spin />
+                    </div>
+                ) : (
+                    <div className="space-y-3">
+                        {/* Transactions */}
+                        <div className="flex items-center justify-between bg-blue-50 rounded-lg customPaddingCards">
+                            <span className="text-xs font-bold text-gray-600">Transactions</span>
+                            <span className="text-sm font-bold text-blue-600">
+                                {data?.transactionCount || 0}
+                            </span>
+                        </div>
+
+                        {/* Revenue */}
+                        <div className="flex items-center justify-between bg-green-50 rounded-lg customPaddingCards">
+                            <span className="text-xs font-bold text-gray-600">Total Revenue</span>
+                            <span className="text-sm font-bold text-green-600">
+                                {data?.totalRevenue || '$0.00'}
+                            </span>
+                        </div>
+
+                        {/* Incentive */}
+                        <div className="flex items-center justify-between bg-purple-50 rounded-lg customPaddingCards">
+                            <span className="text-xs font-bold text-gray-600">Total Incentive</span>
+                            <span className="text-sm font-bold text-purple-600">
+                                {data?.totalIncentive || '$0.00'}
+                            </span>
+                        </div>
+
+                        {/* Ranking */}
+                        <div className="flex items-center justify-between bg-yellow-50 rounded-lg customPaddingCards">
+                            <span className="text-xs font-bold text-gray-600">Your Ranking</span>
+                            <span className="text-sm font-bold text-yellow-600">
+                                #{data?.ranking || 'N/A'}
+                            </span>
+                        </div>
+
+                        {/* Top Product */}
+                        <div className="flex items-center justify-between bg-pink-50 rounded-lg customPaddingCards">
+                            <span className="text-xs font-bold text-gray-600">Top Product</span>
+                            <span className="text-xs font-medium text-pink-600 truncate max-w-[120px]">
+                                {data?.topProduct || 'N/A'}
+                            </span>
+                        </div>
+
+                        {/* Conversion Rate */}
+                        <div className="flex items-center justify-between bg-indigo-50 rounded-lg customPaddingCards">
+                            <span className="text-xs font-bold text-gray-600">Conversion Rate</span>
+                            <span className="text-sm font-bold text-indigo-600 flex items-center gap-1">
+                                {data?.conversionRate || '0%'}
+                                <RiseOutlined className="text-xs" />
+                            </span>
+                        </div>
+
+                        {/* Your Attempts */}
+                        <div className="flex items-center justify-between bg-indigo-50 rounded-lg customPaddingCards">
+                            <span className="text-xs font-bold text-gray-600">Your Attempts</span>
+                            <span className="text-sm font-bold text-indigo-600 flex items-center gap-1">
+                                {data?.attempts || '0'}
+                            </span>
+                        </div>
+                    </div>
+                )}
+            </Card>
+        );
+    };
+
+    const ScrollableCardsContainer = ({ children }) => {
+        const scrollContainerRef = useRef(null);
+        const [showLeftArrow, setShowLeftArrow] = useState(false);
+        const [showRightArrow, setShowRightArrow] = useState(true);
+
+        const checkScrollPosition = () => {
+            if (scrollContainerRef.current) {
+                const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current;
+                setShowLeftArrow(scrollLeft > 0);
+                setShowRightArrow(scrollLeft < scrollWidth - clientWidth - 10);
+            }
+        };
+
+        useEffect(() => {
+            checkScrollPosition();
+            window.addEventListener('resize', checkScrollPosition);
+            return () => window.removeEventListener('resize', checkScrollPosition);
+        }, []);
+
+        const scroll = (direction) => {
+            if (scrollContainerRef.current) {
+                const scrollAmount = 320; // Card width + gap
+                const newScrollLeft = direction === 'left'
+                    ? scrollContainerRef.current.scrollLeft - scrollAmount
+                    : scrollContainerRef.current.scrollLeft + scrollAmount;
+
+                scrollContainerRef.current.scrollTo({
+                    left: newScrollLeft,
+                    behavior: 'smooth'
+                });
+
+                setTimeout(checkScrollPosition, 300);
+            }
+        };
+
+        return (
+            <div className="relative">
+                {/* Left Arrow */}
+                {showLeftArrow && (
+                    <Button
+                        type="primary"
+                        shape="circle"
+                        icon={<LeftOutlined />}
+                        onClick={() => scroll('left')}
+                        className="absolute left-0 top-1/2 -translate-y-1/2 z-10 shadow-lg"
+                        style={{
+                            backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                            color: '#1890ff',
+                            border: '2px solid #1890ff'
+                        }}
+                    />
+                )}
+
+                {/* Scrollable Container */}
+                <div
+                    ref={scrollContainerRef}
+                    onScroll={checkScrollPosition}
+                    className="flex gap-4 overflow-x-auto scrollbar-hide scroll-smooth px-2"
+                    style={{
+                        scrollbarWidth: 'none',
+                        msOverflowStyle: 'none',
+                        WebkitOverflowScrolling: 'touch'
+                    }}
+                >
+                    {children}
+                </div>
+
+                {/* Right Arrow */}
+                {showRightArrow && (
+                    <Button
+                        type="primary"
+                        shape="circle"
+                        icon={<RightOutlined />}
+                        onClick={() => scroll('right')}
+                        className="absolute right-0 top-1/2 -translate-y-1/2 z-10 shadow-lg"
+                        style={{
+                            backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                            color: '#1890ff',
+                            border: '2px solid #1890ff'
+                        }}
+                    />
+                )}
+
+                <style jsx>{`
+            .scrollbar-hide::-webkit-scrollbar {
+              display: none;
+            }
+          `}</style>
+            </div>
+        );
+    };
+
     const fetchTransactionsWithSearch = useCallback((searchValue: string = "") => {
         setLoadingData(true);
         const url = new URL(`${Url}/api/v1/uploads/get-al-upsell-transactions`);
@@ -928,54 +1101,54 @@ export default function Upsell() {
     };
 
     // Updated RankingCard with stats in header - Optimized for 5 records
-    const RankingCard = ({ title, data, color, statValue, statLabel }) => (
-        <Card
-            className="hover:shadow-lg transition-shadow duration-300"
-            bodyStyle={{ padding: '12px' }}
-        >
-            <div className="mb-2">
-                {/* Stats Header - Compact */}
-                <div className="text-center mb-2 pb-2 border-b border-gray-200">
-                    <div className={`text-2xl font-bold text-${color}-600 mb-0.5`}>
-                        {statValue}
+    const RankingCard = ({ title, data, color, statValue, statLabel, onViewDetails }) => (
+        <div className="flex-shrink-0" style={{ minWidth: '300px' }}>
+            <Card
+                className="hover:shadow-lg transition-shadow duration-300 h-full"
+                bodyStyle={{ padding: '12px' }}
+            >
+                <div className="mb-2">
+                    <div className="text-center mb-2 pb-2 border-b border-gray-200">
+                        <div className={`text-2xl font-bold text-${color}-600 mb-0.5`}>
+                            {statValue}
+                        </div>
+                        <div className="text-xs text-gray-600">{statLabel}</div>
                     </div>
-                    <div className="text-xs text-gray-600">{statLabel}</div>
-                </div>
 
-                {/* Title and View All - Compact */}
-                <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-1.5">
-                        {/* <div className={`w-1.5 h-1.5 rounded-full bg-${color}-500`}></div> */}
+                    <div className="flex items-center justify-between mb-2">
                         <h3 className="text-xs font-semibold text-gray-700 m-0">{title}</h3>
-                    </div>
-                    <div>
                         <Button
-                            onClick={() => viewDetails(title)}
-                            className="customModalBtn text-xs h-6 px-2"
+                            onClick={() => onViewDetails(title)}
+                            className="text-xs h-6 px-2"
                             size="small"
                         >
-                            View<IoExpandSharp />
+                            View All
                         </Button>
                     </div>
                 </div>
-            </div>
-            <Space direction="vertical" size={2} className="w-full">
-                {data.slice(0, 5).map((item) => (
-                    <div
-                        key={item.rank}
-                        className="flex items-center justify-between hover:bg-gray-50 px-1.5 py-1 rounded transition-colors"
-                    >
-                        <div className="flex items-center gap-2">
-                            <span className={`flex items-center justify-center w-4 h-4 text-${color}-600 text-[10px] font-bold`}>
-                                {item.rank}
+
+                <div className="space-y-2">
+                    {data.slice(0, 5).map((item) => (
+                        <div
+                            key={item.rank}
+                            className="flex items-center justify-between hover:bg-gray-50 px-2 py-2 rounded transition-colors"
+                        >
+                            <div className="flex items-center gap-2">
+                                <span className={`flex items-center justify-center w-4 h-4 text-${color}-600 text-[10px] font-bold`}>
+                                    {item.rank}
+                                </span>
+                                <span className="text-xs text-gray-700 truncate" style={{ maxWidth: '150px' }}>
+                                    {item.name || item.confirmation}
+                                </span>
+                            </div>
+                            <span className="text-xs font-medium text-gray-900 whitespace-nowrap ml-2">
+                                {item.revenue || item.amount}
                             </span>
-                            <span className="text-xs text-gray-700 truncate" style={{ maxWidth: '8vw' }}>{item.name || item.confirmation}</span>
                         </div>
-                        <span className="text-xs font-medium text-gray-900 whitespace-nowrap ml-2">{item.revenue || item.amount}</span>
-                    </div>
-                ))}
-            </Space>
-        </Card>
+                    ))}
+                </div>
+            </Card>
+        </div>
     );
 
     const rangePresets = [
@@ -1200,7 +1373,7 @@ export default function Upsell() {
                 </Card>
 
                 {/* Top Performance Cards with Stats */}
-                <Row gutter={[16, 16]}>
+                {/* <Row gutter={[16, 16]}>
                     <Col xs={24} sm={12} lg={6}>
                         <RankingCard
                             title="Top Selling Products"
@@ -1237,7 +1410,53 @@ export default function Upsell() {
                             statLabel="Pending Approval"
                         />
                     </Col>
-                </Row>
+                </Row> */}
+                <ScrollableCardsContainer>
+                    {/* Your Performance Card - First */}
+                    <div className="flex-shrink-0" style={{ width: '300px' }}>
+                        <PersonalPerformanceCard
+                            data={dashboardData.personalPerformance}
+                            loading={false}
+                        />
+                    </div>
+
+                    {/* Other Ranking Cards */}
+                    <RankingCard
+                        title="Top Selling Products"
+                        data={dashboardData.topSellingProducts}
+                        color="blue"
+                        statValue={dashboardData.stats.totalRevenue}
+                        statLabel="Total Revenue"
+                        onViewDetails={viewDetails}
+                    />
+
+                    <RankingCard
+                        title="Top Sellers"
+                        data={dashboardData.topSellers}
+                        color="green"
+                        statValue={dashboardData.stats.totalTransactions}
+                        statLabel="Total Transactions"
+                        onViewDetails={viewDetails}
+                    />
+
+                    <RankingCard
+                        title="Top Incentive"
+                        data={dashboardData.topIncentives}
+                        color="purple"
+                        statValue={dashboardData.stats.totalIncentives}
+                        statLabel="Total Incentives"
+                        onViewDetails={viewDetails}
+                    />
+
+                    <RankingCard
+                        title="Pending Approvals"
+                        data={dashboardData.pendingApprovals}
+                        color="red"
+                        statValue={dashboardData.stats.pendingCount}
+                        statLabel="Pending Approval"
+                        onViewDetails={viewDetails}
+                    />
+                </ScrollableCardsContainer>
 
                 {/* Table Section */}
                 <Card className="shadow-sm customUpsellCard">
