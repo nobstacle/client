@@ -12,6 +12,7 @@ export interface CardPropsI {
   isRecevied?: boolean;
   isAdmin?: boolean;
   icon?: JSX.Element;
+  onQrCodeClick?: () => void;
 }
 
 export const Card: React.FC<React.PropsWithChildren<CardPropsI>> = ({

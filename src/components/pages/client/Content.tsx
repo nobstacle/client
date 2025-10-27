@@ -158,9 +158,9 @@ const PackageCard = ({ packageData, handleClick, loadingButton, langCode = 'en' 
   const [expanded, setExpanded] = useState(false);
   const [isModalOpen, setisIsModalOpen] = useState(false);
 
-  const formatPrice = (price) => {
-    return new Intl.NumberFormat().format(price / 100);
-  };
+  // const formatPrice = (price) => {
+  //   return new Intl.NumberFormat().format(price / 100);
+  // };
 
   const formatCurrency = (price, currency = 'AED') => {
     return `${currency} ${price}`;
@@ -192,7 +192,7 @@ const PackageCard = ({ packageData, handleClick, loadingButton, langCode = 'en' 
   const isSoldOut = packageData.toCategory?.soldOut === true;
 
   // Get image array and deduplicate
-  const rawImageArray = packageData.signedImageUrls || packageData.images || [];
+  // const rawImageArray = packageData.signedImageUrls || packageData.images || [];
 
   // Build media array (images + videos)
   const mediaArray = [
@@ -385,20 +385,6 @@ const PackageCard = ({ packageData, handleClick, loadingButton, langCode = 'en' 
                             }
                           }}
                         />
-                        // <video
-                        //   autoPlay
-                        //   muted
-                        //   loop
-                        //   playsInline
-                        //   src={item.url}
-                        //   className="w-full h-full object-cover object-center"
-                        //   style={{
-                        //     borderRadius: '8px',
-                        //     height: '100%',
-                        //     maxHeight: '35vh',
-                        //     minHeight: '35vh',
-                        //   }}
-                        // />
                       )}
 
                       {/*Expand Icon Top Right */}
@@ -462,12 +448,6 @@ const PackageCard = ({ packageData, handleClick, loadingButton, langCode = 'en' 
               <div className="text-left sm:text-right flex-shrink-0">
                 <Text className={`font-bold mb-2 block text-sm sm:text-base ${isSoldOut ? 'text-red-600' : 'text-gray-600'}`}>
                   {popularityTexts}
-                  {/* {isSoldOut ? soldOutText : (
-                    packageData.totalPackagesSold > 1500 ? "Best Seller" :
-                      packageData.totalPackagesSold > 1000 && packageData.totalPackagesSold < 1500 ? "Top Seller" :
-                        packageData.totalPackagesSold > 500 && packageData.totalPackagesSold < 1000 ? "Popular Deal" :
-                          "Limited Offer"
-                  )} */}
                 </Text>
                 <Text className="text-xs sm:text-sm text-gray-500">
                   {packageData.totalPackagesSold || 0} {purchaseText}
@@ -836,7 +816,8 @@ export const Content: React.FC = () => {
     if (
       messageStore.receivedType === ("JotFormMessage" as any) ||
       messageStore.receivedType === 'WebsiteTemplateQr' ||
-      messageStore.receivedType === 'MapTemplateQr'
+      messageStore.receivedType === 'MapTemplateQr' || 
+      (messageStore.receivedType === 'Image' && messageStore.receivedContent?.directContent === 'QR')
     ) {
       generateQR();
     }
@@ -852,7 +833,7 @@ export const Content: React.FC = () => {
           setQrCodeUrl(url);
           const wdthSize = window.innerWidth;
           if (wdthSize > 650) {
-            // Reset the timer states when new content arrives
+            
             setIsClosing(false);
             setContentKey(prev => prev + 1); // Trigger timer reset
             setTimeout(() => {
@@ -1217,7 +1198,17 @@ export const Content: React.FC = () => {
 
     if (messageStore.receivedType === "Image") {
       return (
-        <img
+        <>
+        {messageStore.receivedContent?.directContent === 'QR' ? (
+           <Card>
+            <img
+              src={qrCodeUrl}
+              alt="QR Code"
+              className="w-96 h-96 object-cover"
+            />
+          </Card>
+        ) : (
+          <img
           key={messageStore.receivedContent?.id ?? ""}
           alt="template_image"
           style={{
@@ -1226,9 +1217,11 @@ export const Content: React.FC = () => {
             maxWidth: "100%",
             objectFit: "cover",
             display: "block",
-          }} // optional
+          }} 
           src={messageStore.receivedContent?.content ?? ""}
         />
+        )}  
+        </>
       );
     }
 

@@ -25,7 +25,8 @@ import { Button } from "./Button";
 import { TrashIcon } from "./icons/TrashIcon";
 import { PencilIcon } from "./icons/PencilIcon";
 import { DragIcon } from "./icons/DragIcon";
-import { Color } from "antd/es/color-picker";
+// import { Color } from "antd/es/color-picker";
+import { IoQrCode } from "react-icons/io5";
 
 export const DraggableCardContainer: React.FC<{
   items: any[];
@@ -93,6 +94,7 @@ export const DraggableCardItem: React.FC<
   sendOnClick,
   tag,
   isDraggable,
+  onQrCodeClick
 }) {
     const [isHover, setIsHover] = React.useState(false);
     const {
@@ -147,9 +149,27 @@ export const DraggableCardItem: React.FC<
       >
         {/* Content Area - Flexible height */}
         <div className="flex-1 p-2 sm:p-3 md:p-3 lg:p-4 overflow-hidden">
-          <div className="h-full text-xs sm:text-sm md:text-sm lg:text-base leading-tight" style={{whiteSpace: 'pre-wrap'}}>
+          <div className="h-full text-xs sm:text-sm md:text-sm lg:text-base leading-tight" style={{ whiteSpace: 'pre-wrap' }}>
             {children}
           </div>
+        </div>
+
+        <div className="absolute right-1 top-1 z-10">
+          <button
+            className="flex items-center justify-center
+                       h-6 w-6 sm:h-7 sm:w-7 md:h-7 md:w-7 lg:h-8 lg:w-8
+                       rounded-md text-gray-700 bg-white/90 hover:bg-blue-500 hover:text-white
+                       shadow-sm hover:shadow-md transition-all duration-150"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (onQrCodeClick) {
+                onQrCodeClick();
+              }
+            }}
+            title="Generate QR Code"
+          >
+            <IoQrCode />
+          </button>
         </div>
 
         {/* Edit Button - Top Left */}
@@ -174,7 +194,7 @@ export const DraggableCardItem: React.FC<
 
         {/* Delete Button - Top Right */}
         {!isRecevied && isHover && isAdmin && !isDragging && (
-          <div className="absolute right-1 top-1 z-10">
+          <div className="absolute right-1 top-10 z-10">
             <button
               className="flex items-center justify-center
                          h-6 w-6 sm:h-7 sm:w-7 md:h-7 md:w-7 lg:h-8 lg:w-8

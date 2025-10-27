@@ -30,7 +30,7 @@ import { Card } from 'antd';
 import "../../../styles/base.css";
 
 export default function ImageDashboard() {
-    let isMobile = typeof window !== 'undefined' && window.innerWidth <= 500;
+  let isMobile = typeof window !== 'undefined' && window.innerWidth <= 500;
   const [editTemplate, setEditTemplate] = useState<null | GetImageTemplateRes>(
     null,
   );
@@ -64,6 +64,19 @@ export default function ImageDashboard() {
       contentExtra: ext,
     });
   };
+
+  const handleQrCodeClick = (id: number, url: string, tag: string) => {
+    console.log("QR Code clicked for:", { id, url, tag });
+    emitSendTemplate({
+      refId: id,
+      langCode:  params.get("lang") || companyData?.defaultLangCode || "en",
+      refType: ChatType.Image,
+      station: Number(params.get("station") ?? 1),
+      contentExtra: url,
+      directContent:'QR'
+    });
+  };
+
   const updateImageTemplateOrder =
     useImageTemplateControllerPatchImageTemplateOrder();
 
@@ -108,7 +121,7 @@ export default function ImageDashboard() {
 
   if (isHydrated)
     return (
-      <div 
+      <div
         className={`flex h-full w-full flex-col justify-start gap-4 overflow-y-auto ${isMobile ? 'p-2' : 'p-6'}`}>
         <div className="customSearchWrapper">
           {imagesSource.length > 0 && (
@@ -154,6 +167,7 @@ export default function ImageDashboard() {
                   onUpdate={() => onUpdateCard(val)}
                   isAdmin={userData?.user.Roles?.includes("Admin")}
                   onDelete={() => onDeleteCard(val.id)}
+                  onQrCodeClick={() => handleQrCodeClick(val.id, val.url, val.tag)}
                   tag={val.tag}
                   key={val.id}
                   isAvailable={val.langCode.includes(
