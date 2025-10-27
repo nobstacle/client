@@ -717,7 +717,7 @@ export default function Upsell() {
                         <div className="flex items-center justify-between bg-green-50 rounded-lg customPaddingCards">
                             <span className="text-xs font-bold text-gray-600">Total Revenue</span>
                             <span className="text-sm font-bold text-green-600">
-                                {data?.totalRevenue || '$0.00'}
+                                {data?.totalRevenue || '0.00'}
                             </span>
                         </div>
 
@@ -928,33 +928,7 @@ export default function Upsell() {
         debouncedSearch(searchValue);
     };
 
-    // Filter transactions based on search term
-    // const filteredTransactions = Array.isArray(transactions) ? transactions.filter((transaction: any) => {
-    //     // Only client-side filtering for ROOM_UPGRADE type
-    //     if (transaction.typeOfSales !== 'ROOM_UPGRADE') return false;
 
-    //     // Package filter (client-side)
-    //     if (selectedPackage && Array.isArray(selectedPackage) && selectedPackage.length > 0) {
-    //         if (!selectedPackage.includes(transaction.package?.id)) return false;
-    //     }
-
-    //     // Status filter (client-side)
-    //     if (selectedStatus) {
-    //         if (transaction.approved?.toLowerCase() !== selectedStatus.toLowerCase()) return false;
-    //     }
-
-    //     // Date filter (client-side)
-    //     if (dateRange && dateRange[0] && dateRange[1]) {
-    //         const transactionDate = new Date(transaction.createdAt);
-    //         const startDate = new Date(dateRange[0].toISOString());
-    //         const endDate = new Date(dateRange[1].toISOString());
-    //         if (transactionDate < startDate || transactionDate > endDate) return false;
-    //     }
-
-    //     return true;
-    // }) : [];
-
-    // Function to send filtered package data
     // Function to send filtered package data
     const sendPackageData = (categoryId = null) => {
         const selectedLang = params.get("lang") || companyData?.defaultLangCode || "en";
@@ -1007,6 +981,7 @@ export default function Upsell() {
         } else {
             message.warning("No packages available on selected language.");
         }
+        fetchDashboardData();
     };
 
     const handlePackageSend = () => {
@@ -1372,45 +1347,6 @@ export default function Upsell() {
                     </Row>
                 </Card>
 
-                {/* Top Performance Cards with Stats */}
-                {/* <Row gutter={[16, 16]}>
-                    <Col xs={24} sm={12} lg={6}>
-                        <RankingCard
-                            title="Top Selling Products"
-                            data={dashboardData.topSellingProducts}
-                            color="blue"
-                            statValue={dashboardData.stats.totalRevenue}
-                            statLabel="Total Revenue"
-                        />
-                    </Col>
-                    <Col xs={24} sm={12} lg={6}>
-                        <RankingCard
-                            title="Top Sellers"
-                            data={dashboardData.topSellers}
-                            color="green"
-                            statValue={dashboardData.stats.totalTransactions}
-                            statLabel="Total Transactions"
-                        />
-                    </Col>
-                    <Col xs={24} sm={12} lg={6}>
-                        <RankingCard
-                            title="Top Incentive"
-                            data={dashboardData.topIncentives}
-                            color="purple"
-                            statValue={dashboardData.stats.totalIncentives}
-                            statLabel="Total Incentives"
-                        />
-                    </Col>
-                    <Col xs={24} sm={12} lg={6}>
-                        <RankingCard
-                            title="Pending Approvals"
-                            data={dashboardData.pendingApprovals}
-                            color="red"
-                            statValue={dashboardData.stats.pendingCount}
-                            statLabel="Pending Approval"
-                        />
-                    </Col>
-                </Row> */}
                 <ScrollableCardsContainer>
                     {/* Your Performance Card - First */}
                     <div className="flex-shrink-0" style={{ width: '300px' }}>
