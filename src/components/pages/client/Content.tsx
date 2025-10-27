@@ -771,7 +771,7 @@ export const Content: React.FC = () => {
     };
   }, [messageStore.receivedContent?.content]);
 
-  useEffect(() => {
+useEffect(() => {
     const generateQR = async () => {
       let content = '';
 
@@ -789,6 +789,24 @@ export const Content: React.FC = () => {
           content = origin;
         } else if (destination) {
           content = destination;
+        }
+      } else if (messageStore.receivedType === 'Image' && messageStore.receivedContent?.directContent === 'QR') {
+        // For Image with QR, decode the URL properly
+        const rawContent = messageStore.receivedContent?.content;
+        
+        // If the URL is already a valid signed URL, use it directly
+        // Otherwise, try to extract the clean URL
+        try {
+          const urlObj = new URL(rawContent);
+          // Check if it's a Google Cloud Storage URL
+          if (urlObj.hostname.includes('storage.googleapis.com')) {
+            content = rawContent; // Use the full signed URL as-is
+          } else {
+            content = rawContent;
+          }
+        } catch (error) {
+          console.error("Invalid URL format:", error);
+          content = rawContent; // Fallback to raw content
         }
       } else {
         // For other types, use the existing logic
@@ -819,38 +837,11 @@ export const Content: React.FC = () => {
       messageStore.receivedType === 'MapTemplateQr' || 
       (messageStore.receivedType === 'Image' && messageStore.receivedContent?.directContent === 'QR')
     ) {
+
       generateQR();
     }
 
-  }, [messageStore.receivedContent?.content, messageStore.receivedContent?.extraContent]);
-
-  useEffect(() => {
-    const generateQR = async () => {
-      const content = messageStore.receivedContent?.content;
-      if (content) {
-        try {
-          const url = await QRCode.toDataURL(content);
-          setQrCodeUrl(url);
-          const wdthSize = window.innerWidth;
-          if (wdthSize > 650) {
-            
-            setIsClosing(false);
-            setContentKey(prev => prev + 1); // Trigger timer reset
-            setTimeout(() => {
-              setShowQR(true);
-            }, 3000);
-          }
-        } catch (err) {
-          console.error("Failed to generate QR code", err);
-        }
-      }
-    };
-
-    if (messageStore.receivedType === ("JotFormMessage" as any) || messageStore.receivedType === 'WebsiteTemplateQr') {
-      generateQR();
-    }
-
-  }, [messageStore.receivedContent?.content]);
+  }, [messageStore.receivedContent?.content, messageStore.receivedContent?.extraContent, messageStore.receivedContent?.directContent]);
 
   const handleCloseQR = useCallback(() => {
     setIsClosing(true);

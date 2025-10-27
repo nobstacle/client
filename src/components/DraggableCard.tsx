@@ -194,7 +194,7 @@ export const DraggableCardItem: React.FC<
 
         {/* Delete Button - Top Right */}
         {!isRecevied && isHover && isAdmin && !isDragging && (
-          <div className="absolute right-1 top-10 z-10">
+          <div className="absolute right-1 z-10" style={{ bottom: '3rem' }}>
             <button
               className="flex items-center justify-center
                          h-6 w-6 sm:h-7 sm:w-7 md:h-7 md:w-7 lg:h-8 lg:w-8

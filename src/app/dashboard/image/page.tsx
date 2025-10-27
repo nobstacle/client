@@ -167,7 +167,7 @@ export default function ImageDashboard() {
                   onUpdate={() => onUpdateCard(val)}
                   isAdmin={userData?.user.Roles?.includes("Admin")}
                   onDelete={() => onDeleteCard(val.id)}
-                  onQrCodeClick={() => handleQrCodeClick(val.id, val.url, val.tag)}
+                  onQrCodeClick={() => handleQrCodeClick(val.id, val.ext, val.tag)}
                   tag={val.tag}
                   key={val.id}
                   isAvailable={val.langCode.includes(
