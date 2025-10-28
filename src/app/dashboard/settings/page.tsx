@@ -4,6 +4,7 @@ import { ColorShortcutForm } from "../../../components/pages/dashboard/Settings/
 import { DefaultSlideshowShortcutForm } from "../../../components/pages/dashboard/Settings/DefaultSlideshowShortcutForm";
 import { LanguageShortcutForm } from "../../../components/pages/dashboard/Settings/LanguageShortcutForm";
 import { UpdateCompanyUsers } from "../../../components/pages/dashboard/Settings/UpdateCompanyUsers";
+import { TemplateMergerForm } from "../../../components/pages/dashboard/Settings/SurveyHeaderText";
 import { useHasHydrated } from "../../../hooks/useHydrated";
 
 export default function SettingsPage() {
@@ -31,29 +32,46 @@ export default function SettingsPage() {
       style={{
         height: "100%",
         width: "100%",
-        overflowY: "auto",
         padding: "24px",
         backgroundColor: "#f5f5f5",
       }}
     >
-      <Row gutter={[24, 24]}>
-        {/* Left Column - Company Info */}
-        <Col xs={24} lg={12} xl={10}>
-          <Card
-            id="company-info-card"
-            bordered
+      <Row gutter={[24, 24]} style={{ height: "100%" }}>
+        {/* Left Column - Company Info (Sticky) */}
+        <Col xs={24} lg={12} xl={10} style={{ height: "100%" }}>
+          <div
             style={{
-              height: "100%",
-              borderRadius: "8px",
-              boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+              position: "sticky",
+              top: "24px",
+              height: "fit-content",
+              maxHeight: "calc(100vh - 48px)",
+              overflowY: "auto",
             }}
           >
-            <UpdateCompanyUsers />
-          </Card>
+            <Card
+              id="company-info-card"
+              bordered
+              style={{
+                borderRadius: "8px",
+                boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+              }}
+            >
+              <UpdateCompanyUsers />
+            </Card>
+          </div>
         </Col>
 
-        {/* Right Column - Shortcuts */}
-        <Col xs={24} lg={12} xl={14}>
+        {/* Right Column - Shortcuts (Scrollable) */}
+        <Col
+          xs={24}
+          lg={12}
+          xl={14}
+          style={{
+            height: "100%",
+            overflowY: "auto",
+            paddingRight: "4px",
+          }}
+        >
           <Row gutter={[0, 24]}>
             {/* Default Slideshow Shortcut */}
             <Col xs={24}>
@@ -91,6 +109,19 @@ export default function SettingsPage() {
                 }}
               >
                 <ColorShortcutForm />
+              </Card>
+            </Col>
+
+            {/* Survey Header */}
+            <Col xs={24}>
+              <Card
+                bordered
+                style={{
+                  borderRadius: "8px",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+                }}
+              >
+                <TemplateMergerForm />
               </Card>
             </Col>
           </Row>

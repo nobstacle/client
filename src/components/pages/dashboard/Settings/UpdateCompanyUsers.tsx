@@ -25,6 +25,7 @@ import {
   Form,
 } from "antd";
 import { DeleteOutlined, PlusOutlined } from "@ant-design/icons";
+import "../../../../styles/base.css";
 
 export const UpdateCompanyUsers: React.FC = () => {
   const userPatchOne = useUserControllerPatchOne();

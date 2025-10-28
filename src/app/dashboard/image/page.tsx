@@ -65,15 +65,17 @@ export default function ImageDashboard() {
     });
   };
 
-  const handleQrCodeClick = (id: number, url: string, tag: string) => {
+  const handleQrCodeClick = (id: number, url: string, tag: string, isAvailable: boolean) => {
     console.log("QR Code clicked for:", { id, url, tag });
     emitSendTemplate({
       refId: id,
-      langCode:  params.get("lang") || companyData?.defaultLangCode || "en",
+      langCode: isAvailable
+        ? params.get("lang") || companyData?.defaultLangCode || "en"
+        : companyData?.defaultLangCode || "en",
       refType: ChatType.Image,
       station: Number(params.get("station") ?? 1),
       contentExtra: url,
-      directContent:'QR'
+      directContent: 'QR'
     });
   };
 
@@ -167,7 +169,7 @@ export default function ImageDashboard() {
                   onUpdate={() => onUpdateCard(val)}
                   isAdmin={userData?.user.Roles?.includes("Admin")}
                   onDelete={() => onDeleteCard(val.id)}
-                  onQrCodeClick={() => handleQrCodeClick(val.id, val.ext, val.tag)}
+                  onQrCodeClick={() => handleQrCodeClick(val.id, val.ext, val.tag, val.langCode.includes(params.get("lang") || companyData?.defaultLangCode || ""),)}
                   tag={val.tag}
                   key={val.id}
                   isAvailable={val.langCode.includes(

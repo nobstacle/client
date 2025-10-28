@@ -1076,7 +1076,7 @@ button {
 }
 
 .customBtn {
-  background: #3b5998;
+  background: #3b5998 !important;
   color: white !important;
   border: none;
 }

@@ -145,7 +145,6 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
         { title: "General Settings", href: "/dashboard/settings", roles: ["Admin"] },
         { title: "Upsell Categories", href: "/dashboard/category", roles: ["Admin", "User"] },
         { title: "Upsell Packages", href: "/dashboard/package", roles: ["Admin", "User"] },
-        { title: "Survey Texts", href: "/dashboard/surveyTemplate", roles: ["Admin", "User"] },
     ];
 
     useEffect(() => {

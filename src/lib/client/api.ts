@@ -4926,3 +4926,335 @@ export const useCategoryControllerBulkDeleteCategories = <
 	const mutationOptions = getCategoryControllerBulkDeleteCategoriesMutationOptions(options);
 	return useMutation(mutationOptions);
 };
+
+export const surveyHeaderControllerCreateSurveyHeader = (
+	data: BodyType<PostSurveyHeaderReq>,
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>,
+) => {
+	return nobstacleBackendApiInstance<GetSurveyHeaderRes>(
+		{
+			url: `/api/v1/shortcut/survey-header`,
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			data: data
+		},
+		options
+	);
+};
+
+export const getSurveyHeaderControllerCreateSurveyHeaderMutationOptions = <
+	TError = ErrorType<HttpExceptionSchema>,
+	TContext = unknown
+>(options?: {
+	mutation?: UseMutationOptions<
+		Awaited<ReturnType<typeof surveyHeaderControllerCreateSurveyHeader>>,
+		TError,
+		{ data: BodyType<PostSurveyHeaderReq> },
+		TContext
+	>,
+	request?: SecondParameter<typeof nobstacleBackendApiInstance>
+}): UseMutationOptions<
+	Awaited<ReturnType<typeof surveyHeaderControllerCreateSurveyHeader>>,
+	TError,
+	{ data: BodyType<PostSurveyHeaderReq> },
+	TContext
+> => {
+	const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+
+	const mutationFn: MutationFunction<
+		Awaited<ReturnType<typeof surveyHeaderControllerCreateSurveyHeader>>,
+		{ data: BodyType<PostSurveyHeaderReq> }
+	> = (props) => {
+		const { data } = props ?? {};
+		return surveyHeaderControllerCreateSurveyHeader(data, requestOptions);
+	};
+
+	return { mutationFn, ...mutationOptions };
+};
+
+export const useSurveyHeaderControllerCreateSurveyHeader = <
+	TError = ErrorType<HttpExceptionSchema>,
+	TContext = unknown
+>(options?: {
+	mutation?: UseMutationOptions<
+		Awaited<ReturnType<typeof surveyHeaderControllerCreateSurveyHeader>>,
+		TError,
+		{ data: BodyType<PostSurveyHeaderReq> },
+		TContext
+	>,
+	request?: SecondParameter<typeof nobstacleBackendApiInstance>
+}) => {
+	const mutationOptions = getSurveyHeaderControllerCreateSurveyHeaderMutationOptions(options);
+	return useMutation(mutationOptions);
+};
+
+// Patch Survey Header
+export const surveyHeaderControllerPatchSurveyHeader = (
+	id: string,
+	data: BodyType<PatchSurveyHeaderReq>,
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>,
+) => {
+	return nobstacleBackendApiInstance<GetSurveyHeaderRes>(
+		{
+			url: `/api/v1/shortcut/survey-header/${id}`,
+			method: 'PATCH',
+			headers: { 'Content-Type': 'application/json' },
+			data: data
+		},
+		options
+	);
+};
+
+export const getSurveyHeaderControllerPatchSurveyHeaderMutationOptions = <
+	TError = ErrorType<HttpExceptionSchema>,
+	TContext = unknown
+>(options?: {
+	mutation?: UseMutationOptions<
+		Awaited<ReturnType<typeof surveyHeaderControllerPatchSurveyHeader>>,
+		TError,
+		{ id: string; data: BodyType<PatchSurveyHeaderReq> },
+		TContext
+	>,
+	request?: SecondParameter<typeof nobstacleBackendApiInstance>
+}): UseMutationOptions<
+	Awaited<ReturnType<typeof surveyHeaderControllerPatchSurveyHeader>>,
+	TError,
+	{ id: string; data: BodyType<PatchSurveyHeaderReq> },
+	TContext
+> => {
+	const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+
+	const mutationFn: MutationFunction<
+		Awaited<ReturnType<typeof surveyHeaderControllerPatchSurveyHeader>>,
+		{ id: string; data: BodyType<PatchSurveyHeaderReq> }
+	> = (props) => {
+		const { id, data } = props ?? {};
+		return surveyHeaderControllerPatchSurveyHeader(id, data, requestOptions);
+	};
+
+	return { mutationFn, ...mutationOptions };
+};
+
+export const useSurveyHeaderControllerPatchSurveyHeader = <
+	TError = ErrorType<HttpExceptionSchema>,
+	TContext = unknown
+>(options?: {
+	mutation?: UseMutationOptions<
+		Awaited<ReturnType<typeof surveyHeaderControllerPatchSurveyHeader>>,
+		TError,
+		{ id: string; data: BodyType<PatchSurveyHeaderReq> },
+		TContext
+	>,
+	request?: SecondParameter<typeof nobstacleBackendApiInstance>
+}) => {
+	const mutationOptions = getSurveyHeaderControllerPatchSurveyHeaderMutationOptions(options);
+	return useMutation(mutationOptions);
+};
+
+// Delete Survey Header
+export const surveyHeaderControllerDeleteSurveyHeaderById = (
+	id: string,
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>,
+) => {
+	return nobstacleBackendApiInstance<GetSurveyHeaderRes>(
+		{
+			url: `/api/v1/shortcut/delete-survey-header/${id}`,
+			method: 'DELETE'
+		},
+		options
+	);
+};
+
+export const getSurveyHeaderControllerDeleteSurveyHeaderByIdMutationOptions = <
+	TError = ErrorType<HttpExceptionSchema>,
+	TContext = unknown
+>(options?: {
+	mutation?: UseMutationOptions<
+		Awaited<ReturnType<typeof surveyHeaderControllerDeleteSurveyHeaderById>>,
+		TError,
+		{ id: string },
+		TContext
+	>,
+	request?: SecondParameter<typeof nobstacleBackendApiInstance>
+}): UseMutationOptions<
+	Awaited<ReturnType<typeof surveyHeaderControllerDeleteSurveyHeaderById>>,
+	TError,
+	{ id: string },
+	TContext
+> => {
+	const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+
+	const mutationFn: MutationFunction<
+		Awaited<ReturnType<typeof surveyHeaderControllerDeleteSurveyHeaderById>>,
+		{ id: string }
+	> = (props) => {
+		const { id } = props ?? {};
+		return surveyHeaderControllerDeleteSurveyHeaderById(id, requestOptions);
+	};
+
+	return { mutationFn, ...mutationOptions };
+};
+
+export const useSurveyHeaderControllerDeleteSurveyHeaderById = <
+	TError = ErrorType<HttpExceptionSchema>,
+	TContext = unknown
+>(options?: {
+	mutation?: UseMutationOptions<
+		Awaited<ReturnType<typeof surveyHeaderControllerDeleteSurveyHeaderById>>,
+		TError,
+		{ id: string },
+		TContext
+	>,
+	request?: SecondParameter<typeof nobstacleBackendApiInstance>
+}) => {
+	const mutationOptions = getSurveyHeaderControllerDeleteSurveyHeaderByIdMutationOptions(options);
+	return useMutation(mutationOptions);
+};
+
+// Get All Survey Headers (List)
+export const surveyHeaderControllerGetSurveyHeaders = (
+	params?: {
+		textId?: number;
+		langCode?: string;
+	},
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>,
+	signal?: AbortSignal
+) => {
+	return nobstacleBackendApiInstance<GetSurveyHeaderRes[]>(
+		{
+			url: `/api/v1/shortcut/getmanySurveyHeaders`,
+			method: 'GET',
+			params,
+			signal
+		},
+		options
+	);
+};
+
+export const getSurveyHeaderControllerGetSurveyHeadersQueryOptions = <
+	TData = Awaited<ReturnType<typeof surveyHeaderControllerGetSurveyHeaders>>,
+	TError = ErrorType<HttpExceptionSchema>
+>(
+	params?: {
+		page?: number;
+		limit?: number;
+		search?: string;
+	},
+	options?: {
+		query?: UseQueryOptions<
+			Awaited<ReturnType<typeof surveyHeaderControllerGetSurveyHeaders>>,
+			TError,
+			TData
+		>,
+		request?: SecondParameter<typeof nobstacleBackendApiInstance>
+	}
+) => {
+	const { query: queryOptions, request: requestOptions } = options ?? {};
+
+	// const queryKey = queryOptions?.queryKey ?? [`/api/v1/getmanySurveyHeaders`, params];
+
+	const queryKey = queryOptions?.queryKey ?? [`/api/v1/getmanySurveyHeaders`, ...(params ? [params] : [])];
+
+	const queryFn: QueryFunction<Awaited<ReturnType<typeof surveyHeaderControllerGetSurveyHeaders>>> = ({ signal }) =>
+		surveyHeaderControllerGetSurveyHeaders(params, requestOptions, signal);
+
+	return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+		Awaited<ReturnType<typeof surveyHeaderControllerGetSurveyHeaders>>,
+		TError,
+		TData
+	> & { queryKey: QueryKey };
+};
+
+export type SurveyHeaderControllerGetSurveyHeadersQueryResult = NonNullable<
+	Awaited<ReturnType<typeof surveyHeaderControllerGetSurveyHeaders>>
+>;
+export type SurveyHeaderControllerGetSurveyHeadersQueryError = ErrorType<HttpExceptionSchema>;
+
+export const useSurveyHeaderControllerGetSurveyHeaders = <
+	TData = Awaited<ReturnType<typeof surveyHeaderControllerGetSurveyHeaders>>,
+	TError = ErrorType<HttpExceptionSchema>
+>(
+	params?: {
+		page?: number;
+		limit?: number;
+		search?: string;
+	},
+	options?: {
+		query?: UseQueryOptions<
+			Awaited<ReturnType<typeof surveyHeaderControllerGetSurveyHeaders>>,
+			TError,
+			TData
+		>,
+		request?: SecondParameter<typeof nobstacleBackendApiInstance>
+	}
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } => {
+	const queryOptions = getSurveyHeaderControllerGetSurveyHeadersQueryOptions(params, options);
+
+	const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+	query.queryKey = queryOptions.queryKey;
+
+	return query;
+};
+
+export const getSurveyHeaderControllerGetSurveyHeadersQueryKey = (
+	params?: {
+		page?: number;
+		limit?: number;
+		search?: string;
+	}
+) => {
+	return [`/api/v1/shortcut/getmanySurveyHeaders`, ...(params ? [params] : [])] as const;
+};
+
+
+// Get Survey Header by ID
+export const surveyHeaderControllerGetSurveyHeaderById = (
+	id: string,
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>,
+) => {
+	return nobstacleBackendApiInstance<GetSurveyHeaderRes>(
+		{
+			url: `/api/v1/shortcut/survey-header/${id}`,
+			method: 'GET'
+		},
+		options
+	);
+};
+
+export const getSurveyHeaderControllerGetSurveyHeaderByIdQueryOptions = <
+	TError = ErrorType<HttpExceptionSchema>
+>(
+	id: string,
+	options?: {
+		query?: UseQueryOptions<
+			Awaited<ReturnType<typeof surveyHeaderControllerGetSurveyHeaderById>>,
+			TError
+		>,
+		request?: SecondParameter<typeof nobstacleBackendApiInstance>
+	}
+) => {
+	const { query: queryOptions, request: requestOptions } = options ?? {};
+
+	const queryKey = [`/api/v1/shortcut/survey-header/${id}`];
+	const queryFn = () => surveyHeaderControllerGetSurveyHeaderById(id, requestOptions);
+
+	return { queryKey, queryFn, ...queryOptions };
+};
+
+export const useSurveyHeaderControllerGetSurveyHeaderById = <
+	TError = ErrorType<HttpExceptionSchema>
+>(
+	id: string,
+	options?: {
+		query?: UseQueryOptions<
+			Awaited<ReturnType<typeof surveyHeaderControllerGetSurveyHeaderById>>,
+			TError
+		>,
+		request?: SecondParameter<typeof nobstacleBackendApiInstance>
+	}
+) => {
+	const queryOptions = getSurveyHeaderControllerGetSurveyHeaderByIdQueryOptions(id, options);
+	return useQuery(queryOptions);
+};
+
