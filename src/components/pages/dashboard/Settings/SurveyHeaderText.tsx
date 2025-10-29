@@ -4,34 +4,24 @@ import {
     Button,
     Select,
     Card,
-    Table,
-    Space,
-    Modal,
     message,
     Spin,
-    Popconfirm,
-    Tag,
     Divider,
+    Alert,
 } from "antd";
 import {
-    PlusOutlined,
-    EditOutlined,
-    DeleteOutlined,
     SaveOutlined,
 } from "@ant-design/icons";
 import useTemplateStore from "../../../../lib/zustand/store/templateStore";
-import { languages } from "../../../../constant/languages";
 import {
     useSurveyHeaderControllerCreateSurveyHeader,
     useSurveyHeaderControllerPatchSurveyHeader,
-    useSurveyHeaderControllerDeleteSurveyHeaderById,
-    useSurveyHeaderControllerGetSurveyHeaders, // You need to create this query hook
+    useSurveyHeaderControllerGetSurveyHeaders,
 } from "../../../../lib/client/api";
 
 interface SurveyHeader {
     id: number;
     textId: number;
-    langCode: string;
     userId: number;
     createdAt: string;
     updatedAt: string;
@@ -44,304 +34,157 @@ interface SurveyHeader {
 
 export const TemplateMergerForm: React.FC = () => {
     const [form] = Form.useForm();
-    const [isModalVisible, setIsModalVisible] = React.useState(false);
-    const [editingRecord, setEditingRecord] = React.useState<SurveyHeader | null>(null);
     const { texts } = useTemplateStore();
 
-    // API hooks - CORRECTED to match shortcut pattern
-    const { data: surveyHeaders, isLoading, refetch, error } = useSurveyHeaderControllerGetSurveyHeaders();
-
+    // API hooks - now fetching single survey header
+    const { data: surveyHeader, isLoading, refetch } = useSurveyHeaderControllerGetSurveyHeaders();
     const createMutation = useSurveyHeaderControllerCreateSurveyHeader();
     const updateMutation = useSurveyHeaderControllerPatchSurveyHeader();
-    const deleteMutation = useSurveyHeaderControllerDeleteSurveyHeaderById();
 
-    const handleOpenModal = (record?: SurveyHeader) => {
-        if (record) {
-            setEditingRecord(record);
+    // Set initial form value when data loads
+    React.useEffect(() => {
+        if (surveyHeader) {
+            console.info("surveyHeadersurveyHeader", surveyHeader)
             form.setFieldsValue({
-                textId: record.textId,
-                langCode: record.langCode,
+                textId: surveyHeader.items[0]?.textId,
             });
-        } else {
-            setEditingRecord(null);
-            form.resetFields();
         }
-        setIsModalVisible(true);
-    };
-
-    const handleCloseModal = () => {
-        setIsModalVisible(false);
-        setEditingRecord(null);
-        form.resetFields();
-    };
+    }, [surveyHeader, form]);
 
     const handleSubmit = (values: any) => {
-        if (editingRecord) {
-            // Update existing survey header - CORRECTED
+        if (surveyHeader) {
+            // Update existing survey header
+            // Temporary: pass empty string for id until API client is regenerated
             updateMutation.mutate(
                 {
-                    id: editingRecord.id.toString(),
+                    id: "", // Backend will ignore this and use userId from JWT
                     data: {
                         textId: values.textId,
-                        langCode: values.langCode,
                     }
                 },
                 {
                     onSuccess: () => {
-                        message.success("Survey header updated successfully!");
-                        handleCloseModal();
+                        message.success("Survey header template updated successfully!");
                         refetch();
                     },
                     onError: (error: any) => {
-                        message.error(error?.response?.data?.message || "Failed to update survey header");
+                        message.error(error?.response?.data?.message || "Failed to update survey header template");
                     },
                 }
             );
         } else {
-            // Create new survey header - CORRECTED
+            // Create new survey header (first time setup)
             createMutation.mutate(
                 {
                     data: {
                         textId: values.textId,
-                        langCode: values.langCode,
                     }
                 },
                 {
                     onSuccess: () => {
-                        message.success("Survey header created successfully!");
-                        handleCloseModal();
+                        message.success("Survey header template assigned successfully!");
                         refetch();
                     },
                     onError: (error: any) => {
-                        message.error(error?.response?.data?.message || "Failed to create survey header");
+                        message.error(error?.response?.data?.message || "Failed to assign survey header template");
                     },
                 }
             );
         }
     };
 
-    const handleDelete = (id: number) => {
-        deleteMutation.mutate(
-            { id: id.toString() },
-            {
-                onSuccess: () => {
-                    message.success("Survey header deleted successfully!");
-                    refetch();
-                },
-                onError: (error: any) => {
-                    message.error(error?.response?.data?.message || "Failed to delete survey header");
-                },
+    // Get unique templates by tag
+    const uniqueTemplates = React.useMemo(() => {
+        const templateMap = new Map();
+        texts.forEach((template) => {
+            if (template.tag && !templateMap.has(template.tag)) {
+                templateMap.set(template.tag, template);
             }
-        );
-    };
+        });
+        return Array.from(templateMap.values());
+    }, [texts]);
 
-    const columns = [
-        {
-            title: "ID",
-            dataIndex: "id",
-            key: "id",
-            width: 80,
-        },
-        {
-            title: "Text Template",
-            dataIndex: "textContent",
-            key: "textContent",
-            render: (text: string) => (
-                <div
-                    style={{
-                        maxWidth: 300,
-                        whiteSpace: "nowrap",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                    }}
-                    title={text}
-                >
-                    <Tag color="blue">
-                        {text || "N/A"}
-                    </Tag>
-                </div>
-            ),
-        },
-        {
-            title: "Language",
-            dataIndex: "langCode",
-            key: "langCode",
-            width: 120,
-            render: (text: string) => <Tag color="green">{text?.toUpperCase()}</Tag>,
-        },
-        {
-            title: "Created At",
-            dataIndex: "createdAt",
-            key: "createdAt",
-            width: 180,
-            render: (date: string) => new Date(date).toLocaleDateString(),
-        },
-        {
-            title: "Actions",
-            key: "actions",
-            width: 120,
-            render: (_: any, record: SurveyHeader) => (
-                <Space>
-                    <Button
-                        type="primary"
-                        icon={<EditOutlined />}
-                        size="small"
-                        onClick={() => handleOpenModal(record)}
-                         className="customBtn"
-                    />
-                    <Popconfirm
-                        title="Are you sure you want to delete this survey header?"
-                        onConfirm={() => handleDelete(record.id)}
-                        okText="Yes"
-                        cancelText="No"
-                    >
-                        <Button
-                            danger
-                            icon={<DeleteOutlined />}
-                            size="small"
-                            loading={deleteMutation.isPending}
-                        />
-                    </Popconfirm>
-                </Space>
-            ),
-        },
-    ];
-
-    // Merge fetched survey headers with text content
-    const dataSource = (surveyHeaders?.items || []).map((header) => {
-        const matchedText = texts.find((t) => t.id === header.textId);
-        return {
-            ...header,
-            textContent: matchedText?.content || "N/A",
-        };
-    });
-
+    const currentTemplate = texts.find((t) => t.id === surveyHeader?.textId);
 
     return (
         <div style={{ padding: "8px" }}>
             <Card
                 className="w-full"
                 title={
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <span style={{ fontSize: "18px", fontWeight: "bold" }}>
-                            Survey Header
-                        </span>
-                        <Button
-                            type="primary"
-                            icon={<PlusOutlined />}
-                            onClick={() => handleOpenModal()}
-                            size="large"
-                            className="customBtn"
-                        >
-                            Create
-                        </Button>
-                    </div>
+                    <span style={{ fontSize: "18px", fontWeight: "bold" }}>
+                        Survey Header Template Settings
+                    </span>
                 }
                 bordered={false}
                 style={{ boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)" }}
             >
                 <Spin spinning={isLoading}>
-                    <Table
-                        dataSource={dataSource}
-                        columns={columns}
-                        rowKey="id"
-                        pagination={{
-                            pageSize: 10,
-                            showSizeChanger: true,
-                            showTotal: (total) => `Total ${total} items`,
-                        }}
-                        bordered
-                    />
-                </Spin>
-            </Card>
-
-            <Modal
-                title={
-                    <span style={{ fontSize: "18px", fontWeight: "bold" }}>
-                        {editingRecord ? "Edit Survey Header" : "Create New Survey Header"}
-                    </span>
-                }
-                open={isModalVisible}
-                onCancel={handleCloseModal}
-                footer={null}
-                width={600}
-            >
-                <Divider />
-                <Form
-                    form={form}
-                    layout="vertical"
-                    onFinish={handleSubmit}
-                >
-                    <Form.Item
-                        label="Text Template"
-                        name="textId"
-                        rules={[
-                            { required: true, message: "Please select a text template" },
-                        ]}
-                    >
-                        <Select
-                            placeholder="Select a text template"
-                            size="large"
-                            showSearch
-                            optionFilterProp="children"
-                            filterOption={(input, option) =>
-                                (option?.label ?? "")
-                                    .toLowerCase()
-                                    .includes(input.toLowerCase())
+                    {currentTemplate && (
+                        <Alert
+                            message="Current Template"
+                            description={
+                                <div>
+                                    <strong>Tag:</strong> {currentTemplate.tag || "N/A"}
+                                    <br />
+                                    <strong>Preview:</strong> {currentTemplate.content.length > 150
+                                        ? `${currentTemplate.content.substring(0, 150)}...`
+                                        : currentTemplate.content}
+                                </div>
                             }
-                            options={texts?.map((template) => ({
-                                label: template.content.length > 100
-                                    ? `${template.content.substring(0, 100)}...`
-                                    : template.content,
-                                value: template.id,
-                            }))}
+                            type="info"
+                            showIcon
+                            style={{ marginBottom: 24 }}
                         />
-                    </Form.Item>
+                    )}
 
-                    <Form.Item
-                        label="Language"
-                        name="langCode"
-                        rules={[
-                            { required: true, message: "Please select a language" },
-                        ]}
+                    <Form
+                        form={form}
+                        layout="vertical"
+                        onFinish={handleSubmit}
                     >
-                        <Select
-                            placeholder="Select language..."
-                            size="large"
-                            showSearch
-                            optionFilterProp="children"
-                            filterOption={(input, option) =>
-                                (option?.label ?? "")
-                                    .toLowerCase()
-                                    .includes(input.toLowerCase())
-                            }
-                            options={languages?.map(({ code, name }) => ({
-                                label: `${name} (${code.toUpperCase()})`,
-                                value: code,
-                            }))}
-                        />
-                    </Form.Item>
+                        <Form.Item
+                            label="Select Survey Header Template"
+                            name="textId"
+                            rules={[
+                                { required: true, message: "Please select a template" },
+                            ]}
+                            extra="This template will be displayed in the language selected by the user in the client app"
+                        >
+                            <Select
+                                placeholder="Select a template by tag"
+                                size="large"
+                                showSearch
+                                optionFilterProp="children"
+                                filterOption={(input, option) =>
+                                    (option?.label ?? "")
+                                        .toLowerCase()
+                                        .includes(input.toLowerCase())
+                                }
+                                options={uniqueTemplates?.map((template) => ({
+                                    label: template.tag || `Template ID: ${template.id}`,
+                                    value: template.id,
+                                }))}
+                            />
+                        </Form.Item>
 
-                    <Divider />
+                        <Divider />
 
-                    <Form.Item style={{ marginBottom: 0 }}>
-                        <Space style={{ width: "100%", justifyContent: "flex-end" }}>
-                            <Button onClick={handleCloseModal} size="large">
-                                Cancel
-                            </Button>
+                        <Form.Item style={{ marginBottom: 0 }}>
                             <Button
                                 type="primary"
                                 htmlType="submit"
                                 icon={<SaveOutlined />}
                                 size="large"
                                 loading={createMutation.isPending || updateMutation.isPending}
+                                block
+                                className="customBtn"
                             >
-                                {editingRecord ? "Update" : "Save"}
+                                {surveyHeader ? "Update Template" : "Assign Template"}
                             </Button>
-                        </Space>
-                    </Form.Item>
-                </Form>
-            </Modal>
+                        </Form.Item>
+                    </Form>
+                </Spin>
+            </Card>
         </div>
     );
 };

@@ -1092,6 +1092,8 @@ useEffect(() => {
     }
   };
 
+  console.info("messageStoremessageStoremessageStore",messageStore);
+
   if (hasHydrated) {
     if (
       messageStore.receivedType === "TextTemplateMessage" ||
@@ -1598,7 +1600,12 @@ useEffect(() => {
   }
 
   if (messageStore.receivedType === "Survey" && messageStore.receivedSurvey) {
-    return <SurveyAnswer tag={messageStore.receivedSurvey.tag} />;
+    return (
+      <SurveyAnswer
+        tag={messageStore.receivedSurvey.tag}
+        survey={messageStore.receivedSurvey}
+      />
+    );
   }
 
   if (messageStore.receivedType === ("JotFormMessage" as any)) {

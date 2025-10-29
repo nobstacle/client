@@ -23,6 +23,24 @@ import { LeftOutlined, RightOutlined, TrophyOutlined, RiseOutlined } from "@ant-
 const { RangePicker } = DatePicker;
 const { Option } = Select;
 
+interface DashboardData {
+    personalPerformance: any;
+    topSellingProducts: any[];
+    topSellers: any[];
+    topIncentives: any[];
+    pendingApprovals: any[];
+    usersByAttempts: any[];
+    usersByConversionRatio: any[];
+    stats: {
+        totalTransactions: number;
+        totalRevenue: string;
+        totalIncentives: string;
+        pendingCount: number;
+        totalAttempts?: number;
+        systemConversionRate?: string;
+    };
+}
+
 export default function Upsell() {
     const [loadingData, setLoadingData] = useState(false);
     const [totalItems, setTotalItems] = useState(0);
@@ -1076,55 +1094,103 @@ export default function Upsell() {
     };
 
     // Updated RankingCard with stats in header - Optimized for 5 records
-    const RankingCard = ({ title, data, color, statValue, statLabel, onViewDetails }) => (
-        <div className="flex-shrink-0" style={{ minWidth: '300px' }}>
-            <Card
-                className="hover:shadow-lg transition-shadow duration-300 h-full"
-                bodyStyle={{ padding: '12px' }}
-            >
-                <div className="mb-2">
-                    <div className="text-center mb-2 pb-2 border-b border-gray-200">
-                        <div className={`text-2xl font-bold text-${color}-600 mb-0.5`}>
-                            {statValue}
-                        </div>
-                        <div className="text-xs text-gray-600">{statLabel}</div>
-                    </div>
+    const RankingCard = ({ title, data, color, statValue, statLabel, onViewDetails, icon, isAttempts = false, isConversion = false }) => {
+        // Color scheme mapping
+        const colorSchemes = {
+            blue: { bg: 'bg-blue-50', text: 'text-blue-600', border: 'border-blue-200', gradient: 'from-blue-500 to-blue-600' },
+            green: { bg: 'bg-green-50', text: 'text-green-600', border: 'border-green-200', gradient: 'from-green-500 to-green-600' },
+            purple: { bg: 'bg-purple-50', text: 'text-purple-600', border: 'border-purple-200', gradient: 'from-purple-500 to-purple-600' },
+            red: { bg: 'bg-red-50', text: 'text-red-600', border: 'border-red-200', gradient: 'from-red-500 to-red-600' },
+            orange: { bg: 'bg-orange-50', text: 'text-orange-600', border: 'border-orange-200', gradient: 'from-orange-500 to-orange-600' },
+            cyan: { bg: 'bg-cyan-50', text: 'text-cyan-600', border: 'border-cyan-200', gradient: 'from-cyan-500 to-cyan-600' },
+        };
 
-                    <div className="flex items-center justify-between mb-2">
-                        <h3 className="text-xs font-semibold text-gray-700 m-0">{title}</h3>
-                        <Button
-                            onClick={() => onViewDetails(title)}
-                            className="text-xs h-6 px-2"
-                            size="small"
-                        >
-                            View All
-                        </Button>
-                    </div>
-                </div>
+        const scheme = colorSchemes[color] || colorSchemes.blue;
 
-                <div className="space-y-2">
-                    {data.slice(0, 5).map((item) => (
-                        <div
-                            key={item.rank}
-                            className="flex items-center justify-between hover:bg-gray-50 px-2 py-2 rounded transition-colors"
-                        >
+        return (
+            <div className="flex-shrink-0" style={{ minWidth: '300px' }}>
+                <Card
+                    className="hover:shadow-lg transition-all duration-300 h-full border-0 overflow-hidden"
+                    bodyStyle={{ padding: '0' }}
+                >
+                    {/* Gradient Header */}
+                    <div className={`bg-gradient-to-r ${scheme.gradient} p-4 text-white`}>
+                        <div className="flex items-center justify-between mb-2">
                             <div className="flex items-center gap-2">
-                                <span className={`flex items-center justify-center w-4 h-4 text-${color}-600 text-[10px] font-bold`}>
-                                    {item.rank}
-                                </span>
-                                <span className="text-xs text-gray-700 truncate" style={{ maxWidth: '150px' }}>
-                                    {item.name || item.confirmation}
-                                </span>
+                                {icon}
+                                <h3 className="text-sm font-semibold m-0">{title}</h3>
                             </div>
-                            <span className="text-xs font-medium text-gray-900 whitespace-nowrap ml-2">
-                                {item.revenue || item.amount}
-                            </span>
+                            <Button
+                                onClick={() => onViewDetails(title)}
+                                size="small"
+                                className="bg-white bg-opacity-20 hover:bg-opacity-30 text-white border-0"
+                            >
+                                View All
+                            </Button>
                         </div>
-                    ))}
-                </div>
-            </Card>
-        </div>
-    );
+                        <div className="text-center">
+                            <div className="text-3xl font-bold mb-1">{statValue}</div>
+                            <div className="text-xs opacity-90">{statLabel}</div>
+                        </div>
+                    </div>
+
+                    {/* Content */}
+                    <div className="p-3 space-y-2">
+                        {data.slice(0, 5).map((item) => (
+                            <div
+                                key={item.rank}
+                                className={`flex items-center justify-between hover:${scheme.bg} px-1 rounded-lg transition-all duration-200 border ${scheme.border} border-opacity-0 hover:border-opacity-100`}
+                            >
+                                <div className="flex items-center gap-3 flex-1 min-w-0">
+                                    {/* Rank Badge */}
+                                    <div className={`flex-shrink-0 flex items-center justify-center w-7 h-7 ${scheme.text} text-xs font-bold`}>
+                                        {item.rank}
+                                    </div>
+
+                                    {/* User/Item Info */}
+                                    <div className="flex-1 min-w-0">
+                                        <div className="text-sm font-medium text-gray-900 truncate">
+                                            {item.name || item.confirmation}
+                                        </div>
+                                        {isAttempts && (
+                                            <div className="text-xs text-gray-500">
+                                                {item.attempts} attempts
+                                            </div>
+                                        )}
+                                        {isConversion && (
+                                            <div className="text-xs text-gray-500">
+                                                {item.transactions} sales / {item.attempts} attempts
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Value Display */}
+                                <div className="flex-shrink-0 ml-2">
+                                    {isAttempts ? (
+                                        <div className={`${scheme.text} font-bold text-lg`}>
+                                            {item.attempts}
+                                        </div>
+                                    ) : isConversion ? (
+                                        <div className="text-right">
+                                            <div className={`${scheme.text} font-bold text-base`}>
+                                                {item.conversionRatio}
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="text-sm font-medium text-gray-900 whitespace-nowrap">
+                                            {item.revenue || item.amount}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </Card>
+            </div>
+        );
+    };
+
 
     const rangePresets = [
         { label: 'Today', value: [dayjs().startOf('day'), dayjs().endOf('day')] },
@@ -1145,6 +1211,10 @@ export default function Upsell() {
                 return dashboardData.topIncentives;
             case 'Pending Approvals':
                 return dashboardData.pendingApprovals;
+            case 'Users by Attempts':
+                return dashboardData.usersByAttempts || [];
+            case 'Users by Conversion Ratio':
+                return dashboardData.usersByConversionRatio || [];
             default:
                 return [];
         }
@@ -1156,6 +1226,9 @@ export default function Upsell() {
         if (!data || data.length === 0) {
             return <div className="text-center py-8 text-gray-500">No data available</div>;
         }
+
+        const isAttempts = selectedModalTitle === 'Users by Attempts';
+        const isConversion = selectedModalTitle === 'Users by Conversion Ratio';
 
         return (
             <div className="space-y-2">
@@ -1181,21 +1254,38 @@ export default function Upsell() {
                                 {item.soldBy && (
                                     <div className="text-xs text-gray-500">Sold by: {item.soldBy}</div>
                                 )}
+                                {isConversion && (
+                                    <div className="text-xs text-gray-500">
+                                        {item.transactions} sales / {item.attempts} attempts
+                                    </div>
+                                )}
                             </div>
                         </div>
                         <div className="text-right">
-                            <div className="font-semibold text-gray-900">
-                                {item.revenue || item.amount}
-                            </div>
-                            {item.transactionCount && (
-                                <div className="text-xs text-gray-500">
-                                    {item.transactionCount} transactions
+                            {isAttempts ? (
+                                <div className="font-semibold text-orange-600 text-lg">
+                                    {item.attempts}
                                 </div>
-                            )}
-                            {item.count && (
-                                <div className="text-xs text-gray-500">
-                                    {item.count} sales
+                            ) : isConversion ? (
+                                <div className="font-semibold text-cyan-600 text-lg">
+                                    {item.conversionRatio}
                                 </div>
+                            ) : (
+                                <>
+                                    <div className="font-semibold text-gray-900">
+                                        {item.revenue || item.amount}
+                                    </div>
+                                    {item.transactionCount && (
+                                        <div className="text-xs text-gray-500">
+                                            {item.transactionCount} transactions
+                                        </div>
+                                    )}
+                                    {item.count && (
+                                        <div className="text-xs text-gray-500">
+                                            {item.count} sales
+                                        </div>
+                                    )}
+                                </>
                             )}
                         </div>
                     </div>
@@ -1203,6 +1293,7 @@ export default function Upsell() {
             </div>
         );
     };
+
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-6">
@@ -1346,17 +1437,40 @@ export default function Upsell() {
                         </Col>
                     </Row>
                 </Card>
-
                 <ScrollableCardsContainer>
                     {/* Your Performance Card - First */}
                     <div className="flex-shrink-0" style={{ width: '300px' }}>
                         <PersonalPerformanceCard
                             data={dashboardData.personalPerformance}
-                            loading={false}
+                            loading={dashboardLoading}
                         />
                     </div>
 
-                    {/* Other Ranking Cards */}
+                    {/* Users by Number of Attempts */}
+                    <RankingCard
+                        title="Users by Attempts"
+                        data={dashboardData.usersByAttempts || []}
+                        color="orange"
+                        statValue={dashboardData.stats.totalAttempts || 0}
+                        statLabel="Total System Attempts"
+                        onViewDetails={viewDetails}
+                        icon={<RiseOutlined className="text-xl" />}
+                        isAttempts={true}
+                    />
+
+                    {/* Users by Conversion Ratio */}
+                    <RankingCard
+                        title="Users by Conversion Ratio"
+                        data={dashboardData.usersByConversionRatio || []}
+                        color="cyan"
+                        statValue={dashboardData.stats.systemConversionRate || '0%'}
+                        statLabel="Average Conversion Rate"
+                        onViewDetails={viewDetails}
+                        icon={<TrophyOutlined className="text-xl" />}
+                        isConversion={true}
+                    />
+
+                    {/* Top Selling Products */}
                     <RankingCard
                         title="Top Selling Products"
                         data={dashboardData.topSellingProducts}
@@ -1364,8 +1478,10 @@ export default function Upsell() {
                         statValue={dashboardData.stats.totalRevenue}
                         statLabel="Total Revenue"
                         onViewDetails={viewDetails}
+                        icon={<RiseOutlined className="text-xl" />}
                     />
 
+                    {/* Top Sellers */}
                     <RankingCard
                         title="Top Sellers"
                         data={dashboardData.topSellers}
@@ -1373,8 +1489,10 @@ export default function Upsell() {
                         statValue={dashboardData.stats.totalTransactions}
                         statLabel="Total Transactions"
                         onViewDetails={viewDetails}
+                        icon={<TrophyOutlined className="text-xl" />}
                     />
 
+                    {/* Top Incentive */}
                     <RankingCard
                         title="Top Incentive"
                         data={dashboardData.topIncentives}
@@ -1382,8 +1500,10 @@ export default function Upsell() {
                         statValue={dashboardData.stats.totalIncentives}
                         statLabel="Total Incentives"
                         onViewDetails={viewDetails}
+                        icon={<TrophyOutlined className="text-xl" />}
                     />
 
+                    {/* Pending Approvals */}
                     <RankingCard
                         title="Pending Approvals"
                         data={dashboardData.pendingApprovals}
@@ -1391,6 +1511,7 @@ export default function Upsell() {
                         statValue={dashboardData.stats.pendingCount}
                         statLabel="Pending Approval"
                         onViewDetails={viewDetails}
+                        icon={<CalendarOutlined className="text-xl" />}
                     />
                 </ScrollableCardsContainer>
 

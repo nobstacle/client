@@ -4996,7 +4996,7 @@ export const surveyHeaderControllerPatchSurveyHeader = (
 ) => {
 	return nobstacleBackendApiInstance<GetSurveyHeaderRes>(
 		{
-			url: `/api/v1/shortcut/survey-header/${id}`,
+			url: `/api/v1/shortcut/update-survey-header`,
 			method: 'PATCH',
 			headers: { 'Content-Type': 'application/json' },
 			data: data

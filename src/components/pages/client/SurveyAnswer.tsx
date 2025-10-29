@@ -52,11 +52,29 @@ const responsiveStyles = `
   }
 `;
 
-const SurveyAnswer: React.FC<{ tag: string }> = ({ tag }) => {
+<style jsx>{`
+  ${responsiveStyles}
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+`}</style>
+
+
+const SurveyAnswer: React.FC<{ tag: string; survey?: any }> = ({ tag, survey }) => {
   const [emptyDefaultSlideshow, setEmptySlideshow] = React.useState(false);
   const [selectedVal, setSelectedVal] = React.useState<number>();
-  const { emitSendSurveyAnswer } = useSocketContext();
+  const { emitSendSurveyAnswer, emitSendTemplate } = useSocketContext();
   const params = useSearchParams();
+  const { company } = useCompanyStore();
+
   const defaultSlideshowShortcut = useShortcutControllerGetShortcutOne(
     { type: "DefaultSlideshow" },
     {
@@ -85,13 +103,9 @@ const SurveyAnswer: React.FC<{ tag: string }> = ({ tag }) => {
     },
   );
 
-  const { emitSendTemplate } = useSocketContext();
-
   React.useEffect(() => {
     setEmptySlideshow(false);
   }, [tag]);
-
-  const { company } = useCompanyStore();
 
   const sendSurveyAnswer = (value: number) => {
     setSelectedVal(value);
@@ -130,14 +144,36 @@ const SurveyAnswer: React.FC<{ tag: string }> = ({ tag }) => {
     );
   }
 
+  // Extract template content safely
+  const templateContent =
+    survey?.surveyHeader?.template?.content
+      ?.replace(/\n/g, " ")
+      ?.trim() || "";
+
   return (
     <>
       <style jsx>{responsiveStyles}</style>
-      <div className="flex flex-col gap-4 md:gap-6 lg:gap-8 emoticonWrapper">
-        <div className="flex flex-wrap justify-center gap-3 md:gap-4 lg:gap-5">
+      <div className="flex flex-col items-center gap-10 md:gap-6 emoticonWrapper">
+        {/* ✅ Conditionally show template text */}
+        {templateContent && (
+          <div
+            className="text-center px-4 sm:px-6 md:px-8 max-w-5xl leading-snug mb-6"
+            style={{
+              fontSize: "clamp(1.25rem, 2vw + 0.5rem, 2.25rem)",
+              fontWeight: 600,
+              lineHeight: 1.4,
+              color: "#3b5998",
+            }}
+          >
+            {templateContent}
+          </div>
+        )}
+
+        {/* Emoticon buttons */}
+        <div className="flex flex-wrap justify-center gap-4  sm:gap-6  md:gap-6 lg:gap-5">
           {[1, 2, 3, 4, 5].map((val) => (
             <button
-              key={val.toString()}
+              key={val}
               className="p-2 sm:p-3 md:p-4 transition-all duration-200"
               style={{
                 border: selectedVal === val ? "4px solid rgb(59, 89, 152)" : "none",
