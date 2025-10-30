@@ -1,4 +1,3 @@
-// components/Header.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -7,6 +6,13 @@ import Link from 'next/link';
 import { signIn } from "next-auth/react";
 import SignInModal from "./SignIn";
 import { Button } from "antd";
+
+declare global {
+  interface Window {
+    gtag?: (...args: any[]) => void;
+  }
+}
+
 
 export default function Header() {
   const [scrolled, setScrolled] = useState(false);
@@ -20,8 +26,17 @@ export default function Header() {
   }, []);
 
   const toggleNav = () => setNavVisible(!navVisible);
-
   const closeNav = () => setNavVisible(false);
+
+  const handleBookDemoClick = () => {
+    // Fire Google Ads conversion tag
+    if (typeof window !== "undefined" && typeof window.gtag !== "undefined") {
+      console.warn("CLICKED");
+      window.gtag('event', 'conversion', {
+        send_to: 'AW-17688003710/AbCdEfGhIjKLMn',
+      });
+    }
+  };
 
   const handleSignIn = async () => {
     await signIn("credentials", {
@@ -58,7 +73,8 @@ export default function Header() {
               <li><a href="#pricing" onClick={closeNav}>Pricing</a></li>
               <li><a href="#faq" onClick={closeNav}>FAQ</a></li>
               <li><a href="#contact" onClick={closeNav}>Contact</a></li>
-              {/* Add these mobile-only items */}
+
+              {/* Mobile-only */}
               <li className="mobile-only">
                 <Button
                   className="signin-link-mobile"
@@ -68,14 +84,30 @@ export default function Header() {
                 </Button>
               </li>
               <li className="mobile-only">
-                <a href="#contact" className="cta-button-mobile" onClick={closeNav}>Book a Demo</a>
+                <a
+                  href="#contact"
+                  className="cta-button-mobile"
+                  onClick={() => {
+                    handleBookDemoClick();
+                    closeNav();
+                  }}
+                >
+                  Book a Demo
+                </a>
               </li>
             </ul>
           </nav>
 
           <div className="nav-actions">
-            <Button className="signin-link" onClick={() => setSignInOpen(true)} >Sign In</Button>
-            <a href="#contact" className="cta-button-header">Book a Demo</a>
+            <Button className="signin-link" onClick={() => setSignInOpen(true)}>Sign In</Button>
+            <a
+              href="#contact"
+              className="cta-button-header"
+              onClick={handleBookDemoClick}
+            >
+              Book a Demo
+            </a>
+
             <button
               className="mobile-nav-toggle"
               aria-controls="main-nav"
@@ -88,6 +120,7 @@ export default function Header() {
           </div>
         </div>
       </header>
+
       <SignInModal isOpen={signInOpen} onClose={() => setSignInOpen(false)} />
     </>
   );
