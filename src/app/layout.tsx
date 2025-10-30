@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 import { ReactQueryContextProvider } from "../context/ReactQueryContextProvider";
 import { SessionContextProvider } from "../context/SessionContextProvider";
@@ -47,6 +48,24 @@ function RootLayout({ children, session }: RootLayourPropsI) {
       </head>
 
       <body className={inter.className}>
+        {/* Google Ads Tracking */}
+        <Script
+          strategy="afterInteractive"
+          src="https://www.googletagmanager.com/gtag/js?id=AW-17688003710"
+        />
+        <Script
+          id="google-ads-init"
+          strategy="afterInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+              gtag('config', 'AW-17688003710');
+            `,
+          }}
+        />
+
         <ReactQueryContextProvider>
           <SessionContextProvider session={session}>
             <div>{children}</div>
