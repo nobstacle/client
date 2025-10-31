@@ -44,7 +44,6 @@ export const TemplateMergerForm: React.FC = () => {
     // Set initial form value when data loads
     React.useEffect(() => {
         if (surveyHeader) {
-            console.info("surveyHeadersurveyHeader", surveyHeader)
             form.setFieldsValue({
                 textId: surveyHeader.items[0]?.textId,
             });
@@ -52,12 +51,10 @@ export const TemplateMergerForm: React.FC = () => {
     }, [surveyHeader, form]);
 
     const handleSubmit = (values: any) => {
-        if (surveyHeader) {
-            // Update existing survey header
-            // Temporary: pass empty string for id until API client is regenerated
+        if (surveyHeader !== undefined && surveyHeader?.items?.length > 0) {
             updateMutation.mutate(
                 {
-                    id: "", // Backend will ignore this and use userId from JWT
+                    id: "",
                     data: {
                         textId: values.textId,
                     }
@@ -73,7 +70,6 @@ export const TemplateMergerForm: React.FC = () => {
                 }
             );
         } else {
-            // Create new survey header (first time setup)
             createMutation.mutate(
                 {
                     data: {
