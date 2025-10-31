@@ -35,7 +35,6 @@ export default function Package() {
     const params = useSearchParams();
 
     useEffect(() => {
-        console.info(params.get("lang"));
         setSelectedLanguage(params.get("lang") || companyData?.defaultLangCode);
     }, [companyData, params]);
 

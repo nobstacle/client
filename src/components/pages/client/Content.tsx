@@ -157,10 +157,8 @@ const PackageCard = ({ packageData, handleClick, loadingButton, langCode = 'en' 
   const [currentSlide, setCurrentSlide] = useState(0);
   const [expanded, setExpanded] = useState(false);
   const [isModalOpen, setisIsModalOpen] = useState(false);
-
-  // const formatPrice = (price) => {
-  //   return new Intl.NumberFormat().format(price / 100);
-  // };
+  const [isVideoModalOpen, setIsVideoModalOpen] = useState(false); // ADD THIS
+  const [selectedVideo, setSelectedVideo] = useState(null); // ADD THIS
 
   const formatCurrency = (price, currency = 'AED') => {
     return `${currency} ${price}`;
@@ -168,6 +166,16 @@ const PackageCard = ({ packageData, handleClick, loadingButton, langCode = 'en' 
 
   const handlePackageClick = (record) => {
     handleClick(record);
+  };
+
+  const openVideoModal = (videoUrl) => {
+    setSelectedVideo(videoUrl);
+    setIsVideoModalOpen(true);
+  };
+
+  const closeVideoModal = () => {
+    setIsVideoModalOpen(false);
+    setSelectedVideo(null);
   };
 
   // Get localized content using the langCode - now this will work properly
@@ -194,8 +202,7 @@ const PackageCard = ({ packageData, handleClick, loadingButton, langCode = 'en' 
   // Get image array and deduplicate
   // const rawImageArray = packageData.signedImageUrls || packageData.images || [];
 
-  // Build media array (images + videos)
-  const mediaArray = [
+  const imageArray = [
     ...(packageData.signedImageUrls?.length
       ? packageData.signedImageUrls
       : packageData.images || []
@@ -204,21 +211,42 @@ const PackageCard = ({ packageData, handleClick, loadingButton, langCode = 'en' 
       url: img.signedUrl || img.url || img,
       alt: img.alt || "Package Image",
       order: img.order || 0,
-    })),
-    ...(packageData.videos || []).map((vid, idx) => ({
-      type: "video",
-      url: vid.url,
-      alt: vid.tag || "Package Video",
-      order: vid.order || idx + 1,
-    })),
+    }))
   ].sort((a, b) => (a.order || 0) - (b.order || 0));
 
-  const hasMultipleImages = mediaArray.length > 1;
+  const videoArray = (packageData.videos || []).map((vid, idx) => ({
+    type: "video",
+    url: vid.url,
+    alt: vid.tag || "Package Video",
+    order: vid.order || idx + 1,
+  })).sort((a, b) => (a.order || 0) - (b.order || 0));
+
+  const hasMultipleImages = imageArray.length > 1;
+  const hasVideos = videoArray.length > 0;
+
+  // Build media array (images + videos)
+  // const mediaArray = [
+  //   ...(packageData.signedImageUrls?.length
+  //     ? packageData.signedImageUrls
+  //     : packageData.images || []
+  //   ).map((img) => ({
+  //     type: "image",
+  //     url: img.signedUrl || img.url || img,
+  //     alt: img.alt || "Package Image",
+  //     order: img.order || 0,
+  //   })),
+  //   ...(packageData.videos || []).map((vid, idx) => ({
+  //     type: "video",
+  //     url: vid.url,
+  //     alt: vid.tag || "Package Video",
+  //     order: vid.order || idx + 1,
+  //   })),
+  // ].sort((a, b) => (a.order || 0) - (b.order || 0));
 
   // Reset currentSlide when imageArray changes
   useEffect(() => {
     setCurrentSlide(0);
-  }, [mediaArray.length]);
+  }, [imageArray.length]);
 
   // Carousel change handler
   const handleSlideChange = (currentSlideIndex) => {
@@ -321,7 +349,7 @@ const PackageCard = ({ packageData, handleClick, loadingButton, langCode = 'en' 
         <div className="flex flex-col md:flex-row lg:flex-row ">
           {/* Image Section */}
           <div className="relative w-full md:w-[300px] lg:w-[375px] xl:w-[500px] flex-shrink-0 flex items-center justify-center min-h-[35vh]">
-            {mediaArray.length > 0 ? (
+            {imageArray.length > 0 ? (
               <div className="relative w-full " style={{ padding: '1rem' }} >
                 <Carousel
                   ref={carouselRef}
@@ -334,60 +362,25 @@ const PackageCard = ({ packageData, handleClick, loadingButton, langCode = 'en' 
                   afterChange={handleSlideChange}
                   beforeChange={(from, to) => setCurrentSlide(to)}
                 >
-                  {mediaArray.map((item, index) => (
+                  {imageArray.map((item, index) => (
                     <div
                       key={`${packageData.id}-${index}`}
                       className="w-full h-full flex items-center justify-center relative"
                     >
-                      {item.type === "image" ? (
-                        <img
-                          src={item.url}
-                          alt={item.alt}
-                          className="w-full h-full object-cover object-center"
-                          style={{
-                            borderRadius: '8px',
-                            height: '100%',
-                            maxHeight: '35vh',
-                            minHeight: '35vh',
-                            filter: isSoldOut ? 'grayscale(100%) brightness(0.7)' : 'none'
-                          }}
-                        />
-                      ) : (
-                        <video
-                        autoPlay
-                          muted
-                          loop
-                          playsInline
-                          webkit-playsinline="true"
-                          x-webkit-airplay="allow"
-                          preload="metadata"
-                          src={item.url}
-                          className="w-full h-full object-cover object-center"
-                          style={{
-                            borderRadius: '8px',
-                            height: '100%',
-                            maxHeight: '35vh',
-                            minHeight: '35vh',
-                          }}
-                          // Prevent fullscreen on iOS
-                          onLoadedMetadata={(e) => {
-                            const video = e.currentTarget;
-                            video.setAttribute('playsinline', 'true');
-                            video.setAttribute('webkit-playsinline', 'true');
-                          }}
-                          // Additional handler to prevent fullscreen
-                          onPlay={(e) => {
-                            const video = e.currentTarget;
-                            if (video.webkitEnterFullscreen) {
-                              // Prevent webkit fullscreen
-                              video.style.width = '100%';
-                              video.style.height = '100%';
-                            }
-                          }}
-                        />
-                      )}
+                      <img
+                        src={item.url}
+                        alt={item.alt}
+                        className="w-full h-full object-cover object-center"
+                        style={{
+                          borderRadius: '8px',
+                          height: '100%',
+                          maxHeight: '35vh',
+                          minHeight: '35vh',
+                          filter: isSoldOut ? 'grayscale(100%) brightness(0.7)' : 'none'
+                        }}
+                      />
 
-                      {/*Expand Icon Top Right */}
+                      {/* Expand Icon Top Right */}
                       <div
                         className="absolute top-2 right-2 bg-black/50 p-2 rounded-full cursor-pointer hover:bg-black/70 transition"
                         onClick={openBigModal}
@@ -399,10 +392,27 @@ const PackageCard = ({ packageData, handleClick, loadingButton, langCode = 'en' 
                   ))}
                 </Carousel>
 
+                {hasVideos && !isSoldOut && (
+                  <div
+                    className="absolute bottom-2 right-2 bg-blue-600/90 hover:bg-blue-700 p-3 rounded-full cursor-pointer transition z-10 flex items-center justify-center"
+                    onClick={() => openVideoModal(videoArray[0].url)}
+                    style={{ height: "48px", width: "48px" }}
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="white"
+                      viewBox="0 0 24 24"
+                      style={{ width: "24px", height: "24px" }}
+                    >
+                      <path d="M8 5v14l11-7z" />
+                    </svg>
+                  </div>
+                )}
+
                 {/* Image counter - Only show if more than one image */}
                 {hasMultipleImages && (
                   <div className="absolute top-2 left-1 bg-black/50 text-white px-2 py-1 rounded text-xs z-10">
-                    {currentSlide + 1} / {mediaArray.length}
+                    {currentSlide + 1} / {imageArray.length}
                   </div>
                 )}
 
@@ -530,6 +540,7 @@ const PackageCard = ({ packageData, handleClick, loadingButton, langCode = 'en' 
           </div>
         </div>
       </Card>
+
       <Modal
         open={isModalOpen}
         onCancel={closeModal}
@@ -539,7 +550,7 @@ const PackageCard = ({ packageData, handleClick, loadingButton, langCode = 'en' 
         style={{ top: 20 }}
       >
         <>
-          {mediaArray.length > 0 ? (
+          {imageArray.length > 0 ? (
             <div
               className="relative w-full h-full"
               style={{ height: '100%', width: '100%' }}
@@ -556,45 +567,28 @@ const PackageCard = ({ packageData, handleClick, loadingButton, langCode = 'en' 
                 beforeChange={(from, to) => setCurrentSlide(to)}
                 className="package-modal-carousel"
               >
-                {mediaArray.map((item, index) => (
-                  <div key={`modal-media-${index}`} className="w-full h-full flex items-center justify-center">
-                    {item.type === "image" ? (
-                      <Image
-                        preview={false}
-                        src={item.url}
-                        alt={item.alt || `Package Image ${index + 1}`}
-                        className="object-contain w-full h-full"
-                        style={{
-                          width: "100%",
-                          height: "100%",
-                          maxHeight: "75vh",
-                          borderRadius: "8px",
-                          filter: isSoldOut ? "grayscale(100%) brightness(0.7)" : "none",
-                        }}
-                      />
-                    ) : (
-                      <video
-                        autoPlay
-                        muted
-                        loop
-                        playsInline
-                        src={item.url}
-                        className="object-contain w-full h-full"
-                        style={{
-                          width: "100%",
-                          height: "100%",
-                          maxHeight: "75vh",
-                          borderRadius: "8px",
-                        }}
-                      />
-                    )}
+                {imageArray.map((item, index) => (
+                  <div key={`modal-image-${index}`} className="w-full h-full flex items-center justify-center">
+                    <Image
+                      preview={false}
+                      src={item.url}
+                      alt={item.alt || `Package Image ${index + 1}`}
+                      className="object-contain w-full h-full"
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        maxHeight: "75vh",
+                        borderRadius: "8px",
+                        filter: isSoldOut ? "grayscale(100%) brightness(0.7)" : "none",
+                      }}
+                    />
                   </div>
                 ))}
               </Carousel>
 
               {hasMultipleImages && (
                 <div className="absolute top-2 left-1 bg-black/50 text-white px-2 py-1 rounded text-xs z-10">
-                  {currentSlide + 1} / {mediaArray.length}
+                  {currentSlide + 1} / {imageArray.length}
                 </div>
               )}
 
@@ -612,6 +606,31 @@ const PackageCard = ({ packageData, handleClick, loadingButton, langCode = 'en' 
             </div>
           )}
         </>
+      </Modal>
+      <Modal
+        open={isVideoModalOpen}
+        onCancel={closeVideoModal}
+        footer={false}
+        width="90%"
+        bodyStyle={{ height: '80vh', padding: '1rem', backgroundColor: 'black' }}
+        style={{ top: 20 }}
+      >
+        <div className="w-full h-full flex items-center justify-center">
+          {selectedVideo && (
+            <video
+              autoPlay
+              controls
+              loop
+              playsInline
+              src={selectedVideo}
+              className="w-full h-full object-contain"
+              style={{
+                maxHeight: "75vh",
+                borderRadius: "8px",
+              }}
+            />
+          )}
+        </div>
       </Modal>
     </>
   );
@@ -771,7 +790,7 @@ export const Content: React.FC = () => {
     };
   }, [messageStore.receivedContent?.content]);
 
-useEffect(() => {
+  useEffect(() => {
     const generateQR = async () => {
       let content = '';
 
@@ -793,7 +812,7 @@ useEffect(() => {
       } else if (messageStore.receivedType === 'Image' && messageStore.receivedContent?.directContent === 'QR') {
         // For Image with QR, decode the URL properly
         const rawContent = messageStore.receivedContent?.content;
-        
+
         // If the URL is already a valid signed URL, use it directly
         // Otherwise, try to extract the clean URL
         try {
@@ -834,7 +853,7 @@ useEffect(() => {
     if (
       messageStore.receivedType === ("JotFormMessage" as any) ||
       messageStore.receivedType === 'WebsiteTemplateQr' ||
-      messageStore.receivedType === 'MapTemplateQr' || 
+      messageStore.receivedType === 'MapTemplateQr' ||
       (messageStore.receivedType === 'Image' && messageStore.receivedContent?.directContent === 'QR')
     ) {
 
@@ -905,18 +924,20 @@ useEffect(() => {
       }
 
       const initialIndexes = {};
-      parseData.forEach((pkg, index) => {
+      parseData.forEach((pkg) => {
         initialIndexes[pkg.id] = 0;
       });
       setPackageImageIndexes(initialIndexes);
       const intervals = [];
 
       parseData.forEach((pkg) => {
-        if (pkg.signedImageUrls && pkg.signedImageUrls.length > 1) {
+        // Only auto-rotate images, not videos
+        const images = pkg.signedImageUrls || pkg.images || [];
+        if (images.length > 1) {
           const interval = setInterval(() => {
             setPackageImageIndexes(prev => ({
               ...prev,
-              [pkg.id]: (prev[pkg.id] + 1) % pkg.signedImageUrls.length
+              [pkg.id]: (prev[pkg.id] + 1) % images.length
             }));
           }, 3000);
           intervals.push(interval);
@@ -1092,7 +1113,7 @@ useEffect(() => {
     }
   };
 
-  console.info("messageStoremessageStoremessageStore",messageStore);
+  console.info("messageStoremessageStoremessageStore", messageStore);
 
   if (hasHydrated) {
     if (
@@ -1192,28 +1213,28 @@ useEffect(() => {
     if (messageStore.receivedType === "Image") {
       return (
         <>
-        {messageStore.receivedContent?.directContent === 'QR' ? (
-           <Card>
+          {messageStore.receivedContent?.directContent === 'QR' ? (
+            <Card>
+              <img
+                src={qrCodeUrl}
+                alt="QR Code"
+                className="w-96 h-96 object-cover"
+              />
+            </Card>
+          ) : (
             <img
-              src={qrCodeUrl}
-              alt="QR Code"
-              className="w-96 h-96 object-cover"
+              key={messageStore.receivedContent?.id ?? ""}
+              alt="template_image"
+              style={{
+                height: "auto",
+                maxHeight: "100%",
+                maxWidth: "100%",
+                objectFit: "cover",
+                display: "block",
+              }}
+              src={messageStore.receivedContent?.content ?? ""}
             />
-          </Card>
-        ) : (
-          <img
-          key={messageStore.receivedContent?.id ?? ""}
-          alt="template_image"
-          style={{
-            height: "auto",
-            maxHeight: "100%",
-            maxWidth: "100%",
-            objectFit: "cover",
-            display: "block",
-          }} 
-          src={messageStore.receivedContent?.content ?? ""}
-        />
-        )}  
+          )}
         </>
       );
     }

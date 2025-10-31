@@ -31,7 +31,6 @@ export default function Header() {
   const handleBookDemoClick = () => {
     // Fire Google Ads conversion tag
     if (typeof window !== "undefined" && typeof window.gtag !== "undefined") {
-      console.warn("CLICKED");
       window.gtag('event', 'conversion', {
         send_to: 'AW-17688003710/AbCdEfGhIjKLMn',
       });

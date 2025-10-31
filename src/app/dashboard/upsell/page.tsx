@@ -66,7 +66,7 @@ export default function Upsell() {
     const [exportLoading, setExportLoading] = useState(false);
     const [detailModal, setDetailModal] = useState(false);
     const [selectedModalTitle, setSelectedModalTitle] = useState(null);
-    const [dateRange, setDateRange] = useState(null);
+const [dateRange, setDateRange] = useState([dayjs().startOf('month'), dayjs().endOf('month')]);
     const [selectedPackage, setSelectedPackage] = useState(undefined);
     const [selectedStatus, setSelectedStatus] = useState(undefined);
     const [dashboardLoading, setDashboardLoading] = useState(false);

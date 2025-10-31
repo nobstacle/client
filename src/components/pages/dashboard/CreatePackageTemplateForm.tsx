@@ -31,6 +31,7 @@ import {
 import { useSession } from "next-auth/react";
 import { TranslationOutlined } from "@ant-design/icons";
 import useTemplateStore from "@/lib/zustand/store/templateStore";
+import { useSearchParams } from "next/navigation";
 
 const { Text, Title } = Typography;
 const { Option } = Select;
@@ -152,7 +153,6 @@ interface CreatePackageFormProps {
   isEdit?: boolean;
 }
 
-
 const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
   cb,
   initialData,
@@ -170,6 +170,7 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
   const [isTranslating, setIsTranslating] = React.useState<string | null>(null);
   const [selectedVideos, setSelectedVideos] = React.useState<number[]>([]);
   const { videos, setVideos, setSearchVideos, searchVideos } = useTemplateStore();
+  const params = useSearchParams();
 
   const getMultilingualValue = (field: any, fallbackLang = 'en') => {
     if (!field || typeof field !== 'object') return field || '';
@@ -338,8 +339,10 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
     };
   };
 
-
   const getDefaultValues = React.useCallback((): CreatePackageFormFieldValues => {
+    // Get default language from URL params
+    const defaultLangCode = params.get("lang") || company.data?.defaultLangCode || "en";
+
     if (isEdit && initialData) {
       // For edit mode, create language cards from existing data
       const existingLanguages = Object.keys(initialData.packageNames || {});
@@ -360,8 +363,6 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
         });
       });
 
-      // setSelectedLanguages(existingLanguages);
-
       return {
         packageCode: initialData.packageCode || "",
         originalPrice: initialData.originalPrice || 0,
@@ -377,10 +378,10 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
         templateId: initialData.templateId || undefined,
         totalPackagesSold: initialData.totalPackagesSold || 0,
         calculationMethod: initialData.calculationMethod || CALCULATION_METHODS[0].value,
-        languageCards: languageCards.length > 0 ? languageCards : [createDefaultLanguageCard()],
-
+        languageCards: languageCards.length > 0 ? languageCards : [createDefaultLanguageCard(defaultLangCode)],
       };
     } else {
+      // For create mode, set first card with default language
       return {
         packageCode: "",
         originalPrice: 0,
@@ -396,10 +397,10 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
         templateId: undefined,
         totalPackagesSold: 0,
         calculationMethod: CALCULATION_METHODS[0].value,
-        languageCards: [createDefaultLanguageCard()],
+        languageCards: [createDefaultLanguageCard(defaultLangCode)], // Set default language here
       };
     }
-  }, [isEdit, initialData, company.data?.id]);
+  }, [isEdit, initialData, company.data?.id, params]);
 
   const {
     handleSubmit,
@@ -599,9 +600,9 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
   // Initialize form data only once for edit mode
   React.useEffect(() => {
     if (isEdit && initialData && !isInitialized) {
-    if (initialData.videos?.length > 0) {
+      if (initialData.videos?.length > 0) {
         setSelectedVideos(initialData.videos.map(v => v.id));
-    }
+      }
       // Set selected languages from initial data
       const existingLanguages = Object.keys(initialData.packageNames || {});
       setSelectedLanguages(existingLanguages);
@@ -616,8 +617,13 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
 
       // Mark as initialized to prevent re-runs
       setIsInitialized(true);
+    } else if (!isEdit && !isInitialized) {
+      // For create mode, set default language
+      const defaultLangCode = params.get("lang") || company.data?.defaultLangCode || "en";
+      setSelectedLanguages([defaultLangCode]);
+      setIsInitialized(true);
     }
-  }, [isEdit, initialData, isInitialized]);
+  }, [isEdit, initialData, isInitialized, params, company.data?.defaultLangCode, reset, getDefaultValues]);
 
   // Fetch categories
   React.useEffect(() => {
@@ -694,7 +700,7 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
     formData.append('totalPackagesSold', (data.totalPackagesSold || 0).toString());
 
     if (selectedVideos && selectedVideos.length > 0) {
-        selectedVideos.forEach((videoId, index) => {
+      selectedVideos.forEach((videoId, index) => {
         formData.append("videoIds[]", videoId.toString());
 
         // Optional metadata if required
