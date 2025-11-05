@@ -66,7 +66,6 @@ export default function ImageDashboard() {
   };
 
   const handleQrCodeClick = (id: number, url: string, tag: string, isAvailable: boolean) => {
-    console.log("QR Code clicked for:", { id, url, tag });
     emitSendTemplate({
       refId: id,
       langCode: isAvailable

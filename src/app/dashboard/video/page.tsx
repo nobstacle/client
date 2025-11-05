@@ -71,6 +71,19 @@ export default function VideoDashboard() {
     });
   };
 
+    const handleQrCodeClick = (id: number, url: string, tag: string, isAvailable: boolean) => {
+    emitSendTemplate({
+      refId: id,
+      langCode: isAvailable
+        ? params.get("lang") || companyData?.defaultLangCode || "en"
+        : companyData?.defaultLangCode || "en",
+      refType: ChatType.Video,
+      station: Number(params.get("station") ?? 1),
+      contentExtra: url,
+      directContent: 'QR'
+    });
+  };
+
   const onDeleteCard = (id: number) => {
     deleteVideoTemplate.mutate(
       { id },
@@ -156,6 +169,7 @@ export default function VideoDashboard() {
                   onDelete={() => onDeleteCard(val.id)}
                   isAdmin={userData?.user.Roles?.includes("Admin")}
                   onUpdate={() => onUpdateCard(val)}
+                    onQrCodeClick={() => handleQrCodeClick(val.id, val.ext, val.tag, val.langCode.includes(params.get("lang") || companyData?.defaultLangCode || ""),)}
                   key={val.id}
                   tag={val.tag}
                   isAvailable={val.langCode.includes(

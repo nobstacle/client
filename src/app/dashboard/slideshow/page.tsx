@@ -1,15 +1,13 @@
 "use client";
 
 import Image from "next/image";
-import { Button } from "../../../components/Button";
+// import { Button } from "../../../components/Button";
 import Modal from "../../../components/Modal";
 import { useDisclousure } from "../../../hooks/useDisclosure";
 import {
-  getTemplateControllerGetSlideshowTemplatesQueryKey,
   useCompanyControllerGetCompany,
   useSlideshowTemplateControllerDeleteSlideshowTemplateOne,
   useSlideshowTemplateControllerPatchSlideshowTemplateOrder,
-  useTemplateControllerGetSlideshowTemplates,
 } from "../../../lib/client/api";
 import { useSearchParams } from "next/navigation";
 import { useSocketContext } from "../../../context/SocketContextProvider";
@@ -23,7 +21,6 @@ import { useTemplateContext } from "../../../context/TemplatesProvider";
 import { UpdateSlideshowTemplateForm } from "../../../components/pages/dashboard/UpdateSlideshowTemplateForm";
 import { useState } from "react";
 import {
-  // GetImageTemplateRes,
   GetSlideshowTemplateRes,
 } from "../../../lib/client/model";
 import { useSearchTemplate } from "../../../hooks/useSearchTemplate";
@@ -76,6 +73,19 @@ export default function SlideshowDashboard() {
       station: Number(params.get("station") ?? 1),
     });
   };
+
+   const handleQrCodeClick = (id: number, url: string, tag: string, isAvailable: boolean) => {
+  emitSendTemplate({
+    refId: id,
+    langCode: isAvailable
+      ? params.get("lang") || companyData?.defaultLangCode || "en"
+      : companyData?.defaultLangCode || "en",
+    refType: ChatType.Slideshow,
+    station: Number(params.get("station") ?? 1),
+    contentExtra: url,
+    directContent: 'QR'
+  });
+};
 
   const onDeleteCard = (id: number) => {
     deleteSlideshowTemplate.mutate(
@@ -184,6 +194,12 @@ export default function SlideshowDashboard() {
                   tag={val.tag}
                   key={val.id}
                   onDelete={() => onDeleteCard(val.id)}
+                   onQrCodeClick={() => handleQrCodeClick(
+    val.id, 
+    val.url || '',
+    val.tag, 
+    val.langCode.includes(params.get("lang") || companyData?.defaultLangCode || "")
+  )}
                   isAdmin={userData?.user.Roles?.includes("Admin")}
                   isAvailable={val.langCode.includes(
                     params.get("lang") || companyData?.defaultLangCode || "",

@@ -27,6 +27,7 @@ export interface SendDocumentPayloadType {
   refType: string;
   station: number;
   contentExtra?: string;
+  directContent?: string;
 }
 
 export interface ReceivedDocumentContent {

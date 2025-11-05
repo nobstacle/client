@@ -228,6 +228,19 @@ export default function Documents() {
         });
     };
 
+      const handleQrCodeClick = (id: number, url: string, tag: string, isAvailable: boolean) => {
+    emitSendDocument({
+      refId: id,
+      langCode: isAvailable
+        ? params.get("lang") || companyData?.defaultLangCode || "en"
+        : companyData?.defaultLangCode || "en",
+      refType: ChatType.Document,
+      station: Number(params.get("station") ?? 1),
+      contentExtra: url,
+      directContent: 'QR'
+    });
+  };
+
     // Apply language filtering to search results as well
     const documentsSource = useMemo(() => {
         const baseDocuments = searchDocuments.length > 0 ? searchDocuments : documents;
@@ -264,6 +277,7 @@ export default function Documents() {
                                             key={document.id}
                                             id={document.id}
                                             tag={document.tag}
+                                              onQrCodeClick={() => handleQrCodeClick(document.id, document.ext, document.tag, document.langCode.includes(params.get("lang") || companyData?.defaultLangCode || ""),)}
                                             isAdmin={data?.user.Roles?.includes("Admin")}
                                             isAvailable={document.langCode.includes(
                                                 params.get("lang") || companyData?.defaultLangCode || "",

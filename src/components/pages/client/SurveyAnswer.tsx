@@ -174,7 +174,7 @@ const SurveyAnswer: React.FC<{ tag: string; survey?: any }> = ({ tag, survey }) 
           {[1, 2, 3, 4, 5].map((val) => (
             <button
               key={val}
-              className="p-2 sm:p-3 md:p-4 transition-all duration-200"
+              className="p-2 sm:p-3 md:p-4 transition-all duration-200 customSurveyButton"
               style={{
                 border: selectedVal === val ? "4px solid rgb(59, 89, 152)" : "none",
                 borderRadius: "12px",

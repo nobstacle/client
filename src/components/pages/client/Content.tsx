@@ -793,7 +793,7 @@ export const Content: React.FC = () => {
   useEffect(() => {
     const generateQR = async () => {
       let content = '';
-
+      console.info("!1111111111111111111111111111111", messageStore.receivedContent)
       // Handle different message types
       if (messageStore.receivedType === "MapTemplateQr") {
         const origin = messageStore.receivedContent?.content;
@@ -809,7 +809,7 @@ export const Content: React.FC = () => {
         } else if (destination) {
           content = destination;
         }
-      } else if (messageStore.receivedType === 'Image' && messageStore.receivedContent?.directContent === 'QR') {
+      } else if (messageStore.receivedContent?.directContent === 'QR') {
         // For Image with QR, decode the URL properly
         const rawContent = messageStore.receivedContent?.content;
 
@@ -854,7 +854,7 @@ export const Content: React.FC = () => {
       messageStore.receivedType === ("JotFormMessage" as any) ||
       messageStore.receivedType === 'WebsiteTemplateQr' ||
       messageStore.receivedType === 'MapTemplateQr' ||
-      (messageStore.receivedType === 'Image' && messageStore.receivedContent?.directContent === 'QR')
+      messageStore.receivedContent?.directContent === 'QR'
     ) {
 
       generateQR();
@@ -1541,57 +1541,89 @@ export const Content: React.FC = () => {
       };
 
       return (
+        <>
+        {messageStore.receivedContent?.directContent === 'QR' ? (
+        <Card>
+          <img
+            src={qrCodeUrl}
+            alt="QR Code"
+            className="w-96 h-96 object-cover"
+          />
+        </Card>
+      ) : (
         <div className={`w-full ${isMobile ? 'p-2' : 'p-5'}`}>
           {renderDocumentViewer()}
         </div>
-      );
+      )}
+      </>
+      )
     }
 
     if (messageStore.receivedType === "Video") {
       return (
-        <div
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            width: '100vw',
-            height: '100vh',
-            overflow: 'hidden',
-            zIndex: 9,
-            pointerEvents: 'none',
-            backgroundColor: 'black',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <video
-            ref={videoElement}
-            autoPlay
-            loop
-            playsInline
-            key={messageStore.receivedContent?.content ?? ""}
+        messageStore.receivedContent?.directContent === 'QR' ? (
+          <Card>
+            <img
+              src={qrCodeUrl}
+              alt="QR Code"
+              className="w-96 h-96 object-cover"
+            />
+          </Card>
+        ) : (
+          <div
             style={{
-              maxWidth: '100%',
-              maxHeight: '100%',
-              width: 'auto',
-              height: 'auto',
-              objectFit: 'contain',
-              display: 'block',
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              width: '100vw',
+              height: '100vh',
+              overflow: 'hidden',
+              zIndex: 9,
+              pointerEvents: 'none',
+              backgroundColor: 'black',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
             }}
           >
-            <source
-              src={messageStore.receivedContent?.content ?? ""}
-              type="video/mp4"
-            />
-          </video>
-        </div>
+            <video
+              ref={videoElement}
+              autoPlay
+              loop
+              playsInline
+              key={messageStore.receivedContent?.content ?? ""}
+              style={{
+                maxWidth: '100%',
+                maxHeight: '100%',
+                width: 'auto',
+                height: 'auto',
+                objectFit: 'contain',
+                display: 'block',
+              }}
+            >
+              <source
+                src={messageStore.receivedContent?.content ?? ""}
+                type="video/mp4"
+              />
+            </video>
+          </div>
+        )
       );
     }
 
     if (messageStore.receivedType === "Slideshow") {
       return (
-        <Slideshow contents={messageStore.receivedContent?.contents ?? []} />
+        messageStore.receivedContent?.directContent === 'QR' ? (
+          <Card>
+            <img
+              src={qrCodeUrl}
+              alt="QR Code"
+              className="w-96 h-96 object-cover"
+            />
+          </Card>
+        ) : (
+          <Slideshow contents={messageStore.receivedContent?.contents ?? []} />
+        )
       );
     }
 

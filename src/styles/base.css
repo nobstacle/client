@@ -1090,3 +1090,10 @@ button {
 .customPaddingCards {
   padding: 0.2rem 0.5rem;
 }
+
+
+.customSurveyButton:focus-visible {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
