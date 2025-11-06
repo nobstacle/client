@@ -13,6 +13,7 @@ export interface CardPropsI {
   isAdmin?: boolean;
   icon?: JSX.Element;
   onQrCodeClick?: () => void;
+  type?: string;
 }
 
 export const Card: React.FC<React.PropsWithChildren<CardPropsI>> = ({

@@ -1097,3 +1097,31 @@ button {
   outline: none !important;
   box-shadow: none !important;
 }
+
+.emoticonWrapper .icon-container:focus-visible {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.emoticonWrapper .icon-container svg:focus {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.ant-select-dropdown .ant-select-item-option-content svg {
+  width: 100%;
+  height: auto;
+  max-width: 50px;
+  max-height: 50px;
+  margin-right: 0.6rem;
+}
+
+.ant-select .ant-select-selector .ant-select-selection-item svg {
+  width: 100%;
+  height: auto;
+  max-width: 20px;
+  max-height: 20px;
+  margin-right: 0.6rem;
+}

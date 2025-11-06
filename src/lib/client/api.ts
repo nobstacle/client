@@ -4100,9 +4100,7 @@ export const documentTemplateControllerPatchDocumentTemplateOrder = (
 
 
 
-//Package Functions
-
-// Package API Functions
+//===================Package Functions =========================
 
 // Create Package
 export const packageControllerCreatePackage = (
@@ -5258,3 +5256,357 @@ export const useSurveyHeaderControllerGetSurveyHeaderById = <
 	return useQuery(queryOptions);
 };
 
+
+// ==================== Survey Emoticon Template APIs ====================
+
+// Types
+export interface SurveyEmoticonTemplateDto {
+  emoticon: number;
+  templateType: string;
+  templateId: number;
+}
+
+export interface SurveyEmoticonTemplateRes {
+  id: number;
+  emoticon: number;
+  templateType: string;
+  templateId: number;
+  userId: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface GetAllSurveyEmoticonTemplatesRes {
+  items: SurveyEmoticonTemplateRes[];
+  total: number;
+}
+
+// Create Survey Emoticon Template
+export const surveyEmoticonTemplateControllerCreate = (
+  data: SurveyEmoticonTemplateDto,
+  options?: SecondParameter<typeof nobstacleBackendApiInstance>
+) => {
+  return nobstacleBackendApiInstance<SurveyEmoticonTemplateRes>(
+	{
+	  url: `/api/v1/shortcut/survey-emoticon-template`,
+	  method: 'POST',
+	  headers: { 'Content-Type': 'application/json' },
+	  data
+	},
+	options
+  );
+};
+
+export const getSurveyEmoticonTemplateControllerCreateMutationOptions = <
+  TError = ErrorType<HttpExceptionSchema>,
+  TContext = unknown
+>(options?: {
+  mutation?: UseMutationOptions<
+	Awaited<ReturnType<typeof surveyEmoticonTemplateControllerCreate>>,
+	TError,
+	{ data: SurveyEmoticonTemplateDto },
+	TContext
+  >,
+  request?: SecondParameter<typeof nobstacleBackendApiInstance>
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof surveyEmoticonTemplateControllerCreate>>,
+  TError,
+  { data: SurveyEmoticonTemplateDto },
+  TContext
+> => {
+  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+
+  const mutationFn: MutationFunction<
+	Awaited<ReturnType<typeof surveyEmoticonTemplateControllerCreate>>,
+	{ data: SurveyEmoticonTemplateDto }
+  > = (props) => {
+	const { data } = props ?? {};
+	return surveyEmoticonTemplateControllerCreate(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export const useSurveyEmoticonTemplateControllerCreate = <
+  TError = ErrorType<HttpExceptionSchema>,
+  TContext = unknown
+>(options?: {
+  mutation?: UseMutationOptions<
+	Awaited<ReturnType<typeof surveyEmoticonTemplateControllerCreate>>,
+	TError,
+	{ data: SurveyEmoticonTemplateDto },
+	TContext
+  >,
+  request?: SecondParameter<typeof nobstacleBackendApiInstance>
+}) => {
+  const mutationOptions = getSurveyEmoticonTemplateControllerCreateMutationOptions(options);
+  return useMutation(mutationOptions);
+};
+
+// Update Survey Emoticon Template
+export const surveyEmoticonTemplateControllerUpdate = (
+  id: string,
+  data: SurveyEmoticonTemplateDto,
+  options?: SecondParameter<typeof nobstacleBackendApiInstance>
+) => {
+  return nobstacleBackendApiInstance<SurveyEmoticonTemplateRes>(
+	{
+	  url: `/api/v1/shortcut/survey-emoticon-template/${id}`,
+	  method: 'PATCH',
+	  headers: { 'Content-Type': 'application/json' },
+	  data
+	},
+	options
+  );
+};
+
+export const getSurveyEmoticonTemplateControllerUpdateMutationOptions = <
+  TError = ErrorType<HttpExceptionSchema>,
+  TContext = unknown
+>(options?: {
+  mutation?: UseMutationOptions<
+	Awaited<ReturnType<typeof surveyEmoticonTemplateControllerUpdate>>,
+	TError,
+	{ id: string; data: SurveyEmoticonTemplateDto },
+	TContext
+  >,
+  request?: SecondParameter<typeof nobstacleBackendApiInstance>
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof surveyEmoticonTemplateControllerUpdate>>,
+  TError,
+  { id: string; data: SurveyEmoticonTemplateDto },
+  TContext
+> => {
+  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+
+  const mutationFn: MutationFunction<
+	Awaited<ReturnType<typeof surveyEmoticonTemplateControllerUpdate>>,
+	{ id: string; data: SurveyEmoticonTemplateDto }
+  > = (props) => {
+	const { id, data } = props ?? {};
+	return surveyEmoticonTemplateControllerUpdate(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export const useSurveyEmoticonTemplateControllerUpdate = <
+  TError = ErrorType<HttpExceptionSchema>,
+  TContext = unknown
+>(options?: {
+  mutation?: UseMutationOptions<
+	Awaited<ReturnType<typeof surveyEmoticonTemplateControllerUpdate>>,
+	TError,
+	{ id: string; data: SurveyEmoticonTemplateDto },
+	TContext
+  >,
+  request?: SecondParameter<typeof nobstacleBackendApiInstance>
+}) => {
+  const mutationOptions = getSurveyEmoticonTemplateControllerUpdateMutationOptions(options);
+  return useMutation(mutationOptions);
+};
+
+// Delete Survey Emoticon Template
+export const surveyEmoticonTemplateControllerDelete = (
+  id: string,
+  options?: SecondParameter<typeof nobstacleBackendApiInstance>
+) => {
+  return nobstacleBackendApiInstance<void>(
+	{
+	  url: `/api/v1/shortcut/survey-emoticon-template/${id}`,
+	  method: 'DELETE'
+	},
+	options
+  );
+};
+
+export const getSurveyEmoticonTemplateControllerDeleteMutationOptions = <
+  TError = ErrorType<HttpExceptionSchema>,
+  TContext = unknown
+>(options?: {
+  mutation?: UseMutationOptions<
+	Awaited<ReturnType<typeof surveyEmoticonTemplateControllerDelete>>,
+	TError,
+	{ id: string },
+	TContext
+  >,
+  request?: SecondParameter<typeof nobstacleBackendApiInstance>
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof surveyEmoticonTemplateControllerDelete>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+
+  const mutationFn: MutationFunction<
+	Awaited<ReturnType<typeof surveyEmoticonTemplateControllerDelete>>,
+	{ id: string }
+  > = (props) => {
+	const { id } = props ?? {};
+	return surveyEmoticonTemplateControllerDelete(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export const useSurveyEmoticonTemplateControllerDelete = <
+  TError = ErrorType<HttpExceptionSchema>,
+  TContext = unknown
+>(options?: {
+  mutation?: UseMutationOptions<
+	Awaited<ReturnType<typeof surveyEmoticonTemplateControllerDelete>>,
+	TError,
+	{ id: string },
+	TContext
+  >,
+  request?: SecondParameter<typeof nobstacleBackendApiInstance>
+}) => {
+  const mutationOptions = getSurveyEmoticonTemplateControllerDeleteMutationOptions(options);
+  return useMutation(mutationOptions);
+};
+
+// Get All Survey Emoticon Templates
+export const surveyEmoticonTemplateControllerGetAll = (
+  params?: {
+	page?: number;
+	limit?: number;
+	emoticon?: number;
+  },
+  options?: SecondParameter<typeof nobstacleBackendApiInstance>,
+  signal?: AbortSignal
+) => {
+  return nobstacleBackendApiInstance<GetAllSurveyEmoticonTemplatesRes>(
+	{
+	  url: `/api/v1/shortcut/survey-emoticon-templates`,
+	  method: 'GET',
+	  params,
+	  signal
+	},
+	options
+  );
+};
+
+export const getSurveyEmoticonTemplateControllerGetAllQueryOptions = <
+  TData = Awaited<ReturnType<typeof surveyEmoticonTemplateControllerGetAll>>,
+  TError = ErrorType<HttpExceptionSchema>
+>(
+  params?: {
+	page?: number;
+	limit?: number;
+	emoticon?: number;
+  },
+  options?: {
+	query?: UseQueryOptions<
+	  Awaited<ReturnType<typeof surveyEmoticonTemplateControllerGetAll>>,
+	  TError,
+	  TData
+	>,
+	request?: SecondParameter<typeof nobstacleBackendApiInstance>
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? [`/api/v1/shortcut/survey-emoticon-templates`, ...(params ? [params] : [])];
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof surveyEmoticonTemplateControllerGetAll>>> = ({ signal }) =>
+	surveyEmoticonTemplateControllerGetAll(params, requestOptions, signal);
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+	Awaited<ReturnType<typeof surveyEmoticonTemplateControllerGetAll>>,
+	TError,
+	TData
+  > & { queryKey: QueryKey };
+};
+
+export type SurveyEmoticonTemplateControllerGetAllQueryResult = NonNullable<
+  Awaited<ReturnType<typeof surveyEmoticonTemplateControllerGetAll>>
+>;
+export type SurveyEmoticonTemplateControllerGetAllQueryError = ErrorType<HttpExceptionSchema>;
+
+export const useSurveyEmoticonTemplateControllerGetAll = <
+  TData = Awaited<ReturnType<typeof surveyEmoticonTemplateControllerGetAll>>,
+  TError = ErrorType<HttpExceptionSchema>
+>(
+  params?: {
+	page?: number;
+	limit?: number;
+	emoticon?: number;
+  },
+  options?: {
+	query?: UseQueryOptions<
+	  Awaited<ReturnType<typeof surveyEmoticonTemplateControllerGetAll>>,
+	  TError,
+	  TData
+	>,
+	request?: SecondParameter<typeof nobstacleBackendApiInstance>
+  }
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } => {
+  const queryOptions = getSurveyEmoticonTemplateControllerGetAllQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  query.queryKey = queryOptions.queryKey;
+
+  return query;
+};
+
+export const getSurveyEmoticonTemplateControllerGetAllQueryKey = (
+  params?: {
+	page?: number;
+	limit?: number;
+	emoticon?: number;
+  }
+) => {
+  return [`/api/v1/shortcut/survey-emoticon-templates`, ...(params ? [params] : [])] as const;
+};
+
+// Get Survey Emoticon Template by ID
+export const surveyEmoticonTemplateControllerGetById = (
+  id: string,
+  options?: SecondParameter<typeof nobstacleBackendApiInstance>
+) => {
+  return nobstacleBackendApiInstance<SurveyEmoticonTemplateRes>(
+	{
+	  url: `/api/v1/shortcut/survey-emoticon-template/${id}`,
+	  method: 'GET'
+	},
+	options
+  );
+};
+
+export const getSurveyEmoticonTemplateControllerGetByIdQueryOptions = <
+  TError = ErrorType<HttpExceptionSchema>
+>(
+  id: string,
+  options?: {
+	query?: UseQueryOptions<
+	  Awaited<ReturnType<typeof surveyEmoticonTemplateControllerGetById>>,
+	  TError
+	>,
+	request?: SecondParameter<typeof nobstacleBackendApiInstance>
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = [`/api/v1/shortcut/survey-emoticon-template/${id}`];
+  const queryFn = () => surveyEmoticonTemplateControllerGetById(id, requestOptions);
+
+  return { queryKey, queryFn, ...queryOptions };
+};
+
+export const useSurveyEmoticonTemplateControllerGetById = <
+  TError = ErrorType<HttpExceptionSchema>
+>(
+  id: string,
+  options?: {
+	query?: UseQueryOptions<
+	  Awaited<ReturnType<typeof surveyEmoticonTemplateControllerGetById>>,
+	  TError
+	>,
+	request?: SecondParameter<typeof nobstacleBackendApiInstance>
+  }
+) => {
+  const queryOptions = getSurveyEmoticonTemplateControllerGetByIdQueryOptions(id, options);
+  return useQuery(queryOptions);
+};

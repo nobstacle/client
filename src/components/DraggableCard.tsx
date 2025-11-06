@@ -94,7 +94,8 @@ export const DraggableCardItem: React.FC<
   sendOnClick,
   tag,
   isDraggable,
-  onQrCodeClick
+  onQrCodeClick,
+  type
 }) {
     const [isHover, setIsHover] = React.useState(false);
     const {
@@ -154,23 +155,25 @@ export const DraggableCardItem: React.FC<
           </div>
         </div>
 
-        <div className="absolute right-1 top-1 z-10">
-          <button
-            className="flex items-center justify-center
+        {type !== "slideshow" && type !== 'text' && (
+          <div className="absolute right-1 top-1 z-10">
+            <button
+              className="flex items-center justify-center
                        h-6 w-6 sm:h-7 sm:w-7 md:h-7 md:w-7 lg:h-8 lg:w-8
                        rounded-md text-gray-700 bg-white/90 hover:bg-blue-500 hover:text-white
                        shadow-sm hover:shadow-md transition-all duration-150"
-            onClick={(e) => {
-              e.stopPropagation();
-              if (onQrCodeClick) {
-                onQrCodeClick();
-              }
-            }}
-            title="Generate QR Code"
-          >
-            <IoQrCode />
-          </button>
-        </div>
+              onClick={(e) => {
+                e.stopPropagation();
+                if (onQrCodeClick) {
+                  onQrCodeClick();
+                }
+              }}
+              title="Generate QR Code"
+            >
+              <IoQrCode />
+            </button>
+          </div>
+        )}
 
         {/* Edit Button - Top Left */}
         {!isRecevied && isHover && isAdmin && !isDragging && (

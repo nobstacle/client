@@ -5,6 +5,7 @@ import { DefaultSlideshowShortcutForm } from "../../../components/pages/dashboar
 import { LanguageShortcutForm } from "../../../components/pages/dashboard/Settings/LanguageShortcutForm";
 import { UpdateCompanyUsers } from "../../../components/pages/dashboard/Settings/UpdateCompanyUsers";
 import { TemplateMergerForm } from "../../../components/pages/dashboard/Settings/SurveyHeaderText";
+import { SurveyEmoticonForm } from "../../../components/pages/dashboard/Settings/SurveyEmoticonForm";
 import { useHasHydrated } from "../../../hooks/useHydrated";
 
 export default function SettingsPage() {
@@ -122,6 +123,19 @@ export default function SettingsPage() {
                 }}
               >
                 <TemplateMergerForm />
+              </Card>
+            </Col>
+
+            {/* Survey Emoticon */}
+            <Col xs={24}>
+              <Card
+                bordered
+                style={{
+                  borderRadius: "8px",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+                }}
+              >
+                <SurveyEmoticonForm />
               </Card>
             </Col>
           </Row>

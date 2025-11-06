@@ -118,8 +118,7 @@ export default function Dashboard() {
     });
   };
 
-    const sendWebsiteTemplateQR = (url: string) => {
-      console.info("Helloo")
+  const sendWebsiteTemplateQR = (url: string) => {
     emitSendTemplate({
       refId: 1,
       langCode: params.get("lang") || companyData?.defaultLangCode || "en",
@@ -141,7 +140,7 @@ export default function Dashboard() {
         </div>
         {websitesSource.length > 0 && (
           <div className="searchInputWidth">
-            <SearchTemplateForm searchOnChange={search} placeholder="Search template"/>
+            <SearchTemplateForm searchOnChange={search} placeholder="Search template" />
           </div>
         )}
         {userData?.user.Roles?.includes("Admin") && (
@@ -183,6 +182,7 @@ export default function Dashboard() {
                   onDelete={() => {
                     onDeleteCard(val.id);
                   }}
+                  onQrCodeClick={() => sendWebsiteTemplateQR(val.url || '')}
                   sendOnClick={() =>
                     sendTemplate(
                       val.id,
@@ -231,7 +231,7 @@ export default function Dashboard() {
                   }
                   isDraggable={searchWebsites.length === 0}
                 >
-                  <div className="flex w-full items-center justify-center" style={{height:'100%'}}>
+                  <div className="flex w-full items-center justify-center" style={{ height: '100%' }}>
                     <WebsiteIcon width="70px" height="70px" />
                   </div>
                 </DraggableCardItem>

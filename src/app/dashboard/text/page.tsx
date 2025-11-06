@@ -179,6 +179,7 @@ export default function Dashboard() {
                       params.get("lang") || companyData?.defaultLangCode || "",
                     )}
                     isDraggable={searchTexts.length === 0}
+                     type="text"
                   >
                     <p className="line-clamp-5 text-sm ">{val.content ?? ""}</p>
                   </DraggableCardItem>

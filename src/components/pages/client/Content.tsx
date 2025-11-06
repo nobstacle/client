@@ -793,7 +793,6 @@ export const Content: React.FC = () => {
   useEffect(() => {
     const generateQR = async () => {
       let content = '';
-      console.info("!1111111111111111111111111111111", messageStore.receivedContent)
       // Handle different message types
       if (messageStore.receivedType === "MapTemplateQr") {
         const origin = messageStore.receivedContent?.content;
@@ -1542,20 +1541,20 @@ export const Content: React.FC = () => {
 
       return (
         <>
-        {messageStore.receivedContent?.directContent === 'QR' ? (
-        <Card>
-          <img
-            src={qrCodeUrl}
-            alt="QR Code"
-            className="w-96 h-96 object-cover"
-          />
-        </Card>
-      ) : (
-        <div className={`w-full ${isMobile ? 'p-2' : 'p-5'}`}>
-          {renderDocumentViewer()}
-        </div>
-      )}
-      </>
+          {messageStore.receivedContent?.directContent === 'QR' ? (
+            <Card>
+              <img
+                src={qrCodeUrl}
+                alt="QR Code"
+                className="w-96 h-96 object-cover"
+              />
+            </Card>
+          ) : (
+            <div className={`w-full ${isMobile ? 'p-2' : 'p-5'}`}>
+              {renderDocumentViewer()}
+            </div>
+          )}
+        </>
       )
     }
 

@@ -74,19 +74,6 @@ export default function SlideshowDashboard() {
     });
   };
 
-   const handleQrCodeClick = (id: number, url: string, tag: string, isAvailable: boolean) => {
-  emitSendTemplate({
-    refId: id,
-    langCode: isAvailable
-      ? params.get("lang") || companyData?.defaultLangCode || "en"
-      : companyData?.defaultLangCode || "en",
-    refType: ChatType.Slideshow,
-    station: Number(params.get("station") ?? 1),
-    contentExtra: url,
-    directContent: 'QR'
-  });
-};
-
   const onDeleteCard = (id: number) => {
     deleteSlideshowTemplate.mutate(
       { id },
@@ -194,12 +181,6 @@ export default function SlideshowDashboard() {
                   tag={val.tag}
                   key={val.id}
                   onDelete={() => onDeleteCard(val.id)}
-                   onQrCodeClick={() => handleQrCodeClick(
-    val.id, 
-    val.url || '',
-    val.tag, 
-    val.langCode.includes(params.get("lang") || companyData?.defaultLangCode || "")
-  )}
                   isAdmin={userData?.user.Roles?.includes("Admin")}
                   isAvailable={val.langCode.includes(
                     params.get("lang") || companyData?.defaultLangCode || "",
@@ -216,6 +197,7 @@ export default function SlideshowDashboard() {
                     )
                   }
                   isDraggable={searchSlideshows.length === 0}
+                 
                 >
                   <Image
                     alt="template_image"

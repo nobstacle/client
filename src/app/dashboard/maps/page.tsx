@@ -114,6 +114,19 @@ export default function MapsDashboard() {
     });
   };
 
+  const handleQrCodeClick = (id: number, origin: string, destination: string, tag: string, isAvailable: boolean) => {
+    emitSendTemplate({
+      refId: id,
+      langCode: isAvailable
+        ? params.get("lang") || companyData?.defaultLangCode || "en"
+        : companyData?.defaultLangCode || "en",
+      refType: 'MapTemplateQr',
+      station: Number(params.get("station") ?? 1),
+      directContent: origin,
+      contentExtra: destination,
+    });
+  };
+
   const onsendQr = (origin: string, destination: string) => {
     emitSendTemplate({
       refId: 1,
@@ -181,6 +194,13 @@ export default function MapsDashboard() {
                   onDelete={() => {
                     onDeleteCard(val.id);
                   }}
+                  onQrCodeClick={() => handleQrCodeClick(
+                    val.id,
+                    val.origin,
+                    val.destination,
+                    val.tag,
+                    val.langCode.includes(params.get("lang") || companyData?.defaultLangCode || "")
+                  )}
                   sendOnClick={() =>
                     sendTemplate(
                       val.id,
