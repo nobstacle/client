@@ -176,7 +176,7 @@ const SurveyAnswer: React.FC<{ tag: string; survey?: any }> = ({ tag, survey }) 
               key={val}
               className="p-2 sm:p-3 md:p-4 transition-all duration-200 customSurveyButton"
               style={{
-                border: selectedVal === val ? "4px solid rgb(59, 89, 152)" : "none",
+                border: "none",
                 borderRadius: "12px",
                 transform: selectedVal === val ? "scale(1.05)" : "scale(1)",
               }}

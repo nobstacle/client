@@ -60,7 +60,7 @@ const TEMPLATE_TYPES = [
 export const SurveyEmoticonForm: React.FC = () => {
     const [form] = Form.useForm();
     const { texts, images, videos, slideshows, maps, websites, documents } = useTemplateStore();
-    
+
     const [selectedTemplateType, setSelectedTemplateType] = React.useState<string | null>(null);
     const [editingId, setEditingId] = React.useState<number | null>(null);
 
@@ -97,16 +97,16 @@ export const SurveyEmoticonForm: React.FC = () => {
     // Get unique templates by tag for selected type
     const availableTemplates = React.useMemo(() => {
         if (!selectedTemplateType) return [];
-        
+
         const templates = getTemplatesByType(selectedTemplateType);
         const templateMap = new Map();
-        
+
         templates.forEach((template: any) => {
             if (template.tag && !templateMap.has(template.tag)) {
                 templateMap.set(template.tag, template);
             }
         });
-        
+
         return Array.from(templateMap.values());
     }, [selectedTemplateType, texts, images, videos, slideshows, maps, websites, documents]);
 
@@ -156,7 +156,7 @@ export const SurveyEmoticonForm: React.FC = () => {
     const handleEdit = (record: EmoticonTemplate) => {
         setEditingId(record.id);
         setSelectedTemplateType(record.templateType);
-        
+
         form.setFieldsValue({
             emoticon: record.emoticon,
             templateType: record.templateType,
@@ -207,13 +207,13 @@ export const SurveyEmoticonForm: React.FC = () => {
                 return (
                     <Tag color={emoticon?.color} style={{ fontSize: "13px", padding: "4px 8px" }}>
                         {IconComponent && (
-                            <IconComponent 
-                                style={{ 
-                                    width: "16px", 
-                                    height: "16px", 
+                            <IconComponent
+                                style={{
+                                    width: "16px",
+                                    height: "16px",
                                     marginRight: "4px",
                                     verticalAlign: "middle"
-                                }} 
+                                }}
                                 className="customIconComponent"
                             />
                         )}
@@ -279,7 +279,7 @@ export const SurveyEmoticonForm: React.FC = () => {
                         form={form}
                         layout="inline"
                         onFinish={handleSubmit}
-                        style={{ width: "100%" }}
+                        style={{ width: "100%", flexWrap: "nowrap", }}
                     >
                         <Form.Item
                             name="emoticon"
@@ -351,6 +351,7 @@ export const SurveyEmoticonForm: React.FC = () => {
                                     icon={<SaveOutlined />}
                                     size="middle"
                                     loading={createMutation.isPending || updateMutation.isPending}
+                                    className="customBtn"
                                 >
                                     {editingId ? "Update" : "Assign"}
                                 </Button>

@@ -82,6 +82,7 @@ export interface SendSurveyMessagePayloadType {
 export interface SendSurveyPayloadType {
   tag: string;
   station: number;
+  langCode: string;
 }
 
 export interface SendLangCodeMessagePayloadType {

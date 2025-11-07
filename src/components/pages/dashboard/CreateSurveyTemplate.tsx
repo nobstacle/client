@@ -46,6 +46,7 @@ export const CreateSurveyTemplate: React.FC = () => {
     emitSendSurvey({
       tag: data.identifier,
       station: params.get("station") ? Number(params.get("station")) : 1,
+      langCode: params.get("lang") || "en"
     });
     reset();
     setSearchSurveysAnswers([]);

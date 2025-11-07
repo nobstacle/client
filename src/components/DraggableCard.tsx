@@ -155,7 +155,7 @@ export const DraggableCardItem: React.FC<
           </div>
         </div>
 
-        {type !== "slideshow" && type !== 'text' && (
+        {type !== "slideshow" && type !== 'text' && type !== 'teamDocs' && (
           <div className="absolute right-1 top-1 z-10">
             <button
               className="flex items-center justify-center

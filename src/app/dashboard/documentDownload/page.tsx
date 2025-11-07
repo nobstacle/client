@@ -286,6 +286,7 @@ export default function DocumentDownload() {
                                             onDelete={() => onDeleteDocument(document.id)}
                                             sendOnClick={() => downloadDocument(document)}
                                             isDraggable={searchDocuments.length === 0}
+                                            type="teamDocs"
                                         >
                                             <div className="flex flex-col items-center justify-center h-full p-2">
                                                 <div className="text-4xl mb-2">
