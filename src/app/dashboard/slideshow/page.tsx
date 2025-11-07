@@ -197,7 +197,7 @@ export default function SlideshowDashboard() {
                     )
                   }
                   isDraggable={searchSlideshows.length === 0}
-                 
+                 type="slideshow"
                 >
                   <Image
                     alt="template_image"
