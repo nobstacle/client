@@ -208,16 +208,9 @@ export const SurveyEmoticonForm: React.FC = () => {
                     <Tag color={emoticon?.color} style={{ fontSize: "13px", padding: "4px 8px" }}>
                         {IconComponent && (
                             <IconComponent
-                                style={{
-                                    width: "16px",
-                                    height: "16px",
-                                    marginRight: "4px",
-                                    verticalAlign: "middle"
-                                }}
                                 className="customIconComponent"
                             />
                         )}
-                        {emoticon?.label}
                     </Tag>
                 );
             },

@@ -52,25 +52,20 @@ const responsiveStyles = `
   }
 `;
 
-<style jsx>{`
-  ${responsiveStyles}
-
-  @keyframes fadeIn {
-    from {
-      opacity: 0;
-      transform: translateY(8px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-`}</style>
-
+// Map emoticon types to their corresponding values
+const EMOTICON_MAP = {
+  1: 'VERY_SAD',
+  2: 'SAD',
+  3: 'NEUTRAL',
+  4: 'HAPPY',
+  5: 'VERY_HAPPY'
+};
 
 const SurveyAnswer: React.FC<{ tag: string; survey?: any }> = ({ tag, survey }) => {
   const [emptyDefaultSlideshow, setEmptySlideshow] = React.useState(false);
   const [selectedVal, setSelectedVal] = React.useState<number>();
+  const [showEmoticonContent, setShowEmoticonContent] = React.useState(false);
+  const [selectedEmoticonData, setSelectedEmoticonData] = React.useState<any>(null);
   const { emitSendSurveyAnswer, emitSendTemplate } = useSocketContext();
   const params = useSearchParams();
   const { company } = useCompanyStore();
@@ -105,10 +100,33 @@ const SurveyAnswer: React.FC<{ tag: string; survey?: any }> = ({ tag, survey }) 
 
   React.useEffect(() => {
     setEmptySlideshow(false);
+    setShowEmoticonContent(false);
+    setSelectedEmoticonData(null);
   }, [tag]);
 
   const sendSurveyAnswer = (value: number) => {
     setSelectedVal(value);
+
+    // Check if there's an emoticon template for this value
+    const emoticonKey = EMOTICON_MAP[value];
+    const emoticonTemplate = survey?.emoticonTemplates?.[emoticonKey];
+
+    if (emoticonTemplate && emoticonTemplate.templateData) {
+      // Show the emoticon template content
+      setSelectedEmoticonData(emoticonTemplate);
+      setShowEmoticonContent(true);
+
+      // Send survey answer
+      emitSendSurveyAnswer({
+        tag,
+        station: Number(params.get("station") ?? 1),
+        value,
+      });
+
+      return;
+    }
+
+    // If no emoticon template, proceed with default slideshow logic
     emitSendSurveyAnswer({
       tag,
       station: Number(params.get("station") ?? 1),
@@ -135,6 +153,90 @@ const SurveyAnswer: React.FC<{ tag: string; survey?: any }> = ({ tag, survey }) 
       setEmptySlideshow(true);
     }
   };
+
+  // Render emoticon template content
+  if (showEmoticonContent && selectedEmoticonData) {
+    const { templateType, templateData } = selectedEmoticonData;
+
+    return (
+      <div className="w-full h-full flex items-center justify-center">
+        {templateType === 'Text' && (
+          <div className="w-full p-5">
+            <p className="text-center text-4xl" style={{ lineHeight: "3.5rem", whiteSpace: 'pre-wrap' }}>
+              {templateData.content}
+            </p>
+          </div>
+        )}
+
+        {templateType === 'Image' && (
+          <img
+            alt="emoticon_template_image"
+            style={{
+              height: "auto",
+              maxHeight: "100%",
+              maxWidth: "100%",
+              objectFit: "cover",
+              display: "block",
+            }}
+            src={templateData.url}
+          />
+        )}
+
+        {templateType === 'Video' && (
+          <div
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              width: '100vw',
+              height: '100vh',
+              overflow: 'hidden',
+              zIndex: 9,
+              pointerEvents: 'none',
+              backgroundColor: 'black',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <video
+              autoPlay
+              loop
+              playsInline
+              style={{
+                maxWidth: '100%',
+                maxHeight: '100%',
+                width: 'auto',
+                height: 'auto',
+                objectFit: 'contain',
+                display: 'block',
+              }}
+            >
+              <source src={templateData.url} type="video/mp4" />
+            </video>
+          </div>
+        )}
+
+        {templateType === 'Website' && (
+          <iframe
+            className="h-full w-full"
+            src={templateData.url}
+          />
+        )}
+
+        {templateType === 'Document' && (
+          <div className="w-full h-screen border rounded-lg overflow-hidden">
+            <iframe
+              src={templateData.url}
+              className="w-full h-full"
+              title="Document"
+              frameBorder="0"
+            />
+          </div>
+        )}
+      </div>
+    );
+  }
 
   if (emptyDefaultSlideshow) {
     return (
@@ -170,7 +272,7 @@ const SurveyAnswer: React.FC<{ tag: string; survey?: any }> = ({ tag, survey }) 
         )}
 
         {/* Emoticon buttons */}
-        <div className="flex flex-wrap justify-center gap-4  sm:gap-6  md:gap-6 lg:gap-5">
+        <div className="flex flex-wrap justify-center gap-4 sm:gap-6 md:gap-6 lg:gap-5">
           {[1, 2, 3, 4, 5].map((val) => (
             <button
               key={val}

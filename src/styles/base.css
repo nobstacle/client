@@ -1125,3 +1125,9 @@ button {
   max-height: 20px;
   margin-right: 0.6rem;
 }
+
+
+.customIconComponent {
+  width: 25px;
+  height: 25px;
+}
