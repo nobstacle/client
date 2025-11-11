@@ -26,7 +26,8 @@ import {
 } from "../../../components/DraggableCard";
 import { arrayMove } from "@dnd-kit/sortable";
 import { UniqueIdentifier } from "@dnd-kit/core";
-import { Card } from "antd";
+import { Card, Tooltip } from "antd";
+import { FaPlay } from "react-icons/fa";
 import "../../../styles/base.css";
 
 export default function VideoDashboard() {
@@ -34,6 +35,7 @@ export default function VideoDashboard() {
   const [editTemplate, setEditTemplate] = useState<null | GetVideoTemplateRes>(
     null,
   );
+  const [previewVideo, setPreviewVideo] = useState<string | null>(null);
   const isHydrated = useHasHydrated();
   const { videos, setVideos, setSearchVideos, searchVideos } =
     useTemplateStore();
@@ -71,7 +73,7 @@ export default function VideoDashboard() {
     });
   };
 
-    const handleQrCodeClick = (id: number, url: string, tag: string, isAvailable: boolean) => {
+  const handleQrCodeClick = (id: number, url: string, tag: string, isAvailable: boolean) => {
     emitSendTemplate({
       refId: id,
       langCode: isAvailable
@@ -169,7 +171,7 @@ export default function VideoDashboard() {
                   onDelete={() => onDeleteCard(val.id)}
                   isAdmin={userData?.user.Roles?.includes("Admin")}
                   onUpdate={() => onUpdateCard(val)}
-                    onQrCodeClick={() => handleQrCodeClick(val.id, val.ext, val.tag, val.langCode.includes(params.get("lang") || companyData?.defaultLangCode || ""),)}
+                  onQrCodeClick={() => handleQrCodeClick(val.id, val.ext, val.tag, val.langCode.includes(params.get("lang") || companyData?.defaultLangCode || ""),)}
                   key={val.id}
                   tag={val.tag}
                   isAvailable={val.langCode.includes(
@@ -189,18 +191,29 @@ export default function VideoDashboard() {
                   isDraggable={searchVideos.length === 0}
                   id={val.id}
                 >
-                  <video
-                    key={val.url}
-                    controls
-                    width="250"
-                    height="100"
-                    style={{
-                      objectFit: "cover",
-                      width: "100%",
-                      height: "100%",
-                    }}
-                    src={val.url}
-                  />
+                  <Tooltip title="Click play to preview">
+                    <div
+                      className="relative w-full h-full bg-gradient-to-br from-gray-900 to-gray-800 flex items-center justify-center cursor-pointer group overflow-hidden"
+                      onClick={() => setPreviewVideo(val.url)}
+                    >
+                      {/* Video Icon */}
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="bg-white/20 backdrop-blur-sm rounded-full p-6 group-hover:bg-white/30 transition-all duration-300 group-hover:scale-110">
+                          <FaPlay className="w-8 h-8 text-white ml-1" />
+                        </div>
+                      </div>
+
+                      {/* Tag Display */}
+                      {/* {val.tag && (
+                      <div className="absolute top-2 left-2 bg-black/60 backdrop-blur-sm px-3 py-1 rounded-full">
+                        <span className="text-white text-xs font-medium">{val.tag}</span>
+                      </div>
+                    )} */}
+
+                      {/* Hover Overlay */}
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300" />
+                    </div>
+                  </Tooltip>
                 </DraggableCardItem>
               ))}
             </DraggableCardContainer>
@@ -234,6 +247,26 @@ export default function VideoDashboard() {
             )}
           </div>
         </div>
+
+        {/* Video Preview Modal */}
+        {previewVideo && (
+          <Modal
+            title="Video Preview"
+            closeModal={() => setPreviewVideo(null)}
+            isOpen={!!previewVideo}
+          >
+            <div className="w-full">
+              <video
+                controls
+                autoPlay
+                className="w-full h-auto rounded-lg"
+                src={previewVideo}
+              >
+                Your browser does not support the video tag.
+              </video>
+            </div>
+          </Modal>
+        )}
 
         {userData?.user.Roles?.includes("Admin") && (
           <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50">

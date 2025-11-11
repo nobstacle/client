@@ -10,7 +10,7 @@ import { FaFileDownload, FaFileUpload, FaCopy, FaFilePdf, FaSearch, FaTrash, FaC
 import { toast, Bounce } from 'react-toastify';
 import { BsFillSendPlusFill } from "react-icons/bs";
 import { RiUploadCloudFill } from "react-icons/ri";
-import { Table, Button, Pagination, Row, Col, Modal, Select, Tooltip, Radio } from 'antd';
+import { Table, Button, Pagination, Row, Col, Modal, Select, Tooltip, Radio, Skeleton } from 'antd';
 import { FiSend } from "react-icons/fi";
 import Swal from 'sweetalert2';
 import { SendIcon } from "../../icons/SendIcon";
@@ -20,6 +20,7 @@ import dayjs from 'dayjs';
 import { IoQrCode } from "react-icons/io5";
 import Papa from 'papaparse';
 import { debounce } from 'lodash';
+import { HiRefresh } from "react-icons/hi";
 
 const { Option } = Select;
 
@@ -105,6 +106,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 	const [selectedFormFields, setSelectedFormFields] = useState<FormFields | null>(null);
 	const [isSearchActive, setIsSearchActive] = useState(false);
 	const [currentSearchTerm, setCurrentSearchTerm] = useState<any>("");
+	const [isSyncing, setIsSyncing] = useState(false);
 
 	useEffect(() => {
 		const handleResize = () => {
@@ -274,7 +276,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 		setCurrentPage,
 		selectedFormFields,
 		onUpdateField,
-		listableFields
+		listableFields,
 	}) => {
 		const [downloadingPDF, setDownloadingPDF] = useState<number | null>(null);
 		const [editingCell, setEditingCell] = useState<{
@@ -979,19 +981,64 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 				setAssignedForms(response?.data);
 				if (selectedForm === null) {
 					setSelectedForm(response?.data[0]?.form_id || null);
+					setLoader(false);
 				}
+				setLoader(false);
 			} else {
+				setLoader(false);
 				console.error('Unexpected response status:', response.status);
 			}
 		} catch (error) {
+			setLoader(false);
 			console.error('Error fetching assigned form data:', error);
 		}
 	};
 
-	const fetchFormQuestions = async (form_id: string | null) => {
+	const handleSyncFormFields = async () => {
+		if (!selectedForm) {
+			toast.warning('Please select a form first');
+			return;
+		}
+
+		setIsSyncing(true);
+		try {
+			// Clear cache and force refresh
+			sessionStorage.removeItem(`form_fields_${selectedForm}`);
+			await fetchFormQuestions(selectedForm, true);
+
+			toast.success('Form fields refreshed successfully!', {
+				position: "bottom-right",
+				autoClose: 3000,
+				theme: "colored",
+			});
+		} catch (error) {
+			console.error('Sync error:', error);
+			toast.error('Failed to refresh form fields', {
+				position: "bottom-right",
+				autoClose: 3000,
+				theme: "colored",
+			});
+		} finally {
+			setIsSyncing(false);
+		}
+	};
+
+	const fetchFormQuestions = async (form_id: string | null, forceRefresh: boolean = false) => {
 		if (!form_id) return;
 
 		try {
+			// Check sessionStorage first (unless force refresh)
+			if (!forceRefresh) {
+				const cachedFields = sessionStorage.getItem(`form_fields_${form_id}`);
+				if (cachedFields) {
+					console.log('Loading form fields from session cache');
+					setSelectedFormFields(JSON.parse(cachedFields));
+					return;
+				}
+			}
+
+			// Fetch from API if not cached or force refresh
+			console.log('Fetching form fields from JotForm API');
 			const API_KEY = process.env.NEXT_PUBLIC_JOTFORM_API_KEY;
 			const response = await fetch(
 				`https://api.jotform.com/form/${form_id}/questions?apiKey=${API_KEY}`
@@ -1002,6 +1049,10 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 			}
 
 			const data = await response.json();
+
+			// Cache in sessionStorage
+			sessionStorage.setItem(`form_fields_${form_id}`, JSON.stringify(data));
+
 			setSelectedFormFields(data || { content: [] });
 		} catch (error: any) {
 			console.error({ error });
@@ -1011,7 +1062,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 
 	useEffect(() => {
 		if (selectedForm) {
-			fetchFormQuestions(selectedForm);
+			fetchFormQuestions(selectedForm, false); // false = use cache if available
 		}
 	}, [selectedForm]);
 
@@ -1023,6 +1074,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 
 	useEffect(() => {
 		if (userData?.user?.id) {
+			setLoader(true);
 			getAssignedFormByID(userData?.user?.companyId)
 			setPageSize(10);
 		}
@@ -2179,7 +2231,8 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 
 					{/* Second Row - Action Buttons */}
 					<Row gutter={[8, 8]} justify="space-between" align="middle">
-						<Col flex="auto">
+						{/* Left side buttons */}
+						<Col>
 							<div className="flex items-center gap-2 flex-wrap">
 								<Tooltip title="Send Form">
 									<Button
@@ -2233,7 +2286,12 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 										</Tooltip>
 									</>
 								)}
+							</div>
+						</Col>
 
+						{/* Right side buttons */}
+						<Col>
+							<div className="flex items-center gap-2">
 								<Tooltip title="Report">
 									<Button
 										className="headerButton"
@@ -2241,6 +2299,17 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 										onClick={() => openReportModel()}
 										icon={<FaChartBar size={18} color="#fff" />}
 										size="middle"
+									/>
+								</Tooltip>
+								<Tooltip title="Refresh Form Fields">
+									<Button
+										onClick={handleSyncFormFields}
+										icon={<HiRefresh />}
+										type="primary"
+										className="headerButton"
+										size="middle"
+										loading={isSyncing}
+										style={{ fontSize: '19.4px' }}
 									/>
 								</Tooltip>
 							</div>
@@ -2330,9 +2399,10 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 								/>
 							</>
 						)}
+
 					</div>
 
-					<div>
+					<div className="flex item-center gap-2">
 						<Button
 							className="flex items-center gap-2 w-full lg:w-auto rounded-md px-6 py-2 text-white transition customSearchButton"
 							onClick={() => openReportModel()}
@@ -2340,6 +2410,17 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 							<FaChartBar />
 							<span>Report</span>
 						</Button>
+						<Tooltip title="Refresh Form Fields">
+							<Button
+								onClick={handleSyncFormFields}
+								type="primary"
+								className="flex items-center gap-2 w-full lg:w-auto rounded-md px-6 py-2 text-white transition customSearchButton"
+								loading={isSyncing}
+							>
+								<HiRefresh />
+								<span>Refresh</span>
+							</Button>
+						</Tooltip>
 					</div>
 				</div>
 			</div>
@@ -2392,71 +2473,61 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 				)}
 			</Form>
 
-			{tableResponse && selectedFormFields?.content ? (
-				<div className="card mt-5 bg-white rounded" style={{ position: 'relative' }}>
-					<div className="flex flex-wrap items-center gap-4 tableDataWrapper" style={{ padding: '0.5rem 1rem 0 1rem' }}>
-						<div className="formFilters">
-							{["all", "completed", "pending"].map((status) => (
-								<label
-									key={status}
-									htmlFor={status}
-									className="inline-flex items-center space-x-2 py-2 bg-gray-100 rounded-md cursor-pointer hover:bg-gray-200 transition"
-								>
-									<input
-										id={status}
-										name="status"
-										type="checkbox"
-										value={status}
-										className="form-checkbox text-blue-600 focus:ring-0"
-										onChange={(e) => handleFilterChange(status, e.target.checked)}
-										checked={selectedFilter === status}
-									/>
-									<span className="capitalize text-gray-700 font-medium">{status}</span>
-								</label>
-							))}
-						</div>
-						<Tooltip title="Export to Excel">
-							<Button
-								onClick={handleExportToExcel}
-								icon={<FaFileDownload size={20} color="#fff" />}
-								type="primary"
-								className="headerButton"
-								loading={exportLoading}
-							/>
-						</Tooltip>
-					</div>
-					{loader ? (
-						<div className="flex items-center justify-center py-10">
-							<p className="text-gray-500 text-lg">Loading...</p>
-						</div>
-					) : !tableResponse?.data || tableResponse.data.length === 0 ? (
-						<div className="flex flex-col items-center justify-center py-10">
-							<p className="text-gray-500 text-lg mb-4">No data available</p>
-							<Button
-								onClick={() => window.location.reload()}
-								type="primary"
+			<div className="card mt-5 bg-white rounded" style={{ position: 'relative' }}>
+				<div className="flex flex-wrap items-center gap-4 tableDataWrapper" style={{ padding: '0.5rem 1rem 0 1rem' }}>
+					<div className="formFilters">
+						{["all", "completed", "pending"].map((status) => (
+							<label
+								key={status}
+								htmlFor={status}
+								className="inline-flex items-center space-x-2 py-2 bg-gray-100 rounded-md cursor-pointer hover:bg-gray-200 transition"
 							>
-								Refresh Page
-							</Button>
-						</div>
-					) : (
-						<TableComponent
-							key={TableKey}
-							tableData={Array.isArray(tableResponse.data) ? tableResponse.data : []}
-							uniqueKeys={Array.isArray(tableResponse.sortColumns) ? tableResponse.sortColumns : []}
-							currentPage={currentPage}
-							itemsPerPage={itemsPerPage}
-							onPageChange={handlePageChange}
-							totalPages={totalPages}
-							setCurrentPage={setCurrentPage}
-							selectedFormFields={selectedFormFields?.content || []}
-							totalItems={totalItems}
-							onUpdateField={updateFieldValue}
-							listableFields={listableFields}
+								<input
+									id={status}
+									name="status"
+									type="checkbox"
+									value={status}
+									className="form-checkbox text-blue-600 focus:ring-0"
+									onChange={(e) => handleFilterChange(status, e.target.checked)}
+									checked={selectedFilter === status}
+									disabled={!selectedFormFields?.content}
+								/>
+								<span className="capitalize text-gray-700 font-medium">{status}</span>
+							</label>
+						))}
+					</div>
+					<Tooltip title="Export to Excel">
+						<Button
+							onClick={handleExportToExcel}
+							icon={<FaFileDownload size={20} color="#fff" />}
+							type="primary"
+							className="headerButton"
+							loading={exportLoading}
+							disabled={!selectedFormFields?.content}
 						/>
-					)}
+					</Tooltip>
 				</div>
-			) : null}
+				{loader || !tableResponse || !selectedFormFields?.content ? (
+					<div className="p-4 bg-white shadow-md rounded-lg customTableWrapper">
+						<Skeleton active paragraph={{ rows: 10 }} />
+					</div>
+				) : (
+					<TableComponent
+						key={TableKey}
+						tableData={Array.isArray(tableResponse.data) ? tableResponse.data : []}
+						uniqueKeys={Array.isArray(tableResponse.sortColumns) ? tableResponse.sortColumns : []}
+						currentPage={currentPage}
+						itemsPerPage={itemsPerPage}
+						onPageChange={handlePageChange}
+						totalPages={totalPages}
+						setCurrentPage={setCurrentPage}
+						selectedFormFields={selectedFormFields?.content || []}
+						totalItems={totalItems}
+						onUpdateField={updateFieldValue}
+						listableFields={listableFields}
+					/>
+				)}
+			</div>
 
 			<Modal
 				open={isModalOpen}

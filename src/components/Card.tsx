@@ -14,6 +14,7 @@ export interface CardPropsI {
   icon?: JSX.Element;
   onQrCodeClick?: () => void;
   type?: string;
+  className:string
 }
 
 export const Card: React.FC<React.PropsWithChildren<CardPropsI>> = ({

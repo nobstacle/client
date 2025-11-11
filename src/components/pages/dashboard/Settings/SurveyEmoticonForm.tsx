@@ -205,13 +205,13 @@ export const SurveyEmoticonForm: React.FC = () => {
                 const emoticon = EMOTICONS.find(e => e.value === value);
                 const IconComponent = emoticon?.icon;
                 return (
-                    <Tag color={emoticon?.color} style={{ fontSize: "13px", padding: "4px 8px" }}>
+                    <div style={{ fontSize: "13px", padding: "4px 8px" }}>
                         {IconComponent && (
                             <IconComponent
                                 className="customIconComponent"
                             />
                         )}
-                    </Tag>
+                    </div>
                 );
             },
         },
@@ -241,6 +241,7 @@ export const SurveyEmoticonForm: React.FC = () => {
                         size="small"
                         icon={<EditOutlined />}
                         onClick={() => handleEdit(record)}
+                        style={{color:'#3b5998', fontWeight:'bold'}}
                     >
                         Edit
                     </Button>
@@ -250,7 +251,7 @@ export const SurveyEmoticonForm: React.FC = () => {
                         okText="Yes"
                         cancelText="No"
                     >
-                        <Button type="link" size="small" danger icon={<DeleteOutlined />}>
+                        <Button type="link" size="small" danger icon={<DeleteOutlined />} style={{ fontWeight:'bold'}}>
                             Delete
                         </Button>
                     </Popconfirm>
@@ -272,7 +273,7 @@ export const SurveyEmoticonForm: React.FC = () => {
                         form={form}
                         layout="inline"
                         onFinish={handleSubmit}
-                        style={{ width: "100%", flexWrap: "nowrap", }}
+                        style={{ width: "90%", flexWrap: "nowrap", }}
                     >
                         <Form.Item
                             name="emoticon"
