@@ -8,6 +8,8 @@ import { LanguageShortcutPicker } from "../../components/pages/dashboard/Header/
 import { TemplateShortcutPicker } from "../../components/pages/dashboard/Header/TemplateShortcutPicker";
 import { StationPicker } from "../../components/pages/dashboard/Header/StationPicker";
 import { ChatBot } from "../../components/pages/dashboard/Header/chatBot";
+import { HeaderSurveyShortcut } from "../../components/pages/dashboard/Header/SurveyPicker";
+import { SendRecording } from "../../components/pages/dashboard/Header/SendRecording";
 
 const ClientHeader = () => {
     const [drawerOpen, setDrawerOpen] = useState(false);
@@ -33,7 +35,6 @@ const ClientHeader = () => {
         <>
             {/* Mobile Header */}
             <div className="block lg:hidden" style={{ backgroundColor: '#3b5998' }}>
-                {/* First Line: Main Menu (Left) - Shortcut Menu (Right) */}
                 <nav className="h-14 w-full shadow-sm border-b border-white/20 px-4">
                     <div className="flex h-full w-full items-center justify-between">
                         <Button
@@ -79,6 +80,12 @@ const ClientHeader = () => {
                     </div>
 
                     <div className="flex items-center">
+                         {/* <div className="" style={{ padding: '0.2rem', marginRight: '0rem' }}>
+                            <SendRecording />
+                        </div> */}
+                        <div className="" style={{ padding: '0.2rem', marginRight: '0rem' }}>
+                            <HeaderSurveyShortcut />
+                        </div>
                         <div className="bg-white/10 backdrop-blur-sm rounded-lg" style={{ padding: '0.2rem', marginRight: '1rem' }}>
                             <ChatBot />
                         </div>

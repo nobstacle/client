@@ -21,7 +21,7 @@ import {
     IoPeople,
     IoSettings
 } from 'react-icons/io5';
-
+import { IoRecordingSharp } from "react-icons/io5";
 interface ClientSidebarProps {
     user: Session | null;
 }
@@ -114,6 +114,13 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
             icon: <IoSpeedometer size={18} />,
             iconColor: "white"
         },
+        // {
+        //     title: "Recordings",
+        //     href: "/dashboard/recordings",
+        //     roles: ["Admin", "User", "Staff"],
+        //     icon: <IoRecordingSharp size={18} />,
+        //     iconColor: "white"
+        // },
         {
             title: "Upsell",
             href: "/dashboard/upsell",

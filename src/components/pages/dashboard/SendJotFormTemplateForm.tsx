@@ -107,6 +107,9 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 	const [isSearchActive, setIsSearchActive] = useState(false);
 	const [currentSearchTerm, setCurrentSearchTerm] = useState<any>("");
 	const [isSyncing, setIsSyncing] = useState(false);
+	const lastFetchParams = useRef({ page: 0, size: 0, form: '', search: '', filter: '' });
+	const hasFetchedOnMount = useRef(false);
+	const hasLoadedUserData = useRef(false);
 
 	useEffect(() => {
 		const handleResize = () => {
@@ -162,23 +165,10 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 	useEffect(() => {
 		if (!socket) return;
 
-		const handleConnect = () => {
-			console.log("Socket connected:", socket.id);
-			// Refresh data after reconnection
-			if (selectedForm) {
-				getTableResponse(
-					selectedForm,
-					currentPage,
-					itemsPerPage,
-					lastSearchRef.current,
-					filterRef.current
-				);
-			}
-		};
+		// REMOVE handleConnect completely
 
 		const handleDisconnect = (reason: string) => {
 			console.warn("Socket disconnected:", reason);
-			// Auto-reconnect if not intentional
 			if (reason === "io server disconnect") {
 				socket.connect();
 			}
@@ -190,7 +180,6 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 
 		const handleDataSaved = ({ formId }: { formId: string }) => {
 			setCurrentPage(1);
-
 			getTableResponse(
 				formId,
 				1,
@@ -200,13 +189,12 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 			);
 		};
 
-		socket.on("connect", handleConnect);
+		// Don't listen to "connect" event
 		socket.on("disconnect", handleDisconnect);
 		socket.on("connect_error", handleError);
 		socket.on("dataSaved", handleDataSaved);
 
 		return () => {
-			socket.off("connect", handleConnect);
 			socket.off("disconnect", handleDisconnect);
 			socket.off("connect_error", handleError);
 			socket.off("dataSaved", handleDataSaved);
@@ -214,10 +202,28 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 	}, [socket]);
 
 	useEffect(() => {
-		if (selectedForm) {
+		if (!selectedForm) return;
+
+		const currentParams = {
+			page: currentPage,
+			size: pageSize,
+			form: selectedForm,
+			search: lastSearchedValue,
+			filter: selectedFilter
+		};
+
+		const paramsChanged =
+			lastFetchParams.current.page !== currentParams.page ||
+			lastFetchParams.current.size !== currentParams.size ||
+			lastFetchParams.current.form !== currentParams.form ||
+			lastFetchParams.current.search !== currentParams.search ||
+			lastFetchParams.current.filter !== currentParams.filter;
+
+		if (paramsChanged) {
+			lastFetchParams.current = currentParams;
 			getTableResponse(selectedForm, currentPage, pageSize, lastSearchedValue, selectedFilter);
 		}
-	}, [currentPage, pageSize, selectedForm]);
+	}, [currentPage, pageSize, selectedForm, lastSearchedValue, selectedFilter]);
 
 	async function deleteWithPathParam(id: any, UUID?: any) {
 		const Url = getBackendUrl();
@@ -1061,24 +1067,20 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 	};
 
 	useEffect(() => {
-		if (selectedForm) {
-			fetchFormQuestions(selectedForm, false); // false = use cache if available
+		if (selectedForm && !hasFetchedOnMount.current) {
+			hasFetchedOnMount.current = true;
+			fetchFormQuestions(selectedForm, false);
 		}
 	}, [selectedForm]);
 
 	useEffect(() => {
-		if (selectedForm) {
-			getTableResponse(selectedForm || null, 1, 10, lastSearchedValue, selectedFilter);
-		}
-	}, [selectedForm]);
-
-	useEffect(() => {
-		if (userData?.user?.id) {
+		if (userData?.user?.id && !hasLoadedUserData.current) {
+			hasLoadedUserData.current = true;
 			setLoader(true);
-			getAssignedFormByID(userData?.user?.companyId)
+			getAssignedFormByID(userData?.user?.companyId);
 			setPageSize(10);
 		}
-	}, [userData])
+	}, [userData?.user?.id, userData?.user?.companyId]);
 
 	type FormValues = {
 		url?: string;
@@ -2301,17 +2303,19 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 										size="middle"
 									/>
 								</Tooltip>
-								<Tooltip title="Refresh Form Fields">
-									<Button
-										onClick={handleSyncFormFields}
-										icon={<HiRefresh />}
-										type="primary"
-										className="headerButton"
-										size="middle"
-										loading={isSyncing}
-										style={{ fontSize: '19.4px' }}
-									/>
-								</Tooltip>
+								{userData?.user.Roles[0] === "Admin" && (
+									<Tooltip title="Refresh Form Fields">
+										<Button
+											onClick={handleSyncFormFields}
+											icon={<HiRefresh />}
+											type="primary"
+											className="headerButton"
+											size="middle"
+											loading={isSyncing}
+											style={{ fontSize: '19.4px' }}
+										/>
+									</Tooltip>
+								)}
 							</div>
 						</Col>
 					</Row>
@@ -2410,17 +2414,19 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 							<FaChartBar />
 							<span>Report</span>
 						</Button>
-						<Tooltip title="Refresh Form Fields">
-							<Button
-								onClick={handleSyncFormFields}
-								type="primary"
-								className="flex items-center gap-2 w-full lg:w-auto rounded-md px-6 py-2 text-white transition customSearchButton"
-								loading={isSyncing}
-							>
-								<HiRefresh />
-								<span>Refresh</span>
-							</Button>
-						</Tooltip>
+						{userData?.user.Roles[0] === "Admin" && (
+							<Tooltip title="Refresh Form Fields">
+								<Button
+									onClick={handleSyncFormFields}
+									type="primary"
+									className="flex items-center gap-2 w-full lg:w-auto rounded-md px-6 py-2 text-white transition customSearchButton"
+									loading={isSyncing}
+								>
+									<HiRefresh />
+									<span>Refresh</span>
+								</Button>
+							</Tooltip>
+						)}
 					</div>
 				</div>
 			</div>

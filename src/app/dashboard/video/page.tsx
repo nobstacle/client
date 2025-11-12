@@ -198,17 +198,10 @@ export default function VideoDashboard() {
                     >
                       {/* Video Icon */}
                       <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="bg-white/20 backdrop-blur-sm rounded-full p-6 group-hover:bg-white/30 transition-all duration-300 group-hover:scale-110">
-                          <FaPlay className="w-8 h-8 text-white ml-1" />
+                        <div className="bg-white/20 backdrop-blur-sm rounded-full p-4 group-hover:bg-white/30 transition-all duration-300 group-hover:scale-90">
+                          <FaPlay className="w-4 h-4 text-white ml-1" />
                         </div>
                       </div>
-
-                      {/* Tag Display */}
-                      {/* {val.tag && (
-                      <div className="absolute top-2 left-2 bg-black/60 backdrop-blur-sm px-3 py-1 rounded-full">
-                        <span className="text-white text-xs font-medium">{val.tag}</span>
-                      </div>
-                    )} */}
 
                       {/* Hover Overlay */}
                       <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300" />

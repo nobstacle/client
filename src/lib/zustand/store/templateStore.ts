@@ -54,6 +54,11 @@ interface BearState {
   setPackages: (packages: any[]) => void;
   searchPackages: any[];
   setSearchPackages: (packages: any[]) => void;
+  // Add recordings-related state
+  recordings: any[];
+  setRecordings: (recordings: any[]) => void;
+  searchRecordings: any[];
+  setSearchRecordings: (recordings: any[]) => void;
 }
 
 const useTemplateStore = create<BearState>()(
@@ -102,9 +107,14 @@ const useTemplateStore = create<BearState>()(
       setPackages: (packages) => set(() => ({ packages })),
       searchPackages: [],
       setSearchPackages: (searchPackages) => set(() => ({ searchPackages })),
+      // Add recordings-related implementations
+      recordings: [],
+      setRecordings: (recordings) => set(() => ({ recordings })),
+      searchRecordings: [],
+      setSearchRecordings: (searchRecordings) => set(() => ({ searchRecordings })),
     }),
     {
-      name: "templates-storage", // name of the item in the storage (must be unique)
+      name: "templates-storage",
     },
   ),
 );

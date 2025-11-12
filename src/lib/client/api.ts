@@ -5705,3 +5705,521 @@ export const useSurveyEmoticonTemplateControllerGetByEmoticon = <TData = Awaited
 
   return query;
 };
+
+
+
+
+// ==================== Recording APIs ====================
+
+export interface RecordingDto {
+  recordingUrl: string;
+  confirmationNumber: string;
+  stationNo: string;
+}
+
+export interface RecordingRes {
+  id: number;
+  recordingUrl: string;
+  confirmationNumber: string;
+  stationNo: string;
+  userId: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface GetAllRecordingsRes {
+  items: RecordingRes[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export interface DeleteResponse {
+  message: string;
+  id: number;
+}
+
+// ============================================
+// CREATE - POST /api/v1/recording
+// ============================================
+
+export const recordingControllerCreate = (
+  data: RecordingDto,
+  options?: SecondParameter<typeof nobstacleBackendApiInstance>
+) => {
+  return nobstacleBackendApiInstance<RecordingRes>(
+    {
+      url: `/api/v1/recording`,
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      data,
+    },
+    options
+  );
+};
+
+export const getRecordingControllerCreateMutationOptions = <
+  TError = ErrorType<HttpExceptionSchema>,
+  TContext = unknown
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof recordingControllerCreate>>,
+    TError,
+    { data: RecordingDto },
+    TContext
+  >;
+  request?: SecondParameter<typeof nobstacleBackendApiInstance>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof recordingControllerCreate>>,
+  TError,
+  { data: RecordingDto },
+  TContext
+> => {
+  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof recordingControllerCreate>>,
+    { data: RecordingDto }
+  > = (props) => {
+    const { data } = props ?? {};
+    return recordingControllerCreate(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export const useRecordingControllerCreate = <
+  TError = ErrorType<HttpExceptionSchema>,
+  TContext = unknown
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof recordingControllerCreate>>,
+    TError,
+    { data: RecordingDto },
+    TContext
+  >;
+  request?: SecondParameter<typeof nobstacleBackendApiInstance>;
+}) => {
+  const mutationOptions = getRecordingControllerCreateMutationOptions(options);
+  return useMutation(mutationOptions);
+};
+
+// ============================================
+// UPDATE - PATCH /api/v1/recording/:id
+// ============================================
+
+export const recordingControllerUpdate = (
+  id: string,
+  data: Partial<RecordingDto>,
+  options?: SecondParameter<typeof nobstacleBackendApiInstance>
+) => {
+  return nobstacleBackendApiInstance<RecordingRes>(
+    {
+      url: `/api/v1/recording/${id}`,
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      data,
+    },
+    options
+  );
+};
+
+export const getRecordingControllerUpdateMutationOptions = <
+  TError = ErrorType<HttpExceptionSchema>,
+  TContext = unknown
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof recordingControllerUpdate>>,
+    TError,
+    { id: string; data: Partial<RecordingDto> },
+    TContext
+  >;
+  request?: SecondParameter<typeof nobstacleBackendApiInstance>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof recordingControllerUpdate>>,
+  TError,
+  { id: string; data: Partial<RecordingDto> },
+  TContext
+> => {
+  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof recordingControllerUpdate>>,
+    { id: string; data: Partial<RecordingDto> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+    return recordingControllerUpdate(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export const useRecordingControllerUpdate = <
+  TError = ErrorType<HttpExceptionSchema>,
+  TContext = unknown
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof recordingControllerUpdate>>,
+    TError,
+    { id: string; data: Partial<RecordingDto> },
+    TContext
+  >;
+  request?: SecondParameter<typeof nobstacleBackendApiInstance>;
+}) => {
+  const mutationOptions = getRecordingControllerUpdateMutationOptions(options);
+  return useMutation(mutationOptions);
+};
+
+// ============================================
+// DELETE - DELETE /api/v1/recording/:id
+// ============================================
+
+export const recordingControllerDelete = (
+  id: number,
+  options?: SecondParameter<typeof nobstacleBackendApiInstance>
+) => {
+  return nobstacleBackendApiInstance<DeleteResponse>(
+    {
+      url: `/api/v1/recording/${id}`,
+      method: 'DELETE',
+    },
+    options
+  );
+};
+
+export const getRecordingControllerDeleteMutationOptions = <
+  TError = ErrorType<HttpExceptionSchema>,
+  TContext = unknown
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof recordingControllerDelete>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof nobstacleBackendApiInstance>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof recordingControllerDelete>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof recordingControllerDelete>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+    return recordingControllerDelete(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export const useRecordingControllerDelete = <
+  TError = ErrorType<HttpExceptionSchema>,
+  TContext = unknown
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof recordingControllerDelete>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof nobstacleBackendApiInstance>;
+}) => {
+  const mutationOptions = getRecordingControllerDeleteMutationOptions(options);
+  return useMutation(mutationOptions);
+};
+
+// ============================================
+// GET ALL - GET /api/v1/recordings
+// ============================================
+
+export const recordingControllerGetAll = (
+  params?: {
+    page?: number;
+    limit?: number;
+    confirmationNumber?: string;
+    stationNo?: string;
+  },
+  options?: SecondParameter<typeof nobstacleBackendApiInstance>,
+  signal?: AbortSignal
+) => {
+  return nobstacleBackendApiInstance<GetAllRecordingsRes>(
+    {
+      url: `/api/v1/recordings`,
+      method: 'GET',
+      params,
+      signal,
+    },
+    options
+  );
+};
+
+export const getRecordingControllerGetAllQueryOptions = <
+  TData = Awaited<ReturnType<typeof recordingControllerGetAll>>,
+  TError = ErrorType<HttpExceptionSchema>
+>(
+  params?: {
+    page?: number;
+    limit?: number;
+    confirmationNumber?: string;
+    stationNo?: string;
+  },
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof recordingControllerGetAll>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof nobstacleBackendApiInstance>;
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ??
+    [`/api/v1/recordings`, ...(params ? [params] : [])];
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof recordingControllerGetAll>>
+  > = ({ signal }) =>
+    recordingControllerGetAll(params, requestOptions, signal);
+
+  return {
+    queryKey,
+    queryFn,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof recordingControllerGetAll>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type RecordingControllerGetAllQueryResult = NonNullable<
+  Awaited<ReturnType<typeof recordingControllerGetAll>>
+>;
+export type RecordingControllerGetAllQueryError = ErrorType<HttpExceptionSchema>;
+
+export const useRecordingControllerGetAll = <
+  TData = Awaited<ReturnType<typeof recordingControllerGetAll>>,
+  TError = ErrorType<HttpExceptionSchema>
+>(
+  params?: {
+    page?: number;
+    limit?: number;
+    confirmationNumber?: string;
+    stationNo?: string;
+  },
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof recordingControllerGetAll>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof nobstacleBackendApiInstance>;
+  }
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } => {
+  const queryOptions = getRecordingControllerGetAllQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  query.queryKey = queryOptions.queryKey;
+
+  return query;
+};
+
+export const getRecordingControllerGetAllQueryKey = (params?: {
+  page?: number;
+  limit?: number;
+  confirmationNumber?: string;
+  stationNo?: string;
+}) => {
+  return [
+    `/api/v1/recordings`,
+    ...(params ? [params] : []),
+  ] as const;
+};
+
+// ============================================
+// GET BY ID - GET /api/v1/recording/:id
+// ============================================
+
+export const recordingControllerGetById = (
+  id: string,
+  options?: SecondParameter<typeof nobstacleBackendApiInstance>,
+  signal?: AbortSignal
+) => {
+  return nobstacleBackendApiInstance<RecordingRes>(
+    {
+      url: `/api/v1/recording/${id}`,
+      method: 'GET',
+      signal,
+    },
+    options
+  );
+};
+
+export const getRecordingControllerGetByIdQueryOptions = <
+  TData = Awaited<ReturnType<typeof recordingControllerGetById>>,
+  TError = ErrorType<HttpExceptionSchema>
+>(
+  id: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof recordingControllerGetById>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof nobstacleBackendApiInstance>;
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? [`/api/v1/recording/${id}`];
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof recordingControllerGetById>>
+  > = ({ signal }) => recordingControllerGetById(id, requestOptions, signal);
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof recordingControllerGetById>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export const useRecordingControllerGetById = <
+  TData = Awaited<ReturnType<typeof recordingControllerGetById>>,
+  TError = ErrorType<HttpExceptionSchema>
+>(
+  id: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof recordingControllerGetById>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof nobstacleBackendApiInstance>;
+  }
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } => {
+  const queryOptions = getRecordingControllerGetByIdQueryOptions(id, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  query.queryKey = queryOptions.queryKey;
+
+  return query;
+};
+
+export const getRecordingControllerGetByIdQueryKey = (id: string) => {
+  return [`/api/v1/recording/${id}`] as const;
+};
+
+// ============================================
+// GET BY CONFIRMATION NUMBER - GET /api/v1/recording/confirmation/:confirmationNumber
+// ============================================
+
+export const recordingControllerGetByConfirmationNumber = (
+  confirmationNumber: string,
+  options?: SecondParameter<typeof nobstacleBackendApiInstance>,
+  signal?: AbortSignal
+) => {
+  return nobstacleBackendApiInstance<RecordingRes>(
+    {
+      url: `/api/v1/recording/confirmation/${confirmationNumber}`,
+      method: 'GET',
+      signal,
+    },
+    options
+  );
+};
+
+export const getRecordingControllerGetByConfirmationNumberQueryOptions = <
+  TData = Awaited<ReturnType<typeof recordingControllerGetByConfirmationNumber>>,
+  TError = ErrorType<HttpExceptionSchema>
+>(
+  confirmationNumber: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof recordingControllerGetByConfirmationNumber>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof nobstacleBackendApiInstance>;
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ??
+    [`/api/v1/recording/confirmation/${confirmationNumber}`];
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof recordingControllerGetByConfirmationNumber>>
+  > = ({ signal }) =>
+    recordingControllerGetByConfirmationNumber(
+      confirmationNumber,
+      requestOptions,
+      signal
+    );
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!confirmationNumber,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof recordingControllerGetByConfirmationNumber>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export const getRecordingControllerGetByConfirmationNumberQueryKey = (
+  confirmationNumber: string
+) => {
+  return [`/api/v1/recording/confirmation/${confirmationNumber}`] as const;
+};
+
+export const useRecordingControllerGetByConfirmationNumber = <
+  TData = Awaited<ReturnType<typeof recordingControllerGetByConfirmationNumber>>,
+  TError = ErrorType<HttpExceptionSchema>
+>(
+  confirmationNumber: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof recordingControllerGetByConfirmationNumber>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof nobstacleBackendApiInstance>;
+  }
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } => {
+  const queryOptions =
+    getRecordingControllerGetByConfirmationNumberQueryOptions(
+      confirmationNumber,
+      options
+    );
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  query.queryKey = queryOptions.queryKey;
+
+  return query;
+};
