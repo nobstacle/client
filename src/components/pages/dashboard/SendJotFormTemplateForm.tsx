@@ -970,12 +970,13 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 	};
 
 	const listableFields = useMemo(() => {
-		if (!selectedFormFields?.content) return [];
+		// Ensure we have both selectedFormFields and selectedForm
+		if (!selectedFormFields?.content || !selectedForm) return [];
 
 		return Object.values(selectedFormFields.content)
 			.filter((field: any) => field.name.includes('listable'))
 			.sort((a: any, b: any) => a.name.localeCompare(b.name));
-	}, [selectedFormFields?.content]);
+	}, [selectedFormFields?.content, selectedForm]);
 
 	const getAssignedFormByID = async (company_id: number) => {
 		const Url = getBackendUrl();
@@ -1033,18 +1034,17 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 		if (!form_id) return;
 
 		try {
-			// Check sessionStorage first (unless force refresh)
 			if (!forceRefresh) {
 				const cachedFields = sessionStorage.getItem(`form_fields_${form_id}`);
 				if (cachedFields) {
-					console.log('Loading form fields from session cache');
-					setSelectedFormFields(JSON.parse(cachedFields));
-					return;
+					console.log('Loading form fields from session cache for form:', form_id);
+					const parsedFields = JSON.parse(cachedFields);
+					setSelectedFormFields(parsedFields);
+					return parsedFields;
 				}
 			}
 
-			// Fetch from API if not cached or force refresh
-			console.log('Fetching form fields from JotForm API');
+			console.log('Fetching form fields from JotForm API for form:', form_id);
 			const API_KEY = process.env.NEXT_PUBLIC_JOTFORM_API_KEY;
 			const response = await fetch(
 				`https://api.jotform.com/form/${form_id}/questions?apiKey=${API_KEY}`
@@ -1056,19 +1056,23 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 
 			const data = await response.json();
 
-			// Cache in sessionStorage
 			sessionStorage.setItem(`form_fields_${form_id}`, JSON.stringify(data));
 
 			setSelectedFormFields(data || { content: [] });
+			return data || { content: [] };
 		} catch (error: any) {
-			console.error({ error });
+			console.error('Error fetching form fields:', error);
 			setSelectedFormFields({ content: [] });
+			return { content: [] };
 		}
 	};
 
 	useEffect(() => {
 		if (selectedForm && !hasFetchedOnMount.current) {
 			hasFetchedOnMount.current = true;
+			fetchFormQuestions(selectedForm, false);
+		} else if (selectedForm) {
+			// When selectedForm changes (not on initial mount), fetch the new form's fields
 			fetchFormQuestions(selectedForm, false);
 		}
 	}, [selectedForm]);
@@ -1282,15 +1286,22 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 		}
 	};
 
-	const handleFormChange = (value: string) => {
+	const handleFormChange = async (value: string) => {
 		setLoader(true);
 		setValue("url", value);
+
+		// Clear the current form fields immediately to prevent showing wrong columns
+		setSelectedFormFields(null);
+
 		setSelectedForm(value);
 		setCurrentPage(1);
 		setPageSize(10);
 		setLastSearchedValue("");
 		setCurrentSearchTerm("");
 		setIsSearchActive(false);
+
+		// Fetch new form fields first, then get table data
+		await fetchFormQuestions(value, false);
 		getTableResponse(value || null, 1, 10, "", selectedFilter);
 	};
 
