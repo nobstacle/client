@@ -21,6 +21,7 @@ import "antd/dist/reset.css";
 import { useSession } from "next-auth/react";
 import { Card, Button, Tag, Typography, Carousel, message, Modal, Image } from "antd";
 import { LeftOutlined, RightOutlined, ExpandAltOutlined } from '@ant-design/icons';
+import Recording from './Recording';
 
 const { Title, Text } = Typography;
 
@@ -1027,6 +1028,39 @@ export const Content: React.FC = () => {
     }
   }, [isLoading]);
 
+  const handleRecordingSubmit = async (blob: Blob, type: 'audio' | 'video') => {
+    try {
+      setLoading(true);
+
+      // Create FormData to upload the recording
+      const formData = new FormData();
+      const fileName = `recording_${Date.now()}.${type === 'video' ? 'webm' : 'mp4'}`;
+      formData.append('file', blob, fileName);
+      formData.append('type', type);
+      formData.append('station', params.get("station") ?? "1");
+
+      // Upload to your backend
+      const response = await fetch(`${Url}/api/v1/recordings/upload`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${data?.user.backendTokens.at}`,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error('Upload failed');
+      }
+
+      message.success('Feedback submitted successfully!');
+      setLoading(false);
+    } catch (error) {
+      console.error('Error submitting recording:', error);
+      message.error('Failed to submit feedback. Please try again.');
+      setLoading(false);
+    }
+  };
+
   const createUpsellTransaction = async (formData: {
     packageId: number;
     confirmationNumber: string;
@@ -1111,8 +1145,6 @@ export const Content: React.FC = () => {
       alert(errorMessage);
     }
   };
-
-  console.info("messageStoremessageStoremessageStore", messageStore);
 
   if (hasHydrated) {
     if (
@@ -1651,6 +1683,7 @@ export const Content: React.FC = () => {
     }
   }
 
+
   if (messageStore.receivedType === "Survey" && messageStore.receivedSurvey) {
     return (
       <SurveyAnswer
@@ -1814,6 +1847,16 @@ export const Content: React.FC = () => {
     );
   }
 
+  if (messageStore.receivedType === "Recording") {
+    return (
+      <>
+        <Recording
+          onSubmit={handleRecordingSubmit}
+          langCode={messageStore.receivedContent?.langCode ?? "en"}
+        />
+      </>
+    )
+  }
   if (
     messageStore.receivedType === "Website" ||
     messageStore.receivedType === "WebsiteTemplateQr" ||

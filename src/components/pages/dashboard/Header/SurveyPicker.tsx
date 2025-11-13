@@ -1,53 +1,29 @@
 import * as React from "react";
 import { useState } from "react";
-import { useForm, Controller } from "react-hook-form";
-import * as yup from "yup";
-import { yupResolver } from "@hookform/resolvers/yup";
-import { useSocketContext } from "../../../../context/SocketContextProvider";
 import { useSearchParams } from "next/navigation";
-import { Modal, Input, Button, Tooltip } from "antd";
-import { SmileOutlined, SendOutlined } from "@ant-design/icons";
+import { Button, Tooltip, Modal } from "antd";
 import { toast } from "react-toastify";
 import { FaSmile } from "react-icons/fa";
+import { useSocketContext } from "../../../../context/SocketContextProvider";
 
-interface SurveyFormValues {
-  identifier: string;
+interface HeaderSurveyShortcutProps {
+  confirmationNumber: string;
+  clearConfirmationNumber: () => void;
 }
 
-const schema = yup.object().shape({
-  identifier: yup.string().required("Confirmation number is required"),
-});
-
-export const HeaderSurveyShortcut: React.FC = () => {
-  const [isModalOpen, setIsModalOpen] = useState(false);
+export const HeaderSurveyShortcut: React.FC<HeaderSurveyShortcutProps> = ({
+  confirmationNumber,
+  clearConfirmationNumber
+}) => {
+  const [isLoading, setIsLoading] = useState(false);
   const params = useSearchParams();
   const { emitSendSurvey } = useSocketContext();
 
-  const {
-    control,
-    handleSubmit,
-    formState: { errors, isSubmitting },
-    reset,
-  } = useForm<SurveyFormValues>({
-    resolver: yupResolver(schema),
-    defaultValues: {
-      identifier: "",
-    },
-  });
-
-  const handleOpenModal = () => {
-    setIsModalOpen(true);
-  };
-
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-    reset();
-  };
-
-  const onSubmit = (data: SurveyFormValues) => {
+  const handleConfirmSend = async () => {
+    setIsLoading(true);
     try {
       emitSendSurvey({
-        tag: data.identifier,
+        tag: confirmationNumber.trim(),
         station: params.get("station") ? Number(params.get("station")) : 1,
         langCode: params.get("lang") || "en",
       });
@@ -57,8 +33,7 @@ export const HeaderSurveyShortcut: React.FC = () => {
         autoClose: 3000,
         theme: "colored",
       });
-
-      handleCloseModal();
+      clearConfirmationNumber();
     } catch (error) {
       console.error("Error sending survey:", error);
       toast.error("Failed to send survey. Please try again.", {
@@ -66,8 +41,11 @@ export const HeaderSurveyShortcut: React.FC = () => {
         autoClose: 3000,
         theme: "colored",
       });
+    } finally {
+      setIsLoading(false);
     }
   };
+
 
   return (
     <>
@@ -76,7 +54,8 @@ export const HeaderSurveyShortcut: React.FC = () => {
         <Button
           type="primary"
           icon={<FaSmile style={{ fontSize: "20px" }} />}
-          onClick={handleOpenModal}
+          onClick={handleConfirmSend}
+          disabled={isLoading}
           className="flex items-center justify-center headerButton"
           style={{
             backgroundColor: "#3b5998",
@@ -86,66 +65,6 @@ export const HeaderSurveyShortcut: React.FC = () => {
           }}
         />
       </Tooltip>
-
-      {/* Modal */}
-      <Modal
-        title={
-          <div className="flex items-center gap-2">
-            <SmileOutlined style={{ fontSize: "20px", color: "#3b5998" }} />
-            <span>Send Survey</span>
-          </div>
-        }
-        open={isModalOpen}
-        onCancel={handleCloseModal}
-        footer={null}
-        width={400}
-        centered
-      >
-        <form onSubmit={handleSubmit(onSubmit)} className="mt-4">
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Confirmation Number <span className="text-red-500">*</span>
-            </label>
-            <Controller
-              name="identifier"
-              control={control}
-              render={({ field }) => (
-                <Input
-                  {...field}
-                  placeholder="Enter confirmation number"
-                  status={errors.identifier ? "error" : ""}
-                  size="large"
-                  onPressEnter={handleSubmit(onSubmit)}
-                />
-              )}
-            />
-            {errors.identifier && (
-              <p className="text-sm text-red-600 mt-1">
-                {errors.identifier.message}
-              </p>
-            )}
-          </div>
-
-          <div className="flex justify-end gap-2">
-            <Button onClick={handleCloseModal} size="large">
-              Cancel
-            </Button>
-            <Button
-              type="primary"
-              htmlType="submit"
-              icon={<SendOutlined />}
-              loading={isSubmitting}
-              size="large"
-              style={{
-                backgroundColor: "#3b5998",
-                borderColor: "#3b5998",
-              }}
-            >
-              Send Survey
-            </Button>
-          </div>
-        </form>
-      </Modal>
     </>
   );
 };

@@ -5260,46 +5260,46 @@ export const useSurveyHeaderControllerGetSurveyHeaderById = <
 // ==================== Survey Emoticon Template APIs ====================
 
 export interface SurveyEmoticonTemplateDto {
-  emoticon: number;
-  templateType: string;
-  templateId: number;
+	emoticon: number;
+	templateType: string;
+	templateId: number;
 }
 
 export interface SurveyEmoticonTemplateRes {
-  id: number;
-  emoticon: number;
-  templateType: string;
-  templateId: number;
-  userId: number;
-  createdAt: string;
-  updatedAt: string;
+	id: number;
+	emoticon: number;
+	templateType: string;
+	templateId: number;
+	userId: number;
+	createdAt: string;
+	updatedAt: string;
 }
 
 export interface GetAllSurveyEmoticonTemplatesRes {
-  items: SurveyEmoticonTemplateRes[];
-  total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
+	items: SurveyEmoticonTemplateRes[];
+	total: number;
+	page: number;
+	limit: number;
+	totalPages: number;
 }
 
 export interface BulkCreateTemplatesDto {
-  templates: SurveyEmoticonTemplateDto[];
+	templates: SurveyEmoticonTemplateDto[];
 }
 
 export interface BulkCreateResponse {
-  message: string;
-  items: SurveyEmoticonTemplateRes[];
+	message: string;
+	items: SurveyEmoticonTemplateRes[];
 }
 
 export interface DeleteAllResponse {
-  message: string;
-  count: number;
+	message: string;
+	count: number;
 }
 
 export interface DeleteResponse {
-  message: string;
-  id: number;
+	message: string;
+	id: number;
 }
 
 
@@ -5308,65 +5308,65 @@ export interface DeleteResponse {
 // ============================================
 
 export const surveyEmoticonTemplateControllerCreate = (
-  data: SurveyEmoticonTemplateDto,
-  options?: SecondParameter<typeof nobstacleBackendApiInstance>
+	data: SurveyEmoticonTemplateDto,
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>
 ) => {
-  return nobstacleBackendApiInstance<SurveyEmoticonTemplateRes>(
-    {
-      url: `/api/v1/survey-emoticon/survey-emoticon-template`,
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      data,
-    },
-    options
-  );
+	return nobstacleBackendApiInstance<SurveyEmoticonTemplateRes>(
+		{
+			url: `/api/v1/survey-emoticon/survey-emoticon-template`,
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			data,
+		},
+		options
+	);
 };
 
 export const getSurveyEmoticonTemplateControllerCreateMutationOptions = <
-  TError = ErrorType<HttpExceptionSchema>,
-  TContext = unknown
+	TError = ErrorType<HttpExceptionSchema>,
+	TContext = unknown
 >(options?: {
-  mutation?: UseMutationOptions<
+	mutation?: UseMutationOptions<
+		Awaited<ReturnType<typeof surveyEmoticonTemplateControllerCreate>>,
+		TError,
+		{ data: SurveyEmoticonTemplateDto },
+		TContext
+	>;
+	request?: SecondParameter<typeof nobstacleBackendApiInstance>;
+}): UseMutationOptions<
 	Awaited<ReturnType<typeof surveyEmoticonTemplateControllerCreate>>,
 	TError,
 	{ data: SurveyEmoticonTemplateDto },
 	TContext
-  >;
-  request?: SecondParameter<typeof nobstacleBackendApiInstance>;
-}): UseMutationOptions<
-  Awaited<ReturnType<typeof surveyEmoticonTemplateControllerCreate>>,
-  TError,
-  { data: SurveyEmoticonTemplateDto },
-  TContext
 > => {
-  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+	const { mutation: mutationOptions, request: requestOptions } = options ?? {};
 
-  const mutationFn: MutationFunction<
-	Awaited<ReturnType<typeof surveyEmoticonTemplateControllerCreate>>,
-	{ data: SurveyEmoticonTemplateDto }
-  > = (props) => {
-	const { data } = props ?? {};
-	return surveyEmoticonTemplateControllerCreate(data, requestOptions);
-  };
+	const mutationFn: MutationFunction<
+		Awaited<ReturnType<typeof surveyEmoticonTemplateControllerCreate>>,
+		{ data: SurveyEmoticonTemplateDto }
+	> = (props) => {
+		const { data } = props ?? {};
+		return surveyEmoticonTemplateControllerCreate(data, requestOptions);
+	};
 
-  return { mutationFn, ...mutationOptions };
+	return { mutationFn, ...mutationOptions };
 };
 
 export const useSurveyEmoticonTemplateControllerCreate = <
-  TError = ErrorType<HttpExceptionSchema>,
-  TContext = unknown
+	TError = ErrorType<HttpExceptionSchema>,
+	TContext = unknown
 >(options?: {
-  mutation?: UseMutationOptions<
-	Awaited<ReturnType<typeof surveyEmoticonTemplateControllerCreate>>,
-	TError,
-	{ data: SurveyEmoticonTemplateDto },
-	TContext
-  >;
-  request?: SecondParameter<typeof nobstacleBackendApiInstance>;
+	mutation?: UseMutationOptions<
+		Awaited<ReturnType<typeof surveyEmoticonTemplateControllerCreate>>,
+		TError,
+		{ data: SurveyEmoticonTemplateDto },
+		TContext
+	>;
+	request?: SecondParameter<typeof nobstacleBackendApiInstance>;
 }) => {
-  const mutationOptions =
-    getSurveyEmoticonTemplateControllerCreateMutationOptions(options);
-  return useMutation(mutationOptions);
+	const mutationOptions =
+		getSurveyEmoticonTemplateControllerCreateMutationOptions(options);
+	return useMutation(mutationOptions);
 };
 
 // ============================================
@@ -5374,66 +5374,66 @@ export const useSurveyEmoticonTemplateControllerCreate = <
 // ============================================
 
 export const surveyEmoticonTemplateControllerUpdate = (
-  id: string,
-  data: Partial<SurveyEmoticonTemplateDto>,
-  options?: SecondParameter<typeof nobstacleBackendApiInstance>
+	id: string,
+	data: Partial<SurveyEmoticonTemplateDto>,
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>
 ) => {
-  return nobstacleBackendApiInstance<SurveyEmoticonTemplateRes>(
-    {
-      url: `/api/v1/survey-emoticon/survey-emoticon-template/${id}`,
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      data,
-    },
-    options
-  );
+	return nobstacleBackendApiInstance<SurveyEmoticonTemplateRes>(
+		{
+			url: `/api/v1/survey-emoticon/survey-emoticon-template/${id}`,
+			method: 'PATCH',
+			headers: { 'Content-Type': 'application/json' },
+			data,
+		},
+		options
+	);
 };
 
 export const getSurveyEmoticonTemplateControllerUpdateMutationOptions = <
-  TError = ErrorType<HttpExceptionSchema>,
-  TContext = unknown
+	TError = ErrorType<HttpExceptionSchema>,
+	TContext = unknown
 >(options?: {
-  mutation?: UseMutationOptions<
+	mutation?: UseMutationOptions<
+		Awaited<ReturnType<typeof surveyEmoticonTemplateControllerUpdate>>,
+		TError,
+		{ id: string; data: Partial<SurveyEmoticonTemplateDto> },
+		TContext
+	>;
+	request?: SecondParameter<typeof nobstacleBackendApiInstance>;
+}): UseMutationOptions<
 	Awaited<ReturnType<typeof surveyEmoticonTemplateControllerUpdate>>,
 	TError,
 	{ id: string; data: Partial<SurveyEmoticonTemplateDto> },
 	TContext
-  >;
-  request?: SecondParameter<typeof nobstacleBackendApiInstance>;
-}): UseMutationOptions<
-  Awaited<ReturnType<typeof surveyEmoticonTemplateControllerUpdate>>,
-  TError,
-  { id: string; data: Partial<SurveyEmoticonTemplateDto> },
-  TContext
 > => {
-  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+	const { mutation: mutationOptions, request: requestOptions } = options ?? {};
 
-  const mutationFn: MutationFunction<
-	Awaited<ReturnType<typeof surveyEmoticonTemplateControllerUpdate>>,
-	{ id: string; data: Partial<SurveyEmoticonTemplateDto> }
-  > = (props) => {
-    const { id, data } = props ?? {};
-    return surveyEmoticonTemplateControllerUpdate(id, data, requestOptions);
-  };
+	const mutationFn: MutationFunction<
+		Awaited<ReturnType<typeof surveyEmoticonTemplateControllerUpdate>>,
+		{ id: string; data: Partial<SurveyEmoticonTemplateDto> }
+	> = (props) => {
+		const { id, data } = props ?? {};
+		return surveyEmoticonTemplateControllerUpdate(id, data, requestOptions);
+	};
 
-  return { mutationFn, ...mutationOptions };
+	return { mutationFn, ...mutationOptions };
 };
 
 export const useSurveyEmoticonTemplateControllerUpdate = <
-  TError = ErrorType<HttpExceptionSchema>,
-  TContext = unknown
+	TError = ErrorType<HttpExceptionSchema>,
+	TContext = unknown
 >(options?: {
-  mutation?: UseMutationOptions<
-	Awaited<ReturnType<typeof surveyEmoticonTemplateControllerUpdate>>,
-	TError,
-	{ id: string; data: Partial<SurveyEmoticonTemplateDto> },
-	TContext
-  >;
-  request?: SecondParameter<typeof nobstacleBackendApiInstance>;
+	mutation?: UseMutationOptions<
+		Awaited<ReturnType<typeof surveyEmoticonTemplateControllerUpdate>>,
+		TError,
+		{ id: string; data: Partial<SurveyEmoticonTemplateDto> },
+		TContext
+	>;
+	request?: SecondParameter<typeof nobstacleBackendApiInstance>;
 }) => {
-  const mutationOptions =
-	getSurveyEmoticonTemplateControllerUpdateMutationOptions(options);
-  return useMutation(mutationOptions);
+	const mutationOptions =
+		getSurveyEmoticonTemplateControllerUpdateMutationOptions(options);
+	return useMutation(mutationOptions);
 };
 
 // ============================================
@@ -5441,34 +5441,34 @@ export const useSurveyEmoticonTemplateControllerUpdate = <
 // ============================================
 
 export const surveyEmoticonTemplateControllerDelete = (
-  id: string,
-  options?: SecondParameter<typeof nobstacleBackendApiInstance>
+	id: string,
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>
 ) => {
-  return nobstacleBackendApiInstance<DeleteResponse>(
-    {
-      url: `/api/v1/survey-emoticon/survey-emoticon-template/${id}`,
-      method: 'DELETE',
-    },
-    options
-  );
+	return nobstacleBackendApiInstance<DeleteResponse>(
+		{
+			url: `/api/v1/survey-emoticon/survey-emoticon-template/${id}`,
+			method: 'DELETE',
+		},
+		options
+	);
 };
 
 export const getSurveyEmoticonTemplateControllerDeleteMutationOptions = <TError = ErrorType<HttpExceptionSchema>, TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof surveyEmoticonTemplateControllerDelete>>, TError, { id: string }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
 ): UseMutationOptions<Awaited<ReturnType<typeof surveyEmoticonTemplateControllerDelete>>, TError, { id: string }, TContext> => {
-  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+	const { mutation: mutationOptions, request: requestOptions } = options ?? {};
 
-  const mutationFn: MutationFunction<Awaited<ReturnType<typeof surveyEmoticonTemplateControllerDelete>>, { id: string }> = (props) => {
-	const { id } = props ?? {};
-	return surveyEmoticonTemplateControllerDelete(id, requestOptions);
-  };
+	const mutationFn: MutationFunction<Awaited<ReturnType<typeof surveyEmoticonTemplateControllerDelete>>, { id: string }> = (props) => {
+		const { id } = props ?? {};
+		return surveyEmoticonTemplateControllerDelete(id, requestOptions);
+	};
 
-  return { mutationFn, ...mutationOptions };
+	return { mutationFn, ...mutationOptions };
 };
 
 export const useSurveyEmoticonTemplateControllerDelete = <TError = ErrorType<HttpExceptionSchema>, TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof surveyEmoticonTemplateControllerDelete>>, TError, { id: string }, TContext>, request?: SecondParameter<typeof nobstacleBackendApiInstance> }
 ) => {
-  const mutationOptions = getSurveyEmoticonTemplateControllerDeleteMutationOptions(options);
-  return useMutation(mutationOptions);
+	const mutationOptions = getSurveyEmoticonTemplateControllerDeleteMutationOptions(options);
+	return useMutation(mutationOptions);
 };
 
 // ============================================
@@ -5476,110 +5476,110 @@ export const useSurveyEmoticonTemplateControllerDelete = <TError = ErrorType<Htt
 // ============================================
 
 export const surveyEmoticonTemplateControllerGetAll = (
-  params?: {
-    page?: number;
-    limit?: number;
-    emoticon?: number;
-  },
-  options?: SecondParameter<typeof nobstacleBackendApiInstance>,
-  signal?: AbortSignal
+	params?: {
+		page?: number;
+		limit?: number;
+		emoticon?: number;
+	},
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>,
+	signal?: AbortSignal
 ) => {
-  return nobstacleBackendApiInstance<GetAllSurveyEmoticonTemplatesRes>(
-    {
-      url: `/api/v1/survey-emoticon/survey-emoticon-templates`,
-      method: 'GET',
-      params,
-      signal,
-    },
-    options
-  );
+	return nobstacleBackendApiInstance<GetAllSurveyEmoticonTemplatesRes>(
+		{
+			url: `/api/v1/survey-emoticon/survey-emoticon-templates`,
+			method: 'GET',
+			params,
+			signal,
+		},
+		options
+	);
 };
 
 export const getSurveyEmoticonTemplateControllerGetAllQueryOptions = <
-  TData = Awaited<ReturnType<typeof surveyEmoticonTemplateControllerGetAll>>,
-  TError = ErrorType<HttpExceptionSchema>
+	TData = Awaited<ReturnType<typeof surveyEmoticonTemplateControllerGetAll>>,
+	TError = ErrorType<HttpExceptionSchema>
 >(
-  params?: {
-	page?: number;
-	limit?: number;
-	emoticon?: number;
-  },
-  options?: {
-	query?: UseQueryOptions<
-	  Awaited<ReturnType<typeof surveyEmoticonTemplateControllerGetAll>>,
-	  TError,
-	  TData
-	>;
-	request?: SecondParameter<typeof nobstacleBackendApiInstance>;
-  }
+	params?: {
+		page?: number;
+		limit?: number;
+		emoticon?: number;
+	},
+	options?: {
+		query?: UseQueryOptions<
+			Awaited<ReturnType<typeof surveyEmoticonTemplateControllerGetAll>>,
+			TError,
+			TData
+		>;
+		request?: SecondParameter<typeof nobstacleBackendApiInstance>;
+	}
 ) => {
-  const { query: queryOptions, request: requestOptions } = options ?? {};
+	const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey =
-    queryOptions?.queryKey ??
-    [`/api/v1/survey-emoticon/survey-emoticon-templates`, ...(params ? [params] : [])];
+	const queryKey =
+		queryOptions?.queryKey ??
+		[`/api/v1/survey-emoticon/survey-emoticon-templates`, ...(params ? [params] : [])];
 
-  const queryFn: QueryFunction<
-	Awaited<ReturnType<typeof surveyEmoticonTemplateControllerGetAll>>
-  > = ({ signal }) =>
-	surveyEmoticonTemplateControllerGetAll(params, requestOptions, signal);
+	const queryFn: QueryFunction<
+		Awaited<ReturnType<typeof surveyEmoticonTemplateControllerGetAll>>
+	> = ({ signal }) =>
+			surveyEmoticonTemplateControllerGetAll(params, requestOptions, signal);
 
-  return {
-	queryKey,
-	queryFn,
-	...queryOptions,
-  } as UseQueryOptions<
-	Awaited<ReturnType<typeof surveyEmoticonTemplateControllerGetAll>>,
-	TError,
-	TData
-  > & { queryKey: QueryKey };
+	return {
+		queryKey,
+		queryFn,
+		...queryOptions,
+	} as UseQueryOptions<
+		Awaited<ReturnType<typeof surveyEmoticonTemplateControllerGetAll>>,
+		TError,
+		TData
+	> & { queryKey: QueryKey };
 };
 
 export type SurveyEmoticonTemplateControllerGetAllQueryResult = NonNullable<
-  Awaited<ReturnType<typeof surveyEmoticonTemplateControllerGetAll>>
+	Awaited<ReturnType<typeof surveyEmoticonTemplateControllerGetAll>>
 >;
 export type SurveyEmoticonTemplateControllerGetAllQueryError =
-  ErrorType<HttpExceptionSchema>;
+	ErrorType<HttpExceptionSchema>;
 
 export const useSurveyEmoticonTemplateControllerGetAll = <
-  TData = Awaited<ReturnType<typeof surveyEmoticonTemplateControllerGetAll>>,
-  TError = ErrorType<HttpExceptionSchema>
+	TData = Awaited<ReturnType<typeof surveyEmoticonTemplateControllerGetAll>>,
+	TError = ErrorType<HttpExceptionSchema>
 >(
-  params?: {
-    page?: number;
-    limit?: number;
-    emoticon?: number;
-  },
-  options?: {
-	query?: UseQueryOptions<
-	  Awaited<ReturnType<typeof surveyEmoticonTemplateControllerGetAll>>,
-	  TError,
-	  TData
-	>;
-    request?: SecondParameter<typeof nobstacleBackendApiInstance>;
-  }
+	params?: {
+		page?: number;
+		limit?: number;
+		emoticon?: number;
+	},
+	options?: {
+		query?: UseQueryOptions<
+			Awaited<ReturnType<typeof surveyEmoticonTemplateControllerGetAll>>,
+			TError,
+			TData
+		>;
+		request?: SecondParameter<typeof nobstacleBackendApiInstance>;
+	}
 ): UseQueryResult<TData, TError> & { queryKey: QueryKey } => {
-  const queryOptions =
-    getSurveyEmoticonTemplateControllerGetAllQueryOptions(params, options);
+	const queryOptions =
+		getSurveyEmoticonTemplateControllerGetAllQueryOptions(params, options);
 
-  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
-    queryKey: QueryKey;
-  };
+	const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+		queryKey: QueryKey;
+	};
 
-  query.queryKey = queryOptions.queryKey;
+	query.queryKey = queryOptions.queryKey;
 
-  return query;
+	return query;
 };
 
 export const getSurveyEmoticonTemplateControllerGetAllQueryKey = (params?: {
-  page?: number;
-  limit?: number;
-  emoticon?: number;
+	page?: number;
+	limit?: number;
+	emoticon?: number;
 }) => {
-  return [
-    `/api/v1/survey-emoticon/survey-emoticon-templates`,
-    ...(params ? [params] : []),
-  ] as const;
+	return [
+		`/api/v1/survey-emoticon/survey-emoticon-templates`,
+		...(params ? [params] : []),
+	] as const;
 };
 
 // ============================================
@@ -5587,123 +5587,123 @@ export const getSurveyEmoticonTemplateControllerGetAllQueryKey = (params?: {
 // ============================================
 
 export const surveyEmoticonTemplateControllerGetById = (
-  id: string,
-  options?: SecondParameter<typeof nobstacleBackendApiInstance>,
-  signal?: AbortSignal
+	id: string,
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>,
+	signal?: AbortSignal
 ) => {
-  return nobstacleBackendApiInstance<SurveyEmoticonTemplateRes>(
-    {
-      url: `/api/v1/survey-emoticon/survey-emoticon-template/${id}`,
-      method: 'GET',
-      signal,
-    },
-    options
-  );
+	return nobstacleBackendApiInstance<SurveyEmoticonTemplateRes>(
+		{
+			url: `/api/v1/survey-emoticon/survey-emoticon-template/${id}`,
+			method: 'GET',
+			signal,
+		},
+		options
+	);
 };
 
 export const getSurveyEmoticonTemplateControllerGetByIdQueryOptions = <TData = Awaited<ReturnType<typeof surveyEmoticonTemplateControllerGetById>>, TError = ErrorType<HttpExceptionSchema>>(
-  id: string,
-  options?: {
-	query?: UseQueryOptions<Awaited<ReturnType<typeof surveyEmoticonTemplateControllerGetById>>, TError, TData>;
-	request?: SecondParameter<typeof nobstacleBackendApiInstance>;
-  }
+	id: string,
+	options?: {
+		query?: UseQueryOptions<Awaited<ReturnType<typeof surveyEmoticonTemplateControllerGetById>>, TError, TData>;
+		request?: SecondParameter<typeof nobstacleBackendApiInstance>;
+	}
 ) => {
-  const { query: queryOptions, request: requestOptions } = options ?? {};
+	const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey = queryOptions?.queryKey ?? [`/api/v1/survey-emoticon/survey-emoticon-template/${id}`];
+	const queryKey = queryOptions?.queryKey ?? [`/api/v1/survey-emoticon/survey-emoticon-template/${id}`];
 
-  const queryFn: QueryFunction<Awaited<ReturnType<typeof surveyEmoticonTemplateControllerGetById>>> = ({ signal }) =>
-	surveyEmoticonTemplateControllerGetById(id, requestOptions, signal);
+	const queryFn: QueryFunction<Awaited<ReturnType<typeof surveyEmoticonTemplateControllerGetById>>> = ({ signal }) =>
+		surveyEmoticonTemplateControllerGetById(id, requestOptions, signal);
 
-  return {
-	queryKey,
-	queryFn,
-	enabled: !!id,
-	...queryOptions,
-  } as UseQueryOptions<Awaited<ReturnType<typeof surveyEmoticonTemplateControllerGetById>>, TError, TData> & { queryKey: QueryKey };
+	return {
+		queryKey,
+		queryFn,
+		enabled: !!id,
+		...queryOptions,
+	} as UseQueryOptions<Awaited<ReturnType<typeof surveyEmoticonTemplateControllerGetById>>, TError, TData> & { queryKey: QueryKey };
 };
 
 export const useSurveyEmoticonTemplateControllerGetById = <
-  TData = Awaited<ReturnType<typeof surveyEmoticonTemplateControllerGetById>>,
-  TError = ErrorType<HttpExceptionSchema>
+	TData = Awaited<ReturnType<typeof surveyEmoticonTemplateControllerGetById>>,
+	TError = ErrorType<HttpExceptionSchema>
 >(
-  id: string,
-  options?: {
-	query?: UseQueryOptions<
-	  Awaited<ReturnType<typeof surveyEmoticonTemplateControllerGetById>>,
-	  TError,
-	  TData
-	>;
-	request?: SecondParameter<typeof nobstacleBackendApiInstance>;
-  }
+	id: string,
+	options?: {
+		query?: UseQueryOptions<
+			Awaited<ReturnType<typeof surveyEmoticonTemplateControllerGetById>>,
+			TError,
+			TData
+		>;
+		request?: SecondParameter<typeof nobstacleBackendApiInstance>;
+	}
 ): UseQueryResult<TData, TError> & { queryKey: QueryKey } => {
-  const queryOptions = getSurveyEmoticonTemplateControllerGetByIdQueryOptions(id, options);
+	const queryOptions = getSurveyEmoticonTemplateControllerGetByIdQueryOptions(id, options);
 
-  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
+	const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
-  query.queryKey = queryOptions.queryKey;
+	query.queryKey = queryOptions.queryKey;
 
-  return query;
+	return query;
 };
 
 export const surveyEmoticonTemplateControllerGetByEmoticon = (
-  emoticon: number,
-  options?: SecondParameter<typeof nobstacleBackendApiInstance>,
-  signal?: AbortSignal
+	emoticon: number,
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>,
+	signal?: AbortSignal
 ) => {
-  return nobstacleBackendApiInstance<SurveyEmoticonTemplateRes>(
-	{
-	  url: `/api/v1/survey-emoticon/survey-emoticon-template-by-emoticon/${emoticon}`,
-	  method: 'GET',
-	  signal,
-	},
-	options
-  );
+	return nobstacleBackendApiInstance<SurveyEmoticonTemplateRes>(
+		{
+			url: `/api/v1/survey-emoticon/survey-emoticon-template-by-emoticon/${emoticon}`,
+			method: 'GET',
+			signal,
+		},
+		options
+	);
 };
 export const getSurveyEmoticonTemplateControllerGetByEmoticonQueryOptions = <TData = Awaited<ReturnType<typeof surveyEmoticonTemplateControllerGetByEmoticon>>, TError = ErrorType<HttpExceptionSchema>>(
-  emoticon: number,
-  options?: {
-	query?: UseQueryOptions<Awaited<ReturnType<typeof surveyEmoticonTemplateControllerGetByEmoticon>>, TError, TData>;
-	request?: SecondParameter<typeof nobstacleBackendApiInstance>;
-  }
+	emoticon: number,
+	options?: {
+		query?: UseQueryOptions<Awaited<ReturnType<typeof surveyEmoticonTemplateControllerGetByEmoticon>>, TError, TData>;
+		request?: SecondParameter<typeof nobstacleBackendApiInstance>;
+	}
 ) => {
-  const { query: queryOptions, request: requestOptions } = options ?? {};
+	const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey = queryOptions?.queryKey ?? [`/api/v1/survey-emoticon/survey-emoticon-template-by-emoticon/${emoticon}`];
+	const queryKey = queryOptions?.queryKey ?? [`/api/v1/survey-emoticon/survey-emoticon-template-by-emoticon/${emoticon}`];
 
-  const queryFn: QueryFunction<Awaited<ReturnType<typeof surveyEmoticonTemplateControllerGetByEmoticon>>> = ({ signal }) =>
-	surveyEmoticonTemplateControllerGetByEmoticon(emoticon, requestOptions, signal);
+	const queryFn: QueryFunction<Awaited<ReturnType<typeof surveyEmoticonTemplateControllerGetByEmoticon>>> = ({ signal }) =>
+		surveyEmoticonTemplateControllerGetByEmoticon(emoticon, requestOptions, signal);
 
-  return {
-	queryKey,
-	queryFn,
-	enabled: emoticon >= 1 && emoticon <= 5,
-	...queryOptions,
-  } as UseQueryOptions<Awaited<ReturnType<typeof surveyEmoticonTemplateControllerGetByEmoticon>>, TError, TData> & { queryKey: QueryKey };
+	return {
+		queryKey,
+		queryFn,
+		enabled: emoticon >= 1 && emoticon <= 5,
+		...queryOptions,
+	} as UseQueryOptions<Awaited<ReturnType<typeof surveyEmoticonTemplateControllerGetByEmoticon>>, TError, TData> & { queryKey: QueryKey };
 };
 
 export const getSurveyEmoticonTemplateControllerGetByEmoticonQueryKey = (
-  emoticon: number
+	emoticon: number
 ) => {
-  return [
-    `/api/v1/survey-emoticon/survey-emoticon-template-by-emoticon/${emoticon}`,
-  ] as const;
+	return [
+		`/api/v1/survey-emoticon/survey-emoticon-template-by-emoticon/${emoticon}`,
+	] as const;
 };
 
 export const useSurveyEmoticonTemplateControllerGetByEmoticon = <TData = Awaited<ReturnType<typeof surveyEmoticonTemplateControllerGetByEmoticon>>, TError = ErrorType<HttpExceptionSchema>>(
-  emoticon: number,
-  options?: {
-	query?: UseQueryOptions<Awaited<ReturnType<typeof surveyEmoticonTemplateControllerGetByEmoticon>>, TError, TData>;
-	request?: SecondParameter<typeof nobstacleBackendApiInstance>;
-  }
+	emoticon: number,
+	options?: {
+		query?: UseQueryOptions<Awaited<ReturnType<typeof surveyEmoticonTemplateControllerGetByEmoticon>>, TError, TData>;
+		request?: SecondParameter<typeof nobstacleBackendApiInstance>;
+	}
 ): UseQueryResult<TData, TError> & { queryKey: QueryKey } => {
-  const queryOptions = getSurveyEmoticonTemplateControllerGetByEmoticonQueryOptions(emoticon, options);
+	const queryOptions = getSurveyEmoticonTemplateControllerGetByEmoticonQueryOptions(emoticon, options);
 
-  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
+	const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
-  query.queryKey = queryOptions.queryKey;
+	query.queryKey = queryOptions.queryKey;
 
-  return query;
+	return query;
 };
 
 
@@ -5712,32 +5712,32 @@ export const useSurveyEmoticonTemplateControllerGetByEmoticon = <TData = Awaited
 // ==================== Recording APIs ====================
 
 export interface RecordingDto {
-  recordingUrl: string;
-  confirmationNumber: string;
-  stationNo: string;
+	recordingUrl: string;
+	confirmationNumber: string;
+	stationNo: string;
 }
 
 export interface RecordingRes {
-  id: number;
-  recordingUrl: string;
-  confirmationNumber: string;
-  stationNo: string;
-  userId: number;
-  createdAt: string;
-  updatedAt: string;
+	id: number;
+	recordingUrl: string;
+	confirmationNumber: string;
+	stationNo: string;
+	userId: number;
+	createdAt: string;
+	updatedAt: string;
 }
 
 export interface GetAllRecordingsRes {
-  items: RecordingRes[];
-  total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
+	items: RecordingRes[];
+	total: number;
+	page: number;
+	limit: number;
+	totalPages: number;
 }
 
 export interface DeleteResponse {
-  message: string;
-  id: number;
+	message: string;
+	id: number;
 }
 
 // ============================================
@@ -5745,64 +5745,64 @@ export interface DeleteResponse {
 // ============================================
 
 export const recordingControllerCreate = (
-  data: RecordingDto,
-  options?: SecondParameter<typeof nobstacleBackendApiInstance>
+	data: RecordingDto,
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>
 ) => {
-  return nobstacleBackendApiInstance<RecordingRes>(
-    {
-      url: `/api/v1/recording`,
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      data,
-    },
-    options
-  );
+	return nobstacleBackendApiInstance<RecordingRes>(
+		{
+			url: `/api/v1/recording`,
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			data,
+		},
+		options
+	);
 };
 
 export const getRecordingControllerCreateMutationOptions = <
-  TError = ErrorType<HttpExceptionSchema>,
-  TContext = unknown
+	TError = ErrorType<HttpExceptionSchema>,
+	TContext = unknown
 >(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof recordingControllerCreate>>,
-    TError,
-    { data: RecordingDto },
-    TContext
-  >;
-  request?: SecondParameter<typeof nobstacleBackendApiInstance>;
+	mutation?: UseMutationOptions<
+		Awaited<ReturnType<typeof recordingControllerCreate>>,
+		TError,
+		{ data: RecordingDto },
+		TContext
+	>;
+	request?: SecondParameter<typeof nobstacleBackendApiInstance>;
 }): UseMutationOptions<
-  Awaited<ReturnType<typeof recordingControllerCreate>>,
-  TError,
-  { data: RecordingDto },
-  TContext
+	Awaited<ReturnType<typeof recordingControllerCreate>>,
+	TError,
+	{ data: RecordingDto },
+	TContext
 > => {
-  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+	const { mutation: mutationOptions, request: requestOptions } = options ?? {};
 
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof recordingControllerCreate>>,
-    { data: RecordingDto }
-  > = (props) => {
-    const { data } = props ?? {};
-    return recordingControllerCreate(data, requestOptions);
-  };
+	const mutationFn: MutationFunction<
+		Awaited<ReturnType<typeof recordingControllerCreate>>,
+		{ data: RecordingDto }
+	> = (props) => {
+		const { data } = props ?? {};
+		return recordingControllerCreate(data, requestOptions);
+	};
 
-  return { mutationFn, ...mutationOptions };
+	return { mutationFn, ...mutationOptions };
 };
 
 export const useRecordingControllerCreate = <
-  TError = ErrorType<HttpExceptionSchema>,
-  TContext = unknown
+	TError = ErrorType<HttpExceptionSchema>,
+	TContext = unknown
 >(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof recordingControllerCreate>>,
-    TError,
-    { data: RecordingDto },
-    TContext
-  >;
-  request?: SecondParameter<typeof nobstacleBackendApiInstance>;
+	mutation?: UseMutationOptions<
+		Awaited<ReturnType<typeof recordingControllerCreate>>,
+		TError,
+		{ data: RecordingDto },
+		TContext
+	>;
+	request?: SecondParameter<typeof nobstacleBackendApiInstance>;
 }) => {
-  const mutationOptions = getRecordingControllerCreateMutationOptions(options);
-  return useMutation(mutationOptions);
+	const mutationOptions = getRecordingControllerCreateMutationOptions(options);
+	return useMutation(mutationOptions);
 };
 
 // ============================================
@@ -5810,65 +5810,65 @@ export const useRecordingControllerCreate = <
 // ============================================
 
 export const recordingControllerUpdate = (
-  id: string,
-  data: Partial<RecordingDto>,
-  options?: SecondParameter<typeof nobstacleBackendApiInstance>
+	id: string,
+	data: Partial<RecordingDto>,
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>
 ) => {
-  return nobstacleBackendApiInstance<RecordingRes>(
-    {
-      url: `/api/v1/recording/${id}`,
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      data,
-    },
-    options
-  );
+	return nobstacleBackendApiInstance<RecordingRes>(
+		{
+			url: `/api/v1/recording/${id}`,
+			method: 'PATCH',
+			headers: { 'Content-Type': 'application/json' },
+			data,
+		},
+		options
+	);
 };
 
 export const getRecordingControllerUpdateMutationOptions = <
-  TError = ErrorType<HttpExceptionSchema>,
-  TContext = unknown
+	TError = ErrorType<HttpExceptionSchema>,
+	TContext = unknown
 >(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof recordingControllerUpdate>>,
-    TError,
-    { id: string; data: Partial<RecordingDto> },
-    TContext
-  >;
-  request?: SecondParameter<typeof nobstacleBackendApiInstance>;
+	mutation?: UseMutationOptions<
+		Awaited<ReturnType<typeof recordingControllerUpdate>>,
+		TError,
+		{ id: string; data: Partial<RecordingDto> },
+		TContext
+	>;
+	request?: SecondParameter<typeof nobstacleBackendApiInstance>;
 }): UseMutationOptions<
-  Awaited<ReturnType<typeof recordingControllerUpdate>>,
-  TError,
-  { id: string; data: Partial<RecordingDto> },
-  TContext
+	Awaited<ReturnType<typeof recordingControllerUpdate>>,
+	TError,
+	{ id: string; data: Partial<RecordingDto> },
+	TContext
 > => {
-  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+	const { mutation: mutationOptions, request: requestOptions } = options ?? {};
 
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof recordingControllerUpdate>>,
-    { id: string; data: Partial<RecordingDto> }
-  > = (props) => {
-    const { id, data } = props ?? {};
-    return recordingControllerUpdate(id, data, requestOptions);
-  };
+	const mutationFn: MutationFunction<
+		Awaited<ReturnType<typeof recordingControllerUpdate>>,
+		{ id: string; data: Partial<RecordingDto> }
+	> = (props) => {
+		const { id, data } = props ?? {};
+		return recordingControllerUpdate(id, data, requestOptions);
+	};
 
-  return { mutationFn, ...mutationOptions };
+	return { mutationFn, ...mutationOptions };
 };
 
 export const useRecordingControllerUpdate = <
-  TError = ErrorType<HttpExceptionSchema>,
-  TContext = unknown
+	TError = ErrorType<HttpExceptionSchema>,
+	TContext = unknown
 >(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof recordingControllerUpdate>>,
-    TError,
-    { id: string; data: Partial<RecordingDto> },
-    TContext
-  >;
-  request?: SecondParameter<typeof nobstacleBackendApiInstance>;
+	mutation?: UseMutationOptions<
+		Awaited<ReturnType<typeof recordingControllerUpdate>>,
+		TError,
+		{ id: string; data: Partial<RecordingDto> },
+		TContext
+	>;
+	request?: SecondParameter<typeof nobstacleBackendApiInstance>;
 }) => {
-  const mutationOptions = getRecordingControllerUpdateMutationOptions(options);
-  return useMutation(mutationOptions);
+	const mutationOptions = getRecordingControllerUpdateMutationOptions(options);
+	return useMutation(mutationOptions);
 };
 
 // ============================================
@@ -5876,62 +5876,62 @@ export const useRecordingControllerUpdate = <
 // ============================================
 
 export const recordingControllerDelete = (
-  id: number,
-  options?: SecondParameter<typeof nobstacleBackendApiInstance>
+	id: number,
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>
 ) => {
-  return nobstacleBackendApiInstance<DeleteResponse>(
-    {
-      url: `/api/v1/recording/${id}`,
-      method: 'DELETE',
-    },
-    options
-  );
+	return nobstacleBackendApiInstance<DeleteResponse>(
+		{
+			url: `/api/v1/recording/${id}`,
+			method: 'DELETE',
+		},
+		options
+	);
 };
 
 export const getRecordingControllerDeleteMutationOptions = <
-  TError = ErrorType<HttpExceptionSchema>,
-  TContext = unknown
+	TError = ErrorType<HttpExceptionSchema>,
+	TContext = unknown
 >(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof recordingControllerDelete>>,
-    TError,
-    { id: number },
-    TContext
-  >;
-  request?: SecondParameter<typeof nobstacleBackendApiInstance>;
+	mutation?: UseMutationOptions<
+		Awaited<ReturnType<typeof recordingControllerDelete>>,
+		TError,
+		{ id: number },
+		TContext
+	>;
+	request?: SecondParameter<typeof nobstacleBackendApiInstance>;
 }): UseMutationOptions<
-  Awaited<ReturnType<typeof recordingControllerDelete>>,
-  TError,
-  { id: number },
-  TContext
+	Awaited<ReturnType<typeof recordingControllerDelete>>,
+	TError,
+	{ id: number },
+	TContext
 > => {
-  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+	const { mutation: mutationOptions, request: requestOptions } = options ?? {};
 
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof recordingControllerDelete>>,
-    { id: number }
-  > = (props) => {
-    const { id } = props ?? {};
-    return recordingControllerDelete(id, requestOptions);
-  };
+	const mutationFn: MutationFunction<
+		Awaited<ReturnType<typeof recordingControllerDelete>>,
+		{ id: number }
+	> = (props) => {
+		const { id } = props ?? {};
+		return recordingControllerDelete(id, requestOptions);
+	};
 
-  return { mutationFn, ...mutationOptions };
+	return { mutationFn, ...mutationOptions };
 };
 
 export const useRecordingControllerDelete = <
-  TError = ErrorType<HttpExceptionSchema>,
-  TContext = unknown
+	TError = ErrorType<HttpExceptionSchema>,
+	TContext = unknown
 >(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof recordingControllerDelete>>,
-    TError,
-    { id: number },
-    TContext
-  >;
-  request?: SecondParameter<typeof nobstacleBackendApiInstance>;
+	mutation?: UseMutationOptions<
+		Awaited<ReturnType<typeof recordingControllerDelete>>,
+		TError,
+		{ id: number },
+		TContext
+	>;
+	request?: SecondParameter<typeof nobstacleBackendApiInstance>;
 }) => {
-  const mutationOptions = getRecordingControllerDeleteMutationOptions(options);
-  return useMutation(mutationOptions);
+	const mutationOptions = getRecordingControllerDeleteMutationOptions(options);
+	return useMutation(mutationOptions);
 };
 
 // ============================================
@@ -5939,112 +5939,112 @@ export const useRecordingControllerDelete = <
 // ============================================
 
 export const recordingControllerGetAll = (
-  params?: {
-    page?: number;
-    limit?: number;
-    confirmationNumber?: string;
-    stationNo?: string;
-  },
-  options?: SecondParameter<typeof nobstacleBackendApiInstance>,
-  signal?: AbortSignal
+	params?: {
+		page?: number;
+		limit?: number;
+		confirmationNumber?: string;
+		stationNo?: string;
+	},
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>,
+	signal?: AbortSignal
 ) => {
-  return nobstacleBackendApiInstance<GetAllRecordingsRes>(
-    {
-      url: `/api/v1/recordings`,
-      method: 'GET',
-      params,
-      signal,
-    },
-    options
-  );
+	return nobstacleBackendApiInstance<GetAllRecordingsRes>(
+		{
+			url: `/api/v1/recordings`,
+			method: 'GET',
+			params,
+			signal,
+		},
+		options
+	);
 };
 
 export const getRecordingControllerGetAllQueryOptions = <
-  TData = Awaited<ReturnType<typeof recordingControllerGetAll>>,
-  TError = ErrorType<HttpExceptionSchema>
+	TData = Awaited<ReturnType<typeof recordingControllerGetAll>>,
+	TError = ErrorType<HttpExceptionSchema>
 >(
-  params?: {
-    page?: number;
-    limit?: number;
-    confirmationNumber?: string;
-    stationNo?: string;
-  },
-  options?: {
-    query?: UseQueryOptions<
-      Awaited<ReturnType<typeof recordingControllerGetAll>>,
-      TError,
-      TData
-    >;
-    request?: SecondParameter<typeof nobstacleBackendApiInstance>;
-  }
+	params?: {
+		page?: number;
+		limit?: number;
+		confirmationNumber?: string;
+		stationNo?: string;
+	},
+	options?: {
+		query?: UseQueryOptions<
+			Awaited<ReturnType<typeof recordingControllerGetAll>>,
+			TError,
+			TData
+		>;
+		request?: SecondParameter<typeof nobstacleBackendApiInstance>;
+	}
 ) => {
-  const { query: queryOptions, request: requestOptions } = options ?? {};
+	const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey =
-    queryOptions?.queryKey ??
-    [`/api/v1/recordings`, ...(params ? [params] : [])];
+	const queryKey =
+		queryOptions?.queryKey ??
+		[`/api/v1/recordings`, ...(params ? [params] : [])];
 
-  const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof recordingControllerGetAll>>
-  > = ({ signal }) =>
-    recordingControllerGetAll(params, requestOptions, signal);
+	const queryFn: QueryFunction<
+		Awaited<ReturnType<typeof recordingControllerGetAll>>
+	> = ({ signal }) =>
+			recordingControllerGetAll(params, requestOptions, signal);
 
-  return {
-    queryKey,
-    queryFn,
-    ...queryOptions,
-  } as UseQueryOptions<
-    Awaited<ReturnType<typeof recordingControllerGetAll>>,
-    TError,
-    TData
-  > & { queryKey: QueryKey };
+	return {
+		queryKey,
+		queryFn,
+		...queryOptions,
+	} as UseQueryOptions<
+		Awaited<ReturnType<typeof recordingControllerGetAll>>,
+		TError,
+		TData
+	> & { queryKey: QueryKey };
 };
 
 export type RecordingControllerGetAllQueryResult = NonNullable<
-  Awaited<ReturnType<typeof recordingControllerGetAll>>
+	Awaited<ReturnType<typeof recordingControllerGetAll>>
 >;
 export type RecordingControllerGetAllQueryError = ErrorType<HttpExceptionSchema>;
 
 export const useRecordingControllerGetAll = <
-  TData = Awaited<ReturnType<typeof recordingControllerGetAll>>,
-  TError = ErrorType<HttpExceptionSchema>
+	TData = Awaited<ReturnType<typeof recordingControllerGetAll>>,
+	TError = ErrorType<HttpExceptionSchema>
 >(
-  params?: {
-    page?: number;
-    limit?: number;
-    confirmationNumber?: string;
-    stationNo?: string;
-  },
-  options?: {
-    query?: UseQueryOptions<
-      Awaited<ReturnType<typeof recordingControllerGetAll>>,
-      TError,
-      TData
-    >;
-    request?: SecondParameter<typeof nobstacleBackendApiInstance>;
-  }
+	params?: {
+		page?: number;
+		limit?: number;
+		confirmationNumber?: string;
+		stationNo?: string;
+	},
+	options?: {
+		query?: UseQueryOptions<
+			Awaited<ReturnType<typeof recordingControllerGetAll>>,
+			TError,
+			TData
+		>;
+		request?: SecondParameter<typeof nobstacleBackendApiInstance>;
+	}
 ): UseQueryResult<TData, TError> & { queryKey: QueryKey } => {
-  const queryOptions = getRecordingControllerGetAllQueryOptions(params, options);
+	const queryOptions = getRecordingControllerGetAllQueryOptions(params, options);
 
-  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
-    queryKey: QueryKey;
-  };
+	const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+		queryKey: QueryKey;
+	};
 
-  query.queryKey = queryOptions.queryKey;
+	query.queryKey = queryOptions.queryKey;
 
-  return query;
+	return query;
 };
 
 export const getRecordingControllerGetAllQueryKey = (params?: {
-  page?: number;
-  limit?: number;
-  confirmationNumber?: string;
-  stationNo?: string;
+	page?: number;
+	limit?: number;
+	confirmationNumber?: string;
+	stationNo?: string;
 }) => {
-  return [
-    `/api/v1/recordings`,
-    ...(params ? [params] : []),
-  ] as const;
+	return [
+		`/api/v1/recordings`,
+		...(params ? [params] : []),
+	] as const;
 };
 
 // ============================================
@@ -6052,81 +6052,81 @@ export const getRecordingControllerGetAllQueryKey = (params?: {
 // ============================================
 
 export const recordingControllerGetById = (
-  id: string,
-  options?: SecondParameter<typeof nobstacleBackendApiInstance>,
-  signal?: AbortSignal
+	id: string,
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>,
+	signal?: AbortSignal
 ) => {
-  return nobstacleBackendApiInstance<RecordingRes>(
-    {
-      url: `/api/v1/recording/${id}`,
-      method: 'GET',
-      signal,
-    },
-    options
-  );
+	return nobstacleBackendApiInstance<RecordingRes>(
+		{
+			url: `/api/v1/recording/${id}`,
+			method: 'GET',
+			signal,
+		},
+		options
+	);
 };
 
 export const getRecordingControllerGetByIdQueryOptions = <
-  TData = Awaited<ReturnType<typeof recordingControllerGetById>>,
-  TError = ErrorType<HttpExceptionSchema>
+	TData = Awaited<ReturnType<typeof recordingControllerGetById>>,
+	TError = ErrorType<HttpExceptionSchema>
 >(
-  id: string,
-  options?: {
-    query?: UseQueryOptions<
-      Awaited<ReturnType<typeof recordingControllerGetById>>,
-      TError,
-      TData
-    >;
-    request?: SecondParameter<typeof nobstacleBackendApiInstance>;
-  }
+	id: string,
+	options?: {
+		query?: UseQueryOptions<
+			Awaited<ReturnType<typeof recordingControllerGetById>>,
+			TError,
+			TData
+		>;
+		request?: SecondParameter<typeof nobstacleBackendApiInstance>;
+	}
 ) => {
-  const { query: queryOptions, request: requestOptions } = options ?? {};
+	const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey = queryOptions?.queryKey ?? [`/api/v1/recording/${id}`];
+	const queryKey = queryOptions?.queryKey ?? [`/api/v1/recording/${id}`];
 
-  const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof recordingControllerGetById>>
-  > = ({ signal }) => recordingControllerGetById(id, requestOptions, signal);
+	const queryFn: QueryFunction<
+		Awaited<ReturnType<typeof recordingControllerGetById>>
+	> = ({ signal }) => recordingControllerGetById(id, requestOptions, signal);
 
-  return {
-    queryKey,
-    queryFn,
-    enabled: !!id,
-    ...queryOptions,
-  } as UseQueryOptions<
-    Awaited<ReturnType<typeof recordingControllerGetById>>,
-    TError,
-    TData
-  > & { queryKey: QueryKey };
+	return {
+		queryKey,
+		queryFn,
+		enabled: !!id,
+		...queryOptions,
+	} as UseQueryOptions<
+		Awaited<ReturnType<typeof recordingControllerGetById>>,
+		TError,
+		TData
+	> & { queryKey: QueryKey };
 };
 
 export const useRecordingControllerGetById = <
-  TData = Awaited<ReturnType<typeof recordingControllerGetById>>,
-  TError = ErrorType<HttpExceptionSchema>
+	TData = Awaited<ReturnType<typeof recordingControllerGetById>>,
+	TError = ErrorType<HttpExceptionSchema>
 >(
-  id: string,
-  options?: {
-    query?: UseQueryOptions<
-      Awaited<ReturnType<typeof recordingControllerGetById>>,
-      TError,
-      TData
-    >;
-    request?: SecondParameter<typeof nobstacleBackendApiInstance>;
-  }
+	id: string,
+	options?: {
+		query?: UseQueryOptions<
+			Awaited<ReturnType<typeof recordingControllerGetById>>,
+			TError,
+			TData
+		>;
+		request?: SecondParameter<typeof nobstacleBackendApiInstance>;
+	}
 ): UseQueryResult<TData, TError> & { queryKey: QueryKey } => {
-  const queryOptions = getRecordingControllerGetByIdQueryOptions(id, options);
+	const queryOptions = getRecordingControllerGetByIdQueryOptions(id, options);
 
-  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
-    queryKey: QueryKey;
-  };
+	const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+		queryKey: QueryKey;
+	};
 
-  query.queryKey = queryOptions.queryKey;
+	query.queryKey = queryOptions.queryKey;
 
-  return query;
+	return query;
 };
 
 export const getRecordingControllerGetByIdQueryKey = (id: string) => {
-  return [`/api/v1/recording/${id}`] as const;
+	return [`/api/v1/recording/${id}`] as const;
 };
 
 // ============================================
@@ -6134,92 +6134,92 @@ export const getRecordingControllerGetByIdQueryKey = (id: string) => {
 // ============================================
 
 export const recordingControllerGetByConfirmationNumber = (
-  confirmationNumber: string,
-  options?: SecondParameter<typeof nobstacleBackendApiInstance>,
-  signal?: AbortSignal
+	confirmationNumber: string,
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>,
+	signal?: AbortSignal
 ) => {
-  return nobstacleBackendApiInstance<RecordingRes>(
-    {
-      url: `/api/v1/recording/confirmation/${confirmationNumber}`,
-      method: 'GET',
-      signal,
-    },
-    options
-  );
+	return nobstacleBackendApiInstance<RecordingRes>(
+		{
+			url: `/api/v1/recording/confirmation/${confirmationNumber}`,
+			method: 'GET',
+			signal,
+		},
+		options
+	);
 };
 
 export const getRecordingControllerGetByConfirmationNumberQueryOptions = <
-  TData = Awaited<ReturnType<typeof recordingControllerGetByConfirmationNumber>>,
-  TError = ErrorType<HttpExceptionSchema>
+	TData = Awaited<ReturnType<typeof recordingControllerGetByConfirmationNumber>>,
+	TError = ErrorType<HttpExceptionSchema>
 >(
-  confirmationNumber: string,
-  options?: {
-    query?: UseQueryOptions<
-      Awaited<ReturnType<typeof recordingControllerGetByConfirmationNumber>>,
-      TError,
-      TData
-    >;
-    request?: SecondParameter<typeof nobstacleBackendApiInstance>;
-  }
+	confirmationNumber: string,
+	options?: {
+		query?: UseQueryOptions<
+			Awaited<ReturnType<typeof recordingControllerGetByConfirmationNumber>>,
+			TError,
+			TData
+		>;
+		request?: SecondParameter<typeof nobstacleBackendApiInstance>;
+	}
 ) => {
-  const { query: queryOptions, request: requestOptions } = options ?? {};
+	const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey =
-    queryOptions?.queryKey ??
-    [`/api/v1/recording/confirmation/${confirmationNumber}`];
+	const queryKey =
+		queryOptions?.queryKey ??
+		[`/api/v1/recording/confirmation/${confirmationNumber}`];
 
-  const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof recordingControllerGetByConfirmationNumber>>
-  > = ({ signal }) =>
-    recordingControllerGetByConfirmationNumber(
-      confirmationNumber,
-      requestOptions,
-      signal
-    );
+	const queryFn: QueryFunction<
+		Awaited<ReturnType<typeof recordingControllerGetByConfirmationNumber>>
+	> = ({ signal }) =>
+			recordingControllerGetByConfirmationNumber(
+				confirmationNumber,
+				requestOptions,
+				signal
+			);
 
-  return {
-    queryKey,
-    queryFn,
-    enabled: !!confirmationNumber,
-    ...queryOptions,
-  } as UseQueryOptions<
-    Awaited<ReturnType<typeof recordingControllerGetByConfirmationNumber>>,
-    TError,
-    TData
-  > & { queryKey: QueryKey };
+	return {
+		queryKey,
+		queryFn,
+		enabled: !!confirmationNumber,
+		...queryOptions,
+	} as UseQueryOptions<
+		Awaited<ReturnType<typeof recordingControllerGetByConfirmationNumber>>,
+		TError,
+		TData
+	> & { queryKey: QueryKey };
 };
 
 export const getRecordingControllerGetByConfirmationNumberQueryKey = (
-  confirmationNumber: string
+	confirmationNumber: string
 ) => {
-  return [`/api/v1/recording/confirmation/${confirmationNumber}`] as const;
+	return [`/api/v1/recording/confirmation/${confirmationNumber}`] as const;
 };
 
 export const useRecordingControllerGetByConfirmationNumber = <
-  TData = Awaited<ReturnType<typeof recordingControllerGetByConfirmationNumber>>,
-  TError = ErrorType<HttpExceptionSchema>
+	TData = Awaited<ReturnType<typeof recordingControllerGetByConfirmationNumber>>,
+	TError = ErrorType<HttpExceptionSchema>
 >(
-  confirmationNumber: string,
-  options?: {
-    query?: UseQueryOptions<
-      Awaited<ReturnType<typeof recordingControllerGetByConfirmationNumber>>,
-      TError,
-      TData
-    >;
-    request?: SecondParameter<typeof nobstacleBackendApiInstance>;
-  }
+	confirmationNumber: string,
+	options?: {
+		query?: UseQueryOptions<
+			Awaited<ReturnType<typeof recordingControllerGetByConfirmationNumber>>,
+			TError,
+			TData
+		>;
+		request?: SecondParameter<typeof nobstacleBackendApiInstance>;
+	}
 ): UseQueryResult<TData, TError> & { queryKey: QueryKey } => {
-  const queryOptions =
-    getRecordingControllerGetByConfirmationNumberQueryOptions(
-      confirmationNumber,
-      options
-    );
+	const queryOptions =
+		getRecordingControllerGetByConfirmationNumberQueryOptions(
+			confirmationNumber,
+			options
+		);
 
-  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
-    queryKey: QueryKey;
-  };
+	const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+		queryKey: QueryKey;
+	};
 
-  query.queryKey = queryOptions.queryKey;
+	query.queryKey = queryOptions.queryKey;
 
-  return query;
+	return query;
 };

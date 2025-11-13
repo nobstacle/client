@@ -1131,3 +1131,25 @@ button {
   width: 25px;
   height: 25px;
 }
+
+.customInputBox:hover {
+  background: transparent !important;
+}
+
+.customInputBox:focus {
+  background: transparent !important;
+}
+
+.customInputBox:focus-within {
+  background: transparent !important;
+}
+
+.customInputBox input:focus {
+  background: transparent !important;
+}
+
+.customInputBox input::placeholder {
+  color: #fff !important;
+  opacity: 0.7;
+  /* ensure it's not dimmed */
+}

@@ -21,6 +21,7 @@ export type ReceivedType =
   | "WebsiteTemplateMessage"
   | "Packages"
   | "WebsiteTemplateQr"
+  | "Recording"
   | "JotFormTemplateMessage";
 
 export interface SendTemplatePayloadType {
@@ -80,6 +81,19 @@ export interface SendSurveyMessagePayloadType {
 }
 
 export interface SendSurveyPayloadType {
+  tag: string;
+  station: number;
+  langCode: string;
+}
+
+export interface SendRecordingPayloadType {
+  tag: string;
+  station: number;
+  langCode: string;
+}
+
+
+export interface SendRecordingPayloadType {
   tag: string;
   station: number;
   langCode: string;

@@ -16,11 +16,16 @@ interface MessageState {
     tag: string;
     station: number;
   } | null;
+  receivedRecording: {
+    tag: string;
+    station: number;
+  } | null;
   receivedLangCode: string | null;
   receivedResponse: ReceivedResponseType | null;
   setReceivedContent: (content: ReceivedTemplateContent) => void;
   setReceivedMessage: (content: ReceivedMessageContent) => void;
   setReceivedSurvey: (survey: { tag: string; station: number }) => void;
+  setReceivedRecording: (Recording: { tag: string; station: number }) => void;
   setReceivedLangCode: (langCode: string) => void;
   setReceivedResponse: (response: ReceivedResponseType) => void;
   clearReceivedMessage: (station: number) => void;
@@ -35,6 +40,7 @@ export const useMessageStore = create<MessageState>((set, get) => ({
   receivedSurvey: null,
   receivedLangCode: null,
   receivedResponse: null,
+  receivedRecording: null,
 
   setReceivedContent: (receivedContent) =>
     set({ receivedContent, receivedType: receivedContent.type }),
@@ -51,6 +57,11 @@ export const useMessageStore = create<MessageState>((set, get) => ({
       receivedType: "Survey",
     }),
 
+  setReceivedRecording: (receivedRecording) =>
+    set({
+      receivedRecording,
+      receivedType: "Recording",
+    }),
   setReceivedLangCode: (langCode) =>
     set({
       receivedLangCode: langCode,

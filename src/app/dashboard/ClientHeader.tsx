@@ -1,7 +1,7 @@
 'use client';
-
+import { useCallback, memo } from "react";
 import { PropsWithChildren, useState } from "react";
-import { Drawer, Button, Divider } from "antd";
+import { Drawer, Button, Input, Tooltip } from "antd";
 import { MenuOutlined, CloseOutlined, SettingOutlined, MoreOutlined } from "@ant-design/icons";
 import { HeaderLanguagePicker } from "../../components/pages/dashboard/Header/LanguagePicker";
 import { LanguageShortcutPicker } from "../../components/pages/dashboard/Header/LanguageShortcutPicker";
@@ -9,11 +9,12 @@ import { TemplateShortcutPicker } from "../../components/pages/dashboard/Header/
 import { StationPicker } from "../../components/pages/dashboard/Header/StationPicker";
 import { ChatBot } from "../../components/pages/dashboard/Header/chatBot";
 import { HeaderSurveyShortcut } from "../../components/pages/dashboard/Header/SurveyPicker";
-import { SendRecording } from "../../components/pages/dashboard/Header/SendRecording";
+import { HeaderRecordingShortcut } from "../../components/pages/dashboard/Header/SendRecording";
 
 const ClientHeader = () => {
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [shortcutMenuOpen, setShortcutMenuOpen] = useState(false);
+    const [confirmationNumber, setConfirmationNumber] = useState("");
 
     const showDrawer = () => {
         setDrawerOpen(true);
@@ -30,6 +31,17 @@ const ClientHeader = () => {
     const closeShortcutMenu = () => {
         setShortcutMenuOpen(false);
     };
+
+    const handleConfirmationNumberChange = useCallback(
+        (e: React.ChangeEvent<HTMLInputElement>) => {
+            setConfirmationNumber(e.target.value);
+        },
+        []
+    );
+
+    const clearConfirmationNumber = useCallback(() => {
+        setConfirmationNumber("");
+    }, []);
 
     return (
         <>
@@ -79,12 +91,36 @@ const ClientHeader = () => {
                         </div>
                     </div>
 
-                    <div className="flex items-center">
-                         {/* <div className="" style={{ padding: '0.2rem', marginRight: '0rem' }}>
-                            <SendRecording />
+                    <div className="flex items-center gap-3">
+                        {/* Shared Confirmation Number Input */}
+                        <div className="bg-white/10 backdrop-blur-sm rounded-lg px-3 py-1">
+                            <Input
+                                placeholder="Confirmation #"
+                                value={confirmationNumber}
+                                onChange={handleConfirmationNumberChange}
+                                className="bg-transparent border-none text-white placeholder-white/60 customInputBox"
+                                style={{
+                                    width: '180px',
+                                    color: 'white',
+                                }}
+                                suffix={
+                                    <CloseOutlined
+                                        className={`transition-opacity ${confirmationNumber
+                                            ? 'opacity-100 cursor-pointer'
+                                            : 'opacity-0 pointer-events-none'
+                                            } text-white/60 hover:text-white text-xs`}
+                                        onClick={clearConfirmationNumber}
+                                    />
+                                }
+                            />
+                        </div>
+
+                        {/* Action Buttons */}
+                        {/* <div className="" style={{ padding: '0.2rem', paddingLeft:'0.5rem' }}>
+                            <HeaderRecordingShortcut confirmationNumber={confirmationNumber} clearConfirmationNumber={clearConfirmationNumber} />
                         </div> */}
-                        <div className="" style={{ padding: '0.2rem', marginRight: '0rem' }}>
-                            <HeaderSurveyShortcut />
+                        <div className="" style={{ padding: '0.2rem' }}>
+                            <HeaderSurveyShortcut confirmationNumber={confirmationNumber} clearConfirmationNumber={clearConfirmationNumber} />
                         </div>
                         <div className="bg-white/10 backdrop-blur-sm rounded-lg" style={{ padding: '0.2rem', marginRight: '1rem' }}>
                             <ChatBot />
@@ -210,7 +246,7 @@ const ClientHeader = () => {
                 </div>
             </Drawer>
 
-            {/* Shortcut Menu Drawer */}
+            {/* Shortcut Menu Drawer - Mobile */}
             <Drawer
                 title={
                     <div className="flex items-center justify-between py-2">
@@ -245,6 +281,32 @@ const ClientHeader = () => {
                 }}
             >
                 <div className="space-y-4">
+                    {/* Shared Input in Mobile Drawer */}
+                    <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                        <h3 className="text-base font-semibold text-gray-800 mb-3">Confirmation Number</h3>
+                        <Input
+                            placeholder="Enter confirmation number"
+                            value={confirmationNumber}
+                            onChange={handleConfirmationNumberChange}
+                            size="large"
+                            suffix={
+                                confirmationNumber && (
+                                    <CloseOutlined
+                                        className="text-gray-400 hover:text-gray-600 cursor-pointer"
+                                        onClick={clearConfirmationNumber}
+                                    />
+                                )
+                            }
+                        />
+                    </div>
+
+                    <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                        <h3 className="text-base font-semibold text-gray-800 mb-3">Quick Actions</h3>
+                        <div className="flex gap-2">
+                            <HeaderSurveyShortcut confirmationNumber={confirmationNumber} clearConfirmationNumber={clearConfirmationNumber} />
+                        </div>
+                    </div>
+
                     <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
                         <h3 className="text-base font-semibold text-gray-800 mb-3">Language Shortcut Picker</h3>
                         <LanguageShortcutPicker />

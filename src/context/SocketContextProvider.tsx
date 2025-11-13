@@ -11,6 +11,7 @@ import {
   SendMessagePayloadType,
   SendSurveyMessagePayloadType,
   SendSurveyPayloadType,
+  SendRecordingPayloadType,
   SendTemplatePayloadType,
   SendLangCodeMessagePayloadType,
   SendJotFormTemplate,
@@ -72,6 +73,7 @@ export const SocketContext = createContext<{
   emitLeaveChat: (data: CleanMessagesPayloadType) => void;
   emitSendSurveyAnswer: (data: SendSurveyMessagePayloadType) => void;
   emitSendSurvey: (data: SendSurveyPayloadType) => void;
+  emitSendRecording: (data: SendRecordingPayloadType) => void;
   emitSendLangCode: (data: SendLangCodeMessagePayloadType) => void;
   emitUpdateInformation: (data: SendInformationUpdatePayloadType, callback?: (response: any) => void) => void;
   emitSendPackages: (data: SendPackagePayloadType, callback?: (response: any) => void) => void;
@@ -103,6 +105,7 @@ export const SocketContextProvider = ({
     clearReceivedMessage,
     setReceivedSurvey,
     setReceivedLangCode,
+    setReceivedRecording,
     setReceivedResponse
   } = useMessageStore();
 
@@ -349,6 +352,17 @@ export const SocketContextProvider = ({
     }
   };
 
+  const onReceivedRecording = (data: any) => {
+    try {
+      const parsedRes = JSON.parse(data);
+      if (parsedRes.status === 400) return;
+      const parsedData = parsedRes.data as SendRecordingPayloadType;
+      setReceivedRecording(parsedData);
+    } catch (error) {
+      console.error("❌ Error parsing template response:", error);
+    }
+  }
+
   const onDataSubmitted = (data: any) => {
     try {
       const parsedRes = JSON.parse(data);
@@ -378,6 +392,7 @@ export const SocketContextProvider = ({
     socketClient.on("received-survey", onReceivedSurvey);
     socketClient.on("received-survey-answer", onReceivedSurveyAnswer);
     socketClient.on("received-lang-code", onReceivedLangCode);
+    socketClient.on("received-recording", onReceivedRecording);
     socketClient.on("jotForm-sent-successfully", onReceivedJotForm);
     socketClient.on("dataSaved", onDataSubmitted);
     socketClient.on("document-sent-successfully", onReceivedDocument);
@@ -403,6 +418,7 @@ export const SocketContextProvider = ({
       socketClient.off("information-updated", onInformationUpdated);
       socketClient.off("received-packages", onReceivedPackages);
       socketClient.on("received-upsell-transaction", onRecievedUpsellPackage);
+      socketClient.on("received-recording", onReceivedRecording);
     };
   }, [socketClient]);
 
@@ -554,6 +570,15 @@ export const SocketContextProvider = ({
     socketClient.emit("send-survey", data);
   };
 
+
+  const emitSendRecording = (data: SendSurveyPayloadType) => {
+    if (!socketClient || !socketClient.connected) {
+      console.error("❌ Socket is not connected!");
+      return;
+    }
+    socketClient.emit("send-recording", data);
+  };
+
   const emitSendSurveyAnswer = (data: SendSurveyMessagePayloadType) => {
     if (!socketClient || !socketClient.connected) {
       console.error("❌ Socket is not connected!");
@@ -598,6 +623,7 @@ export const SocketContextProvider = ({
         emitLeaveChat,
         emitSendSurveyAnswer,
         emitSendSurvey,
+        emitSendRecording,
         emitSendLangCode,
         emitUpdateInformation,
         socketConnected,

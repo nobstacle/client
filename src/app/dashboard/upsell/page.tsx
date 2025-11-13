@@ -166,7 +166,10 @@ export default function Upsell() {
                 });
                 if (response.ok) {
                     const packageData = await response.json();
-                    setAllPackages(packageData.data || packageData);
+                    const filterPackages = packageData.data?.filter((item) => {
+                        return item?.active === true
+                    });
+                    setAllPackages(filterPackages);
                 }
             } catch (error) {
                 console.error('Error fetching packages:', error);

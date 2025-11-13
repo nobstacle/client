@@ -8,6 +8,7 @@ import { Table, Card, Pagination, Button } from "antd";
 import "../../../styles/base.css";
 import { FaTrash, FaPlay, FaPause } from "react-icons/fa";
 import Swal from "sweetalert2";
+import { SendRecordingTrigger } from "../../../components/pages/dashboard/CreateRecordingsTemplate";
 
 function Page() {
   const isHydrated = useHasHydrated();
@@ -18,7 +19,7 @@ function Page() {
     <div className="h-full overflow-y-auto p-4">
       <Card className="bg-gray-50">
         <div className="flex w-full flex-col gap-4">
-          <h2 className="text-2xl font-bold">Recordings</h2>
+          <SendRecordingTrigger />
         </div>
         <RecordingsList />
       </Card>
@@ -90,7 +91,7 @@ function RecordingsList() {
               setSearchRecordings(searchRecordings.filter((val) => val.id !== id));
               setRecordings(recordings.filter((val) => val.id !== id));
               Swal.fire("Deleted!", "Recording deleted successfully.", "success");
-              
+
               // Stop audio if deleted recording was playing
               if (playingId === id && audioElement) {
                 audioElement.pause();
