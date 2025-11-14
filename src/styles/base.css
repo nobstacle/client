@@ -369,9 +369,9 @@ button {
   align-items: center;
 }
 
-.jotFormTable .ant-table-body {
+/* .jotFormTable .ant-table-body {
   max-height: 450px !important;
-}
+} */
 
 .jotFormTable .ant-table-thead th {
   white-space: normal;

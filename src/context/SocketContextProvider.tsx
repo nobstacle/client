@@ -365,6 +365,7 @@ export const SocketContextProvider = ({
 
   const onDataSubmitted = (data: any) => {
     try {
+      console.info("DATATATAA", data)
       const parsedRes = JSON.parse(data);
       if (parsedRes.status === 400) {
         console.warn("⚠️ JotForm data error:", parsedRes);

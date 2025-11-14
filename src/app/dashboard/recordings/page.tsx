@@ -1,12 +1,15 @@
 "use client";
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import useTemplateStore from "../../../lib/zustand/store/templateStore";
 import { useHasHydrated } from "../../../hooks/useHydrated";
 import { useSession } from "next-auth/react";
-import { useRecordingControllerDelete } from "../../../lib/client/api";
-import { Table, Card, Pagination, Button } from "antd";
+import { 
+  useRecordingControllerDelete,
+  useRecordingControllerGetAll 
+} from "../../../lib/client/api";
+import { Table, Card, Pagination, Button, Spin, Tag } from "antd";
 import "../../../styles/base.css";
-import { FaTrash, FaPlay, FaPause } from "react-icons/fa";
+import { FaTrash, FaPlay, FaPause, FaVideo, FaMusic } from "react-icons/fa";
 import Swal from "sweetalert2";
 import { SendRecordingTrigger } from "../../../components/pages/dashboard/CreateRecordingsTemplate";
 
@@ -30,47 +33,94 @@ function Page() {
 function RecordingsList() {
   const {
     recordings,
-    setSearchRecordings,
     setRecordings,
-    searchRecordings,
   } = useTemplateStore();
-
-  const sourceRecordings =
-    searchRecordings.length > 0 ? searchRecordings : recordings;
 
   const { data: userData } = useSession();
   const deleteRecording = useRecordingControllerDelete();
+  
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [playingId, setPlayingId] = useState<number | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(0);
-  const [totalItems, setTotalItems] = useState(0);
   const [pageSize, setPageSize] = useState(10);
-  const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
+  const [mediaElement, setMediaElement] = useState<HTMLAudioElement | HTMLVideoElement | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
 
-  const handlePlayRecording = (id: number, recordingUrl: string) => {
+  // Fetch recordings from API
+  const { 
+    data: recordingsData, 
+    isLoading, 
+    refetch 
+  } = useRecordingControllerGetAll(
+    {
+      page: currentPage,
+      limit: pageSize,
+    },
+    {
+      query: {
+        enabled: true,
+        refetchOnWindowFocus: false,
+      }
+    }
+  );
+
+  // Update store when data is fetched
+  useEffect(() => {
+    if (recordingsData?.data?.items) {
+      setRecordings(recordingsData.data.items);
+    }
+  }, [recordingsData, setRecordings]);
+
+  const handlePlayRecording = (id: number, recordingUrl: string, type: string) => {
     // If already playing this recording, pause it
-    if (playingId === id && audioElement) {
-      audioElement.pause();
+    if (playingId === id && mediaElement) {
+      mediaElement.pause();
       setPlayingId(null);
       return;
     }
 
-    // Stop any currently playing audio
-    if (audioElement) {
-      audioElement.pause();
+    // Stop any currently playing media
+    if (mediaElement) {
+      mediaElement.pause();
     }
 
-    // Create and play new audio
-    const audio = new Audio(recordingUrl);
-    audio.play();
-    setAudioElement(audio);
-    setPlayingId(id);
+    // Determine if it's audio or video
+    const isVideo = type === 'video';
 
-    // Reset playing state when audio ends
-    audio.onended = () => {
-      setPlayingId(null);
-    };
+    if (isVideo) {
+      // For video, open in a modal or new window
+      Swal.fire({
+        title: 'Video Player',
+        html: `
+          <video 
+            controls 
+            autoplay 
+            style="width: 100%; max-height: 500px;"
+            src="${recordingUrl}"
+          >
+            Your browser does not support the video tag.
+          </video>
+        `,
+        width: '800px',
+        showCloseButton: true,
+        showConfirmButton: false,
+        customClass: {
+          container: 'video-modal'
+        }
+      });
+      setPlayingId(id);
+    } else {
+      // For audio, create and play audio element
+      const audio = new Audio(recordingUrl);
+      audio.play();
+      setMediaElement(audio);
+      setPlayingId(id);
+
+      // Reset playing state when audio ends
+      audio.onended = () => {
+        setPlayingId(null);
+      };
+    }
   };
 
   const handleDeleteRecording = (id: number) => {
@@ -84,22 +134,28 @@ function RecordingsList() {
       confirmButtonText: "Yes, delete it!",
     }).then((result) => {
       if (result.isConfirmed) {
+        setDeletingId(id);
         deleteRecording.mutate(
           { id },
           {
             onSuccess: () => {
-              setSearchRecordings(searchRecordings.filter((val) => val.id !== id));
               setRecordings(recordings.filter((val) => val.id !== id));
               Swal.fire("Deleted!", "Recording deleted successfully.", "success");
+              setDeletingId(null);
 
-              // Stop audio if deleted recording was playing
-              if (playingId === id && audioElement) {
-                audioElement.pause();
+              // Stop media if deleted recording was playing
+              if (playingId === id && mediaElement) {
+                mediaElement.pause();
                 setPlayingId(null);
               }
+
+              // Refetch to update the list
+              refetch();
             },
-            onError: () => {
-              Swal.fire("Error!", "Failed to delete the recording.", "error");
+            onError: (error: any) => {
+              console.error('Delete error:', error);
+              Swal.fire("Error!", error?.response?.data?.message || "Failed to delete the recording.", "error");
+              setDeletingId(null);
             },
           }
         );
@@ -107,15 +163,45 @@ function RecordingsList() {
     });
   };
 
+  const formatFileSize = (bytes?: number) => {
+    if (!bytes) return 'N/A';
+    const mb = bytes / (1024 * 1024);
+    return `${mb.toFixed(2)} MB`;
+  };
+
+  const formatDuration = (seconds?: number) => {
+    if (!seconds) return 'N/A';
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
   const columns = [
+    {
+      title: "Type",
+      dataIndex: "type",
+      key: "type",
+      width: 80,
+      render: (type: string) => (
+        <div className="flex items-center justify-center">
+          {type === 'video' ? (
+            <FaVideo className="text-blue-600" size={16} />
+          ) : (
+            <FaMusic className="text-green-600" size={16} />
+          )}
+        </div>
+      ),
+    },
     {
       title: "Play",
       dataIndex: "recordingUrl",
       key: "play",
+      width: 80,
       render: (recordingUrl: string, record: any) => (
         <button
-          onClick={() => handlePlayRecording(record.id, recordingUrl)}
+          onClick={() => handlePlayRecording(record.id, recordingUrl, record.type)}
           className="w-8 h-8 flex items-center justify-center text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 font-medium rounded-full text-xs"
+          title={record.type === 'video' ? 'Play Video' : 'Play Audio'}
         >
           {playingId === record.id ? (
             <FaPause size={12} />
@@ -126,6 +212,12 @@ function RecordingsList() {
       ),
     },
     {
+      title: "Title",
+      dataIndex: "title",
+      key: "title",
+      render: (title: string) => title || 'Untitled',
+    },
+    {
       title: "Confirmation Number",
       dataIndex: "confirmationNumber",
       key: "confirmationNumber",
@@ -134,17 +226,40 @@ function RecordingsList() {
       title: "Station",
       key: "stationNo",
       dataIndex: "stationNo",
+      width: 100,
+    },
+    {
+      title: "Size",
+      key: "fileSize",
+      dataIndex: "fileSize",
+      width: 100,
+      render: (size: number) => formatFileSize(size),
+    },
+    {
+      title: "Duration",
+      key: "duration",
+      dataIndex: "duration",
+      width: 100,
+      render: (duration: number) => formatDuration(duration),
     },
     {
       title: "Date",
       key: "createdAt",
+      width: 150,
       render: (_, record) => (
-        <span>{new Date(record.createdAt).toLocaleString("tr-TR")}</span>
+        <span>{new Date(record.createdAt).toLocaleString("en-US", {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        })}</span>
       ),
     },
     {
       title: "Action",
       key: "action",
+      width: 80,
       render: (_, record) =>
         userData?.user.Roles?.includes("Admin") ? (
           <button
@@ -187,27 +302,56 @@ function RecordingsList() {
     },
   ];
 
-  const handlePageChange = (pageNumber: number) => {
-    setCurrentPage(pageNumber);
+  const handlePageChange = (page: number, pageSize?: number) => {
+    setCurrentPage(page);
+    if (pageSize) {
+      setPageSize(pageSize);
+    }
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <Spin size="large" />
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 shadow-md rounded-lg customTableWrapper bg-white">
+      <div className="mb-4 flex justify-between items-center">
+        <div>
+          <h2 className="text-lg font-semibold">Recordings</h2>
+          <p className="text-sm text-gray-500">
+            Total: {recordingsData?.data?.total || 0} recordings
+          </p>
+        </div>
+        <Button 
+          type="primary" 
+          onClick={() => refetch()}
+        >
+          Refresh
+        </Button>
+      </div>
+      
       <Table
         rowKey="id"
         columns={columns}
-        dataSource={sourceRecordings}
+        dataSource={recordings}
         pagination={false}
         className="jotFormTable"
+        loading={isLoading}
       />
+      
       <div className="flex justify-center mt-6">
         <Pagination
           current={currentPage}
-          total={totalItems}
+          total={recordingsData?.data?.total || 0}
           pageSize={pageSize}
           onChange={handlePageChange}
           showSizeChanger
           pageSizeOptions={['10', '20', '50', '100']}
+          showTotal={(total, range) => `${range[0]}-${range[1]} of ${total} items`}
         />
       </div>
     </div>

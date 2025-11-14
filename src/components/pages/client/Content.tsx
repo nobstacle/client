@@ -889,29 +889,29 @@ export const Content: React.FC = () => {
     return () => clearInterval(countdown);
   }, [showQR, isClosing, handleCloseQR, contentKey]);
 
-  useEffect(() => {
-    const loadFormData = async () => {
-      if (messageStore.receivedType === "JotFormMessage" && messageStore.receivedContent?.content) {
-        try {
-          const result = await getFormData(messageStore.receivedContent.content);
+useEffect(() => {
+  const loadFormData = async () => {
+    if (messageStore.receivedType === "JotFormMessage" && messageStore.receivedContent?.content) {
+      try {
+        const result = await getFormData(messageStore.receivedContent.content);
 
-          if (result) {
-            setJotFormUrl(result.url);
-            setPrefillData(result.prefillData);
-          } else {
-            setJotFormUrl(null);
-            setPrefillData({});
-          }
-        } catch (error) {
-          console.error("Failed to load form data:", error);
+        if (result) {
+          setJotFormUrl(result.url);
+          setPrefillData(result.prefillData);
+        } else {
           setJotFormUrl(null);
           setPrefillData({});
         }
+      } catch (error) {
+        console.error("Failed to load form data:", error);
+        setJotFormUrl(null);
+        setPrefillData({});
       }
-    };
+    }
+  };
 
-    loadFormData();
-  }, [messageStore.receivedType, messageStore.receivedContent?.content, data?.user.backendTokens.at]);
+  loadFormData();
+}, [messageStore.receivedType, messageStore.receivedContent?.content, data?.user.backendTokens.at]);
 
   useEffect(() => {
     if (messageStore.receivedType === 'Packages') {
@@ -950,58 +950,97 @@ export const Content: React.FC = () => {
     }
   }, [messageStore.receivedType, messageStore.receivedContent?.extraContent]);
 
-  const getFormData = async (url: string): Promise<{ url: string, prefillData: Record<string, string> } | null> => {
+const getFormData = async (url: string): Promise<{ url: string, prefillData: Record<string, string> } | null> => {
+  try {
+    // Parse the URL to extract UUID and prefill data
+    let uuid: string | null = null;
+    const prefillData: Record<string, string> = {};
+
+    // Try to extract UUID from path (format: /forms/{uuid})
+    const pathMatch = url.match(/\/forms\/([^/?]+)/);
+    if (pathMatch) {
+      uuid = pathMatch[1];
+    }
+
+    // Parse URL parameters for both UUID and prefill data
     try {
       const urlObj = new URL(url);
-      const uuid = urlObj.searchParams.get("uuid");
-
+      
+      // If UUID wasn't found in path, check query params
       if (!uuid) {
-        console.error("UUID not found in URL");
-        return null;
+        uuid = urlObj.searchParams.get("uuid");
       }
 
-      // Extract prefill data from original URL
-      const prefillData: Record<string, string> = {};
+      // Extract all query parameters as prefill data
       urlObj.searchParams.forEach((value, key) => {
         if (key !== 'uuid') {
           prefillData[key] = value;
         }
       });
-
-      const res = await fetch(`${baseUrl}/api/jotform/get-assigned-form-by-uuid?uuid=${uuid}`, {
-        headers: {
-          Authorization: `Bearer ${data?.user.backendTokens.at}`,
-          "Content-Type": "application/json",
-        },
-      });
-
-      if (!res.ok) {
-        throw new Error(`HTTP error! status: ${res.status}`);
+    } catch (urlError) {
+      // If URL parsing fails, try to extract from query string manually
+      const queryMatch = url.match(/[?&]uuid=([^&]+)/);
+      if (queryMatch && !uuid) {
+        uuid = queryMatch[1];
       }
 
-      const text = await res.text();
-      const result = JSON.parse(text);
+      // Extract other parameters
+      const paramMatches = url.matchAll(/[?&]([^=]+)=([^&]+)/g);
+      for (const match of paramMatches) {
+        const [, key, value] = match;
+        if (key !== 'uuid') {
+          prefillData[key] = decodeURIComponent(value);
+        }
+      }
+    }
 
-      const newUrl = new URL(`https://form.jotform.com/${result.data.formId}`);
+    console.info("Extracted UUID:", uuid);
+    console.info("Extracted Prefill Data:", prefillData);
 
-      // Add the UUID back to the new URL
-      newUrl.searchParams.set('uuid', uuid);
-
-      // Add all prefill parameters to the new URL
-      Object.entries(prefillData).forEach(([key, value]) => {
-        newUrl.searchParams.set(key, value);
-      });
-
-      return {
-        url: newUrl.toString(),
-        prefillData
-      };
-
-    } catch (error) {
-      console.error("Error fetching data:", error);
+    if (!uuid) {
+      console.error("UUID not found in URL");
       return null;
     }
-  };
+
+    // Fetch the form data from backend
+    const res = await fetch(`${baseUrl}/api/jotform/get-assigned-form-by-uuid?uuid=${uuid}`, {
+      headers: {
+        Authorization: `Bearer ${data?.user.backendTokens.at}`,
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!res.ok) {
+      throw new Error(`HTTP error! status: ${res.status}`);
+    }
+
+    const text = await res.text();
+    const result = JSON.parse(text);
+
+    // Build new URL with form ID
+    const newUrl = new URL(`https://form.jotform.com/${result.data.formId}`);
+
+    // Add the UUID to the new URL
+    newUrl.searchParams.set('uuid', uuid);
+
+    // Add all prefill parameters to the new URL
+    Object.entries(prefillData).forEach(([key, value]) => {
+      newUrl.searchParams.set(key, value);
+    });
+
+    console.info("Final URL:", newUrl.toString());
+    console.info("Final Prefill Data:", prefillData);
+
+    return {
+      url: newUrl.toString(),
+      prefillData
+    };
+
+  } catch (error) {
+    console.error("Error fetching data:", error);
+    return null;
+  }
+};
 
   const { emitSendMessage } = useSocketContext();
 
@@ -1846,6 +1885,8 @@ export const Content: React.FC = () => {
       </>
     );
   }
+
+          console.info("CHECKINGF",messageStore.receivedContent);
 
   if (messageStore.receivedType === "Recording") {
     return (

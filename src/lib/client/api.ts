@@ -5120,7 +5120,7 @@ export const surveyHeaderControllerGetSurveyHeaders = (
 ) => {
 	return nobstacleBackendApiInstance<GetSurveyHeaderRes[]>(
 		{
-			url: `/api/v1/shortcut/getmanySurveyHeaders`,
+			url: `/api/v1/shortcut/`,
 			method: 'GET',
 			params,
 			signal
@@ -5715,6 +5715,10 @@ export interface RecordingDto {
 	recordingUrl: string;
 	confirmationNumber: string;
 	stationNo: string;
+	type?: string;
+	title?: string;
+	description?: string;
+	langCode?: string;
 }
 
 export interface RecordingRes {
@@ -5722,7 +5726,15 @@ export interface RecordingRes {
 	recordingUrl: string;
 	confirmationNumber: string;
 	stationNo: string;
+	type: string;
+	duration?: number;
+	fileSize?: number;
+	mimeType?: string;
+	title?: string;
+	description?: string;
+	langCode: string;
 	userId: number;
+	companyId: number;
 	createdAt: string;
 	updatedAt: string;
 }
@@ -5741,83 +5753,83 @@ export interface DeleteResponse {
 }
 
 // ============================================
-// CREATE - POST /api/v1/recording
+// UPLOAD - POST /api/v1/recordings/upload (multipart/form-data)
 // ============================================
 
-export const recordingControllerCreate = (
-	data: RecordingDto,
+export const recordingControllerUpload = (
+	formData: FormData,
 	options?: SecondParameter<typeof nobstacleBackendApiInstance>
 ) => {
 	return nobstacleBackendApiInstance<RecordingRes>(
 		{
-			url: `/api/v1/recording`,
+			url: `/api/v1/recordings/upload`,
 			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			data,
+			headers: { 'Content-Type': 'multipart/form-data' },
+			data: formData,
 		},
 		options
 	);
 };
 
-export const getRecordingControllerCreateMutationOptions = <
+export const getRecordingControllerUploadMutationOptions = <
 	TError = ErrorType<HttpExceptionSchema>,
 	TContext = unknown
 >(options?: {
 	mutation?: UseMutationOptions<
-		Awaited<ReturnType<typeof recordingControllerCreate>>,
+		Awaited<ReturnType<typeof recordingControllerUpload>>,
 		TError,
-		{ data: RecordingDto },
+		{ data: FormData },
 		TContext
 	>;
 	request?: SecondParameter<typeof nobstacleBackendApiInstance>;
 }): UseMutationOptions<
-	Awaited<ReturnType<typeof recordingControllerCreate>>,
+	Awaited<ReturnType<typeof recordingControllerUpload>>,
 	TError,
-	{ data: RecordingDto },
+	{ data: FormData },
 	TContext
 > => {
 	const { mutation: mutationOptions, request: requestOptions } = options ?? {};
 
 	const mutationFn: MutationFunction<
-		Awaited<ReturnType<typeof recordingControllerCreate>>,
-		{ data: RecordingDto }
+		Awaited<ReturnType<typeof recordingControllerUpload>>,
+		{ data: FormData }
 	> = (props) => {
 		const { data } = props ?? {};
-		return recordingControllerCreate(data, requestOptions);
+		return recordingControllerUpload(data, requestOptions);
 	};
 
 	return { mutationFn, ...mutationOptions };
 };
 
-export const useRecordingControllerCreate = <
+export const useRecordingControllerUpload = <
 	TError = ErrorType<HttpExceptionSchema>,
 	TContext = unknown
 >(options?: {
 	mutation?: UseMutationOptions<
-		Awaited<ReturnType<typeof recordingControllerCreate>>,
+		Awaited<ReturnType<typeof recordingControllerUpload>>,
 		TError,
-		{ data: RecordingDto },
+		{ data: FormData },
 		TContext
 	>;
 	request?: SecondParameter<typeof nobstacleBackendApiInstance>;
 }) => {
-	const mutationOptions = getRecordingControllerCreateMutationOptions(options);
+	const mutationOptions = getRecordingControllerUploadMutationOptions(options);
 	return useMutation(mutationOptions);
 };
 
 // ============================================
-// UPDATE - PATCH /api/v1/recording/:id
+// UPDATE - PUT /api/v1/recordings/:id
 // ============================================
 
 export const recordingControllerUpdate = (
-	id: string,
+	id: number,
 	data: Partial<RecordingDto>,
 	options?: SecondParameter<typeof nobstacleBackendApiInstance>
 ) => {
 	return nobstacleBackendApiInstance<RecordingRes>(
 		{
-			url: `/api/v1/recording/${id}`,
-			method: 'PATCH',
+			url: `/api/v1/recordings/${id}`,
+			method: 'PUT',
 			headers: { 'Content-Type': 'application/json' },
 			data,
 		},
@@ -5832,21 +5844,21 @@ export const getRecordingControllerUpdateMutationOptions = <
 	mutation?: UseMutationOptions<
 		Awaited<ReturnType<typeof recordingControllerUpdate>>,
 		TError,
-		{ id: string; data: Partial<RecordingDto> },
+		{ id: number; data: Partial<RecordingDto> },
 		TContext
 	>;
 	request?: SecondParameter<typeof nobstacleBackendApiInstance>;
 }): UseMutationOptions<
 	Awaited<ReturnType<typeof recordingControllerUpdate>>,
 	TError,
-	{ id: string; data: Partial<RecordingDto> },
+	{ id: number; data: Partial<RecordingDto> },
 	TContext
 > => {
 	const { mutation: mutationOptions, request: requestOptions } = options ?? {};
 
 	const mutationFn: MutationFunction<
 		Awaited<ReturnType<typeof recordingControllerUpdate>>,
-		{ id: string; data: Partial<RecordingDto> }
+		{ id: number; data: Partial<RecordingDto> }
 	> = (props) => {
 		const { id, data } = props ?? {};
 		return recordingControllerUpdate(id, data, requestOptions);
@@ -5862,7 +5874,7 @@ export const useRecordingControllerUpdate = <
 	mutation?: UseMutationOptions<
 		Awaited<ReturnType<typeof recordingControllerUpdate>>,
 		TError,
-		{ id: string; data: Partial<RecordingDto> },
+		{ id: number; data: Partial<RecordingDto> },
 		TContext
 	>;
 	request?: SecondParameter<typeof nobstacleBackendApiInstance>;
@@ -5872,7 +5884,7 @@ export const useRecordingControllerUpdate = <
 };
 
 // ============================================
-// DELETE - DELETE /api/v1/recording/:id
+// DELETE - DELETE /api/v1/recordings/:id
 // ============================================
 
 export const recordingControllerDelete = (
@@ -5881,7 +5893,7 @@ export const recordingControllerDelete = (
 ) => {
 	return nobstacleBackendApiInstance<DeleteResponse>(
 		{
-			url: `/api/v1/recording/${id}`,
+			url: `/api/v1/recordings/${id}`,
 			method: 'DELETE',
 		},
 		options
@@ -5944,6 +5956,9 @@ export const recordingControllerGetAll = (
 		limit?: number;
 		confirmationNumber?: string;
 		stationNo?: string;
+		type?: string;
+		langCode?: string;
+		search?: string;
 	},
 	options?: SecondParameter<typeof nobstacleBackendApiInstance>,
 	signal?: AbortSignal
@@ -5968,6 +5983,9 @@ export const getRecordingControllerGetAllQueryOptions = <
 		limit?: number;
 		confirmationNumber?: string;
 		stationNo?: string;
+		type?: string;
+		langCode?: string;
+		search?: string;
 	},
 	options?: {
 		query?: UseQueryOptions<
@@ -6014,6 +6032,9 @@ export const useRecordingControllerGetAll = <
 		limit?: number;
 		confirmationNumber?: string;
 		stationNo?: string;
+		type?: string;
+		langCode?: string;
+		search?: string;
 	},
 	options?: {
 		query?: UseQueryOptions<
@@ -6040,6 +6061,9 @@ export const getRecordingControllerGetAllQueryKey = (params?: {
 	limit?: number;
 	confirmationNumber?: string;
 	stationNo?: string;
+	type?: string;
+	langCode?: string;
+	search?: string;
 }) => {
 	return [
 		`/api/v1/recordings`,
@@ -6048,17 +6072,17 @@ export const getRecordingControllerGetAllQueryKey = (params?: {
 };
 
 // ============================================
-// GET BY ID - GET /api/v1/recording/:id
+// GET BY ID - GET /api/v1/recordings/:id
 // ============================================
 
 export const recordingControllerGetById = (
-	id: string,
+	id: number,
 	options?: SecondParameter<typeof nobstacleBackendApiInstance>,
 	signal?: AbortSignal
 ) => {
 	return nobstacleBackendApiInstance<RecordingRes>(
 		{
-			url: `/api/v1/recording/${id}`,
+			url: `/api/v1/recordings/${id}`,
 			method: 'GET',
 			signal,
 		},
@@ -6070,7 +6094,7 @@ export const getRecordingControllerGetByIdQueryOptions = <
 	TData = Awaited<ReturnType<typeof recordingControllerGetById>>,
 	TError = ErrorType<HttpExceptionSchema>
 >(
-	id: string,
+	id: number,
 	options?: {
 		query?: UseQueryOptions<
 			Awaited<ReturnType<typeof recordingControllerGetById>>,
@@ -6082,7 +6106,7 @@ export const getRecordingControllerGetByIdQueryOptions = <
 ) => {
 	const { query: queryOptions, request: requestOptions } = options ?? {};
 
-	const queryKey = queryOptions?.queryKey ?? [`/api/v1/recording/${id}`];
+	const queryKey = queryOptions?.queryKey ?? [`/api/v1/recordings/${id}`];
 
 	const queryFn: QueryFunction<
 		Awaited<ReturnType<typeof recordingControllerGetById>>
@@ -6104,7 +6128,7 @@ export const useRecordingControllerGetById = <
 	TData = Awaited<ReturnType<typeof recordingControllerGetById>>,
 	TError = ErrorType<HttpExceptionSchema>
 >(
-	id: string,
+	id: number,
 	options?: {
 		query?: UseQueryOptions<
 			Awaited<ReturnType<typeof recordingControllerGetById>>,
@@ -6125,12 +6149,12 @@ export const useRecordingControllerGetById = <
 	return query;
 };
 
-export const getRecordingControllerGetByIdQueryKey = (id: string) => {
-	return [`/api/v1/recording/${id}`] as const;
+export const getRecordingControllerGetByIdQueryKey = (id: number) => {
+	return [`/api/v1/recordings/${id}`] as const;
 };
 
 // ============================================
-// GET BY CONFIRMATION NUMBER - GET /api/v1/recording/confirmation/:confirmationNumber
+// GET BY CONFIRMATION NUMBER - GET /api/v1/recordings/confirmation/:confirmationNumber
 // ============================================
 
 export const recordingControllerGetByConfirmationNumber = (
@@ -6140,7 +6164,7 @@ export const recordingControllerGetByConfirmationNumber = (
 ) => {
 	return nobstacleBackendApiInstance<RecordingRes>(
 		{
-			url: `/api/v1/recording/confirmation/${confirmationNumber}`,
+			url: `/api/v1/recordings/confirmation/${confirmationNumber}`,
 			method: 'GET',
 			signal,
 		},
@@ -6166,7 +6190,7 @@ export const getRecordingControllerGetByConfirmationNumberQueryOptions = <
 
 	const queryKey =
 		queryOptions?.queryKey ??
-		[`/api/v1/recording/confirmation/${confirmationNumber}`];
+		[`/api/v1/recordings/confirmation/${confirmationNumber}`];
 
 	const queryFn: QueryFunction<
 		Awaited<ReturnType<typeof recordingControllerGetByConfirmationNumber>>
@@ -6192,7 +6216,7 @@ export const getRecordingControllerGetByConfirmationNumberQueryOptions = <
 export const getRecordingControllerGetByConfirmationNumberQueryKey = (
 	confirmationNumber: string
 ) => {
-	return [`/api/v1/recording/confirmation/${confirmationNumber}`] as const;
+	return [`/api/v1/recordings/confirmation/${confirmationNumber}`] as const;
 };
 
 export const useRecordingControllerGetByConfirmationNumber = <

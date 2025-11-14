@@ -70,6 +70,49 @@ interface TableComponentProps {
 	listableFields: any[];
 }
 
+const buildUrlFromFormData = (
+	formId: string,
+	formData: Record<string, any>,
+	uuid?: string,
+	listableFields?: any[],
+	type?: string
+): string => {
+	let baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.nobstacle.com';
+
+	if (uuid) {
+		baseUrl = `${baseUrl}/forms/${uuid}`;
+	}
+
+	console.info("fffff", type);
+
+	if (type === "blank") {
+		return baseUrl;
+	}
+	const params = new URLSearchParams();
+
+
+	if (listableFields && listableFields.length > 0) {
+		listableFields.forEach((field: any) => {
+			const label = field.text;
+			const key = field.name;
+			const value = formData[label] || formData[key];
+
+			if (value !== undefined && value !== null && value !== '') {
+				params.append(key, String(value));
+			}
+		});
+	} else {
+		for (const [key, value] of Object.entries(formData)) {
+			if (value !== undefined && value !== null && value !== '') {
+				params.append(key, String(value));
+			}
+		}
+	}
+
+	const queryString = params.toString();
+	return queryString ? `${baseUrl}/forms/${formId}?${queryString}` : `${baseUrl}/forms/${formId}`;
+};
+
 export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => void }) => {
 	const [isModalOpen, setIsModalOpen] = useState(false);
 	const [isSendModalOpen, setIsSendModalOpen] = useState(false);
@@ -568,7 +611,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 				}
 			});
 
-			const dynamicUrl = buildUrl(selectedForm, result, UUID);
+			const dynamicUrl = buildUrlFromFormData(selectedForm, result, UUID, listableFields);
 			sendJotFormMessage(dynamicUrl, data?.formData?.uuid);
 
 			toast.success('Form sent successfully!', {
@@ -606,7 +649,12 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 					}
 				});
 
-				url = buildUrl(selectedForm, result);
+				url = buildUrlFromFormData(
+					selectedForm,
+					data,
+					data?.formData?.uuid,
+					listableFields
+				);
 			}
 
 			if (url) {
@@ -942,7 +990,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 					dataSource={cleanTableData}
 					rowKey={(record: any, index?: number) => record?.formData?.submission_id || index}
 					pagination={false}
-					scroll={{ x: 'max-content', y: 400 }}
+					scroll={{ x: 'max-content' }}
 					sticky
 					className="jotFormTable"
 					loading={loader}
@@ -1186,7 +1234,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 			setPageSize(10); // RESET page size when clearing search
 		}
 
-		// Use actual page for API call (don't override with 1 for search)
+		// Use actual page for API call
 		const apiPage = actualPage;
 
 		let API_URL = `${Url}/api/jotform/responses/${form_id}?page=${apiPage}&limit=${limit}`;
@@ -1214,64 +1262,41 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 			});
 
 			if (response.status === 200) {
-				const data = response.data.items ? response.data.items : response.data;
+				const { items, allFieldNames, totalPages, totalItems, isSearchActive: apiSearchActive } = response.data;
 
-				console.log('Response Debug:', {
-					totalItems: response.data.totalItems,
-					totalPages: response.data.totalPages,
-					itemsReceived: data.length,
-					currentPage: actualPage
-				});
+				console.log('Response Debug:', response.data);
 
-				setTotalPages(response.data.totalPages || 1);
-				setTotalItems(response?.data?.totalItems || 0);
+				setTotalPages(totalPages || 1);
+				setTotalItems(totalItems || 0);
 
-				if (data && data.length > 0) {
-					const tableData = data.map((item: any) => {
-						let prettyData: Record<string, any> = {};
+				if (items && items.length > 0) {
+					// Transform the new response format to match your table structure
+					const tableData = items.map((item: any) => {
+						// Start with the formData object
+						const prettyData: Record<string, any> = { ...item.formData };
 
-						if (item.submissionId === null) {
-							const parsedData = JSON.parse(item.data);
-							prettyData = Object.entries(parsedData).reduce((acc: any, [key, value]: [string, any]) => {
-								acc[key.trim()] = String(value).trim();
-								return acc;
-							}, {});
-						} else {
-							const parsedData = JSON.parse(item.data);
-
-							if (parsedData.pretty) {
-								const pairs = parsedData.pretty.split(', ');
-								pairs.forEach((pair: string) => {
-									const separatorIndex = pair.indexOf(':');
-									if (separatorIndex > 0) {
-										const key = pair.substring(0, separatorIndex).trim();
-										const value = pair.substring(separatorIndex + 1).trim();
-										prettyData[key] = value;
-									}
-								});
-							} else {
-								prettyData = { ...parsedData };
-							}
-						}
-
+						// Add metadata
 						prettyData.formData = {
-							submission_id: item?.submissionId,
-							form_id: item?.formId,
-							url: item?.normalUrl,
-							uuid: item?.uuid
+							submission_id: item.submissionId,
+							form_id: item.formId,
+							uuid: item.uuid,
+							id: item.id,
+							created_at: item.createdAt,
+							updated_at: item.updatedAt
 						};
 
 						return prettyData;
 					});
 
-					let sortColumns = response.data.allFieldNames?.sort((a: string, b: string) => {
+					// Sort column names alphabetically
+					let sortColumns = allFieldNames?.sort((a: string, b: string) => {
 						return a.localeCompare(b);
 					}) || [];
 
 					setTableResponse({ data: tableData, sortColumns });
 					setLoader(false);
 				} else {
-					setTableResponse({ data: [], uniqueKeys: [] });
+					setTableResponse({ data: [], sortColumns: [] });
 					setLoader(false);
 				}
 			}
@@ -1280,12 +1305,11 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 				console.log('Request canceled:', error.message);
 				return;
 			}
-			setTableResponse({ data: [], uniqueKeys: [] });
+			setTableResponse({ data: [], sortColumns: [] });
 			setLoader(false);
 			console.error('Error fetching form data:', error);
 		}
 	};
-
 	const handleFormChange = async (value: string) => {
 		setLoader(true);
 		setValue("url", value);
@@ -1316,7 +1340,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 				return;
 			}
 
-			const dynamicUrl = buildUrl(selectedForm, manualInputValues, uuid);
+			const dynamicUrl = buildUrlFromFormData(selectedForm, manualInputValues, uuid, listableFields);
 			sendJotFormMessage(dynamicUrl, uuid);
 
 			toast.success('Form sent successfully!', {
@@ -1348,7 +1372,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 				return;
 			}
 
-			const dynamicUrl = buildUrl(selectedForm, manualInputValues, uuid);
+			const dynamicUrl = buildUrlFromFormData(selectedForm, manualInputValues, uuid, listableFields);
 			sendJotFormMessage(dynamicUrl, uuid);
 
 			toast.success('Form sent successfully!', {
@@ -1744,12 +1768,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 		let uploadBlankRecord = await handleBlankUpload();
 		if (uploadBlankRecord) {
 			let uuid = uploadBlankRecord?.uuid;
-			let url = "";
-			const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ? process.env.NEXT_PUBLIC_BASE_URL : 'https://www.nobstacle.com';
-
-			if (uuid) {
-				url = `${baseUrl}/forms/${uuid}`;
-			}
+			const url = buildUrlFromFormData(selectedForm, {}, uuid, [], 'blank');
 			if (url) {
 				navigator.clipboard
 					.writeText(url)

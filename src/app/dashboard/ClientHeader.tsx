@@ -116,7 +116,7 @@ const ClientHeader = () => {
                         </div>
 
                         {/* Action Buttons */}
-                        {/* <div className="" style={{ padding: '0.2rem', paddingLeft:'0.5rem' }}>
+                        {/* <div className="" style={{ padding: '0.2rem', paddingLeft: '0.5rem' }}>
                             <HeaderRecordingShortcut confirmationNumber={confirmationNumber} clearConfirmationNumber={clearConfirmationNumber} />
                         </div> */}
                         <div className="" style={{ padding: '0.2rem' }}>
