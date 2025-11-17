@@ -19,20 +19,23 @@ import {
     useTemplateControllerGetDocumenttemplates,
     useCompanyControllerGetCompany
 } from '../../lib/client/api';
-import {
-    FileTextOutlined,
-    PictureOutlined,
-    VideoCameraOutlined,
-    GlobalOutlined,
-    EnvironmentOutlined,
-    FileOutlined,
-    PlaySquareOutlined,
-    SearchOutlined
-} from '@ant-design/icons';
 import { useSearchParams } from "next/navigation";
 import { useSocketContext } from "../../context/SocketContextProvider";
-import { useHasHydrated } from "@/hooks/useHydrated";
 import { ChatType } from "@/constant/types";
+import {
+    IoImage,
+    IoImages,
+    IoPlay,
+    IoGlobe,
+    IoDocuments,
+    IoMap,
+    IoChatboxEllipses,
+    IoSpeedometer,
+    IoDocumentText,
+    IoWallet,
+    IoPeople,
+    IoSettings
+} from 'react-icons/io5';
 
 const ClientHeader = () => {
     const [drawerOpen, setDrawerOpen] = useState(false);
@@ -42,16 +45,18 @@ const ClientHeader = () => {
     const [isDropdownVisible, setIsDropdownVisible] = useState(false);
     const [filteredTemplates, setFilteredTemplates] = useState([]);
     const searchRef = useRef(null);
+    const inputRef = useRef(null); // Add ref for input
     const params = useSearchParams();
     const { emitSendTemplate, socketConnected } = useSocketContext();
-    const isHydrated = useHasHydrated();
+    const [debouncedSearch, setDebouncedSearch] = useState('');
+    const confirmationTimeoutRef = useRef(null); // Ref to store timeout
 
     // Get company data with proper caching
     const { data: companyData } = useCompanyControllerGetCompany({
         query: {
             queryKey: ['company'],
-            staleTime: 1000 * 60 * 5, // Cache for 5 minutes
-            gcTime: 1000 * 60 * 10, // Keep in cache for 10 minutes (formerly cacheTime)
+            staleTime: 1000 * 60 * 5,
+            gcTime: 1000 * 60 * 10,
             refetchOnWindowFocus: false,
             refetchOnMount: false,
         }
@@ -65,8 +70,8 @@ const ClientHeader = () => {
         {
             query: {
                 queryKey: ['textTemplates'],
-                staleTime: 1000 * 60 * 5, // 5 minutes
-                gcTime: 1000 * 60 * 10, // 10 minutes
+                staleTime: 1000 * 60 * 5,
+                gcTime: 1000 * 60 * 10,
                 refetchOnWindowFocus: false,
                 refetchOnMount: false,
             }
@@ -155,20 +160,19 @@ const ClientHeader = () => {
 
     // Template type configurations
     const templateConfig = useMemo(() => ({
-        text: { icon: <FileTextOutlined />, color: 'blue', label: 'Text' },
-        image: { icon: <PictureOutlined />, color: 'green', label: 'Image' },
-        video: { icon: <VideoCameraOutlined />, color: 'red', label: 'Video' },
-        website: { icon: <GlobalOutlined />, color: 'purple', label: 'Website' },
-        slideshow: { icon: <PlaySquareOutlined />, color: 'orange', label: 'Slideshow' },
-        map: { icon: <EnvironmentOutlined />, color: 'cyan', label: 'Map' },
-        document: { icon: <FileOutlined />, color: 'gold', label: 'Document' }
+        text: { icon: <IoChatboxEllipses />, color: '#3b5998', label: 'Text' },
+        image: { icon: <IoImage />, color: '#3b5998', label: 'Image' },
+        video: { icon: <IoPlay />, color: '#3b5998', label: 'Video' },
+        website: { icon: <IoGlobe />, color: '#3b5998', label: 'Website' },
+        slideshow: { icon: <IoImages />, color: '#3b5998', label: 'Slideshow' },
+        map: { icon: <IoMap />, color: 'cyan', label: '#3b5998' },
+        document: { icon: <IoDocuments />, color: '#3b5998', label: 'Document' }
     }), []);
 
-    // Combine all templates - use useMemo to prevent recalculation
+    // Combine all templates
     const allTemplates = useMemo(() => {
         const combined = [];
 
-        // Process text templates
         if (textTemplates) {
             textTemplates.forEach(template => {
                 if (template.langCode?.includes(selectedLang)) {
@@ -185,7 +189,6 @@ const ClientHeader = () => {
             });
         }
 
-        // Process image templates
         if (imageTemplates) {
             imageTemplates.forEach(template => {
                 if (template.langCode?.includes(selectedLang)) {
@@ -202,7 +205,6 @@ const ClientHeader = () => {
             });
         }
 
-        // Process video templates
         if (videoTemplates) {
             videoTemplates.forEach(template => {
                 if (template.langCode?.includes(selectedLang)) {
@@ -219,7 +221,6 @@ const ClientHeader = () => {
             });
         }
 
-        // Process website templates
         if (websiteTemplates) {
             websiteTemplates.forEach(template => {
                 if (template.langCode?.includes(selectedLang)) {
@@ -236,7 +237,6 @@ const ClientHeader = () => {
             });
         }
 
-        // Process slideshow templates
         if (slideshowTemplates) {
             slideshowTemplates.forEach(template => {
                 if (template.langCode?.includes(selectedLang)) {
@@ -253,7 +253,6 @@ const ClientHeader = () => {
             });
         }
 
-        // Process map templates
         if (mapTemplates) {
             mapTemplates.forEach(template => {
                 if (template.langCode?.includes(selectedLang)) {
@@ -271,7 +270,6 @@ const ClientHeader = () => {
             });
         }
 
-        // Process document templates
         if (documentTemplates) {
             documentTemplates.forEach(template => {
                 if (template.langCode?.includes(selectedLang)) {
@@ -288,7 +286,6 @@ const ClientHeader = () => {
             });
         }
 
-        // Sort by order
         combined.sort((a, b) => (a.order || 999) - (b.order || 999));
         return combined;
     }, [
@@ -302,22 +299,55 @@ const ClientHeader = () => {
         selectedLang
     ]);
 
-    // Filter templates based on search - use useMemo
+    // Separate debounce effect for search
     useEffect(() => {
-        if (!searchValue.trim()) {
+        const timer = setTimeout(() => {
+            setSearchValue(debouncedSearch);
+        }, 500);
+
+        return () => clearTimeout(timer);
+    }, [debouncedSearch]);
+
+    // Separate effect for confirmation number that doesn't interfere with input
+    useEffect(() => {
+        // Clear previous timeout
+        if (confirmationTimeoutRef.current) {
+            clearTimeout(confirmationTimeoutRef.current);
+        }
+
+        // Set new timeout
+        confirmationTimeoutRef.current = setTimeout(() => {
+            const isNumeric = /^\d+$/.test(searchValue);
+            if (isNumeric && searchValue) {
+                setConfirmationNumber(searchValue);
+            } else if (!searchValue) {
+                setConfirmationNumber("");
+            }
+        }, 1000);
+
+        return () => {
+            if (confirmationTimeoutRef.current) {
+                clearTimeout(confirmationTimeoutRef.current);
+            }
+        };
+    }, [searchValue]);
+
+    // Filter templates based on search
+    useEffect(() => {
+        if (!debouncedSearch.trim()) {
             setFilteredTemplates([]);
             setIsDropdownVisible(false);
             return;
         }
 
-        const searchLower = searchValue.toLowerCase().trim();
+        const searchLower = debouncedSearch.toLowerCase().trim();
         const filtered = allTemplates.filter(template =>
             template.tag.toLowerCase().includes(searchLower)
         );
 
         setFilteredTemplates(filtered);
-        // setIsDropdownVisible(filtered.length > 0);
-    }, [searchValue, allTemplates]);
+        setIsDropdownVisible(filtered.length > 0);
+    }, [debouncedSearch, allTemplates]);
 
     // Handle click outside to close dropdown
     useEffect(() => {
@@ -347,57 +377,62 @@ const ClientHeader = () => {
         setConfirmationNumber("");
     }, []);
 
-
-const handleTemplateSelect = useCallback((template) => {
-    if (!socketConnected) {
-        message.warning('Connection not ready, please try again in a moment');
-        return;
-    }
-
-    let contentType = "";
-    if (template?.type === 'image') {
-        contentType = ChatType.Image;
-    } else if (template?.type === 'video') {
-        contentType = ChatType.Video;
-    } else if (template?.type === 'website') {
-        contentType = ChatType.Website;
-    } else if (template?.type === 'slideshow') {
-        contentType = ChatType.Slideshow;
-    } else if (template?.type === 'map') {
-        contentType = ChatType.Map;
-    } else if (template?.type === 'document') {
-        contentType = ChatType.Document;
-    } else {
-        contentType = ChatType.Text;
-    }
-    
-    emitSendTemplate({
-        refId: template?.id,
-        langCode: params.get("lang") || companyData?.defaultLangCode || "en",
-        refType: contentType,
-        station: Number(params.get("station") ?? 1),
-        contentExtra: template?.url,
-    });
-
-    setTimeout(() => {
+    const handleTemplateSelect = useCallback((template) => {
+        // Set the selected template tag in the input
+        setDebouncedSearch(template.tag);
         setSearchValue(template.tag);
-        setIsDropdownVisible(false);
-    }, 100);
 
-}, [socketConnected, emitSendTemplate, params, companyData]);
+        if (!socketConnected) {
+            message.warning('Connection not ready, please try again in a moment');
+            return;
+        }
+
+        let contentType = "";
+        if (template?.type === 'image') {
+            contentType = ChatType.Image;
+        } else if (template?.type === 'video') {
+            contentType = ChatType.Video;
+        } else if (template?.type === 'website') {
+            contentType = ChatType.Website;
+        } else if (template?.type === 'slideshow') {
+            contentType = ChatType.Slideshow;
+        } else if (template?.type === 'map') {
+            contentType = ChatType.Map;
+        } else if (template?.type === 'document') {
+            contentType = ChatType.Document;
+        } else {
+            contentType = ChatType.Text;
+        }
+
+        emitSendTemplate({
+            refId: template?.id,
+            langCode: params.get("lang") || companyData?.defaultLangCode || "en",
+            refType: contentType,
+            station: Number(params.get("station") ?? 1),
+            contentExtra: template?.templateData?.ext,
+        });
+
+        // Close dropdown after selection
+        setIsDropdownVisible(false);
+    }, [socketConnected, emitSendTemplate, params, companyData]);
 
     const handleClear = useCallback(() => {
         setSearchValue('');
+        setDebouncedSearch('');
         setFilteredTemplates([]);
         setIsDropdownVisible(false);
         setConfirmationNumber("");
     }, []);
 
-    const handleSearchChange = (value) => {
-        setSearchValue(value);
-        setConfirmationNumber(value);
-        setIsDropdownVisible(true);
-    }
+    const handleSearchChange = useCallback((e) => {
+        const value = e.target.value;
+        setDebouncedSearch(value);
+
+        // Ensure input keeps focus
+        if (inputRef.current && document.activeElement !== inputRef.current) {
+            inputRef.current.focus();
+        }
+    }, []);
 
     return (
         <>
@@ -457,120 +492,115 @@ const handleTemplateSelect = useCallback((template) => {
                         <div className="rounded-lg" style={{ padding: '0.2rem' }}>
                             <ChatBot />
                         </div>
-                        {isHydrated && (
-                            <>
-                                {/* Template Search Input */}
-                                <div ref={searchRef} className="bg-white/10 backdrop-blur-sm rounded-lg px-3 py-1" style={{
-                                    position: 'relative',
-                                    zIndex: 1000
-                                }}>
-                                    <Input
-                                        placeholder="ID# or Search Template"
-                                        value={searchValue}
-                                        onChange={(e) => handleSearchChange(e.target.value)}
-                                        // onFocus={() => searchValue && setIsDropdownVisible(true)}
-                                        // prefix={<SearchOutlined style={{ color: 'rgba(255, 255, 255, 0.6)' }} />}
-                                        suffix={
-                                            searchValue ? (
-                                                <CloseOutlined
-                                                    onClick={handleClear}
-                                                    style={{
-                                                        color: 'rgba(255, 255, 255, 0.6)',
-                                                        cursor: 'pointer',
-                                                        fontSize: '12px'
-                                                    }}
-                                                />
-                                            ) : null
-                                        }
-                                        className="bg-transparent border-none text-white placeholder-white/60 customInputBox"
-                                        style={{
-                                            width: '190px',
-                                            color: 'white',
-                                        }}
-                                    />
-
-                                    {isDropdownVisible && (
-                                        <div
-                                            style={{
-                                                position: 'absolute',
-                                                top: 'calc(100% + 4px)',
-                                                right: 0,
-                                                backgroundColor: 'white',
-                                                borderRadius: '8px',
-                                                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                                                maxHeight: '400px',
-                                                overflowY: 'auto',
-                                                zIndex: 9999,
-                                                border: '1px solid #e5e7eb',
-                                                minWidth: '300px'
+                        {/* Template Search Input */}
+                        <div ref={searchRef} className="bg-white/10 backdrop-blur-sm rounded-lg px-3 py-1" style={{
+                            position: 'relative',
+                            zIndex: 1000
+                        }}>
+                            <Input
+                                ref={inputRef}
+                                placeholder="ID# or Search Template"
+                                value={debouncedSearch}
+                                onChange={handleSearchChange}
+                                onFocus={() => debouncedSearch && setIsDropdownVisible(true)}
+                                suffix={
+                                    searchValue ? (
+                                        <CloseOutlined
+                                            onMouseDown={(e) => {
+                                                e.preventDefault();
+                                                handleClear();
                                             }}
-                                        >
-                                            {isLoading ? (
-                                                <div style={{ padding: '20px', textAlign: 'center' }}>
-                                                    <Spin />
-                                                </div>
-                                            ) : filteredTemplates.length > 0 ? (
-                                                <List
-                                                    dataSource={filteredTemplates}
-                                                    renderItem={(template) => {
-                                                        const config = templateConfig[template.type];
-                                                        return (
-                                                          <List.Item
-    onMouseDown={(e) => {
-        e.preventDefault(); // Prevent focus issues
-        handleTemplateSelect(template);
-    }}
-    style={{
-        cursor: 'pointer',
-        padding: '12px 16px',
-        borderBottom: '1px solid #f0f0f0',
-        transition: 'background-color 0.2s'
-    }}
-    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f5f5f5'}
-    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
->
-    <List.Item.Meta
-        avatar={
-            <div style={{
-                fontSize: '24px',
-                color: config.color,
-                display: 'flex',
-                alignItems: 'center'
-            }}>
-                {config.icon}
-            </div>
-        }
-        title={
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontWeight: 600 }}>{template.tag}</span>
-                <Tag color={config.color} style={{ margin: 0 }}>
-                    {config.label}
-                </Tag>
-            </div>
-        }
-    />
-</List.Item>
-                                                        );
-                                                    }}
-                                                />
-                                            ) : (
-                                                <Empty
-                                                    image={Empty.PRESENTED_IMAGE_SIMPLE}
-                                                    description="No templates found"
-                                                    style={{ padding: '20px' }}
-                                                />
-                                            )}
+                                            style={{
+                                                color: 'rgba(255, 255, 255, 0.6)',
+                                                cursor: 'pointer',
+                                                fontSize: '12px'
+                                            }}
+                                        />
+                                    ) : null
+                                }
+                                className="bg-transparent border-none text-white placeholder-white/60 customInputBox"
+                                style={{
+                                    width: '190px',
+                                    color: 'white',
+                                }}
+                            />
+
+                            {isDropdownVisible && (
+                                <div
+                                    style={{
+                                        position: 'absolute',
+                                        top: 'calc(100% + 4px)',
+                                        right: 0,
+                                        backgroundColor: 'white',
+                                        borderRadius: '8px',
+                                        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                                        maxHeight: '400px',
+                                        overflowY: 'auto',
+                                        zIndex: 9999,
+                                        border: '1px solid #e5e7eb',
+                                        minWidth: '300px'
+                                    }}
+                                >
+                                    {isLoading ? (
+                                        <div style={{ padding: '20px', textAlign: 'center' }}>
+                                            <Spin />
                                         </div>
+                                    ) : filteredTemplates.length > 0 ? (
+                                        <List
+                                            dataSource={filteredTemplates}
+                                            renderItem={(template) => {
+                                                const config = templateConfig[template.type];
+                                                return (
+                                                    <List.Item
+                                                        onMouseDown={(e) => {
+                                                            e.preventDefault();
+                                                            handleTemplateSelect(template);
+                                                        }}
+                                                        style={{
+                                                            cursor: 'pointer',
+                                                            padding: '12px 16px',
+                                                            borderBottom: '1px solid #f0f0f0',
+                                                            transition: 'background-color 0.2s'
+                                                        }}
+                                                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f5f5f5'}
+                                                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
+                                                    >
+                                                        <List.Item.Meta
+                                                            avatar={
+                                                                <div style={{
+                                                                    fontSize: '24px',
+                                                                    color: config.color,
+                                                                    display: 'flex',
+                                                                    alignItems: 'center'
+                                                                }}>
+                                                                    {config.icon}
+                                                                </div>
+                                                            }
+                                                            title={
+                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                                    <span>{template.tag}</span>
+                                                                </div>
+                                                            }
+                                                        />
+                                                    </List.Item>
+                                                );
+                                            }}
+                                        />
+                                    ) : (
+                                        <Empty
+                                            image={Empty.PRESENTED_IMAGE_SIMPLE}
+                                            description="No templates found"
+                                            style={{ padding: '20px' }}
+                                        />
                                     )}
                                 </div>
-                            </>
-                        )}
-
+                            )}
+                        </div>
                     </div>
                 </div>
             </nav>
 
-            {/* Main Menu Drawer */}
+            {/* Drawers remain the same */}
             <Drawer
                 title={
                     <div className="flex items-center justify-between py-2">
