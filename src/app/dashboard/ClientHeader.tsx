@@ -165,7 +165,7 @@ const ClientHeader = () => {
         video: { icon: <IoPlay />, color: '#3b5998', label: 'Video' },
         website: { icon: <IoGlobe />, color: '#3b5998', label: 'Website' },
         slideshow: { icon: <IoImages />, color: '#3b5998', label: 'Slideshow' },
-        map: { icon: <IoMap />, color: 'cyan', label: '#3b5998' },
+        map: { icon: <IoMap />, color: '#3b5998', label: 'Map' },
         document: { icon: <IoDocuments />, color: '#3b5998', label: 'Document' }
     }), []);
 
@@ -318,6 +318,7 @@ const ClientHeader = () => {
         // Set new timeout
         confirmationTimeoutRef.current = setTimeout(() => {
             const isNumeric = /^\d+$/.test(searchValue);
+
             if (isNumeric && searchValue) {
                 setConfirmationNumber(searchValue);
             } else if (!searchValue) {
@@ -403,6 +404,7 @@ const ClientHeader = () => {
         } else {
             contentType = ChatType.Text;
         }
+
 
         emitSendTemplate({
             refId: template?.id,
