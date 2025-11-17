@@ -3,15 +3,16 @@ import { useState, useEffect } from 'react';
 import useTemplateStore from "../../../lib/zustand/store/templateStore";
 import { useHasHydrated } from "../../../hooks/useHydrated";
 import { useSession } from "next-auth/react";
-import { 
+import {
   useRecordingControllerDelete,
-  useRecordingControllerGetAll 
+  useRecordingControllerGetAll
 } from "../../../lib/client/api";
 import { Table, Card, Pagination, Button, Spin, Tag } from "antd";
 import "../../../styles/base.css";
 import { FaTrash, FaPlay, FaPause, FaVideo, FaMusic } from "react-icons/fa";
 import Swal from "sweetalert2";
 import { SendRecordingTrigger } from "../../../components/pages/dashboard/CreateRecordingsTemplate";
+import { useMessageStore } from '../../../lib/zustand/store/messageStore';
 
 function Page() {
   const isHydrated = useHasHydrated();
@@ -36,21 +37,22 @@ function RecordingsList() {
     setRecordings,
   } = useTemplateStore();
 
+  const { receivedRecording } = useMessageStore();
+
   const { data: userData } = useSession();
   const deleteRecording = useRecordingControllerDelete();
-  
+
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [playingId, setPlayingId] = useState<number | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [mediaElement, setMediaElement] = useState<HTMLAudioElement | HTMLVideoElement | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
 
   // Fetch recordings from API
-  const { 
-    data: recordingsData, 
-    isLoading, 
-    refetch 
+  const {
+    data: recordingsData,
+    isLoading,
+    refetch
   } = useRecordingControllerGetAll(
     {
       page: currentPage,
@@ -64,10 +66,15 @@ function RecordingsList() {
     }
   );
 
-  // Update store when data is fetched
   useEffect(() => {
-    if (recordingsData?.data?.items) {
-      setRecordings(recordingsData.data.items);
+    if (receivedRecording) {
+      refetch();
+    }
+  }, [receivedRecording, refetch]);
+
+  useEffect(() => {
+    if (recordingsData?.items) {
+      setRecordings(recordingsData?.items);
     }
   }, [recordingsData, setRecordings]);
 
@@ -229,13 +236,6 @@ function RecordingsList() {
       width: 100,
     },
     {
-      title: "Size",
-      key: "fileSize",
-      dataIndex: "fileSize",
-      width: 100,
-      render: (size: number) => formatFileSize(size),
-    },
-    {
       title: "Duration",
       key: "duration",
       dataIndex: "duration",
@@ -323,26 +323,26 @@ function RecordingsList() {
         <div>
           <h2 className="text-lg font-semibold">Recordings</h2>
           <p className="text-sm text-gray-500">
-            Total: {recordingsData?.data?.total || 0} recordings
+            Total: {recordingsData?.items?.total || 0} recordings
           </p>
         </div>
-        <Button 
-          type="primary" 
+        <Button
+          type="primary"
           onClick={() => refetch()}
         >
           Refresh
         </Button>
       </div>
-      
+
       <Table
         rowKey="id"
         columns={columns}
-        dataSource={recordings}
+        dataSource={recordingsData?.items || recordingsData}
         pagination={false}
         className="jotFormTable"
         loading={isLoading}
       />
-      
+
       <div className="flex justify-center mt-6">
         <Pagination
           current={currentPage}

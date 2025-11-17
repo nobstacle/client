@@ -61,7 +61,7 @@ const EMOTICON_MAP = {
   5: 'VERY_HAPPY'
 };
 
-const SurveyAnswer: React.FC<{ tag: string; survey?: any }> = ({ tag, survey }) => {
+const SurveyAnswer: React.FC<{ tag: string; survey?: any; handleComplete: any }> = ({ tag, survey, handleComplete }) => {
   const [emptyDefaultSlideshow, setEmptySlideshow] = React.useState(false);
   const [selectedVal, setSelectedVal] = React.useState<number>();
   const [showEmoticonContent, setShowEmoticonContent] = React.useState(false);
@@ -140,6 +140,7 @@ const SurveyAnswer: React.FC<{ tag: string; survey?: any }> = ({ tag, survey }) 
 
       if (!slideshow) {
         setEmptySlideshow(true);
+        handleComplete();
       } else {
         emitSendTemplate({
           refId: slideshow.id ?? NaN,
@@ -148,9 +149,11 @@ const SurveyAnswer: React.FC<{ tag: string; survey?: any }> = ({ tag, survey }) 
           station: Number(params.get("station") ?? 1),
           self: true,
         });
+        handleComplete();
       }
     } else {
       setEmptySlideshow(true);
+      handleComplete();
     }
   };
 

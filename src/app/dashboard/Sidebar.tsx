@@ -22,6 +22,8 @@ import {
     IoSettings
 } from 'react-icons/io5';
 import { IoRecordingSharp } from "react-icons/io5";
+import { StationPicker } from "../../components/pages/dashboard/Header/StationPicker";
+
 interface ClientSidebarProps {
     user: Session | null;
 }
@@ -478,7 +480,10 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
                         )}
                     </div>
 
-                    <ul className="w-full border-t border-white/20">
+                    <ul className="w-full border-t border-white/20 flex" style={{ alignItems: 'center' }}>
+                        <div className="px-4 py-2">
+                            <StationPicker />
+                        </div>
                         <li className="flex gap-2 p-4 px-6 hover:bg-white/5 cursor-pointer transition-colors">
                             <LogoutIcon />
                             <Logout />

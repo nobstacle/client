@@ -59,6 +59,8 @@ interface BearState {
   setRecordings: (recordings: any[]) => void;
   searchRecordings: any[];
   setSearchRecordings: (recordings: any[]) => void;
+  receivedRecording: any[];
+  setRecievedRecording: (recordings: any[]) => void;
 }
 
 const useTemplateStore = create<BearState>()(
@@ -112,6 +114,8 @@ const useTemplateStore = create<BearState>()(
       setRecordings: (recordings) => set(() => ({ recordings })),
       searchRecordings: [],
       setSearchRecordings: (searchRecordings) => set(() => ({ searchRecordings })),
+      receivedRecording: null,
+      setRecievedRecording: (receivedRecording) => set(() => ({ receivedRecording })),
     }),
     {
       name: "templates-storage",

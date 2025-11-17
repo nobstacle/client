@@ -15,7 +15,8 @@ import {
   SendTemplatePayloadType,
   SendLangCodeMessagePayloadType,
   SendJotFormTemplate,
-  ReceivedResponseType
+  ReceivedResponseType,
+  
 } from "../constant/types";
 import { useMessageStore } from "../lib/zustand/store/messageStore";
 import useTemplateStore from "../lib/zustand/store/templateStore";
@@ -106,7 +107,8 @@ export const SocketContextProvider = ({
     setReceivedSurvey,
     setReceivedLangCode,
     setReceivedRecording,
-    setReceivedResponse
+    setReceivedResponse,
+    
   } = useMessageStore();
 
   const { addSurveyAnswer } = useTemplateStore();
@@ -365,7 +367,6 @@ export const SocketContextProvider = ({
 
   const onDataSubmitted = (data: any) => {
     try {
-      console.info("DATATATAA", data)
       const parsedRes = JSON.parse(data);
       if (parsedRes.status === 400) {
         console.warn("⚠️ JotForm data error:", parsedRes);
@@ -379,6 +380,21 @@ export const SocketContextProvider = ({
       console.error("❌ Failed to parse JotForm data:", error);
     }
   };
+
+const onSubmittedRecordings = (data: any) => {
+  try {
+    console.log("📊 Recording submitted (raw):", data);
+    
+    // Parse if it's a string, otherwise use as-is
+    const parsedData = typeof data === 'string' ? JSON.parse(data) : data;
+    
+    console.log("📊 Recording submitted (parsed):", parsedData);
+    
+    setReceivedRecording(parsedData);
+  } catch (error) {
+    console.error("❌ Failed to parse recording data:", error);
+  }
+};
 
   // Setup socket event listeners
   useEffect(() => {
@@ -401,6 +417,7 @@ export const SocketContextProvider = ({
     socketClient.on("information-updated", onInformationUpdated);
     socketClient.on("received-packages", onReceivedPackages);
     socketClient.on("received-upsell-transaction", onRecievedUpsellPackage);
+    socketClient.on("recordingSaved", onSubmittedRecordings);
 
     return () => {
       socketClient.off("disconnect", onDisconnect);
@@ -418,8 +435,9 @@ export const SocketContextProvider = ({
       socketClient.off("team-document-sent-successfully", onReceivedTeamDocument);
       socketClient.off("information-updated", onInformationUpdated);
       socketClient.off("received-packages", onReceivedPackages);
-      socketClient.on("received-upsell-transaction", onRecievedUpsellPackage);
-      socketClient.on("received-recording", onReceivedRecording);
+      socketClient.off("received-upsell-transaction", onRecievedUpsellPackage);
+      socketClient.off("received-recording", onReceivedRecording);
+      socketClient.off("recordingSaved", onSubmittedRecordings);
     };
   }, [socketClient]);
 

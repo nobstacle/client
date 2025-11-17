@@ -109,7 +109,7 @@ export interface ReceivedResponseType {
   station: number;
   responseData: any;
   submittedAt?: string;
-  source?: "Form" | "Survey" | "API" | string;
+  source?: "Form" | "Survey" | "API" | string | 'recordings';
 }
 
 // Add package-related types

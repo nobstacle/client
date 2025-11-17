@@ -91,16 +91,26 @@ const ClientHeader = () => {
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center">
+                        {/* Action Buttons */}
+                        {/* <div className="" style={{ padding: '0.2rem', paddingLeft: '0.5rem' }}>
+                            <HeaderRecordingShortcut confirmationNumber={confirmationNumber} clearConfirmationNumber={clearConfirmationNumber} />
+                        </div> */}
+                        <div className="" style={{ padding: '0.2rem' }}>
+                            <HeaderSurveyShortcut confirmationNumber={confirmationNumber} clearConfirmationNumber={clearConfirmationNumber} />
+                        </div>
+                        <div className="rounded-lg" style={{ padding: '0.2rem' }}>
+                            <ChatBot />
+                        </div>
                         {/* Shared Confirmation Number Input */}
                         <div className="bg-white/10 backdrop-blur-sm rounded-lg px-3 py-1">
                             <Input
-                                placeholder="Confirmation #"
+                                placeholder="ID# or Search Template"
                                 value={confirmationNumber}
                                 onChange={handleConfirmationNumberChange}
                                 className="bg-transparent border-none text-white placeholder-white/60 customInputBox"
                                 style={{
-                                    width: '180px',
+                                    width: '190px',
                                     color: 'white',
                                 }}
                                 suffix={
@@ -113,20 +123,6 @@ const ClientHeader = () => {
                                     />
                                 }
                             />
-                        </div>
-
-                        {/* Action Buttons */}
-                        {/* <div className="" style={{ padding: '0.2rem', paddingLeft: '0.5rem' }}>
-                            <HeaderRecordingShortcut confirmationNumber={confirmationNumber} clearConfirmationNumber={clearConfirmationNumber} />
-                        </div> */}
-                        <div className="" style={{ padding: '0.2rem' }}>
-                            <HeaderSurveyShortcut confirmationNumber={confirmationNumber} clearConfirmationNumber={clearConfirmationNumber} />
-                        </div>
-                        <div className="bg-white/10 backdrop-blur-sm rounded-lg" style={{ padding: '0.2rem', marginRight: '1rem' }}>
-                            <ChatBot />
-                        </div>
-                        <div className="bg-white/10 backdrop-blur-sm rounded-lg px-4 py-2">
-                            <StationPicker />
                         </div>
                     </div>
                 </div>

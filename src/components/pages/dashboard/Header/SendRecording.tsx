@@ -53,12 +53,11 @@ export const HeaderRecordingShortcut: React.FC<HeaderRecordingShortcutProps> = (
                     type="primary"
                     icon={<FaCircle style={{ fontSize: "20px" }} />}
                     onClick={handleConfirmSend}
-                    className="flex items-center justify-center headerButton"
+                    className="flex items-center justify-center customHeaderButton"
                     style={{
                         backgroundColor: "#3b5998",
                         border: "none",
                         height: "40px",
-                        width: "40px !important",
                     }}
                 />
             </Tooltip>

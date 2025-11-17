@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react";
-import { Modal, Button } from "antd";
+import { Modal, Button, Tooltip } from "antd";
 import { MessageOutlined } from "@ant-design/icons";
 import { useSocketContext } from "../../../../context/SocketContextProvider";
 import { useMessageStore } from "../../../../lib/zustand/store/messageStore";
@@ -59,18 +59,19 @@ export const ChatBot: React.FC<{ cb?: () => void }> = ({ cb }) => {
 
     return (
         <>
-            <Button
-                type="text"
-                icon={<IoChatbubbleEllipses className="text-white text-xl" />}
-                onClick={showModal}
-                className="border-none shadow-none hover:bg-white/20 transition-colors duration-200"
-                style={{
-                    background: 'transparent',
-                    border: 'none',
-                    color: 'white'
-                }}
-            />
-
+            <Tooltip title="Chatbot" placement="bottom">
+                <Button
+                    type="text"
+                    icon={<IoChatbubbleEllipses className="text-white text-xl" />}
+                    onClick={showModal}
+                    className="border-none shadow-none hover:bg-white/20 transition-colors duration-200"
+                    style={{
+                        background: 'transparent',
+                        border: 'none',
+                        color: 'white'
+                    }}
+                />
+            </Tooltip>
             <Modal
                 title="Chat Assistant"
                 open={isModalOpen}
