@@ -1,7 +1,7 @@
 'use client';
-import { useCallback, memo } from "react";
-import { PropsWithChildren, useState } from "react";
-import { Drawer, Button, Input, Tooltip } from "antd";
+import { useCallback, useEffect, useRef, useMemo } from "react";
+import { useState } from "react";
+import { Drawer, Button, Input, List, Tag, Spin, Empty, message } from "antd";
 import { MenuOutlined, CloseOutlined, SettingOutlined, MoreOutlined } from "@ant-design/icons";
 import { HeaderLanguagePicker } from "../../components/pages/dashboard/Header/LanguagePicker";
 import { LanguageShortcutPicker } from "../../components/pages/dashboard/Header/LanguageShortcutPicker";
@@ -9,28 +9,332 @@ import { TemplateShortcutPicker } from "../../components/pages/dashboard/Header/
 import { StationPicker } from "../../components/pages/dashboard/Header/StationPicker";
 import { ChatBot } from "../../components/pages/dashboard/Header/chatBot";
 import { HeaderSurveyShortcut } from "../../components/pages/dashboard/Header/SurveyPicker";
-import { HeaderRecordingShortcut } from "../../components/pages/dashboard/Header/SendRecording";
+import {
+    useTemplateControllerGetTextTemplates,
+    useTemplateControllerGetImageTemplates,
+    useTemplateControllerGetVideoTemplates,
+    useTemplateControllerGetWebsiteTemplates,
+    useTemplateControllerGetSlideshowTemplates,
+    useTemplateControllerGetMapTemplates,
+    useTemplateControllerGetDocumenttemplates,
+    useCompanyControllerGetCompany
+} from '../../lib/client/api';
+import {
+    FileTextOutlined,
+    PictureOutlined,
+    VideoCameraOutlined,
+    GlobalOutlined,
+    EnvironmentOutlined,
+    FileOutlined,
+    PlaySquareOutlined,
+    SearchOutlined
+} from '@ant-design/icons';
+import { useSearchParams } from "next/navigation";
+import { useSocketContext } from "../../context/SocketContextProvider";
+import { useHasHydrated } from "@/hooks/useHydrated";
+import { ChatType } from "@/constant/types";
 
 const ClientHeader = () => {
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [shortcutMenuOpen, setShortcutMenuOpen] = useState(false);
     const [confirmationNumber, setConfirmationNumber] = useState("");
+    const [searchValue, setSearchValue] = useState('');
+    const [isDropdownVisible, setIsDropdownVisible] = useState(false);
+    const [filteredTemplates, setFilteredTemplates] = useState([]);
+    const searchRef = useRef(null);
+    const params = useSearchParams();
+    const { emitSendTemplate, socketConnected } = useSocketContext();
+    const isHydrated = useHasHydrated();
 
-    const showDrawer = () => {
-        setDrawerOpen(true);
-    };
+    // Get company data with proper caching
+    const { data: companyData } = useCompanyControllerGetCompany({
+        query: {
+            queryKey: ['company'],
+            staleTime: 1000 * 60 * 5, // Cache for 5 minutes
+            gcTime: 1000 * 60 * 10, // Keep in cache for 10 minutes (formerly cacheTime)
+            refetchOnWindowFocus: false,
+            refetchOnMount: false,
+        }
+    });
 
-    const closeDrawer = () => {
-        setDrawerOpen(false);
-    };
+    const selectedLang = params.get("lang") || companyData?.defaultLangCode || "en";
 
-    const showShortcutMenu = () => {
-        setShortcutMenuOpen(true);
-    };
+    // Fetch all template types with proper caching configuration
+    const { data: textTemplates, isLoading: textLoading } = useTemplateControllerGetTextTemplates(
+        undefined,
+        {
+            query: {
+                queryKey: ['textTemplates'],
+                staleTime: 1000 * 60 * 5, // 5 minutes
+                gcTime: 1000 * 60 * 10, // 10 minutes
+                refetchOnWindowFocus: false,
+                refetchOnMount: false,
+            }
+        }
+    );
 
-    const closeShortcutMenu = () => {
-        setShortcutMenuOpen(false);
-    };
+    const { data: imageTemplates, isLoading: imageLoading } = useTemplateControllerGetImageTemplates(
+        undefined,
+        {
+            query: {
+                queryKey: ['imageTemplates'],
+                staleTime: 1000 * 60 * 5,
+                gcTime: 1000 * 60 * 10,
+                refetchOnWindowFocus: false,
+                refetchOnMount: false,
+            }
+        }
+    );
+
+    const { data: videoTemplates, isLoading: videoLoading } = useTemplateControllerGetVideoTemplates(
+        undefined,
+        {
+            query: {
+                queryKey: ['videoTemplates'],
+                staleTime: 1000 * 60 * 5,
+                gcTime: 1000 * 60 * 10,
+                refetchOnWindowFocus: false,
+                refetchOnMount: false,
+            }
+        }
+    );
+
+    const { data: websiteTemplates, isLoading: websiteLoading } = useTemplateControllerGetWebsiteTemplates(
+        undefined,
+        {
+            query: {
+                queryKey: ['websiteTemplates'],
+                staleTime: 1000 * 60 * 5,
+                gcTime: 1000 * 60 * 10,
+                refetchOnWindowFocus: false,
+                refetchOnMount: false,
+            }
+        }
+    );
+
+    const { data: slideshowTemplates, isLoading: slideshowLoading } = useTemplateControllerGetSlideshowTemplates(
+        undefined,
+        {
+            query: {
+                queryKey: ['slideshowTemplates'],
+                staleTime: 1000 * 60 * 5,
+                gcTime: 1000 * 60 * 10,
+                refetchOnWindowFocus: false,
+                refetchOnMount: false,
+            }
+        }
+    );
+
+    const { data: mapTemplates, isLoading: mapLoading } = useTemplateControllerGetMapTemplates(
+        {
+            query: {
+                queryKey: ['mapTemplates'],
+                staleTime: 1000 * 60 * 5,
+                gcTime: 1000 * 60 * 10,
+                refetchOnWindowFocus: false,
+                refetchOnMount: false,
+            }
+        }
+    );
+
+    const { data: documentTemplates, isLoading: documentLoading } = useTemplateControllerGetDocumenttemplates(
+        undefined,
+        {
+            query: {
+                queryKey: ['documentTemplates'],
+                staleTime: 1000 * 60 * 5,
+                gcTime: 1000 * 60 * 10,
+                refetchOnWindowFocus: false,
+                refetchOnMount: false,
+            }
+        }
+    );
+
+    const isLoading = textLoading || imageLoading || videoLoading ||
+        websiteLoading || slideshowLoading || mapLoading || documentLoading;
+
+    // Template type configurations
+    const templateConfig = useMemo(() => ({
+        text: { icon: <FileTextOutlined />, color: 'blue', label: 'Text' },
+        image: { icon: <PictureOutlined />, color: 'green', label: 'Image' },
+        video: { icon: <VideoCameraOutlined />, color: 'red', label: 'Video' },
+        website: { icon: <GlobalOutlined />, color: 'purple', label: 'Website' },
+        slideshow: { icon: <PlaySquareOutlined />, color: 'orange', label: 'Slideshow' },
+        map: { icon: <EnvironmentOutlined />, color: 'cyan', label: 'Map' },
+        document: { icon: <FileOutlined />, color: 'gold', label: 'Document' }
+    }), []);
+
+    // Combine all templates - use useMemo to prevent recalculation
+    const allTemplates = useMemo(() => {
+        const combined = [];
+
+        // Process text templates
+        if (textTemplates) {
+            textTemplates.forEach(template => {
+                if (template.langCode?.includes(selectedLang)) {
+                    combined.push({
+                        id: template.id,
+                        tag: template.tag,
+                        type: 'text',
+                        content: template.content,
+                        langCode: template.langCode,
+                        order: template.order,
+                        templateData: template
+                    });
+                }
+            });
+        }
+
+        // Process image templates
+        if (imageTemplates) {
+            imageTemplates.forEach(template => {
+                if (template.langCode?.includes(selectedLang)) {
+                    combined.push({
+                        id: template.id,
+                        tag: template.tag,
+                        type: 'image',
+                        url: template.url,
+                        langCode: template.langCode,
+                        order: template.order,
+                        templateData: template
+                    });
+                }
+            });
+        }
+
+        // Process video templates
+        if (videoTemplates) {
+            videoTemplates.forEach(template => {
+                if (template.langCode?.includes(selectedLang)) {
+                    combined.push({
+                        id: template.id,
+                        tag: template.tag,
+                        type: 'video',
+                        url: template.url,
+                        langCode: template.langCode,
+                        order: template.order,
+                        templateData: template
+                    });
+                }
+            });
+        }
+
+        // Process website templates
+        if (websiteTemplates) {
+            websiteTemplates.forEach(template => {
+                if (template.langCode?.includes(selectedLang)) {
+                    combined.push({
+                        id: template.id,
+                        tag: template.tag,
+                        type: 'website',
+                        url: template.url,
+                        langCode: template.langCode,
+                        order: template.order,
+                        templateData: template
+                    });
+                }
+            });
+        }
+
+        // Process slideshow templates
+        if (slideshowTemplates) {
+            slideshowTemplates.forEach(template => {
+                if (template.langCode?.includes(selectedLang)) {
+                    combined.push({
+                        id: template.id,
+                        tag: template.tag,
+                        type: 'slideshow',
+                        urls: template.url,
+                        langCode: template.langCode,
+                        order: template.order,
+                        templateData: template
+                    });
+                }
+            });
+        }
+
+        // Process map templates
+        if (mapTemplates) {
+            mapTemplates.forEach(template => {
+                if (template.langCode?.includes(selectedLang)) {
+                    combined.push({
+                        id: template.id,
+                        tag: template.tag,
+                        type: 'map',
+                        origin: template.origin,
+                        destination: template.destination,
+                        langCode: template.langCode,
+                        order: template.order,
+                        templateData: template
+                    });
+                }
+            });
+        }
+
+        // Process document templates
+        if (documentTemplates) {
+            documentTemplates.forEach(template => {
+                if (template.langCode?.includes(selectedLang)) {
+                    combined.push({
+                        id: template.id,
+                        tag: template.tag,
+                        type: 'document',
+                        url: template.url,
+                        langCode: template.langCode,
+                        order: template.order,
+                        templateData: template
+                    });
+                }
+            });
+        }
+
+        // Sort by order
+        combined.sort((a, b) => (a.order || 999) - (b.order || 999));
+        return combined;
+    }, [
+        textTemplates,
+        imageTemplates,
+        videoTemplates,
+        websiteTemplates,
+        slideshowTemplates,
+        mapTemplates,
+        documentTemplates,
+        selectedLang
+    ]);
+
+    // Filter templates based on search - use useMemo
+    useEffect(() => {
+        if (!searchValue.trim()) {
+            setFilteredTemplates([]);
+            setIsDropdownVisible(false);
+            return;
+        }
+
+        const searchLower = searchValue.toLowerCase().trim();
+        const filtered = allTemplates.filter(template =>
+            template.tag.toLowerCase().includes(searchLower)
+        );
+
+        setFilteredTemplates(filtered);
+        // setIsDropdownVisible(filtered.length > 0);
+    }, [searchValue, allTemplates]);
+
+    // Handle click outside to close dropdown
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (searchRef.current && !searchRef.current.contains(event.target)) {
+                setIsDropdownVisible(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    const showDrawer = () => setDrawerOpen(true);
+    const closeDrawer = () => setDrawerOpen(false);
+    const showShortcutMenu = () => setShortcutMenuOpen(true);
+    const closeShortcutMenu = () => setShortcutMenuOpen(false);
 
     const handleConfirmationNumberChange = useCallback(
         (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -42,6 +346,58 @@ const ClientHeader = () => {
     const clearConfirmationNumber = useCallback(() => {
         setConfirmationNumber("");
     }, []);
+
+
+const handleTemplateSelect = useCallback((template) => {
+    if (!socketConnected) {
+        message.warning('Connection not ready, please try again in a moment');
+        return;
+    }
+
+    let contentType = "";
+    if (template?.type === 'image') {
+        contentType = ChatType.Image;
+    } else if (template?.type === 'video') {
+        contentType = ChatType.Video;
+    } else if (template?.type === 'website') {
+        contentType = ChatType.Website;
+    } else if (template?.type === 'slideshow') {
+        contentType = ChatType.Slideshow;
+    } else if (template?.type === 'map') {
+        contentType = ChatType.Map;
+    } else if (template?.type === 'document') {
+        contentType = ChatType.Document;
+    } else {
+        contentType = ChatType.Text;
+    }
+    
+    emitSendTemplate({
+        refId: template?.id,
+        langCode: params.get("lang") || companyData?.defaultLangCode || "en",
+        refType: contentType,
+        station: Number(params.get("station") ?? 1),
+        contentExtra: template?.url,
+    });
+
+    setTimeout(() => {
+        setSearchValue(template.tag);
+        setIsDropdownVisible(false);
+    }, 100);
+
+}, [socketConnected, emitSendTemplate, params, companyData]);
+
+    const handleClear = useCallback(() => {
+        setSearchValue('');
+        setFilteredTemplates([]);
+        setIsDropdownVisible(false);
+        setConfirmationNumber("");
+    }, []);
+
+    const handleSearchChange = (value) => {
+        setSearchValue(value);
+        setConfirmationNumber(value);
+        setIsDropdownVisible(true);
+    }
 
     return (
         <>
@@ -61,9 +417,9 @@ const ClientHeader = () => {
                         />
                         <Button
                             type="text"
-                            icon={<MoreOutlined className="text-white text-xl" size={30} />}
+                            icon={<MoreOutlined className="text-white text-xl" />}
                             onClick={showShortcutMenu}
-                            className="border-none shadow-none hover:bg-white/20 transition-colors duration-200 rounded-lg p-3 customQuickActionButton"
+                            className="border-none shadow-none hover:bg-white/20 transition-colors duration-200 rounded-lg p-3"
                             style={{
                                 background: 'transparent',
                                 border: 'none'
@@ -92,38 +448,124 @@ const ClientHeader = () => {
                     </div>
 
                     <div className="flex items-center">
-                        {/* Action Buttons */}
-                        {/* <div className="" style={{ padding: '0.2rem', paddingLeft: '0.5rem' }}>
-                            <HeaderRecordingShortcut confirmationNumber={confirmationNumber} clearConfirmationNumber={clearConfirmationNumber} />
-                        </div> */}
-                        <div className="" style={{ padding: '0.2rem' }}>
-                            <HeaderSurveyShortcut confirmationNumber={confirmationNumber} clearConfirmationNumber={clearConfirmationNumber} />
+                        <div style={{ padding: '0.2rem' }}>
+                            <HeaderSurveyShortcut
+                                confirmationNumber={confirmationNumber}
+                                clearConfirmationNumber={clearConfirmationNumber}
+                            />
                         </div>
                         <div className="rounded-lg" style={{ padding: '0.2rem' }}>
                             <ChatBot />
                         </div>
-                        {/* Shared Confirmation Number Input */}
-                        <div className="bg-white/10 backdrop-blur-sm rounded-lg px-3 py-1">
-                            <Input
-                                placeholder="ID# or Search Template"
-                                value={confirmationNumber}
-                                onChange={handleConfirmationNumberChange}
-                                className="bg-transparent border-none text-white placeholder-white/60 customInputBox"
-                                style={{
-                                    width: '190px',
-                                    color: 'white',
-                                }}
-                                suffix={
-                                    <CloseOutlined
-                                        className={`transition-opacity ${confirmationNumber
-                                            ? 'opacity-100 cursor-pointer'
-                                            : 'opacity-0 pointer-events-none'
-                                            } text-white/60 hover:text-white text-xs`}
-                                        onClick={clearConfirmationNumber}
+                        {isHydrated && (
+                            <>
+                                {/* Template Search Input */}
+                                <div ref={searchRef} className="bg-white/10 backdrop-blur-sm rounded-lg px-3 py-1" style={{
+                                    position: 'relative',
+                                    zIndex: 1000
+                                }}>
+                                    <Input
+                                        placeholder="ID# or Search Template"
+                                        value={searchValue}
+                                        onChange={(e) => handleSearchChange(e.target.value)}
+                                        // onFocus={() => searchValue && setIsDropdownVisible(true)}
+                                        prefix={<SearchOutlined style={{ color: 'rgba(255, 255, 255, 0.6)' }} />}
+                                        suffix={
+                                            searchValue ? (
+                                                <CloseOutlined
+                                                    onClick={handleClear}
+                                                    style={{
+                                                        color: 'rgba(255, 255, 255, 0.6)',
+                                                        cursor: 'pointer',
+                                                        fontSize: '12px'
+                                                    }}
+                                                />
+                                            ) : null
+                                        }
+                                        className="bg-transparent border-none text-white placeholder-white/60 customInputBox"
+                                        style={{
+                                            width: '190px',
+                                            color: 'white',
+                                        }}
                                     />
-                                }
-                            />
-                        </div>
+
+                                    {isDropdownVisible && (
+                                        <div
+                                            style={{
+                                                position: 'absolute',
+                                                top: 'calc(100% + 4px)',
+                                                right: 0,
+                                                backgroundColor: 'white',
+                                                borderRadius: '8px',
+                                                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                                                maxHeight: '400px',
+                                                overflowY: 'auto',
+                                                zIndex: 9999,
+                                                border: '1px solid #e5e7eb',
+                                                minWidth: '300px'
+                                            }}
+                                        >
+                                            {isLoading ? (
+                                                <div style={{ padding: '20px', textAlign: 'center' }}>
+                                                    <Spin />
+                                                </div>
+                                            ) : filteredTemplates.length > 0 ? (
+                                                <List
+                                                    dataSource={filteredTemplates}
+                                                    renderItem={(template) => {
+                                                        const config = templateConfig[template.type];
+                                                        return (
+                                                          <List.Item
+    onMouseDown={(e) => {
+        e.preventDefault(); // Prevent focus issues
+        handleTemplateSelect(template);
+    }}
+    style={{
+        cursor: 'pointer',
+        padding: '12px 16px',
+        borderBottom: '1px solid #f0f0f0',
+        transition: 'background-color 0.2s'
+    }}
+    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f5f5f5'}
+    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
+>
+    <List.Item.Meta
+        avatar={
+            <div style={{
+                fontSize: '24px',
+                color: config.color,
+                display: 'flex',
+                alignItems: 'center'
+            }}>
+                {config.icon}
+            </div>
+        }
+        title={
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontWeight: 600 }}>{template.tag}</span>
+                <Tag color={config.color} style={{ margin: 0 }}>
+                    {config.label}
+                </Tag>
+            </div>
+        }
+    />
+</List.Item>
+                                                        );
+                                                    }}
+                                                />
+                                            ) : (
+                                                <Empty
+                                                    image={Empty.PRESENTED_IMAGE_SIMPLE}
+                                                    description="No templates found"
+                                                    style={{ padding: '20px' }}
+                                                />
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            </>
+                        )}
+
                     </div>
                 </div>
             </nav>
@@ -164,7 +606,6 @@ const ClientHeader = () => {
                 }}
             >
                 <div className="space-y-6">
-                    {/* Language Section */}
                     <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
                         <div className="flex items-center gap-2 mb-4">
                             <div className="w-2 h-2 rounded-full" style={{ backgroundColor: '#3b5998' }}></div>
@@ -186,7 +627,6 @@ const ClientHeader = () => {
                         </div>
                     </div>
 
-                    {/* Template Section */}
                     <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
                         <div className="flex items-center gap-2 mb-4">
                             <div className="w-2 h-2 rounded-full" style={{ backgroundColor: '#3b5998' }}></div>
@@ -200,7 +640,6 @@ const ClientHeader = () => {
                         </div>
                     </div>
 
-                    {/* Station Section */}
                     <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
                         <div className="flex items-center gap-2 mb-4">
                             <div className="w-2 h-2 rounded-full" style={{ backgroundColor: '#3b5998' }}></div>
@@ -214,7 +653,6 @@ const ClientHeader = () => {
                         </div>
                     </div>
 
-                    {/* Action Buttons */}
                     <div className="pt-6 space-y-3">
                         <Button
                             type="primary"
@@ -277,7 +715,6 @@ const ClientHeader = () => {
                 }}
             >
                 <div className="space-y-4">
-                    {/* Shared Input in Mobile Drawer */}
                     <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
                         <h3 className="text-base font-semibold text-gray-800 mb-3">Confirmation Number</h3>
                         <Input
@@ -299,7 +736,10 @@ const ClientHeader = () => {
                     <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
                         <h3 className="text-base font-semibold text-gray-800 mb-3">Quick Actions</h3>
                         <div className="flex gap-2">
-                            <HeaderSurveyShortcut confirmationNumber={confirmationNumber} clearConfirmationNumber={clearConfirmationNumber} />
+                            <HeaderSurveyShortcut
+                                confirmationNumber={confirmationNumber}
+                                clearConfirmationNumber={clearConfirmationNumber}
+                            />
                         </div>
                     </div>
 

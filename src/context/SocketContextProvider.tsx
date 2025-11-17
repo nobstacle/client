@@ -16,7 +16,7 @@ import {
   SendLangCodeMessagePayloadType,
   SendJotFormTemplate,
   ReceivedResponseType,
-  
+
 } from "../constant/types";
 import { useMessageStore } from "../lib/zustand/store/messageStore";
 import useTemplateStore from "../lib/zustand/store/templateStore";
@@ -108,7 +108,7 @@ export const SocketContextProvider = ({
     setReceivedLangCode,
     setReceivedRecording,
     setReceivedResponse,
-    
+
   } = useMessageStore();
 
   const { addSurveyAnswer } = useTemplateStore();
@@ -117,12 +117,24 @@ export const SocketContextProvider = ({
   const params = useSearchParams();
 
   // Initialize socket connection
+  // In SocketContextProvider, modify the useEffect:
   useEffect(() => {
     if (session.data?.user.backendTokens.at) {
       const socketC = socket(
         session.data?.user.backendTokens.at ?? "",
-      ).connect();
+      );
+
+      // Set socket client immediately
       setSocketClient(socketC);
+
+      // Then connect
+      socketC.connect();
+
+      // Listen for connection
+      socketC.on("connect", () => {
+        console.log("✅ Socket connected successfully");
+        setSocketConnected(true);
+      });
     }
   }, [session.data?.user.backendTokens.at]);
 
@@ -231,34 +243,6 @@ export const SocketContextProvider = ({
       console.error("❌ Raw data that caused error:", data);
     }
   };
-
-  // const onDocumentSentSuccessfully = (data: any) => {
-  //   console.log("📄 Document sent successfully:", data);
-
-  //   try {
-  //     const parsedRes = JSON.parse(data);
-  //     if (parsedRes.status === 400) {
-  //       console.warn("⚠️ Document send response has error:", parsedRes);
-  //       return;
-  //     }
-
-  //     console.log("✅ Document sent successfully:", parsedRes);
-
-  //     // If you need to trigger a template emission after document is sent, do it here
-  //     if (parsedRes.data) {
-  //       // Emit send-template instead of received-template
-  //       emitSendTemplate({
-  //         refId: parsedRes.data.id,
-  //         refType: 'Document',
-  //         station: parsedRes.data.station,
-  //         langCode: parsedRes.data.langCode || 'en'
-  //       });
-  //     }
-
-  //   } catch (error) {
-  //     console.error("❌ Error parsing document send response:", error);
-  //   }
-  // };
 
   const onReceivedMessage = (data: any) => {
     try {
@@ -381,20 +365,19 @@ export const SocketContextProvider = ({
     }
   };
 
-const onSubmittedRecordings = (data: any) => {
-  try {
-    console.log("📊 Recording submitted (raw):", data);
-    
-    // Parse if it's a string, otherwise use as-is
-    const parsedData = typeof data === 'string' ? JSON.parse(data) : data;
-    
-    console.log("📊 Recording submitted (parsed):", parsedData);
-    
-    setReceivedRecording(parsedData);
-  } catch (error) {
-    console.error("❌ Failed to parse recording data:", error);
-  }
-};
+  const onSubmittedRecordings = (data: any) => {
+    try {
+
+      // Parse if it's a string, otherwise use as-is
+      const parsedData = typeof data === 'string' ? JSON.parse(data) : data;
+
+      console.log("📊 Recording submitted (parsed):", parsedData);
+
+      setReceivedRecording(parsedData);
+    } catch (error) {
+      console.error("❌ Failed to parse recording data:", error);
+    }
+  };
 
   // Setup socket event listeners
   useEffect(() => {
@@ -451,9 +434,22 @@ const onSubmittedRecordings = (data: any) => {
   }, [socketClient, params]);
 
   // Emit functions
+  // In SocketContextProvider.tsx
   const emitSendTemplate = (data: SendTemplatePayloadType) => {
-    if (!socketClient || !socketClient.connected) {
-      console.error("❌ Socket is not connected!");
+
+    if (!socketClient) {
+      console.error("❌ Socket client not initialized!");
+      return;
+    }
+
+    if (!socketClient.connected) {
+      socketClient.connect();
+
+      // Wait for connection before emitting
+      socketClient.once("connect", () => {
+        console.log("✅ Socket reconnected, now emitting template");
+        socketClient.emit("send-template", data);
+      });
       return;
     }
 

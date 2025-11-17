@@ -1187,6 +1187,8 @@ export const Content: React.FC = () => {
     }
   };
 
+  console.info("Rendering Content component with message type:", messageStore.receivedType);
+
   if (hasHydrated) {
     if (
       messageStore.receivedType === "TextTemplateMessage" ||
