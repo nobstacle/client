@@ -469,7 +469,7 @@ const handleTemplateSelect = useCallback((template) => {
                                         value={searchValue}
                                         onChange={(e) => handleSearchChange(e.target.value)}
                                         // onFocus={() => searchValue && setIsDropdownVisible(true)}
-                                        prefix={<SearchOutlined style={{ color: 'rgba(255, 255, 255, 0.6)' }} />}
+                                        // prefix={<SearchOutlined style={{ color: 'rgba(255, 255, 255, 0.6)' }} />}
                                         suffix={
                                             searchValue ? (
                                                 <CloseOutlined
