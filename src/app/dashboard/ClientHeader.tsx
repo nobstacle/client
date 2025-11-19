@@ -36,20 +36,22 @@ import {
     IoPeople,
     IoSettings
 } from 'react-icons/io5';
+import { drop } from "lodash";
 
 const ClientHeader = () => {
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [shortcutMenuOpen, setShortcutMenuOpen] = useState(false);
     const [confirmationNumber, setConfirmationNumber] = useState("");
     const [searchValue, setSearchValue] = useState('');
+    const [selectedTemplate, setSelectedTemplate] = useState(null);
     const [isDropdownVisible, setIsDropdownVisible] = useState(false);
     const [filteredTemplates, setFilteredTemplates] = useState([]);
     const searchRef = useRef(null);
     const inputRef = useRef(null); // Add ref for input
     const params = useSearchParams();
     const { emitSendTemplate, socketConnected } = useSocketContext();
-    const [debouncedSearch, setDebouncedSearch] = useState('');
-    const confirmationTimeoutRef = useRef(null); // Ref to store timeout
+    const debounceTimerRef = useRef(null);
+    const confirmationTimerRef = useRef(null);
 
     // Get company data with proper caching
     const { data: companyData } = useCompanyControllerGetCompany({
@@ -299,56 +301,77 @@ const ClientHeader = () => {
         selectedLang
     ]);
 
-    // Separate debounce effect for search
+    // REPLACE the existing debounce effect with:
     useEffect(() => {
         const timer = setTimeout(() => {
-            setSearchValue(debouncedSearch);
-        }, 500);
+            const searchLower = searchValue.toLowerCase().trim();
+            if (!searchValue.trim()) {
+                setFilteredTemplates([]);
+                setIsDropdownVisible(false);
+                return;
+            }
+
+            const filtered = allTemplates.filter(template =>
+                template.tag.toLowerCase().includes(searchLower)
+            );
+
+            setFilteredTemplates(filtered);
+            setIsDropdownVisible(!isDropdownVisible && selectedTemplate === null);
+        }, 300);
 
         return () => clearTimeout(timer);
-    }, [debouncedSearch]);
+    }, [searchValue, allTemplates]);
 
-    // Separate effect for confirmation number that doesn't interfere with input
+    // Template filtering with debounce
     useEffect(() => {
-        // Clear previous timeout
-        if (confirmationTimeoutRef.current) {
-            clearTimeout(confirmationTimeoutRef.current);
+        if (debounceTimerRef.current) {
+            clearTimeout(debounceTimerRef.current);
         }
 
-        // Set new timeout
-        confirmationTimeoutRef.current = setTimeout(() => {
-            const isNumeric = /^\d+$/.test(searchValue);
-
-            if (isNumeric && searchValue) {
-                setConfirmationNumber(searchValue);
-            } else if (!searchValue) {
-                setConfirmationNumber("");
-            }
-        }, 1000);
-
-        return () => {
-            if (confirmationTimeoutRef.current) {
-                clearTimeout(confirmationTimeoutRef.current);
-            }
-        };
-    }, [searchValue]);
-
-    // Filter templates based on search
-    useEffect(() => {
-        if (!debouncedSearch.trim()) {
+        if (!searchValue.trim()) {
             setFilteredTemplates([]);
             setIsDropdownVisible(false);
             return;
         }
 
-        const searchLower = debouncedSearch.toLowerCase().trim();
-        const filtered = allTemplates.filter(template =>
-            template.tag.toLowerCase().includes(searchLower)
-        );
+        debounceTimerRef.current = setTimeout(() => {
+            const searchLower = searchValue.toLowerCase().trim();
+            const filtered = allTemplates.filter(template =>
+                template.tag.toLowerCase().includes(searchLower)
+            );
 
-        setFilteredTemplates(filtered);
-        setIsDropdownVisible(filtered.length > 0);
-    }, [debouncedSearch, allTemplates]);
+            setFilteredTemplates(filtered);
+            setIsDropdownVisible(!isDropdownVisible && selectedTemplate === null);
+        }, 300);
+
+        return () => {
+            if (debounceTimerRef.current) {
+                clearTimeout(debounceTimerRef.current);
+            }
+        };
+    }, [searchValue, allTemplates]);
+
+    // Confirmation number detection (separate from search)
+    useEffect(() => {
+        if (confirmationTimerRef.current) {
+            clearTimeout(confirmationTimerRef.current);
+        }
+
+        confirmationTimerRef.current = setTimeout(() => {
+            const isNumeric = /^\d+$/.test(searchValue);
+            if (isNumeric && searchValue) {
+                setConfirmationNumber(searchValue);
+            } else if (!searchValue) {
+                setConfirmationNumber("");
+            }
+        }, 1500);
+
+        return () => {
+            if (confirmationTimerRef.current) {
+                clearTimeout(confirmationTimerRef.current);
+            }
+        };
+    }, [searchValue]);
 
     // Handle click outside to close dropdown
     useEffect(() => {
@@ -379,9 +402,8 @@ const ClientHeader = () => {
     }, []);
 
     const handleTemplateSelect = useCallback((template) => {
-        // Set the selected template tag in the input
-        setDebouncedSearch(template.tag);
         setSearchValue(template.tag);
+        setSelectedTemplate(template.id);
 
         if (!socketConnected) {
             message.warning('Connection not ready, please try again in a moment');
@@ -420,20 +442,18 @@ const ClientHeader = () => {
 
     const handleClear = useCallback(() => {
         setSearchValue('');
-        setDebouncedSearch('');
         setFilteredTemplates([]);
         setIsDropdownVisible(false);
         setConfirmationNumber("");
-    }, []);
-
-    const handleSearchChange = useCallback((e) => {
-        const value = e.target.value;
-        setDebouncedSearch(value);
-
-        // Ensure input keeps focus
-        if (inputRef.current && document.activeElement !== inputRef.current) {
+        setSelectedTemplate(null);
+        if (inputRef.current) {
             inputRef.current.focus();
         }
+    }, []);
+
+    // REPLACE with:
+    const handleSearchChange = useCallback((e) => {
+        setSearchValue(e.target.value);
     }, []);
 
     return (
@@ -495,16 +515,16 @@ const ClientHeader = () => {
                             <ChatBot />
                         </div>
                         {/* Template Search Input */}
-                        <div ref={searchRef} className="bg-white/10 backdrop-blur-sm rounded-lg px-3 py-1" style={{
+                        {/* <div ref={searchRef} className="bg-white/10 backdrop-blur-sm rounded-lg px-3 py-1" style={{
                             position: 'relative',
                             zIndex: 1000
                         }}>
                             <Input
                                 ref={inputRef}
                                 placeholder="ID# or Search Template"
-                                value={debouncedSearch}
+                                value={searchValue}  // Changed from debouncedSearch
                                 onChange={handleSearchChange}
-                                onFocus={() => debouncedSearch && setIsDropdownVisible(true)}
+                                onFocus={() => searchValue && filteredTemplates.length > 0 && setIsDropdownVisible(true)}
                                 suffix={
                                     searchValue ? (
                                         <CloseOutlined
@@ -526,6 +546,123 @@ const ClientHeader = () => {
                                     color: 'white',
                                 }}
                             />
+                            {isDropdownVisible && (
+                                <div
+                                    style={{
+                                        position: 'absolute',
+                                        top: 'calc(100% + 4px)',
+                                        right: 0,
+                                        backgroundColor: 'white',
+                                        borderRadius: '8px',
+                                        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                                        maxHeight: '400px',
+                                        overflowY: 'auto',
+                                        zIndex: 9999,
+                                        border: '1px solid #e5e7eb',
+                                        minWidth: '300px'
+                                    }}
+                                >
+                                    {isLoading ? (
+                                        <div style={{ padding: '20px', textAlign: 'center' }}>
+                                            <Spin />
+                                        </div>
+                                    ) : filteredTemplates.length > 0 ? (
+                                        <List
+                                            dataSource={filteredTemplates}
+                                            renderItem={(template) => {
+                                                const config = templateConfig[template.type];
+                                                return (
+                                                    <List.Item
+                                                        onMouseDown={(e) => {
+                                                            e.preventDefault();
+                                                            handleTemplateSelect(template);
+                                                        }}
+                                                        style={{
+                                                            cursor: 'pointer',
+                                                            padding: '12px 16px',
+                                                            borderBottom: '1px solid #f0f0f0',
+                                                            transition: 'background-color 0.2s'
+                                                        }}
+                                                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f5f5f5'}
+                                                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
+                                                    >
+                                                        <List.Item.Meta
+                                                            avatar={
+                                                                <div style={{
+                                                                    fontSize: '24px',
+                                                                    color: config.color,
+                                                                    display: 'flex',
+                                                                    alignItems: 'center'
+                                                                }}>
+                                                                    {config.icon}
+                                                                </div>
+                                                            }
+                                                            title={
+                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                                    <span>{template.tag}</span>
+                                                                </div>
+                                                            }
+                                                        />
+                                                    </List.Item>
+                                                );
+                                            }}
+                                        />
+                                    ) : (
+                                        <Empty
+                                            image={Empty.PRESENTED_IMAGE_SIMPLE}
+                                            description="No templates found"
+                                            style={{ padding: '20px' }}
+                                        />
+                                    )}
+                                </div>
+                            )}
+                        </div> */}
+                        {/* Template Search Input */}
+                        <div ref={searchRef} className="bg-white/10 backdrop-blur-sm rounded-lg px-3 py-1" style={{
+                            position: 'relative',
+                            zIndex: 1000
+                        }}>
+                            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                                <input
+                                    ref={inputRef}
+                                    type="text"
+                                    placeholder="ID# or Search Template"
+                                    value={searchValue}
+                                    onChange={handleSearchChange}
+                                    onFocus={() => {
+                                        if (searchValue && filteredTemplates.length > 0) {
+                                            setIsDropdownVisible(true);
+                                        }
+                                    }}
+                                    style={{
+                                        width: '190px',
+                                        color: 'white',
+                                        backgroundColor: 'transparent',
+                                        border: 'none',
+                                        outline: 'none',
+                                        fontSize: '14px',
+                                        padding: '4px 24px 4px 0',
+                                        caretColor: 'white',
+                                    }}
+                                    className="placeholder-white/60"
+                                />
+                                {searchValue && (
+                                    <CloseOutlined
+                                        onMouseDown={(e) => {
+                                            e.preventDefault();
+                                            handleClear();
+                                        }}
+                                        style={{
+                                            position: 'absolute',
+                                            right: 0,
+                                            color: 'rgba(255, 255, 255, 0.6)',
+                                            cursor: 'pointer',
+                                            fontSize: '12px',
+                                            padding: '4px'
+                                        }}
+                                    />
+                                )}
+                            </div>
 
                             {isDropdownVisible && (
                                 <div
