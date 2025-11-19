@@ -43,7 +43,6 @@ const ClientHeader = () => {
     const [shortcutMenuOpen, setShortcutMenuOpen] = useState(false);
     const [confirmationNumber, setConfirmationNumber] = useState("");
     const [searchValue, setSearchValue] = useState('');
-    const [selectedTemplate, setSelectedTemplate] = useState(null);
     const [isDropdownVisible, setIsDropdownVisible] = useState(false);
     const [filteredTemplates, setFilteredTemplates] = useState([]);
     const searchRef = useRef(null);
@@ -52,6 +51,7 @@ const ClientHeader = () => {
     const { emitSendTemplate, socketConnected } = useSocketContext();
     const debounceTimerRef = useRef(null);
     const confirmationTimerRef = useRef(null);
+    const justSelectedRef = useRef(false);
 
     // Get company data with proper caching
     const { data: companyData } = useCompanyControllerGetCompany({
@@ -302,25 +302,25 @@ const ClientHeader = () => {
     ]);
 
     // REPLACE the existing debounce effect with:
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            const searchLower = searchValue.toLowerCase().trim();
-            if (!searchValue.trim()) {
-                setFilteredTemplates([]);
-                setIsDropdownVisible(false);
-                return;
-            }
+    // useEffect(() => {
+    //     const timer = setTimeout(() => {
+    //         const searchLower = searchValue.toLowerCase().trim();
+    //         if (!searchValue.trim()) {
+    //             setFilteredTemplates([]);
+    //             setIsDropdownVisible(false);
+    //             return;
+    //         }
 
-            const filtered = allTemplates.filter(template =>
-                template.tag.toLowerCase().includes(searchLower)
-            );
+    //         const filtered = allTemplates.filter(template =>
+    //             template.tag.toLowerCase().includes(searchLower)
+    //         );
 
-            setFilteredTemplates(filtered);
-            setIsDropdownVisible(!isDropdownVisible && selectedTemplate === null);
-        }, 300);
+    //         setFilteredTemplates(filtered);
+    //         setIsDropdownVisible(!isDropdownVisible && selectedTemplate === null);
+    //     }, 300);
 
-        return () => clearTimeout(timer);
-    }, [searchValue, allTemplates]);
+    //     return () => clearTimeout(timer);
+    // }, [searchValue, allTemplates]);
 
     // Template filtering with debounce
     useEffect(() => {
@@ -341,7 +341,7 @@ const ClientHeader = () => {
             );
 
             setFilteredTemplates(filtered);
-            setIsDropdownVisible(!isDropdownVisible && selectedTemplate === null);
+            setIsDropdownVisible(filtered.length > 0);
         }, 300);
 
         return () => {
@@ -402,8 +402,9 @@ const ClientHeader = () => {
     }, []);
 
     const handleTemplateSelect = useCallback((template) => {
+        justSelectedRef.current = true;
         setSearchValue(template.tag);
-        setSelectedTemplate(template.id);
+        setIsDropdownVisible(false);
 
         if (!socketConnected) {
             message.warning('Connection not ready, please try again in a moment');
@@ -436,7 +437,10 @@ const ClientHeader = () => {
             contentExtra: template?.templateData?.ext,
         });
 
-        // Close dropdown after selection
+        setTimeout(() => {
+            justSelectedRef.current = false;
+        }, 100);
+
         setIsDropdownVisible(false);
     }, [socketConnected, emitSendTemplate, params, companyData]);
 
@@ -445,7 +449,7 @@ const ClientHeader = () => {
         setFilteredTemplates([]);
         setIsDropdownVisible(false);
         setConfirmationNumber("");
-        setSelectedTemplate(null);
+        justSelectedRef.current = false; // Reset flag
         if (inputRef.current) {
             inputRef.current.focus();
         }
@@ -630,7 +634,11 @@ const ClientHeader = () => {
                                     value={searchValue}
                                     onChange={handleSearchChange}
                                     onFocus={() => {
-                                        if (searchValue && filteredTemplates.length > 0) {
+                                        // Don't open if we just selected something
+                                        if (justSelectedRef.current) {
+                                            return;
+                                        }
+                                        if (searchValue.trim() && filteredTemplates.length > 0) {
                                             setIsDropdownVisible(true);
                                         }
                                     }}
