@@ -1187,7 +1187,6 @@ export const Content: React.FC = () => {
     }
   };
 
-  console.info("Rendering Content component with message type:", messageStore.receivedType);
 
   if (hasHydrated) {
     if (
@@ -1633,57 +1632,72 @@ export const Content: React.FC = () => {
       )
     }
 
-    if (messageStore.receivedType === "Video") {
-      return (
-        messageStore.receivedContent?.directContent === 'QR' ? (
-          <Card>
-            <img
-              src={qrCodeUrl}
-              alt="QR Code"
-              className="w-96 h-96 object-cover"
-            />
-          </Card>
-        ) : (
-          <div
-            style={{
-              position: 'fixed',
-              top: 0,
-              left: 0,
-              width: '100vw',
-              height: '100vh',
-              overflow: 'hidden',
-              zIndex: 9,
-              pointerEvents: 'none',
-              backgroundColor: 'black',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <video
-              ref={videoElement}
-              autoPlay
-              loop
-              playsInline
-              key={messageStore.receivedContent?.content ?? ""}
-              style={{
-                maxWidth: '100%',
-                maxHeight: '100%',
-                width: 'auto',
-                height: 'auto',
-                objectFit: 'contain',
-                display: 'block',
-              }}
-            >
-              <source
-                src={messageStore.receivedContent?.content ?? ""}
-                type="video/mp4"
-              />
-            </video>
-          </div>
-        )
-      );
-    }
+if (messageStore.receivedType === "Video") {
+  return (
+    messageStore.receivedContent?.directContent === 'QR' ? (
+      <Card>
+        <img
+          src={qrCodeUrl}
+          alt="QR Code"
+          className="w-96 h-96 object-cover"
+        />
+      </Card>
+    ) : (
+      <div
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: '100vh',
+          overflow: 'hidden',
+          zIndex: 9,
+          pointerEvents: 'none',
+          backgroundColor: 'black',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <video
+          ref={videoElement}
+          autoPlay
+          muted 
+          loop
+          playsInline
+          preload="auto" // Ensure video is preloaded
+          key={messageStore.receivedContent?.content ?? ""}
+          onLoadedData={() => {
+            // Force play when video data is loaded
+            if (videoElement.current) {
+              videoElement.current.play().catch(err => {
+                console.error("Video play failed:", err);
+              });
+            }
+          }}
+          onError={(e) => {
+            console.error("Video error:", e);
+            console.error("Failed to load video:", messageStore.receivedContent?.content);
+          }}
+          style={{
+            maxWidth: '100%',
+            maxHeight: '100%',
+            width: 'auto',
+            height: 'auto',
+            objectFit: 'contain',
+            display: 'block',
+          }}
+        >
+          <source
+            src={messageStore.receivedContent?.content ?? ""}
+            type="video/mp4"
+          />
+          Your browser does not support the video tag.
+        </video>
+      </div>
+    )
+  );
+}
 
     if (messageStore.receivedType === "Slideshow") {
       return (

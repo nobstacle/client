@@ -1,6 +1,6 @@
 "use client";
-import { useEffect, useState, useMemo } from "react";
-import { useSearchParams } from "next/navigation";
+import { useEffect, useState, useMemo, useRef } from "react";
+import { useSearchParams, usePathname } from "next/navigation";
 import { useDisclousure } from "../../../hooks/useDisclosure";
 import { PlusIcon } from "../../../components/icons/PlusIcon";
 import Modal from "../../../components/Modal";
@@ -19,7 +19,7 @@ import { useTeamDocumentControllerDeleteDocumentOne, useCompanyControllerGetComp
 import { toast } from 'react-toastify';
 import useTemplateStore from "../../../lib/zustand/store/templateStore";
 import { useSearchDocument } from "../../../hooks/useSearchDocument";
-import { Card } from "antd";
+import { Card, Spin } from "antd";
 import {
     AiFillFilePdf,
     AiFillFileWord,
@@ -32,11 +32,17 @@ import "../../../styles/base.css";
 export default function DocumentDownload() {
     const { data } = useSession();
     const params = useSearchParams();
+    const pathname = usePathname();
     const { handleClose, handleOpen, isOpen } = useDisclousure();
     const [responses, setResponses] = useState([]);
     const [selectedDocument, setSelectedDocument] = useState(null);
     const [modalType, setModalType] = useState<'create' | 'update'>('create');
     const [isMounted, setIsMounted] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
+    const [minimumLoadingTime, setMinimumLoadingTime] = useState(true);
+    const hasLoadedOnce = useRef(false);
+    const previousPathname = useRef(pathname);
+    
     const {
         documents,
         setDocuments,
@@ -50,7 +56,19 @@ export default function DocumentDownload() {
 
     useEffect(() => {
         setIsMounted(true);
-    }, []);
+        
+        // Only set minimum loading time on first load or route change
+        if (!hasLoadedOnce.current || previousPathname.current !== pathname) {
+            setMinimumLoadingTime(true);
+            const timer = setTimeout(() => {
+                setMinimumLoadingTime(false);
+                hasLoadedOnce.current = true;
+            }, 2000);
+
+            previousPathname.current = pathname;
+            return () => clearTimeout(timer);
+        }
+    }, [pathname]);
 
     const filterDocumentsByLanguage = (docs) => {
         const selectedLang = params.get("lang") || companyData?.defaultLangCode || "en";
@@ -83,6 +101,11 @@ export default function DocumentDownload() {
 
     const fetchDocuments = () => {
         if (data?.user.backendTokens.at) {
+            // Only show loading on first load or route change
+            if (!hasLoadedOnce.current || previousPathname.current !== pathname) {
+                setIsLoading(true);
+            }
+            
             fetch(`${Url}/api/v1/template/team-documents`, {
                 headers: { Authorization: `Bearer ${data?.user.backendTokens.at}` },
             })
@@ -94,8 +117,12 @@ export default function DocumentDownload() {
                     const filteredData = filterDocumentsByLanguage(data);
                     setResponses(filteredData);
                     setDocuments(filteredData);
+                    setIsLoading(false);
                 })
-                .catch((error) => console.error("Error fetching data:", error));
+                .catch((error) => {
+                    console.error("Error fetching data:", error);
+                    setIsLoading(false);
+                });
         }
     }
 
@@ -121,12 +148,10 @@ export default function DocumentDownload() {
         }
     });
 
-    // Function to handle document deletion
     const onDeleteDocument = (id: number) => {
         deleteDocument({ id });
     };
 
-    // Enhanced function to handle document update
     const onUpdateDocument = (document: any) => {
         const updatedDocument = {
             ...document,
@@ -138,22 +163,20 @@ export default function DocumentDownload() {
         handleOpen();
     };
 
-    // Function to handle creating new document
     const onCreateDocument = () => {
         setSelectedDocument(null);
         setModalType('create');
         handleOpen();
     };
 
-    // Enhanced modal close handler
     const handleModalClose = () => {
         handleClose();
         setSelectedDocument(null);
         setModalType('create');
     };
 
-        const updateDocumentTemplateOrder =
-            useTeamDocumentTemplateControllerPatchDocumentTemplateOrder();
+    const updateDocumentTemplateOrder =
+        useTeamDocumentTemplateControllerPatchDocumentTemplateOrder();
 
     const sortDocuments = async (item1: UniqueIdentifier, item2: UniqueIdentifier) => {
         const setResource = searchDocuments.length > 0 ? setSearchDocuments : setResponses;
@@ -250,6 +273,20 @@ export default function DocumentDownload() {
 
     if (!isMounted) {
         return null;
+    }
+
+    // Show loader only on first load or route change, not on tab switches
+    const shouldShowLoader = (isLoading || minimumLoadingTime) && (!hasLoadedOnce.current || previousPathname.current !== pathname);
+
+    if (shouldShowLoader) {
+        return (
+            <div className="h-full flex items-center justify-center">
+                <div className="flex flex-col items-center gap-4">
+                    <Spin size="large" />
+                    <p className="text-gray-600 text-lg">Loading team documents...</p>
+                </div>
+            </div>
+        );
     }
 
     return (
