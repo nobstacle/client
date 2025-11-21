@@ -116,13 +116,13 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
             icon: <IoSpeedometer size={18} />,
             iconColor: "white"
         },
-        // {
-        //     title: "Recordings",
-        //     href: "/dashboard/recordings",
-        //     roles: ["Admin", "User", "Staff"],
-        //     icon: <IoRecordingSharp size={18} />,
-        //     iconColor: "white"
-        // },
+        {
+            title: "Recordings",
+            href: "/dashboard/recordings",
+            roles: ["Admin", "User", "Staff"],
+            icon: <IoRecordingSharp size={18} />,
+            iconColor: "white"
+        },
         {
             title: "Upsell",
             href: "/dashboard/upsell",
@@ -250,41 +250,41 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
         );
     };
 
-const renderTeamItem = (item: TeamItem) => {
-    if (item.roles && !hasAccess(item.roles)) return null;
+    const renderTeamItem = (item: TeamItem) => {
+        if (item.roles && !hasAccess(item.roles)) return null;
 
-    const isActive = item.href === pathname;
-    
-    const handleClick = (e: React.MouseEvent) => {
-        if (item.href === '/dashboard/documentDownload') {
-            e.preventDefault();
-            closeSidebar();
-            window.location.href = item.href;
-        } else {
-            closeSidebar();
-        }
-    };
+        const isActive = item.href === pathname;
 
-    return (
-        <li key={item.title} className="w-full" onClick={handleClick}>
-            <div
-                className={`
+        const handleClick = (e: React.MouseEvent) => {
+            if (item.href === '/dashboard/documentDownload') {
+                e.preventDefault();
+                closeSidebar();
+                window.location.href = item.href;
+            } else {
+                closeSidebar();
+            }
+        };
+
+        return (
+            <li key={item.title} className="w-full" onClick={handleClick}>
+                <div
+                    className={`
                     flex items-center pl-10 pr-0 py-2.5 pr-2 transition-colors duration-200 cursor-pointer
                     ${isActive
-                        ? 'bg-white/10 text-white border-l-4 border-white'
-                        : 'text-white/80 hover:bg-white/5 hover:text-white border-l-4 border-transparent'
-                    }
+                            ? 'bg-white/10 text-white border-l-4 border-white'
+                            : 'text-white/80 hover:bg-white/5 hover:text-white border-l-4 border-transparent'
+                        }
                 `}
-            >
-                <ClientLink
-                    href={item.href}
-                    title={item.title}
-                    className="flex-1 text-sm font-normal"
-                />
-            </div>
-        </li>
-    );
-};
+                >
+                    <ClientLink
+                        href={item.href}
+                        title={item.title}
+                        className="flex-1 text-sm font-normal"
+                    />
+                </div>
+            </li>
+        );
+    };
 
     const renderSettingsItem = (item: SettingsItem) => {
         if (item.roles && !hasAccess(item.roles)) return null;

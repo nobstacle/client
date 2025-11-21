@@ -9,6 +9,7 @@ import { TemplateShortcutPicker } from "../../components/pages/dashboard/Header/
 import { StationPicker } from "../../components/pages/dashboard/Header/StationPicker";
 import { ChatBot } from "../../components/pages/dashboard/Header/chatBot";
 import { HeaderSurveyShortcut } from "../../components/pages/dashboard/Header/SurveyPicker";
+import { HeaderRecordingShortcut } from "../../components/pages/dashboard/Header/SendRecording";
 import {
     useTemplateControllerGetTextTemplates,
     useTemplateControllerGetImageTemplates,
@@ -36,7 +37,6 @@ import {
     IoPeople,
     IoSettings
 } from 'react-icons/io5';
-import { drop } from "lodash";
 
 const ClientHeader = () => {
     const [drawerOpen, setDrawerOpen] = useState(false);
@@ -516,111 +516,12 @@ const ClientHeader = () => {
                             />
                         </div>
                         <div className="rounded-lg" style={{ padding: '0.2rem' }}>
+                            <HeaderRecordingShortcut confirmationNumber={confirmationNumber} clearConfirmationNumber={clearConfirmationNumber} />
+                        </div>
+                        <div className="rounded-lg" style={{ padding: '0.2rem' }}>
                             <ChatBot />
                         </div>
-                        {/* Template Search Input */}
-                        {/* <div ref={searchRef} className="bg-white/10 backdrop-blur-sm rounded-lg px-3 py-1" style={{
-                            position: 'relative',
-                            zIndex: 1000
-                        }}>
-                            <Input
-                                ref={inputRef}
-                                placeholder="ID# or Search Template"
-                                value={searchValue}  // Changed from debouncedSearch
-                                onChange={handleSearchChange}
-                                onFocus={() => searchValue && filteredTemplates.length > 0 && setIsDropdownVisible(true)}
-                                suffix={
-                                    searchValue ? (
-                                        <CloseOutlined
-                                            onMouseDown={(e) => {
-                                                e.preventDefault();
-                                                handleClear();
-                                            }}
-                                            style={{
-                                                color: 'rgba(255, 255, 255, 0.6)',
-                                                cursor: 'pointer',
-                                                fontSize: '12px'
-                                            }}
-                                        />
-                                    ) : null
-                                }
-                                className="bg-transparent border-none text-white placeholder-white/60 customInputBox"
-                                style={{
-                                    width: '190px',
-                                    color: 'white',
-                                }}
-                            />
-                            {isDropdownVisible && (
-                                <div
-                                    style={{
-                                        position: 'absolute',
-                                        top: 'calc(100% + 4px)',
-                                        right: 0,
-                                        backgroundColor: 'white',
-                                        borderRadius: '8px',
-                                        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                                        maxHeight: '400px',
-                                        overflowY: 'auto',
-                                        zIndex: 9999,
-                                        border: '1px solid #e5e7eb',
-                                        minWidth: '300px'
-                                    }}
-                                >
-                                    {isLoading ? (
-                                        <div style={{ padding: '20px', textAlign: 'center' }}>
-                                            <Spin />
-                                        </div>
-                                    ) : filteredTemplates.length > 0 ? (
-                                        <List
-                                            dataSource={filteredTemplates}
-                                            renderItem={(template) => {
-                                                const config = templateConfig[template.type];
-                                                return (
-                                                    <List.Item
-                                                        onMouseDown={(e) => {
-                                                            e.preventDefault();
-                                                            handleTemplateSelect(template);
-                                                        }}
-                                                        style={{
-                                                            cursor: 'pointer',
-                                                            padding: '12px 16px',
-                                                            borderBottom: '1px solid #f0f0f0',
-                                                            transition: 'background-color 0.2s'
-                                                        }}
-                                                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f5f5f5'}
-                                                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
-                                                    >
-                                                        <List.Item.Meta
-                                                            avatar={
-                                                                <div style={{
-                                                                    fontSize: '24px',
-                                                                    color: config.color,
-                                                                    display: 'flex',
-                                                                    alignItems: 'center'
-                                                                }}>
-                                                                    {config.icon}
-                                                                </div>
-                                                            }
-                                                            title={
-                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                                    <span>{template.tag}</span>
-                                                                </div>
-                                                            }
-                                                        />
-                                                    </List.Item>
-                                                );
-                                            }}
-                                        />
-                                    ) : (
-                                        <Empty
-                                            image={Empty.PRESENTED_IMAGE_SIMPLE}
-                                            description="No templates found"
-                                            style={{ padding: '20px' }}
-                                        />
-                                    )}
-                                </div>
-                            )}
-                        </div> */}
+
                         {/* Template Search Input */}
                         <div ref={searchRef} className="bg-white/10 backdrop-blur-sm rounded-lg px-3 py-1" style={{
                             position: 'relative',
