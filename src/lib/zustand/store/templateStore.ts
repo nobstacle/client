@@ -49,6 +49,10 @@ interface BearState {
   setDocuments: (documents: any[]) => void;
   searchDocuments: any[];
   setSearchDocuments: (documents: any[]) => void;
+  teamDocuments: any[];
+  setTeamDocuments: (documents: any[]) => void;
+  searchTeamDocuments: any[];
+  setSearchTeamDocuments: (documents: any[]) => void;
   // Add package-related state
   packages: any[];
   setPackages: (packages: any[]) => void;
@@ -104,6 +108,10 @@ const useTemplateStore = create<BearState>()(
       setDocuments: (documents) => set(() => ({ documents })),
       searchDocuments: [],
       setSearchDocuments: (searchDocuments) => set(() => ({ searchDocuments })),
+       teamDocuments: [],
+      setTeamDocuments: (teamDocuments) => set(() => ({ teamDocuments })),
+      searchTeamDocuments: [],
+      setSearchTeamDocuments: (searchTeamDocuments) => set(() => ({ searchTeamDocuments })),
       // Add package-related implementations
       packages: [],
       setPackages: (packages) => set(() => ({ packages })),

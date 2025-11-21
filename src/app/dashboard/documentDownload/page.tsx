@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useMemo, useRef } from "react";
+import { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import { useSearchParams, usePathname } from "next/navigation";
 import { useDisclousure } from "../../../hooks/useDisclosure";
 import { PlusIcon } from "../../../components/icons/PlusIcon";
@@ -15,7 +15,7 @@ import { arrayMove } from "@dnd-kit/sortable";
 import { UniqueIdentifier } from "@dnd-kit/core";
 import { useSocketContext } from "../../../context/SocketContextProvider";
 import { ChatType } from "../../../constant/types";
-import { useTeamDocumentControllerDeleteDocumentOne, useCompanyControllerGetCompany,useTeamDocumentTemplateControllerPatchDocumentTemplateOrder } from "../../../lib/client/api";
+import { useTeamDocumentControllerDeleteDocumentOne, useCompanyControllerGetCompany, useTeamDocumentTemplateControllerPatchDocumentTemplateOrder } from "../../../lib/client/api";
 import { toast } from 'react-toastify';
 import useTemplateStore from "../../../lib/zustand/store/templateStore";
 import { useSearchDocument } from "../../../hooks/useSearchDocument";
@@ -39,36 +39,25 @@ export default function DocumentDownload() {
     const [modalType, setModalType] = useState<'create' | 'update'>('create');
     const [isMounted, setIsMounted] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
-    const [minimumLoadingTime, setMinimumLoadingTime] = useState(true);
     const hasLoadedOnce = useRef(false);
     const previousPathname = useRef(pathname);
-    
+    const selectedLang = useMemo(() => params.get("lang"), [params]);
+
     const {
-        documents,
-        setDocuments,
-        searchDocuments,
-        setSearchDocuments
+        teamDocuments,
+        setTeamDocuments,
+        searchTeamDocuments,
+        setSearchTeamDocuments
     } = useTemplateStore();
-    const { search, clearSearch, isSearching } = useSearchDocument(documents, setSearchDocuments);
+
+    const { search, clearSearch, isSearching } = useSearchDocument(teamDocuments, setSearchTeamDocuments);
     const { emitSendTeamDocument } = useSocketContext();
     let Url = process.env.NEXT_PUBLIC_BACKEND_URL;
     const { data: companyData } = useCompanyControllerGetCompany();
 
     useEffect(() => {
         setIsMounted(true);
-        
-        // Only set minimum loading time on first load or route change
-        if (!hasLoadedOnce.current || previousPathname.current !== pathname) {
-            setMinimumLoadingTime(true);
-            const timer = setTimeout(() => {
-                setMinimumLoadingTime(false);
-                hasLoadedOnce.current = true;
-            }, 2000);
-
-            previousPathname.current = pathname;
-            return () => clearTimeout(timer);
-        }
-    }, [pathname]);
+    }, []);
 
     const filterDocumentsByLanguage = (docs) => {
         const selectedLang = params.get("lang") || companyData?.defaultLangCode || "en";
@@ -86,11 +75,11 @@ export default function DocumentDownload() {
             if (tagDocs.length === 1) {
                 filteredDocs.push(tagDocs[0]);
             } else {
-                const matchingLangDoc = tagDocs.find(doc => doc.langCode === selectedLang);
+                const matchingLangDoc = tagDocs?.find(doc => doc.langCode === selectedLang);
                 if (matchingLangDoc) {
                     filteredDocs.push(matchingLangDoc);
                 } else {
-                    const defaultLangDoc = tagDocs.find(doc => doc.langCode === (companyData?.defaultLangCode || "en"));
+                    const defaultLangDoc = tagDocs?.find(doc => doc.langCode === (companyData?.defaultLangCode || "en"));
                     filteredDocs.push(defaultLangDoc || tagDocs[0]);
                 }
             }
@@ -99,13 +88,12 @@ export default function DocumentDownload() {
         return filteredDocs;
     };
 
-    const fetchDocuments = () => {
+    const fetchDocuments = useCallback(() => {
         if (data?.user.backendTokens.at) {
-            // Only show loading on first load or route change
             if (!hasLoadedOnce.current || previousPathname.current !== pathname) {
                 setIsLoading(true);
             }
-            
+
             fetch(`${Url}/api/v1/template/team-documents`, {
                 headers: { Authorization: `Bearer ${data?.user.backendTokens.at}` },
             })
@@ -116,19 +104,21 @@ export default function DocumentDownload() {
                 .then((data) => {
                     const filteredData = filterDocumentsByLanguage(data);
                     setResponses(filteredData);
-                    setDocuments(filteredData);
+                    setTeamDocuments(filteredData);
                     setIsLoading(false);
+                    hasLoadedOnce.current = true;
+                    previousPathname.current = pathname;
                 })
                 .catch((error) => {
                     console.error("Error fetching data:", error);
                     setIsLoading(false);
                 });
         }
-    }
+    }, [data?.user.backendTokens.at, companyData?.defaultLangCode, params.get("lang")]);
 
     useEffect(() => {
         fetchDocuments();
-    }, [data, companyData, params.get("lang")]);
+    }, [data, selectedLang]);
 
     const handleUploadSuccess = () => {
         fetchDocuments();
@@ -179,8 +169,8 @@ export default function DocumentDownload() {
         useTeamDocumentTemplateControllerPatchDocumentTemplateOrder();
 
     const sortDocuments = async (item1: UniqueIdentifier, item2: UniqueIdentifier) => {
-        const setResource = searchDocuments.length > 0 ? setSearchDocuments : setResponses;
-        const documentsResource = searchDocuments.length > 0 ? searchDocuments : responses;
+        const isSearching = searchTeamDocuments.length > 0;
+        const documentsResource = isSearching ? searchTeamDocuments : responses;
 
         const oldIndex = documentsResource.findIndex((item) => item.id === item1);
         const newIndex = documentsResource.findIndex((item) => item.id === item2);
@@ -189,10 +179,12 @@ export default function DocumentDownload() {
 
         let reorderedDocuments = [...documentsResource];
         reorderedDocuments = arrayMove(documentsResource, oldIndex, newIndex);
-        setResource(reorderedDocuments);
 
-        if (searchDocuments.length === 0) {
-            setDocuments(reorderedDocuments);
+        if (isSearching) {
+            setSearchTeamDocuments(reorderedDocuments);
+        } else {
+            setResponses(reorderedDocuments);
+            setTeamDocuments(reorderedDocuments);
         }
 
         try {
@@ -210,9 +202,11 @@ export default function DocumentDownload() {
             console.error("Error updating document order:", error);
             toast.error("Failed to update document order");
 
-            setResource(documentsResource);
-            if (searchDocuments.length === 0) {
-                setDocuments(documentsResource);
+            if (isSearching) {
+                setSearchTeamDocuments(documentsResource);
+            } else {
+                setResponses(documentsResource);
+                setTeamDocuments(documentsResource);
             }
         }
     };
@@ -267,27 +261,14 @@ export default function DocumentDownload() {
     };
 
     const documentsSource = useMemo(() => {
-        const baseDocuments = searchDocuments.length > 0 ? searchDocuments : documents;
+        const baseDocuments = searchTeamDocuments.length > 0 ? searchTeamDocuments : teamDocuments;
         return filterDocumentsByLanguage(baseDocuments);
-    }, [searchDocuments, documents, params.get("lang"), companyData?.defaultLangCode]);
+    }, [searchTeamDocuments, teamDocuments, params.get("lang"), companyData?.defaultLangCode]);
 
     if (!isMounted) {
         return null;
     }
 
-    // Show loader only on first load or route change, not on tab switches
-    const shouldShowLoader = (isLoading || minimumLoadingTime) && (!hasLoadedOnce.current || previousPathname.current !== pathname);
-
-    if (shouldShowLoader) {
-        return (
-            <div className="h-full flex items-center justify-center">
-                <div className="flex flex-col items-center gap-4">
-                    <Spin size="large" />
-                    <p className="text-gray-600 text-lg">Loading team documents...</p>
-                </div>
-            </div>
-        );
-    }
 
     return (
         <>
@@ -322,7 +303,7 @@ export default function DocumentDownload() {
                                             onUpdate={() => onUpdateDocument(document)}
                                             onDelete={() => onDeleteDocument(document.id)}
                                             sendOnClick={() => downloadDocument(document)}
-                                            isDraggable={searchDocuments.length === 0}
+                                            isDraggable={searchTeamDocuments.length === 0}
                                             type="teamDocs"
                                         >
                                             <div className="flex flex-col items-center justify-center h-full p-2">

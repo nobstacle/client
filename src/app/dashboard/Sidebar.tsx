@@ -256,13 +256,7 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
         const isActive = item.href === pathname;
 
         const handleClick = (e: React.MouseEvent) => {
-            if (item.href === '/dashboard/documentDownload') {
-                e.preventDefault();
-                closeSidebar();
-                window.location.href = item.href;
-            } else {
-                closeSidebar();
-            }
+            closeSidebar();
         };
 
         return (
