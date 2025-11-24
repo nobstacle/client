@@ -663,6 +663,8 @@ export const Content: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [packageImageIndexes, setPackageImageIndexes] = useState<Record<number, number>>({});
   let Url = process.env.NEXT_PUBLIC_BACKEND_URL;
+  const [isMuted, setIsMuted] = useState(true);
+  const [showUnmutePrompt, setShowUnmutePrompt] = useState(true);
 
   const defaultSlideshowContent =
     useContentControllerGetDefaultSlideshowContent({
@@ -1182,6 +1184,19 @@ export const Content: React.FC = () => {
     }
   };
 
+  const handleUnmute = () => {
+    setIsMuted(false);
+    setShowUnmutePrompt(false);
+  };
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowUnmutePrompt(false);
+    }, 4000);
+
+    return () => clearTimeout(timer);
+  }, []);
+
   if (hasHydrated) {
     if (
       messageStore.receivedType === "TextTemplateMessage" ||
@@ -1646,7 +1661,6 @@ export const Content: React.FC = () => {
               height: '100vh',
               overflow: 'hidden',
               zIndex: 9,
-              pointerEvents: 'none',
               backgroundColor: 'black',
               display: 'flex',
               alignItems: 'center',
@@ -1656,21 +1670,17 @@ export const Content: React.FC = () => {
             <video
               ref={videoElement}
               autoPlay
-              // muted
+              muted={isMuted}
               loop
               playsInline
-              preload="auto" // Ensure video is preloaded
+              preload="auto"
               key={messageStore.receivedContent?.content ?? ""}
               onLoadedData={() => {
-                // Force play when video data is loaded
                 if (videoElement.current) {
                   videoElement.current.play().catch(err => {
                     console.error("Video play failed:", err);
                   });
                 }
-              }}
-              onError={(e) => {
-                console.error("Video error:", e);
               }}
               style={{
                 maxWidth: '100%',
@@ -1685,8 +1695,70 @@ export const Content: React.FC = () => {
                 src={messageStore.receivedContent?.content ?? ""}
                 type="video/mp4"
               />
-              Your browser does not support the video tag.
             </video>
+
+            {/* Minimal tap-to-unmute overlay */}
+            {showUnmutePrompt && (
+              <div
+                onClick={handleUnmute}
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  height: '100%',
+                  pointerEvents: 'auto',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  animation: 'fadeOut 3s forwards',
+                }}
+              >
+                <div
+                  style={{
+                    padding: '16px 32px',
+                    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                    borderRadius: '50px',
+                    color: 'white',
+                    fontSize: '18px',
+                    fontWeight: '500',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    backdropFilter: 'blur(10px)',
+                  }}
+                >
+                  <span style={{ fontSize: '24px' }}>🔇</span>
+                  Tap for sound
+                </div>
+              </div>
+            )}
+
+            {!showUnmutePrompt && (
+              <button
+                onClick={() => setIsMuted(!isMuted)}
+                style={{
+                  position: 'absolute',
+                  bottom: '20px',
+                  right: '20px',
+                  pointerEvents: 'auto',
+                  width: '48px',
+                  height: '48px',
+                  backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                  border: '2px solid rgba(255, 255, 255, 0.3)',
+                  borderRadius: '50%',
+                  cursor: 'pointer',
+                  fontSize: '20px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backdropFilter: 'blur(5px)',
+                }}
+              >
+                {isMuted ? '🔇' : '🔊'}
+              </button>
+            )}
           </div>
         )
       );
