@@ -663,8 +663,6 @@ export const Content: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [packageImageIndexes, setPackageImageIndexes] = useState<Record<number, number>>({});
   let Url = process.env.NEXT_PUBLIC_BACKEND_URL;
-  const [isMuted, setIsMuted] = useState(true);
-  const [showUnmutePrompt, setShowUnmutePrompt] = useState(true);
 
   const defaultSlideshowContent =
     useContentControllerGetDefaultSlideshowContent({
@@ -1184,18 +1182,6 @@ export const Content: React.FC = () => {
     }
   };
 
-  const handleUnmute = () => {
-    setIsMuted(false);
-    setShowUnmutePrompt(false);
-  };
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setShowUnmutePrompt(false);
-    }, 4000);
-
-    return () => clearTimeout(timer);
-  }, []);
 
   if (hasHydrated) {
     if (
@@ -1670,7 +1656,7 @@ export const Content: React.FC = () => {
             <video
               ref={videoElement}
               autoPlay
-              muted={isMuted}
+              muted
               loop
               playsInline
               preload="auto"
@@ -1698,7 +1684,7 @@ export const Content: React.FC = () => {
             </video>
 
             {/* Minimal tap-to-unmute overlay */}
-            {showUnmutePrompt && (
+            {/* {showUnmutePrompt && (
               <div
                 onClick={handleUnmute}
                 style={{
@@ -1733,9 +1719,9 @@ export const Content: React.FC = () => {
                   Tap for sound
                 </div>
               </div>
-            )}
+            )} */}
 
-            {!showUnmutePrompt && (
+            {/* {!showUnmutePrompt && (
               <button
                 onClick={() => setIsMuted(!isMuted)}
                 style={{
@@ -1758,7 +1744,7 @@ export const Content: React.FC = () => {
               >
                 {isMuted ? '🔇' : '🔊'}
               </button>
-            )}
+            )} */}
           </div>
         )
       );
