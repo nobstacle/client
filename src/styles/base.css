@@ -1164,3 +1164,17 @@ button {
   opacity: 0.7;
   /* ensure it's not dimmed */
 }
+
+.customLogoutMobile {
+  display: flex;
+}
+
+.customLogoutMobile button {
+  font-size: 12px;
+  margin-left: 0.3rem;
+}
+
+.customLogoutMobile svg {
+  width: 20px;
+  height: 20px;
+}

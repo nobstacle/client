@@ -28,15 +28,15 @@ export const HeaderRecordingShortcut: React.FC<HeaderRecordingShortcutProps> = (
                 langCode: params.get("lang") || "en",
             });
 
-            toast.success("Survey sent successfully!", {
+            toast.success("Recording sent!", {
                 position: "bottom-right",
                 autoClose: 3000,
                 theme: "colored",
             });
             clearConfirmationNumber();
         } catch (error) {
-            console.error("Error sending survey:", error);
-            toast.error("Failed to send survey. Please try again.", {
+            console.error("Error sending recording:", error);
+            toast.error("Failed to send recording. Please try again.", {
                 position: "bottom-right",
                 autoClose: 3000,
                 theme: "colored",

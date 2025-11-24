@@ -1182,7 +1182,6 @@ export const Content: React.FC = () => {
     }
   };
 
-
   if (hasHydrated) {
     if (
       messageStore.receivedType === "TextTemplateMessage" ||
@@ -1657,7 +1656,7 @@ export const Content: React.FC = () => {
             <video
               ref={videoElement}
               autoPlay
-              muted
+              // muted
               loop
               playsInline
               preload="auto" // Ensure video is preloaded

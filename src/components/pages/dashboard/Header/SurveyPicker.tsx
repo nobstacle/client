@@ -28,7 +28,7 @@ export const HeaderSurveyShortcut: React.FC<HeaderSurveyShortcutProps> = ({
         langCode: params.get("lang") || "en",
       });
 
-      toast.success("Survey sent successfully!", {
+      toast.success("Survey sent!", {
         position: "bottom-right",
         autoClose: 3000,
         theme: "colored",

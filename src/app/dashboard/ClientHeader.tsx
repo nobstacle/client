@@ -31,12 +31,10 @@ import {
     IoDocuments,
     IoMap,
     IoChatboxEllipses,
-    IoSpeedometer,
-    IoDocumentText,
-    IoWallet,
-    IoPeople,
-    IoSettings
+    IoQrCode
 } from 'react-icons/io5';
+import { Logout } from "../../components/pages/dashboard/Header/Logout";
+import { LogoutIcon } from "../../components/icons/sidebar/LogoutIcon";
 
 const ClientHeader = () => {
     const [drawerOpen, setDrawerOpen] = useState(false);
@@ -46,7 +44,7 @@ const ClientHeader = () => {
     const [isDropdownVisible, setIsDropdownVisible] = useState(false);
     const [filteredTemplates, setFilteredTemplates] = useState([]);
     const searchRef = useRef(null);
-    const inputRef = useRef(null); // Add ref for input
+    const inputRef = useRef(null);
     const params = useSearchParams();
     const { emitSendTemplate, socketConnected } = useSocketContext();
     const debounceTimerRef = useRef(null);
@@ -460,6 +458,50 @@ const ClientHeader = () => {
         setSearchValue(e.target.value);
     }, []);
 
+    const handleQRCodeClick = useCallback((template) => {
+        justSelectedRef.current = true;
+        setSearchValue(template.tag);
+        setIsDropdownVisible(false);
+
+        if (!socketConnected) {
+            message.warning('Connection not ready, please try again in a moment');
+            return;
+        }
+
+        let contentType = "";
+        if (template?.type === 'image') {
+            contentType = ChatType.Image;
+        } else if (template?.type === 'video') {
+            contentType = ChatType.Video;
+        } else if (template?.type === 'website') {
+            contentType = ChatType.Website;
+        } else if (template?.type === 'slideshow') {
+            contentType = ChatType.Slideshow;
+        } else if (template?.type === 'map') {
+            contentType = ChatType.Map;
+        } else if (template?.type === 'document') {
+            contentType = ChatType.Document;
+        } else {
+            contentType = ChatType.Text;
+        }
+
+
+        emitSendTemplate({
+            refId: template?.id,
+            langCode: params.get("lang") || companyData?.defaultLangCode || "en",
+            refType: contentType,
+            station: Number(params.get("station") ?? 1),
+            contentExtra: template?.templateData?.ext,
+            directContent: 'QR'
+        });
+
+        setTimeout(() => {
+            justSelectedRef.current = false;
+        }, 100);
+
+        setIsDropdownVisible(false);
+    }, [socketConnected, emitSendTemplate, params, companyData]);
+
     return (
         <>
             {/* Mobile Header */}
@@ -476,16 +518,22 @@ const ClientHeader = () => {
                                 border: 'none'
                             }}
                         />
-                        <Button
-                            type="text"
-                            icon={<MoreOutlined className="text-white text-xl" />}
-                            onClick={showShortcutMenu}
-                            className="border-none shadow-none hover:bg-white/20 transition-colors duration-200 rounded-lg p-3"
-                            style={{
-                                background: 'transparent',
-                                border: 'none'
-                            }}
-                        />
+                        <div className="flex items-center gap-2">
+                            <div className="customLogoutMobile">
+                                <LogoutIcon />
+                                <Logout />
+                            </div>
+                            <Button
+                                type="text"
+                                icon={<MoreOutlined className="text-white text-xl" />}
+                                onClick={showShortcutMenu}
+                                className="border-none shadow-none hover:bg-white/20 transition-colors duration-200 rounded-lg p-3"
+                                style={{
+                                    background: 'transparent',
+                                    border: 'none'
+                                }}
+                            />
+                        </div>
                     </div>
                 </nav>
             </div>
@@ -600,10 +648,6 @@ const ClientHeader = () => {
                                                 const config = templateConfig[template.type];
                                                 return (
                                                     <List.Item
-                                                        onMouseDown={(e) => {
-                                                            e.preventDefault();
-                                                            handleTemplateSelect(template);
-                                                        }}
                                                         style={{
                                                             cursor: 'pointer',
                                                             padding: '12px 16px',
@@ -613,23 +657,59 @@ const ClientHeader = () => {
                                                         onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f5f5f5'}
                                                         onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
                                                     >
-                                                        <List.Item.Meta
-                                                            avatar={
-                                                                <div style={{
-                                                                    fontSize: '24px',
-                                                                    color: config.color,
-                                                                    display: 'flex',
-                                                                    alignItems: 'center'
-                                                                }}>
-                                                                    {config.icon}
-                                                                </div>
-                                                            }
-                                                            title={
-                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                                    <span>{template.tag}</span>
-                                                                </div>
-                                                            }
-                                                        />
+                                                        <div
+                                                            style={{ flex: 1, display: 'flex', alignItems: 'center' }}
+                                                            onMouseDown={(e) => {
+                                                                e.preventDefault();
+                                                                handleTemplateSelect(template);
+                                                            }}
+                                                        >
+                                                            <List.Item.Meta
+                                                                avatar={
+                                                                    <div style={{
+                                                                        fontSize: '24px',
+                                                                        color: config.color,
+                                                                        display: 'flex',
+                                                                        alignItems: 'center'
+                                                                    }}>
+                                                                        {config.icon}
+                                                                    </div>
+                                                                }
+                                                                title={
+                                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                                        <span>{template.tag}</span>
+                                                                    </div>
+                                                                }
+                                                            />
+                                                        </div>
+                                                        <div
+                                                            onMouseDown={(e) => {
+                                                                e.preventDefault();
+                                                                handleQRCodeClick(template);
+                                                            }}
+                                                            style={{
+                                                                fontSize: '20px',
+                                                                color: '#3b5998',
+                                                                cursor: 'pointer',
+                                                                padding: '8px',
+                                                                borderRadius: '6px',
+                                                                transition: 'all 0.2s',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                flexShrink: 0
+                                                            }}
+                                                            onMouseEnter={(e) => {
+                                                                e.currentTarget.style.backgroundColor = '#e8eef7';
+                                                                e.currentTarget.style.transform = 'scale(1.1)';
+                                                            }}
+                                                            onMouseLeave={(e) => {
+                                                                e.currentTarget.style.backgroundColor = 'transparent';
+                                                                e.currentTarget.style.transform = 'scale(1)';
+                                                            }}
+                                                        >
+                                                            <IoQrCode />
+                                                        </div>
                                                     </List.Item>
                                                 );
                                             }}

@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Button, Card, message, Modal, Radio } from 'antd';
-import { AudioOutlined, VideoCameraOutlined, StopOutlined, PlayCircleOutlined, DeleteOutlined, SendOutlined } from '@ant-design/icons';
-
+import { Button, Card, message } from 'antd';
+import { AudioOutlined } from '@ant-design/icons';
 interface RecordingProps {
   onSubmit: (blob: Blob, type: 'audio' | 'video') => void;
   langCode?: string;
@@ -9,23 +8,27 @@ interface RecordingProps {
 }
 
 const Recording: React.FC<RecordingProps> = ({ onSubmit, langCode = 'en', loading }: RecordingProps) => {
-  const [recordingType, setRecordingType] = useState<'audio' | 'video'>('audio');
   const [isRecording, setIsRecording] = useState(false);
   const [recordedBlob, setRecordedBlob] = useState<Blob | null>(null);
   const [recordingTime, setRecordingTime] = useState(0);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [permissionStatus, setPermissionStatus] = useState<'granted' | 'denied' | 'prompt'>('prompt');
+  const hasStartedRef = useRef(false);
+
+  const MAX_RECORDING_TIME = 300;
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const videoPreviewRef = useRef<HTMLVideoElement | null>(null);
-  const videoPlaybackRef = useRef<HTMLVideoElement | null>(null); // Separate ref for playback
-  const audioPreviewRef = useRef<HTMLAudioElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Cleanup on unmount
+  // Auto-start recording on mount
   useEffect(() => {
+    if (!hasStartedRef.current) {
+      hasStartedRef.current = true;
+      startRecording();
+    }
+
     return () => {
       stopStream();
       if (timerRef.current) clearInterval(timerRef.current);
@@ -33,115 +36,115 @@ const Recording: React.FC<RecordingProps> = ({ onSubmit, langCode = 'en', loadin
     };
   }, []);
 
+  // Auto-stop at 5 minutes
+  useEffect(() => {
+    if (recordingTime >= MAX_RECORDING_TIME && isRecording) {
+      stopRecording();
+      // message.info('Recording stopped.');
+    }
+  }, [recordingTime, isRecording]);
+
   const stopStream = () => {
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current.getTracks().forEach(track => {
+        track.stop();
+        console.log('🎤 Microphone track stopped:', track.label);
+      });
       streamRef.current = null;
     }
   };
 
-  const requestPermissions = async (type: 'audio' | 'video') => {
+  const requestPermissions = async () => {
     try {
-      const constraints = type === 'video'
-        ? { video: { facingMode: 'user' }, audio: true }
-        : { audio: true };
-
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       setPermissionStatus('granted');
       return stream;
     } catch (error) {
       console.error('Permission denied:', error);
       setPermissionStatus('denied');
 
-      // iOS specific error handling
       if (error.name === 'NotAllowedError') {
-        message.error('Please allow camera/microphone access in your device settings');
+        message.error('Please allow microphone access in your device settings');
       } else if (error.name === 'NotFoundError') {
-        message.error('No camera or microphone found on this device');
+        message.error('No microphone found on this device');
       } else {
-        message.error('Unable to access camera/microphone. Please check permissions.');
+        message.error('Unable to access microphone. Please check permissions.');
       }
 
       return null;
     }
   };
 
+
+  // Modify the startRecording function:
   const startRecording = async () => {
     try {
-      console.log('🎬 Starting recording...');
-
-      // Reset previous recording
-      if (recordedBlob) {
-        setRecordedBlob(null);
-        setPreviewUrl(null);
-      }
-
-      const stream = await requestPermissions(recordingType);
-      if (!stream) {
-        console.error('❌ No stream returned');
-        return;
-      }
-
-      console.log('✅ Stream obtained:', stream);
-      console.log('📹 Stream tracks:', stream.getTracks());
+      // Get permissions first
+      const stream = await requestPermissions();
+      if (!stream) return;
 
       streamRef.current = stream;
 
-      // SET isRecording to true FIRST so the video element renders
-      setIsRecording(true);
+      // Create announcement text-to-speech or use pre-recorded audio
+      const announcement = new SpeechSynthesisUtterance(
+        "Your voice feedback is being recorded to help us improve our services."
+      );
 
-      // THEN set up the video preview after a small delay to ensure element is mounted
-      if (recordingType === 'video') {
-        // Use setTimeout to ensure video element is in DOM
+      announcement.rate = 1.6;
+
+      announcement.onend = () => {
+        // Generate beep sound using Web Audio API
+        const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+
+        oscillator.frequency.value = 800; // Frequency in Hz
+        oscillator.type = 'sine';
+
+        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + 0.5);
+
+        // Wait for beep to finish, then start recording
         setTimeout(() => {
-          if (videoPreviewRef.current && streamRef.current) {
-            console.log('📺 Setting up video preview...');
+          setIsRecording(true);
+          startActualRecording(stream);
+        }, 600); // 600ms = 500ms beep + 100ms buffer
+      };
 
-            videoPreviewRef.current.srcObject = streamRef.current;
-            videoPreviewRef.current.muted = true;
+      speechSynthesis.speak(announcement);
 
-            videoPreviewRef.current.onloadedmetadata = () => {
-              console.log('✅ Video metadata loaded');
-              console.log('Video dimensions:', videoPreviewRef.current?.videoWidth, 'x', videoPreviewRef.current?.videoHeight);
-            };
+    } catch (error) {
+      console.error('Error:', error);
+    }
+  };
 
-            videoPreviewRef.current.onplay = () => {
-              console.log('▶️ Video started playing');
-            };
-
-            videoPreviewRef.current.onerror = (e) => {
-              console.error('❌ Video error:', e);
-            };
-
-            videoPreviewRef.current.play().catch(err => {
-              console.error('❌ Error playing video preview:', err);
-            });
-          }
-        }, 100);
-      }
+  const startActualRecording = async (stream: MediaStream) => {
+    try {
+      console.log('🎬 Starting actual recording...');
 
       // Determine MIME type based on browser support
-      let mimeType = recordingType === 'video' ? 'video/mp4' : 'audio/mp4';
+      let mimeType = 'audio/mp4';
 
-      // iOS Safari fallback
       if (!MediaRecorder.isTypeSupported(mimeType)) {
-        mimeType = recordingType === 'video' ? 'video/webm' : 'audio/webm';
+        mimeType = 'audio/webm';
         console.log('📝 Using fallback MIME type:', mimeType);
       }
 
-      // Android Chrome fallback
       if (!MediaRecorder.isTypeSupported(mimeType)) {
-        mimeType = recordingType === 'video' ? 'video/webm;codecs=vp8,opus' : 'audio/webm;codecs=opus';
+        mimeType = 'audio/webm;codecs=opus';
         console.log('📝 Using second fallback MIME type:', mimeType);
       }
 
       console.log('📝 Final MIME type:', mimeType);
 
       chunksRef.current = [];
-      const mediaRecorder = new MediaRecorder(stream, {
-        mimeType: mimeType,
-        videoBitsPerSecond: 2500000,
-      });
+      const mediaRecorder = new MediaRecorder(stream, { mimeType });
 
       mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
@@ -153,21 +156,10 @@ const Recording: React.FC<RecordingProps> = ({ onSubmit, langCode = 'en', loadin
         console.log('⏹️ Recording stopped');
         const blob = new Blob(chunksRef.current, { type: mimeType });
         console.log('💾 Blob created:', blob.size, 'bytes');
-        setRecordedBlob(blob);
-
-        const url = URL.createObjectURL(blob);
-        setPreviewUrl(url);
-        console.log('🔗 Preview URL created:', url);
-
-        // Stop the stream after recording
         stopStream();
-
-        // Clear live preview
-        if (videoPreviewRef.current) {
-          videoPreviewRef.current.srcObject = null;
-        }
-
         setIsRecording(false);
+        onSubmit(blob, 'audio');
+        // message.success('Thank you for your feedback!');
       };
 
       mediaRecorderRef.current = mediaRecorder;
@@ -195,22 +187,17 @@ const Recording: React.FC<RecordingProps> = ({ onSubmit, langCode = 'en', loadin
       if (timerRef.current) {
         clearInterval(timerRef.current);
         timerRef.current = null;
+        submitRecording();
       }
-
-      message.success('Recording stopped');
     }
-  };
-  const deleteRecording = () => {
-    setRecordedBlob(null);
-    setPreviewUrl(null);
-    setRecordingTime(0);
-    if (previewUrl) URL.revokeObjectURL(previewUrl);
   };
 
   const submitRecording = () => {
     if (recordedBlob) {
-      onSubmit(recordedBlob, recordingType);
-      deleteRecording();
+      onSubmit(recordedBlob, 'audio');
+      setRecordedBlob(null);
+      setPreviewUrl(null);
+      setRecordingTime(0);
     }
   };
 
@@ -221,172 +208,124 @@ const Recording: React.FC<RecordingProps> = ({ onSubmit, langCode = 'en', loadin
   };
 
   return (
-    <>
-      <div className="w-full h-screen flex items-center justify-center bg-gray-50 p-4">
-        <Card className="w-full max-w-2xl shadow-lg">
-          {loading ? (
-            <div className="space-y-6">
-              <div className="text-center">
-                <div className="text-8xl mb-4">😊</div>
-                <h2 className="text-2xl font-bold text-gray-800 mb-2 mt-6">
-                  Thank you for your feedback!
-                </h2>
-              </div>
+    <div className="w-full h-screen flex items-center justify-center bg-gray-50 p-4">
+      <Card className="w-full max-w-2xl shadow-lg">
+        {loading ? (
+          <div className="space-y-6">
+            <div className="text-center">
+              <div className="text-8xl mb-4">😊</div>
+              <h2 className="text-2xl font-bold text-gray-800 mb-2 mt-6">
+                Thank you for your feedback!
+              </h2>
             </div>
-          ) : (
+          </div>
+        ) : (
+          <>
             <div className="space-y-6">
               {/* Header */}
-              <div className="text-center">
-                <h2 className="text-2xl font-bold text-gray-800 mb-2">
-                  Share Your Feedback
-                </h2>
-                <p className="text-gray-600">
-                  Record an audio or video message about your experience
-                </p>
-              </div>
-              {/* Recording Type Selection */}
-              {!isRecording && !recordedBlob && (
-                <div className="flex justify-center">
-                  <Radio.Group
-                    value={recordingType}
-                    onChange={(e) => setRecordingType(e.target.value)}
-                    size="large"
-                  >
-                    <Radio.Button value="audio">
-                      <AudioOutlined className="mr-2" />
-                      Audio
-                    </Radio.Button>
-                    <Radio.Button value="video">
-                      <VideoCameraOutlined className="mr-2" />
-                      Video
-                    </Radio.Button>
-                  </Radio.Group>
+              {isRecording && !recordedBlob ? (
+                <div className="relative bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 rounded-lg overflow-hidden" style={{ minHeight: '400px' }}>
+                  {/* Animated background waves */}
+                  <div className="absolute inset-0 opacity-30">
+                    <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-blue-500 to-transparent animate-pulse"></div>
+                    <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-purple-500 to-transparent animate-pulse" style={{ animationDelay: '0.5s' }}></div>
+                  </div>
+
+                  <div className="relative flex flex-col items-center justify-center h-full text-white p-8" style={{ minHeight: '400px' }}>
+                    {/* Animated listening character/icon */}
+                    <div className="relative mb-8">
+                      {/* Pulsing sound waves */}
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="w-40 h-40 rounded-full bg-blue-500 opacity-20 animate-ping"></div>
+                      </div>
+                      <div className="absolute inset-0 flex items-center justify-center" style={{ animationDelay: '0.3s' }}>
+                        <div className="w-32 h-32 rounded-full bg-purple-500 opacity-30 animate-ping"></div>
+                      </div>
+
+                      {/* Center microphone with glow */}
+                      <div className="relative z-10 w-24 h-24 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center shadow-2xl">
+                        <AudioOutlined className="text-5xl text-white animate-pulse" />
+                      </div>
+
+                      {/* Recording indicator */}
+                      <div className="absolute -top-2 -right-2 z-20">
+                        <span className="flex h-8 w-8">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-8 w-8 bg-red-500 items-center justify-center">
+                            <span className="text-white text-xs font-bold">REC</span>
+                          </span>
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Animated sound bars */}
+                    <div className="flex items-end justify-center gap-1 mb-6 h-16">
+                      {[...Array(5)].map((_, i) => (
+                        <div
+                          key={i}
+                          className="w-2 bg-gradient-to-t from-blue-400 to-purple-400 rounded-full animate-bounce"
+                          style={{
+                            height: `${20 + Math.random() * 40}px`,
+                            animationDelay: `${i * 0.1}s`,
+                            animationDuration: `${0.6 + Math.random() * 0.4}s`
+                          }}
+                        ></div>
+                      ))}
+                    </div>
+
+                    {/* Text with typing animation effect */}
+                    <p className="text-2xl font-semibold mb-2 animate-pulse">
+                      🎤 Listening...
+                    </p>
+                    <p className="text-lg text-blue-200 mb-4">
+                      We're all ears! Share your thoughts
+                    </p>
+
+                    {/* Timer display */}
+                    <div className="bg-black bg-opacity-30 px-6 py-3 rounded-full backdrop-blur-sm">
+                      <span className="font-mono text-2xl font-bold text-green-400">
+                        {formatTime(recordingTime)}
+                      </span>
+                      <span className="text-gray-400 ml-2">/ 5:00</span>
+                    </div>
+                  </div>
                 </div>
-              )}
-
-              {/* Preview Area */}
-              <div className="relative bg-gray-900 rounded-lg overflow-hidden" style={{ minHeight: '300px' }}>
-                {/* Live Preview during recording */}
-                {recordingType === 'video' && isRecording && !recordedBlob && (
-                  <video
-                    key="live-preview"
-                    ref={videoPreviewRef}
-                    className="w-full h-full object-contain"
-                    style={{ minHeight: '300px', maxHeight: '400px' }}
-                    playsInline
-                    muted
-                    autoPlay
-                  />
-                )}
-                {/* Playback after recording */}
-                {recordingType === 'video' && !isRecording && recordedBlob && (
-                  <video
-                    key="playback"
-                    ref={videoPlaybackRef}
-                    className="w-full h-full object-contain"
-                    style={{ minHeight: '300px', maxHeight: '400px' }}
-                    controls
-                    playsInline
-                    src={previewUrl || undefined}
-                  />
-                )}
-
-                {recordingType === 'audio' && recordedBlob && (
-                  <div className="flex items-center justify-center h-full p-8">
-                    <audio
-                      ref={audioPreviewRef}
-                      className="w-full"
-                      controls
-                      src={previewUrl || undefined}
-                    />
+              ) : (
+                <>
+                  <div className="d-flex align-items-center justify-content-center p-4">
+                    <h3>Your feedback is being recorded to help us improve our hotel and services. Thank you for sharing your thoughts!</h3>
                   </div>
-                )}
-
-                {!isRecording && !recordedBlob && (
-                  <div className="flex flex-col items-center justify-center h-full text-white p-8" style={{ minHeight: '300px' }}>
-                    {recordingType === 'audio' ? (
-                      <AudioOutlined style={{ fontSize: '64px', marginBottom: '16px' }} />
-                    ) : (
-                      <VideoCameraOutlined style={{ fontSize: '64px', marginBottom: '16px' }} />
-                    )}
-                    <p className="text-lg">Ready to record {recordingType}</p>
-                  </div>
-                )}
-
-                {/* Recording Timer Overlay */}
-                {isRecording && (
-                  <div className="absolute top-4 right-4 bg-red-600 text-white px-4 py-2 rounded-full flex items-center gap-2">
-                    <span className="animate-pulse">●</span>
-                    <span className="font-mono font-bold">{formatTime(recordingTime)}</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Controls */}
-              <div className="flex justify-center gap-4">
-                {!isRecording && !recordedBlob && (
-                  <Button
-                    type="primary"
-                    size="large"
-                    icon={recordingType === 'audio' ? <AudioOutlined /> : <VideoCameraOutlined />}
-                    onClick={startRecording}
-                    className="bg-blue-600 hover:bg-blue-700"
-                  >
-                    Start Recording
-                  </Button>
-                )}
-
-                {isRecording && (
-                  <Button
-                    danger
-                    size="large"
-                    icon={<StopOutlined />}
-                    onClick={stopRecording}
-                  >
-                    Stop Recording
-                  </Button>
-                )}
-
-                {recordedBlob && (
-                  <>
-                    <Button
-                      size="large"
-                      icon={<DeleteOutlined />}
-                      onClick={deleteRecording}
-                    >
-                      Delete
-                    </Button>
-                    <Button
-                      type="primary"
-                      size="large"
-                      icon={<SendOutlined />}
-                      onClick={submitRecording}
-                      className="bg-green-600 hover:bg-green-700"
-                      loading={loading}
-                    >
-                      Submit Feedback
-                    </Button>
-                  </>
-                )}
-              </div>
-
-              {/* Permission Warning for iOS */}
-              {permissionStatus === 'denied' && (
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-center">
-                  <p className="text-yellow-800 mb-2">
-                    Camera/Microphone access is required
-                  </p>
-                  <p className="text-sm text-yellow-700">
-                    Please enable permissions in Settings → Safari → Camera/Microphone
-                  </p>
-                </div>
+                </>
               )}
             </div>
-          )}
+            <div className="flex justify-center gap-4 mt-4">
+              {isRecording && (
+                <Button
+                  danger
+                  size="large"
+                  onClick={stopRecording}
+                  className="min-w-[200px]"
+                >
+                  Stop Recording
+                </Button>
+              )}
+            </div>
 
-        </Card>
-      </div>
-    </>
+            {/* Permission Warning */}
+            {permissionStatus === 'denied' && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-center">
+                <p className="text-yellow-800 mb-2">
+                  Microphone access is required
+                </p>
+                <p className="text-sm text-yellow-700">
+                  Please enable microphone permissions in your browser settings
+                </p>
+              </div>
+            )}
+          </>
+        )}
+      </Card>
+    </div>
   );
 };
 
