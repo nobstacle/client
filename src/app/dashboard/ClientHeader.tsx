@@ -172,122 +172,95 @@ const ClientHeader = () => {
     // Combine all templates
     const allTemplates = useMemo(() => {
         const combined = [];
+        const templateMap = new Map();
+
+        const addTemplate = (template, type, extraData = {}) => {
+            const tag = template.tag;
+
+            if (!templateMap.has(tag)) {
+                // First time seeing this tag
+                templateMap.set(tag, {
+                    id: template.id,
+                    tag: template.tag,
+                    type: type,
+                    langCode: template.langCode,
+                    order: template.order,
+                    templateData: template,
+                    availableInSelectedLang: template.langCode?.includes(selectedLang),
+                    defaultLangData: template, // Store default language version
+                    ...extraData
+                });
+            } else {
+                // Tag exists, check if this version has the selected language
+                const existing = templateMap.get(tag);
+                if (template.langCode?.includes(selectedLang) && !existing.availableInSelectedLang) {
+                    // Update with selected language version
+                    templateMap.set(tag, {
+                        ...existing,
+                        id: template.id,
+                        langCode: template.langCode,
+                        templateData: template,
+                        availableInSelectedLang: true,
+                        ...extraData
+                    });
+                } else if (!existing.availableInSelectedLang && template.langCode?.includes(companyData?.defaultLangCode)) {
+                    // Store default language version as fallback
+                    templateMap.set(tag, {
+                        ...existing,
+                        defaultLangData: template
+                    });
+                }
+            }
+        };
 
         if (textTemplates) {
             textTemplates.forEach(template => {
-                if (template.langCode?.includes(selectedLang)) {
-                    combined.push({
-                        id: template.id,
-                        tag: template.tag,
-                        type: 'text',
-                        content: template.content,
-                        langCode: template.langCode,
-                        order: template.order,
-                        templateData: template
-                    });
-                }
+                addTemplate(template, 'text', { content: template.content });
             });
         }
 
         if (imageTemplates) {
             imageTemplates.forEach(template => {
-                if (template.langCode?.includes(selectedLang)) {
-                    combined.push({
-                        id: template.id,
-                        tag: template.tag,
-                        type: 'image',
-                        url: template.url,
-                        langCode: template.langCode,
-                        order: template.order,
-                        templateData: template
-                    });
-                }
+                addTemplate(template, 'image', { url: template.url });
             });
         }
 
         if (videoTemplates) {
             videoTemplates.forEach(template => {
-                if (template.langCode?.includes(selectedLang)) {
-                    combined.push({
-                        id: template.id,
-                        tag: template.tag,
-                        type: 'video',
-                        url: template.url,
-                        langCode: template.langCode,
-                        order: template.order,
-                        templateData: template
-                    });
-                }
+                addTemplate(template, 'video', { url: template.url });
             });
         }
 
         if (websiteTemplates) {
             websiteTemplates.forEach(template => {
-                if (template.langCode?.includes(selectedLang)) {
-                    combined.push({
-                        id: template.id,
-                        tag: template.tag,
-                        type: 'website',
-                        url: template.url,
-                        langCode: template.langCode,
-                        order: template.order,
-                        templateData: template
-                    });
-                }
+                addTemplate(template, 'website', { url: template.url });
             });
         }
 
         if (slideshowTemplates) {
             slideshowTemplates.forEach(template => {
-                if (template.langCode?.includes(selectedLang)) {
-                    combined.push({
-                        id: template.id,
-                        tag: template.tag,
-                        type: 'slideshow',
-                        urls: template.url,
-                        langCode: template.langCode,
-                        order: template.order,
-                        templateData: template
-                    });
-                }
+                addTemplate(template, 'slideshow', { urls: template.url });
             });
         }
 
         if (mapTemplates) {
             mapTemplates.forEach(template => {
-                if (template.langCode?.includes(selectedLang)) {
-                    combined.push({
-                        id: template.id,
-                        tag: template.tag,
-                        type: 'map',
-                        origin: template.origin,
-                        destination: template.destination,
-                        langCode: template.langCode,
-                        order: template.order,
-                        templateData: template
-                    });
-                }
+                addTemplate(template, 'map', {
+                    origin: template.origin,
+                    destination: template.destination
+                });
             });
         }
 
         if (documentTemplates) {
             documentTemplates.forEach(template => {
-                if (template.langCode?.includes(selectedLang)) {
-                    combined.push({
-                        id: template.id,
-                        tag: template.tag,
-                        type: 'document',
-                        url: template.url,
-                        langCode: template.langCode,
-                        order: template.order,
-                        templateData: template
-                    });
-                }
+                addTemplate(template, 'document', { url: template.url });
             });
         }
 
-        combined.sort((a, b) => (a.order || 999) - (b.order || 999));
-        return combined;
+        const result = Array.from(templateMap.values());
+        result.sort((a, b) => (a.order || 999) - (b.order || 999));
+        return result;
     }, [
         textTemplates,
         imageTemplates,
@@ -296,31 +269,9 @@ const ClientHeader = () => {
         slideshowTemplates,
         mapTemplates,
         documentTemplates,
-        selectedLang
+        selectedLang,
+        companyData?.defaultLangCode
     ]);
-
-    // REPLACE the existing debounce effect with:
-    // useEffect(() => {
-    //     const timer = setTimeout(() => {
-    //         const searchLower = searchValue.toLowerCase().trim();
-    //         if (!searchValue.trim()) {
-    //             setFilteredTemplates([]);
-    //             setIsDropdownVisible(false);
-    //             return;
-    //         }
-
-    //         const filtered = allTemplates.filter(template =>
-    //             template.tag.toLowerCase().includes(searchLower)
-    //         );
-
-    //         setFilteredTemplates(filtered);
-    //         setIsDropdownVisible(!isDropdownVisible && selectedTemplate === null);
-    //     }, 300);
-
-    //     return () => clearTimeout(timer);
-    // }, [searchValue, allTemplates]);
-
-    // Template filtering with debounce
     useEffect(() => {
         if (debounceTimerRef.current) {
             clearTimeout(debounceTimerRef.current);
@@ -409,6 +360,14 @@ const ClientHeader = () => {
             return;
         }
 
+        const templateToSend = template.availableInSelectedLang
+            ? template.templateData
+            : template.defaultLangData;
+
+        const langToSend = template.availableInSelectedLang
+            ? selectedLang
+            : (companyData?.defaultLangCode || "en");
+
         let contentType = "";
         if (template?.type === 'image') {
             contentType = ChatType.Image;
@@ -426,21 +385,24 @@ const ClientHeader = () => {
             contentType = ChatType.Text;
         }
 
-
         emitSendTemplate({
-            refId: template?.id,
-            langCode: params.get("lang") || companyData?.defaultLangCode || "en",
+            refId: templateToSend?.id,
+            langCode: langToSend,
             refType: contentType,
             station: Number(params.get("station") ?? 1),
-            contentExtra: template?.templateData?.ext,
+            contentExtra: templateToSend?.ext,
         });
+
+        if (!template.availableInSelectedLang) {
+            message.info(`Template not available in selected language. Sending in ${langToSend.toUpperCase()}`);
+        }
 
         setTimeout(() => {
             justSelectedRef.current = false;
         }, 100);
 
         setIsDropdownVisible(false);
-    }, [socketConnected, emitSendTemplate, params, companyData]);
+    }, [socketConnected, emitSendTemplate, params, companyData, selectedLang]);
 
     const handleClear = useCallback(() => {
         setSearchValue('');
@@ -468,6 +430,10 @@ const ClientHeader = () => {
             return;
         }
 
+        const templateToSend = template.availableInSelectedLang
+            ? template.templateData
+            : template.defaultLangData;
+
         let contentType = "";
         if (template?.type === 'image') {
             contentType = ChatType.Image;
@@ -485,22 +451,25 @@ const ClientHeader = () => {
             contentType = ChatType.Text;
         }
 
-
         emitSendTemplate({
-            refId: template?.id,
-            langCode: params.get("lang") || companyData?.defaultLangCode || "en",
+            refId: templateToSend?.id,
+            langCode: langToSend,
             refType: contentType,
             station: Number(params.get("station") ?? 1),
-            contentExtra: template?.templateData?.ext,
+            contentExtra: templateToSend?.ext,
             directContent: 'QR'
         });
+
+        if (!template.availableInSelectedLang) {
+            message.info(`Template not available in selected language. Sending QR in ${langToSend.toUpperCase()}`);
+        }
 
         setTimeout(() => {
             justSelectedRef.current = false;
         }, 100);
 
         setIsDropdownVisible(false);
-    }, [socketConnected, emitSendTemplate, params, companyData]);
+    }, [socketConnected, emitSendTemplate, params, companyData, selectedLang]);
 
     return (
         <>
@@ -678,6 +647,11 @@ const ClientHeader = () => {
                                                                 title={
                                                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                                                         <span>{template.tag}</span>
+                                                                        {!template.availableInSelectedLang && (
+                                                                            <Tag color="orange" style={{ fontSize: '10px', padding: '0 4px', margin: 0 }}>
+                                                                                {companyData?.defaultLangCode?.toUpperCase() || 'EN'}
+                                                                            </Tag>
+                                                                        )}
                                                                     </div>
                                                                 }
                                                             />

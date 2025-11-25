@@ -22,6 +22,8 @@ import { useSession } from "next-auth/react";
 import { Card, Button, Tag, Typography, Carousel, message, Modal, Image } from "antd";
 import { LeftOutlined, RightOutlined, ExpandAltOutlined } from '@ant-design/icons';
 import Recording from './Recording';
+import { RecordingNotice } from './RecordingNotice';
+import { BackgroundRecorder } from './BackgroundRecorder';
 
 const { Title, Text } = Typography;
 
@@ -662,6 +664,11 @@ export const Content: React.FC = () => {
   const [contentKey, setContentKey] = useState(0);
   const [loading, setLoading] = useState(false);
   const [packageImageIndexes, setPackageImageIndexes] = useState<Record<number, number>>({});
+  const [isMuted, setIsMuted] = useState(true);
+  const [showUnmutePrompt, setShowUnmutePrompt] = useState(true);
+  const [isRecordingActive, setIsRecordingActive] = useState(false);
+  const [showRecordingNotice, setShowRecordingNotice] = useState(false);
+
   let Url = process.env.NEXT_PUBLIC_BACKEND_URL;
 
   const defaultSlideshowContent =
@@ -1065,7 +1072,6 @@ export const Content: React.FC = () => {
     try {
       setLoading(true);
 
-      // Create FormData to upload the recording
       const formData = new FormData();
       const fileName = `recording_${Date.now()}.${type === 'video' ? 'webm' : 'mp4'}`;
       formData.append('file', blob, fileName);
@@ -1073,7 +1079,6 @@ export const Content: React.FC = () => {
       formData.append('station', params.get("station") ?? "1");
       formData.append('confirmationNumber', messageStore?.receivedRecording?.tag);
 
-      // Upload to your backend
       const response = await fetch(`${Url}/api/v1/recordings/upload`, {
         method: 'POST',
         headers: {
@@ -1086,13 +1091,14 @@ export const Content: React.FC = () => {
         throw new Error('Upload failed');
       }
 
-      // message.success('Feedback submitted successfully!');
       setLoading(false);
-      messageStore.reset();
+      setIsRecordingActive(false);
+      setShowRecordingNotice(false);
     } catch (error) {
       console.error('Error submitting recording:', error);
       message.error('Failed to submit feedback. Please try again.');
       setLoading(false);
+      setIsRecordingActive(false);
     }
   };
 
@@ -1182,435 +1188,494 @@ export const Content: React.FC = () => {
     }
   };
 
+  useEffect(() => {
+    if (messageStore.receivedType === "Video") {
+      setIsMuted(true);
+      setShowUnmutePrompt(true);
+
+      const timer = setTimeout(() => {
+        setShowUnmutePrompt(false);
+      }, 3000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [messageStore.receivedContent?.content, messageStore.receivedType]);
+
+  useEffect(() => {
+    if (messageStore.receivedType === "Recording") {
+      setIsRecordingActive(true);
+      setShowRecordingNotice(true);
+    }
+  }, [messageStore.receivedType]);
+
+  const handleUnmute = () => {
+    if (videoElement.current) {
+      videoElement.current.muted = false;
+      setIsMuted(false);
+      setShowUnmutePrompt(false);
+    }
+  };
+
+  const toggleMute = () => {
+    if (videoElement.current) {
+      const newMutedState = !isMuted;
+      videoElement.current.muted = newMutedState;
+      setIsMuted(newMutedState);
+    }
+  };
 
   if (hasHydrated) {
-    if (
-      messageStore.receivedType === "TextTemplateMessage" ||
-      messageStore.receivedType === "Text"
-    ) {
-      return (
-        <div className="w-full p-5">
-          <p className="text-center text-4xl" style={{ lineHeight: "3.5rem", whiteSpace: 'pre-wrap' }}>
-            {messageStore.receivedContent?.content ?? ""}
-          </p>
-        </div>
-      );
-    }
+    return (
+      <>
 
-    if (messageStore.receivedType === 'Packages') {
-      let parseData;
-      try {
-        parseData = JSON.parse(messageStore.receivedContent?.extraContent ?? '[]');
-      } catch (error) {
-        console.error("Error parsing package data:", error);
-        return (
-          <div className="w-full p-5">
-            <Text className="text-red-500">Error loading package data</Text>
-          </div>
-        );
-      }
+        {showRecordingNotice && (
+          <RecordingNotice langCode={company.data?.defaultLangCode ?? "en"} />
+        )}
 
-      const currentLangCode = messageStore.receivedContent?.langCode || 'en';
+        {isRecordingActive && (
+          <BackgroundRecorder
+            confirmationNumber={messageStore?.receivedRecording?.tag || ""}
+            onRecordingComplete={handleRecordingSubmit}
+            langCode={company.data?.defaultLangCode ?? "en"}
+          />
+        )}
 
-      // Helper function to merge category images with package images
-      const mergeImages = (packageImages, toCategory) => {
-        let combinedImages = [...(packageImages || [])];
-
-        // If to_category_id exists and toCategory has signedImages, merge them
-        if (toCategory && toCategory.signedImages && Array.isArray(toCategory.signedImages)) {
-          // Convert category images to the same format as package images
-          const categoryImages = toCategory.signedImages.map((img, index) => ({
-            alt: `Category image ${index + 1}`,
-            url: img.url,
-            order: (packageImages?.length || 0) + index + 1, // Continue numbering after package images
-            signedUrl: img.signedUrl
-          }));
-
-          combinedImages = [...combinedImages, ...categoryImages];
-        }
-
-        return combinedImages;
-      };
-
-      const processedPackages = parseData.map(pkg => ({
-        ...pkg,
-        signedImageUrls: pkg.to_category_id ?
-          mergeImages(pkg.signedImageUrls, pkg.toCategory) :
-          pkg.signedImageUrls
-      }));
-
-      const sortedPackages = processedPackages.sort((a, b) => {
-        const purchasesA = a.totalPackagesSold || 0;
-        const purchasesB = b.totalPackagesSold || 0;
-        return purchasesB - purchasesA;
-      });
-
-      return (
-        <div
-          className="w-full space-y-6 relative"
-          style={{ height: '100%', padding: '3rem 1rem', overflowY: 'scroll' }}
-        >
-          {sortedPackages.map((packageData) => (
-            <PackageCard
-              key={packageData.id}
-              packageData={packageData}
-              langCode={currentLangCode}
-              handleClick={(data) => handlePackageClicked(data)}
-              loadingButton={loading}
-
-            />
-          ))}
-        </div>
-      );
-    }
-
-    if (messageStore.receivedType === "ChatMessage") {
-      return (
-        <div className="flex w-full flex-col items-center justify-center gap-2 p-4">
-          <div className="w-full max-w-[100%] sm:max-w-[75%] md:max-w-[50%]">
-            <ChatBox
-              ref={chatBoxRef}
-              messages={messageStore.receivedMessage}
-              sendMessage={sendMessage}
-            />
-          </div>
-        </div>
-      );
-    }
-
-    if (messageStore.receivedType === "Image") {
-      return (
-        <>
-          {messageStore.receivedContent?.directContent === 'QR' ? (
-            <Card>
-              <img
-                src={qrCodeUrl}
-                alt="QR Code"
-                className="w-96 h-96 object-cover"
-              />
-            </Card>
-          ) : (
-            <img
-              key={messageStore.receivedContent?.id ?? ""}
-              alt="template_image"
-              style={{
-                height: "auto",
-                maxHeight: "100%",
-                maxWidth: "100%",
-                objectFit: "cover",
-                display: "block",
-              }}
-              src={messageStore.receivedContent?.content ?? ""}
-            />
-          )}
-        </>
-      );
-    }
-
-    if (messageStore.receivedType === "Document" ||
-      messageStore.receivedType === "Documents" ||
-      messageStore.receivedType === "PdfDocument" ||
-      messageStore.receivedType === "WordDocument" ||
-      messageStore.receivedType === "ExcelDocument" ||
-      messageStore.receivedType === "PowerPointDocument" ||
-      messageStore.receivedType === "CsvDocument") {
-
-      const documentUrl = messageStore.receivedContent?.content ?? "";
-      const fileType = messageStore.receivedContent?.extraContent?.toLowerCase() ?? "";
-
-      const handleIframeError = () => {
-        setLoadError(true);
-        setIsLoading(false);
-        if (loadingTimeout) {
-          clearTimeout(loadingTimeout);
-        }
-      };
-
-      const handleIframeLoad = () => {
-        setIsLoading(false);
-        setLoadError(false);
-        if (loadingTimeout) {
-          clearTimeout(loadingTimeout);
-        }
-      };
-
-      const renderDocumentViewer = () => {
-        if (loadError) {
-          return (
-            <div className="w-full p-8 text-center border-2 border-dashed border-gray-300 rounded-lg">
-              <div className="text-gray-500 mb-4">
-                <svg className="mx-auto h-12 w-12 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                </svg>
-                <p className="mb-4">Unable to display document</p>
-              </div>
+        {(messageStore.receivedType === "TextTemplateMessage" ||
+          messageStore.receivedType === "Text") && (
+            <div className="w-full p-5">
+              <p className="text-center text-4xl" style={{ lineHeight: "3.5rem", whiteSpace: 'pre-wrap' }}>
+                {messageStore.receivedContent?.content ?? ""}
+              </p>
             </div>
-          );
-        }
+          )}
 
-        switch (fileType) {
-          case 'ppt':
-          case 'pptx':
-          case 'xls':
-          case 'xlsx':
-          case 'csv':
+        {messageStore.receivedType === 'Packages' && (() => {
+          let parseData;
+          try {
+            parseData = JSON.parse(messageStore.receivedContent?.extraContent ?? '[]');
+          } catch (error) {
+            console.error("Error parsing package data:", error);
             return (
-              <div className="w-full h-screen border rounded-lg overflow-hidden relative">
-                {isLoading && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-gray-50 z-10">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-                  </div>
-                )}
-                <iframe
-                  src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(documentUrl)}`}
-                  className="w-full h-full"
-                  title="Office Document"
-                  frameBorder="0"
-                  onLoad={handleIframeLoad}
-                  onError={handleIframeError}
-                />
+              <div className="w-full p-5">
+                <Text className="text-red-500">Error loading package data</Text>
               </div>
             );
+          }
 
-          case 'pdf':
-            if (isMobile) {
-              return (
-                <div className="w-full h-screen flex flex-col overflow-hidden">
-                  {isLoading && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-gray-50 z-10">
-                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+          const currentLangCode = messageStore.receivedContent?.langCode || 'en';
+
+          // Helper function to merge category images with package images
+          const mergeImages = (packageImages, toCategory) => {
+            let combinedImages = [...(packageImages || [])];
+
+            if (toCategory && toCategory.signedImages && Array.isArray(toCategory.signedImages)) {
+              const categoryImages = toCategory.signedImages.map((img, index) => ({
+                alt: `Category image ${index + 1}`,
+                url: img.url,
+                order: (packageImages?.length || 0) + index + 1,
+                signedUrl: img.signedUrl
+              }));
+
+              combinedImages = [...combinedImages, ...categoryImages];
+            }
+
+            return combinedImages;
+          };
+
+          const processedPackages = parseData.map(pkg => ({
+            ...pkg,
+            signedImageUrls: pkg.to_category_id ?
+              mergeImages(pkg.signedImageUrls, pkg.toCategory) :
+              pkg.signedImageUrls
+          }));
+
+          const sortedPackages = processedPackages.sort((a, b) => {
+            const purchasesA = a.totalPackagesSold || 0;
+            const purchasesB = b.totalPackagesSold || 0;
+            return purchasesB - purchasesA;
+          });
+
+          return (
+            <div
+              className="w-full space-y-6 relative"
+              style={{ height: '100%', padding: '3rem 1rem', overflowY: 'scroll' }}
+            >
+              {sortedPackages.map((packageData) => (
+                <PackageCard
+                  key={packageData.id}
+                  packageData={packageData}
+                  langCode={currentLangCode}
+                  handleClick={(data) => handlePackageClicked(data)}
+                  loadingButton={loading}
+
+                />
+              ))}
+            </div>
+          );
+        })()}
+
+        {messageStore.receivedType === "ChatMessage" && (
+          <div className="flex w-full flex-col items-center justify-center gap-2 p-4">
+            <div className="w-full max-w-[100%] sm:max-w-[75%] md:max-w-[50%]">
+              <ChatBox
+                ref={chatBoxRef}
+                messages={messageStore.receivedMessage}
+                sendMessage={sendMessage}
+              />
+            </div>
+          </div>
+        )}
+
+        {messageStore.receivedType === "Image" && (
+          <>
+            {messageStore.receivedContent?.directContent === 'QR' ? (
+              <Card>
+                <img
+                  src={qrCodeUrl}
+                  alt="QR Code"
+                  className="w-96 h-96 object-cover"
+                />
+              </Card>
+            ) : (
+              <img
+                key={messageStore.receivedContent?.id ?? ""}
+                alt="template_image"
+                style={{
+                  height: "auto",
+                  maxHeight: "100%",
+                  maxWidth: "100%",
+                  objectFit: "cover",
+                  display: "block",
+                }}
+                src={messageStore.receivedContent?.content ?? ""}
+              />
+            )}
+          </>
+        )}
+
+
+        {(messageStore.receivedType === "Document" ||
+          messageStore.receivedType === "Documents" ||
+          messageStore.receivedType === "PdfDocument" ||
+          messageStore.receivedType === "WordDocument" ||
+          messageStore.receivedType === "ExcelDocument" ||
+          messageStore.receivedType === "PowerPointDocument" ||
+          messageStore.receivedType === "CsvDocument") && (() => {
+
+            const documentUrl = messageStore.receivedContent?.content ?? "";
+            const fileType = messageStore.receivedContent?.extraContent?.toLowerCase() ?? "";
+
+            const handleIframeError = () => {
+              setLoadError(true);
+              setIsLoading(false);
+              if (loadingTimeout) {
+                clearTimeout(loadingTimeout);
+              }
+            };
+
+            const handleIframeLoad = () => {
+              setIsLoading(false);
+              setLoadError(false);
+              if (loadingTimeout) {
+                clearTimeout(loadingTimeout);
+              }
+            };
+
+            const renderDocumentViewer = () => {
+              if (loadError) {
+                return (
+                  <div className="w-full p-8 text-center border-2 border-dashed border-gray-300 rounded-lg">
+                    <div className="text-gray-500 mb-4">
+                      <svg className="mx-auto h-12 w-12 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                      </svg>
+                      <p className="mb-4">Unable to display document</p>
                     </div>
-                  )}
+                  </div>
+                );
+              }
 
-                  {isIOS ? (
-                    <div className="flex-1 w-full relative">
+              switch (fileType) {
+                case 'ppt':
+                case 'pptx':
+                case 'xls':
+                case 'xlsx':
+                case 'csv':
+                  return (
+                    <div className="w-full h-screen border rounded-lg overflow-hidden relative">
+                      {isLoading && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-gray-50 z-10">
+                          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+                        </div>
+                      )}
                       <iframe
-                        src={`https://docs.google.com/viewer?url=${encodeURIComponent(documentUrl)}&embedded=true`}
-                        className="w-full h-full border-0"
-                        title="PDF Document"
-                        style={{
-                          width: '100%',
-                          height: '100%',
-                          border: 'none',
-                          overflow: 'hidden'
-                        }}
-                        scrolling="no"
+                        src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(documentUrl)}`}
+                        className="w-full h-full"
+                        title="Office Document"
+                        frameBorder="0"
                         onLoad={handleIframeLoad}
-                        onError={() => {
-                          setLoadError(false);
-                          const iframe = document.querySelector('iframe[title="PDF Document"]') as HTMLIFrameElement;
-                          if (iframe) {
-                            iframe.src = documentUrl + '#toolbar=0&navpanes=0&scrollbar=0';
-                          }
-                        }}
+                        onError={handleIframeError}
                       />
                     </div>
-                  ) : (
-                    <div className="flex-1 w-full relative">
-                      <object
-                        data={documentUrl}
-                        type="application/pdf"
-                        className="w-full h-full"
-                        style={{ width: '100%', height: '100%' }}
-                        onLoad={() => {
-                          setIsLoading(false);
-                          setLoadError(false);
-                        }}
-                        onError={() => {
-                          // Fallback 1: Try Google Docs viewer
-                          const container = document.querySelector('.flex-1.w-full.relative');
-                          if (container) {
-                            container.innerHTML = `
+                  );
+
+                case 'pdf':
+                  if (isMobile) {
+                    return (
+                      <div className="w-full h-screen flex flex-col overflow-hidden">
+                        {isLoading && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-gray-50 z-10">
+                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+                          </div>
+                        )}
+
+                        {isIOS ? (
+                          <div className="flex-1 w-full relative">
+                            <iframe
+                              src={`https://docs.google.com/viewer?url=${encodeURIComponent(documentUrl)}&embedded=true`}
+                              className="w-full h-full border-0"
+                              title="PDF Document"
+                              style={{
+                                width: '100%',
+                                height: '100%',
+                                border: 'none',
+                                overflow: 'hidden'
+                              }}
+                              scrolling="no"
+                              onLoad={handleIframeLoad}
+                              onError={() => {
+                                setLoadError(false);
+                                const iframe = document.querySelector('iframe[title="PDF Document"]') as HTMLIFrameElement;
+                                if (iframe) {
+                                  iframe.src = documentUrl + '#toolbar=0&navpanes=0&scrollbar=0';
+                                }
+                              }}
+                            />
+                          </div>
+                        ) : (
+                          <div className="flex-1 w-full relative">
+                            <object
+                              data={documentUrl}
+                              type="application/pdf"
+                              className="w-full h-full"
+                              style={{ width: '100%', height: '100%' }}
+                              onLoad={() => {
+                                setIsLoading(false);
+                                setLoadError(false);
+                              }}
+                              onError={() => {
+                                // Fallback 1: Try Google Docs viewer
+                                const container = document.querySelector('.flex-1.w-full.relative');
+                                if (container) {
+                                  container.innerHTML = `
                     <iframe
                       src="https://docs.google.com/viewer?url=${encodeURIComponent(documentUrl)}&embedded=true"
                       style="width: 100%; height: 100%; border: none;"
                       title="PDF Document"
                     ></iframe>
                   `;
-                          }
-                          setTimeout(() => setIsLoading(false), 3000);
-                        }}
-                      >
-                        {/* Fallback for object tag */}
+                                }
+                                setTimeout(() => setIsLoading(false), 3000);
+                              }}
+                            >
+                              {/* Fallback for object tag */}
+                              <iframe
+                                src={`https://drive.google.com/viewerng/viewer?embedded=true&url=${encodeURIComponent(documentUrl)}`}
+                                className="w-full h-full border-0"
+                                title="PDF Document"
+                                style={{ width: '100%', height: '100%', border: 'none' }}
+                                onLoad={() => {
+                                  setIsLoading(false);
+                                  setLoadError(false);
+                                }}
+                                onError={() => {
+                                  // Final fallback: Direct link in new tab
+                                  window.open(documentUrl, '_blank');
+                                  setIsLoading(false);
+                                }}
+                              />
+                            </object>
+                          </div>
+                        )}
+
+                      </div>
+                    );
+                  } else if (isTablet) {
+                    const pdfViewerUrl = `https://mozilla.github.io/pdf.js/web/viewer.html?file=${encodeURIComponent(documentUrl)}`;
+
+                    return (
+                      <div className="w-full h-screen flex flex-col overflow-hidden">
+                        {isLoading && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-gray-50 z-10">
+                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+                          </div>
+                        )}
+
+                        <div className="flex-1 w-full relative">
+                          <iframe
+                            src={pdfViewerUrl}
+                            className="w-full h-full border-0"
+                            title="PDF Document"
+                            style={{ width: '100%', height: '100%', border: 'none', overflow: 'hidden' }}
+                            onLoad={() => {
+                              setIsLoading(false);
+                              setLoadError(false);
+                            }}
+                            onError={() => {
+                              setLoadError(true);
+                              window.open(documentUrl, '_blank');
+                            }}
+                          />
+
+                          {loadError && (
+                            <div className="absolute inset-0 flex flex-col items-center justify-center bg-white p-4 space-y-2">
+                              <p className="text-gray-700">Failed to load PDF viewer.</p>
+                              <a
+                                href={documentUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="px-4 py-2 bg-blue-500 text-white rounded"
+                              >
+                                Open directly
+                              </a>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  }
+                  else {
+                    // Desktop PDF viewer
+                    return (
+                      <div className="w-full h-screen border rounded-lg overflow-hidden relative">
+                        {isLoading && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-gray-50 z-10">
+                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+                          </div>
+                        )}
                         <iframe
-                          src={`https://drive.google.com/viewerng/viewer?embedded=true&url=${encodeURIComponent(documentUrl)}`}
-                          className="w-full h-full border-0"
+                          src={documentUrl}
+                          className="w-full h-full"
                           title="PDF Document"
-                          style={{ width: '100%', height: '100%', border: 'none' }}
-                          onLoad={() => {
-                            setIsLoading(false);
-                            setLoadError(false);
-                          }}
-                          onError={() => {
-                            // Final fallback: Direct link in new tab
-                            window.open(documentUrl, '_blank');
-                            setIsLoading(false);
-                          }}
+                          frameBorder="0"
+                          onLoad={handleIframeLoad}
+                          onError={handleIframeError}
                         />
-                      </object>
-                    </div>
-                  )}
-
-                </div>
-              );
-            } else if (isTablet) {
-              const pdfViewerUrl = `https://mozilla.github.io/pdf.js/web/viewer.html?file=${encodeURIComponent(documentUrl)}`;
-
-              return (
-                <div className="w-full h-screen flex flex-col overflow-hidden">
-                  {isLoading && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-gray-50 z-10">
-                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-                    </div>
-                  )}
-
-                  <div className="flex-1 w-full relative">
-                    <iframe
-                      src={pdfViewerUrl}
-                      className="w-full h-full border-0"
-                      title="PDF Document"
-                      style={{ width: '100%', height: '100%', border: 'none', overflow: 'hidden' }}
-                      onLoad={() => {
-                        setIsLoading(false);
-                        setLoadError(false);
-                      }}
-                      onError={() => {
-                        setLoadError(true);
-                        window.open(documentUrl, '_blank');
-                      }}
-                    />
-
-                    {loadError && (
-                      <div className="absolute inset-0 flex flex-col items-center justify-center bg-white p-4 space-y-2">
-                        <p className="text-gray-700">Failed to load PDF viewer.</p>
-                        <a
-                          href={documentUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="px-4 py-2 bg-blue-500 text-white rounded"
-                        >
-                          Open directly
-                        </a>
                       </div>
-                    )}
-                  </div>
-                </div>
-              );
-            }
-            else {
-              // Desktop PDF viewer
-              return (
-                <div className="w-full h-screen border rounded-lg overflow-hidden relative">
-                  {isLoading && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-gray-50 z-10">
-                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-                    </div>
-                  )}
-                  <iframe
-                    src={documentUrl}
-                    className="w-full h-full"
-                    title="PDF Document"
-                    frameBorder="0"
-                    onLoad={handleIframeLoad}
-                    onError={handleIframeError}
-                  />
-                </div>
-              );
-            }
+                    );
+                  }
 
-          case 'doc':
-          case 'docx':
-            if (isMobile || isTablet) {
-              return (
-                <div className="w-full h-screen flex flex-col overflow-hidden">
-                  <div className="flex-1 relative">
-                    {isLoading && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-gray-50 z-10">
-                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+                case 'doc':
+                case 'docx':
+                  if (isMobile || isTablet) {
+                    return (
+                      <div className="w-full h-screen flex flex-col overflow-hidden">
+                        <div className="flex-1 relative">
+                          {isLoading && (
+                            <div className="absolute inset-0 flex items-center justify-center bg-gray-50 z-10">
+                              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+                            </div>
+                          )}
+
+                          {isAndroid ? (
+                            // Android: Try multiple viewers in order
+                            <iframe
+                              src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(documentUrl)}`}
+                              className="w-full h-full border-0"
+                              title="Word Document"
+                              style={{ width: '100%', height: '100%', border: 'none' }}
+                              onLoad={() => {
+                                setIsLoading(false);
+                                setLoadError(false);
+                              }}
+                              onError={() => {
+                                // Fallback: Google Docs viewer
+                                const iframe = document.querySelector('iframe[title="Word Document"]') as HTMLIFrameElement;
+                                if (iframe) {
+                                  iframe.src = `https://docs.google.com/viewer?url=${encodeURIComponent(documentUrl)}&embedded=true`;
+                                }
+                                setTimeout(() => setIsLoading(false), 3000);
+                              }}
+                            />
+                          ) : (
+                            // iOS: Google Docs viewer
+                            <iframe
+                              src={`https://docs.google.com/viewer?url=${encodeURIComponent(documentUrl)}&embedded=true`}
+                              className="w-full h-full border-0"
+                              title="Word Document"
+                              style={{ width: '100%', height: '100%', border: 'none' }}
+                              onLoad={() => {
+                                setIsLoading(false);
+                                setLoadError(false);
+                              }}
+                              onError={() => {
+                                const iframe = document.querySelector('iframe[title="Word Document"]') as HTMLIFrameElement;
+                                if (iframe) {
+                                  iframe.src = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(documentUrl)}`;
+                                }
+                                setTimeout(() => setIsLoading(false), 5000);
+                              }}
+                            />
+                          )}
+                        </div>
                       </div>
-                    )}
+                    );
+                  } else {
+                    // Desktop Word viewer
+                    return (
+                      <div className="w-full h-screen border rounded-lg overflow-hidden relative">
+                        {isLoading && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-gray-50 z-10">
+                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+                          </div>
+                        )}
+                        <iframe
+                          src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(documentUrl)}`}
+                          className="w-full h-full"
+                          title="Word Document"
+                          frameBorder="0"
+                          onLoad={handleIframeLoad}
+                          onError={handleIframeError}
+                        />
+                      </div>
+                    );
+                  }
 
-                    {isAndroid ? (
-                      // Android: Try multiple viewers in order
-                      <iframe
-                        src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(documentUrl)}`}
-                        className="w-full h-full border-0"
-                        title="Word Document"
-                        style={{ width: '100%', height: '100%', border: 'none' }}
-                        onLoad={() => {
-                          setIsLoading(false);
-                          setLoadError(false);
-                        }}
-                        onError={() => {
-                          // Fallback: Google Docs viewer
-                          const iframe = document.querySelector('iframe[title="Word Document"]') as HTMLIFrameElement;
-                          if (iframe) {
-                            iframe.src = `https://docs.google.com/viewer?url=${encodeURIComponent(documentUrl)}&embedded=true`;
-                          }
-                          setTimeout(() => setIsLoading(false), 3000);
-                        }}
-                      />
-                    ) : (
-                      // iOS: Google Docs viewer
-                      <iframe
-                        src={`https://docs.google.com/viewer?url=${encodeURIComponent(documentUrl)}&embedded=true`}
-                        className="w-full h-full border-0"
-                        title="Word Document"
-                        style={{ width: '100%', height: '100%', border: 'none' }}
-                        onLoad={() => {
-                          setIsLoading(false);
-                          setLoadError(false);
-                        }}
-                        onError={() => {
-                          const iframe = document.querySelector('iframe[title="Word Document"]') as HTMLIFrameElement;
-                          if (iframe) {
-                            iframe.src = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(documentUrl)}`;
-                          }
-                          setTimeout(() => setIsLoading(false), 5000);
-                        }}
-                      />
-                    )}
-                  </div>
-                </div>
-              );
-            } else {
-              // Desktop Word viewer
-              return (
-                <div className="w-full h-screen border rounded-lg overflow-hidden relative">
-                  {isLoading && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-gray-50 z-10">
-                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+                default:
+                  return (
+                    <div className="w-full p-8 text-center border-2 border-dashed border-gray-300 rounded-lg">
+                      <div className="text-gray-500 mb-4">
+                        <svg className="mx-auto h-12 w-12 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        <p className="mb-4">Preview not available for this file type</p>
+                      </div>
                     </div>
-                  )}
-                  <iframe
-                    src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(documentUrl)}`}
-                    className="w-full h-full"
-                    title="Word Document"
-                    frameBorder="0"
-                    onLoad={handleIframeLoad}
-                    onError={handleIframeError}
-                  />
-                </div>
-              );
-            }
+                  );
+              }
+            };
 
-          default:
             return (
-              <div className="w-full p-8 text-center border-2 border-dashed border-gray-300 rounded-lg">
-                <div className="text-gray-500 mb-4">
-                  <svg className="mx-auto h-12 w-12 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                  <p className="mb-4">Preview not available for this file type</p>
-                </div>
-              </div>
+              <>
+                {messageStore.receivedContent?.directContent === 'QR' ? (
+                  <Card>
+                    <img
+                      src={qrCodeUrl}
+                      alt="QR Code"
+                      className="w-96 h-96 object-cover"
+                    />
+                  </Card>
+                ) : (
+                  <div className={`w-full ${isMobile ? 'p-2' : 'p-5'}`}>
+                    {renderDocumentViewer()}
+                  </div>
+                )}
+              </>
             );
-        }
-      };
+          })()}
 
-      return (
-        <>
-          {messageStore.receivedContent?.directContent === 'QR' ? (
+        {messageStore.receivedType === "Video" && (
+          messageStore.receivedContent?.directContent === 'QR' ? (
             <Card>
               <img
                 src={qrCodeUrl}
@@ -1619,192 +1684,194 @@ export const Content: React.FC = () => {
               />
             </Card>
           ) : (
-            <div className={`w-full ${isMobile ? 'p-2' : 'p-5'}`}>
-              {renderDocumentViewer()}
-            </div>
-          )}
-        </>
-      )
-    }
+            <>
+              <style jsx>{`
+          @keyframes fadeOut {
+            0% { opacity: 1; }
+            70% { opacity: 1; }
+            100% { opacity: 0; pointer-events: none; }
+          }
 
-    if (messageStore.receivedType === "Video") {
-      return (
-        messageStore.receivedContent?.directContent === 'QR' ? (
-          <Card>
-            <img
-              src={qrCodeUrl}
-              alt="QR Code"
-              className="w-96 h-96 object-cover"
-            />
-          </Card>
-        ) : (
-          <div
-            style={{
-              position: 'fixed',
-              top: 0,
-              left: 0,
-              width: '100vw',
-              height: '100vh',
-              overflow: 'hidden',
-              zIndex: 9,
-              backgroundColor: 'black',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <video
-              ref={videoElement}
-              autoPlay
-              muted
-              loop
-              playsInline
-              preload="auto"
-              key={messageStore.receivedContent?.content ?? ""}
-              onLoadedData={() => {
-                if (videoElement.current) {
-                  videoElement.current.play().catch(err => {
-                    console.error("Video play failed:", err);
-                  });
-                }
-              }}
-              style={{
-                maxWidth: '100%',
-                maxHeight: '100%',
-                width: 'auto',
-                height: 'auto',
-                objectFit: 'contain',
-                display: 'block',
-              }}
-            >
-              <source
-                src={messageStore.receivedContent?.content ?? ""}
-                type="video/mp4"
-              />
-            </video>
+          .fade-out-prompt {
+            animation: fadeOut 3s forwards;
+          }
+        `}</style>
 
-            {/* Minimal tap-to-unmute overlay */}
-            {/* {showUnmutePrompt && (
               <div
-                onClick={handleUnmute}
                 style={{
-                  position: 'absolute',
+                  position: 'fixed',
                   top: 0,
                   left: 0,
-                  width: '100%',
-                  height: '100%',
-                  pointerEvents: 'auto',
+                  width: '100vw',
+                  height: '100vh',
+                  overflow: 'hidden',
+                  zIndex: 9,
+                  backgroundColor: 'black',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  cursor: 'pointer',
-                  animation: 'fadeOut 3s forwards',
                 }}
               >
-                <div
+                <video
+                  ref={videoElement}
+                  autoPlay
+                  muted={isMuted}
+                  loop
+                  playsInline
+                  preload="auto"
+                  key={messageStore.receivedContent?.content ?? ""}
+                  onLoadedData={() => {
+                    if (videoElement.current) {
+                      videoElement.current.muted = isMuted;
+                      videoElement.current.play().catch(err => {
+                        console.error("Video play failed:", err);
+                      });
+                    }
+                  }}
                   style={{
-                    padding: '16px 32px',
-                    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-                    borderRadius: '50px',
-                    color: 'white',
-                    fontSize: '18px',
-                    fontWeight: '500',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px',
-                    backdropFilter: 'blur(10px)',
+                    maxWidth: '100%',
+                    maxHeight: '100%',
+                    width: 'auto',
+                    height: 'auto',
+                    objectFit: 'contain',
+                    display: 'block',
                   }}
                 >
-                  <span style={{ fontSize: '24px' }}>🔇</span>
-                  Tap for sound
-                </div>
+                  <source
+                    src={messageStore.receivedContent?.content ?? ""}
+                    type="video/mp4"
+                  />
+                </video>
+
+                {/* Tap-to-unmute overlay */}
+                {showUnmutePrompt && (
+                  <div
+                    onClick={handleUnmute}
+                    className="fade-out-prompt"
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      height: '100%',
+                      pointerEvents: 'auto',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <div
+                      style={{
+                        padding: '16px 32px',
+                        backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                        borderRadius: '50px',
+                        color: 'white',
+                        fontSize: '18px',
+                        fontWeight: '500',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px',
+                        backdropFilter: 'blur(10px)',
+                      }}
+                    >
+                      <span style={{ fontSize: '24px' }}>🔇</span>
+                      Tap for sound
+                    </div>
+                  </div>
+                )}
+
+                {/* Mute/Unmute toggle button */}
+                {!showUnmutePrompt && (
+                  <button
+                    onClick={toggleMute}
+                    style={{
+                      position: 'absolute',
+                      bottom: '20px',
+                      right: '20px',
+                      pointerEvents: 'auto',
+                      width: '48px',
+                      height: '48px',
+                      backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                      border: '2px solid rgba(255, 255, 255, 0.3)',
+                      borderRadius: '50%',
+                      cursor: 'pointer',
+                      fontSize: '20px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      backdropFilter: 'blur(5px)',
+                      transition: 'all 0.2s ease',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
+                      e.currentTarget.style.transform = 'scale(1.05)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.6)';
+                      e.currentTarget.style.transform = 'scale(1)';
+                    }}
+                  >
+                    {isMuted ? '🔇' : '🔊'}
+                  </button>
+                )}
               </div>
-            )} */}
+            </>
+          )
+        )}
 
-            {/* {!showUnmutePrompt && (
-              <button
-                onClick={() => setIsMuted(!isMuted)}
-                style={{
-                  position: 'absolute',
-                  bottom: '20px',
-                  right: '20px',
-                  pointerEvents: 'auto',
-                  width: '48px',
-                  height: '48px',
-                  backgroundColor: 'rgba(0, 0, 0, 0.6)',
-                  border: '2px solid rgba(255, 255, 255, 0.3)',
-                  borderRadius: '50%',
-                  cursor: 'pointer',
-                  fontSize: '20px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  backdropFilter: 'blur(5px)',
-                }}
-              >
-                {isMuted ? '🔇' : '🔊'}
-              </button>
-            )} */}
-          </div>
-        )
-      );
-    }
+        {messageStore.receivedType === "Slideshow" && (
+          messageStore.receivedContent?.directContent === 'QR' ? (
+            <Card>
+              <img
+                src={qrCodeUrl}
+                alt="QR Code"
+                className="w-96 h-96 object-cover"
+              />
+            </Card>
+          ) : (
+            <Slideshow contents={messageStore.receivedContent?.contents ?? []} />
+          )
+        )}
 
-    if (messageStore.receivedType === "Slideshow") {
-      return (
-        messageStore.receivedContent?.directContent === 'QR' ? (
-          <Card>
-            <img
-              src={qrCodeUrl}
-              alt="QR Code"
-              className="w-96 h-96 object-cover"
-            />
-          </Card>
-        ) : (
-          <Slideshow contents={messageStore.receivedContent?.contents ?? []} />
-        )
-      );
-    }
+        {(
+          messageStore.receivedType === "Map" ||
+          messageStore.receivedType === "MapTemplateQr" ||
+          messageStore.receivedType === "MapTemplateMessage"
+        ) && (() => {
+          return (
+            <>
+              {messageStore.receivedType === "MapTemplateQr" ? (
+                <Card>
+                  <img
+                    src={qrCodeUrl}
+                    alt="QR Code"
+                    className="w-96 h-96 object-cover"
+                  />
+                </Card>
+              ) : (
+                <SimpleMap
+                  destination={messageStore.receivedContent?.extraContent ?? ""}
+                  origin={messageStore.receivedContent?.content ?? ""}
+                  languageCode={messageStore.receivedContent?.langCode ?? "en"}
+                />
+              )}
+            </>
+          )
+        })}
 
-    if (
-      messageStore.receivedType === "Map" ||
-      messageStore.receivedType === "MapTemplateQr" ||
-      messageStore.receivedType === "MapTemplateMessage"
-    ) {
-      return (
-        messageStore.receivedType === "MapTemplateQr" ? (
-          <Card>
-            <img
-              src={qrCodeUrl}
-              alt="QR Code"
-              className="w-96 h-96 object-cover"
-            />
-          </Card>
-        ) : (
-          <SimpleMap
-            destination={messageStore.receivedContent?.extraContent ?? ""}
-            origin={messageStore.receivedContent?.content ?? ""}
-            languageCode={messageStore.receivedContent?.langCode ?? "en"}
+
+        {messageStore.receivedType === "Survey" && messageStore.receivedSurvey && (
+          <SurveyAnswer
+            tag={messageStore.receivedSurvey.tag}
+            survey={messageStore.receivedSurvey}
+            handleComplete={() => messageStore.reset()}
           />
-        )
-      );
-    }
-  }
+        )}
 
-  if (messageStore.receivedType === "Survey" && messageStore.receivedSurvey) {
-    return (
-      <SurveyAnswer
-        tag={messageStore.receivedSurvey.tag}
-        survey={messageStore.receivedSurvey}
-        handleComplete={() => messageStore.reset()}
-      />
-    );
-  }
-
-  if (messageStore.receivedType === ("JotFormMessage" as any)) {
-    return (
-      <>
-        <style jsx>{`
+        {(messageStore.receivedType === ("JotFormMessage" as any)) && (
+          <>
+            <style jsx>{`
         @keyframes slideDown {
           from {
             transform: translateY(-100%);
@@ -1909,89 +1976,80 @@ export const Content: React.FC = () => {
         }
       `}</style>
 
-        <div className="surveyWrapper w-screen h-screen flex flex-col bg-gray-100 relative">
+            <div className="surveyWrapper w-screen h-screen flex flex-col bg-gray-100 relative">
 
-          {showQR && (
-            <div
-              className={`relative bg-white shadow-md px-4 py-3 z-50 ${isClosing ? 'qr-modal-exit' : 'qr-modal-enter'}`}
-            >
-              {qrCodeUrl && (
-                <div className="absolute left-4 top-1/2 transform -translate-y-1/2">
-                  <img
-                    src={qrCodeUrl}
-                    alt="QR Code"
-                    className="w-28 h-28 object-contain"
-                  />
+              {showQR && (
+                <div
+                  className={`relative bg-white shadow-md px-4 py-3 z-50 ${isClosing ? 'qr-modal-exit' : 'qr-modal-enter'}`}
+                >
+                  {qrCodeUrl && (
+                    <div className="absolute left-4 top-1/2 transform -translate-y-1/2">
+                      <img
+                        src={qrCodeUrl}
+                        alt="QR Code"
+                        className="w-28 h-28 object-contain"
+                      />
+                    </div>
+                  )}
+                  <div className="flex justify-center items-center w-full h-full min-h-[7rem]">
+                    <span className="text-gray-700 text-xl customScanCode text-center">
+                      Kindly scan to fill the form on your own device.
+                    </span>
+                  </div>
+
+                  <div className="absolute bottom-2 right-4 text-sm text-gray-500">
+                    {timer}s
+                  </div>
+
+                  <button
+                    onClick={handleCloseQR}
+                    className="text-2xl text-gray-500 hover:text-gray-700 absolute top-2 right-4 transition-colors duration-200"
+                  >
+                    ×
+                  </button>
                 </div>
               )}
-              <div className="flex justify-center items-center w-full h-full min-h-[7rem]">
-                <span className="text-gray-700 text-xl customScanCode text-center">
-                  Kindly scan to fill the form on your own device.
-                </span>
-              </div>
 
-              <div className="absolute bottom-2 right-4 text-sm text-gray-500">
-                {timer}s
+              <div
+                className="flex-1 overflow-auto iframe-container" >
+                <IframeWithPrefill
+                  src={jotFormUrl}
+                  prefillData={prefillData}
+                />
               </div>
-
-              <button
-                onClick={handleCloseQR}
-                className="text-2xl text-gray-500 hover:text-gray-700 absolute top-2 right-4 transition-colors duration-200"
-              >
-                ×
-              </button>
             </div>
+          </>
+        )}
+
+        {(
+          messageStore.receivedType === "Website" ||
+          messageStore.receivedType === "WebsiteTemplateQr" ||
+          messageStore.receivedType === "WebsiteTemplateMessage"
+        ) && (
+            messageStore.receivedType === 'WebsiteTemplateQr' ? (
+              <Card>
+                <img
+                  src={qrCodeUrl}
+                  alt="QR Code"
+                  className="w-96 h-96 object-cover"
+                />
+              </Card>
+            ) : (
+              <iframe
+                className="h-full w-full"
+                src={messageStore.receivedContent?.content ?? ""}
+              />
+            )
           )}
 
-          <div
-            className="flex-1 overflow-auto iframe-container" >
-            <IframeWithPrefill
-              src={jotFormUrl}
-              prefillData={prefillData}
-            />
-          </div>
-        </div>
       </>
     );
   }
-
-  if (messageStore.receivedType === "Recording") {
-    return (
-      <>
-        <Recording
-          onSubmit={handleRecordingSubmit}
-          langCode={messageStore.receivedContent?.langCode ?? "en"}
-          loading={loading}
-        />
-      </>
-    )
-  }
-  if (
-    messageStore.receivedType === "Website" ||
-    messageStore.receivedType === "WebsiteTemplateQr" ||
-    messageStore.receivedType === "WebsiteTemplateMessage"
-  ) {
-    return (
-      messageStore.receivedType === 'WebsiteTemplateQr' ? (
-        <Card>
-          <img
-            src={qrCodeUrl}
-            alt="QR Code"
-            className="w-96 h-96 object-cover"
-          />
-        </Card>
-      ) : (
-        <iframe
-          className="h-full w-full"
-          src={messageStore.receivedContent?.content ?? ""}
-        />
-      )
-    );
-  }
-
   if (isFirstTimeOpen && defaultSlideshowContent.data)
     return (
-      <Slideshow contents={defaultSlideshowContent.data?.contents ?? []} />
+      <>
+        <Slideshow contents={defaultSlideshowContent.data?.contents ?? []} />
+      </>
     );
 
   return <div></div>;
