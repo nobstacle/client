@@ -56,7 +56,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
     const confirmationTimerRef = useRef(null);
     const justSelectedRef = useRef(false);
     const isSAdmin = user?.user.Roles?.includes("SAdmin");
-console.info("fff",isSAdmin)
+    console.info("fff", isSAdmin)
     // Get company data with proper caching
     const { data: companyData } = useCompanyControllerGetCompany({
         query: {
@@ -439,6 +439,10 @@ console.info("fff",isSAdmin)
         const templateToSend = template.availableInSelectedLang
             ? template.templateData
             : template.defaultLangData;
+
+        const langToSend = template.availableInSelectedLang
+            ? selectedLang
+            : (companyData?.defaultLangCode || "en");
 
         let contentType = "";
         if (template?.type === 'image') {
