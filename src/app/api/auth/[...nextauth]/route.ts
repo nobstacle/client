@@ -17,7 +17,6 @@ export const authOptions: AuthOptions = {
       async authorize(credentials) {
         
         if (typeof credentials !== "undefined") {
-          console.log("IN--",);
           const res = await authControllerLogin({
             emailOrUsername: credentials.email,
             password: credentials.password,

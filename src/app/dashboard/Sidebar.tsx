@@ -19,7 +19,8 @@ import {
     IoDocumentText,
     IoWallet,
     IoPeople,
-    IoSettings
+    IoSettings,
+    IoHome
 } from 'react-icons/io5';
 import { IoRecordingSharp } from "react-icons/io5";
 import { StationPicker } from "../../components/pages/dashboard/Header/StationPicker";
@@ -58,7 +59,21 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
     const [mounted, setMounted] = useState(false);
     const pathname = usePathname();
 
-    // Flattened menu structure with icons
+    // Check if user is SAdmin
+    const isSAdmin = user?.user.Roles?.includes("SAdmin");
+
+    // Menu items for SAdmin users
+    const sAdminMenuItems: MenuItem[] = [
+        {
+            title: "Home",
+            href: "/dashboard/asignForms",
+            roles: ["SAdmin"],
+            icon: <IoHome size={18} />,
+            iconColor: "white"
+        }
+    ];
+
+    // Regular menu items for other users
     const menuItems: MenuItem[] = [
         {
             title: "Image",
@@ -155,6 +170,9 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
         { title: "Upsell Categories", href: "/dashboard/category", roles: ["Admin", "User"] },
         { title: "Upsell Packages", href: "/dashboard/package", roles: ["Admin", "User"] },
     ];
+
+    // Select which menu to display based on user role
+    const displayMenuItems = isSAdmin ? sAdminMenuItems : menuItems;
 
     useEffect(() => {
         setMounted(true);
@@ -396,98 +414,105 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
                 <div className="flex h-full w-full flex-col justify-between" style={{ overflow: 'hidden' }}>
                     <div className="flex-1 overflow-y-auto">
                         <ul className="w-full py-2">
-                            {menuItems.map(item => renderMenuItem(item))}
+                            {displayMenuItems.map(item => renderMenuItem(item))}
                         </ul>
 
-                        {/* Team Dropdown */}
-                        {hasTeamAccess && (
-                            <div className="w-full">
-                                <div
-                                    onClick={toggleTeam}
-                                    className={`
-                                        flex items-center justify-between gap-3 px-6 py-3 cursor-pointer
-                                        transition-colors duration-200
-                                        text-white/90 hover:bg-white/5 hover:text-white border-l-4 border-transparent
-                                    `}
-                                >
-                                    <div className="flex items-center gap-3 flex-1">
-                                        <IoPeople size={18} />
-                                        <span className="text-sm font-normal">Team</span>
+                        {/* Only show Team and Settings dropdowns for non-SAdmin users */}
+                        {!isSAdmin && (
+                            <>
+                                {/* Team Dropdown */}
+                                {hasTeamAccess && (
+                                    <div className="w-full">
+                                        <div
+                                            onClick={toggleTeam}
+                                            className={`
+                                                flex items-center justify-between gap-3 px-6 py-3 cursor-pointer
+                                                transition-colors duration-200
+                                                text-white/90 hover:bg-white/5 hover:text-white border-l-4 border-transparent
+                                            `}
+                                        >
+                                            <div className="flex items-center gap-3 flex-1">
+                                                <IoPeople size={18} />
+                                                <span className="text-sm font-normal">Team</span>
+                                            </div>
+                                            <svg
+                                                className={`w-4 h-4 transition-transform duration-300 ${teamExpanded ? 'rotate-180' : ''}`}
+                                                fill="none"
+                                                stroke="currentColor"
+                                                viewBox="0 0 24 24"
+                                            >
+                                                <path
+                                                    strokeLinecap="round"
+                                                    strokeLinejoin="round"
+                                                    strokeWidth={2}
+                                                    d="M19 9l-7 7-7-7"
+                                                />
+                                            </svg>
+                                        </div>
+                                        <div
+                                            className={`
+                                                overflow-hidden transition-all duration-300 ease-in-out
+                                                ${teamExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}
+                                            `}
+                                        >
+                                            <ul className="bg-primary-dark/30">
+                                                {teamItems.map(item => renderTeamItem(item))}
+                                            </ul>
+                                        </div>
                                     </div>
-                                    <svg
-                                        className={`w-4 h-4 transition-transform duration-300 ${teamExpanded ? 'rotate-180' : ''}`}
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth={2}
-                                            d="M19 9l-7 7-7-7"
-                                        />
-                                    </svg>
-                                </div>
-                                <div
-                                    className={`
-                                        overflow-hidden transition-all duration-300 ease-in-out
-                                        ${teamExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}
-                                    `}
-                                >
-                                    <ul className="bg-primary-dark/30">
-                                        {teamItems.map(item => renderTeamItem(item))}
-                                    </ul>
-                                </div>
-                            </div>
-                        )}
+                                )}
 
-                        {/* Settings Dropdown */}
-                        {hasSettingsAccess && (
-                            <div className="w-full">
-                                <div
-                                    onClick={toggleSettings}
-                                    className={`
-                                        flex items-center justify-between px-6 py-3 cursor-pointer
-                                        transition-colors duration-200
-                                        text-white/90 hover:bg-white/5 hover:text-white border-l-4 border-transparent
-                                    `}
-                                >
-                                    <div className="flex items-center gap-3 flex-1">
-                                        <IoSettings size={18} />
-                                        <span className="text-sm font-normal">Settings</span>
+                                {/* Settings Dropdown */}
+                                {hasSettingsAccess && (
+                                    <div className="w-full">
+                                        <div
+                                            onClick={toggleSettings}
+                                            className={`
+                                                flex items-center justify-between px-6 py-3 cursor-pointer
+                                                transition-colors duration-200
+                                                text-white/90 hover:bg-white/5 hover:text-white border-l-4 border-transparent
+                                            `}
+                                        >
+                                            <div className="flex items-center gap-3 flex-1">
+                                                <IoSettings size={18} />
+                                                <span className="text-sm font-normal">Settings</span>
+                                            </div>
+                                            <svg
+                                                className={`w-4 h-4 transition-transform duration-300 ${settingsExpanded ? 'rotate-180' : ''}`}
+                                                fill="none"
+                                                stroke="currentColor"
+                                                viewBox="0 0 24 24"
+                                            >
+                                                <path
+                                                    strokeLinecap="round"
+                                                    strokeLinejoin="round"
+                                                    strokeWidth={2}
+                                                    d="M19 9l-7 7-7-7"
+                                                />
+                                            </svg>
+                                        </div>
+                                        <div
+                                            className={`
+                                                overflow-hidden transition-all duration-300 ease-in-out
+                                                ${settingsExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}
+                                            `}
+                                        >
+                                            <ul className="bg-primary-dark/30">
+                                                {settingsItems.map(item => renderSettingsItem(item))}
+                                            </ul>
+                                        </div>
                                     </div>
-                                    <svg
-                                        className={`w-4 h-4 transition-transform duration-300 ${settingsExpanded ? 'rotate-180' : ''}`}
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth={2}
-                                            d="M19 9l-7 7-7-7"
-                                        />
-                                    </svg>
-                                </div>
-                                <div
-                                    className={`
-                                        overflow-hidden transition-all duration-300 ease-in-out
-                                        ${settingsExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}
-                                    `}
-                                >
-                                    <ul className="bg-primary-dark/30">
-                                        {settingsItems.map(item => renderSettingsItem(item))}
-                                    </ul>
-                                </div>
-                            </div>
+                                )}
+                            </>
                         )}
                     </div>
 
                     <ul className="w-full border-t border-white/20 flex" style={{ alignItems: 'center' }}>
-                        <div className="px-4 py-2">
-                            <StationPicker />
-                        </div>
+                        {!isSAdmin && (
+                            <div className="px-4 py-2">
+                                <StationPicker />
+                            </div>
+                        )}
                         <li className="flex gap-2 p-4 px-6 hover:bg-white/5 cursor-pointer transition-colors">
                             <LogoutIcon />
                             <Logout />

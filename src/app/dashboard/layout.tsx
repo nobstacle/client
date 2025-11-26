@@ -27,7 +27,8 @@ function DashboardLayout({ children }: { children: React.ReactNode }) {
 }
 
 const ServerHeaderWrapper = async () => {
-  return <ClientHeader  />;
+    const user = await getServerSession(authOptions);
+  return <ClientHeader  user={user}/>;
 };
 
 const ServerSidebarWrapper = async () => {
