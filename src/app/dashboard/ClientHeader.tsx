@@ -10,6 +10,8 @@ import { StationPicker } from "../../components/pages/dashboard/Header/StationPi
 import { ChatBot } from "../../components/pages/dashboard/Header/chatBot";
 import { HeaderSurveyShortcut } from "../../components/pages/dashboard/Header/SurveyPicker";
 import { HeaderRecordingShortcut } from "../../components/pages/dashboard/Header/SendRecording";
+import { TextSurveyShortcut } from "../../components/pages/dashboard/Header/TextSurveyShortcut";
+import { WebsiteShortcut } from "../../components/pages/dashboard/Header/WebsiteShortcut";
 import {
     useTemplateControllerGetTextTemplates,
     useTemplateControllerGetImageTemplates,
@@ -56,7 +58,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
     const confirmationTimerRef = useRef(null);
     const justSelectedRef = useRef(false);
     const isSAdmin = user?.user.Roles?.includes("SAdmin");
-    console.info("fff", isSAdmin)
+
     // Get company data with proper caching
     const { data: companyData } = useCompanyControllerGetCompany({
         query: {
@@ -345,15 +347,16 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
     const showShortcutMenu = () => setShortcutMenuOpen(true);
     const closeShortcutMenu = () => setShortcutMenuOpen(false);
 
-    const handleConfirmationNumberChange = useCallback(
-        (e: React.ChangeEvent<HTMLInputElement>) => {
-            setConfirmationNumber(e.target.value);
-        },
-        []
-    );
+    // const handleConfirmationNumberChange = useCallback(
+    //     (e: React.ChangeEvent<HTMLInputElement>) => {
+    //         setConfirmationNumber(e.target.value);
+    //     },
+    //     []
+    // );
 
     const clearConfirmationNumber = useCallback(() => {
         setConfirmationNumber("");
+        setSearchValue("");
     }, []);
 
     const handleTemplateSelect = useCallback((template) => {
@@ -540,13 +543,27 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                     {!isSAdmin && (
                         <div className="flex items-center">
                             <div style={{ padding: '0.2rem' }}>
+                                <WebsiteShortcut
+                                    confirmationNumber={searchValue !== "" ? searchValue : confirmationNumber}
+                                    clearConfirmationNumber={clearConfirmationNumber}
+                                />
+                            </div>
+                            <div style={{ padding: '0.2rem' }}>
+                                <TextSurveyShortcut
+                                    confirmationNumber={searchValue !== "" ? searchValue : confirmationNumber}
+                                    clearConfirmationNumber={clearConfirmationNumber}
+                                />
+                            </div>
+                            <div style={{ padding: '0.2rem' }}>
                                 <HeaderSurveyShortcut
-                                    confirmationNumber={confirmationNumber}
+                                    confirmationNumber={searchValue !== "" ? searchValue : confirmationNumber}
                                     clearConfirmationNumber={clearConfirmationNumber}
                                 />
                             </div>
                             <div className="rounded-lg" style={{ padding: '0.2rem' }}>
-                                <HeaderRecordingShortcut confirmationNumber={confirmationNumber} clearConfirmationNumber={clearConfirmationNumber} />
+                                <HeaderRecordingShortcut
+                                    confirmationNumber={confirmationNumber}
+                                    clearConfirmationNumber={clearConfirmationNumber} />
                             </div>
                             <div className="rounded-lg" style={{ padding: '0.2rem' }}>
                                 <ChatBot />
@@ -560,6 +577,9 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                 <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                                     <input
                                         ref={inputRef}
+                                        autoComplete="off"
+                                        autoCorrect="off"
+                                        autoCapitalize="off"
                                         type="text"
                                         placeholder="ID# or Search Template"
                                         value={searchValue}
@@ -628,6 +648,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                                 dataSource={filteredTemplates}
                                                 renderItem={(template) => {
                                                     const config = templateConfig[template.type];
+
                                                     return (
                                                         <List.Item
                                                             style={{
@@ -669,34 +690,36 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                                                     }
                                                                 />
                                                             </div>
-                                                            <div
-                                                                onMouseDown={(e) => {
-                                                                    e.preventDefault();
-                                                                    handleQRCodeClick(template);
-                                                                }}
-                                                                style={{
-                                                                    fontSize: '20px',
-                                                                    color: '#3b5998',
-                                                                    cursor: 'pointer',
-                                                                    padding: '8px',
-                                                                    borderRadius: '6px',
-                                                                    transition: 'all 0.2s',
-                                                                    display: 'flex',
-                                                                    alignItems: 'center',
-                                                                    justifyContent: 'center',
-                                                                    flexShrink: 0
-                                                                }}
-                                                                onMouseEnter={(e) => {
-                                                                    e.currentTarget.style.backgroundColor = '#e8eef7';
-                                                                    e.currentTarget.style.transform = 'scale(1.1)';
-                                                                }}
-                                                                onMouseLeave={(e) => {
-                                                                    e.currentTarget.style.backgroundColor = 'transparent';
-                                                                    e.currentTarget.style.transform = 'scale(1)';
-                                                                }}
-                                                            >
-                                                                <IoQrCode />
-                                                            </div>
+                                                            {template.type !== "slideshow" && template.type !== "text" && (
+                                                                <div
+                                                                    onMouseDown={(e) => {
+                                                                        e.preventDefault();
+                                                                        handleQRCodeClick(template);
+                                                                    }}
+                                                                    style={{
+                                                                        fontSize: '20px',
+                                                                        color: '#3b5998',
+                                                                        cursor: 'pointer',
+                                                                        padding: '8px',
+                                                                        borderRadius: '6px',
+                                                                        transition: 'all 0.2s',
+                                                                        display: 'flex',
+                                                                        alignItems: 'center',
+                                                                        justifyContent: 'center',
+                                                                        flexShrink: 0
+                                                                    }}
+                                                                    onMouseEnter={(e) => {
+                                                                        e.currentTarget.style.backgroundColor = '#e8eef7';
+                                                                        e.currentTarget.style.transform = 'scale(1.1)';
+                                                                    }}
+                                                                    onMouseLeave={(e) => {
+                                                                        e.currentTarget.style.backgroundColor = 'transparent';
+                                                                        e.currentTarget.style.transform = 'scale(1)';
+                                                                    }}
+                                                                >
+                                                                    <IoQrCode />
+                                                                </div>
+                                                            )}
                                                         </List.Item>
                                                     );
                                                 }}
@@ -863,21 +886,162 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
             >
                 <div className="space-y-4">
                     <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-                        <h3 className="text-base font-semibold text-gray-800 mb-3">Confirmation Number</h3>
-                        <Input
-                            placeholder="Enter confirmation number"
-                            value={confirmationNumber}
-                            onChange={handleConfirmationNumberChange}
-                            size="large"
-                            suffix={
-                                confirmationNumber && (
+                        <h3 className="text-base font-semibold text-gray-800 mb-3">Template Search</h3>
+                        <div ref={searchRef} style={{ position: 'relative' }}>
+                            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                                <input
+                                    ref={inputRef}
+                                    autoComplete="off"
+                                    autoCorrect="off"
+                                    autoCapitalize="off"
+                                    type="text"
+                                    placeholder="ID# or Search Template"
+                                    value={searchValue}
+                                    onChange={handleSearchChange}
+                                    onFocus={() => {
+                                        if (justSelectedRef.current) return;
+                                        if (searchValue.trim() && filteredTemplates.length > 0) {
+                                            setIsDropdownVisible(true);
+                                        }
+                                    }}
+                                    style={{
+                                        width: '100%',
+                                        padding: '8px 32px 8px 12px',
+                                        border: '1px solid #e5e7eb',
+                                        borderRadius: '8px',
+                                        fontSize: '14px',
+                                        outline: 'none',
+                                    }}
+                                    className="focus:border-blue-500"
+                                />
+                                {searchValue && (
                                     <CloseOutlined
-                                        className="text-gray-400 hover:text-gray-600 cursor-pointer"
-                                        onClick={clearConfirmationNumber}
+                                        onMouseDown={(e) => {
+                                            e.preventDefault();
+                                            handleClear();
+                                        }}
+                                        style={{
+                                            position: 'absolute',
+                                            right: '12px',
+                                            color: 'rgba(0, 0, 0, 0.45)',
+                                            cursor: 'pointer',
+                                            fontSize: '12px',
+                                            padding: '4px'
+                                        }}
                                     />
-                                )
-                            }
-                        />
+                                )}
+                            </div>
+
+                            {isDropdownVisible && (
+                                <div
+                                    style={{
+                                        position: 'absolute',
+                                        top: 'calc(100% + 4px)',
+                                        left: 0,
+                                        right: 0,
+                                        backgroundColor: 'white',
+                                        borderRadius: '8px',
+                                        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                                        maxHeight: '300px',
+                                        overflowY: 'auto',
+                                        zIndex: 9999,
+                                        border: '1px solid #e5e7eb',
+                                    }}
+                                >
+                                    {isLoading ? (
+                                        <div style={{ padding: '20px', textAlign: 'center' }}>
+                                            <Spin />
+                                        </div>
+                                    ) : filteredTemplates.length > 0 ? (
+                                        <List
+                                            dataSource={filteredTemplates}
+                                            renderItem={(template) => {
+                                                const config = templateConfig[template.type];
+                                                return (
+                                                    <List.Item
+                                                        style={{
+                                                            cursor: 'pointer',
+                                                            padding: '12px 16px',
+                                                            borderBottom: '1px solid #f0f0f0',
+                                                            transition: 'background-color 0.2s'
+                                                        }}
+                                                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f5f5f5'}
+                                                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
+                                                    >
+                                                        <div
+                                                            style={{ flex: 1, display: 'flex', alignItems: 'center' }}
+                                                            onMouseDown={(e) => {
+                                                                e.preventDefault();
+                                                                handleTemplateSelect(template);
+                                                            }}
+                                                        >
+                                                            <List.Item.Meta
+                                                                avatar={
+                                                                    <div style={{
+                                                                        fontSize: '24px',
+                                                                        color: config.color,
+                                                                        display: 'flex',
+                                                                        alignItems: 'center'
+                                                                    }}>
+                                                                        {config.icon}
+                                                                    </div>
+                                                                }
+                                                                title={
+                                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                                        <span>{template.tag}</span>
+                                                                        {!template.availableInSelectedLang && (
+                                                                            <Tag color="orange" style={{ fontSize: '10px', padding: '0 4px', margin: 0 }}>
+                                                                                {companyData?.defaultLangCode?.toUpperCase() || 'EN'}
+                                                                            </Tag>
+                                                                        )}
+                                                                    </div>
+                                                                }
+                                                            />
+                                                        </div>
+                                                        {template.type !== "slideshow" && template.type !== "texts" && (
+                                                            <div
+                                                                onMouseDown={(e) => {
+                                                                    e.preventDefault();
+                                                                    handleQRCodeClick(template);
+                                                                }}
+                                                                style={{
+                                                                    fontSize: '20px',
+                                                                    color: '#3b5998',
+                                                                    cursor: 'pointer',
+                                                                    padding: '8px',
+                                                                    borderRadius: '6px',
+                                                                    transition: 'all 0.2s',
+                                                                    display: 'flex',
+                                                                    alignItems: 'center',
+                                                                    justifyContent: 'center',
+                                                                    flexShrink: 0
+                                                                }}
+                                                                onMouseEnter={(e) => {
+                                                                    e.currentTarget.style.backgroundColor = '#e8eef7';
+                                                                    e.currentTarget.style.transform = 'scale(1.1)';
+                                                                }}
+                                                                onMouseLeave={(e) => {
+                                                                    e.currentTarget.style.backgroundColor = 'transparent';
+                                                                    e.currentTarget.style.transform = 'scale(1)';
+                                                                }}
+                                                            >
+                                                                <IoQrCode />
+                                                            </div>
+                                                        )}
+                                                    </List.Item>
+                                                );
+                                            }}
+                                        />
+                                    ) : (
+                                        <Empty
+                                            image={Empty.PRESENTED_IMAGE_SIMPLE}
+                                            description="No templates found"
+                                            style={{ padding: '20px' }}
+                                        />
+                                    )}
+                                </div>
+                            )}
+                        </div>
                     </div>
 
                     <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
@@ -887,6 +1051,8 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                 confirmationNumber={confirmationNumber}
                                 clearConfirmationNumber={clearConfirmationNumber}
                             />
+                            <HeaderRecordingShortcut confirmationNumber={confirmationNumber} clearConfirmationNumber={clearConfirmationNumber} />
+                            <ChatBot />
                         </div>
                     </div>
 

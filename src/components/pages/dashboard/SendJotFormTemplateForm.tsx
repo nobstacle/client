@@ -83,8 +83,6 @@ const buildUrlFromFormData = (
 		baseUrl = `${baseUrl}/forms/${uuid}`;
 	}
 
-	console.info("fffff", type);
-
 	if (type === "blank") {
 		return baseUrl;
 	}

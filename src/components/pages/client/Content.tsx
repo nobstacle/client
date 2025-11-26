@@ -1223,7 +1223,7 @@ export const Content: React.FC = () => {
       setIsMuted(newMutedState);
     }
   };
-
+  
   if (hasHydrated) {
     return (
       <>
@@ -2026,7 +2026,7 @@ export const Content: React.FC = () => {
           messageStore.receivedType === "WebsiteTemplateQr" ||
           messageStore.receivedType === "WebsiteTemplateMessage"
         ) && (
-            messageStore.receivedType === 'WebsiteTemplateQr' ? (
+            messageStore.receivedType === 'WebsiteTemplateQr' || messageStore.receivedContent?.directContent === 'QR' ? (
               <Card>
                 <img
                   src={qrCodeUrl}

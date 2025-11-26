@@ -474,7 +474,6 @@ export const SocketContextProvider = ({
 
   const onRecievedUpsellPackage = (payload: any) => {
     try {
-      console.info("Received upsell transaction data:", payload);
 
       // payload.data is now an array of objects
       if (Array.isArray(payload.data)) {
