@@ -359,7 +359,7 @@ export default function Handover() {
         },
 
         onSuccess: (data) => {
-            message.success('Handover note uploaded successfully!');
+            message.success('Handover note uploaded!');
             fetchNotes(1, 10, undefined);
         },
 
@@ -403,7 +403,7 @@ export default function Handover() {
         },
 
         onSuccess: (data) => {
-            message.success('Handover note updated successfully!');
+            message.success('Handover note updated!');
             fetchNotes(1, 10, undefined);
             setEditRecordData(null);
         },

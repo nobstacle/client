@@ -87,7 +87,6 @@ const AsignForms: React.FC = () => {
 
 		try {
 			const result = await saveFormData(formDataObject);
-			console.log('Form data saved successfully:', result);
 			getAssignedFormData();
 			form.resetFields();
 			setFormData({ form_id: "", form_name: "", assigned_companies: [], previous_year_url: "", this_month_url: "", this_year_url: "", previous_month_url: "" }); // Clear the formData state as well
@@ -123,7 +122,7 @@ const AsignForms: React.FC = () => {
 				try {
 					const response = await deleteWithBody(formData);
 					if (response.ok) {
-						Swal.fire("Deleted!", "Form has been successfully deleted.", "success");
+						Swal.fire("Deleted!", "Form has been deleted.", "success");
 						getAssignedFormData();
 					} else {
 						const errorResponse = await response.json();

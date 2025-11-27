@@ -21,9 +21,6 @@ import "antd/dist/reset.css";
 import { useSession } from "next-auth/react";
 import { Card, Button, Tag, Typography, Carousel, message, Modal, Image } from "antd";
 import { LeftOutlined, RightOutlined, ExpandAltOutlined } from '@ant-design/icons';
-import Recording from './Recording';
-import { RecordingNotice } from './RecordingNotice';
-import { BackgroundRecorder } from './BackgroundRecorder';
 
 const { Title, Text } = Typography;
 
@@ -666,8 +663,6 @@ export const Content: React.FC = () => {
   const [packageImageIndexes, setPackageImageIndexes] = useState<Record<number, number>>({});
   const [isMuted, setIsMuted] = useState(true);
   const [showUnmutePrompt, setShowUnmutePrompt] = useState(true);
-  const [isRecordingActive, setIsRecordingActive] = useState(false);
-  const [showRecordingNotice, setShowRecordingNotice] = useState(false);
 
   let Url = process.env.NEXT_PUBLIC_BACKEND_URL;
 
@@ -709,21 +704,6 @@ export const Content: React.FC = () => {
       }
     }
   }, [messageStore.receivedMessage.length, chatBoxRef.current]);
-
-  //   const videoStyles = `
-  //   video::-webkit-media-controls-start-playback-button {
-  //     display: none !important;
-  //   }
-
-  //   video::-webkit-media-controls-fullscreen-button {
-  //     display: none !important;
-  //   }
-
-  //   video {
-  //     -webkit-playsinline: true;
-  //     object-fit: cover;
-  //   }
-  // `;
 
   useEffect(() => {
     if (messageStore.receivedType && isFirstTimeOpen.current === true) {
@@ -1068,40 +1048,6 @@ export const Content: React.FC = () => {
     }
   }, [isLoading]);
 
-  const handleRecordingSubmit = async (blob: Blob, type: 'audio' | 'video') => {
-    try {
-      setLoading(true);
-
-      const formData = new FormData();
-      const fileName = `recording_${Date.now()}.${type === 'video' ? 'webm' : 'mp4'}`;
-      formData.append('file', blob, fileName);
-      formData.append('type', type);
-      formData.append('station', params.get("station") ?? "1");
-      formData.append('confirmationNumber', messageStore?.receivedRecording?.tag);
-
-      const response = await fetch(`${Url}/api/v1/recordings/upload`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${data?.user.backendTokens.at}`,
-        },
-        body: formData,
-      });
-
-      if (!response.ok) {
-        throw new Error('Upload failed');
-      }
-
-      setLoading(false);
-      setIsRecordingActive(false);
-      setShowRecordingNotice(false);
-    } catch (error) {
-      console.error('Error submitting recording:', error);
-      message.error('Failed to submit feedback. Please try again.');
-      setLoading(false);
-      setIsRecordingActive(false);
-    }
-  };
-
   const createUpsellTransaction = async (formData: {
     packageId: number;
     confirmationNumber: string;
@@ -1157,7 +1103,7 @@ export const Content: React.FC = () => {
       };
 
       await createUpsellTransaction(upsellData);
-      message.success(`Package "${packageData?.packageNames?.en || ''}" purchased successfully!\nConfirmation: ${confirmationNumber}`);
+      message.success(`Package "${packageData?.packageNames?.en || ''}" purchased!\nConfirmation: ${confirmationNumber}`);
       setLoading(false);
       messageStore.reset();
     } catch (error) {
@@ -1201,13 +1147,6 @@ export const Content: React.FC = () => {
     }
   }, [messageStore.receivedContent?.content, messageStore.receivedType]);
 
-  useEffect(() => {
-    if (messageStore.receivedType === "Recording") {
-      setIsRecordingActive(true);
-      setShowRecordingNotice(true);
-    }
-  }, [messageStore.receivedType]);
-
   const handleUnmute = () => {
     if (videoElement.current) {
       videoElement.current.muted = false;
@@ -1227,19 +1166,6 @@ export const Content: React.FC = () => {
   if (hasHydrated) {
     return (
       <>
-
-        {showRecordingNotice && (
-          <RecordingNotice langCode={company.data?.defaultLangCode ?? "en"} />
-        )}
-
-        {isRecordingActive && (
-          <BackgroundRecorder
-            confirmationNumber={messageStore?.receivedRecording?.tag || ""}
-            onRecordingComplete={handleRecordingSubmit}
-            langCode={company.data?.defaultLangCode ?? "en"}
-          />
-        )}
-
         {(messageStore.receivedType === "TextTemplateMessage" ||
           messageStore.receivedType === "Text") && (
             <div className="w-full p-5">

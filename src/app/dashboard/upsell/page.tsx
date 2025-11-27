@@ -254,7 +254,7 @@ export default function Upsell() {
                 throw new Error(errorData.message || 'Failed to update transaction');
             }
 
-            message.success('Transaction updated successfully');
+            message.success('Transaction updated');
 
             // Refresh both transactions and dashboard data
             await Promise.all([
@@ -305,7 +305,7 @@ export default function Upsell() {
             window.URL.revokeObjectURL(url);
             document.body.removeChild(a);
 
-            message.success('Export completed successfully');
+            message.success('Export completed');
         } catch (error) {
             console.error('Export error:', error);
             message.error('Failed to export data');
@@ -353,7 +353,7 @@ export default function Upsell() {
                     .then(() => {
                         Swal.fire({
                             title: 'Deleted!',
-                            text: 'transaction has been deleted successfully.',
+                            text: 'transaction has been deleted.',
                             icon: 'success',
                             timer: 2000,
                             showConfirmButton: false
@@ -994,7 +994,7 @@ export default function Upsell() {
                 contentExtra: JSON.stringify(filteredPackages)
             } as SendPackagePayloadType, (response) => {
                 if (response && (response === true)) {
-                    message.success("Packages sent successfully!");
+                    message.success("Packages sent!");
                 } else {
                     message.error("Failed to send packages. Please try again.");
                 }

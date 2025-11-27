@@ -289,7 +289,7 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
       });
 
       setValue("languageCards", updatedCards, { shouldValidate: true });
-      message.success('Translation imported successfully!');
+      message.success('Translation imported!');
 
     } catch (error) {
       console.error('Translation error:', error);
@@ -779,7 +779,7 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
         { id: initialData.id, data: formData },
         {
           onSuccess: (packageResponse) => {
-            message.success('Package updated successfully!');
+            message.success('Package updated!');
             if (cb) {
               cb(packageResponse, true);
             }
@@ -795,7 +795,7 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
         { data: formData },
         {
           onSuccess: (packageResponse) => {
-            message.success('Package created successfully!');
+            message.success('Package created!');
             if (cb) {
               cb(packageResponse, false);
             }
@@ -829,7 +829,7 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
 
     if (info.file) {
       if (info.file.status === 'done') {
-        message.success(`${info.file.name} file uploaded successfully.`);
+        message.success(`${info.file.name} file uploaded.`);
       } else if (info.file.status === 'error') {
         message.error(`${info.file.name} file upload failed.`);
       }

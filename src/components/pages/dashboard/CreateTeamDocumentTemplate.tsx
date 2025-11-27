@@ -137,8 +137,8 @@ export const UploadTeamDocumentTemplateForm: React.FC<{
         },
         onSuccess: (data) => {
             const successMessage = isUpdateMode
-                ? 'Document updated successfully!'
-                : 'Document uploaded successfully!';
+                ? 'Document updated!'
+                : 'Document uploaded!';
 
             toast.success(successMessage, {
                 position: "bottom-right",

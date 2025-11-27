@@ -46,13 +46,11 @@ export const CompanyLogo: React.FC = () => {
             );
           }
         }}
-        src="/Logo_Dark.svg"
+        src="/Icon2.png"
         style={{
           cursor: template ? "pointer" : "default",
-          width: "100%",
           height: "100%",
           objectFit: "cover",
-          transform: "scale(1.3)",
         }}
       />
     );

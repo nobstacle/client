@@ -347,7 +347,7 @@ export default function InformationNotes() {
                     });
 
                     if (response.ok) {
-                        message.success('Information note deleted successfully');
+                        message.success('Information note deleted');
 
                         socket?.emit('dataDeleted', {
                             itemId: record.id.toString()
@@ -401,7 +401,7 @@ export default function InformationNotes() {
 
             if (response.ok) {
                 const responseData = await response.json();
-                message.success(editRecordData ? 'Information note updated successfully!' : 'Information note created successfully!');
+                message.success(editRecordData ? 'Information note updated!' : 'Information note created!');
 
                 if (editRecordData) {
                     socket?.emit('dataUpdated', {

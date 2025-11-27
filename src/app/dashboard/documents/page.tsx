@@ -115,7 +115,7 @@ export default function Documents() {
     const { mutate: deleteDocument } = useDocumentControllerDeleteDocumentOne({
         mutation: {
             onSuccess: (_, variables) => {
-                toast.success("Document deleted successfully!");
+                toast.success("Document deleted!");
                 fetchDocuments();
             },
             onError: (error) => {
@@ -181,8 +181,6 @@ export default function Documents() {
             });
 
             await Promise.all(updatePromises);
-            console.log("Document order updated successfully");
-
         } catch (error) {
             console.error("Error updating document order:", error);
             toast.error("Failed to update document order");

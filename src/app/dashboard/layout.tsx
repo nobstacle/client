@@ -10,13 +10,13 @@ import ClientHeader from './ClientHeader';
 
 function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div id="parent" className="flex h-screen w-full flex-row bg-white">
+    <div id="parent" className="flex h-screen w-full flex-col bg-white">
       <CompanyContextProvider>
         <SocketContextProvider>
           <TemplateContextProvider>
-            <ServerSidebarWrapper />
-            <div className="flex w-full flex-col overflow-hidden">
-              <ServerHeaderWrapper />
+            <ServerHeaderWrapper />
+            <div className="flex flex-1 flex-row overflow-hidden">
+              <ServerSidebarWrapper />
               <Body>{children}</Body>
             </div>
           </TemplateContextProvider>
@@ -27,8 +27,8 @@ function DashboardLayout({ children }: { children: React.ReactNode }) {
 }
 
 const ServerHeaderWrapper = async () => {
-    const user = await getServerSession(authOptions);
-  return <ClientHeader  user={user}/>;
+  const user = await getServerSession(authOptions);
+  return <ClientHeader user={user} />;
 };
 
 const ServerSidebarWrapper = async () => {
@@ -41,7 +41,7 @@ const Body: React.FC<PropsWithChildren> = ({ children }) => {
   return (
     <div
       id="child3"
-      className="h-[calc(100vh-4rem)] sm:h-[calc(100vh-6rem)] w-full flex-col items-stretch justify-stretch overflow-x-hidden bg-white"
+      className="h-full w-full flex-col items-stretch justify-stretch overflow-x-hidden bg-white"
     >
       {children}
     </div>

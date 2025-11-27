@@ -95,7 +95,6 @@ const PDFViewer = ({ documentUrl, onLoadingChange, onError }) => {
       };
 
       const pdf = await loadingTask.promise;
-      console.log('✅ PDF loaded successfully via direct method');
 
       setPdfDoc(pdf);
       setTotalPages(pdf.numPages);
@@ -137,7 +136,6 @@ const PDFViewer = ({ documentUrl, onLoadingChange, onError }) => {
       });
 
       const pdf = await loadingTask.promise;
-      console.log('✅ PDF loaded successfully via ArrayBuffer method');
 
       setPdfDoc(pdf);
       setTotalPages(pdf.numPages);
@@ -161,7 +159,6 @@ const PDFViewer = ({ documentUrl, onLoadingChange, onError }) => {
       });
 
       const pdf = await loadingTask.promise;
-      console.log('✅ PDF loaded successfully via simplified method');
 
       setPdfDoc(pdf);
       setTotalPages(pdf.numPages);

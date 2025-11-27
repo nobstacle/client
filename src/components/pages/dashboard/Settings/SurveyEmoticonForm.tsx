@@ -126,7 +126,7 @@ export const SurveyEmoticonForm: React.FC = () => {
                 },
                 {
                     onSuccess: () => {
-                        message.success("Emoticon template updated successfully!");
+                        message.success("Emoticon template updated!");
                         refetch();
                         resetForm();
                     },
@@ -140,7 +140,7 @@ export const SurveyEmoticonForm: React.FC = () => {
                 { data: payload },
                 {
                     onSuccess: () => {
-                        message.success("Emoticon template assigned successfully!");
+                        message.success("Emoticon assigned!");
                         refetch();
                         resetForm();
                     },
@@ -170,7 +170,7 @@ export const SurveyEmoticonForm: React.FC = () => {
             { id: id.toString() },
             {
                 onSuccess: () => {
-                    message.success("Emoticon template deleted successfully!");
+                    message.success("Emoticon deleted!");
                     refetch();
                 },
                 onError: (error: any) => {

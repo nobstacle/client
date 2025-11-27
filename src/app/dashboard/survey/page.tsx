@@ -64,7 +64,7 @@ function SurveyAnswers() {
             onSuccess: () => {
               setSearchSurveysAnswers(searchSurveysAnswers.filter((val) => val.id !== id));
               setSurveyAnswers(surveysAnswer.filter((val) => val.id !== id));
-              Swal.fire("Deleted!", "Survey answer deleted successfully.", "success");
+              Swal.fire("Deleted!", "Survey answer deleted.", "success");
             },
             onError: () => {
               Swal.fire("Error!", "Failed to delete the survey answer.", "error");

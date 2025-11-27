@@ -222,7 +222,7 @@ export default function Category() {
                         onSuccess: (response) => {
                             Swal.fire({
                                 title: 'Deleted!',
-                                text: 'Category has been deleted successfully.',
+                                text: 'Category deleted.',
                                 icon: 'success',
                                 timer: 2000,
                                 showConfirmButton: false

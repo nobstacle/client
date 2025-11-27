@@ -324,26 +324,6 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
         );
     };
 
-    if (!mounted) {
-        return (
-            <div className="relative w-[20%] sm:w-[18%] md:w-[15%] lg:w-[13%] xl:w-[12%] flex h-full flex-col bg-primary customSidebar">
-                <div
-                    style={{
-                        minHeight: "5rem",
-                        maxHeight: "5rem",
-                        height: "5rem",
-                        paddingTop: "0.2em",
-                        paddingLeft: "0.2em",
-                        paddingRight: "0.2em",
-                    }}
-                    className="flex items-center justify-center"
-                >
-                    <CompanyLogo />
-                </div>
-            </div>
-        );
-    };
-
     const hasTeamAccess = teamItems.some(item => hasAccess(item.roles));
     const isTeamActive = teamItems.some(item => item.href === pathname);
     const hasSettingsAccess = settingsItems.some(item => hasAccess(item.roles));
@@ -390,27 +370,13 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
             <div
                 id="child2"
                 className={`
-                    flex h-full flex-col bg-primary customSidebar transition-transform duration-300 ease-in-out z-40
-                    ${isMobile
-                        ? `fixed left-0 top-0 w-64 ${isOpen ? 'translate-x-0' : '-translate-x-full'}`
-                        : 'relative w-[20%] sm:w-[18%] md:w-[15%] lg:w-[13%] xl:w-[12%]'
+        flex flex-col bg-primary customSidebar transition-transform duration-300 ease-in-out z-40
+        ${isMobile
+                        ? `fixed left-0 top-0 h-full w-64 ${isOpen ? 'translate-x-0' : '-translate-x-full'}`
+                        : 'relative w-[20%] sm:w-[18%] md:w-[15%] lg:w-[13%] xl:w-[12%] h-full'
                     }
-                `}
+    `}
             >
-                <div
-                    style={{
-                        minHeight: "5rem",
-                        maxHeight: "5rem",
-                        height: "5rem",
-                        paddingTop: "0.2em",
-                        paddingLeft: "0.2em",
-                        paddingRight: "0.2em",
-                    }}
-                    className="flex items-center justify-center border-b border-white/10"
-                >
-                    <CompanyLogo />
-                </div>
-
                 <div className="flex h-full w-full flex-col justify-between" style={{ overflow: 'hidden' }}>
                     <div className="flex-1 overflow-y-auto">
                         <ul className="w-full py-2">

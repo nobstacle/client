@@ -132,7 +132,7 @@ export const SocketContextProvider = ({
 
       // Listen for connection
       socketC.on("connect", () => {
-        console.log("✅ Socket connected successfully");
+        console.log("✅ Socket connected");
         setSocketConnected(true);
       });
     }

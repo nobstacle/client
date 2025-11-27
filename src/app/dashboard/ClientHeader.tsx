@@ -38,6 +38,11 @@ import {
 import { Logout } from "../../components/pages/dashboard/Header/Logout";
 import { LogoutIcon } from "../../components/icons/sidebar/LogoutIcon";
 import { Session } from 'next-auth';
+import { CompanyLogo } from "../../components/pages/dashboard/Header/CompanyLogo";
+import { GiHamburgerMenu } from "react-icons/gi";
+import { RiLockPasswordLine, RiLogoutBoxLine } from 'react-icons/ri';
+import { HiOutlineOfficeBuilding, HiOutlineUser } from 'react-icons/hi';
+import { signOut } from "next-auth/react";
 
 interface ClientHeaderProps {
     user: Session | null;
@@ -58,6 +63,8 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
     const confirmationTimerRef = useRef(null);
     const justSelectedRef = useRef(false);
     const isSAdmin = user?.user.Roles?.includes("SAdmin");
+    const [isHamburgerMenuOpen, setIsHamburgerMenuOpen] = useState(false);
+    const hamburgerMenuRef = useRef(null);
 
     // Get company data with proper caching
     const { data: companyData } = useCompanyControllerGetCompany({
@@ -280,6 +287,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         selectedLang,
         companyData?.defaultLangCode
     ]);
+
     useEffect(() => {
         if (debounceTimerRef.current) {
             clearTimeout(debounceTimerRef.current);
@@ -347,12 +355,21 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
     const showShortcutMenu = () => setShortcutMenuOpen(true);
     const closeShortcutMenu = () => setShortcutMenuOpen(false);
 
-    // const handleConfirmationNumberChange = useCallback(
-    //     (e: React.ChangeEvent<HTMLInputElement>) => {
-    //         setConfirmationNumber(e.target.value);
-    //     },
-    //     []
-    // );
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (hamburgerMenuRef.current && !hamburgerMenuRef.current.contains(event.target)) {
+                setIsHamburgerMenuOpen(false);
+            }
+        };
+
+        if (isHamburgerMenuOpen) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [isHamburgerMenuOpen]);
 
     const clearConfirmationNumber = useCallback(() => {
         setConfirmationNumber("");
@@ -484,6 +501,14 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         setIsDropdownVisible(false);
     }, [socketConnected, emitSendTemplate, params, companyData, selectedLang]);
 
+    const handleLogout = async () => {
+        localStorage.clear();
+        await signOut({
+            redirect: true,
+            callbackUrl: "/"
+        });
+    };
+
     return (
         <>
             {/* Mobile Header */}
@@ -521,10 +546,13 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
             </div>
 
             {/* Desktop Header */}
-            <nav className="h-20 w-full shadow-sm border-b border-gray-100 px-6 hidden lg:block"
-                style={{ backgroundColor: '#3b5998' }}>
+            <nav className=" w-full shadow-sm border-b border-gray-100 px-6 hidden lg:block"
+                style={{ backgroundColor: '#3b5998', height: '4.09rem' }}>
                 <div className="flex h-full w-full items-center justify-between mx-auto">
                     <div className="flex items-center gap-6">
+                        <div style={{ paddingTop: "0.2em", paddingRight: "1em", width: '4vw' }}>
+                            <CompanyLogo />
+                        </div>
                         {!isSAdmin && (
                             <div className="flex items-center gap-4">
                                 <div className="bg-white/10 backdrop-blur-sm rounded-lg px-4 py-2">
@@ -542,32 +570,37 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
 
                     {!isSAdmin && (
                         <div className="flex items-center">
-                            <div style={{ padding: '0.2rem' }}>
+                            <div>
                                 <WebsiteShortcut
                                     confirmationNumber={searchValue !== "" ? searchValue : confirmationNumber}
                                     clearConfirmationNumber={clearConfirmationNumber}
                                 />
                             </div>
-                            <div style={{ padding: '0.2rem' }}>
+
+                            <div>
                                 <TextSurveyShortcut
                                     confirmationNumber={searchValue !== "" ? searchValue : confirmationNumber}
                                     clearConfirmationNumber={clearConfirmationNumber}
                                 />
                             </div>
-                            <div style={{ padding: '0.2rem' }}>
+
+                            <div>
                                 <HeaderSurveyShortcut
                                     confirmationNumber={searchValue !== "" ? searchValue : confirmationNumber}
                                     clearConfirmationNumber={clearConfirmationNumber}
                                 />
                             </div>
-                            <div className="rounded-lg" style={{ padding: '0.2rem' }}>
+
+                            <div>
                                 <HeaderRecordingShortcut
-                                    confirmationNumber={confirmationNumber}
+                                    confirmationNumber={searchValue !== "" ? searchValue : confirmationNumber}
                                     clearConfirmationNumber={clearConfirmationNumber} />
                             </div>
-                            <div className="rounded-lg" style={{ padding: '0.2rem' }}>
+
+                            <div>
                                 <ChatBot />
                             </div>
+
 
                             {/* Template Search Input */}
                             <div ref={searchRef} className="bg-white/10 backdrop-blur-sm rounded-lg px-3 py-1" style={{
@@ -731,6 +764,208 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                                 style={{ padding: '20px' }}
                                             />
                                         )}
+                                    </div>
+                                )}
+                            </div>
+
+                            <div ref={hamburgerMenuRef} style={{ position: 'relative', marginLeft: '8px' }}>
+                                <div
+                                    onClick={() => setIsHamburgerMenuOpen(!isHamburgerMenuOpen)}
+                                    style={{
+                                        cursor: 'pointer',
+                                        padding: '8px 12px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        borderRadius: '8px',
+                                        transition: 'all 0.2s ease',
+                                        backgroundColor: isHamburgerMenuOpen ? 'rgba(255, 255, 255, 0.15)' : 'transparent',
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        if (!isHamburgerMenuOpen) {
+                                            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+                                        }
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        if (!isHamburgerMenuOpen) {
+                                            e.currentTarget.style.backgroundColor = 'transparent';
+                                        }
+                                    }}
+                                >
+                                    <GiHamburgerMenu
+                                        style={{
+                                            color: 'white',
+                                            fontSize: '20px',
+                                            transition: 'transform 0.2s ease',
+                                            transform: isHamburgerMenuOpen ? 'rotate(90deg)' : 'rotate(0deg)'
+                                        }}
+                                    />
+                                </div>
+
+                                {/* Dropdown Menu */}
+                                {isHamburgerMenuOpen && (
+                                    <div style={{
+                                        position: 'absolute',
+                                        top: 'calc(100% + 8px)',
+                                        right: 0,
+                                        backgroundColor: 'white',
+                                        borderRadius: '12px',
+                                        boxShadow: '0 10px 40px rgba(0, 0, 0, 0.15)',
+                                        minWidth: '280px',
+                                        zIndex: 9999,
+                                        overflow: 'hidden',
+                                        border: '1px solid #e5e7eb',
+                                        animation: 'slideDown 0.2s ease-out'
+                                    }}>
+                                        {/* Company Name */}
+                                        <div style={{
+                                            padding: '16px 20px',
+                                            borderBottom: '1px solid #f0f0f0',
+                                            backgroundColor: '#f8fafc'
+                                        }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                <div style={{
+                                                    width: '40px',
+                                                    height: '40px',
+                                                    borderRadius: '10px',
+                                                    backgroundColor: '#3b5998',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center'
+                                                }}>
+                                                    <HiOutlineOfficeBuilding style={{ color: 'white', fontSize: '20px' }} />
+                                                </div>
+                                                <div style={{ flex: 1, minWidth: 0 }}>
+                                                    <div style={{
+                                                        fontSize: '11px',
+                                                        color: '#6b7280',
+                                                        fontWeight: '500',
+                                                        marginBottom: '2px',
+                                                        textTransform: 'uppercase'
+                                                    }}>Company</div>
+                                                    <div style={{
+                                                        fontSize: '15px',
+                                                        fontWeight: '600',
+                                                        color: '#1f2937',
+                                                        overflow: 'hidden',
+                                                        textOverflow: 'ellipsis',
+                                                        whiteSpace: 'nowrap'
+                                                    }}>{companyData?.name || 'Company Name'}</div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* User Name */}
+                                        <div style={{
+                                            padding: '16px 20px',
+                                            borderBottom: '1px solid #f0f0f0'
+                                        }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                <div style={{
+                                                    width: '40px',
+                                                    height: '40px',
+                                                    borderRadius: '10px',
+                                                    backgroundColor: '#e8eef7',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center'
+                                                }}>
+                                                    <HiOutlineUser style={{ color: '#3b5998', fontSize: '20px' }} />
+                                                </div>
+                                                <div style={{ flex: 1, minWidth: 0 }}>
+                                                    <div style={{
+                                                        fontSize: '11px',
+                                                        color: '#6b7280',
+                                                        fontWeight: '500',
+                                                        marginBottom: '2px',
+                                                        textTransform: 'uppercase'
+                                                    }}>User</div>
+                                                    <div style={{
+                                                        fontSize: '15px',
+                                                        fontWeight: '600',
+                                                        color: '#1f2937',
+                                                        overflow: 'hidden',
+                                                        textOverflow: 'ellipsis',
+                                                        whiteSpace: 'nowrap'
+                                                    }}>{user?.user?.name || user?.user?.email || 'User Name'}</div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Buttons */}
+                                        <div style={{ padding: '8px' }}>
+                                            <button
+                                                onClick={() => {
+                                                    setIsHamburgerMenuOpen(false);
+                                                }}
+                                                style={{
+                                                    width: '100%',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: '12px',
+                                                    padding: '12px 16px',
+                                                    backgroundColor: 'transparent',
+                                                    border: 'none',
+                                                    borderRadius: '8px',
+                                                    cursor: 'pointer',
+                                                    fontSize: '14px',
+                                                    fontWeight: '500',
+                                                    color: '#374151',
+                                                    marginBottom: '4px'
+                                                }}
+                                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
+                                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                            >
+                                                <div style={{
+                                                    width: '36px',
+                                                    height: '36px',
+                                                    borderRadius: '8px',
+                                                    backgroundColor: '#fef3c7',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center'
+                                                }}>
+                                                    <RiLockPasswordLine style={{ color: '#d97706', fontSize: '18px' }} />
+                                                </div>
+                                                <span>Change Password</span>
+                                            </button>
+
+                                            <button
+                                                onClick={() => {
+                                                    handleLogout();
+                                                    setIsHamburgerMenuOpen(false);
+                                                }}
+                                                style={{
+                                                    width: '100%',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: '12px',
+                                                    padding: '12px 16px',
+                                                    backgroundColor: 'transparent',
+                                                    border: 'none',
+                                                    borderRadius: '8px',
+                                                    cursor: 'pointer',
+                                                    fontSize: '14px',
+                                                    fontWeight: '500',
+                                                    color: '#dc2626'
+                                                }}
+                                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#fee2e2'}
+                                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                            >
+                                                <div style={{
+                                                    width: '36px',
+                                                    height: '36px',
+                                                    borderRadius: '8px',
+                                                    backgroundColor: '#fee2e2',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center'
+                                                }}>
+                                                    <RiLogoutBoxLine style={{ color: '#dc2626', fontSize: '18px' }} />
+                                                </div>
+                                                <span>Logout</span>
+                                            </button>
+                                        </div>
                                     </div>
                                 )}
                             </div>

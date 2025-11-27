@@ -129,7 +129,7 @@ export default function DocumentDownload() {
     const { mutate: deleteDocument } = useTeamDocumentControllerDeleteDocumentOne({
         mutation: {
             onSuccess: (_, variables) => {
-                toast.success("Document deleted successfully!");
+                toast.success("Document deleted!");
                 fetchDocuments();
             },
             onError: (error) => {
@@ -196,7 +196,7 @@ export default function DocumentDownload() {
             });
 
             await Promise.all(updatePromises);
-            console.log("Document order updated successfully");
+            console.log("Document order updated");
 
         } catch (error) {
             console.error("Error updating document order:", error);

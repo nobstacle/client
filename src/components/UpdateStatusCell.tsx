@@ -24,7 +24,7 @@ export const UpsellStatusCell = ({ status, record, token, isAdmin, onStatusUpdat
 
       if (!res.ok) throw new Error("Failed to update");
 
-      message.success("Status updated successfully");
+      message.success("Status updated!");
       onStatusUpdated?.(); 
     } catch (error) {
       console.error(error);

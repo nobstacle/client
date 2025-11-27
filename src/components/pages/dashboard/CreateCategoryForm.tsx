@@ -150,7 +150,7 @@ const CreateCategoryForm: React.FC<CreateCategoryFormProps> = ({
                 { id: initialData.id, data: formData },
                 {
                     onSuccess: (categoryResponse) => {
-                        message.success('Category updated successfully!');
+                        message.success('Category updated!');
                         if (cb) {
                             cb(categoryResponse, true);
                         }
@@ -167,7 +167,7 @@ const CreateCategoryForm: React.FC<CreateCategoryFormProps> = ({
                 { data: formData },
                 {
                     onSuccess: (categoryResponse) => {
-                        message.success('Category created successfully!');
+                        message.success('Category created!');
                         if (cb) {
                             cb(categoryResponse, false);
                         }
@@ -204,7 +204,7 @@ const CreateCategoryForm: React.FC<CreateCategoryFormProps> = ({
         // Handle individual file status updates
         if (info.file) {
             if (info.file.status === 'done') {
-                message.success(`${info.file.name} file uploaded successfully.`);
+                message.success(`${info.file.name} file uploaded.`);
             } else if (info.file.status === 'error') {
                 message.error(`${info.file.name} file upload failed.`);
             }

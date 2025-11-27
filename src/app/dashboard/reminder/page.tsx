@@ -995,7 +995,7 @@ export default function Reminder() {
         },
 
         onSuccess: (data) => {
-            message.success('Reminder added successfully!');
+            message.success('Reminder added!');
             setCurrentPage(1);
             setHasMore(true);
             fetchNotes(1, false);
@@ -1040,7 +1040,7 @@ export default function Reminder() {
         },
 
         onSuccess: (data) => {
-            message.success('Reminder note updated successfully!');
+            message.success('Reminder note updated!');
             setCurrentPage(1);
             setHasMore(true);
             fetchNotes(1, false);

@@ -17,7 +17,7 @@ export const LanguageShortcutPicker: React.FC = () => {
   const [checked, setChecked] = useState<string>("");
   const isHydrated = useHasHydrated();
   let isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
-  
+
   const headerLangaugePickerDefault =
     params.get("lang") || company?.defaultLangCode || "en";
 

@@ -61,7 +61,7 @@ export const TemplateMergerForm: React.FC = () => {
                 },
                 {
                     onSuccess: () => {
-                        message.success("Survey header template updated successfully!");
+                        message.success("Survey header template updated!");
                         refetch();
                     },
                     onError: (error: any) => {
@@ -78,7 +78,7 @@ export const TemplateMergerForm: React.FC = () => {
                 },
                 {
                     onSuccess: () => {
-                        message.success("Survey header template assigned successfully!");
+                        message.success("Survey header template assigned!");
                         refetch();
                     },
                     onError: (error: any) => {

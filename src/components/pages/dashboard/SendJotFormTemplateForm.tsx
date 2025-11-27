@@ -390,7 +390,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 			document.body.removeChild(a);
 
 			setTimeout(() => {
-				toast.success('PDF downloaded successfully!', {
+				toast.success('PDF downloaded!', {
 					position: "bottom-right",
 					autoClose: 5000,
 					hideProgressBar: false,
@@ -612,7 +612,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 			const dynamicUrl = buildUrlFromFormData(selectedForm, result, UUID, listableFields);
 			sendJotFormMessage(dynamicUrl, data?.formData?.uuid);
 
-			toast.success('Form sent successfully!', {
+			toast.success('Form sent!', {
 				position: "bottom-right",
 				autoClose: 5000,
 				hideProgressBar: false,
@@ -1059,7 +1059,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 			sessionStorage.removeItem(`form_fields_${selectedForm}`);
 			await fetchFormQuestions(selectedForm, true);
 
-			toast.success('Form fields refreshed successfully!', {
+			toast.success('Form fields refreshed!', {
 				position: "bottom-right",
 				autoClose: 3000,
 				theme: "colored",
@@ -1173,7 +1173,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 				uuid: uuid,
 			},
 			(response: any) => {
-				alert(response?.success ? "JotForm message sent successfully!" : "Failed to send JotForm message.");
+				alert(response?.success ? "JotForm message sent!" : "Failed to send JotForm message.");
 			}
 		);
 	};
@@ -1341,7 +1341,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 			const dynamicUrl = buildUrlFromFormData(selectedForm, manualInputValues, uuid, listableFields);
 			sendJotFormMessage(dynamicUrl, uuid);
 
-			toast.success('Form sent successfully!', {
+			toast.success('Form sent!', {
 				position: "bottom-right",
 				autoClose: 5000,
 				hideProgressBar: false,
@@ -1373,7 +1373,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 			const dynamicUrl = buildUrlFromFormData(selectedForm, manualInputValues, uuid, listableFields);
 			sendJotFormMessage(dynamicUrl, uuid);
 
-			toast.success('Form sent successfully!', {
+			toast.success('Form sent!', {
 				position: "bottom-right",
 				autoClose: 5000,
 				hideProgressBar: false,
@@ -1418,7 +1418,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 
 			if (response.status === 201) {
 				if (show === 'true') {
-					toast.success('Response uploaded successfully!', {
+					toast.success('Response uploaded!', {
 						position: "bottom-right",
 						autoClose: 5000,
 						hideProgressBar: false,
@@ -1653,7 +1653,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 					);
 
 					if (response.status === 201) {
-						toast.success("Bulk data uploaded successfully!", {
+						toast.success("Bulk data uploaded!", {
 							position: "bottom-right",
 							autoClose: 5000,
 							theme: "colored",
@@ -2020,11 +2020,11 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 			});
 
 			if (result.data?.jotFormUpdateSuccess) {
-				toast.success('Field updated successfully!');
+				toast.success('Field updated!');
 			} else if (result.data?.jotFormError) {
 				toast.warning(`Field updated in database, but JotForm update failed: ${result.data.jotFormError}`);
 			} else {
-				toast.success('Field updated successfully in database!');
+				toast.success('Field updated!');
 			}
 
 			return true;
@@ -2089,7 +2089,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 			document.body.removeChild(link);
 			window.URL.revokeObjectURL(url);
 
-			toast.success('Data exported successfully!', {
+			toast.success('Data exported!', {
 				position: "bottom-right",
 				autoClose: 5000,
 				hideProgressBar: false,

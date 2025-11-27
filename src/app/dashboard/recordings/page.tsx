@@ -147,7 +147,7 @@ function RecordingsList() {
           {
             onSuccess: () => {
               setRecordings(recordings.filter((val) => val.id !== id));
-              Swal.fire("Deleted!", "Recording deleted successfully.", "success");
+              Swal.fire("Deleted!", "Recording deleted.", "success");
               setDeletingId(null);
 
               // Stop media if deleted recording was playing
@@ -170,35 +170,7 @@ function RecordingsList() {
     });
   };
 
-  const formatFileSize = (bytes?: number) => {
-    if (!bytes) return 'N/A';
-    const mb = bytes / (1024 * 1024);
-    return `${mb.toFixed(2)} MB`;
-  };
-
-  const formatDuration = (seconds?: number) => {
-    if (!seconds) return 'N/A';
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
-
   const columns = [
-    {
-      title: "Type",
-      dataIndex: "type",
-      key: "type",
-      width: 80,
-      render: (type: string) => (
-        <div className="flex items-center justify-center">
-          {type === 'video' ? (
-            <FaVideo className="text-blue-600" size={16} />
-          ) : (
-            <FaMusic className="text-green-600" size={16} />
-          )}
-        </div>
-      ),
-    },
     {
       title: "Play",
       dataIndex: "recordingUrl",
@@ -234,13 +206,6 @@ function RecordingsList() {
       key: "stationNo",
       dataIndex: "stationNo",
       width: 100,
-    },
-    {
-      title: "Duration",
-      key: "duration",
-      dataIndex: "duration",
-      width: 100,
-      render: (duration: number) => formatDuration(duration),
     },
     {
       title: "Date",
