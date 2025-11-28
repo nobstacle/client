@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef } from "react";
 import { Modal, Button, Tooltip } from "antd";
-import { MessageOutlined } from "@ant-design/icons";
 import { useSocketContext } from "../../../../context/SocketContextProvider";
 import { useMessageStore } from "../../../../lib/zustand/store/messageStore";
 import { useSearchParams } from "next/navigation";
@@ -10,7 +9,7 @@ import { ChatBox } from "../../../../components/ChatBox";
 import { useHasHydrated } from "../../../../hooks/useHydrated";
 import { useCompanyControllerGetCompany } from "../../../../lib/client/api";
 import { EndChatIcon } from "../../../../components/icons/EndChatIcon";
-import { IoChatbubbleEllipses } from "react-icons/io5";
+import { IoChatbubbles } from "react-icons/io5";
 
 export const ChatBot: React.FC<{ cb?: () => void }> = ({ cb }) => {
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -62,7 +61,7 @@ export const ChatBot: React.FC<{ cb?: () => void }> = ({ cb }) => {
             <Tooltip title="Chat" placement="bottom">
                 <Button
                     type="text"
-                    icon={<IoChatbubbleEllipses className="text-white text-xl" />}
+                    icon={<IoChatbubbles className="text-white text-xl" />}
                     onClick={showModal}
                     className="border-none shadow-none hover:bg-white/20 transition-colors duration-200"
                     style={{

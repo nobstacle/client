@@ -20,6 +20,7 @@ import {
     IoHome
 } from 'react-icons/io5';
 import { IoRecordingSharp } from "react-icons/io5";
+import { IoChatbubbleEllipses } from "react-icons/io5";
 
 interface ClientSidebarProps {
     user: Session | null;
@@ -117,7 +118,7 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
             title: "Text",
             href: "/dashboard/text",
             roles: ["Admin", "User", "Staff"],
-            icon: <IoChatboxEllipses size={18} />,
+            icon: <IoChatbubbleEllipses size={18} />,
             iconColor: "white"
         },
         {

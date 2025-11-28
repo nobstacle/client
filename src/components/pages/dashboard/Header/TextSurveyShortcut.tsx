@@ -7,9 +7,7 @@ import { toast } from "react-toastify";
 import {
     useCompanyControllerGetCompany,
 } from "../../../../lib/client/api";
-import {
-    IoChatboxEllipses,
-} from 'react-icons/io5';
+import { IoChatbubbleEllipses } from "react-icons/io5";
 
 interface HeaderTextShortcutProps {
     confirmationNumber: string;
@@ -63,7 +61,7 @@ export const TextSurveyShortcut: React.FC<HeaderTextShortcutProps> = ({
             <Tooltip title="Display Text" placement="bottom">
                 <Button
                     type="primary"
-                    icon={<IoChatboxEllipses style={{ fontSize: "20px" }} />}
+                    icon={<IoChatbubbleEllipses style={{ fontSize: "20px" }} />}
                     onClick={handleConfirmSend}
                     className="flex items-center justify-center customHeaderButton"
                     style={{
