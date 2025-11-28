@@ -546,7 +546,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
             </div>
 
             {/* Desktop Header */}
-            <nav className=" w-full shadow-sm border-b border-gray-100 px-6 hidden lg:block"
+            <nav className=" w-full shadow-sm px-6 hidden lg:block"
                 style={{ backgroundColor: '#3b5998', height: '4.09rem' }}>
                 <div className="flex h-full w-full items-center justify-between mx-auto">
                     <div className="flex items-center gap-6">
@@ -571,10 +571,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                     {!isSAdmin && (
                         <div className="flex items-center">
                             <div>
-                                <WebsiteShortcut
-                                    confirmationNumber={searchValue !== "" ? searchValue : confirmationNumber}
-                                    clearConfirmationNumber={clearConfirmationNumber}
-                                />
+                                <ChatBot />
                             </div>
 
                             <div>
@@ -583,9 +580,14 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                     clearConfirmationNumber={clearConfirmationNumber}
                                 />
                             </div>
-
                             <div>
                                 <HeaderSurveyShortcut
+                                    confirmationNumber={searchValue !== "" ? searchValue : confirmationNumber}
+                                    clearConfirmationNumber={clearConfirmationNumber}
+                                />
+                            </div>
+                            <div>
+                                <WebsiteShortcut
                                     confirmationNumber={searchValue !== "" ? searchValue : confirmationNumber}
                                     clearConfirmationNumber={clearConfirmationNumber}
                                 />
@@ -596,11 +598,6 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                     confirmationNumber={searchValue !== "" ? searchValue : confirmationNumber}
                                     clearConfirmationNumber={clearConfirmationNumber} />
                             </div>
-
-                            <div>
-                                <ChatBot />
-                            </div>
-
 
                             {/* Template Search Input */}
                             <div ref={searchRef} className="bg-white/10 backdrop-blur-sm rounded-lg px-3 py-1" style={{
@@ -780,6 +777,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                         borderRadius: '8px',
                                         transition: 'all 0.2s ease',
                                         backgroundColor: isHamburgerMenuOpen ? 'rgba(255, 255, 255, 0.15)' : 'transparent',
+                                        position: 'relative',
                                     }}
                                     onMouseEnter={(e) => {
                                         if (!isHamburgerMenuOpen) {
@@ -800,6 +798,26 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                             transform: isHamburgerMenuOpen ? 'rotate(90deg)' : 'rotate(0deg)'
                                         }}
                                     />
+                                    <div style={{
+                                        position: 'absolute',
+                                        top: '2px',
+                                        right: '2px',
+                                        backgroundColor: '#ef4444',
+                                        color: 'white',
+                                        fontSize: '10px',
+                                        fontWeight: '600',
+                                        borderRadius: '10px',
+                                        minWidth: '18px',
+                                        height: '18px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        padding: '0 4px',
+                                        border: '2px solid #3b5998',
+                                        boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                                    }}>
+                                        {params.get("station") ?? 1}
+                                    </div>
                                 </div>
 
                                 {/* Dropdown Menu */}
@@ -817,6 +835,43 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                         border: '1px solid #e5e7eb',
                                         animation: 'slideDown 0.2s ease-out'
                                     }}>
+                                        {/* Station Number */}
+                                        <div style={{
+                                            padding: '16px 20px',
+                                            borderBottom: '1px solid #f0f0f0',
+                                            backgroundColor: '#f8fafc'
+                                        }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                <div style={{
+                                                    width: '40px',
+                                                    height: '40px',
+                                                    borderRadius: '10px',
+                                                    backgroundColor: '#3b5998',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center'
+                                                }}>
+                                                    <HiOutlineOfficeBuilding style={{ color: 'white', fontSize: '20px' }} />
+                                                </div>
+                                                <div style={{ flex: 1, minWidth: 0 }}>
+                                                    <div style={{
+                                                        fontSize: '11px',
+                                                        color: '#6b7280',
+                                                        fontWeight: '500',
+                                                        marginBottom: '2px',
+                                                        textTransform: 'uppercase'
+                                                    }}>Station</div>
+                                                    <div style={{
+                                                        fontSize: '15px',
+                                                        fontWeight: '600',
+                                                        color: '#1f2937',
+                                                        overflow: 'hidden',
+                                                        textOverflow: 'ellipsis',
+                                                        whiteSpace: 'nowrap'
+                                                    }}> <StationPicker /></div>
+                                                </div>
+                                            </div>
+                                        </div>
                                         {/* Company Name */}
                                         <div style={{
                                             padding: '16px 20px',

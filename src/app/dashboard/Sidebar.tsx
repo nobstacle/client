@@ -4,9 +4,6 @@ import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { Session } from 'next-auth';
 import { ClientLink } from "../../components/pages/dashboard/Sidebar/ClientLink";
-import { Logout } from "../../components/pages/dashboard/Header/Logout";
-import { CompanyLogo } from "../../components/pages/dashboard/Header/CompanyLogo";
-import { LogoutIcon } from "../../components/icons/sidebar/LogoutIcon";
 import {
     IoImage,
     IoImages,
@@ -23,7 +20,6 @@ import {
     IoHome
 } from 'react-icons/io5';
 import { IoRecordingSharp } from "react-icons/io5";
-import { StationPicker } from "../../components/pages/dashboard/Header/StationPicker";
 
 interface ClientSidebarProps {
     user: Session | null;
@@ -472,18 +468,6 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
                             </>
                         )}
                     </div>
-
-                    <ul className="w-full border-t border-white/20 flex" style={{ alignItems: 'center' }}>
-                        {!isSAdmin && (
-                            <div className="px-4 py-2">
-                                <StationPicker />
-                            </div>
-                        )}
-                        <li className="flex gap-2 p-4 px-6 hover:bg-white/5 cursor-pointer transition-colors">
-                            <LogoutIcon />
-                            <Logout />
-                        </li>
-                    </ul>
                 </div>
             </div>
         </>

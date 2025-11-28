@@ -59,7 +59,7 @@ export const ChatBot: React.FC<{ cb?: () => void }> = ({ cb }) => {
 
     return (
         <>
-            <Tooltip title="Chatbot" placement="bottom">
+            <Tooltip title="Chat" placement="bottom">
                 <Button
                     type="text"
                     icon={<IoChatbubbleEllipses className="text-white text-xl" />}

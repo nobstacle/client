@@ -663,6 +663,8 @@ export const Content: React.FC = () => {
   const [packageImageIndexes, setPackageImageIndexes] = useState<Record<number, number>>({});
   const [isMuted, setIsMuted] = useState(true);
   const [showUnmutePrompt, setShowUnmutePrompt] = useState(true);
+  const [contentToDisplay, setContentToDisplay] = useState(null);
+  const [recordingMessageKey, setRecordingMessageKey] = useState(null);
 
   let Url = process.env.NEXT_PUBLIC_BACKEND_URL;
 
@@ -848,6 +850,46 @@ export const Content: React.FC = () => {
     }
 
   }, [messageStore.receivedContent?.content, messageStore.receivedContent?.extraContent, messageStore.receivedContent?.directContent]);
+
+  useEffect(() => {
+    if (messageStore.receivedType && messageStore.receivedType !== "Recording") {
+      const contentToStore = {
+        type: messageStore.receivedType,
+        content: messageStore.receivedContent,
+        survey: messageStore.receivedSurvey,
+        messages: messageStore.receivedMessage,
+        timestamp: Date.now()
+      };
+      localStorage.setItem('lastDisplayedContent', JSON.stringify(contentToStore));
+    }
+  }, [messageStore.receivedType, messageStore.receivedContent, messageStore.receivedSurvey, messageStore.receivedMessage]);
+
+  useEffect(() => {
+    if (messageStore.receivedType === "Recording") {
+      const lastContent = localStorage.getItem('lastDisplayedContent');
+      if (lastContent) {
+        try {
+          const parsed = JSON.parse(lastContent);
+          setContentToDisplay(parsed);
+          message.info("This conversation is recorded for quality and training purposes");
+        } catch (error) {
+          console.error("Failed to parse last content:", error);
+          setContentToDisplay(null);
+        }
+      }
+    } else if (messageStore.receivedType) {
+      setContentToDisplay({
+        type: messageStore.receivedType,
+        content: messageStore.receivedContent,
+        survey: messageStore.receivedSurvey,
+        messages: messageStore.receivedMessage
+      });
+    }
+  }, [messageStore.receivedType, messageStore.receivedContent, messageStore.receivedSurvey, messageStore.receivedMessage]);
+
+  useEffect(() => {
+    localStorage?.removeItem("lastDisplayedContent");
+  }, []);
 
   const handleCloseQR = useCallback(() => {
     setIsClosing(true);
@@ -1162,12 +1204,12 @@ export const Content: React.FC = () => {
       setIsMuted(newMutedState);
     }
   };
-  
+
   if (hasHydrated) {
     return (
       <>
-        {(messageStore.receivedType === "TextTemplateMessage" ||
-          messageStore.receivedType === "Text") && (
+        {(contentToDisplay?.type === "TextTemplateMessage" ||
+          contentToDisplay?.type === "Text") && (
             <div className="w-full p-5">
               <p className="text-center text-4xl" style={{ lineHeight: "3.5rem", whiteSpace: 'pre-wrap' }}>
                 {messageStore.receivedContent?.content ?? ""}
@@ -1175,7 +1217,7 @@ export const Content: React.FC = () => {
             </div>
           )}
 
-        {messageStore.receivedType === 'Packages' && (() => {
+        {contentToDisplay?.type === 'Packages' && (() => {
           let parseData;
           try {
             parseData = JSON.parse(messageStore.receivedContent?.extraContent ?? '[]');
@@ -1240,7 +1282,7 @@ export const Content: React.FC = () => {
           );
         })()}
 
-        {messageStore.receivedType === "ChatMessage" && (
+        {contentToDisplay?.type === "ChatMessage" && (
           <div className="flex w-full flex-col items-center justify-center gap-2 p-4">
             <div className="w-full max-w-[100%] sm:max-w-[75%] md:max-w-[50%]">
               <ChatBox
@@ -1252,7 +1294,7 @@ export const Content: React.FC = () => {
           </div>
         )}
 
-        {messageStore.receivedType === "Image" && (
+        {contentToDisplay?.type === "Image" && (
           <>
             {messageStore.receivedContent?.directContent === 'QR' ? (
               <Card>
@@ -1280,13 +1322,13 @@ export const Content: React.FC = () => {
         )}
 
 
-        {(messageStore.receivedType === "Document" ||
-          messageStore.receivedType === "Documents" ||
-          messageStore.receivedType === "PdfDocument" ||
-          messageStore.receivedType === "WordDocument" ||
-          messageStore.receivedType === "ExcelDocument" ||
-          messageStore.receivedType === "PowerPointDocument" ||
-          messageStore.receivedType === "CsvDocument") && (() => {
+        {(contentToDisplay?.type === "Document" ||
+          contentToDisplay?.type === "Documents" ||
+          contentToDisplay?.type === "PdfDocument" ||
+          contentToDisplay?.type === "WordDocument" ||
+          contentToDisplay?.type === "ExcelDocument" ||
+          contentToDisplay?.type === "PowerPointDocument" ||
+          contentToDisplay?.type === "CsvDocument") && (() => {
 
             const documentUrl = messageStore.receivedContent?.content ?? "";
             const fileType = messageStore.receivedContent?.extraContent?.toLowerCase() ?? "";
@@ -1600,7 +1642,7 @@ export const Content: React.FC = () => {
             );
           })()}
 
-        {messageStore.receivedType === "Video" && (
+        {contentToDisplay?.type === "Video" && (
           messageStore.receivedContent?.directContent === 'QR' ? (
             <Card>
               <img
@@ -1746,7 +1788,7 @@ export const Content: React.FC = () => {
           )
         )}
 
-        {messageStore.receivedType === "Slideshow" && (
+        {contentToDisplay?.type === "Slideshow" && (
           messageStore.receivedContent?.directContent === 'QR' ? (
             <Card>
               <img
@@ -1761,13 +1803,13 @@ export const Content: React.FC = () => {
         )}
 
         {(
-          messageStore.receivedType === "Map" ||
-          messageStore.receivedType === "MapTemplateQr" ||
-          messageStore.receivedType === "MapTemplateMessage"
+          contentToDisplay?.type === "Map" ||
+          contentToDisplay?.type === "MapTemplateQr" ||
+          contentToDisplay?.type === "MapTemplateMessage"
         ) && (() => {
           return (
             <>
-              {messageStore.receivedType === "MapTemplateQr" ? (
+              {contentToDisplay?.type === "MapTemplateQr" ? (
                 <Card>
                   <img
                     src={qrCodeUrl}
@@ -1787,7 +1829,7 @@ export const Content: React.FC = () => {
         })}
 
 
-        {messageStore.receivedType === "Survey" && messageStore.receivedSurvey && (
+        {contentToDisplay?.type === "Survey" && messageStore.receivedSurvey && (
           <SurveyAnswer
             tag={messageStore.receivedSurvey.tag}
             survey={messageStore.receivedSurvey}
@@ -1795,7 +1837,7 @@ export const Content: React.FC = () => {
           />
         )}
 
-        {(messageStore.receivedType === ("JotFormMessage" as any)) && (
+        {(contentToDisplay?.type === ("JotFormMessage" as any)) && (
           <>
             <style jsx>{`
         @keyframes slideDown {
@@ -1948,11 +1990,11 @@ export const Content: React.FC = () => {
         )}
 
         {(
-          messageStore.receivedType === "Website" ||
-          messageStore.receivedType === "WebsiteTemplateQr" ||
-          messageStore.receivedType === "WebsiteTemplateMessage"
+          contentToDisplay?.type === "Website" ||
+          contentToDisplay?.type === "WebsiteTemplateQr" ||
+          contentToDisplay?.type === "WebsiteTemplateMessage"
         ) && (
-            messageStore.receivedType === 'WebsiteTemplateQr' || messageStore.receivedContent?.directContent === 'QR' ? (
+            contentToDisplay?.type === 'WebsiteTemplateQr' || messageStore.receivedContent?.directContent === 'QR' ? (
               <Card>
                 <img
                   src={qrCodeUrl}

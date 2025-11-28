@@ -5,7 +5,7 @@ import { FaCircle, FaStop, FaMicrophone } from "react-icons/fa";
 import { useSocketContext } from "../../../../context/SocketContextProvider";
 import { useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
-
+import { IoRecordingSharp } from "react-icons/io5";
 interface HeaderRecordingShortcutProps {
     confirmationNumber: string;
     clearConfirmationNumber: () => void;
@@ -117,7 +117,7 @@ export const HeaderRecordingShortcut: React.FC<HeaderRecordingShortcutProps> = (
                 });
             }, 1000);
 
-            message.success('Audio recording started');
+            message.success('Recording started');
         } catch (error) {
             console.error('Error accessing microphone:', error);
             message.error('Failed to access microphone. Please check permissions.');
@@ -193,7 +193,7 @@ export const HeaderRecordingShortcut: React.FC<HeaderRecordingShortcutProps> = (
             stopRecording();
         } else {
             if (!confirmationNumber.trim()) {
-                message.warning('Please enter a confirmation number first');
+                message.warning('Please enter an identifier or a text');
                 return;
             }
             startRecording();
@@ -220,18 +220,18 @@ export const HeaderRecordingShortcut: React.FC<HeaderRecordingShortcutProps> = (
             `}</style>
 
             <Tooltip
-                title={isRecording ? `Recording: ${formatTime(recordingTime)}` : "Start Audio Recording"}
+                title={isUploading ? "Please wait." : isRecording ? `Recording: ${formatTime(recordingTime)}` : "Start Recording"}
                 placement="bottom"
             >
                 <Button
                     type="primary"
-                    icon={isRecording ? <FaStop style={{ fontSize: "16px" }} /> : <FaMicrophone style={{ fontSize: "18px" }} />}
+                    icon={isRecording ? <IoRecordingSharp style={{ fontSize: "18px", color: 'red' }} /> : <IoRecordingSharp style={{ fontSize: "18px" }} />}
                     onClick={handleToggleRecording}
                     disabled={isUploading}
-                    loading={isUploading}
+                    // loading={isUploading}
                     className={`flex items-center justify-center customHeaderButton ${isRecording ? 'recording-pulse' : ''}`}
                     style={{
-                        backgroundColor: isRecording ? "#ef4444" : "#3b5998",
+                        backgroundColor: "#3b5998",
                         border: "none",
                         height: "40px",
                         transition: "all 0.3s ease",

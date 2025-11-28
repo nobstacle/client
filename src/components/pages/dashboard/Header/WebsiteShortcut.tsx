@@ -1,6 +1,6 @@
 import * as React from "react";
 import { useState } from "react";
-import { Button, Tooltip } from "antd";
+import { Button, Tooltip, message } from "antd";
 import { useSocketContext } from "../../../../context/SocketContextProvider";
 import { useSearchParams } from "next/navigation";
 import { toast } from "react-toastify";
@@ -25,37 +25,42 @@ export const WebsiteShortcut: React.FC<HeaderWebsiteShortcutProps> = ({
     const { data: companyData } = useCompanyControllerGetCompany();
 
     const handleConfirmSend = async () => {
-        setIsLoading(true);
-        try {
-            emitSendTemplate({
-                refId: 1,
-                langCode: params.get("lang") || companyData?.defaultLangCode || "en",
-                refType: "WebsiteTemplateMessage",
-                station: Number(params.get("station") ?? 1),
-                directContent: confirmationNumber,
-            });
+        if (confirmationNumber !== "") {
+            setIsLoading(true);
+            try {
+                emitSendTemplate({
+                    refId: 1,
+                    langCode: params.get("lang") || companyData?.defaultLangCode || "en",
+                    refType: "WebsiteTemplateMessage",
+                    station: Number(params.get("station") ?? 1),
+                    directContent: confirmationNumber,
+                });
 
-            toast.success("Website sent!", {
-                position: "bottom-right",
-                autoClose: 3000,
-                theme: "colored",
-            });
-            clearConfirmationNumber();
-        } catch (error) {
-            console.error("Error sending text:", error);
-            toast.error("Failed to send website. Please try again.", {
-                position: "bottom-right",
-                autoClose: 3000,
-                theme: "colored",
-            });
-        } finally {
-            setIsLoading(false);
+                toast.success("Website sent!", {
+                    position: "bottom-right",
+                    autoClose: 3000,
+                    theme: "colored",
+                });
+                clearConfirmationNumber();
+            } catch (error) {
+                console.error("Error sending text:", error);
+                toast.error("Failed to send website. Please try again.", {
+                    position: "bottom-right",
+                    autoClose: 3000,
+                    theme: "colored",
+                });
+            } finally {
+                setIsLoading(false);
+            }
+        } else {
+            message.warning('Please enter an identifier or a text');
         }
     };
+
     return (
         <>
             {/* Trigger Button */}
-            <Tooltip title="Send Website" placement="bottom">
+            <Tooltip title="Display Website" placement="bottom">
                 <Button
                     type="primary"
                     icon={<IoGlobe style={{ fontSize: "20px" }} />}
