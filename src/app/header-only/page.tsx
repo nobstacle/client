@@ -9,12 +9,42 @@ export default function HeaderOnlyPage() {
   const { data: session, status } = useSession();
   const [mounted, setMounted] = useState(false);
   const [isInIframe, setIsInIframe] = useState(false);
+  const [extensionAuth, setExtensionAuth] = useState<any>(null);
 
   useEffect(() => {
     setMounted(true);
     setIsInIframe(window.self !== window.top);
     
-    // Debug: Log auth status
+    // Listen for auth data from extension
+    const handleMessage = (event: MessageEvent) => {
+      // Only accept messages from parent window or extension
+      if (event.data.type === 'EXTENSION_AUTH') {
+        console.log('📨 Received auth from extension:', {
+          hasCookies: !!event.data.cookies,
+          hasSessionToken: !!event.data.sessionToken,
+          cookieCount: event.data.cookies?.length || 0
+        });
+        
+        setExtensionAuth(event.data);
+        
+        // If we have a session token but NextAuth doesn't recognize it,
+        // try to refresh the session
+        if (event.data.sessionToken && !session) {
+          console.log('🔄 Attempting to restore session...');
+          // Force NextAuth to check the session again
+          window.location.reload();
+        }
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+
+    // Request auth data if in iframe
+    if (window.self !== window.top) {
+      console.log('📤 Requesting auth from extension...');
+      window.parent.postMessage({ type: 'REQUEST_AUTH' }, '*');
+    }
+
     console.log('🔐 Auth Status:', {
       status,
       hasSession: !!session,
@@ -22,9 +52,12 @@ export default function HeaderOnlyPage() {
       isInIframe: window.self !== window.top,
       url: window.location.href
     });
+
+    return () => {
+      window.removeEventListener('message', handleMessage);
+    };
   }, [session, status]);
 
-  // Don't render anything during SSR or initial mount
   if (!mounted) {
     return (
       <div style={{ 
@@ -39,7 +72,6 @@ export default function HeaderOnlyPage() {
     );
   }
 
-  // Show loading state
   if (status === 'loading') {
     return (
       <div style={{ 
@@ -51,11 +83,15 @@ export default function HeaderOnlyPage() {
         borderBottom: '2px solid #ffc107'
       }}>
         🔄 Checking authentication...
+        {extensionAuth && (
+          <div style={{ fontSize: '11px', marginTop: '5px', opacity: 0.8 }}>
+            Extension: {extensionAuth.cookies?.length || 0} cookies found
+          </div>
+        )}
       </div>
     );
   }
 
-  // Show login prompt if not authenticated
   if (status === 'unauthenticated' || !session) {
     return (
       <div style={{ 
@@ -69,6 +105,12 @@ export default function HeaderOnlyPage() {
         <div style={{ marginBottom: '10px' }}>
           🔒 Not logged in
         </div>
+        {extensionAuth && (
+          <div style={{ fontSize: '11px', marginBottom: '10px', opacity: 0.7 }}>
+            Debug: {extensionAuth.cookies?.length || 0} cookies, 
+            Session token: {extensionAuth.sessionToken ? 'Found' : 'Missing'}
+          </div>
+        )}
         <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap' }}>
           {isInIframe ? (
             <>
@@ -125,10 +167,8 @@ export default function HeaderOnlyPage() {
     );
   }
 
-  // Authenticated - show header
   return (
     <div style={{ position: 'relative' }}>
-      {/* Optional: Show logged in indicator in dev mode */}
       {process.env.NODE_ENV === 'development' && (
         <div style={{
           position: 'absolute',
