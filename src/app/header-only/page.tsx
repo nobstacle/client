@@ -12,226 +12,138 @@ export default function HeaderOnlyPage() {
   const [extensionSession, setExtensionSession] = useState<any>(null);
   const [extensionAuthStatus, setExtensionAuthStatus] = useState<'loading' | 'authenticated' | 'unauthenticated'>('loading');
 
+  // 1. Mount + detect iframe + send initial requests
   useEffect(() => {
     setMounted(true);
-    setIsInIframe(window.self !== window.top);
-    
-    // Listen for auth data from extension
+    const inIframe = window.self !== window.top;
+    setIsInIframe(inIframe);
+
+    if (inIframe) {
+      const send = () => window.parent.postMessage(
+        { type: 'REQUEST_AUTH' },
+        'https://nobstacle.com'
+      );
+      send();
+      setTimeout(send, 300);
+      setTimeout(send, 900);
+    }
+  }, []);
+
+  // 2. Listen for auth from extension (CRITICAL — was missing!)
+  useEffect(() => {
     const handleMessage = async (event: MessageEvent) => {
-      console.log('📬 Received message:', {
-        type: event.data.type,
-        origin: event.origin,
-        hasData: !!event.data
-      });
-      
-      if (event.data.type === 'EXTENSION_AUTH') {
-        console.log('📨 Received auth from extension:', {
-          hasCookies: !!event.data.cookies,
-          hasSessionToken: !!event.data.sessionToken,
-          cookieCount: event.data.cookies?.length || 0,
-          sessionTokenPreview: event.data.sessionToken ? event.data.sessionToken.substring(0, 20) + '...' : 'none'
+      if (event.origin !== 'https://nobstacle.com' && event.origin !== 'http://localhost:3000') return;
+      if (event.data.type !== 'EXTENSION_AUTH') return;
+
+      const { sessionToken } = event.data;
+
+      if (!sessionToken) {
+        setExtensionAuthStatus('unauthenticated');
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/auth/verify-extension', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sessionToken })
         });
-        
-        // If we have a session token, verify it with our backend
-        if (event.data.sessionToken) {
-          try {
-            const response = await fetch('/api/auth/verify-extension', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ sessionToken: event.data.sessionToken })
-            });
-            
-            const data = await response.json();
-            console.log('🔐 Session verification result:', data);
-            
-            if (data.authenticated) {
-              setExtensionSession({
-                user: data.user,
-                expires: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
-              } as any);
-              setExtensionAuthStatus('authenticated');
-            } else {
-              setExtensionAuthStatus('unauthenticated');
-            }
-          } catch (error) {
-            console.error('❌ Session verification failed:', error);
-            setExtensionAuthStatus('unauthenticated');
-          }
+        const data = await res.json();
+
+        if (data.authenticated && data.user) {
+          setExtensionSession(data.user); // assuming your API returns full user
+          setExtensionAuthStatus('authenticated');
         } else {
           setExtensionAuthStatus('unauthenticated');
         }
+      } catch (err) {
+        console.error('Auth verification failed:', err);
+        setExtensionAuthStatus('unauthenticated');
       }
     };
 
     window.addEventListener('message', handleMessage);
-
-    // Request auth data if in iframe - do this multiple times to ensure delivery
-    if (window.self !== window.top) {
-      console.log('📤 Requesting auth from extension...');
-      
-      // Send immediately
-      window.parent.postMessage({ type: 'REQUEST_AUTH' }, 'https://nobstacle.com');
-      
-      // Also send after a short delay in case iframe loads before content script
-      setTimeout(() => {
-        console.log('📤 Requesting auth again (retry)...');
-        window.parent.postMessage({ type: 'REQUEST_AUTH' }, 'https://nobstacle.com');
-      }, 500);
-      
-      // One more time after 1 second
-      setTimeout(() => {
-        console.log('📤 Requesting auth again (final retry)...');
-        window.parent.postMessage({ type: 'REQUEST_AUTH' }, 'https://nobstacle.com');
-      }, 1000);
-    }
-
-    return () => {
-      window.removeEventListener('message', handleMessage);
-    };
+    return () => window.removeEventListener('message', handleMessage);
   }, []);
 
+  // 3. Safe retry if still loading
   useEffect(() => {
-    console.log('🔐 Auth Status:', {
+    if (!isInIframe || extensionAuthStatus !== 'loading') return;
+
+    let attempts = 0;
+    const max = 6;
+
+    const retry = () => {
+      if (extensionAuthStatus !== 'loading') return;
+      attempts++;
+      window.parent.postMessage({ type: 'REQUEST_AUTH' }, 'https://nobstacle.com');
+      if (attempts < max) {
+        setTimeout(retry, 2000 * attempts);
+      }
+    };
+
+    const timer = setTimeout(retry, 2500);
+    return () => clearTimeout(timer);
+  }, [isInIframe, extensionAuthStatus]);
+
+  // 4. Debug log
+  useEffect(() => {
+    console.log('Auth Status:', {
       nextAuthStatus: status,
-      hasNextAuthSession: !!session,
       extensionAuthStatus,
-      hasExtensionSession: !!extensionSession,
-      user: session?.user?.email || extensionSession?.email || 'Not logged in',
-      isInIframe: window.self !== window.top,
+      isInIframe,
+      user: session?.user?.email || extensionSession?.email || 'Not logged in'
     });
-  }, [session, status, extensionSession, extensionAuthStatus]);
+  }, [status, extensionAuthStatus, session, extensionSession, isInIframe]);
 
   if (!mounted) {
-    return (
-      <div style={{ 
-        padding: '10px', 
-        background: '#f0f0f0',
-        fontFamily: 'system-ui',
-        fontSize: '12px',
-        textAlign: 'center'
-      }}>
-        Loading...
-      </div>
-    );
+    return <div style={{ padding: '10px', background: '#f0f0f0', textAlign: 'center', fontSize: '12px' }}>Loading...</div>;
   }
 
-  // Auto-retry every 3 seconds if still loading
-useEffect(() => {
-  if (extensionAuthStatus !== 'loading') return;
+  // FIXED: Proper loading & auth logic
+  const isLoading = isInIframe
+    ? extensionAuthStatus === 'loading'
+    : status === 'loading';
 
-  const interval = setInterval(() => {
-    console.log('Auto-retrying auth request...');
-    window.parent.postMessage(
-      { type: 'REQUEST_AUTH' },
-      'https://nobstacle.com'
-    );
-  }, 3000);
-
-  return () => clearInterval(interval);
-}, [extensionAuthStatus]);
-
-  // Determine the effective auth status
-  const isAuthenticated = isInIframe 
+  const isAuthenticated = isInIframe
     ? extensionAuthStatus === 'authenticated'
     : status === 'authenticated';
-    
-  const isLoading = isInIframe
-  const effectiveSession = isInIframe 
-    ? extensionSession
+
+  const effectiveSession = isInIframe
+    ? { user: extensionSession, expires: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() } // wrap to match NextAuth shape
     : session;
 
   if (isLoading) {
     return (
-      <div style={{ 
-        padding: '15px', 
-        background: '#fff3cd',
-        fontFamily: 'system-ui',
-        fontSize: '14px',
-        textAlign: 'center',
-        borderBottom: '2px solid #ffc107'
-      }}>
-        🔄 Checking authentication...
-        {isInIframe && (
-          <div style={{ fontSize: '11px', marginTop: '5px', opacity: 0.8 }}>
-            Waiting for extension data...
-          </div>
-        )}
+      <div style={{ padding: '15px', background: '#fff3cd', textAlign: 'center', borderBottom: '2px solid #ffc107' }}>
+        Checking authentication...
+        {isInIframe && <div style={{ fontSize: '11px', marginTop: '5px', opacity: 0.8 }}>Waiting for extension...</div>}
       </div>
     );
   }
 
-  if (!isAuthenticated || !effectiveSession) {
+  if (!isAuthenticated || !effectiveSession?.user) {
     return (
-      <div style={{ 
-        padding: '15px', 
-        background: '#f8d7da',
-        fontFamily: 'system-ui',
-        fontSize: '14px',
-        textAlign: 'center',
-        borderBottom: '2px solid #dc3545'
-      }}>
-        <div style={{ marginBottom: '10px' }}>
-          🔒 Not logged in
-        </div>
-        {process.env.NODE_ENV === 'development' && (
-          <div style={{ fontSize: '11px', marginBottom: '10px', opacity: 0.7 }}>
-            Debug: NextAuth={status}, Extension={extensionAuthStatus}
-          </div>
-        )}
+      <div style={{ padding: '15px', background: '#f8d7da', textAlign: 'center', borderBottom: '2px solid #dc3545' }}>
+        <div style={{ marginBottom: '10px' }}>Not logged in</div>
         <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap' }}>
           {isInIframe ? (
             <>
-              <button 
-                onClick={() => window.open('https://nobstacle.com', '_blank')}
-                style={{ 
-                  padding: '8px 16px', 
-                  background: '#667eea', 
-                  color: 'white', 
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: 'pointer',
-                  fontSize: '13px',
-                  fontWeight: '500'
-                }}
-              >
+              <button onClick={() => window.open('https://nobstacle.com', '_blank')}
+                style={{ padding: '8px 16px', background: '#667eea', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
                 Open Nobstacle & Login
               </button>
-<button 
-  onClick={() => {
-    // Just re-request auth — content script will respond
-    window.parent.postMessage({ type: 'REQUEST_AUTH' }, 'https://nobstacle.com');
-    
-    // Optional: show feedback instead of crashing
-    alert('Auth refresh requested. If still not logged in, try opening nobstacle.com in a new tab.');
-  }}
-  style={{ 
-    padding: '8px 16px', 
-    background: '#6c757d', 
-    color: 'white', 
-    border: 'none',
-    borderRadius: '4px',
-    cursor: 'pointer',
-    fontSize: '13px',
-    fontWeight: '500'
-  }}
->
-  Retry Auth
-</button>
+              <button onClick={() => {
+                window.parent.postMessage({ type: 'REQUEST_AUTH' }, 'https://nobstacle.com');
+                alert('Checking again...');
+              }}
+                style={{ padding: '8px 16px', background: '#6c757d', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
+                Retry Auth
+              </button>
             </>
           ) : (
-            <button 
-              onClick={() => signIn()}
-              style={{ 
-                padding: '8px 16px', 
-                background: '#667eea', 
-                color: 'white', 
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                fontSize: '13px',
-                fontWeight: '500'
-              }}
-            >
+            <button onClick={() => signIn()}
+              style={{ padding: '8px 16px', background: '#667eea', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
               Sign In
             </button>
           )}
@@ -244,22 +156,12 @@ useEffect(() => {
     <div style={{ position: 'relative' }}>
       {process.env.NODE_ENV === 'development' && (
         <div style={{
-          position: 'absolute',
-          top: '5px',
-          right: '5px',
-          padding: '3px 8px',
-          background: '#d4edda',
-          border: '1px solid #c3e6cb',
-          borderRadius: '4px',
-          fontSize: '11px',
-          zIndex: 1000,
-          pointerEvents: 'none'
+          position: 'absolute', top: '5px', right: '5px', background: '#d4edda', padding: '3px 8px',
+          borderRadius: '4px', fontSize: '11px', border: '1px solid #c3e6cb'
         }}>
-          ✓ {effectiveSession?.user?.email || 'Authenticated'}
-          {isInIframe && ' (Extension)'}
+          ✓ {effectiveSession.user.email} {isInIframe && '(Extension)'}
         </div>
       )}
-      
       <SocketContextProvider>
         <ClientHeader user={effectiveSession} />
       </SocketContextProvider>
