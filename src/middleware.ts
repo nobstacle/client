@@ -1,10 +1,48 @@
 import { getToken } from "next-auth/jwt";
 import { withAuth } from "next-auth/middleware";
 import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 
 export default withAuth(
-  (req) => {
+  async (req) => {
     const url = req.nextUrl.clone();
+    const pathname = req.nextUrl.pathname;
+
+    if (pathname.startsWith('/header-only')) {
+      const response = NextResponse.next();
+
+      // Get token to check auth status
+      const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET || "asdfgh1234" });
+      
+      // Log for debugging
+      console.log('🔐 /header-only auth check:', {
+        hasToken: !!token,
+        user: token?.email || 'Not authenticated',
+        origin: req.headers.get('origin'),
+        referer: req.headers.get('referer')
+      });
+
+      // Remove frame restrictions
+      response.headers.delete('X-Frame-Options');
+      
+      // Allow embedding from extensions and all origins
+      response.headers.set(
+        'Content-Security-Policy',
+        "frame-ancestors 'self' chrome-extension://* https://* http://localhost:* http://127.0.0.1:*"
+      );
+      
+      // CRITICAL: Allow credentials in cross-origin
+      const origin = req.headers.get('origin');
+      if (origin) {
+        response.headers.set('Access-Control-Allow-Origin', origin);
+        response.headers.set('Access-Control-Allow-Credentials', 'true');
+        response.headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+        response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+      }
+
+      return response;
+    }
+
     const isAuthenticated = !!req.nextauth.token;
     const isAdmin = req.nextauth.token?.user.Roles?.includes("Admin");
     const isStaff = req.nextauth.token?.user.Roles?.includes("Staff");
@@ -85,8 +123,13 @@ export default withAuth(
         const sessionToken = await getToken({ req, secret: "asdfgh1234" });
         const pathname = req.nextUrl.pathname;
 
-        // Allow unauthenticated access to public pages
-        if (pathname === "/" || pathname === "/home" || pathname === "/welcome") {
+        // Allow unauthenticated access to public pages and header-only
+        if (
+          pathname === "/" || 
+          pathname === "/home" || 
+          pathname === "/welcome" || 
+          pathname.startsWith("/header-only")
+        ) {
           return true;
         }
 
