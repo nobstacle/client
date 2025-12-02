@@ -45,7 +45,7 @@ export const authOptions: AuthOptions = {
         sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
         path: '/',
         secure: process.env.NODE_ENV === 'production', // Must be true in production with sameSite: 'none'
-        domain: process.env.NODE_ENV === 'production' ? '.nobstacle.com' : undefined, // Share across subdomains
+        domain: process.env.NODE_ENV === 'production' ? '.nobstacle.com' :  "localhost", // Share across subdomains
       },
     },
     callbackUrl: {

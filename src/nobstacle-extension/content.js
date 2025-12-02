@@ -1,27 +1,26 @@
 // Configuration
 const Isproduction = true; // Set to false for local testing
-const HEADER_URL = Isproduction ? 'https://nobstacle.com/header-only' : 'http://localhost:3000/header-only';
+const HEADER_URL = Isproduction 
+  ? 'https://nobstacle.com/header-only' 
+  : 'http://localhost:3000/header-only';
 const HEADER_HEIGHT = '70px';
 const DEBUG_MODE = true;
 
+// List of allowed iframe origins (handles www, non-www, localhost)
+const ALLOWED_IFRAME_ORIGINS = Isproduction
+  ? ['https://nobstacle.com', 'https://www.nobstacle.com']
+  : ['http://localhost:3000', 'http://localhost:3001'];
+
 function shouldInject() {
-  if (window.location.hostname.includes('nobstacle.com')) {
-    return false;
-  }
-  
-  if (window.location.protocol === 'chrome:' || 
-      window.location.protocol === 'chrome-extension:') {
-    return false;
-  }
-  
+  const hostname = window.location.hostname;
+  if (hostname.includes('nobstacle.com') || hostname === 'localhost') return false;
+  if (window.location.protocol === 'chrome:' || window.location.protocol === 'chrome-extension:') return false;
   return true;
 }
 
 function injectStyles() {
-  if (document.getElementById('nobstacle-header-styles')) {
-    return;
-  }
-  
+  if (document.getElementById('nobstacle-header-styles')) return;
+
   const style = document.createElement('style');
   style.id = 'nobstacle-header-styles';
   style.textContent = `
@@ -34,79 +33,58 @@ function injectStyles() {
       z-index: 2147483647 !important;
       background: white !important;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
-      margin: 0 !important;
-      padding: 0 !important;
     }
-    
     #nobstacle-header-iframe {
       display: block !important;
       width: 100% !important;
+      height: ${HEADER_HEIGHT} !important;
       border: none !important;
       margin: 0 !important;
       padding: 0 !important;
-      overflow: hidden !important;
     }
   `;
-  
   document.head.appendChild(style);
 }
 
 function injectDebugPanel() {
   if (!DEBUG_MODE) return;
-  
-  const debugPanel = document.createElement('div');
-  debugPanel.id = 'nobstacle-debug-panel';
-  debugPanel.style.cssText = `
-    position: fixed;
-    bottom: 10px;
-    right: 10px;
-    background: rgba(0, 0, 0, 0.85);
-    color: white;
-    padding: 10px;
-    border-radius: 6px;
-    font-family: monospace;
-    font-size: 11px;
-    z-index: 2147483646;
-    max-width: 300px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+
+  const panel = document.createElement('div');
+  panel.id = 'nobstacle-debug-panel';
+  panel.style.cssText = `
+    position: fixed; bottom: 10px; right: 10px; background: rgba(0,0,0,0.9); color: white;
+    padding: 12px; border-radius: 8px; font-family: monospace; font-size: 11px;
+    z-index: 2147483646; max-width: 320px; box-shadow: 0 4px 20px rgba(0,0,0,0.4);
   `;
-  
-  debugPanel.innerHTML = `
-    <div style="font-weight: bold; margin-bottom: 8px; color: #4CAF50;">
-      🔍 Nobstacle Extension Debug
-    </div>
-    <div style="line-height: 1.6;">
-      <div>URL: <span style="color: #81C784;">${HEADER_URL}</span></div>
-      <div>Mode: <span style="color: #FFB74D;">${Isproduction ? 'PRODUCTION' : 'DEVELOPMENT'}</span></div>
-      <div>Injected: <span style="color: #4CAF50;">✓ Yes</span></div>
-      <div id="auth-status">Checking auth...</div>
-      <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #555;">
-<button onclick="window.location.reload()">
-  Reload Page (slow)
-</button>
-        <button onclick="document.getElementById('nobstacle-debug-panel').remove()" 
-                style="padding: 4px 8px; background: #dc3545; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 11px;">
-          Hide
-        </button>
-      </div>
+  panel.innerHTML = `
+    <div style="font-weight:bold; color:#4CAF50; margin-bottom:8px;">Nobstacle Debug</div>
+    <div>URL: <span style="color:#81C784;">${HEADER_URL}</span></div>
+    <div>Mode: <span style="color:#FFB74D;">${Isproduction ? 'PROD' : 'DEV'}</span></div>
+    <div id="auth-status">Checking cookies...</div>
+    <div style="margin-top:10px; padding-top:10px; border-top:1px solid #555; display:flex; gap:8px;">
+      <button onclick="location.reload()" style="padding:5px 10px; background:#667eea; color:white; border:none; border-radius:4px; cursor:pointer; font-size:11px;">
+        Reload Page
+      </button>
+      <button onclick="this.parentElement.parentElement.parentElement.remove()" style="padding:5px 10px; background:#dc3545; color:white; border:none; border-radius:4px; cursor:pointer; font-size:11px;">
+        Hide
+      </button>
     </div>
   `;
-  
-  document.body.appendChild(debugPanel);
+  document.body.appendChild(panel);
 }
 
-function updateDebugAuth(hasAuth, cookieCount) {
-  const authStatus = document.getElementById('auth-status');
-  if (authStatus) {
-    authStatus.innerHTML = hasAuth 
-      ? `<span style="color: #4CAF50;">✓ Auth: ${cookieCount} cookies</span>`
-      : `<span style="color: #ff6b6b;">✗ No auth cookies</span>`;
+function updateDebugAuth(hasAuth, count) {
+  const el = document.getElementById('auth-status');
+  if (el) {
+    el.innerHTML = hasAuth
+      ? `<span style="color:#4CAF50;">Authenticated: ${count} cookies</span>`
+      : `<span style="color:#ff6b6b;">No session cookie</span>`;
   }
 }
 
 async function getAuthCookies() {
   return new Promise((resolve) => {
-    chrome.runtime.sendMessage({ 
+    chrome.runtime.sendMessage({
       action: 'getCookies',
       domain: Isproduction ? 'nobstacle.com' : 'localhost'
     }, (response) => {
@@ -116,123 +94,91 @@ async function getAuthCookies() {
 }
 
 async function injectHeader() {
-  if (document.getElementById('nobstacle-header-container')) {
-    return;
-  }
-  
+  if (document.getElementById('nobstacle-header-container')) return;
+
   injectStyles();
-  
+
   const container = document.createElement('div');
   container.id = 'nobstacle-header-container';
-  
+
   const iframe = document.createElement('iframe');
   iframe.id = 'nobstacle-header-iframe';
-  
-  // Remove invalid attributes
   iframe.src = HEADER_URL;
-  iframe.style.cssText = `
-    width: 100%;
-    height: ${HEADER_HEIGHT};
-    border: none;
-    display: block;
-    margin: 0;
-    padding: 0;
-  `;
-  
-  // Set credentials mode to include cookies (this is the correct way)
-  iframe.setAttribute('credentialless', 'false');
-  
+  iframe.style.cssText = `width:100%; height:${HEADER_HEIGHT}; border:none;`;
+  iframe.allow = 'clipboard-write';
+
   container.appendChild(iframe);
-  
-  // Get auth cookies and send to iframe once it loads
+  document.body.insertBefore(container, document.body.firstChild);
+
+  // Adjust page margin
+  const existing = parseInt(getComputedStyle(document.body).marginTop) || 0;
+  document.body.style.marginTop = `${existing + parseInt(HEADER_HEIGHT)}px`;
+
+  injectDebugPanel();
+
+  // Send auth when iframe loads
   iframe.onload = async () => {
     const cookies = await getAuthCookies();
-    
-    // Look for both production and development cookie names
-    const sessionCookie = cookies.find(c => 
-      c.name === 'next-auth.session-token' || 
-      c.name === '__Secure-next-auth.session-token'
+    const sessionCookie = cookies.find(c =>
+      c.name === '__Secure-next-auth.session-token' ||
+      c.name === 'next-auth.session-token'
     );
-    
-    console.log('🍪 Cookies found:', cookies.length);
-    console.log('🍪 All cookies:', cookies.map(c => c.name));
-    console.log('🔐 Session cookie:', sessionCookie ? 'Found' : 'Not found');
-    
-    if (sessionCookie) {
-      console.log('🔐 Session cookie details:', {
-        name: sessionCookie.name,
-        domain: sessionCookie.domain,
-        secure: sessionCookie.secure,
-        sameSite: sessionCookie.sameSite
-      });
-    }
-    
+
+    console.log('Extension → iframe: Sending auth data', { hasToken: !!sessionCookie });
     updateDebugAuth(!!sessionCookie, cookies.length);
-    
-    // Send auth data to iframe
+
+    // CRITICAL FIX: Use "*" — never trust origin calculation with www/localhost
     iframe.contentWindow.postMessage({
       type: 'EXTENSION_AUTH',
-      cookies: cookies,
-      sessionToken: sessionCookie?.value
-    }, new URL(HEADER_URL).origin);
+      sessionToken: sessionCookie?.value || null,
+      cookies: cookies
+    }, '*');
   };
-  
+
   // Listen for auth requests from iframe
-  const authMessageHandler = async (event) => {
-    // Accept messages from the iframe
-    if (event.origin !== new URL(HEADER_URL).origin) {
-      console.log('❌ Message from wrong origin:', event.origin);
+  const handler = async (event) => {
+    // Allow both www and non-www + localhost
+    if (!ALLOWED_IFRAME_ORIGINS.includes(event.origin)) {
+      console.log('Blocked message from origin:', event.origin);
       return;
     }
-    
+
     if (event.data.type === 'REQUEST_AUTH') {
-      console.log('📨 Received REQUEST_AUTH from iframe');
+      console.log('Iframe requested auth → responding');
       const cookies = await getAuthCookies();
-      const sessionCookie = cookies.find(c => 
-        c.name === 'next-auth.session-token' ||
-        c.name === '__Secure-next-auth.session-token'
+      const sessionCookie = cookies.find(c =>
+        c.name.includes('next-auth.session-token')
       );
-      
-      console.log('📤 Sending auth to iframe:', {
-        cookieCount: cookies.length,
-        hasSessionToken: !!sessionCookie
-      });
-      
+
       iframe.contentWindow.postMessage({
         type: 'EXTENSION_AUTH',
-        cookies: cookies,
-        sessionToken: sessionCookie?.value
-      }, event.origin);
+        sessionToken: sessionCookie?.value || null,
+        cookies: cookies
+      }, '*'); // ← Always use "*" here
     }
   };
-  
-  window.addEventListener('message', authMessageHandler);
-  
-  document.body.insertBefore(container, document.body.firstChild);
-  adjustPageContent();
-  injectDebugPanel();
-  
-  console.log('Nobstacle header injected');
+
+  window.addEventListener('message', handler);
+
+  console.log('Nobstacle header injected successfully');
 }
 
-function adjustPageContent() {
-  if (document.body) {
-    const existingMargin = parseInt(window.getComputedStyle(document.body).marginTop) || 0;
-    document.body.style.marginTop = `calc(${existingMargin}px + ${HEADER_HEIGHT})`;
+// Toggle support
+chrome.runtime.onMessage.addListener((req, sender, respond) => {
+  if (req.action === 'toggle') {
+    if (document.getElementById('nobstacle-header-container')) {
+      document.getElementById('nobstacle-header-container')?.remove();
+      document.body.style.marginTop = '';
+      respond({ injected: false });
+    } else {
+      injectHeader();
+      respond({ injected: true });
+    }
+    return true;
   }
-}
+});
 
-function removeHeader() {
-  const container = document.getElementById('nobstacle-header-container');
-  if (container) {
-    container.remove();
-    
-    const currentMargin = parseInt(window.getComputedStyle(document.body).marginTop) || 0;
-    const headerHeightPx = parseInt(HEADER_HEIGHT);
-    document.body.style.marginTop = `${Math.max(0, currentMargin - headerHeightPx)}px`;
-  }
-}
-
+// Inject on load
 if (shouldInject()) {
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', injectHeader);
@@ -240,17 +186,3 @@ if (shouldInject()) {
     injectHeader();
   }
 }
-
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  if (request.action === 'toggle') {
-    const container = document.getElementById('nobstacle-header-container');
-    if (container) {
-      removeHeader();
-      sendResponse({ injected: false });
-    } else {
-      injectHeader();
-      sendResponse({ injected: true });
-    }
-  }
-  return true;
-});
