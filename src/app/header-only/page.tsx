@@ -15,16 +15,23 @@ export default function HeaderOnlyPage() {
   useEffect(() => {
     setMounted(true);
     setIsInIframe(window.self !== window.top);
-
+    
     // Listen for auth data from extension
     const handleMessage = async (event: MessageEvent) => {
+      console.log('📬 Received message:', {
+        type: event.data.type,
+        origin: event.origin,
+        hasData: !!event.data
+      });
+      
       if (event.data.type === 'EXTENSION_AUTH') {
         console.log('📨 Received auth from extension:', {
           hasCookies: !!event.data.cookies,
           hasSessionToken: !!event.data.sessionToken,
-          cookieCount: event.data.cookies?.length || 0
+          cookieCount: event.data.cookies?.length || 0,
+          sessionTokenPreview: event.data.sessionToken ? event.data.sessionToken.substring(0, 20) + '...' : 'none'
         });
-
+        
         // If we have a session token, verify it with our backend
         if (event.data.sessionToken) {
           try {
@@ -33,12 +40,15 @@ export default function HeaderOnlyPage() {
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ sessionToken: event.data.sessionToken })
             });
-
+            
             const data = await response.json();
             console.log('🔐 Session verification result:', data);
-
+            
             if (data.authenticated) {
-              setExtensionSession(data.user);
+              setExtensionSession({
+                user: data.user,
+                expires: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+              } as any);
               setExtensionAuthStatus('authenticated');
             } else {
               setExtensionAuthStatus('unauthenticated');
@@ -55,10 +65,24 @@ export default function HeaderOnlyPage() {
 
     window.addEventListener('message', handleMessage);
 
-    // Request auth data if in iframe
+    // Request auth data if in iframe - do this multiple times to ensure delivery
     if (window.self !== window.top) {
       console.log('📤 Requesting auth from extension...');
+      
+      // Send immediately
       window.parent.postMessage({ type: 'REQUEST_AUTH' }, '*');
+      
+      // Also send after a short delay in case iframe loads before content script
+      setTimeout(() => {
+        console.log('📤 Requesting auth again (retry)...');
+        window.parent.postMessage({ type: 'REQUEST_AUTH' }, '*');
+      }, 500);
+      
+      // One more time after 1 second
+      setTimeout(() => {
+        console.log('📤 Requesting auth again (final retry)...');
+        window.parent.postMessage({ type: 'REQUEST_AUTH' }, '*');
+      }, 1000);
     }
 
     return () => {
@@ -79,8 +103,8 @@ export default function HeaderOnlyPage() {
 
   if (!mounted) {
     return (
-      <div style={{
-        padding: '10px',
+      <div style={{ 
+        padding: '10px', 
         background: '#f0f0f0',
         fontFamily: 'system-ui',
         fontSize: '12px',
@@ -92,22 +116,19 @@ export default function HeaderOnlyPage() {
   }
 
   // Determine the effective auth status
-  const isAuthenticated = isInIframe
+  const isAuthenticated = isInIframe 
     ? extensionAuthStatus === 'authenticated'
     : status === 'authenticated';
-
+    
   const isLoading = isInIframe
-    ? extensionAuthStatus === 'loading'
-    : status === 'loading';
-
-  const effectiveSession = isInIframe
-    ? (extensionSession ? { user: extensionSession, expires: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() } : null)
+  const effectiveSession = isInIframe 
+    ? extensionSession
     : session;
 
   if (isLoading) {
     return (
-      <div style={{
-        padding: '15px',
+      <div style={{ 
+        padding: '15px', 
         background: '#fff3cd',
         fontFamily: 'system-ui',
         fontSize: '14px',
@@ -126,8 +147,8 @@ export default function HeaderOnlyPage() {
 
   if (!isAuthenticated || !effectiveSession) {
     return (
-      <div style={{
-        padding: '15px',
+      <div style={{ 
+        padding: '15px', 
         background: '#f8d7da',
         fontFamily: 'system-ui',
         fontSize: '14px',
@@ -145,12 +166,12 @@ export default function HeaderOnlyPage() {
         <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap' }}>
           {isInIframe ? (
             <>
-              <button
+              <button 
                 onClick={() => window.open('https://nobstacle.com', '_blank')}
-                style={{
-                  padding: '8px 16px',
-                  background: '#667eea',
-                  color: 'white',
+                style={{ 
+                  padding: '8px 16px', 
+                  background: '#667eea', 
+                  color: 'white', 
                   border: 'none',
                   borderRadius: '4px',
                   cursor: 'pointer',
@@ -160,15 +181,15 @@ export default function HeaderOnlyPage() {
               >
                 Open Nobstacle & Login
               </button>
-              <button
+              <button 
                 onClick={() => {
                   window.parent.postMessage({ type: 'REQUEST_AUTH' }, '*');
                   window.location.reload();
                 }}
-                style={{
-                  padding: '8px 16px',
-                  background: '#6c757d',
-                  color: 'white',
+                style={{ 
+                  padding: '8px 16px', 
+                  background: '#6c757d', 
+                  color: 'white', 
                   border: 'none',
                   borderRadius: '4px',
                   cursor: 'pointer',
@@ -180,12 +201,12 @@ export default function HeaderOnlyPage() {
               </button>
             </>
           ) : (
-            <button
+            <button 
               onClick={() => signIn()}
-              style={{
-                padding: '8px 16px',
-                background: '#667eea',
-                color: 'white',
+              style={{ 
+                padding: '8px 16px', 
+                background: '#667eea', 
+                color: 'white', 
                 border: 'none',
                 borderRadius: '4px',
                 cursor: 'pointer',
@@ -220,7 +241,7 @@ export default function HeaderOnlyPage() {
           {isInIframe && ' (Extension)'}
         </div>
       )}
-
+      
       <SocketContextProvider>
         <ClientHeader user={effectiveSession} />
       </SocketContextProvider>

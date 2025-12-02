@@ -179,15 +179,25 @@ async function injectHeader() {
   };
   
   // Listen for auth requests from iframe
-  window.addEventListener('message', async (event) => {
-    if (event.origin !== new URL(HEADER_URL).origin) return;
+  const authMessageHandler = async (event) => {
+    // Accept messages from the iframe
+    if (event.origin !== new URL(HEADER_URL).origin) {
+      console.log('❌ Message from wrong origin:', event.origin);
+      return;
+    }
     
     if (event.data.type === 'REQUEST_AUTH') {
+      console.log('📨 Received REQUEST_AUTH from iframe');
       const cookies = await getAuthCookies();
       const sessionCookie = cookies.find(c => 
-        c.name.includes('next-auth.session-token') ||
-        c.name.includes('__Secure-next-auth.session-token')
+        c.name === 'next-auth.session-token' ||
+        c.name === '__Secure-next-auth.session-token'
       );
+      
+      console.log('📤 Sending auth to iframe:', {
+        cookieCount: cookies.length,
+        hasSessionToken: !!sessionCookie
+      });
       
       iframe.contentWindow.postMessage({
         type: 'EXTENSION_AUTH',
@@ -195,7 +205,9 @@ async function injectHeader() {
         sessionToken: sessionCookie?.value
       }, event.origin);
     }
-  });
+  };
+  
+  window.addEventListener('message', authMessageHandler);
   
   document.body.insertBefore(container, document.body.firstChild);
   adjustPageContent();
