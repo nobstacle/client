@@ -9,30 +9,46 @@ export default function HeaderOnlyPage() {
   const { data: session, status } = useSession();
   const [mounted, setMounted] = useState(false);
   const [isInIframe, setIsInIframe] = useState(false);
-  const [extensionAuth, setExtensionAuth] = useState<any>(null);
+  const [extensionSession, setExtensionSession] = useState<any>(null);
+  const [extensionAuthStatus, setExtensionAuthStatus] = useState<'loading' | 'authenticated' | 'unauthenticated'>('loading');
 
   useEffect(() => {
     setMounted(true);
     setIsInIframe(window.self !== window.top);
-    
+
     // Listen for auth data from extension
-    const handleMessage = (event: MessageEvent) => {
-      // Only accept messages from parent window or extension
+    const handleMessage = async (event: MessageEvent) => {
       if (event.data.type === 'EXTENSION_AUTH') {
         console.log('📨 Received auth from extension:', {
           hasCookies: !!event.data.cookies,
           hasSessionToken: !!event.data.sessionToken,
           cookieCount: event.data.cookies?.length || 0
         });
-        
-        setExtensionAuth(event.data);
-        
-        // If we have a session token but NextAuth doesn't recognize it,
-        // try to refresh the session
-        if (event.data.sessionToken && !session) {
-          console.log('🔄 Attempting to restore session...');
-          // Force NextAuth to check the session again
-          window.location.reload();
+
+        // If we have a session token, verify it with our backend
+        if (event.data.sessionToken) {
+          try {
+            const response = await fetch('/api/auth/verify-extension', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ sessionToken: event.data.sessionToken })
+            });
+
+            const data = await response.json();
+            console.log('🔐 Session verification result:', data);
+
+            if (data.authenticated) {
+              setExtensionSession(data.user);
+              setExtensionAuthStatus('authenticated');
+            } else {
+              setExtensionAuthStatus('unauthenticated');
+            }
+          } catch (error) {
+            console.error('❌ Session verification failed:', error);
+            setExtensionAuthStatus('unauthenticated');
+          }
+        } else {
+          setExtensionAuthStatus('unauthenticated');
         }
       }
     };
@@ -45,23 +61,26 @@ export default function HeaderOnlyPage() {
       window.parent.postMessage({ type: 'REQUEST_AUTH' }, '*');
     }
 
-    console.log('🔐 Auth Status:', {
-      status,
-      hasSession: !!session,
-      user: session?.user?.email || 'Not logged in',
-      isInIframe: window.self !== window.top,
-      url: window.location.href
-    });
-
     return () => {
       window.removeEventListener('message', handleMessage);
     };
-  }, [session, status]);
+  }, []);
+
+  useEffect(() => {
+    console.log('🔐 Auth Status:', {
+      nextAuthStatus: status,
+      hasNextAuthSession: !!session,
+      extensionAuthStatus,
+      hasExtensionSession: !!extensionSession,
+      user: session?.user?.email || extensionSession?.email || 'Not logged in',
+      isInIframe: window.self !== window.top,
+    });
+  }, [session, status, extensionSession, extensionAuthStatus]);
 
   if (!mounted) {
     return (
-      <div style={{ 
-        padding: '10px', 
+      <div style={{
+        padding: '10px',
         background: '#f0f0f0',
         fontFamily: 'system-ui',
         fontSize: '12px',
@@ -72,10 +91,23 @@ export default function HeaderOnlyPage() {
     );
   }
 
-  if (status === 'loading') {
+  // Determine the effective auth status
+  const isAuthenticated = isInIframe
+    ? extensionAuthStatus === 'authenticated'
+    : status === 'authenticated';
+
+  const isLoading = isInIframe
+    ? extensionAuthStatus === 'loading'
+    : status === 'loading';
+
+  const effectiveSession = isInIframe
+    ? (extensionSession ? { user: extensionSession, expires: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() } : null)
+    : session;
+
+  if (isLoading) {
     return (
-      <div style={{ 
-        padding: '15px', 
+      <div style={{
+        padding: '15px',
         background: '#fff3cd',
         fontFamily: 'system-ui',
         fontSize: '14px',
@@ -83,19 +115,19 @@ export default function HeaderOnlyPage() {
         borderBottom: '2px solid #ffc107'
       }}>
         🔄 Checking authentication...
-        {extensionAuth && (
+        {isInIframe && (
           <div style={{ fontSize: '11px', marginTop: '5px', opacity: 0.8 }}>
-            Extension: {extensionAuth.cookies?.length || 0} cookies found
+            Waiting for extension data...
           </div>
         )}
       </div>
     );
   }
 
-  if (status === 'unauthenticated' || !session) {
+  if (!isAuthenticated || !effectiveSession) {
     return (
-      <div style={{ 
-        padding: '15px', 
+      <div style={{
+        padding: '15px',
         background: '#f8d7da',
         fontFamily: 'system-ui',
         fontSize: '14px',
@@ -105,21 +137,20 @@ export default function HeaderOnlyPage() {
         <div style={{ marginBottom: '10px' }}>
           🔒 Not logged in
         </div>
-        {extensionAuth && (
+        {process.env.NODE_ENV === 'development' && (
           <div style={{ fontSize: '11px', marginBottom: '10px', opacity: 0.7 }}>
-            Debug: {extensionAuth.cookies?.length || 0} cookies, 
-            Session token: {extensionAuth.sessionToken ? 'Found' : 'Missing'}
+            Debug: NextAuth={status}, Extension={extensionAuthStatus}
           </div>
         )}
         <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap' }}>
           {isInIframe ? (
             <>
-              <button 
+              <button
                 onClick={() => window.open('https://nobstacle.com', '_blank')}
-                style={{ 
-                  padding: '8px 16px', 
-                  background: '#667eea', 
-                  color: 'white', 
+                style={{
+                  padding: '8px 16px',
+                  background: '#667eea',
+                  color: 'white',
                   border: 'none',
                   borderRadius: '4px',
                   cursor: 'pointer',
@@ -129,12 +160,15 @@ export default function HeaderOnlyPage() {
               >
                 Open Nobstacle & Login
               </button>
-              <button 
-                onClick={() => window.location.reload()}
-                style={{ 
-                  padding: '8px 16px', 
-                  background: '#6c757d', 
-                  color: 'white', 
+              <button
+                onClick={() => {
+                  window.parent.postMessage({ type: 'REQUEST_AUTH' }, '*');
+                  window.location.reload();
+                }}
+                style={{
+                  padding: '8px 16px',
+                  background: '#6c757d',
+                  color: 'white',
                   border: 'none',
                   borderRadius: '4px',
                   cursor: 'pointer',
@@ -146,12 +180,12 @@ export default function HeaderOnlyPage() {
               </button>
             </>
           ) : (
-            <button 
+            <button
               onClick={() => signIn()}
-              style={{ 
-                padding: '8px 16px', 
-                background: '#667eea', 
-                color: 'white', 
+              style={{
+                padding: '8px 16px',
+                background: '#667eea',
+                color: 'white',
                 border: 'none',
                 borderRadius: '4px',
                 cursor: 'pointer',
@@ -182,12 +216,13 @@ export default function HeaderOnlyPage() {
           zIndex: 1000,
           pointerEvents: 'none'
         }}>
-          ✓ {session.user?.email}
+          ✓ {effectiveSession?.user?.email || 'Authenticated'}
+          {isInIframe && ' (Extension)'}
         </div>
       )}
-      
+
       <SocketContextProvider>
-        <ClientHeader user={session} />
+        <ClientHeader user={effectiveSession} />
       </SocketContextProvider>
     </div>
   );
