@@ -81,10 +81,9 @@ function injectDebugPanel() {
       <div>Injected: <span style="color: #4CAF50;">✓ Yes</span></div>
       <div id="auth-status">Checking auth...</div>
       <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #555;">
-        <button onclick="document.getElementById('nobstacle-header-iframe').contentWindow.location.reload()" 
-                style="padding: 4px 8px; background: #667eea; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 11px; margin-right: 5px;">
-          Reload Header
-        </button>
+<button onclick="window.location.reload()">
+  Reload Page (slow)
+</button>
         <button onclick="document.getElementById('nobstacle-debug-panel').remove()" 
                 style="padding: 4px 8px; background: #dc3545; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 11px;">
           Hide

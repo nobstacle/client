@@ -70,18 +70,18 @@ export default function HeaderOnlyPage() {
       console.log('📤 Requesting auth from extension...');
       
       // Send immediately
-      window.parent.postMessage({ type: 'REQUEST_AUTH' }, '*');
+      window.parent.postMessage({ type: 'REQUEST_AUTH' }, 'https://nobstacle.com');
       
       // Also send after a short delay in case iframe loads before content script
       setTimeout(() => {
         console.log('📤 Requesting auth again (retry)...');
-        window.parent.postMessage({ type: 'REQUEST_AUTH' }, '*');
+        window.parent.postMessage({ type: 'REQUEST_AUTH' }, 'https://nobstacle.com');
       }, 500);
       
       // One more time after 1 second
       setTimeout(() => {
         console.log('📤 Requesting auth again (final retry)...');
-        window.parent.postMessage({ type: 'REQUEST_AUTH' }, '*');
+        window.parent.postMessage({ type: 'REQUEST_AUTH' }, 'https://nobstacle.com');
       }, 1000);
     }
 
@@ -114,6 +114,21 @@ export default function HeaderOnlyPage() {
       </div>
     );
   }
+
+  // Auto-retry every 3 seconds if still loading
+useEffect(() => {
+  if (extensionAuthStatus !== 'loading') return;
+
+  const interval = setInterval(() => {
+    console.log('Auto-retrying auth request...');
+    window.parent.postMessage(
+      { type: 'REQUEST_AUTH' },
+      'https://nobstacle.com'
+    );
+  }, 3000);
+
+  return () => clearInterval(interval);
+}, [extensionAuthStatus]);
 
   // Determine the effective auth status
   const isAuthenticated = isInIframe 
@@ -181,24 +196,27 @@ export default function HeaderOnlyPage() {
               >
                 Open Nobstacle & Login
               </button>
-              <button 
-                onClick={() => {
-                  window.parent.postMessage({ type: 'REQUEST_AUTH' }, '*');
-                  window.location.reload();
-                }}
-                style={{ 
-                  padding: '8px 16px', 
-                  background: '#6c757d', 
-                  color: 'white', 
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: 'pointer',
-                  fontSize: '13px',
-                  fontWeight: '500'
-                }}
-              >
-                Refresh
-              </button>
+<button 
+  onClick={() => {
+    // Just re-request auth — content script will respond
+    window.parent.postMessage({ type: 'REQUEST_AUTH' }, 'https://nobstacle.com');
+    
+    // Optional: show feedback instead of crashing
+    alert('Auth refresh requested. If still not logged in, try opening nobstacle.com in a new tab.');
+  }}
+  style={{ 
+    padding: '8px 16px', 
+    background: '#6c757d', 
+    color: 'white', 
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    fontSize: '13px',
+    fontWeight: '500'
+  }}
+>
+  Retry Auth
+</button>
             </>
           ) : (
             <button 
