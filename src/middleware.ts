@@ -12,7 +12,7 @@ export default withAuth(
       const response = NextResponse.next();
 
       // Get token to check auth status
-      const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET || "asdfgh1234" });
+      const token = await getToken({ req, secret:  "asdfgh1234" });
       
       // Log for debugging
       console.log('🔐 /header-only auth check:', {
@@ -21,6 +21,8 @@ export default withAuth(
         origin: req.headers.get('origin'),
         referer: req.headers.get('referer')
       });
+
+      console.log("tokentokentokentokentoken",token);
 
       // Remove frame restrictions
       response.headers.delete('X-Frame-Options');

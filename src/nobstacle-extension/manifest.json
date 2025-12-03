@@ -6,10 +6,13 @@
   "permissions": [
     "cookies",
     "storage",
-    "tabs"
+    "tabs",
+    "webRequest"
   ],
   "host_permissions": [
     "https://nobstacle.com/*",
+    "https://www.nobstacle.com/*",
+    "https://nobstacle-production-d145.up.railway.app/*",
     "http://localhost:3000/*",
     "https://*/*",
     "http://*/*"

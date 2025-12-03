@@ -1,12 +1,12 @@
 // Configuration
-const Isproduction = true; // Set to false for local testing
+const Isproduction = true; // Set to true for production
 const HEADER_URL = Isproduction 
   ? 'https://nobstacle.com/header-only' 
   : 'http://localhost:3000/header-only';
 const HEADER_HEIGHT = '70px';
 const DEBUG_MODE = true;
 
-// List of allowed iframe origins (handles www, non-www, localhost)
+// List of allowed iframe origins
 const ALLOWED_IFRAME_ORIGINS = Isproduction
   ? ['https://nobstacle.com', 'https://www.nobstacle.com']
   : ['http://localhost:3000', 'http://localhost:3001'];
@@ -61,11 +61,14 @@ function injectDebugPanel() {
     <div>URL: <span style="color:#81C784;">${HEADER_URL}</span></div>
     <div>Mode: <span style="color:#FFB74D;">${Isproduction ? 'PROD' : 'DEV'}</span></div>
     <div id="auth-status">Checking cookies...</div>
+    <div id="backend-token-status" style="margin-top:4px; color:#FFB74D;">Backend token: Waiting...</div>
+    <div id="token-preview" style="margin-top:8px; font-size:10px; color:#FFB74D;"></div>
+    <div id="debug-log" style="margin-top:10px; max-height:150px; overflow-y:auto; font-size:10px; border-top:1px solid #555; padding-top:8px;"></div>
     <div style="margin-top:10px; padding-top:10px; border-top:1px solid #555; display:flex; gap:8px;">
       <button onclick="location.reload()" style="padding:5px 10px; background:#667eea; color:white; border:none; border-radius:4px; cursor:pointer; font-size:11px;">
         Reload Page
       </button>
-      <button onclick="this.parentElement.parentElement.parentElement.remove()" style="padding:5px 10px; background:#dc3545; color:white; border:none; border-radius:4px; cursor:pointer; font-size:11px;">
+      <button onclick="this.parentElement.parentElement.remove()" style="padding:5px 10px; background:#dc3545; color:white; border:none; border-radius:4px; cursor:pointer; font-size:11px;">
         Hide
       </button>
     </div>
@@ -73,12 +76,39 @@ function injectDebugPanel() {
   document.body.appendChild(panel);
 }
 
-function updateDebugAuth(hasAuth, count) {
+function addDebugLog(message) {
+  const logEl = document.getElementById('debug-log');
+  if (logEl) {
+    const time = new Date().toLocaleTimeString();
+    const entry = document.createElement('div');
+    entry.textContent = `${time}: ${message}`;
+    entry.style.marginBottom = '4px';
+    logEl.appendChild(entry);
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+  console.log('[Nobstacle Extension]', message);
+}
+
+function updateDebugAuth(hasAuth, count, tokenPreview = '') {
   const el = document.getElementById('auth-status');
   if (el) {
     el.innerHTML = hasAuth
-      ? `<span style="color:#4CAF50;">Authenticated: ${count} cookies</span>`
-      : `<span style="color:#ff6b6b;">No session cookie</span>`;
+      ? `<span style="color:#4CAF50;">✓ Authenticated: ${count} cookies</span>`
+      : `<span style="color:#ff6b6b;">✗ No session cookie</span>`;
+  }
+  
+  const tokenEl = document.getElementById('token-preview');
+  if (tokenEl && tokenPreview) {
+    tokenEl.innerHTML = `Token: ${tokenPreview.substring(0, 40)}...`;
+  }
+}
+
+function updateBackendTokenStatus(hasToken) {
+  const el = document.getElementById('backend-token-status');
+  if (el) {
+    el.innerHTML = hasToken
+      ? '<span style="color:#4CAF50;">✓ Backend token stored</span>'
+      : '<span style="color:#ff6b6b;">⚠ No backend token</span>';
   }
 }
 
@@ -96,6 +126,7 @@ async function getAuthCookies() {
 async function injectHeader() {
   if (document.getElementById('nobstacle-header-container')) return;
 
+  addDebugLog('Starting header injection...');
   injectStyles();
 
   const container = document.createElement('div');
@@ -115,36 +146,50 @@ async function injectHeader() {
   document.body.style.marginTop = `${existing + parseInt(HEADER_HEIGHT)}px`;
 
   injectDebugPanel();
+  addDebugLog('Header iframe created');
 
   // Send auth when iframe loads
   iframe.onload = async () => {
+    addDebugLog('Iframe loaded, fetching cookies...');
+    
     const cookies = await getAuthCookies();
     const sessionCookie = cookies.find(c =>
       c.name === '__Secure-next-auth.session-token' ||
       c.name === 'next-auth.session-token'
     );
 
-    console.log('Extension → iframe: Sending auth data', { hasToken: !!sessionCookie });
-    updateDebugAuth(!!sessionCookie, cookies.length);
+    addDebugLog(`Found ${cookies.length} cookies`);
+    
+    if (sessionCookie) {
+      addDebugLog(`Session cookie: ${sessionCookie.name}`);
+      addDebugLog(`Token length: ${sessionCookie.value.length} chars`);
+    } else {
+      addDebugLog('No session cookie found!');
+    }
 
-    // CRITICAL FIX: Use "*" — never trust origin calculation with www/localhost
+    updateDebugAuth(!!sessionCookie, cookies.length, sessionCookie?.value || '');
+
+    // Send message to iframe
+    addDebugLog('Sending EXTENSION_AUTH message to iframe...');
     iframe.contentWindow.postMessage({
       type: 'EXTENSION_AUTH',
       sessionToken: sessionCookie?.value || null,
       cookies: cookies
     }, '*');
+    addDebugLog('Message sent!');
   };
 
-  // Listen for auth requests from iframe
+  // Listen for messages from iframe
   const handler = async (event) => {
-    // Allow both www and non-www + localhost
+    // Check origin
     if (!ALLOWED_IFRAME_ORIGINS.includes(event.origin)) {
-      console.log('Blocked message from origin:', event.origin);
+      addDebugLog(`Blocked message from origin: ${event.origin}`);
       return;
     }
 
+    // Handle auth requests from iframe
     if (event.data.type === 'REQUEST_AUTH') {
-      console.log('Iframe requested auth → responding');
+      addDebugLog('Iframe requested auth, responding...');
       const cookies = await getAuthCookies();
       const sessionCookie = cookies.find(c =>
         c.name.includes('next-auth.session-token')
@@ -154,13 +199,35 @@ async function injectHeader() {
         type: 'EXTENSION_AUTH',
         sessionToken: sessionCookie?.value || null,
         cookies: cookies
-      }, '*'); // ← Always use "*" here
+      }, '*');
+      addDebugLog('Auth response sent');
+    }
+
+    // *** CRITICAL: Receive backend token from iframe ***
+    if (event.data.type === 'BACKEND_TOKEN') {
+      addDebugLog('✓ Received backend token from iframe!');
+      addDebugLog(`Token preview: ${event.data.token.substring(0, 40)}...`);
+      
+      // Send to background script for storage and injection
+      chrome.runtime.sendMessage({
+        action: 'setBackendToken',
+        token: event.data.token,
+        expiresIn: event.data.expiresIn
+      }, (response) => {
+        if (response?.success) {
+          addDebugLog('✓ Backend token stored in background script');
+          updateBackendTokenStatus(true);
+        } else {
+          addDebugLog('✗ Failed to store backend token');
+          updateBackendTokenStatus(false);
+        }
+      });
     }
   };
 
   window.addEventListener('message', handler);
 
-  console.log('Nobstacle header injected successfully');
+  addDebugLog('✓ Header injection complete');
 }
 
 // Toggle support
