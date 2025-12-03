@@ -1,7 +1,7 @@
 // Configuration
 const Isproduction = true; // Set to true for production
-const HEADER_URL = Isproduction 
-  ? 'https://nobstacle.com/header-only' 
+const HEADER_URL = Isproduction
+  ? 'https://nobstacle.com/header-only'
   : 'http://localhost:3000/header-only';
 const HEADER_HEIGHT = '70px';
 const DEBUG_MODE = true;
@@ -10,6 +10,9 @@ const DEBUG_MODE = true;
 const ALLOWED_IFRAME_ORIGINS = Isproduction
   ? ['https://nobstacle.com', 'https://www.nobstacle.com']
   : ['http://localhost:3000', 'http://localhost:3001'];
+
+let originalMarginTop = 0;
+let isDropdownOpen = false;
 
 function shouldInject() {
   const hostname = window.location.hostname;
@@ -98,7 +101,7 @@ function updateDebugAuth(hasAuth, count, tokenPreview = '') {
       ? `<span style="color:#4CAF50;">✓ Authenticated: ${count} cookies</span>`
       : `<span style="color:#ff6b6b;">✗ No session cookie</span>`;
   }
-  
+
   const tokenEl = document.getElementById('token-preview');
   if (tokenEl && tokenPreview) {
     tokenEl.innerHTML = `Token: ${tokenPreview.substring(0, 40)}...`;
@@ -125,6 +128,10 @@ async function getAuthCookies() {
   });
 }
 
+if (typeof window.nobstacleOriginalMargin === 'undefined') {
+  window.nobstacleOriginalMargin = parseInt(getComputedStyle(document.body).marginTop) || 0;
+}
+
 async function injectHeader() {
   if (document.getElementById('nobstacle-header-container')) return;
 
@@ -143,9 +150,11 @@ async function injectHeader() {
   container.appendChild(iframe);
   document.body.insertBefore(container, document.body.firstChild);
 
-  // Adjust page margin
-  const existing = parseInt(getComputedStyle(document.body).marginTop) || 0;
-  document.body.style.marginTop = `${existing + parseInt(HEADER_HEIGHT)}px`;
+  iframe.style.height = HEADER_HEIGHT;
+  container.style.height = HEADER_HEIGHT;
+
+  const baseMargin = window.nobstacleOriginalMargin + parseInt(HEADER_HEIGHT);
+  document.body.style.marginTop = `${baseMargin}px`;
 
   // injectDebugPanel();
   addDebugLog('Header iframe created');
@@ -153,7 +162,7 @@ async function injectHeader() {
   // Send auth when iframe loads
   iframe.onload = async () => {
     addDebugLog('Iframe loaded, fetching cookies...');
-    
+
     const cookies = await getAuthCookies();
     const sessionCookie = cookies.find(c =>
       c.name === '__Secure-next-auth.session-token' ||
@@ -161,7 +170,7 @@ async function injectHeader() {
     );
 
     addDebugLog(`Found ${cookies.length} cookies`);
-    
+
     if (sessionCookie) {
       addDebugLog(`Session cookie: ${sessionCookie.name}`);
       addDebugLog(`Token length: ${sessionCookie.value.length} chars`);
@@ -180,6 +189,16 @@ async function injectHeader() {
     }, '*');
     addDebugLog('Message sent!');
   };
+
+  function updateBodyMargin(extraHeight = 0) {
+    if (!originalMarginTop) {
+      originalMarginTop = parseInt(getComputedStyle(document.body).marginTop) || 0;
+    }
+
+    const baseHeight = parseInt(HEADER_HEIGHT);
+    const totalHeight = baseHeight + extraHeight;
+    document.body.style.marginTop = `${originalMarginTop + totalHeight}px`;
+  }
 
   // Listen for messages from iframe
   const handler = async (event) => {
@@ -205,11 +224,32 @@ async function injectHeader() {
       addDebugLog('Auth response sent');
     }
 
+    if (event.data.type === 'DROPDOWN_HEIGHT' || event.data.type === 'HAMBURGER_HEIGHT') {
+      const iframe = document.getElementById('nobstacle-header-iframe');
+      const container = document.getElementById('nobstacle-header-container');
+      if (!iframe || !container) return;
+
+      const isOpen = event.data.isOpen;
+      const newHeight = isOpen ? event.data.height : parseInt(HEADER_HEIGHT);
+
+      addDebugLog(`Dropdown ${isOpen ? 'open' : 'closed'} → ${newHeight}px`);
+
+      iframe.style.transition = 'height 0.22s ease-out';
+      container.style.transition = 'height 0.22s ease-out';
+      iframe.style.height = newHeight + 'px';
+      container.style.height = newHeight + 'px';
+
+      // Push page down only by the *extra* height
+      const extra = newHeight - parseInt(HEADER_HEIGHT);
+      const finalMargin = window.nobstacleOriginalMargin + parseInt(HEADER_HEIGHT) + extra;
+      document.body.style.marginTop = finalMargin + 'px';
+    }
+
     // *** CRITICAL: Receive backend token from iframe ***
     if (event.data.type === 'BACKEND_TOKEN') {
       addDebugLog('✓ Received backend token from iframe!');
       addDebugLog(`Token preview: ${event.data.token.substring(0, 40)}...`);
-      
+
       // Send to background script for storage and injection
       chrome.runtime.sendMessage({
         action: 'setBackendToken',

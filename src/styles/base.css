@@ -1178,3 +1178,8 @@ button {
   width: 20px;
   height: 20px;
 }
+
+#nobstacle-header-container,
+#nobstacle-header-iframe {
+  transition: height 0.25s ease !important;
+}

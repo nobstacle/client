@@ -82,12 +82,12 @@ export default function HeaderOnlyPage() {
 
   if (!user) {
     return (
-      <div style={{ padding: '16px', background: '#f8d7da', textAlign: 'center' }}>
-        <div style={{ marginBottom: '12px', fontWeight: '500', color: '#721c24' }}>
+      <div style={{ padding: '16px', background: '#f8d7da', textAlign: 'center', display:'flex', justifyContent:'center', alignItems:'center' }}>
+        <div style={{ fontWeight: '500', color: '#721c24', marginRight:'1rem' }}>
           Not logged in
         </div>
         <button 
-          onClick={() => window.open('http://localhost:3000', '_blank')}
+          onClick={() => window.open('https://nobstacle.com', '_blank')}
           style={{
             padding: '10px 18px',
             background: '#667eea',
@@ -97,7 +97,7 @@ export default function HeaderOnlyPage() {
             cursor: 'pointer'
           }}
         >
-          Login at Localhost
+          Login
         </button>
       </div>
     );

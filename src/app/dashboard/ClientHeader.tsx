@@ -67,6 +67,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
     const hamburgerMenuRef = useRef(null);
     const [dropdownPosition, setDropdownPosition] = useState({ top: 0, width: 0 });
     const [hamburgerPosition, setHamburgerPosition] = useState({ top: 0, right: 0 });
+    const [isRealDropdownOpen, setIsRealDropdownOpen] = useState(false);
 
     // Get company data with proper caching
     const { data: companyData } = useCompanyControllerGetCompany({
@@ -381,27 +382,29 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         }
     }, [isHamburgerMenuOpen]);
 
-    // Notify parent about dropdown height for iframe adjustment
     useEffect(() => {
-        if (window.self !== window.top) {
-            window.parent.postMessage({
-                type: 'DROPDOWN_HEIGHT',
-                isOpen: isDropdownVisible,
-                height: isDropdownVisible ? 450 : 70
-            }, '*');
-        }
-    }, [isDropdownVisible]);
+  if (window.self === window.top) return; // Only run in iframe
 
-    // Notify parent about hamburger menu height
-    useEffect(() => {
-        if (window.self !== window.top) {
-            window.parent.postMessage({
-                type: 'HAMBURGER_HEIGHT',
-                isOpen: isHamburgerMenuOpen,
-                height: isHamburgerMenuOpen ? 500 : 70
-            }, '*');
-        }
-    }, [isHamburgerMenuOpen]);
+  const shouldOpen = isDropdownVisible || isHamburgerMenuOpen;
+  const shouldClose = !isDropdownVisible && !isHamburgerMenuOpen;
+
+  // Only trigger resize if it's a REAL dropdown (not tooltip hover)
+  if (shouldOpen && !isRealDropdownOpen) {
+    setIsRealDropdownOpen(true);
+    window.parent.postMessage({
+      type: 'DROPDOWN_HEIGHT',
+      isOpen: true,
+      height: 520 // or your max dropdown height
+    }, '*');
+  } else if (shouldClose && isRealDropdownOpen) {
+    setIsRealDropdownOpen(false);
+    window.parent.postMessage({
+      type: 'DROPDOWN_HEIGHT',
+      isOpen: false,
+      height: 70
+    }, '*');
+  }
+}, [isDropdownVisible, isHamburgerMenuOpen, isRealDropdownOpen]);
 
     const showDrawer = () => setDrawerOpen(true);
     const closeDrawer = () => setDrawerOpen(false);
