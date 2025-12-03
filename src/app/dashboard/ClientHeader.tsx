@@ -65,9 +65,9 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
     const isSAdmin = user?.user.Roles?.includes("SAdmin");
     const [isHamburgerMenuOpen, setIsHamburgerMenuOpen] = useState(false);
     const hamburgerMenuRef = useRef(null);
-    const [dropdownPosition, setDropdownPosition] = useState({ top: 0, width: 0 });
+    const [dropdownPosition, setDropdownPosition] = useState({ top: 0, right: 0, width: 0 });
     const [hamburgerPosition, setHamburgerPosition] = useState({ top: 0, right: 0 });
-    const [isRealDropdownOpen, setIsRealDropdownOpen] = useState(false);
+
 
     // Get company data with proper caching
     const { data: companyData } = useCompanyControllerGetCompany({
@@ -358,6 +358,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
             const rect = searchRef.current.getBoundingClientRect();
             setDropdownPosition({
                 top: rect.bottom + 4,
+                right: window.innerWidth - rect.right,
                 width: Math.max(300, rect.width)
             });
         }
@@ -534,524 +535,537 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
 
     return (
         <>
-            {/* Mobile Header */}
-            <div className="block lg:hidden" style={{ backgroundColor: '#3b5998' }}>
-                <nav className="h-14 w-full shadow-sm border-b border-white/20 px-4">
-                    <div className="flex h-full w-full items-center justify-between">
-                        <Button
-                            type="text"
-                            icon={<MenuOutlined className="text-white text-xl" />}
-                            onClick={showDrawer}
-                            className="border-none shadow-none hover:bg-white/20 transition-colors duration-200 rounded-lg p-3"
-                            style={{
-                                background: 'transparent',
-                                border: 'none'
-                            }}
-                        />
-                        <div className="flex items-center gap-2">
-                            <div className="customLogoutMobile">
-                                <LogoutIcon />
-                                <Logout />
-                            </div>
+
+            <style jsx global>{`
+                html, body {
+                    background: transparent !important;
+                }
+                `}</style>
+            <div style={{
+                width: '100%',
+                position: 'relative',
+                pointerEvents: 'none' // Allow clicks to pass through transparent areas
+            }}>
+                {/* Mobile Header */}
+                <div className="block lg:hidden" style={{ backgroundColor: '#3b5998' }}>
+                    <nav className="h-14 w-full shadow-sm border-b border-white/20 px-4">
+                        <div className="flex h-full w-full items-center justify-between">
                             <Button
                                 type="text"
-                                icon={<MoreOutlined className="text-white text-xl" />}
-                                onClick={showShortcutMenu}
+                                icon={<MenuOutlined className="text-white text-xl" />}
+                                onClick={showDrawer}
                                 className="border-none shadow-none hover:bg-white/20 transition-colors duration-200 rounded-lg p-3"
                                 style={{
                                     background: 'transparent',
                                     border: 'none'
                                 }}
                             />
+                            <div className="flex items-center gap-2">
+                                <div className="customLogoutMobile">
+                                    <LogoutIcon />
+                                    <Logout />
+                                </div>
+                                <Button
+                                    type="text"
+                                    icon={<MoreOutlined className="text-white text-xl" />}
+                                    onClick={showShortcutMenu}
+                                    className="border-none shadow-none hover:bg-white/20 transition-colors duration-200 rounded-lg p-3"
+                                    style={{
+                                        background: 'transparent',
+                                        border: 'none'
+                                    }}
+                                />
+                            </div>
                         </div>
-                    </div>
-                </nav>
-            </div>
+                    </nav>
+                </div>
 
-            {/* Desktop Header */}
-            <nav className=" w-full shadow-sm px-6 hidden lg:block"
-                style={{ backgroundColor: '#3b5998', height: '4.09rem' }}>
-                <div className="flex h-full w-full items-center justify-between mx-auto">
-                    <div className="flex items-center gap-6">
-                        <div style={{ paddingTop: "0.2em", paddingRight: "1em", width: '4vw' }}>
-                            <CompanyLogo />
+                {/* Desktop Header */}
+                <nav
+                    className="w-full shadow-sm px-6 hidden lg:block"
+                    style={{
+                        backgroundColor: '#3b5998',
+                        height: '4.09rem',
+                        pointerEvents: 'auto',
+                        position: 'relative',
+                        zIndex: 1
+                    }}
+                >
+                    <div className="flex h-full w-full items-center justify-between mx-auto">
+                        <div className="flex items-center gap-6">
+                            <div style={{ paddingTop: "0.2em", paddingRight: "1em", width: '4vw' }}>
+                                <CompanyLogo />
+                            </div>
+                            {!isSAdmin && (
+                                <div className="flex items-center gap-4">
+                                    <div className="bg-white/10 backdrop-blur-sm rounded-lg px-4 py-2">
+                                        <LanguageShortcutPicker />
+                                    </div>
+                                    <div className="bg-white/10 backdrop-blur-sm rounded-lg px-4 py-2">
+                                        <HeaderLanguagePicker />
+                                    </div>
+                                    <div className="bg-white/10 backdrop-blur-sm rounded-lg px-4 py-2">
+                                        <TemplateShortcutPicker />
+                                    </div>
+                                </div>
+                            )}
                         </div>
+
                         {!isSAdmin && (
-                            <div className="flex items-center gap-4">
-                                <div className="bg-white/10 backdrop-blur-sm rounded-lg px-4 py-2">
-                                    <LanguageShortcutPicker />
+                            <div className="flex items-center">
+                                <div>
+                                    <ChatBot />
                                 </div>
-                                <div className="bg-white/10 backdrop-blur-sm rounded-lg px-4 py-2">
-                                    <HeaderLanguagePicker />
+
+                                <div>
+                                    <TextSurveyShortcut
+                                        confirmationNumber={searchValue !== "" ? searchValue : confirmationNumber}
+                                        clearConfirmationNumber={clearConfirmationNumber}
+                                    />
                                 </div>
-                                <div className="bg-white/10 backdrop-blur-sm rounded-lg px-4 py-2">
-                                    <TemplateShortcutPicker />
+                                <div>
+                                    <HeaderSurveyShortcut
+                                        confirmationNumber={searchValue !== "" ? searchValue : confirmationNumber}
+                                        clearConfirmationNumber={clearConfirmationNumber}
+                                    />
+                                </div>
+                                <div>
+                                    <WebsiteShortcut
+                                        confirmationNumber={searchValue !== "" ? searchValue : confirmationNumber}
+                                        clearConfirmationNumber={clearConfirmationNumber}
+                                    />
+                                </div>
+
+                                <div>
+                                    <HeaderRecordingShortcut
+                                        confirmationNumber={searchValue !== "" ? searchValue : confirmationNumber}
+                                        clearConfirmationNumber={clearConfirmationNumber} />
+                                </div>
+
+                                {/* Template Search Input */}
+                                <div ref={searchRef} className="bg-white/10 backdrop-blur-sm rounded-lg px-3 py-1" style={{
+                                    position: 'relative',
+                                    zIndex: 1000
+                                }}>
+                                    <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                                        <input
+                                            ref={inputRef}
+                                            autoComplete="off"
+                                            type="text"
+                                            placeholder="ID# or Search Template"
+                                            value={searchValue}
+                                            onChange={handleSearchChange}
+                                            onFocus={() => {
+                                                if (justSelectedRef.current) return;
+                                                if (searchValue.trim() && filteredTemplates.length > 0) {
+                                                    setIsDropdownVisible(true);
+                                                }
+                                            }}
+                                            style={{
+                                                width: '190px',
+                                                color: 'white',
+                                                backgroundColor: 'transparent',
+                                                border: 'none',
+                                                outline: 'none',
+                                                fontSize: '14px',
+                                                padding: '4px 24px 4px 0',
+                                                caretColor: 'white',
+                                            }}
+                                            className="placeholder-white/60"
+                                        />
+                                        {searchValue && (
+                                            <CloseOutlined
+                                                onMouseDown={(e) => {
+                                                    e.preventDefault();
+                                                    handleClear();
+                                                }}
+                                                style={{
+                                                    position: 'absolute',
+                                                    right: 0,
+                                                    color: 'rgba(255, 255, 255, 0.6)',
+                                                    cursor: 'pointer',
+                                                    fontSize: '12px',
+                                                    padding: '4px'
+                                                }}
+                                            />
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div ref={hamburgerMenuRef} style={{ position: 'relative', marginLeft: '8px' }}>
+                                    <div
+                                        onClick={() => setIsHamburgerMenuOpen(!isHamburgerMenuOpen)}
+                                        style={{
+                                            cursor: 'pointer',
+                                            padding: '8px 12px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            borderRadius: '8px',
+                                            transition: 'all 0.2s ease',
+                                            backgroundColor: isHamburgerMenuOpen ? 'rgba(255, 255, 255, 0.15)' : 'transparent',
+                                            position: 'relative',
+                                        }}
+                                        onMouseEnter={(e) => {
+                                            if (!isHamburgerMenuOpen) {
+                                                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+                                            }
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            if (!isHamburgerMenuOpen) {
+                                                e.currentTarget.style.backgroundColor = 'transparent';
+                                            }
+                                        }}
+                                    >
+                                        <GiHamburgerMenu
+                                            style={{
+                                                color: 'white',
+                                                fontSize: '20px',
+                                                transition: 'transform 0.2s ease',
+                                                transform: isHamburgerMenuOpen ? 'rotate(90deg)' : 'rotate(0deg)'
+                                            }}
+                                        />
+                                        <div style={{
+                                            position: 'absolute',
+                                            top: '2px',
+                                            right: '2px',
+                                            backgroundColor: '#ef4444',
+                                            color: 'white',
+                                            fontSize: '10px',
+                                            fontWeight: '600',
+                                            borderRadius: '10px',
+                                            minWidth: '18px',
+                                            height: '18px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            padding: '0 4px',
+                                            border: '2px solid #3b5998',
+                                            boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                                        }}>
+                                            {params.get("station") ?? 1}
+                                        </div>
+                                    </div>
+
+                                    {/* Dropdown Menu */}
+                                    {isHamburgerMenuOpen && (
+                                        <div style={{
+                                            position: 'fixed', // Always fixed
+                                            top: `${hamburgerPosition.top}px`,
+                                            right: `${hamburgerPosition.right}px`,
+                                            backgroundColor: 'white',
+                                            borderRadius: '12px',
+                                            boxShadow: '0 10px 40px rgba(0, 0, 0, 0.15)',
+                                            minWidth: '280px',
+                                            zIndex: 2147483647,
+                                            overflow: 'hidden',
+                                            border: '1px solid #e5e7eb',
+                                            animation: 'slideDown 0.2s ease-out'
+                                        }}>
+                                            {/* Station Number */}
+                                            <div style={{
+                                                padding: '16px 20px',
+                                                borderBottom: '1px solid #f0f0f0',
+                                                backgroundColor: '#f8fafc'
+                                            }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                    <div style={{
+                                                        width: '40px',
+                                                        height: '40px',
+                                                        borderRadius: '10px',
+                                                        backgroundColor: '#3b5998',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center'
+                                                    }}>
+                                                        <HiOutlineOfficeBuilding style={{ color: 'white', fontSize: '20px' }} />
+                                                    </div>
+                                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                                        <div style={{
+                                                            fontSize: '11px',
+                                                            color: '#6b7280',
+                                                            fontWeight: '500',
+                                                            marginBottom: '2px',
+                                                            textTransform: 'uppercase'
+                                                        }}>Station</div>
+                                                        <div style={{
+                                                            fontSize: '15px',
+                                                            fontWeight: '600',
+                                                            color: '#1f2937',
+                                                            overflow: 'hidden',
+                                                            textOverflow: 'ellipsis',
+                                                            whiteSpace: 'nowrap'
+                                                        }}> <StationPicker /></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            {/* Company Name */}
+                                            <div style={{
+                                                padding: '16px 20px',
+                                                borderBottom: '1px solid #f0f0f0',
+                                                backgroundColor: '#f8fafc'
+                                            }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                    <div style={{
+                                                        width: '40px',
+                                                        height: '40px',
+                                                        borderRadius: '10px',
+                                                        backgroundColor: '#3b5998',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center'
+                                                    }}>
+                                                        <HiOutlineOfficeBuilding style={{ color: 'white', fontSize: '20px' }} />
+                                                    </div>
+                                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                                        <div style={{
+                                                            fontSize: '11px',
+                                                            color: '#6b7280',
+                                                            fontWeight: '500',
+                                                            marginBottom: '2px',
+                                                            textTransform: 'uppercase'
+                                                        }}>Company</div>
+                                                        <div style={{
+                                                            fontSize: '15px',
+                                                            fontWeight: '600',
+                                                            color: '#1f2937',
+                                                            overflow: 'hidden',
+                                                            textOverflow: 'ellipsis',
+                                                            whiteSpace: 'nowrap'
+                                                        }}>{companyData?.name || 'Company Name'}</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* User Name */}
+                                            <div style={{
+                                                padding: '16px 20px',
+                                                borderBottom: '1px solid #f0f0f0'
+                                            }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                    <div style={{
+                                                        width: '40px',
+                                                        height: '40px',
+                                                        borderRadius: '10px',
+                                                        backgroundColor: '#e8eef7',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center'
+                                                    }}>
+                                                        <HiOutlineUser style={{ color: '#3b5998', fontSize: '20px' }} />
+                                                    </div>
+                                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                                        <div style={{
+                                                            fontSize: '11px',
+                                                            color: '#6b7280',
+                                                            fontWeight: '500',
+                                                            marginBottom: '2px',
+                                                            textTransform: 'uppercase'
+                                                        }}>User</div>
+                                                        <div style={{
+                                                            fontSize: '15px',
+                                                            fontWeight: '600',
+                                                            color: '#1f2937',
+                                                            overflow: 'hidden',
+                                                            textOverflow: 'ellipsis',
+                                                            whiteSpace: 'nowrap'
+                                                        }}>{user?.user?.name || user?.user?.email || 'User Name'}</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Buttons */}
+                                            <div style={{ padding: '8px' }}>
+                                                <button
+                                                    onClick={() => {
+                                                        setIsHamburgerMenuOpen(false);
+                                                    }}
+                                                    style={{
+                                                        width: '100%',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        gap: '12px',
+                                                        padding: '12px 16px',
+                                                        backgroundColor: 'transparent',
+                                                        border: 'none',
+                                                        borderRadius: '8px',
+                                                        cursor: 'pointer',
+                                                        fontSize: '14px',
+                                                        fontWeight: '500',
+                                                        color: '#374151',
+                                                        marginBottom: '4px'
+                                                    }}
+                                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
+                                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                                >
+                                                    <div style={{
+                                                        width: '36px',
+                                                        height: '36px',
+                                                        borderRadius: '8px',
+                                                        backgroundColor: '#fef3c7',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center'
+                                                    }}>
+                                                        <RiLockPasswordLine style={{ color: '#d97706', fontSize: '18px' }} />
+                                                    </div>
+                                                    <span>Change Password</span>
+                                                </button>
+
+                                                <button
+                                                    onClick={() => {
+                                                        handleLogout();
+                                                        setIsHamburgerMenuOpen(false);
+                                                    }}
+                                                    style={{
+                                                        width: '100%',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        gap: '12px',
+                                                        padding: '12px 16px',
+                                                        backgroundColor: 'transparent',
+                                                        border: 'none',
+                                                        borderRadius: '8px',
+                                                        cursor: 'pointer',
+                                                        fontSize: '14px',
+                                                        fontWeight: '500',
+                                                        color: '#dc2626'
+                                                    }}
+                                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#fee2e2'}
+                                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                                >
+                                                    <div style={{
+                                                        width: '36px',
+                                                        height: '36px',
+                                                        borderRadius: '8px',
+                                                        backgroundColor: '#fee2e2',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center'
+                                                    }}>
+                                                        <RiLogoutBoxLine style={{ color: '#dc2626', fontSize: '18px' }} />
+                                                    </div>
+                                                    <span>Logout</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         )}
                     </div>
+                </nav>
+                {isDropdownVisible && (
+                    <div
+                        style={{
+                            position: 'fixed', // Always fixed
+                            top: `${dropdownPosition.top}px`,
+                            right: `${dropdownPosition.right}px`,
+                            backgroundColor: 'white',
+                            borderRadius: '8px',
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                            maxHeight: '400px',
+                            overflowY: 'auto',
+                            zIndex: 2147483647,
+                            border: '1px solid #e5e7eb',
+                            minWidth: `${dropdownPosition.width}px`
+                        }}
+                    >
+                        {isLoading ? (
+                            <div style={{ padding: '20px', textAlign: 'center' }}>
+                                <Spin />
+                            </div>
+                        ) : filteredTemplates.length > 0 ? (
+                            <List
+                                dataSource={filteredTemplates}
+                                renderItem={(template) => {
+                                    const config = templateConfig[template.type];
 
-                    {!isSAdmin && (
-                        <div className="flex items-center">
-                            <div>
-                                <ChatBot />
-                            </div>
-
-                            <div>
-                                <TextSurveyShortcut
-                                    confirmationNumber={searchValue !== "" ? searchValue : confirmationNumber}
-                                    clearConfirmationNumber={clearConfirmationNumber}
-                                />
-                            </div>
-                            <div>
-                                <HeaderSurveyShortcut
-                                    confirmationNumber={searchValue !== "" ? searchValue : confirmationNumber}
-                                    clearConfirmationNumber={clearConfirmationNumber}
-                                />
-                            </div>
-                            <div>
-                                <WebsiteShortcut
-                                    confirmationNumber={searchValue !== "" ? searchValue : confirmationNumber}
-                                    clearConfirmationNumber={clearConfirmationNumber}
-                                />
-                            </div>
-
-                            <div>
-                                <HeaderRecordingShortcut
-                                    confirmationNumber={searchValue !== "" ? searchValue : confirmationNumber}
-                                    clearConfirmationNumber={clearConfirmationNumber} />
-                            </div>
-
-                            {/* Template Search Input */}
-                            <div ref={searchRef} className="bg-white/10 backdrop-blur-sm rounded-lg px-3 py-1" style={{
-                                position: 'relative',
-                                zIndex: 1000
-                            }}>
-                                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                                    <input
-                                        ref={inputRef}
-                                        autoComplete="off"
-                                        autoCorrect="off"
-                                        autoCapitalize="off"
-                                        type="text"
-                                        placeholder="ID# or Search Template"
-                                        value={searchValue}
-                                        onChange={handleSearchChange}
-                                        onFocus={() => {
-                                            // Don't open if we just selected something
-                                            if (justSelectedRef.current) {
-                                                return;
-                                            }
-                                            if (searchValue.trim() && filteredTemplates.length > 0) {
-                                                setIsDropdownVisible(true);
-                                            }
-                                        }}
-                                        style={{
-                                            width: '190px',
-                                            color: 'white',
-                                            backgroundColor: 'transparent',
-                                            border: 'none',
-                                            outline: 'none',
-                                            fontSize: '14px',
-                                            padding: '4px 24px 4px 0',
-                                            caretColor: 'white',
-                                        }}
-                                        className="placeholder-white/60"
-                                    />
-                                    {searchValue && (
-                                        <CloseOutlined
-                                            onMouseDown={(e) => {
-                                                e.preventDefault();
-                                                handleClear();
-                                            }}
+                                    return (
+                                        <List.Item
                                             style={{
-                                                position: 'absolute',
-                                                right: 0,
-                                                color: 'rgba(255, 255, 255, 0.6)',
                                                 cursor: 'pointer',
-                                                fontSize: '12px',
-                                                padding: '4px'
+                                                padding: '12px 16px',
+                                                borderBottom: '1px solid #f0f0f0',
+                                                transition: 'background-color 0.2s'
                                             }}
-                                        />
-                                    )}
-                                </div>
-
-                                {isDropdownVisible && (
-                                    <div
-                                        style={{
-                                            position: 'fixed', // Always fixed
-                                            top: `${dropdownPosition.top}px`,
-                                            backgroundColor: 'white',
-                                            borderRadius: '8px',
-                                            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                                            maxHeight: '400px',
-                                            overflowY: 'auto',
-                                            zIndex: 2147483647,
-                                            border: '1px solid #e5e7eb',
-                                            minWidth: `${dropdownPosition.width}px`
-                                        }}
-                                    >
-                                        {isLoading ? (
-                                            <div style={{ padding: '20px', textAlign: 'center' }}>
-                                                <Spin />
-                                            </div>
-                                        ) : filteredTemplates.length > 0 ? (
-                                            <List
-                                                dataSource={filteredTemplates}
-                                                renderItem={(template) => {
-                                                    const config = templateConfig[template.type];
-
-                                                    return (
-                                                        <List.Item
-                                                            style={{
-                                                                cursor: 'pointer',
-                                                                padding: '12px 16px',
-                                                                borderBottom: '1px solid #f0f0f0',
-                                                                transition: 'background-color 0.2s'
-                                                            }}
-                                                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f5f5f5'}
-                                                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
-                                                        >
-                                                            <div
-                                                                style={{ flex: 1, display: 'flex', alignItems: 'center' }}
-                                                                onMouseDown={(e) => {
-                                                                    e.preventDefault();
-                                                                    handleTemplateSelect(template);
-                                                                }}
-                                                            >
-                                                                <List.Item.Meta
-                                                                    avatar={
-                                                                        <div style={{
-                                                                            fontSize: '24px',
-                                                                            color: config.color,
-                                                                            display: 'flex',
-                                                                            alignItems: 'center'
-                                                                        }}>
-                                                                            {config.icon}
-                                                                        </div>
-                                                                    }
-                                                                    title={
-                                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                                            <span>{template.tag}</span>
-                                                                            {!template.availableInSelectedLang && (
-                                                                                <Tag color="orange" style={{ fontSize: '10px', padding: '0 4px', margin: 0 }}>
-                                                                                    {companyData?.defaultLangCode?.toUpperCase() || 'EN'}
-                                                                                </Tag>
-                                                                            )}
-                                                                        </div>
-                                                                    }
-                                                                />
-                                                            </div>
-                                                            {template.type !== "slideshow" && template.type !== "text" && (
-                                                                <div
-                                                                    onMouseDown={(e) => {
-                                                                        e.preventDefault();
-                                                                        handleQRCodeClick(template);
-                                                                    }}
-                                                                    style={{
-                                                                        fontSize: '20px',
-                                                                        color: '#3b5998',
-                                                                        cursor: 'pointer',
-                                                                        padding: '8px',
-                                                                        borderRadius: '6px',
-                                                                        transition: 'all 0.2s',
-                                                                        display: 'flex',
-                                                                        alignItems: 'center',
-                                                                        justifyContent: 'center',
-                                                                        flexShrink: 0
-                                                                    }}
-                                                                    onMouseEnter={(e) => {
-                                                                        e.currentTarget.style.backgroundColor = '#e8eef7';
-                                                                        e.currentTarget.style.transform = 'scale(1.1)';
-                                                                    }}
-                                                                    onMouseLeave={(e) => {
-                                                                        e.currentTarget.style.backgroundColor = 'transparent';
-                                                                        e.currentTarget.style.transform = 'scale(1)';
-                                                                    }}
-                                                                >
-                                                                    <IoQrCode />
-                                                                </div>
+                                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f5f5f5'}
+                                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
+                                        >
+                                            <div
+                                                style={{ flex: 1, display: 'flex', alignItems: 'center' }}
+                                                onMouseDown={(e) => {
+                                                    e.preventDefault();
+                                                    handleTemplateSelect(template);
+                                                }}
+                                            >
+                                                <List.Item.Meta
+                                                    avatar={
+                                                        <div style={{
+                                                            fontSize: '24px',
+                                                            color: config.color,
+                                                            display: 'flex',
+                                                            alignItems: 'center'
+                                                        }}>
+                                                            {config.icon}
+                                                        </div>
+                                                    }
+                                                    title={
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                            <span>{template.tag}</span>
+                                                            {!template.availableInSelectedLang && (
+                                                                <Tag color="orange" style={{ fontSize: '10px', padding: '0 4px', margin: 0 }}>
+                                                                    {companyData?.defaultLangCode?.toUpperCase() || 'EN'}
+                                                                </Tag>
                                                             )}
-                                                        </List.Item>
-                                                    );
-                                                }}
-                                            />
-                                        ) : (
-                                            <Empty
-                                                image={Empty.PRESENTED_IMAGE_SIMPLE}
-                                                description="No templates found"
-                                                style={{ padding: '20px' }}
-                                            />
-                                        )}
-                                    </div>
-                                )}
-                            </div>
-
-                            <div ref={hamburgerMenuRef} style={{ position: 'relative', marginLeft: '8px' }}>
-                                <div
-                                    onClick={() => setIsHamburgerMenuOpen(!isHamburgerMenuOpen)}
-                                    style={{
-                                        cursor: 'pointer',
-                                        padding: '8px 12px',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        borderRadius: '8px',
-                                        transition: 'all 0.2s ease',
-                                        backgroundColor: isHamburgerMenuOpen ? 'rgba(255, 255, 255, 0.15)' : 'transparent',
-                                        position: 'relative',
-                                    }}
-                                    onMouseEnter={(e) => {
-                                        if (!isHamburgerMenuOpen) {
-                                            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
-                                        }
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        if (!isHamburgerMenuOpen) {
-                                            e.currentTarget.style.backgroundColor = 'transparent';
-                                        }
-                                    }}
-                                >
-                                    <GiHamburgerMenu
-                                        style={{
-                                            color: 'white',
-                                            fontSize: '20px',
-                                            transition: 'transform 0.2s ease',
-                                            transform: isHamburgerMenuOpen ? 'rotate(90deg)' : 'rotate(0deg)'
-                                        }}
-                                    />
-                                    <div style={{
-                                        position: 'absolute',
-                                        top: '2px',
-                                        right: '2px',
-                                        backgroundColor: '#ef4444',
-                                        color: 'white',
-                                        fontSize: '10px',
-                                        fontWeight: '600',
-                                        borderRadius: '10px',
-                                        minWidth: '18px',
-                                        height: '18px',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        padding: '0 4px',
-                                        border: '2px solid #3b5998',
-                                        boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-                                    }}>
-                                        {params.get("station") ?? 1}
-                                    </div>
-                                </div>
-
-                                {/* Dropdown Menu */}
-                                {isHamburgerMenuOpen && (
-                                    <div style={{
-                                        position: 'fixed', // Always fixed
-                                        top: `${hamburgerPosition.top}px`,
-                                        right: `${hamburgerPosition.right}px`,
-                                        backgroundColor: 'white',
-                                        borderRadius: '12px',
-                                        boxShadow: '0 10px 40px rgba(0, 0, 0, 0.15)',
-                                        minWidth: '280px',
-                                        zIndex: 2147483647,
-                                        overflow: 'hidden',
-                                        border: '1px solid #e5e7eb',
-                                        animation: 'slideDown 0.2s ease-out'
-                                    }}>
-                                        {/* Station Number */}
-                                        <div style={{
-                                            padding: '16px 20px',
-                                            borderBottom: '1px solid #f0f0f0',
-                                            backgroundColor: '#f8fafc'
-                                        }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                                <div style={{
-                                                    width: '40px',
-                                                    height: '40px',
-                                                    borderRadius: '10px',
-                                                    backgroundColor: '#3b5998',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center'
-                                                }}>
-                                                    <HiOutlineOfficeBuilding style={{ color: 'white', fontSize: '20px' }} />
-                                                </div>
-                                                <div style={{ flex: 1, minWidth: 0 }}>
-                                                    <div style={{
-                                                        fontSize: '11px',
-                                                        color: '#6b7280',
-                                                        fontWeight: '500',
-                                                        marginBottom: '2px',
-                                                        textTransform: 'uppercase'
-                                                    }}>Station</div>
-                                                    <div style={{
-                                                        fontSize: '15px',
-                                                        fontWeight: '600',
-                                                        color: '#1f2937',
-                                                        overflow: 'hidden',
-                                                        textOverflow: 'ellipsis',
-                                                        whiteSpace: 'nowrap'
-                                                    }}> <StationPicker /></div>
-                                                </div>
+                                                        </div>
+                                                    }
+                                                />
                                             </div>
-                                        </div>
-                                        {/* Company Name */}
-                                        <div style={{
-                                            padding: '16px 20px',
-                                            borderBottom: '1px solid #f0f0f0',
-                                            backgroundColor: '#f8fafc'
-                                        }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                                <div style={{
-                                                    width: '40px',
-                                                    height: '40px',
-                                                    borderRadius: '10px',
-                                                    backgroundColor: '#3b5998',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center'
-                                                }}>
-                                                    <HiOutlineOfficeBuilding style={{ color: 'white', fontSize: '20px' }} />
+                                            {template.type !== "slideshow" && template.type !== "text" && (
+                                                <div
+                                                    onMouseDown={(e) => {
+                                                        e.preventDefault();
+                                                        handleQRCodeClick(template);
+                                                    }}
+                                                    style={{
+                                                        fontSize: '20px',
+                                                        color: '#3b5998',
+                                                        cursor: 'pointer',
+                                                        padding: '8px',
+                                                        borderRadius: '6px',
+                                                        transition: 'all 0.2s',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        flexShrink: 0
+                                                    }}
+                                                    onMouseEnter={(e) => {
+                                                        e.currentTarget.style.backgroundColor = '#e8eef7';
+                                                        e.currentTarget.style.transform = 'scale(1.1)';
+                                                    }}
+                                                    onMouseLeave={(e) => {
+                                                        e.currentTarget.style.backgroundColor = 'transparent';
+                                                        e.currentTarget.style.transform = 'scale(1)';
+                                                    }}
+                                                >
+                                                    <IoQrCode />
                                                 </div>
-                                                <div style={{ flex: 1, minWidth: 0 }}>
-                                                    <div style={{
-                                                        fontSize: '11px',
-                                                        color: '#6b7280',
-                                                        fontWeight: '500',
-                                                        marginBottom: '2px',
-                                                        textTransform: 'uppercase'
-                                                    }}>Company</div>
-                                                    <div style={{
-                                                        fontSize: '15px',
-                                                        fontWeight: '600',
-                                                        color: '#1f2937',
-                                                        overflow: 'hidden',
-                                                        textOverflow: 'ellipsis',
-                                                        whiteSpace: 'nowrap'
-                                                    }}>{companyData?.name || 'Company Name'}</div>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {/* User Name */}
-                                        <div style={{
-                                            padding: '16px 20px',
-                                            borderBottom: '1px solid #f0f0f0'
-                                        }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                                <div style={{
-                                                    width: '40px',
-                                                    height: '40px',
-                                                    borderRadius: '10px',
-                                                    backgroundColor: '#e8eef7',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center'
-                                                }}>
-                                                    <HiOutlineUser style={{ color: '#3b5998', fontSize: '20px' }} />
-                                                </div>
-                                                <div style={{ flex: 1, minWidth: 0 }}>
-                                                    <div style={{
-                                                        fontSize: '11px',
-                                                        color: '#6b7280',
-                                                        fontWeight: '500',
-                                                        marginBottom: '2px',
-                                                        textTransform: 'uppercase'
-                                                    }}>User</div>
-                                                    <div style={{
-                                                        fontSize: '15px',
-                                                        fontWeight: '600',
-                                                        color: '#1f2937',
-                                                        overflow: 'hidden',
-                                                        textOverflow: 'ellipsis',
-                                                        whiteSpace: 'nowrap'
-                                                    }}>{user?.user?.name || user?.user?.email || 'User Name'}</div>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {/* Buttons */}
-                                        <div style={{ padding: '8px' }}>
-                                            <button
-                                                onClick={() => {
-                                                    setIsHamburgerMenuOpen(false);
-                                                }}
-                                                style={{
-                                                    width: '100%',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    gap: '12px',
-                                                    padding: '12px 16px',
-                                                    backgroundColor: 'transparent',
-                                                    border: 'none',
-                                                    borderRadius: '8px',
-                                                    cursor: 'pointer',
-                                                    fontSize: '14px',
-                                                    fontWeight: '500',
-                                                    color: '#374151',
-                                                    marginBottom: '4px'
-                                                }}
-                                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
-                                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                                            >
-                                                <div style={{
-                                                    width: '36px',
-                                                    height: '36px',
-                                                    borderRadius: '8px',
-                                                    backgroundColor: '#fef3c7',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center'
-                                                }}>
-                                                    <RiLockPasswordLine style={{ color: '#d97706', fontSize: '18px' }} />
-                                                </div>
-                                                <span>Change Password</span>
-                                            </button>
-
-                                            <button
-                                                onClick={() => {
-                                                    handleLogout();
-                                                    setIsHamburgerMenuOpen(false);
-                                                }}
-                                                style={{
-                                                    width: '100%',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    gap: '12px',
-                                                    padding: '12px 16px',
-                                                    backgroundColor: 'transparent',
-                                                    border: 'none',
-                                                    borderRadius: '8px',
-                                                    cursor: 'pointer',
-                                                    fontSize: '14px',
-                                                    fontWeight: '500',
-                                                    color: '#dc2626'
-                                                }}
-                                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#fee2e2'}
-                                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                                            >
-                                                <div style={{
-                                                    width: '36px',
-                                                    height: '36px',
-                                                    borderRadius: '8px',
-                                                    backgroundColor: '#fee2e2',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center'
-                                                }}>
-                                                    <RiLogoutBoxLine style={{ color: '#dc2626', fontSize: '18px' }} />
-                                                </div>
-                                                <span>Logout</span>
-                                            </button>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    )}
-
-                </div>
-            </nav>
-
+                                            )}
+                                        </List.Item>
+                                    );
+                                }}
+                            />
+                        ) : (
+                            <Empty
+                                image={Empty.PRESENTED_IMAGE_SIMPLE}
+                                description="No templates found"
+                                style={{ padding: '20px' }}
+                            />
+                        )}
+                    </div>
+                )}
+            </div>
             {/* Drawers remain the same */}
             <Drawer
                 title={
