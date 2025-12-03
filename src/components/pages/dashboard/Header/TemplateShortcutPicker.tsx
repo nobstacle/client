@@ -2,7 +2,7 @@
 
 import { useSearchParams } from "next/navigation";
 import { useHasHydrated } from "../../../../hooks/useHydrated";
-import useShortcutStore from "../../../../lib/zustand/store/shortcutStore";
+// import useShortcutStore from "../../../../lib/zustand/store/shortcutStore";
 import useCompanyStore from "../../../../lib/zustand/store/companyStore";
 import { useSocketContext } from "../../../../context/SocketContextProvider";
 import useTemplateStore from "../../../../lib/zustand/store/templateStore";
@@ -18,6 +18,9 @@ import {
   GetWebsiteTemplateRes,
 } from "../../../../lib/client/model";
 
+
+import { useShortcutControllerGetShortcutMany } from "../../../../lib/client/api";
+
 export const TemplateShortcutPicker: React.FC = () => {
   const { emitSendTemplate } = useSocketContext();
   const { company } = useCompanyStore();
@@ -26,7 +29,19 @@ export const TemplateShortcutPicker: React.FC = () => {
   const isHydrated = useHasHydrated();
 
   const params = useSearchParams();
-  const { templatesShortcuts } = useShortcutStore();
+
+  // REPLACED: useShortcutStore() → direct API call
+  const { data: templatesShortcuts = [], isLoading: shortcutsLoading } =
+    useShortcutControllerGetShortcutMany(
+      { type: "Template" },
+      {
+        query: {
+          queryKey: ["shortcuts", "template"],
+          staleTime: 1000 * 60 * 5,
+          refetchOnWindowFocus: false,
+        },
+      }
+    );
 
   const renderIcon = (iconName: string, color?: string) => {
     const IconComponent = (Io5Icons as any)[iconName];
@@ -47,7 +62,8 @@ export const TemplateShortcutPicker: React.FC = () => {
       | GetWebsiteTemplateRes
       | GetDocumentTemplateRes
       | undefined;
-    const templateShortcut = templatesShortcuts.filter(
+
+    const templateShortcut = templatesShortcuts.find(
       (templateShortcut) => templateShortcut.id === id,
     );
 
@@ -65,17 +81,14 @@ export const TemplateShortcutPicker: React.FC = () => {
             ),
         );
 
-        // if not exist on the selected language try to find default language to send
         if (!template && company?.defaultLangCode) {
           template = texts.find(
             (text) =>
               text.tag === tag &&
               text.langCode.includes(company?.defaultLangCode),
           );
-
           isExistOnDefaultLanguage = true;
         }
-
         break;
 
       case "Image":
@@ -87,14 +100,12 @@ export const TemplateShortcutPicker: React.FC = () => {
             ),
         );
 
-        // if not exist on the selected language try to find default language to send
         if (!template && company?.defaultLangCode) {
           template = images.find(
             (image) =>
               image.tag === tag &&
               image.langCode.includes(company?.defaultLangCode),
           );
-
           isExistOnDefaultLanguage = true;
         }
         break;
@@ -108,14 +119,12 @@ export const TemplateShortcutPicker: React.FC = () => {
             ),
         );
 
-        // if not exist on the selected language try to find default language to send
         if (!template && company?.defaultLangCode) {
           template = videos.find(
             (video) =>
               video.tag === tag &&
               video.langCode.includes(company?.defaultLangCode),
           );
-
           isExistOnDefaultLanguage = true;
         }
         break;
@@ -129,14 +138,12 @@ export const TemplateShortcutPicker: React.FC = () => {
             ),
         );
 
-        // if not exist on the selected language try to find default language to send
         if (!template && company?.defaultLangCode) {
           template = slideshows.find(
             (slideshow) =>
               slideshow.tag === tag &&
               slideshow.langCode.includes(company?.defaultLangCode),
           );
-
           isExistOnDefaultLanguage = true;
         }
         break;
@@ -150,17 +157,14 @@ export const TemplateShortcutPicker: React.FC = () => {
             ),
         );
 
-        // if not exist on the selected language try to find default language to send
         if (!template && company?.defaultLangCode) {
           template = maps.find(
             (map) =>
               map.tag === tag &&
               map.langCode.includes(company?.defaultLangCode),
           );
-
           isExistOnDefaultLanguage = true;
         }
-
         break;
 
       case "Website":
@@ -172,19 +176,15 @@ export const TemplateShortcutPicker: React.FC = () => {
             ),
         );
 
-        // if not exist on the selected language try to find default language to send
         if (!template && company?.defaultLangCode) {
           template = websites.find(
             (website) =>
               website.tag === tag &&
               website.langCode.includes(company?.defaultLangCode),
           );
-
           isExistOnDefaultLanguage = true;
         }
-
         break;
-
 
       case "Document":
         template = documents.find(
@@ -195,18 +195,16 @@ export const TemplateShortcutPicker: React.FC = () => {
             ),
         );
 
-        // if not exist on the selected language try to find default language to send
         if (!template && company?.defaultLangCode) {
           template = documents.find(
             (document) =>
               document.tag === tag &&
               document.langCode.includes(company?.defaultLangCode),
           );
-
           isExistOnDefaultLanguage = true;
         }
-
         break;
+
       default:
         template = undefined;
     }
@@ -226,25 +224,32 @@ export const TemplateShortcutPicker: React.FC = () => {
     });
   };
 
-  if (!isHydrated) return;
+  if (!isHydrated || shortcutsLoading) {
+    return (
+      <div className="flex gap-2">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="w-6 h-6 bg-white/20 rounded animate-pulse" />
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className="flex cursor-pointer gap-2">
       {templatesShortcuts
-          .sort((a, b) => a.order! - b.order!)
-          .map((res) => (
-            <span
-              key={res.id}
-              onClick={() =>
-                handleOnSendTemplateClick(res.id, res.key as any, res.value)
-              }
-              title={`${res.value}/${res.key}`}
-              className="flex h-[25px] w-[25px] items-center justify-center"
-            >
-              {renderIcon(res.extraValue ?? "IoAdd", res.color)}
-            </span>
+        .sort((a, b) => a.order! - b.order!)
+        .map((res) => (
+          <span
+            key={res.id}
+            onClick={() =>
+              handleOnSendTemplateClick(res.id, res.key as any, res.value)
+            }
+            title={`${res.value}/${res.key}`}
+            className="flex h-[25px] w-[25px] items-center justify-center"
+          >
+            {renderIcon(res.extraValue ?? "IoAdd", res.color)}
+          </span>
         ))}
-
     </div>
   );
 };
