@@ -353,14 +353,23 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
     }, []);
 
     useEffect(() => {
-        if (isDropdownVisible && searchRef.current) {
-            const rect = searchRef.current.getBoundingClientRect();
-            setDropdownPosition({
-                top: rect.bottom + 4,
-                width: Math.max(300, rect.width)
-            });
-        }
-    }, [isDropdownVisible]);
+  if (isDropdownVisible && searchRef.current) {
+    const rect = searchRef.current.getBoundingClientRect();
+    
+    // If in iframe, use viewport coordinates
+    if (window.self !== window.top) {
+      setDropdownPosition({
+        top: rect.bottom,
+        width: Math.max(300, rect.width)
+      });
+    } else {
+      setDropdownPosition({
+        top: rect.bottom + 4,
+        width: Math.max(300, rect.width)
+      });
+    }
+  }
+}, [isDropdownVisible]);
 
     useEffect(() => {
         if (isHamburgerMenuOpen && hamburgerMenuRef.current) {
@@ -700,8 +709,8 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                 {isDropdownVisible && (
                                     <div
                                         style={{
-                                            position: 'absolute',  // Change back to absolute
-                                            top: 'calc(100% + 4px)',
+                                            position: window.self !== window.top ? 'fixed' : 'absolute',  // Change back to absolute
+                                            top: window.self !== window.top ? `${dropdownPosition.top}px` : 'calc(100% + 4px)',
                                             right: 0,
                                             backgroundColor: 'white',
                                             borderRadius: '8px',

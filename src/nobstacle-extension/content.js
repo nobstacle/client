@@ -33,6 +33,7 @@ function injectStyles() {
       z-index: 2147483647 !important;
       background: white !important;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+      overflow: visible !important; /* Add this */
     }
     #nobstacle-header-iframe {
       display: block !important;
@@ -41,6 +42,7 @@ function injectStyles() {
       border: none !important;
       margin: 0 !important;
       padding: 0 !important;
+      overflow: visible !important; /* Add this */
     }
   `;
   document.head.appendChild(style);
