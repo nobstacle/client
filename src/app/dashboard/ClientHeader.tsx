@@ -1278,18 +1278,29 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                             {isDropdownVisible && (
                                 <div
                                     style={{
-                                        position: 'fixed',
-                                        top: `${hamburgerPosition.top}px`,
-                                        right: `${hamburgerPosition.right}px`,
-                                        backgroundColor: 'white',
-                                        borderRadius: '12px',
-                                        boxShadow: '0 10px 40px rgba(0, 0, 0, 0.15)',
-                                        minWidth: '280px',
-                                        zIndex: 2147483647,
-                                        overflow: 'hidden',
-                                        border: '1px solid #e5e7eb',
-                                        animation: 'slideDown 0.2s ease-out'
-                                    }}
+  position: window.self !== window.top ? 'fixed' : 'absolute',
+  top: window.self !== window.top ? `${dropdownPosition.top}px` : 'calc(100% + 4px)',
+  // Fix: Use 'left' instead of 'right' when position is 'fixed', or calculate left from right
+  ...(window.self !== window.top 
+    ? { 
+        right: `${hamburgerPosition.right}px`,  // For iframe: use fixed positioning with right
+        left: 'auto' 
+      }
+    : { 
+        right: 0,  // For normal page: use absolute positioning with right
+        left: 'auto'
+      }
+  ),
+  backgroundColor: 'white',
+  borderRadius: '12px',
+  boxShadow: '0 10px 40px rgba(0, 0, 0, 0.15)',
+  minWidth: '280px',
+  maxHeight: '400px',  // Add max height
+  overflowY: 'auto',   // Allow scrolling if content is too tall
+  zIndex: 2147483647,
+  border: '1px solid #e5e7eb',
+  animation: 'slideDown 0.2s ease-out'
+}}
                                 >
                                     {isLoading ? (
                                         <div style={{ padding: '20px', textAlign: 'center' }}>
