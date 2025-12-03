@@ -145,7 +145,7 @@ async function injectHeader() {
   const existing = parseInt(getComputedStyle(document.body).marginTop) || 0;
   document.body.style.marginTop = `${existing + parseInt(HEADER_HEIGHT)}px`;
 
-  injectDebugPanel();
+  // injectDebugPanel();
   addDebugLog('Header iframe created');
 
   // Send auth when iframe loads

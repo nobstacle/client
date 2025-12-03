@@ -65,6 +65,8 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
     const isSAdmin = user?.user.Roles?.includes("SAdmin");
     const [isHamburgerMenuOpen, setIsHamburgerMenuOpen] = useState(false);
     const hamburgerMenuRef = useRef(null);
+    const [dropdownPosition, setDropdownPosition] = useState({ top: 0, width: 0 });
+    const [hamburgerPosition, setHamburgerPosition] = useState({ top: 0, right: 0 });
 
     // Get company data with proper caching
     const { data: companyData } = useCompanyControllerGetCompany({
@@ -349,6 +351,26 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
+
+    useEffect(() => {
+        if (isDropdownVisible && searchRef.current) {
+            const rect = searchRef.current.getBoundingClientRect();
+            setDropdownPosition({
+                top: rect.bottom + 4,
+                width: Math.max(300, rect.width)
+            });
+        }
+    }, [isDropdownVisible]);
+
+    useEffect(() => {
+        if (isHamburgerMenuOpen && hamburgerMenuRef.current) {
+            const rect = hamburgerMenuRef.current.getBoundingClientRect();
+            setHamburgerPosition({
+                top: rect.bottom + 8,
+                right: window.innerWidth - rect.right
+            });
+        }
+    }, [isHamburgerMenuOpen]);
 
     const showDrawer = () => setDrawerOpen(true);
     const closeDrawer = () => setDrawerOpen(false);
@@ -656,17 +678,17 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                 {isDropdownVisible && (
                                     <div
                                         style={{
-                                            position: 'absolute',
-                                            top: 'calc(100% + 4px)',
+                                            position: 'fixed',  // ✅ NEW
+                                            top: `${dropdownPosition.top}px`,
                                             right: 0,
                                             backgroundColor: 'white',
                                             borderRadius: '8px',
                                             boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
                                             maxHeight: '400px',
                                             overflowY: 'auto',
-                                            zIndex: 9999,
+                                            zIndex: 2147483647, // Maximum z-index
                                             border: '1px solid #e5e7eb',
-                                            minWidth: '300px'
+                                            minWidth: `${dropdownPosition.width}px`
                                         }}
                                     >
                                         {isLoading ? (
@@ -1225,17 +1247,17 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                             {isDropdownVisible && (
                                 <div
                                     style={{
-                                        position: 'absolute',
-                                        top: 'calc(100% + 4px)',
-                                        left: 0,
-                                        right: 0,
+                                        position: 'fixed',
+                                        top: `${hamburgerPosition.top}px`,
+                                        right: `${hamburgerPosition.right}px`,
                                         backgroundColor: 'white',
-                                        borderRadius: '8px',
-                                        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                                        maxHeight: '300px',
-                                        overflowY: 'auto',
-                                        zIndex: 9999,
+                                        borderRadius: '12px',
+                                        boxShadow: '0 10px 40px rgba(0, 0, 0, 0.15)',
+                                        minWidth: '280px',
+                                        zIndex: 2147483647,
+                                        overflow: 'hidden',
                                         border: '1px solid #e5e7eb',
+                                        animation: 'slideDown 0.2s ease-out'
                                     }}
                                 >
                                     {isLoading ? (

@@ -108,7 +108,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   return true;
 });
 
-// Intercept API requests and add Authorization header
+// Modify headers using declarativeNetRequest API (Manifest V3 way)
+// This intercepts requests and modifies headers
 chrome.webRequest.onBeforeSendHeaders.addListener(
   (details) => {
     // Only modify requests to your API
@@ -139,11 +140,11 @@ chrome.webRequest.onBeforeSendHeaders.addListener(
     return {};
   },
   { urls: ["https://nobstacle-production-d145.up.railway.app/*"] },
-  ["blocking", "requestHeaders", "extraHeaders"]
+  ["requestHeaders", "extraHeaders"]
 );
 
-// Listen for 401 errors and clear token
-chrome.webRequest.onCompleted.addListener(
+// Use onHeadersReceived instead of onCompleted for better performance
+chrome.webRequest.onHeadersReceived.addListener(
   (details) => {
     if (details.statusCode === 401 && details.url.includes('nobstacle-production-d145.up.railway.app')) {
       console.log('[Background] 401 detected, clearing token');
@@ -152,7 +153,8 @@ chrome.webRequest.onCompleted.addListener(
       chrome.storage.local.remove(['backendToken', 'backendTokenExpiry']);
     }
   },
-  { urls: ["https://nobstacle-production-d145.up.railway.app/*"] }
+  { urls: ["https://nobstacle-production-d145.up.railway.app/*"] },
+  ["responseHeaders"]
 );
 
 // Periodically check token expiry
