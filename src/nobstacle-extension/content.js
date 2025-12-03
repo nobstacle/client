@@ -33,10 +33,11 @@ function injectStyles() {
       left: 0 !important;
       right: 0 !important;
       width: 100% !important;
+      height: ${HEADER_HEIGHT} !important;
       z-index: 2147483647 !important;
       background: white !important;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
-      overflow: visible !important; /* Add this */
+      overflow: visible !important;
     }
     #nobstacle-header-iframe {
       display: block !important;
@@ -45,7 +46,7 @@ function injectStyles() {
       border: none !important;
       margin: 0 !important;
       padding: 0 !important;
-      overflow: visible !important; /* Add this */
+      overflow: visible !important;
     }
   `;
   document.head.appendChild(style);
@@ -144,15 +145,12 @@ async function injectHeader() {
   const iframe = document.createElement('iframe');
   iframe.id = 'nobstacle-header-iframe';
   iframe.src = HEADER_URL;
-  iframe.style.cssText = `width:100%; height:${HEADER_HEIGHT}; border:none;`;
   iframe.allow = 'clipboard-write';
 
   container.appendChild(iframe);
   document.body.insertBefore(container, document.body.firstChild);
 
-  iframe.style.height = HEADER_HEIGHT;
-  container.style.height = HEADER_HEIGHT;
-
+  // Set initial body margin to account for fixed header
   const baseMargin = window.nobstacleOriginalMargin + parseInt(HEADER_HEIGHT);
   document.body.style.marginTop = `${baseMargin}px`;
 
@@ -190,16 +188,6 @@ async function injectHeader() {
     addDebugLog('Message sent!');
   };
 
-  function updateBodyMargin(extraHeight = 0) {
-    if (!originalMarginTop) {
-      originalMarginTop = parseInt(getComputedStyle(document.body).marginTop) || 0;
-    }
-
-    const baseHeight = parseInt(HEADER_HEIGHT);
-    const totalHeight = baseHeight + extraHeight;
-    document.body.style.marginTop = `${originalMarginTop + totalHeight}px`;
-  }
-
   // Listen for messages from iframe
   const handler = async (event) => {
     // Check origin
@@ -224,25 +212,17 @@ async function injectHeader() {
       addDebugLog('Auth response sent');
     }
 
+    // REMOVED: No longer adjust iframe or body height for dropdowns
+    // Dropdowns will overlay on top using fixed positioning in the iframe
     if (event.data.type === 'DROPDOWN_HEIGHT' || event.data.type === 'HAMBURGER_HEIGHT') {
       const iframe = document.getElementById('nobstacle-header-iframe');
       const container = document.getElementById('nobstacle-header-container');
       if (!iframe || !container) return;
 
-      const isOpen = event.data.isOpen;
-      const newHeight = isOpen ? event.data.height : parseInt(HEADER_HEIGHT);
-
-      addDebugLog(`Dropdown ${isOpen ? 'open' : 'closed'} → ${newHeight}px`);
-
-      iframe.style.transition = 'height 0.22s ease-out';
-      container.style.transition = 'height 0.22s ease-out';
-      iframe.style.height = newHeight + 'px';
-      container.style.height = newHeight + 'px';
-
-      // Push page down only by the *extra* height
-      const extra = newHeight - parseInt(HEADER_HEIGHT);
-      const finalMargin = window.nobstacleOriginalMargin + parseInt(HEADER_HEIGHT) + extra;
-      document.body.style.marginTop = finalMargin + 'px';
+      addDebugLog(`Dropdown ${event.data.isOpen ? 'open' : 'closed'} - keeping header at fixed height`);
+      
+      // Keep iframe and container at fixed height - dropdowns will overlay
+      // No transitions or margin adjustments needed
     }
 
     // *** CRITICAL: Receive backend token from iframe ***
@@ -277,7 +257,7 @@ chrome.runtime.onMessage.addListener((req, sender, respond) => {
   if (req.action === 'toggle') {
     if (document.getElementById('nobstacle-header-container')) {
       document.getElementById('nobstacle-header-container')?.remove();
-      document.body.style.marginTop = '';
+      document.body.style.marginTop = `${window.nobstacleOriginalMargin}px`;
       respond({ injected: false });
     } else {
       injectHeader();

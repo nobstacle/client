@@ -354,23 +354,14 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
     }, []);
 
     useEffect(() => {
-  if (isDropdownVisible && searchRef.current) {
-    const rect = searchRef.current.getBoundingClientRect();
-    
-    // If in iframe, use viewport coordinates
-    if (window.self !== window.top) {
-      setDropdownPosition({
-        top: rect.bottom,
-        width: Math.max(300, rect.width)
-      });
-    } else {
-      setDropdownPosition({
-        top: rect.bottom + 4,
-        width: Math.max(300, rect.width)
-      });
-    }
-  }
-}, [isDropdownVisible]);
+        if (isDropdownVisible && searchRef.current) {
+            const rect = searchRef.current.getBoundingClientRect();
+            setDropdownPosition({
+                top: rect.bottom + 4,
+                width: Math.max(300, rect.width)
+            });
+        }
+    }, [isDropdownVisible]);
 
     useEffect(() => {
         if (isHamburgerMenuOpen && hamburgerMenuRef.current) {
@@ -381,30 +372,6 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
             });
         }
     }, [isHamburgerMenuOpen]);
-
-    useEffect(() => {
-  if (window.self === window.top) return; // Only run in iframe
-
-  const shouldOpen = isDropdownVisible || isHamburgerMenuOpen;
-  const shouldClose = !isDropdownVisible && !isHamburgerMenuOpen;
-
-  // Only trigger resize if it's a REAL dropdown (not tooltip hover)
-  if (shouldOpen && !isRealDropdownOpen) {
-    setIsRealDropdownOpen(true);
-    window.parent.postMessage({
-      type: 'DROPDOWN_HEIGHT',
-      isOpen: true,
-      height: 520 // or your max dropdown height
-    }, '*');
-  } else if (shouldClose && isRealDropdownOpen) {
-    setIsRealDropdownOpen(false);
-    window.parent.postMessage({
-      type: 'DROPDOWN_HEIGHT',
-      isOpen: false,
-      height: 70
-    }, '*');
-  }
-}, [isDropdownVisible, isHamburgerMenuOpen, isRealDropdownOpen]);
 
     const showDrawer = () => setDrawerOpen(true);
     const closeDrawer = () => setDrawerOpen(false);
@@ -712,15 +679,14 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                 {isDropdownVisible && (
                                     <div
                                         style={{
-                                            position: window.self !== window.top ? 'fixed' : 'absolute',  // Change back to absolute
-                                            top: window.self !== window.top ? `${dropdownPosition.top}px` : 'calc(100% + 4px)',
-                                            right: 0,
+                                            position: 'fixed', // Always fixed
+                                            top: `${dropdownPosition.top}px`,
                                             backgroundColor: 'white',
                                             borderRadius: '8px',
                                             boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
                                             maxHeight: '400px',
                                             overflowY: 'auto',
-                                            zIndex: 2147483647, // Maximum z-index
+                                            zIndex: 2147483647,
                                             border: '1px solid #e5e7eb',
                                             minWidth: `${dropdownPosition.width}px`
                                         }}
@@ -879,14 +845,14 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                 {/* Dropdown Menu */}
                                 {isHamburgerMenuOpen && (
                                     <div style={{
-                                        position: 'absolute',
-                                        top: 'calc(100% + 8px)',
-                                        right: 0,
+                                        position: 'fixed', // Always fixed
+                                        top: `${hamburgerPosition.top}px`,
+                                        right: `${hamburgerPosition.right}px`,
                                         backgroundColor: 'white',
                                         borderRadius: '12px',
                                         boxShadow: '0 10px 40px rgba(0, 0, 0, 0.15)',
                                         minWidth: '280px',
-                                        zIndex: 9999,
+                                        zIndex: 2147483647,
                                         overflow: 'hidden',
                                         border: '1px solid #e5e7eb',
                                         animation: 'slideDown 0.2s ease-out'
@@ -1281,29 +1247,20 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                             {isDropdownVisible && (
                                 <div
                                     style={{
-  position: window.self !== window.top ? 'fixed' : 'absolute',
-  top: window.self !== window.top ? `${dropdownPosition.top}px` : 'calc(100% + 4px)',
-  // Fix: Use 'left' instead of 'right' when position is 'fixed', or calculate left from right
-  ...(window.self !== window.top 
-    ? { 
-        right: `${hamburgerPosition.right}px`,  // For iframe: use fixed positioning with right
-        left: 'auto' 
-      }
-    : { 
-        right: 0,  // For normal page: use absolute positioning with right
-        left: 'auto'
-      }
-  ),
-  backgroundColor: 'white',
-  borderRadius: '12px',
-  boxShadow: '0 10px 40px rgba(0, 0, 0, 0.15)',
-  minWidth: '280px',
-  maxHeight: '400px',  // Add max height
-  overflowY: 'auto',   // Allow scrolling if content is too tall
-  zIndex: 2147483647,
-  border: '1px solid #e5e7eb',
-  animation: 'slideDown 0.2s ease-out'
-}}
+                                        position: 'fixed', // Always fixed
+                                        top: `${dropdownPosition.top}px`,
+                                        right: `${hamburgerPosition.right}px`,
+                                        left: 'auto',
+                                        backgroundColor: 'white',
+                                        borderRadius: '12px',
+                                        boxShadow: '0 10px 40px rgba(0, 0, 0, 0.15)',
+                                        minWidth: '280px',
+                                        maxHeight: '400px',
+                                        overflowY: 'auto',
+                                        zIndex: 2147483647,
+                                        border: '1px solid #e5e7eb',
+                                        animation: 'slideDown 0.2s ease-out'
+                                    }}
                                 >
                                     {isLoading ? (
                                         <div style={{ padding: '20px', textAlign: 'center' }}>
