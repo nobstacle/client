@@ -372,6 +372,28 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         }
     }, [isHamburgerMenuOpen]);
 
+    // Notify parent about dropdown height for iframe adjustment
+    useEffect(() => {
+        if (window.self !== window.top) {
+            window.parent.postMessage({
+                type: 'DROPDOWN_HEIGHT',
+                isOpen: isDropdownVisible,
+                height: isDropdownVisible ? 450 : 70
+            }, '*');
+        }
+    }, [isDropdownVisible]);
+
+    // Notify parent about hamburger menu height
+    useEffect(() => {
+        if (window.self !== window.top) {
+            window.parent.postMessage({
+                type: 'HAMBURGER_HEIGHT',
+                isOpen: isHamburgerMenuOpen,
+                height: isHamburgerMenuOpen ? 500 : 70
+            }, '*');
+        }
+    }, [isHamburgerMenuOpen]);
+
     const showDrawer = () => setDrawerOpen(true);
     const closeDrawer = () => setDrawerOpen(false);
     const showShortcutMenu = () => setShortcutMenuOpen(true);
@@ -678,8 +700,8 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                 {isDropdownVisible && (
                                     <div
                                         style={{
-                                            position: 'fixed',  // ✅ NEW
-                                            top: `${dropdownPosition.top}px`,
+                                            position: 'absolute',  // Change back to absolute
+                                            top: 'calc(100% + 4px)',
                                             right: 0,
                                             backgroundColor: 'white',
                                             borderRadius: '8px',
