@@ -3,7 +3,7 @@ const Isproduction = true; // Set to true for production
 const HEADER_URL = Isproduction
   ? 'https://nobstacle.com/header-only'
   : 'http://localhost:3000/header-only';
-const HEADER_HEIGHT = '70px';
+const HEADER_HEIGHT = '60px';
 const DEBUG_MODE = true;
 let isEnabled = true;
 let headerInjected = false;
@@ -299,7 +299,7 @@ function createSearchDropdown(content) {
     templateItems.forEach(item => {
       const templateId = item.getAttribute('data-template-id');
       const isQrButton = item.getAttribute('data-is-qr') === 'true';
-      
+
       item.addEventListener('mousedown', (e) => {
         e.preventDefault();
         iframe.contentWindow.postMessage({
@@ -447,7 +447,7 @@ async function injectHeader() {
       if (placeholder) {
         placeholder.outerHTML = event.data.html;
         addDebugLog('✓ Station picker injected into dropdown');
-        
+
         // Add event listener to the select element
         setTimeout(() => {
           const select = document.getElementById('extension-station-select');
@@ -455,13 +455,13 @@ async function injectHeader() {
             select.addEventListener('change', (e) => {
               const newStation = e.target.value;
               addDebugLog(`Station changed to: ${newStation}`);
-              
+
               // Send message to iframe
               iframe.contentWindow.postMessage({
                 type: 'STATION_CHANGE',
                 station: newStation
               }, '*');
-              
+
               // Close dropdown
               document.getElementById('nobstacle-hamburger-dropdown')?.remove();
             });

@@ -23,8 +23,6 @@ export const TextSurveyShortcut: React.FC<HeaderTextShortcutProps> = ({
     const { emitSendTemplate } = useSocketContext();
     const params = useSearchParams();
     const { data: companyData } = useCompanyControllerGetCompany();
-
-    console.info("5555555555555555555555555",checkTooltip);
     
     const handleConfirmSend = async () => {
         if (confirmationNumber !== "") {
@@ -61,7 +59,7 @@ export const TextSurveyShortcut: React.FC<HeaderTextShortcutProps> = ({
     };
     return (
         <>
-            {checkTooltip ? (
+            {!checkTooltip ? (
                 <Tooltip title="Display Text" placement="bottom">
                     <Button
                         type="primary"

@@ -55,7 +55,7 @@ export const HeaderSurveyShortcut: React.FC<HeaderSurveyShortcutProps> = ({
 
   return (
     <>
-      {checkTooltip ? (
+      {!checkTooltip ? (
         <Tooltip title="Display Survey" placement="bottom">
           <Button
             type="primary"

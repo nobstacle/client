@@ -61,7 +61,7 @@ export const WebsiteShortcut: React.FC<HeaderWebsiteShortcutProps> = ({
 
     return (
         <>
-            {checkTooltip ? (
+            {!checkTooltip ? (
                 <Tooltip title="Display Website" placement="bottom">
                     <Button
                         type="primary"

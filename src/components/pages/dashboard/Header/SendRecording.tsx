@@ -220,7 +220,7 @@ export const HeaderRecordingShortcut: React.FC<HeaderRecordingShortcutProps> = (
                     animation: pulse 1.5s ease-in-out infinite;
                 }
             `}</style>
-            {checkTooltip ? (
+            {!checkTooltip ? (
                 <Tooltip
                     title={isUploading ? "Please wait." : isRecording ? `Recording: ${formatTime(recordingTime)}` : "Start Recording"}
                     placement="bottom"
