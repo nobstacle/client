@@ -3,7 +3,7 @@ const Isproduction = true; // Set to true for production
 const HEADER_URL = Isproduction
   ? 'https://nobstacle.com/header-only'
   : 'http://localhost:3000/header-only';
-const HEADER_HEIGHT = '60px';
+const HEADER_HEIGHT = '56px';
 const DEBUG_MODE = true;
 let isEnabled = true;
 let headerInjected = false;

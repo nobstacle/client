@@ -669,7 +669,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         }
     }, [isDropdownVisible, filteredTemplates, isLoading, isInIframe, generateSearchDropdownHTML]);
 
-    
+
     // Add this useEffect near the top with other useEffects:
     useEffect(() => {
         if (!isInIframe) return;
@@ -823,7 +823,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                     className="w-full shadow-sm px-6 hidden lg:block"
                     style={{
                         backgroundColor: '#3b5998',
-                        height: '4.09rem',
+                        height: isInIframe ? '3.5rem' : '4.09rem',
                         pointerEvents: 'auto',
                         position: 'relative',
                         zIndex: 1
