@@ -258,7 +258,24 @@ async function injectHeader() {
       }, '*');
       addDebugLog('Auth response sent');
     }
+if (event.data.type === 'HAMBURGER_MENU') {
+    const iframe = document.getElementById('nobstacle-header-iframe');
+    if (!iframe) return;
 
+    addDebugLog(`Hamburger menu ${event.data.isOpen ? 'opened' : 'closed'}`);
+    
+    // Send back the iframe's position so the menu can position itself correctly
+    const iframeRect = iframe.getBoundingClientRect();
+    iframe.contentWindow.postMessage({
+        type: 'IFRAME_POSITION',
+        position: {
+            top: iframeRect.bottom,
+            left: iframeRect.left,
+            right: window.innerWidth - iframeRect.right,
+            width: iframeRect.width
+        }
+    }, event.origin);
+}
     // Dropdown handling (keeping header fixed)
     if (event.data.type === 'DROPDOWN_HEIGHT' || event.data.type === 'HAMBURGER_HEIGHT') {
       const iframe = document.getElementById('nobstacle-header-iframe');

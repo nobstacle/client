@@ -1,4 +1,5 @@
 'use client';
+import ReactDOM from 'react-dom';
 import { useCallback, useEffect, useRef, useMemo } from "react";
 import { useState } from "react";
 import { Drawer, Button, Input, List, Tag, Spin, Empty, message } from "antd";
@@ -368,16 +369,6 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         }
     }, [isDropdownVisible]);
 
-    useEffect(() => {
-        if (isHamburgerMenuOpen && hamburgerMenuRef.current) {
-            const rect = hamburgerMenuRef.current.getBoundingClientRect();
-            setHamburgerPosition({
-                top: rect.bottom + 8,
-                right: window.innerWidth - rect.right
-            });
-        }
-    }, [isHamburgerMenuOpen]);
-
     const showDrawer = () => setDrawerOpen(true);
     const closeDrawer = () => setDrawerOpen(false);
     const showShortcutMenu = () => setShortcutMenuOpen(true);
@@ -473,6 +464,18 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
     const handleSearchChange = useCallback((e) => {
         setSearchValue(e.target.value);
     }, []);
+
+    useEffect(() => {
+        if (isHamburgerMenuOpen && hamburgerMenuRef.current) {
+            const rect = hamburgerMenuRef.current.getBoundingClientRect();
+            const isInIframe = window.self !== window.top;
+
+            setHamburgerPosition({
+                top: rect.bottom + 8,
+                right: isInIframe ? 16 : (window.innerWidth - rect.right)
+            });
+        }
+    }, [isHamburgerMenuOpen]);
 
     const handleQRCodeClick = useCallback((template) => {
         justSelectedRef.current = true;
@@ -761,9 +764,9 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                     </div>
 
                                     {/* Dropdown Menu */}
-                                    {isHamburgerMenuOpen && (
+                                    {isHamburgerMenuOpen && ReactDOM.createPortal(
                                         <div style={{
-                                            position: 'fixed', // Always fixed
+                                            position: 'fixed',
                                             top: `${hamburgerPosition.top}px`,
                                             right: `${hamburgerPosition.right}px`,
                                             backgroundColor: 'white',
@@ -961,7 +964,8 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                                     <span>Logout</span>
                                                 </button>
                                             </div>
-                                        </div>
+                                        </div>,
+                                        document.body
                                     )}
                                 </div>
                             </div>
@@ -1391,8 +1395,9 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                             <HeaderSurveyShortcut
                                 confirmationNumber={confirmationNumber}
                                 clearConfirmationNumber={clearConfirmationNumber}
+                                checkTooltip={isInIframe}
                             />
-                            <HeaderRecordingShortcut confirmationNumber={confirmationNumber} clearConfirmationNumber={clearConfirmationNumber} />
+                            <HeaderRecordingShortcut confirmationNumber={confirmationNumber} clearConfirmationNumber={clearConfirmationNumber} checkTooltip={isInIframe} />
                             <ChatBot />
                         </div>
                     </div>
