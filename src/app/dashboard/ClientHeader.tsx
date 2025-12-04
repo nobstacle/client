@@ -102,12 +102,12 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                 // Handle password change
                 console.log('Change password clicked');
             }
- if (event.data.type === 'REQUEST_STATION_PICKER') {
-            // Get the current station from URL params
-            const currentStation = params.get("station") ?? 1;
-            
-            // Create station picker HTML that will work in the extension context
-            const stationPickerHTML = `
+            if (event.data.type === 'REQUEST_STATION_PICKER') {
+                // Get the current station from URL params
+                const currentStation = params.get("station") ?? 1;
+
+                // Create station picker HTML that will work in the extension context
+                const stationPickerHTML = `
                 <div style="position: relative;">
                     <select 
                         id="extension-station-select"
@@ -133,40 +133,60 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                     </select>
                 </div>
             `;
-            
-            window.parent.postMessage({
-                type: 'STATION_PICKER_HTML',
-                html: stationPickerHTML
-            }, '*');
-        }
 
-   if (event.data.type === 'STATION_CHANGE') {
-            const newStation = event.data.station;
-            
-            // Update URL params without reload (same as existing StationPicker)
-            const currentUrl = new URL(window.location.href);
-            currentUrl.searchParams.set('station', newStation);
-            
-            // Use Next.js router to update URL without reload
-            window.history.pushState({}, '', currentUrl.toString());
-            
-            // Trigger a custom event that the SocketContext can listen to
-            window.dispatchEvent(new CustomEvent('stationChanged', { 
-                detail: { station: newStation } 
-            }));
-            
-            // Close the hamburger menu
-            window.parent.postMessage({ type: 'HAMBURGER_CLOSED' }, '*');
-            setIsHamburgerMenuOpen(false);
-            
-            // Optional: Show a message
-            message.success(`Switched to Station ${newStation}`);
-        }
+                window.parent.postMessage({
+                    type: 'STATION_PICKER_HTML',
+                    html: stationPickerHTML
+                }, '*');
+            }
+
+            if (event.data.type === 'STATION_CHANGE') {
+                const newStation = event.data.station;
+
+                // Update URL params without reload (same as existing StationPicker)
+                const currentUrl = new URL(window.location.href);
+                currentUrl.searchParams.set('station', newStation);
+
+                // Use Next.js router to update URL without reload
+                window.history.pushState({}, '', currentUrl.toString());
+
+                // Trigger a custom event that the SocketContext can listen to
+                window.dispatchEvent(new CustomEvent('stationChanged', {
+                    detail: { station: newStation }
+                }));
+
+                // Close the hamburger menu
+                window.parent.postMessage({ type: 'HAMBURGER_CLOSED' }, '*');
+                setIsHamburgerMenuOpen(false);
+
+                // Optional: Show a message
+                message.success(`Switched to Station ${newStation}`);
+            }
+
+            if (event.data.type === 'TEMPLATE_SELECT') {
+                const template = filteredTemplates.find(t => t.id === event.data.templateId);
+                if (template) {
+                    handleTemplateSelect(template);
+                }
+            }
+
+            if (event.data.type === 'TEMPLATE_QR_CLICK') {
+                const template = filteredTemplates.find(t => t.id === event.data.templateId);
+                if (template) {
+                    handleQRCodeClick(template);
+                }
+            }
+
+            if (event.data.type === 'SEARCH_DROPDOWN_CLOSED') {
+                setIsDropdownVisible(false);
+            }
+
+
         };
 
         window.addEventListener('message', handler);
         return () => window.removeEventListener('message', handler);
-    }, [isInIframe, params]);
+    }, [isInIframe, filteredTemplates, handleTemplateSelect, handleQRCodeClick]);
 
     // Fetch all template types with proper caching configuration
     const { data: textTemplates, isLoading: textLoading } = useTemplateControllerGetTextTemplates(
@@ -439,16 +459,16 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    useEffect(() => {
-        if (isDropdownVisible && searchRef.current) {
-            const rect = searchRef.current.getBoundingClientRect();
-            setDropdownPosition({
-                top: rect.bottom + 4,
-                right: window.innerWidth - rect.right,
-                width: Math.max(300, rect.width)
-            });
-        }
-    }, [isDropdownVisible]);
+    // useEffect(() => {
+    //     if (isDropdownVisible && searchRef.current) {
+    //         const rect = searchRef.current.getBoundingClientRect();
+    //         setDropdownPosition({
+    //             top: rect.bottom + 4,
+    //             right: window.innerWidth - rect.right,
+    //             width: Math.max(300, rect.width)
+    //         });
+    //     }
+    // }, [isDropdownVisible]);
 
     const showDrawer = () => setDrawerOpen(true);
     const closeDrawer = () => setDrawerOpen(false);
@@ -620,6 +640,135 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
             callbackUrl: "/"
         });
     };
+
+    const generateSearchDropdownHTML = useCallback((templates, isLoading) => {
+        if (isLoading) {
+            return `
+            <div style="padding: 20px; text-align: center;">
+                <div style="display: inline-block; width: 20px; height: 20px; border: 2px solid #f3f3f3; border-top: 2px solid #3b5998; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                <style>
+                    @keyframes spin {
+                        0% { transform: rotate(0deg); }
+                        100% { transform: rotate(360deg); }
+                    }
+                </style>
+            </div>
+        `;
+        }
+
+        if (templates.length === 0) {
+            return `
+            <div style="padding: 20px; text-align: center; color: #999;">
+                <svg style="width: 48px; height: 48px; margin: 0 auto 12px; color: #e5e7eb;" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
+                </svg>
+                <div style="font-size: 14px; color: #666;">No templates found</div>
+            </div>
+        `;
+        }
+
+        const templateIcons = {
+            text: '<svg style="width: 24px; height: 24px;" fill="currentColor" viewBox="0 0 20 20"><path d="M2 5a2 2 0 012-2h12a2 2 0 012 2v2a2 2 0 01-2 2H4a2 2 0 01-2-2V5z"></path><path d="M6 13a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1z"></path></svg>',
+            image: '<svg style="width: 24px; height: 24px;" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clip-rule="evenodd"></path></svg>',
+            video: '<svg style="width: 24px; height: 24px;" fill="currentColor" viewBox="0 0 20 20"><path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zm12.553 1.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z"></path></svg>',
+            website: '<svg style="width: 24px; height: 24px;" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.083 9h1.946c.089-1.546.383-2.97.837-4.118A6.004 6.004 0 004.083 9zM10 2a8 8 0 100 16 8 8 0 000-16zm0 2c-.076 0-.232.032-.465.262-.238.234-.497.623-.737 1.182-.389.907-.673 2.142-.766 3.556h3.936c-.093-1.414-.377-2.649-.766-3.556-.24-.56-.5-.948-.737-1.182C10.232 4.032 10.076 4 10 4zm3.971 5c-.089-1.546-.383-2.97-.837-4.118A6.004 6.004 0 0115.917 9h-1.946zm-2.003 2H8.032c.093 1.414.377 2.649.766 3.556.24.56.5.948.737 1.182.233.23.389.262.465.262.076 0 .232-.032.465-.262.238-.234.498-.623.737-1.182.389-.907.673-2.142.766-3.556zm1.166 4.118c.454-1.147.748-2.572.837-4.118h1.946a6.004 6.004 0 01-2.783 4.118zm-6.268 0C6.412 13.97 6.118 12.546 6.03 11H4.083a6.004 6.004 0 002.783 4.118z" clip-rule="evenodd"></path></svg>',
+            slideshow: '<svg style="width: 24px; height: 24px;" fill="currentColor" viewBox="0 0 20 20"><path d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z"></path></svg>',
+            map: '<svg style="width: 24px; height: 24px;" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M12 1.586l-4 4v12.828l4-4V1.586zM3.707 3.293A1 1 0 002 4v10a1 1 0 00.293.707L6 18.414V5.586L3.707 3.293zM17.707 5.293L14 1.586v12.828l2.293 2.293A1 1 0 0018 16V6a1 1 0 00-.293-.707z" clip-rule="evenodd"></path></svg>',
+            document: '<svg style="width: 24px; height: 24px;" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd"></path></svg>'
+        };
+
+        const qrIcon = '<svg style="width: 20px; height: 20px;" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M3 4a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1H4a1 1 0 01-1-1V4zm2 2V5h1v1H5zM3 13a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1H4a1 1 0 01-1-1v-3zm2 2v-1h1v1H5zM13 3a1 1 0 00-1 1v3a1 1 0 001 1h3a1 1 0 001-1V4a1 1 0 00-1-1h-3zm1 2v1h1V5h-1z" clip-rule="evenodd"></path><path d="M11 4a1 1 0 10-2 0v1a1 1 0 002 0V4zM10 7a1 1 0 011 1v1h2a1 1 0 110 2h-3a1 1 0 01-1-1V8a1 1 0 011-1zM16 9a1 1 0 100 2 1 1 0 000-2zM9 13a1 1 0 011-1h1a1 1 0 110 2v2a1 1 0 11-2 0v-3zM7 11a1 1 0 10-2 0v2a1 1 0 102 0v-2zM13 13a1 1 0 011-1h2a1 1 0 110 2h-2a1 1 0 01-1-1zM14 15a1 1 0 100 2h1a1 1 0 100-2h-1z"></path></svg>';
+
+        return templates.map(template => {
+            const icon = templateIcons[template.type] || templateIcons.text;
+            const showQR = template.type !== "slideshow" && template.type !== "text";
+            const langTag = !template.availableInSelectedLang
+                ? `<span style="display: inline-block; background: #ff9800; color: white; font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-left: 8px;">${companyData?.defaultLangCode?.toUpperCase() || 'EN'}</span>`
+                : '';
+
+            return `
+            <div style="
+                cursor: pointer;
+                padding: 12px 16px;
+                border-bottom: 1px solid #f0f0f0;
+                transition: background-color 0.2s;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+            "
+            onmouseover="this.style.backgroundColor='#f5f5f5'"
+            onmouseout="this.style.backgroundColor='white'"
+            >
+                <div style="flex: 1; display: flex; align-items: center; gap: 12px;" data-template-id="${template.id}" data-is-qr="false">
+                    <div style="color: #3b5998; display: flex; align-items: center;">
+                        ${icon}
+                    </div>
+                    <div style="flex: 1;">
+                        <div style="font-weight: 500; color: #1f2937; font-size: 14px;">
+                            ${template.tag}${langTag}
+                        </div>
+                    </div>
+                </div>
+                ${showQR ? `
+                    <div 
+                        data-template-id="${template.id}"
+                        data-is-qr="true"
+                        style="
+                            color: #3b5998;
+                            padding: 8px;
+                            border-radius: 6px;
+                            transition: all 0.2s;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                        "
+                        onmouseover="this.style.backgroundColor='#e8eef7'; this.style.transform='scale(1.1)'"
+                        onmouseout="this.style.backgroundColor='transparent'; this.style.transform='scale(1)'"
+                    >
+                        ${qrIcon}
+                    </div>
+                ` : ''}
+            </div>
+        `;
+        }).join('');
+    }, [companyData]);
+
+    useEffect(() => {
+        if (isDropdownVisible && isInIframe) {
+            const rect = searchRef.current?.getBoundingClientRect();
+            if (rect) {
+                const html = generateSearchDropdownHTML(filteredTemplates, isLoading);
+
+                window.parent.postMessage({
+                    type: 'SEARCH_DROPDOWN',
+                    isOpen: true,
+                    content: {
+                        html: html,
+                        position: {
+                            top: rect.bottom + 4,
+                            right: window.innerWidth - rect.right,
+                            width: Math.max(300, rect.width)
+                        }
+                    }
+                }, '*');
+            }
+        } else if (!isDropdownVisible && isInIframe) {
+            window.parent.postMessage({
+                type: 'SEARCH_DROPDOWN',
+                isOpen: false
+            }, '*');
+        }
+
+        // Update local dropdown position for non-iframe
+        if (isDropdownVisible && !isInIframe && searchRef.current) {
+            const rect = searchRef.current.getBoundingClientRect();
+            setDropdownPosition({
+                top: rect.bottom + 4,
+                right: window.innerWidth - rect.right,
+                width: Math.max(300, rect.width)
+            });
+        }
+    }, [isDropdownVisible, filteredTemplates, isLoading, isInIframe, generateSearchDropdownHTML]);
 
     return (
         <>
@@ -1067,10 +1216,10 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                         )}
                     </div>
                 </nav>
-                {isDropdownVisible && (
+                {isDropdownVisible && !isInIframe && (
                     <div
                         style={{
-                            position: 'fixed', // Always fixed
+                            position: 'fixed',
                             top: `${dropdownPosition.top}px`,
                             right: `${dropdownPosition.right}px`,
                             backgroundColor: 'white',

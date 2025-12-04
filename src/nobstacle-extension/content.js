@@ -264,6 +264,69 @@ function createHamburgerDropdown(content) {
   addDebugLog('✓ Hamburger dropdown created');
 }
 
+function createSearchDropdown(content) {
+  // Remove existing
+  document.getElementById('nobstacle-search-dropdown')?.remove();
+
+  const iframe = document.getElementById('nobstacle-header-iframe');
+  if (!iframe) return;
+
+  const dropdown = document.createElement('div');
+  dropdown.id = 'nobstacle-search-dropdown';
+  dropdown.style.cssText = `
+    position: fixed !important;
+    top: ${content.position.top}px !important;
+    right: ${content.position.right}px !important;
+    background: white !important;
+    border-radius: 8px !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+    max-height: 400px !important;
+    overflow-y: auto !important;
+    z-index: 2147483647 !important;
+    border: 1px solid #e5e7eb !important;
+    min-width: ${content.position.width}px !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+    animation: slideDown 0.2s ease-out !important;
+  `;
+
+  dropdown.innerHTML = content.html;
+
+  document.body.appendChild(dropdown);
+
+  // Add event listeners for template items
+  setTimeout(() => {
+    const templateItems = dropdown.querySelectorAll('[data-template-id]');
+    templateItems.forEach(item => {
+      const templateId = item.getAttribute('data-template-id');
+      const isQrButton = item.getAttribute('data-is-qr') === 'true';
+      
+      item.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        iframe.contentWindow.postMessage({
+          type: isQrButton ? 'TEMPLATE_QR_CLICK' : 'TEMPLATE_SELECT',
+          templateId: templateId
+        }, '*');
+        dropdown.remove();
+      });
+    });
+  }, 100);
+
+  // Close on click outside
+  setTimeout(() => {
+    const closeHandler = (e) => {
+      const iframeElement = document.getElementById('nobstacle-header-iframe');
+      if (!dropdown.contains(e.target) && e.target !== iframeElement) {
+        dropdown.remove();
+        iframe.contentWindow.postMessage({ type: 'SEARCH_DROPDOWN_CLOSED' }, '*');
+        document.removeEventListener('mousedown', closeHandler);
+      }
+    };
+    document.addEventListener('mousedown', closeHandler);
+  }, 100);
+
+  addDebugLog('✓ Search dropdown created');
+}
+
 if (typeof window.nobstacleOriginalMargin === 'undefined') {
   window.nobstacleOriginalMargin = parseInt(getComputedStyle(document.body).marginTop) || 0;
 }
@@ -361,6 +424,20 @@ async function injectHeader() {
         createHamburgerDropdown(event.data.content);
       } else {
         document.getElementById('nobstacle-hamburger-dropdown')?.remove();
+      }
+    }
+
+    // Search dropdown toggle
+    if (event.data.type === 'SEARCH_DROPDOWN') {
+      const iframe = document.getElementById('nobstacle-header-iframe');
+      if (!iframe) return;
+
+      addDebugLog(`Search dropdown ${event.data.isOpen ? 'opened' : 'closed'}`);
+
+      if (event.data.isOpen) {
+        createSearchDropdown(event.data.content);
+      } else {
+        document.getElementById('nobstacle-search-dropdown')?.remove();
       }
     }
 
