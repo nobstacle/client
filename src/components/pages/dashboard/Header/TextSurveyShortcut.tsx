@@ -24,6 +24,8 @@ export const TextSurveyShortcut: React.FC<HeaderTextShortcutProps> = ({
     const params = useSearchParams();
     const { data: companyData } = useCompanyControllerGetCompany();
 
+    console.info("5555555555555555555555555",checkTooltip);
+    
     const handleConfirmSend = async () => {
         if (confirmationNumber !== "") {
             setIsLoading(true);

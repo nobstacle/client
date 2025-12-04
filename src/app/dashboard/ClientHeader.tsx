@@ -87,107 +87,6 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
 
     const selectedLang = params.get("lang") || companyData?.defaultLangCode || "en";
 
-    // Add this useEffect near the top with other useEffects:
-    useEffect(() => {
-        if (!isInIframe) return;
-
-        const handler = (event: MessageEvent) => {
-            if (event.data.type === 'HAMBURGER_CLOSED') {
-                setIsHamburgerMenuOpen(false);
-            }
-            if (event.data.type === 'LOGOUT') {
-                handleLogout();
-            }
-            if (event.data.type === 'CHANGE_PASSWORD') {
-                // Handle password change
-                console.log('Change password clicked');
-            }
-            if (event.data.type === 'REQUEST_STATION_PICKER') {
-                // Get the current station from URL params
-                const currentStation = params.get("station") ?? 1;
-
-                // Create station picker HTML that will work in the extension context
-                const stationPickerHTML = `
-                <div style="position: relative;">
-                    <select 
-                        id="extension-station-select"
-                        style="
-                            width: 100%;
-                            padding: 6px 12px;
-                            border: 1px solid #e5e7eb;
-                            border-radius: 6px;
-                            font-size: 14px;
-                            font-weight: 600;
-                            color: #1f2937;
-                            background: white;
-                            cursor: pointer;
-                            outline: none;
-                        "
-                        onchange="window.parent.postMessage({type: 'STATION_CHANGE', station: this.value}, '*')"
-                    >
-                        ${[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(num => `
-                            <option value="${num}" ${num == currentStation ? 'selected' : ''}>
-                                Station ${num}
-                            </option>
-                        `).join('')}
-                    </select>
-                </div>
-            `;
-
-                window.parent.postMessage({
-                    type: 'STATION_PICKER_HTML',
-                    html: stationPickerHTML
-                }, '*');
-            }
-
-            if (event.data.type === 'STATION_CHANGE') {
-                const newStation = event.data.station;
-
-                // Update URL params without reload (same as existing StationPicker)
-                const currentUrl = new URL(window.location.href);
-                currentUrl.searchParams.set('station', newStation);
-
-                // Use Next.js router to update URL without reload
-                window.history.pushState({}, '', currentUrl.toString());
-
-                // Trigger a custom event that the SocketContext can listen to
-                window.dispatchEvent(new CustomEvent('stationChanged', {
-                    detail: { station: newStation }
-                }));
-
-                // Close the hamburger menu
-                window.parent.postMessage({ type: 'HAMBURGER_CLOSED' }, '*');
-                setIsHamburgerMenuOpen(false);
-
-                // Optional: Show a message
-                message.success(`Switched to Station ${newStation}`);
-            }
-
-            if (event.data.type === 'TEMPLATE_SELECT') {
-                const template = filteredTemplates.find(t => t.id === event.data.templateId);
-                if (template) {
-                    handleTemplateSelect(template);
-                }
-            }
-
-            if (event.data.type === 'TEMPLATE_QR_CLICK') {
-                const template = filteredTemplates.find(t => t.id === event.data.templateId);
-                if (template) {
-                    handleQRCodeClick(template);
-                }
-            }
-
-            if (event.data.type === 'SEARCH_DROPDOWN_CLOSED') {
-                setIsDropdownVisible(false);
-            }
-
-
-        };
-
-        window.addEventListener('message', handler);
-        return () => window.removeEventListener('message', handler);
-    }, [isInIframe, filteredTemplates, handleTemplateSelect, handleQRCodeClick]);
-
     // Fetch all template types with proper caching configuration
     const { data: textTemplates, isLoading: textLoading } = useTemplateControllerGetTextTemplates(
         undefined,
@@ -770,6 +669,108 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         }
     }, [isDropdownVisible, filteredTemplates, isLoading, isInIframe, generateSearchDropdownHTML]);
 
+    
+    // Add this useEffect near the top with other useEffects:
+    useEffect(() => {
+        if (!isInIframe) return;
+
+        const handler = (event: MessageEvent) => {
+            if (event.data.type === 'HAMBURGER_CLOSED') {
+                setIsHamburgerMenuOpen(false);
+            }
+            if (event.data.type === 'LOGOUT') {
+                handleLogout();
+            }
+            if (event.data.type === 'CHANGE_PASSWORD') {
+                // Handle password change
+                console.log('Change password clicked');
+            }
+            if (event.data.type === 'REQUEST_STATION_PICKER') {
+                // Get the current station from URL params
+                const currentStation = params.get("station") ?? 1;
+
+                // Create station picker HTML that will work in the extension context
+                const stationPickerHTML = `
+                <div style="position: relative;">
+                    <select 
+                        id="extension-station-select"
+                        style="
+                            width: 100%;
+                            padding: 6px 12px;
+                            border: 1px solid #e5e7eb;
+                            border-radius: 6px;
+                            font-size: 14px;
+                            font-weight: 600;
+                            color: #1f2937;
+                            background: white;
+                            cursor: pointer;
+                            outline: none;
+                        "
+                        onchange="window.parent.postMessage({type: 'STATION_CHANGE', station: this.value}, '*')"
+                    >
+                        ${[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(num => `
+                            <option value="${num}" ${num == currentStation ? 'selected' : ''}>
+                                Station ${num}
+                            </option>
+                        `).join('')}
+                    </select>
+                </div>
+            `;
+
+                window.parent.postMessage({
+                    type: 'STATION_PICKER_HTML',
+                    html: stationPickerHTML
+                }, '*');
+            }
+
+            if (event.data.type === 'STATION_CHANGE') {
+                const newStation = event.data.station;
+
+                // Update URL params without reload (same as existing StationPicker)
+                const currentUrl = new URL(window.location.href);
+                currentUrl.searchParams.set('station', newStation);
+
+                // Use Next.js router to update URL without reload
+                window.history.pushState({}, '', currentUrl.toString());
+
+                // Trigger a custom event that the SocketContext can listen to
+                window.dispatchEvent(new CustomEvent('stationChanged', {
+                    detail: { station: newStation }
+                }));
+
+                // Close the hamburger menu
+                window.parent.postMessage({ type: 'HAMBURGER_CLOSED' }, '*');
+                setIsHamburgerMenuOpen(false);
+
+                // Optional: Show a message
+                message.success(`Switched to Station ${newStation}`);
+            }
+
+            if (event.data.type === 'TEMPLATE_SELECT') {
+                const template = filteredTemplates.find(t => t.id === event.data.templateId);
+                if (template) {
+                    handleTemplateSelect(template);
+                }
+            }
+
+            if (event.data.type === 'TEMPLATE_QR_CLICK') {
+                const template = filteredTemplates.find(t => t.id === event.data.templateId);
+                if (template) {
+                    handleQRCodeClick(template);
+                }
+            }
+
+            if (event.data.type === 'SEARCH_DROPDOWN_CLOSED') {
+                setIsDropdownVisible(false);
+            }
+
+
+        };
+
+        window.addEventListener('message', handler);
+        return () => window.removeEventListener('message', handler);
+    }, [isInIframe, filteredTemplates, handleTemplateSelect, handleQRCodeClick]);
+    
     return (
         <>
 
