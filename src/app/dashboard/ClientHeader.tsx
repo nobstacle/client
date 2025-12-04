@@ -748,6 +748,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
 
             if (event.data.type === 'TEMPLATE_SELECT') {
                 const template = filteredTemplates.find(t => t.id === event.data.templateId);
+                console.info('EVENT',event.data);
                 console.info('TEMPLETE Clicked',template);
                 console.info('TEMPLETE Clicked',filteredTemplates);
                 if (template) {
@@ -757,7 +758,8 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
 
             if (event.data.type === 'TEMPLATE_QR_CLICK') {
                 const template = filteredTemplates.find(t => t.id === event.data.templateId);
-                            console.info('TEMPLETE QR Clicked',template);
+                 console.info('EVENT',event.data);
+                console.info('TEMPLETE QR Clicked',template);
                 console.info('TEMPLETE QR  Clicked',filteredTemplates);
                 if (template) {
                     handleQRCodeClick(template);
