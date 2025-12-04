@@ -6,6 +6,7 @@ const HEADER_URL = Isproduction
 const HEADER_HEIGHT = '70px';
 const DEBUG_MODE = true;
 let isEnabled = true;
+let headerInjected = false;
 
 // List of allowed iframe origins
 const ALLOWED_IFRAME_ORIGINS = Isproduction
@@ -40,6 +41,7 @@ chrome.runtime.onMessage.addListener((req, sender, respond) => {
       respond({ injected: true });
     } else if (!isEnabled && headerInjected) {
       document.getElementById('nobstacle-header-container')?.remove();
+      document.getElementById('nobstacle-hamburger-dropdown')?.remove();
       document.body.style.marginTop = `${window.nobstacleOriginalMargin}px`;
       headerInjected = false;
       respond({ injected: false });
@@ -74,6 +76,16 @@ function injectStyles() {
       margin: 0 !important;
       padding: 0 !important;
       overflow: visible !important;
+    }
+    @keyframes slideDown {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
   `;
   document.head.appendChild(style);
@@ -173,6 +185,147 @@ async function prefetchAuthData() {
   return cachedAuthData;
 }
 
+function createHamburgerDropdown(content) {
+  // Remove existing
+  document.getElementById('nobstacle-hamburger-dropdown')?.remove();
+
+  const iframe = document.getElementById('nobstacle-header-iframe');
+  if (!iframe) return;
+
+  const iframeRect = iframe.getBoundingClientRect();
+
+  const dropdown = document.createElement('div');
+  dropdown.id = 'nobstacle-hamburger-dropdown';
+  dropdown.style.cssText = `
+    position: fixed !important;
+    top: ${iframeRect.bottom + 8}px !important;
+    right: 16px !important;
+    background: white !important;
+    border-radius: 12px !important;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15) !important;
+    min-width: 280px !important;
+    z-index: 2147483647 !important;
+    border: 1px solid #e5e7eb !important;
+    overflow: hidden !important;
+    animation: slideDown 0.2s ease-out !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+  `;
+
+  dropdown.innerHTML = `
+    <!-- Station -->
+    <div style="padding: 16px 20px; border-bottom: 1px solid #f0f0f0; background: #f8fafc;">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <div style="width: 40px; height: 40px; border-radius: 10px; background: #3b5998; display: flex; align-items: center; justify-content: center;">
+          <svg style="color: white; width: 20px; height: 20px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+          </svg>
+        </div>
+        <div style="flex: 1; min-width: 0;">
+          <div style="font-size: 11px; color: #6b7280; font-weight: 500; margin-bottom: 2px; text-transform: uppercase;">Station</div>
+          <div id="station-value" style="font-size: 15px; font-weight: 600; color: #1f2937;">${content.station || '1'}</div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Company -->
+    <div style="padding: 16px 20px; border-bottom: 1px solid #f0f0f0; background: #f8fafc;">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <div style="width: 40px; height: 40px; border-radius: 10px; background: #3b5998; display: flex; align-items: center; justify-content: center;">
+          <svg style="color: white; width: 20px; height: 20px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+          </svg>
+        </div>
+        <div style="flex: 1; min-width: 0;">
+          <div style="font-size: 11px; color: #6b7280; font-weight: 500; margin-bottom: 2px; text-transform: uppercase;">Company</div>
+          <div style="font-size: 15px; font-weight: 600; color: #1f2937; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${content.companyName || 'Company Name'}</div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- User -->
+    <div style="padding: 16px 20px; border-bottom: 1px solid #f0f0f0;">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <div style="width: 40px; height: 40px; border-radius: 10px; background: #e8eef7; display: flex; align-items: center; justify-content: center;">
+          <svg style="color: #3b5998; width: 20px; height: 20px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+          </svg>
+        </div>
+        <div style="flex: 1; min-width: 0;">
+          <div style="font-size: 11px; color: #6b7280; font-weight: 500; margin-bottom: 2px; text-transform: uppercase;">User</div>
+          <div style="font-size: 15px; font-weight: 600; color: #1f2937; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${content.userName || 'User Name'}</div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Buttons -->
+    <div style="padding: 8px;">
+      <button class="hamburger-change-password" style="width: 100%; display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: transparent; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 4px; transition: background 0.2s;">
+        <div style="width: 36px; height: 36px; border-radius: 8px; background: #fef3c7; display: flex; align-items: center; justify-content: center;">
+          <svg style="color: #d97706; width: 18px; height: 18px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+          </svg>
+        </div>
+        <span>Change Password</span>
+      </button>
+      
+      <button class="hamburger-logout" style="width: 100%; display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: transparent; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 500; color: #dc2626; transition: background 0.2s;">
+        <div style="width: 36px; height: 36px; border-radius: 8px; background: #fee2e2; display: flex; align-items: center; justify-content: center;">
+          <svg style="color: #dc2626; width: 18px; height: 18px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+          </svg>
+        </div>
+        <span>Logout</span>
+      </button>
+    </div>
+  `;
+
+  document.body.appendChild(dropdown);
+
+  // Add hover effects
+  const changePasswordBtn = dropdown.querySelector('.hamburger-change-password');
+  const logoutBtn = dropdown.querySelector('.hamburger-logout');
+
+  changePasswordBtn.addEventListener('mouseenter', () => {
+    changePasswordBtn.style.background = '#f3f4f6';
+  });
+  changePasswordBtn.addEventListener('mouseleave', () => {
+    changePasswordBtn.style.background = 'transparent';
+  });
+
+  logoutBtn.addEventListener('mouseenter', () => {
+    logoutBtn.style.background = '#fee2e2';
+  });
+  logoutBtn.addEventListener('mouseleave', () => {
+    logoutBtn.style.background = 'transparent';
+  });
+
+  // Add click handlers
+  changePasswordBtn.addEventListener('click', () => {
+    iframe.contentWindow.postMessage({ type: 'CHANGE_PASSWORD' }, '*');
+    dropdown.remove();
+  });
+
+  logoutBtn.addEventListener('click', () => {
+    iframe.contentWindow.postMessage({ type: 'LOGOUT' }, '*');
+    dropdown.remove();
+  });
+
+  // Close on click outside
+  setTimeout(() => {
+    const closeHandler = (e) => {
+      const iframeElement = document.getElementById('nobstacle-header-iframe');
+      if (!dropdown.contains(e.target) && e.target !== iframeElement) {
+        dropdown.remove();
+        iframe.contentWindow.postMessage({ type: 'HAMBURGER_CLOSED' }, '*');
+        document.removeEventListener('mousedown', closeHandler);
+      }
+    };
+    document.addEventListener('mousedown', closeHandler);
+  }, 100);
+
+  addDebugLog('✓ Hamburger dropdown created');
+}
+
 if (typeof window.nobstacleOriginalMargin === 'undefined') {
   window.nobstacleOriginalMargin = parseInt(getComputedStyle(document.body).marginTop) || 0;
 }
@@ -258,24 +411,21 @@ async function injectHeader() {
       }, '*');
       addDebugLog('Auth response sent');
     }
-if (event.data.type === 'HAMBURGER_MENU') {
-    const iframe = document.getElementById('nobstacle-header-iframe');
-    if (!iframe) return;
 
-    addDebugLog(`Hamburger menu ${event.data.isOpen ? 'opened' : 'closed'}`);
-    
-    // Send back the iframe's position so the menu can position itself correctly
-    const iframeRect = iframe.getBoundingClientRect();
-    iframe.contentWindow.postMessage({
-        type: 'IFRAME_POSITION',
-        position: {
-            top: iframeRect.bottom,
-            left: iframeRect.left,
-            right: window.innerWidth - iframeRect.right,
-            width: iframeRect.width
-        }
-    }, event.origin);
-}
+    // Hamburger menu toggle
+    if (event.data.type === 'HAMBURGER_MENU') {
+      const iframe = document.getElementById('nobstacle-header-iframe');
+      if (!iframe) return;
+
+      addDebugLog(`Hamburger menu ${event.data.isOpen ? 'opened' : 'closed'}`);
+
+      if (event.data.isOpen) {
+        createHamburgerDropdown(event.data.content);
+      } else {
+        document.getElementById('nobstacle-hamburger-dropdown')?.remove();
+      }
+    }
+
     // Dropdown handling (keeping header fixed)
     if (event.data.type === 'DROPDOWN_HEIGHT' || event.data.type === 'HAMBURGER_HEIGHT') {
       const iframe = document.getElementById('nobstacle-header-iframe');

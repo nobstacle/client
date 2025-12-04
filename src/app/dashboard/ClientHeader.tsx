@@ -87,6 +87,27 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
 
     const selectedLang = params.get("lang") || companyData?.defaultLangCode || "en";
 
+    // Add this useEffect near the top with other useEffects:
+    useEffect(() => {
+        if (!isInIframe) return;
+
+        const handler = (event: MessageEvent) => {
+            if (event.data.type === 'HAMBURGER_CLOSED') {
+                setIsHamburgerMenuOpen(false);
+            }
+            if (event.data.type === 'LOGOUT') {
+                handleLogout();
+            }
+            if (event.data.type === 'CHANGE_PASSWORD') {
+                // Handle password change
+                console.log('Change password clicked');
+            }
+        };
+
+        window.addEventListener('message', handler);
+        return () => window.removeEventListener('message', handler);
+    }, [isInIframe]);
+
     // Fetch all template types with proper caching configuration
     const { data: textTemplates, isLoading: textLoading } = useTemplateControllerGetTextTemplates(
         undefined,
@@ -710,7 +731,22 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
 
                                 <div ref={hamburgerMenuRef} style={{ position: 'relative', marginLeft: '8px' }}>
                                     <div
-                                        onClick={() => setIsHamburgerMenuOpen(!isHamburgerMenuOpen)}
+                                        onClick={() => {
+                                            const newState = !isHamburgerMenuOpen;
+                                            setIsHamburgerMenuOpen(newState);
+
+                                            if (isInIframe) {
+                                                window.parent.postMessage({
+                                                    type: 'HAMBURGER_MENU',
+                                                    isOpen: newState,
+                                                    content: {
+                                                        station: params.get("station") ?? 1,
+                                                        companyName: companyData?.name || 'Company Name',
+                                                        userName: user?.user?.name || user?.user?.email || 'User Name'
+                                                    }
+                                                }, '*');
+                                            }
+                                        }}
                                         style={{
                                             cursor: 'pointer',
                                             padding: '8px 12px',
@@ -764,7 +800,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                     </div>
 
                                     {/* Dropdown Menu */}
-                                    {isHamburgerMenuOpen && ReactDOM.createPortal(
+                                    {isHamburgerMenuOpen && !isInIframe && (
                                         <div style={{
                                             position: 'fixed',
                                             top: `${hamburgerPosition.top}px`,
@@ -964,8 +1000,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                                     <span>Logout</span>
                                                 </button>
                                             </div>
-                                        </div>,
-                                        document.body
+                                        </div>
                                     )}
                                 </div>
                             </div>
