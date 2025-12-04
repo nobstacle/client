@@ -212,8 +212,8 @@ function createHamburgerDropdown(content) {
   `;
 
   dropdown.innerHTML = `
-    <!-- Station -->
-    <div style="padding: 16px 20px; border-bottom: 1px solid #f0f0f0; background: #f8fafc;">
+    <!-- Station Dropdown -->
+    <div id="station-dropdown-container" style="padding: 16px 20px; border-bottom: 1px solid #f0f0f0; background: #f8fafc;">
       <div style="display: flex; align-items: center; gap: 12px;">
         <div style="width: 40px; height: 40px; border-radius: 10px; background: #3b5998; display: flex; align-items: center; justify-content: center;">
           <svg style="color: white; width: 20px; height: 20px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -222,22 +222,7 @@ function createHamburgerDropdown(content) {
         </div>
         <div style="flex: 1; min-width: 0;">
           <div style="font-size: 11px; color: #6b7280; font-weight: 500; margin-bottom: 2px; text-transform: uppercase;">Station</div>
-          <div id="station-value" style="font-size: 15px; font-weight: 600; color: #1f2937;">${content.station || '1'}</div>
-        </div>
-      </div>
-    </div>
-    
-    <!-- Company -->
-    <div style="padding: 16px 20px; border-bottom: 1px solid #f0f0f0; background: #f8fafc;">
-      <div style="display: flex; align-items: center; gap: 12px;">
-        <div style="width: 40px; height: 40px; border-radius: 10px; background: #3b5998; display: flex; align-items: center; justify-content: center;">
-          <svg style="color: white; width: 20px; height: 20px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
-          </svg>
-        </div>
-        <div style="flex: 1; min-width: 0;">
-          <div style="font-size: 11px; color: #6b7280; font-weight: 500; margin-bottom: 2px; text-transform: uppercase;">Company</div>
-          <div style="font-size: 15px; font-weight: 600; color: #1f2937; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${content.companyName || 'Company Name'}</div>
+          <div id="station-picker-placeholder" style="font-size: 15px; font-weight: 600; color: #1f2937;">Loading...</div>
         </div>
       </div>
     </div>
@@ -256,59 +241,12 @@ function createHamburgerDropdown(content) {
         </div>
       </div>
     </div>
-    
-    <!-- Buttons -->
-    <div style="padding: 8px;">
-      <button class="hamburger-change-password" style="width: 100%; display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: transparent; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 4px; transition: background 0.2s;">
-        <div style="width: 36px; height: 36px; border-radius: 8px; background: #fef3c7; display: flex; align-items: center; justify-content: center;">
-          <svg style="color: #d97706; width: 18px; height: 18px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
-          </svg>
-        </div>
-        <span>Change Password</span>
-      </button>
-      
-      <button class="hamburger-logout" style="width: 100%; display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: transparent; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 500; color: #dc2626; transition: background 0.2s;">
-        <div style="width: 36px; height: 36px; border-radius: 8px; background: #fee2e2; display: flex; align-items: center; justify-content: center;">
-          <svg style="color: #dc2626; width: 18px; height: 18px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
-          </svg>
-        </div>
-        <span>Logout</span>
-      </button>
-    </div>
   `;
 
   document.body.appendChild(dropdown);
 
-  // Add hover effects
-  const changePasswordBtn = dropdown.querySelector('.hamburger-change-password');
-  const logoutBtn = dropdown.querySelector('.hamburger-logout');
-
-  changePasswordBtn.addEventListener('mouseenter', () => {
-    changePasswordBtn.style.background = '#f3f4f6';
-  });
-  changePasswordBtn.addEventListener('mouseleave', () => {
-    changePasswordBtn.style.background = 'transparent';
-  });
-
-  logoutBtn.addEventListener('mouseenter', () => {
-    logoutBtn.style.background = '#fee2e2';
-  });
-  logoutBtn.addEventListener('mouseleave', () => {
-    logoutBtn.style.background = 'transparent';
-  });
-
-  // Add click handlers
-  changePasswordBtn.addEventListener('click', () => {
-    iframe.contentWindow.postMessage({ type: 'CHANGE_PASSWORD' }, '*');
-    dropdown.remove();
-  });
-
-  logoutBtn.addEventListener('click', () => {
-    iframe.contentWindow.postMessage({ type: 'LOGOUT' }, '*');
-    dropdown.remove();
-  });
+  // Request the station picker component from iframe
+  iframe.contentWindow.postMessage({ type: 'REQUEST_STATION_PICKER' }, '*');
 
   // Close on click outside
   setTimeout(() => {
@@ -423,6 +361,15 @@ async function injectHeader() {
         createHamburgerDropdown(event.data.content);
       } else {
         document.getElementById('nobstacle-hamburger-dropdown')?.remove();
+      }
+    }
+
+    // Handle station picker HTML from iframe
+    if (event.data.type === 'STATION_PICKER_HTML') {
+      const placeholder = document.getElementById('station-picker-placeholder');
+      if (placeholder) {
+        placeholder.outerHTML = event.data.html;
+        addDebugLog('✓ Station picker injected into dropdown');
       }
     }
 

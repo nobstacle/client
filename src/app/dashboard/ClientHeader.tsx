@@ -102,11 +102,55 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                 // Handle password change
                 console.log('Change password clicked');
             }
+               if (event.data.type === 'REQUEST_STATION_PICKER') {
+            // Get the current station from URL params
+            const currentStation = params.get("station") ?? 1;
+            
+            // Create station picker HTML that will work in the extension context
+            const stationPickerHTML = `
+                <div style="position: relative;">
+                    <select 
+                        id="extension-station-select"
+                        style="
+                            width: 100%;
+                            padding: 6px 12px;
+                            border: 1px solid #e5e7eb;
+                            border-radius: 6px;
+                            font-size: 14px;
+                            font-weight: 600;
+                            color: #1f2937;
+                            background: white;
+                            cursor: pointer;
+                            outline: none;
+                        "
+                        onchange="window.parent.postMessage({type: 'STATION_CHANGE', station: this.value}, '*')"
+                    >
+                        ${[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(num => `
+                            <option value="${num}" ${num == currentStation ? 'selected' : ''}>
+                                Station ${num}
+                            </option>
+                        `).join('')}
+                    </select>
+                </div>
+            `;
+            
+            window.parent.postMessage({
+                type: 'STATION_PICKER_HTML',
+                html: stationPickerHTML
+            }, '*');
+        }
+
+         if (event.data.type === 'STATION_CHANGE') {
+            const newStation = event.data.station;
+            const currentUrl = new URL(window.location.href);
+            currentUrl.searchParams.set('station', newStation);
+            window.location.href = currentUrl.toString();
+        }
         };
 
         window.addEventListener('message', handler);
         return () => window.removeEventListener('message', handler);
-    }, [isInIframe]);
+    }, [isInIframe, params]);
 
     // Fetch all template types with proper caching configuration
     const { data: textTemplates, isLoading: textLoading } = useTemplateControllerGetTextTemplates(
