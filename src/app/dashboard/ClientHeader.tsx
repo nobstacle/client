@@ -748,6 +748,8 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
 
             if (event.data.type === 'TEMPLATE_SELECT') {
                 const template = filteredTemplates.find(t => t.id === event.data.templateId);
+                console.info('TEMPLETE Clicked',template);
+                console.info('TEMPLETE Clicked',filteredTemplates);
                 if (template) {
                     handleTemplateSelect(template);
                 }
@@ -755,6 +757,8 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
 
             if (event.data.type === 'TEMPLATE_QR_CLICK') {
                 const template = filteredTemplates.find(t => t.id === event.data.templateId);
+                            console.info('TEMPLETE QR Clicked',template);
+                console.info('TEMPLETE QR  Clicked',filteredTemplates);
                 if (template) {
                     handleQRCodeClick(template);
                 }
@@ -770,7 +774,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         window.addEventListener('message', handler);
         return () => window.removeEventListener('message', handler);
     }, [isInIframe, filteredTemplates, handleTemplateSelect, handleQRCodeClick]);
-    
+
     return (
         <>
 
