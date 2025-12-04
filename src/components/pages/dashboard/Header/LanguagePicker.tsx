@@ -14,6 +14,7 @@ interface LanguagePickerPropsI {
   defaultValue: string;
   register?: UseFormRegister<any>;
   name: string;
+  checkIframe?: boolean;
 }
 
 export const LanguagePicker: React.FC<LanguagePickerPropsI> = ({
@@ -21,6 +22,7 @@ export const LanguagePicker: React.FC<LanguagePickerPropsI> = ({
   onChange,
   register,
   name,
+  checkIframe = true,
 }) => {
   const registerActive = register ? { ...register(name) } : {};
   let isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
@@ -43,7 +45,7 @@ export const LanguagePicker: React.FC<LanguagePickerPropsI> = ({
   );
 };
 
-export const HeaderLanguagePicker = () => {
+export const HeaderLanguagePicker = ({ checkIframe = true }: { checkIframe?: boolean }) => {
   const router = useRouterWithQueryParams();
   const params = useSearchParams();
   const { data } = useCompanyControllerGetCompany();
@@ -57,6 +59,7 @@ export const HeaderLanguagePicker = () => {
   return (
     <LanguagePicker
       name="header-language-picker"
+      checkIframe={checkIframe}
       defaultValue={headerLangaugePickerDefault}
       onChange={(e) => {
         router.push("lang", e.currentTarget.value);

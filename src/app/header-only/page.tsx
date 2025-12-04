@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import ClientHeader from "../dashboard/ClientHeader";
 import { SocketContextProvider } from '@/context/SocketContextProvider';
 
@@ -9,6 +9,7 @@ export default function HeaderOnlyPage() {
   const [isInIframe, setIsInIframe] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const authTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -24,6 +25,12 @@ export default function HeaderOnlyPage() {
 
     const handler = async (event: MessageEvent) => {
       if (event.data?.type !== 'EXTENSION_AUTH') return;
+
+      // Clear timeout since we received auth
+      if (authTimeoutRef.current) {
+        clearTimeout(authTimeoutRef.current);
+        authTimeoutRef.current = null;
+      }
 
       const token = event.data.sessionToken;
       if (!token) {
@@ -59,42 +66,80 @@ export default function HeaderOnlyPage() {
 
     window.addEventListener('message', handler);
 
-    // Request auth
+    // Request auth from extension
     const req = () => window.parent.postMessage({ type: 'REQUEST_AUTH' }, '*');
     req();
     setTimeout(req, 400);
     setTimeout(req, 1000);
 
-    return () => window.removeEventListener('message', handler);
+    // Set timeout: if no auth received after 3 seconds, stop loading
+    authTimeoutRef.current = setTimeout(() => {
+      console.log('[HeaderOnly] Auth timeout - no response from extension');
+      setLoading(false);
+    }, 3000);
+
+    return () => {
+      window.removeEventListener('message', handler);
+      if (authTimeoutRef.current) {
+        clearTimeout(authTimeoutRef.current);
+      }
+    };
   }, [isInIframe]);
 
   if (!mounted) {
-    return <div style={{ padding: '16px', textAlign: 'center' }}>Loading...</div>;
+    return null; // Don't show anything during mount
   }
 
   if (loading) {
+    // Show minimal loading state that matches header height
     return (
-      <div style={{ padding: '16px', background: '#fff8e1', textAlign: 'center' }}>
-        Checking login...
+      <div style={{ 
+        height: '70px',
+        background: '#3b5998',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}>
+        <div style={{ 
+          color: 'white',
+          fontSize: '14px',
+          opacity: 0.8
+        }}>
+          Loading...
+        </div>
       </div>
     );
   }
 
   if (!user) {
     return (
-      <div style={{ padding: '16px', background: '#f8d7da', textAlign: 'center', display:'flex', justifyContent:'center', alignItems:'center' }}>
-        <div style={{ fontWeight: '500', color: '#721c24', marginRight:'1rem' }}>
+      <div style={{ 
+        height: '70px',
+        padding: '0 24px',
+        background: '#3b5998',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
+      }}>
+        <div style={{ 
+          fontWeight: '500',
+          color: 'white',
+          fontSize: '14px'
+        }}>
           Not logged in
         </div>
         <button 
           onClick={() => window.open('https://nobstacle.com', '_blank')}
           style={{
-            padding: '10px 18px',
-            background: '#667eea',
-            color: 'white',
+            padding: '8px 16px',
+            background: 'white',
+            color: '#3b5998',
             border: 'none',
             borderRadius: '6px',
-            cursor: 'pointer'
+            cursor: 'pointer',
+            fontWeight: '500',
+            fontSize: '14px'
           }}
         >
           Login
@@ -107,16 +152,10 @@ export default function HeaderOnlyPage() {
   const mockSession = {
     user: {
       ...user,
-      backendTokens: user.backendTokens // Ensure backendTokens is accessible
+      backendTokens: user.backendTokens
     },
     expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
   };
-
-  console.log('[HeaderOnly] Rendering with session:', {
-    email: mockSession.user.email,
-    hasBackendTokens: !!mockSession.user.backendTokens,
-    atc: mockSession.user.backendTokens?.atc?.substring(0, 30) + '...'
-  });
 
   return (
     <SocketContextProvider>

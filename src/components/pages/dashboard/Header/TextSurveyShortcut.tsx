@@ -1,6 +1,6 @@
 import * as React from "react";
 import { useState } from "react";
-import { Button, Tooltip,message } from "antd";
+import { Button, Tooltip, message } from "antd";
 import { useSocketContext } from "../../../../context/SocketContextProvider";
 import { useSearchParams } from "next/navigation";
 import { toast } from "react-toastify";
@@ -12,10 +12,12 @@ import { IoChatbubbleEllipses } from "react-icons/io5";
 interface HeaderTextShortcutProps {
     confirmationNumber: string;
     clearConfirmationNumber: () => void;
+    checkTooltip: boolean
 }
 export const TextSurveyShortcut: React.FC<HeaderTextShortcutProps> = ({
     confirmationNumber,
-    clearConfirmationNumber
+    clearConfirmationNumber,
+    checkTooltip
 }) => {
     const [isLoading, setIsLoading] = useState(false);
     const { emitSendTemplate } = useSocketContext();
@@ -51,14 +53,27 @@ export const TextSurveyShortcut: React.FC<HeaderTextShortcutProps> = ({
                 setIsLoading(false);
             }
         } else {
-   message.warning('Please enter an identifier or a text');
+            message.warning('Please enter an identifier or a text');
         }
 
     };
     return (
         <>
-            {/* Trigger Button */}
-            <Tooltip title="Display Text" placement="bottom">
+            {checkTooltip ? (
+                <Tooltip title="Display Text" placement="bottom">
+                    <Button
+                        type="primary"
+                        icon={<IoChatbubbleEllipses style={{ fontSize: "20px" }} />}
+                        onClick={handleConfirmSend}
+                        className="flex items-center justify-center customHeaderButton"
+                        style={{
+                            backgroundColor: "#3b5998",
+                            border: "none",
+                            height: "40px",
+                        }}
+                    />
+                </Tooltip>
+            ) : (
                 <Button
                     type="primary"
                     icon={<IoChatbubbleEllipses style={{ fontSize: "20px" }} />}
@@ -70,7 +85,7 @@ export const TextSurveyShortcut: React.FC<HeaderTextShortcutProps> = ({
                         height: "40px",
                     }}
                 />
-            </Tooltip>
+            )}
         </>
     )
 }

@@ -9,11 +9,13 @@ import { IoSpeedometer } from 'react-icons/io5';
 interface HeaderSurveyShortcutProps {
   confirmationNumber: string;
   clearConfirmationNumber: () => void;
+  checkTooltip: boolean
 }
 
 export const HeaderSurveyShortcut: React.FC<HeaderSurveyShortcutProps> = ({
   confirmationNumber,
-  clearConfirmationNumber
+  clearConfirmationNumber,
+  checkTooltip
 }) => {
   const [isLoading, setIsLoading] = useState(false);
   const params = useSearchParams();
@@ -46,15 +48,29 @@ export const HeaderSurveyShortcut: React.FC<HeaderSurveyShortcutProps> = ({
         setIsLoading(false);
       }
     } else {
-   message.warning('Please enter an identifier or a text');
+      message.warning('Please enter an identifier or a text');
     }
   };
 
 
   return (
     <>
-      {/* Trigger Button */}
-      <Tooltip title="Display Survey" placement="bottom">
+      {checkTooltip ? (
+        <Tooltip title="Display Survey" placement="bottom">
+          <Button
+            type="primary"
+            icon={<IoSpeedometer style={{ fontSize: "20px" }} />}
+            onClick={handleConfirmSend}
+            disabled={isLoading}
+            className="flex items-center justify-center customHeaderButton"
+            style={{
+              backgroundColor: "#3b5998",
+              border: "none",
+              height: "40px",
+            }}
+          />
+        </Tooltip>
+      ) : (
         <Button
           type="primary"
           icon={<IoSpeedometer style={{ fontSize: "20px" }} />}
@@ -67,7 +83,7 @@ export const HeaderSurveyShortcut: React.FC<HeaderSurveyShortcutProps> = ({
             height: "40px",
           }}
         />
-      </Tooltip>
+      )}
     </>
   );
 };

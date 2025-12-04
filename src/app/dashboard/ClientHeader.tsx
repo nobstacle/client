@@ -67,7 +67,11 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
     const hamburgerMenuRef = useRef(null);
     const [dropdownPosition, setDropdownPosition] = useState({ top: 0, right: 0, width: 0 });
     const [hamburgerPosition, setHamburgerPosition] = useState({ top: 0, right: 0 });
+    const [isInIframe, setIsInIframe] = useState(false);
 
+    useEffect(() => {
+        setIsInIframe(window.self !== window.top);
+    }, []);
 
     // Get company data with proper caching
     const { data: companyData } = useCompanyControllerGetCompany({
@@ -592,54 +596,63 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                     }}
                 >
                     <div className="flex h-full w-full items-center justify-between mx-auto">
-                        <div className="flex items-center gap-6">
-                            <div style={{ paddingTop: "0.2em", paddingRight: "1em", width: '4vw' }}>
+                        <div className="flex items-center gap-2 lg:gap-6">
+                            <div style={{
+                                paddingTop: "0.2em",
+                                paddingRight: isInIframe ? "0.5em" : "1em",
+                                width: isInIframe ? '3vw' : '4vw',
+                                minWidth: '40px'
+                            }}>
                                 <CompanyLogo />
                             </div>
                             {!isSAdmin && (
-                                <div className="flex items-center gap-4">
-                                    <div className="bg-white/10 backdrop-blur-sm rounded-lg px-4 py-2">
-                                        <LanguageShortcutPicker />
+                                <div className="flex items-center gap-1 lg:gap-4">
+                                    <div className="bg-white/10 backdrop-blur-sm rounded-lg px-2 py-1 lg:px-4 text-xs lg:text-xs">
+                                        <LanguageShortcutPicker checkIframe={isInIframe} />
                                     </div>
-                                    <div className="bg-white/10 backdrop-blur-sm rounded-lg px-4 py-2">
-                                        <HeaderLanguagePicker />
+                                    <div className="bg-white/10 backdrop-blur-sm rounded-lg px-2 py-1 lg:px-4 lg:py-2 text-xs lg:text-sm">
+                                        <HeaderLanguagePicker checkIframe={isInIframe} />
                                     </div>
-                                    <div className="bg-white/10 backdrop-blur-sm rounded-lg px-4 py-2">
-                                        <TemplateShortcutPicker />
+                                    <div className="bg-white/10 backdrop-blur-sm rounded-lg px-2 py-1 lg:px-4  text-xs lg:text-sm">
+                                        <TemplateShortcutPicker checkIframe={isInIframe} />
                                     </div>
                                 </div>
                             )}
                         </div>
 
                         {!isSAdmin && (
-                            <div className="flex items-center">
-                                <div>
-                                    <ChatBot />
+                            <div className="flex items-center gap-0.5 lg:gap-1">
+                                <div className="scale-75 lg:scale-100">
+                                    <ChatBot checkTooltip={isInIframe} />
                                 </div>
 
-                                <div>
+                                <div className="scale-75 lg:scale-100">
                                     <TextSurveyShortcut
                                         confirmationNumber={searchValue !== "" ? searchValue : confirmationNumber}
                                         clearConfirmationNumber={clearConfirmationNumber}
+                                        checkTooltip={isInIframe}
                                     />
                                 </div>
-                                <div>
+                                <div className="scale-75 lg:scale-100">
                                     <HeaderSurveyShortcut
                                         confirmationNumber={searchValue !== "" ? searchValue : confirmationNumber}
                                         clearConfirmationNumber={clearConfirmationNumber}
+                                        checkTooltip={isInIframe}
                                     />
                                 </div>
-                                <div>
+                                <div className="scale-75 lg:scale-100">
                                     <WebsiteShortcut
                                         confirmationNumber={searchValue !== "" ? searchValue : confirmationNumber}
                                         clearConfirmationNumber={clearConfirmationNumber}
+                                        checkTooltip={isInIframe}
                                     />
                                 </div>
 
-                                <div>
+                                <div className="scale-75 lg:scale-100">
                                     <HeaderRecordingShortcut
                                         confirmationNumber={searchValue !== "" ? searchValue : confirmationNumber}
-                                        clearConfirmationNumber={clearConfirmationNumber} />
+                                        clearConfirmationNumber={clearConfirmationNumber}
+                                        checkTooltip={isInIframe} />
                                 </div>
 
                                 {/* Template Search Input */}
@@ -662,7 +675,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                                 }
                                             }}
                                             style={{
-                                                width: '190px',
+                                                width: isInIframe ? '140px' : '190px',
                                                 color: 'white',
                                                 backgroundColor: 'transparent',
                                                 border: 'none',

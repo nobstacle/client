@@ -14,10 +14,12 @@ import {
 interface HeaderWebsiteShortcutProps {
     confirmationNumber: string;
     clearConfirmationNumber: () => void;
+    checkTooltip: boolean
 }
 export const WebsiteShortcut: React.FC<HeaderWebsiteShortcutProps> = ({
     confirmationNumber,
-    clearConfirmationNumber
+    clearConfirmationNumber,
+    checkTooltip
 }) => {
     const [isLoading, setIsLoading] = useState(false);
     const { emitSendTemplate } = useSocketContext();
@@ -59,8 +61,21 @@ export const WebsiteShortcut: React.FC<HeaderWebsiteShortcutProps> = ({
 
     return (
         <>
-            {/* Trigger Button */}
-            <Tooltip title="Display Website" placement="bottom">
+            {checkTooltip ? (
+                <Tooltip title="Display Website" placement="bottom">
+                    <Button
+                        type="primary"
+                        icon={<IoGlobe style={{ fontSize: "20px" }} />}
+                        onClick={handleConfirmSend}
+                        className="flex items-center justify-center customHeaderButton"
+                        style={{
+                            backgroundColor: "#3b5998",
+                            border: "none",
+                            height: "40px",
+                        }}
+                    />
+                </Tooltip>
+            ) : (
                 <Button
                     type="primary"
                     icon={<IoGlobe style={{ fontSize: "20px" }} />}
@@ -72,7 +87,8 @@ export const WebsiteShortcut: React.FC<HeaderWebsiteShortcutProps> = ({
                         height: "40px",
                     }}
                 />
-            </Tooltip>
+            )}
+
         </>
     )
 }

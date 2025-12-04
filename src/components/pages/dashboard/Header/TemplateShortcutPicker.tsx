@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { useHasHydrated } from "../../../../hooks/useHydrated";
 // import useShortcutStore from "../../../../lib/zustand/store/shortcutStore";
@@ -18,17 +19,25 @@ import {
   GetWebsiteTemplateRes,
 } from "../../../../lib/client/model";
 
-
 import { useShortcutControllerGetShortcutMany } from "../../../../lib/client/api";
 
-export const TemplateShortcutPicker: React.FC = () => {
+export const TemplateShortcutPicker: React.FC<{ checkIframe?: boolean }> = ({
+  checkIframe = true
+}) => {
   const { emitSendTemplate } = useSocketContext();
   const { company } = useCompanyStore();
   const { texts, images, videos, slideshows, maps, websites, documents } =
     useTemplateStore();
   const isHydrated = useHasHydrated();
+  const [isInIframe, setIsInIframe] = useState(false);
 
   const params = useSearchParams();
+
+  useEffect(() => {
+    if (checkIframe) {
+      setIsInIframe(window.self !== window.top);
+    }
+  }, [checkIframe]);
 
   // REPLACED: useShortcutStore() → direct API call
   const { data: templatesShortcuts = [], isLoading: shortcutsLoading } =
@@ -45,7 +54,8 @@ export const TemplateShortcutPicker: React.FC = () => {
 
   const renderIcon = (iconName: string, color?: string) => {
     const IconComponent = (Io5Icons as any)[iconName];
-    return IconComponent ? <IconComponent size={25} color={color || "white"} /> : null;
+    const iconSize = isInIframe ? 18 : 25; // Smaller in iframe
+    return IconComponent ? <IconComponent size={iconSize} color={color || "white"} /> : null;
   };
 
   const handleOnSendTemplateClick = (
@@ -235,7 +245,7 @@ export const TemplateShortcutPicker: React.FC = () => {
   }
 
   return (
-    <div className="flex cursor-pointer gap-2">
+    <div className={`flex cursor-pointer ${isInIframe ? 'gap-1' : 'gap-2'}`}>
       {templatesShortcuts
         .sort((a, b) => a.order! - b.order!)
         .map((res) => (
@@ -245,7 +255,8 @@ export const TemplateShortcutPicker: React.FC = () => {
               handleOnSendTemplateClick(res.id, res.key as any, res.value)
             }
             title={`${res.value}/${res.key}`}
-            className="flex h-[25px] w-[25px] items-center justify-center"
+            className={`flex items-center justify-center ${isInIframe ? 'h-[20px] w-[20px]' : 'h-[25px] w-[25px]'
+              }`}
           >
             {renderIcon(res.extraValue ?? "IoAdd", res.color)}
           </span>

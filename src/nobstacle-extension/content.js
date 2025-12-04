@@ -5,6 +5,7 @@ const HEADER_URL = Isproduction
   : 'http://localhost:3000/header-only';
 const HEADER_HEIGHT = '70px';
 const DEBUG_MODE = true;
+let isEnabled = true;
 
 // List of allowed iframe origins
 const ALLOWED_IFRAME_ORIGINS = Isproduction
@@ -13,6 +14,7 @@ const ALLOWED_IFRAME_ORIGINS = Isproduction
 
 let originalMarginTop = 0;
 let isDropdownOpen = false;
+let cachedAuthData = null; // Cache auth data for faster delivery
 
 function shouldInject() {
   const hostname = window.location.hostname;
@@ -20,6 +22,31 @@ function shouldInject() {
   if (window.location.protocol === 'chrome:' || window.location.protocol === 'chrome-extension:') return false;
   return true;
 }
+
+chrome.storage.local.get(['extensionEnabled'], (result) => {
+  isEnabled = result.extensionEnabled !== false;
+  if (isEnabled && shouldInject()) {
+    injectHeader();
+  }
+});
+
+chrome.runtime.onMessage.addListener((req, sender, respond) => {
+  if (req.action === 'toggle') {
+    isEnabled = !isEnabled;
+    chrome.storage.local.set({ extensionEnabled: isEnabled });
+
+    if (isEnabled && !headerInjected && shouldInject()) {
+      injectHeader();
+      respond({ injected: true });
+    } else if (!isEnabled && headerInjected) {
+      document.getElementById('nobstacle-header-container')?.remove();
+      document.body.style.marginTop = `${window.nobstacleOriginalMargin}px`;
+      headerInjected = false;
+      respond({ injected: false });
+    }
+    return true;
+  }
+});
 
 function injectStyles() {
   if (document.getElementById('nobstacle-header-styles')) return;
@@ -129,6 +156,23 @@ async function getAuthCookies() {
   });
 }
 
+// Pre-fetch auth data
+async function prefetchAuthData() {
+  const cookies = await getAuthCookies();
+  const sessionCookie = cookies.find(c =>
+    c.name === '__Secure-next-auth.session-token' ||
+    c.name === 'next-auth.session-token'
+  );
+
+  cachedAuthData = {
+    sessionToken: sessionCookie?.value || null,
+    cookies: cookies
+  };
+
+  addDebugLog(`Pre-fetched auth: ${cachedAuthData.sessionToken ? 'YES' : 'NO'}`);
+  return cachedAuthData;
+}
+
 if (typeof window.nobstacleOriginalMargin === 'undefined') {
   window.nobstacleOriginalMargin = parseInt(getComputedStyle(document.body).marginTop) || 0;
 }
@@ -136,8 +180,11 @@ if (typeof window.nobstacleOriginalMargin === 'undefined') {
 async function injectHeader() {
   if (document.getElementById('nobstacle-header-container')) return;
 
+  headerInjected = true;
   addDebugLog('Starting header injection...');
   injectStyles();
+
+  await prefetchAuthData();
 
   const container = document.createElement('div');
   container.id = 'nobstacle-header-container';
@@ -157,35 +204,36 @@ async function injectHeader() {
   // injectDebugPanel();
   addDebugLog('Header iframe created');
 
-  // Send auth when iframe loads
+  // Send auth IMMEDIATELY when iframe loads (using cached data)
   iframe.onload = async () => {
-    addDebugLog('Iframe loaded, fetching cookies...');
+    addDebugLog('Iframe loaded - sending cached auth immediately');
 
-    const cookies = await getAuthCookies();
-    const sessionCookie = cookies.find(c =>
-      c.name === '__Secure-next-auth.session-token' ||
-      c.name === 'next-auth.session-token'
-    );
+    // Send cached data first (instant)
+    if (cachedAuthData) {
+      iframe.contentWindow.postMessage({
+        type: 'EXTENSION_AUTH',
+        sessionToken: cachedAuthData.sessionToken,
+        cookies: cachedAuthData.cookies
+      }, '*');
+      addDebugLog('✓ Cached auth sent instantly');
 
-    addDebugLog(`Found ${cookies.length} cookies`);
-
-    if (sessionCookie) {
-      addDebugLog(`Session cookie: ${sessionCookie.name}`);
-      addDebugLog(`Token length: ${sessionCookie.value.length} chars`);
-    } else {
-      addDebugLog('No session cookie found!');
+      updateDebugAuth(
+        !!cachedAuthData.sessionToken,
+        cachedAuthData.cookies.length,
+        cachedAuthData.sessionToken || ''
+      );
     }
 
-    updateDebugAuth(!!sessionCookie, cookies.length, sessionCookie?.value || '');
-
-    // Send message to iframe
-    addDebugLog('Sending EXTENSION_AUTH message to iframe...');
-    iframe.contentWindow.postMessage({
-      type: 'EXTENSION_AUTH',
-      sessionToken: sessionCookie?.value || null,
-      cookies: cookies
-    }, '*');
-    addDebugLog('Message sent!');
+    // Then refresh in background (in case cookies changed)
+    setTimeout(async () => {
+      const freshAuth = await prefetchAuthData();
+      iframe.contentWindow.postMessage({
+        type: 'EXTENSION_AUTH',
+        sessionToken: freshAuth.sessionToken,
+        cookies: freshAuth.cookies
+      }, '*');
+      addDebugLog('✓ Fresh auth sent');
+    }, 100);
   };
 
   // Listen for messages from iframe
@@ -198,39 +246,33 @@ async function injectHeader() {
 
     // Handle auth requests from iframe
     if (event.data.type === 'REQUEST_AUTH') {
-      addDebugLog('Iframe requested auth, responding...');
-      const cookies = await getAuthCookies();
-      const sessionCookie = cookies.find(c =>
-        c.name.includes('next-auth.session-token')
-      );
+      addDebugLog('Iframe requested auth, responding with cached data...');
+
+      // Use cached data if available, otherwise fetch
+      const authData = cachedAuthData || await prefetchAuthData();
 
       iframe.contentWindow.postMessage({
         type: 'EXTENSION_AUTH',
-        sessionToken: sessionCookie?.value || null,
-        cookies: cookies
+        sessionToken: authData.sessionToken,
+        cookies: authData.cookies
       }, '*');
       addDebugLog('Auth response sent');
     }
 
-    // REMOVED: No longer adjust iframe or body height for dropdowns
-    // Dropdowns will overlay on top using fixed positioning in the iframe
+    // Dropdown handling (keeping header fixed)
     if (event.data.type === 'DROPDOWN_HEIGHT' || event.data.type === 'HAMBURGER_HEIGHT') {
       const iframe = document.getElementById('nobstacle-header-iframe');
       const container = document.getElementById('nobstacle-header-container');
       if (!iframe || !container) return;
 
       addDebugLog(`Dropdown ${event.data.isOpen ? 'open' : 'closed'} - keeping header at fixed height`);
-      
-      // Keep iframe and container at fixed height - dropdowns will overlay
-      // No transitions or margin adjustments needed
     }
 
-    // *** CRITICAL: Receive backend token from iframe ***
+    // Backend token handling
     if (event.data.type === 'BACKEND_TOKEN') {
       addDebugLog('✓ Received backend token from iframe!');
       addDebugLog(`Token preview: ${event.data.token.substring(0, 40)}...`);
 
-      // Send to background script for storage and injection
       chrome.runtime.sendMessage({
         action: 'setBackendToken',
         token: event.data.token,
@@ -250,28 +292,4 @@ async function injectHeader() {
   window.addEventListener('message', handler);
 
   addDebugLog('✓ Header injection complete');
-}
-
-// Toggle support
-chrome.runtime.onMessage.addListener((req, sender, respond) => {
-  if (req.action === 'toggle') {
-    if (document.getElementById('nobstacle-header-container')) {
-      document.getElementById('nobstacle-header-container')?.remove();
-      document.body.style.marginTop = `${window.nobstacleOriginalMargin}px`;
-      respond({ injected: false });
-    } else {
-      injectHeader();
-      respond({ injected: true });
-    }
-    return true;
-  }
-});
-
-// Inject on load
-if (shouldInject()) {
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', injectHeader);
-  } else {
-    injectHeader();
-  }
 }

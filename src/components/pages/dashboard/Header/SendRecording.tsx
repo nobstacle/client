@@ -9,11 +9,13 @@ import { IoRecordingSharp } from "react-icons/io5";
 interface HeaderRecordingShortcutProps {
     confirmationNumber: string;
     clearConfirmationNumber: () => void;
+    checkTooltip: boolean
 }
 
 export const HeaderRecordingShortcut: React.FC<HeaderRecordingShortcutProps> = ({
     confirmationNumber,
-    clearConfirmationNumber
+    clearConfirmationNumber,
+    checkTooltip
 }) => {
     const [isRecording, setIsRecording] = useState(false);
     const [recordingTime, setRecordingTime] = useState(0);
@@ -218,11 +220,27 @@ export const HeaderRecordingShortcut: React.FC<HeaderRecordingShortcutProps> = (
                     animation: pulse 1.5s ease-in-out infinite;
                 }
             `}</style>
-
-            <Tooltip
-                title={isUploading ? "Please wait." : isRecording ? `Recording: ${formatTime(recordingTime)}` : "Start Recording"}
-                placement="bottom"
-            >
+            {checkTooltip ? (
+                <Tooltip
+                    title={isUploading ? "Please wait." : isRecording ? `Recording: ${formatTime(recordingTime)}` : "Start Recording"}
+                    placement="bottom"
+                >
+                    <Button
+                        type="primary"
+                        icon={isRecording ? <IoRecordingSharp style={{ fontSize: "18px", color: 'red' }} /> : <IoRecordingSharp style={{ fontSize: "18px" }} />}
+                        onClick={handleToggleRecording}
+                        disabled={isUploading}
+                        // loading={isUploading}
+                        className={`flex items-center justify-center customHeaderButton ${isRecording ? 'recording-pulse' : ''}`}
+                        style={{
+                            backgroundColor: "#3b5998",
+                            border: "none",
+                            height: "40px",
+                            transition: "all 0.3s ease",
+                        }}
+                    />
+                </Tooltip>
+            ) : (
                 <Button
                     type="primary"
                     icon={isRecording ? <IoRecordingSharp style={{ fontSize: "18px", color: 'red' }} /> : <IoRecordingSharp style={{ fontSize: "18px" }} />}
@@ -237,7 +255,8 @@ export const HeaderRecordingShortcut: React.FC<HeaderRecordingShortcutProps> = (
                         transition: "all 0.3s ease",
                     }}
                 />
-            </Tooltip>
+            )}
+
 
             {isRecording && (
                 <div
