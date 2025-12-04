@@ -370,6 +370,26 @@ async function injectHeader() {
       if (placeholder) {
         placeholder.outerHTML = event.data.html;
         addDebugLog('✓ Station picker injected into dropdown');
+        
+        // Add event listener to the select element
+        setTimeout(() => {
+          const select = document.getElementById('extension-station-select');
+          if (select) {
+            select.addEventListener('change', (e) => {
+              const newStation = e.target.value;
+              addDebugLog(`Station changed to: ${newStation}`);
+              
+              // Send message to iframe
+              iframe.contentWindow.postMessage({
+                type: 'STATION_CHANGE',
+                station: newStation
+              }, '*');
+              
+              // Close dropdown
+              document.getElementById('nobstacle-hamburger-dropdown')?.remove();
+            });
+          }
+        }, 100);
       }
     }
 

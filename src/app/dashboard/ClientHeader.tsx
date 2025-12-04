@@ -102,7 +102,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                 // Handle password change
                 console.log('Change password clicked');
             }
-               if (event.data.type === 'REQUEST_STATION_PICKER') {
+ if (event.data.type === 'REQUEST_STATION_PICKER') {
             // Get the current station from URL params
             const currentStation = params.get("station") ?? 1;
             
@@ -140,11 +140,27 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
             }, '*');
         }
 
-         if (event.data.type === 'STATION_CHANGE') {
+   if (event.data.type === 'STATION_CHANGE') {
             const newStation = event.data.station;
+            
+            // Update URL params without reload (same as existing StationPicker)
             const currentUrl = new URL(window.location.href);
             currentUrl.searchParams.set('station', newStation);
-            window.location.href = currentUrl.toString();
+            
+            // Use Next.js router to update URL without reload
+            window.history.pushState({}, '', currentUrl.toString());
+            
+            // Trigger a custom event that the SocketContext can listen to
+            window.dispatchEvent(new CustomEvent('stationChanged', { 
+                detail: { station: newStation } 
+            }));
+            
+            // Close the hamburger menu
+            window.parent.postMessage({ type: 'HAMBURGER_CLOSED' }, '*');
+            setIsHamburgerMenuOpen(false);
+            
+            // Optional: Show a message
+            message.success(`Switched to Station ${newStation}`);
         }
         };
 
