@@ -4,7 +4,7 @@ const HEADER_URL = Isproduction
   ? 'https://nobstacle.com/header-only'
   : 'http://localhost:3000/header-only';
 const HEADER_HEIGHT = '56px';
-const DEBUG_MODE = true;
+const DEBUG_MODE = false; // Set to true for debugging
 let isEnabled = true;
 let headerInjected = false;
 
@@ -15,7 +15,8 @@ const ALLOWED_IFRAME_ORIGINS = Isproduction
 
 let originalMarginTop = 0;
 let isDropdownOpen = false;
-let cachedAuthData = null; // Cache auth data for faster delivery
+let cachedAuthData = null;
+let authDataReady = false;
 
 function shouldInject() {
   const hostname = window.location.hostname;
@@ -42,6 +43,9 @@ chrome.runtime.onMessage.addListener((req, sender, respond) => {
     } else if (!isEnabled && headerInjected) {
       document.getElementById('nobstacle-header-container')?.remove();
       document.getElementById('nobstacle-hamburger-dropdown')?.remove();
+      document.getElementById('nobstacle-chat-popup')?.remove();
+      document.getElementById('nobstacle-search-dropdown')?.remove();
+      document.getElementById('nobstacle-recording-indicator')?.remove();
       document.body.style.marginTop = `${window.nobstacleOriginalMargin}px`;
       headerInjected = false;
       respond({ injected: false });
@@ -87,6 +91,17 @@ function injectStyles() {
         transform: translateY(0);
       }
     }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    .recording-pulse {
+      animation: pulse 1.5s ease-in-out infinite;
+    }
   `;
   document.head.appendChild(style);
 }
@@ -122,6 +137,7 @@ function injectDebugPanel() {
 }
 
 function addDebugLog(message) {
+  if (!DEBUG_MODE) return;
   const logEl = document.getElementById('debug-log');
   if (logEl) {
     const time = new Date().toLocaleTimeString();
@@ -135,6 +151,7 @@ function addDebugLog(message) {
 }
 
 function updateDebugAuth(hasAuth, count, tokenPreview = '') {
+  if (!DEBUG_MODE) return;
   const el = document.getElementById('auth-status');
   if (el) {
     el.innerHTML = hasAuth
@@ -149,6 +166,7 @@ function updateDebugAuth(hasAuth, count, tokenPreview = '') {
 }
 
 function updateBackendTokenStatus(hasToken) {
+  if (!DEBUG_MODE) return;
   const el = document.getElementById('backend-token-status');
   if (el) {
     el.innerHTML = hasToken
@@ -168,7 +186,7 @@ async function getAuthCookies() {
   });
 }
 
-// Pre-fetch auth data
+// Pre-fetch auth data BEFORE iframe loads to prevent login flash
 async function prefetchAuthData() {
   const cookies = await getAuthCookies();
   const sessionCookie = cookies.find(c =>
@@ -181,12 +199,44 @@ async function prefetchAuthData() {
     cookies: cookies
   };
 
+  authDataReady = true;
   addDebugLog(`Pre-fetched auth: ${cachedAuthData.sessionToken ? 'YES' : 'NO'}`);
   return cachedAuthData;
 }
 
+function createRecordingIndicator(data) {
+  document.getElementById('nobstacle-recording-indicator')?.remove();
+
+  const indicator = document.createElement('div');
+  indicator.id = 'nobstacle-recording-indicator';
+  indicator.style.cssText = `
+    position: fixed !important;
+    top: 80px !important;
+    right: 20px !important;
+    background: rgba(239, 68, 68, 0.95) !important;
+    color: white !important;
+    padding: 12px 20px !important;
+    border-radius: 8px !important;
+    z-index: 2147483647 !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+    font-weight: 500 !important;
+    font-size: 14px !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+  `;
+
+  indicator.innerHTML = `
+    <div class="recording-pulse" style="width: 10px; height: 10px; background: white; border-radius: 50%;"></div>
+    <span>${data.text}</span>
+  `;
+
+  document.body.appendChild(indicator);
+  addDebugLog('✓ Recording indicator created');
+}
+
 function createHamburgerDropdown(content) {
-  // Remove existing
   document.getElementById('nobstacle-hamburger-dropdown')?.remove();
 
   const iframe = document.getElementById('nobstacle-header-iframe');
@@ -212,7 +262,6 @@ function createHamburgerDropdown(content) {
   `;
 
   dropdown.innerHTML = `
-    <!-- Station Dropdown -->
     <div id="station-dropdown-container" style="padding: 16px 20px; border-bottom: 1px solid #f0f0f0; background: #f8fafc;">
       <div style="display: flex; align-items: center; gap: 12px;">
         <div style="width: 40px; height: 40px; border-radius: 10px; background: #3b5998; display: flex; align-items: center; justify-content: center;">
@@ -227,7 +276,6 @@ function createHamburgerDropdown(content) {
       </div>
     </div>
     
-    <!-- User -->
     <div style="padding: 16px 20px; border-bottom: 1px solid #f0f0f0;">
       <div style="display: flex; align-items: center; gap: 12px;">
         <div style="width: 40px; height: 40px; border-radius: 10px; background: #e8eef7; display: flex; align-items: center; justify-content: center;">
@@ -244,11 +292,8 @@ function createHamburgerDropdown(content) {
   `;
 
   document.body.appendChild(dropdown);
-
-  // Request the station picker component from iframe
   iframe.contentWindow.postMessage({ type: 'REQUEST_STATION_PICKER' }, '*');
 
-  // Close on click outside
   setTimeout(() => {
     const closeHandler = (e) => {
       const iframeElement = document.getElementById('nobstacle-header-iframe');
@@ -264,8 +309,94 @@ function createHamburgerDropdown(content) {
   addDebugLog('✓ Hamburger dropdown created');
 }
 
+function createChatPopup(content) {
+  document.getElementById('nobstacle-chat-popup')?.remove();
+
+  const iframe = document.getElementById('nobstacle-header-iframe');
+  if (!iframe) return;
+
+  const popup = document.createElement('div');
+  popup.id = 'nobstacle-chat-popup';
+  popup.style.cssText = `
+    position: fixed !important;
+    top: ${content.position.top}px !important;
+    right: ${content.position.right}px !important;
+    width: ${content.position.width}px !important;
+    height: ${content.position.height}px !important;
+    background: white !important;
+    border-radius: 12px !important;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15) !important;
+    z-index: 2147483647 !important;
+    border: 1px solid #e5e7eb !important;
+    overflow: hidden !important;
+    animation: slideDown 0.2s ease-out !important;
+    display: flex !important;
+    flex-direction: column !important;
+  `;
+
+  popup.innerHTML = content.html;
+
+  document.body.appendChild(popup);
+
+  // Forward events from popup to iframe
+  setTimeout(() => {
+    const messageInput = popup.querySelector('#chat-message-input');
+    const sendButton = popup.querySelector('#chat-send-button');
+    const clearButton = popup.querySelector('#chat-clear-button');
+    const closeButton = popup.querySelector('#chat-close-button');
+
+    if (messageInput && sendButton) {
+      const sendMessage = () => {
+        const message = messageInput.value.trim();
+        if (message) {
+          iframe.contentWindow.postMessage({
+            type: 'CHAT_SEND_MESSAGE',
+            message: message
+          }, '*');
+          messageInput.value = '';
+        }
+      };
+
+      sendButton.addEventListener('click', sendMessage);
+      messageInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          sendMessage();
+        }
+      });
+    }
+
+    if (clearButton) {
+      clearButton.addEventListener('click', () => {
+        iframe.contentWindow.postMessage({ type: 'CHAT_CLEAR' }, '*');
+      });
+    }
+
+    if (closeButton) {
+      closeButton.addEventListener('click', () => {
+        popup.remove();
+        iframe.contentWindow.postMessage({ type: 'CHAT_POPUP_CLOSED' }, '*');
+      });
+    }
+  }, 100);
+
+  // Close on click outside
+  setTimeout(() => {
+    const closeHandler = (e) => {
+      const iframeElement = document.getElementById('nobstacle-header-iframe');
+      if (!popup.contains(e.target) && e.target !== iframeElement) {
+        popup.remove();
+        iframe.contentWindow.postMessage({ type: 'CHAT_POPUP_CLOSED' }, '*');
+        document.removeEventListener('mousedown', closeHandler);
+      }
+    };
+    document.addEventListener('mousedown', closeHandler);
+  }, 100);
+
+  addDebugLog('✓ Chat popup created');
+}
+
 function createSearchDropdown(content) {
-  // Remove existing
   document.getElementById('nobstacle-search-dropdown')?.remove();
 
   const iframe = document.getElementById('nobstacle-header-iframe');
@@ -290,10 +421,8 @@ function createSearchDropdown(content) {
   `;
 
   dropdown.innerHTML = content.html;
-
   document.body.appendChild(dropdown);
 
-  // Add event listeners for template items
   setTimeout(() => {
     const templateItems = dropdown.querySelectorAll('[data-template-id]');
     templateItems.forEach(item => {
@@ -311,7 +440,6 @@ function createSearchDropdown(content) {
     });
   }, 100);
 
-  // Close on click outside
   setTimeout(() => {
     const closeHandler = (e) => {
       const iframeElement = document.getElementById('nobstacle-header-iframe');
@@ -338,6 +466,7 @@ async function injectHeader() {
   addDebugLog('Starting header injection...');
   injectStyles();
 
+  // Pre-fetch auth BEFORE creating iframe to prevent login flash
   await prefetchAuthData();
 
   const container = document.createElement('div');
@@ -346,24 +475,22 @@ async function injectHeader() {
   const iframe = document.createElement('iframe');
   iframe.id = 'nobstacle-header-iframe';
   iframe.src = HEADER_URL;
-  iframe.allow = 'clipboard-write';
+  iframe.allow = 'clipboard-write; microphone';
 
   container.appendChild(iframe);
   document.body.insertBefore(container, document.body.firstChild);
 
-  // Set initial body margin to account for fixed header
   const baseMargin = window.nobstacleOriginalMargin + parseInt(HEADER_HEIGHT);
   document.body.style.marginTop = `${baseMargin}px`;
 
-  // injectDebugPanel();
+  injectDebugPanel();
   addDebugLog('Header iframe created');
 
-  // Send auth IMMEDIATELY when iframe loads (using cached data)
+  // Send auth IMMEDIATELY when iframe loads
   iframe.onload = async () => {
     addDebugLog('Iframe loaded - sending cached auth immediately');
 
-    // Send cached data first (instant)
-    if (cachedAuthData) {
+    if (cachedAuthData && authDataReady) {
       iframe.contentWindow.postMessage({
         type: 'EXTENSION_AUTH',
         sessionToken: cachedAuthData.sessionToken,
@@ -378,7 +505,7 @@ async function injectHeader() {
       );
     }
 
-    // Then refresh in background (in case cookies changed)
+    // Refresh in background
     setTimeout(async () => {
       const freshAuth = await prefetchAuthData();
       iframe.contentWindow.postMessage({
@@ -392,19 +519,14 @@ async function injectHeader() {
 
   // Listen for messages from iframe
   const handler = async (event) => {
-    // Check origin
     if (!ALLOWED_IFRAME_ORIGINS.includes(event.origin)) {
       addDebugLog(`Blocked message from origin: ${event.origin}`);
       return;
     }
 
-    // Handle auth requests from iframe
     if (event.data.type === 'REQUEST_AUTH') {
-      addDebugLog('Iframe requested auth, responding with cached data...');
-
-      // Use cached data if available, otherwise fetch
+      addDebugLog('Iframe requested auth');
       const authData = cachedAuthData || await prefetchAuthData();
-
       iframe.contentWindow.postMessage({
         type: 'EXTENSION_AUTH',
         sessionToken: authData.sessionToken,
@@ -413,13 +535,15 @@ async function injectHeader() {
       addDebugLog('Auth response sent');
     }
 
-    // Hamburger menu toggle
+    if (event.data.type === 'RECORDING_INDICATOR') {
+      if (event.data.show) {
+        createRecordingIndicator(event.data);
+      } else {
+        document.getElementById('nobstacle-recording-indicator')?.remove();
+      }
+    }
+
     if (event.data.type === 'HAMBURGER_MENU') {
-      const iframe = document.getElementById('nobstacle-header-iframe');
-      if (!iframe) return;
-
-      addDebugLog(`Hamburger menu ${event.data.isOpen ? 'opened' : 'closed'}`);
-
       if (event.data.isOpen) {
         createHamburgerDropdown(event.data.content);
       } else {
@@ -427,13 +551,26 @@ async function injectHeader() {
       }
     }
 
-    // Search dropdown toggle
+    if (event.data.type === 'CHAT_POPUP') {
+      if (event.data.isOpen) {
+        createChatPopup(event.data.content);
+      } else {
+        document.getElementById('nobstacle-chat-popup')?.remove();
+      }
+    }
+
+    if (event.data.type === 'CHAT_UPDATE_MESSAGES') {
+      const popup = document.getElementById('nobstacle-chat-popup');
+      if (popup) {
+        const messagesContainer = popup.querySelector('#chat-messages-container');
+        if (messagesContainer) {
+          messagesContainer.innerHTML = event.data.html;
+          messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+      }
+    }
+
     if (event.data.type === 'SEARCH_DROPDOWN') {
-      const iframe = document.getElementById('nobstacle-header-iframe');
-      if (!iframe) return;
-
-      addDebugLog(`Search dropdown ${event.data.isOpen ? 'opened' : 'closed'}`);
-
       if (event.data.isOpen) {
         createSearchDropdown(event.data.content);
       } else {
@@ -441,28 +578,21 @@ async function injectHeader() {
       }
     }
 
-    // Handle station picker HTML from iframe
     if (event.data.type === 'STATION_PICKER_HTML') {
       const placeholder = document.getElementById('station-picker-placeholder');
       if (placeholder) {
         placeholder.outerHTML = event.data.html;
-        addDebugLog('✓ Station picker injected into dropdown');
-
-        // Add event listener to the select element
         setTimeout(() => {
           const select = document.getElementById('extension-station-select');
           if (select) {
             select.addEventListener('change', (e) => {
               const newStation = e.target.value;
               addDebugLog(`Station changed to: ${newStation}`);
-
-              // Send message to iframe
+              
               iframe.contentWindow.postMessage({
                 type: 'STATION_CHANGE',
                 station: newStation
               }, '*');
-
-              // Close dropdown
               document.getElementById('nobstacle-hamburger-dropdown')?.remove();
             });
           }
@@ -470,37 +600,21 @@ async function injectHeader() {
       }
     }
 
-    // Dropdown handling (keeping header fixed)
-    if (event.data.type === 'DROPDOWN_HEIGHT' || event.data.type === 'HAMBURGER_HEIGHT') {
-      const iframe = document.getElementById('nobstacle-header-iframe');
-      const container = document.getElementById('nobstacle-header-container');
-      if (!iframe || !container) return;
-
-      addDebugLog(`Dropdown ${event.data.isOpen ? 'open' : 'closed'} - keeping header at fixed height`);
-    }
-
-    // Backend token handling
     if (event.data.type === 'BACKEND_TOKEN') {
-      addDebugLog('✓ Received backend token from iframe!');
-      addDebugLog(`Token preview: ${event.data.token.substring(0, 40)}...`);
-
+      addDebugLog('✓ Received backend token');
       chrome.runtime.sendMessage({
         action: 'setBackendToken',
         token: event.data.token,
         expiresIn: event.data.expiresIn
       }, (response) => {
         if (response?.success) {
-          addDebugLog('✓ Backend token stored in background script');
+          addDebugLog('✓ Token stored');
           updateBackendTokenStatus(true);
-        } else {
-          addDebugLog('✗ Failed to store backend token');
-          updateBackendTokenStatus(false);
         }
       });
     }
   };
 
   window.addEventListener('message', handler);
-
   addDebugLog('✓ Header injection complete');
 }

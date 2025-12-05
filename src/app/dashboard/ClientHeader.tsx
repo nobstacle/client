@@ -85,6 +85,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         }
     });
 
+
     const selectedLang = params.get("lang") || companyData?.defaultLangCode || "en";
 
     // Fetch all template types with proper caching configuration
@@ -686,10 +687,19 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                 console.log('Change password clicked');
             }
             if (event.data.type === 'REQUEST_STATION_PICKER') {
-                // Get the current station from URL params
-                const currentStation = params.get("station") ?? 1;
+                const currentStation = params.get("station") ?? "1";
+                const stationCount = companyData?.stationCount || 10;
 
-                // Create station picker HTML that will work in the extension context
+                const stationOptions = Array(stationCount)
+                    .fill(1)
+                    .map((x, y) => x + y)
+                    .map(num => `
+                    <option value="${num}" ${num == currentStation ? 'selected' : ''}>
+                        Station ${num}
+                    </option>
+                `)
+                    .join('');
+
                 const stationPickerHTML = `
                 <div style="position: relative;">
                     <select 
@@ -706,13 +716,8 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                             cursor: pointer;
                             outline: none;
                         "
-                        onchange="window.parent.postMessage({type: 'STATION_CHANGE', station: this.value}, '*')"
                     >
-                        ${[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(num => `
-                            <option value="${num}" ${num == currentStation ? 'selected' : ''}>
-                                Station ${num}
-                            </option>
-                        `).join('')}
+                        ${stationOptions}
                     </select>
                 </div>
             `;
@@ -722,27 +727,28 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                     html: stationPickerHTML
                 }, '*');
             }
-
             if (event.data.type === 'STATION_CHANGE') {
                 const newStation = event.data.station;
 
-                // Update URL params without reload (same as existing StationPicker)
+                // Update URL params
                 const currentUrl = new URL(window.location.href);
                 currentUrl.searchParams.set('station', newStation);
 
-                // Use Next.js router to update URL without reload
+                // Push new state
                 window.history.pushState({}, '', currentUrl.toString());
 
-                // Trigger a custom event that the SocketContext can listen to
-                window.dispatchEvent(new CustomEvent('stationChanged', {
+                // Create and dispatch a custom event for socket context
+                const stationEvent = new CustomEvent('stationChanged', {
                     detail: { station: newStation }
-                }));
+                });
+                window.dispatchEvent(stationEvent);
 
-                // Close the hamburger menu
-                window.parent.postMessage({ type: 'HAMBURGER_CLOSED' }, '*');
-                setIsHamburgerMenuOpen(false);
+                // Force a re-render by updating router
+                if (typeof window !== 'undefined') {
+                    const popStateEvent = new PopStateEvent('popstate', { state: {} });
+                    window.dispatchEvent(popStateEvent);
+                }
 
-                // Optional: Show a message
                 message.success(`Switched to Station ${newStation}`);
             }
 
@@ -763,8 +769,6 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
             if (event.data.type === 'SEARCH_DROPDOWN_CLOSED') {
                 setIsDropdownVisible(false);
             }
-
-
         };
 
         window.addEventListener('message', handler);
@@ -939,7 +943,8 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                     </div>
                                 </div>
 
-                                <div ref={hamburgerMenuRef} style={{ position: 'relative', marginLeft: '8px' }}>
+                                <div ref={hamburgerMenuRef}
+                                    style={{ position: 'relative', marginLeft: '8px' }}>
                                     <div
                                         onClick={() => {
                                             const newState = !isHamburgerMenuOpen;
@@ -1005,7 +1010,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                             border: '2px solid #3b5998',
                                             boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
                                         }}>
-                                            {params.get("station") ?? 1}
+                                            {Number(params.get("station") ?? 1)}
                                         </div>
                                     </div>
 

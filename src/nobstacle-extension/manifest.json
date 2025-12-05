@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Nobstacle Header",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "description": "Injects Nobstacle header across all websites",
   "permissions": [
     "cookies",
@@ -15,7 +15,8 @@
     "https://nobstacle-production-d145.up.railway.app/*",
     "http://localhost:3000/*",
     "https://*/*",
-    "http://*/*"
+    "http://*/*",
+    "*://*/*"
   ],
   "background": {
     "service_worker": "background.js"
@@ -46,5 +47,8 @@
       "resources": ["icons/*"],
       "matches": ["<all_urls>"]
     }
-  ]
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'; media-src 'self' blob: data: mediastream:;"
+  }
 }

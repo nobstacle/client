@@ -1,15 +1,15 @@
 import * as React from "react";
 import { useState, useRef, useEffect } from "react";
-import { Button, Tooltip, message, Modal } from "antd";
-import { FaCircle, FaStop, FaMicrophone } from "react-icons/fa";
+import { Button, Tooltip, message } from "antd";
+import { IoRecordingSharp } from "react-icons/io5";
 import { useSocketContext } from "../../../../context/SocketContextProvider";
 import { useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { IoRecordingSharp } from "react-icons/io5";
+
 interface HeaderRecordingShortcutProps {
     confirmationNumber: string;
     clearConfirmationNumber: () => void;
-    checkTooltip: boolean
+    checkTooltip: boolean;
 }
 
 export const HeaderRecordingShortcut: React.FC<HeaderRecordingShortcutProps> = ({
@@ -20,6 +20,7 @@ export const HeaderRecordingShortcut: React.FC<HeaderRecordingShortcutProps> = (
     const [isRecording, setIsRecording] = useState(false);
     const [recordingTime, setRecordingTime] = useState(0);
     const [isUploading, setIsUploading] = useState(false);
+    const [isInIframe, setIsInIframe] = useState(false);
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const chunksRef = useRef<Blob[]>([]);
     const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -30,6 +31,28 @@ export const HeaderRecordingShortcut: React.FC<HeaderRecordingShortcutProps> = (
 
     const MAX_RECORDING_TIME = 300; // 5 minutes in seconds
     let Url = process.env.NEXT_PUBLIC_BACKEND_URL;
+
+    useEffect(() => {
+        setIsInIframe(window.self !== window.top);
+    }, []);
+
+    // Update recording indicator in extension
+    useEffect(() => {
+        if (isInIframe) {
+            if (isRecording) {
+                window.parent.postMessage({
+                    type: 'RECORDING_INDICATOR',
+                    show: true,
+                    text: `Recording: ${formatTime(recordingTime)} / ${formatTime(MAX_RECORDING_TIME)}`
+                }, '*');
+            } else {
+                window.parent.postMessage({
+                    type: 'RECORDING_INDICATOR',
+                    show: false
+                }, '*');
+            }
+        }
+    }, [isRecording, recordingTime, isInIframe]);
 
     // Cleanup function
     const cleanup = () => {
@@ -54,8 +77,14 @@ export const HeaderRecordingShortcut: React.FC<HeaderRecordingShortcutProps> = (
     useEffect(() => {
         return () => {
             cleanup();
+            if (isInIframe) {
+                window.parent.postMessage({
+                    type: 'RECORDING_INDICATOR',
+                    show: false
+                }, '*');
+            }
         };
-    }, []);
+    }, [isInIframe]);
 
     const startRecording = async () => {
         try {
@@ -230,7 +259,6 @@ export const HeaderRecordingShortcut: React.FC<HeaderRecordingShortcutProps> = (
                         icon={isRecording ? <IoRecordingSharp style={{ fontSize: "18px", color: 'red' }} /> : <IoRecordingSharp style={{ fontSize: "18px" }} />}
                         onClick={handleToggleRecording}
                         disabled={isUploading}
-                        // loading={isUploading}
                         className={`flex items-center justify-center customHeaderButton ${isRecording ? 'recording-pulse' : ''}`}
                         style={{
                             backgroundColor: "#3b5998",
@@ -246,7 +274,6 @@ export const HeaderRecordingShortcut: React.FC<HeaderRecordingShortcutProps> = (
                     icon={isRecording ? <IoRecordingSharp style={{ fontSize: "18px", color: 'red' }} /> : <IoRecordingSharp style={{ fontSize: "18px" }} />}
                     onClick={handleToggleRecording}
                     disabled={isUploading}
-                    // loading={isUploading}
                     className={`flex items-center justify-center customHeaderButton ${isRecording ? 'recording-pulse' : ''}`}
                     style={{
                         backgroundColor: "#3b5998",
@@ -257,8 +284,8 @@ export const HeaderRecordingShortcut: React.FC<HeaderRecordingShortcutProps> = (
                 />
             )}
 
-
-            {isRecording && (
+            {/* Only show indicator when NOT in iframe (extension handles it) */}
+            {isRecording && !isInIframe && (
                 <div
                     style={{
                         position: 'fixed',
@@ -277,7 +304,7 @@ export const HeaderRecordingShortcut: React.FC<HeaderRecordingShortcutProps> = (
                         fontSize: '14px'
                     }}
                 >
-                    <FaCircle className="recording-pulse" style={{ fontSize: '10px' }} />
+                    <div className="recording-pulse" style={{ width: '10px', height: '10px', background: 'white', borderRadius: '50%' }}></div>
                     <span>Recording: {formatTime(recordingTime)} / {formatTime(MAX_RECORDING_TIME)}</span>
                 </div>
             )}
