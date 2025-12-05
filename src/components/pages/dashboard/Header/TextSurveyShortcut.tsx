@@ -23,7 +23,7 @@ export const TextSurveyShortcut: React.FC<HeaderTextShortcutProps> = ({
     const { emitSendTemplate } = useSocketContext();
     const params = useSearchParams();
     const { data: companyData } = useCompanyControllerGetCompany();
-    
+
     const handleConfirmSend = async () => {
         if (confirmationNumber !== "") {
             setIsLoading(true);
@@ -36,19 +36,24 @@ export const TextSurveyShortcut: React.FC<HeaderTextShortcutProps> = ({
                     station: Number(params.get("station") ?? 1),
                     directContent: confirmationNumber,
                 });
-                toast.success("Text sent!", {
-                    position: "bottom-right",
-                    autoClose: 3000,
-                    theme: "colored",
-                });
+                if (!checkTooltip) {
+                    toast.success("Text sent!", {
+                        position: "bottom-right",
+                        autoClose: 3000,
+                        theme: "colored",
+                    });
+                }
+
                 clearConfirmationNumber();
             } catch (error) {
                 console.error("Error sending text:", error);
-                toast.error("Failed to send text. Please try again.", {
-                    position: "bottom-right",
-                    autoClose: 3000,
-                    theme: "colored",
-                });
+                if (!checkTooltip) {
+                    toast.error("Failed to send text. Please try again.", {
+                        position: "bottom-right",
+                        autoClose: 3000,
+                        theme: "colored",
+                    });
+                }
             } finally {
                 setIsLoading(false);
             }

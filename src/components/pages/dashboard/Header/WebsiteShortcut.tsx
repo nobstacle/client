@@ -38,19 +38,23 @@ export const WebsiteShortcut: React.FC<HeaderWebsiteShortcutProps> = ({
                     directContent: confirmationNumber,
                 });
 
-                toast.success("Website sent!", {
-                    position: "bottom-right",
-                    autoClose: 3000,
-                    theme: "colored",
-                });
+                if (!checkTooltip) {
+                    toast.success("Website sent!", {
+                        position: "bottom-right",
+                        autoClose: 3000,
+                        theme: "colored",
+                    });
+                }
                 clearConfirmationNumber();
             } catch (error) {
                 console.error("Error sending text:", error);
-                toast.error("Failed to send website. Please try again.", {
-                    position: "bottom-right",
-                    autoClose: 3000,
-                    theme: "colored",
-                });
+                if (!checkTooltip) {
+                    toast.error("Failed to send website. Please try again.", {
+                        position: "bottom-right",
+                        autoClose: 3000,
+                        theme: "colored",
+                    });
+                }
             } finally {
                 setIsLoading(false);
             }

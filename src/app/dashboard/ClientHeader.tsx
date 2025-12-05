@@ -431,6 +431,9 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
             contentType = ChatType.Text;
         }
 
+        console.info("template?.type",template?.type);
+        console.info("templateToSend",templateToSend);
+
         emitSendTemplate({
             refId: templateToSend?.id,
             langCode: langToSend,

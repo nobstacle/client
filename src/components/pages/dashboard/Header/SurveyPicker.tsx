@@ -31,19 +31,23 @@ export const HeaderSurveyShortcut: React.FC<HeaderSurveyShortcutProps> = ({
           langCode: params.get("lang") || "en",
         });
 
-        toast.success("Survey sent!", {
-          position: "bottom-right",
-          autoClose: 3000,
-          theme: "colored",
-        });
+        if (!checkTooltip) {
+          toast.success("Survey sent!", {
+            position: "bottom-right",
+            autoClose: 3000,
+            theme: "colored",
+          });
+        }
         clearConfirmationNumber();
       } catch (error) {
         console.error("Error sending survey:", error);
-        toast.error("Failed to send survey. Please try again.", {
-          position: "bottom-right",
-          autoClose: 3000,
-          theme: "colored",
-        });
+        if (!checkTooltip) {
+          toast.error("Failed to send survey. Please try again.", {
+            position: "bottom-right",
+            autoClose: 3000,
+            theme: "colored",
+          });
+        }
       } finally {
         setIsLoading(false);
       }

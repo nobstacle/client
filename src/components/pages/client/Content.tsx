@@ -864,6 +864,8 @@ export const Content: React.FC = () => {
     }
   }, [messageStore.receivedType, messageStore.receivedContent, messageStore.receivedSurvey, messageStore.receivedMessage]);
 
+  console.info("TYPE", messageStore.receivedType);
+  
   useEffect(() => {
     if (messageStore.receivedType === "Recording") {
       const lastContent = localStorage.getItem('lastDisplayedContent');
