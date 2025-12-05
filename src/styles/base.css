@@ -664,6 +664,10 @@ button {
   width: 20%;
 }
 
+.customCards {
+  z-index: 0;
+}
+
 @media screen and (max-width: 768px) {
   .searchInputWidth {
     width: 100%;

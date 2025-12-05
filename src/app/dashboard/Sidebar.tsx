@@ -21,6 +21,7 @@ import {
 } from 'react-icons/io5';
 import { IoRecordingSharp } from "react-icons/io5";
 import { IoChatbubbleEllipses } from "react-icons/io5";
+import { FaMicrophone } from "react-icons/fa";
 
 interface ClientSidebarProps {
     user: Session | null;
@@ -132,7 +133,7 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
             title: "Recordings",
             href: "/dashboard/recordings",
             roles: ["Admin", "User", "Staff"],
-            icon: <IoRecordingSharp size={18} />,
+            icon: <FaMicrophone size={18} />,
             iconColor: "white"
         },
         {

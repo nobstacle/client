@@ -372,8 +372,12 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
 
     const showDrawer = () => setDrawerOpen(true);
     const closeDrawer = () => setDrawerOpen(false);
-    const showShortcutMenu = () => setShortcutMenuOpen(true);
-    const closeShortcutMenu = () => setShortcutMenuOpen(false);
+    const openQuickActions = () => {
+        console.info("CKCLID");
+        setShortcutMenuOpen(true);
+    }
+
+    const closeQuickActions = () => setShortcutMenuOpen(false);
 
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -415,6 +419,8 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
             : (companyData?.defaultLangCode || "en");
 
         let contentType = "";
+        let contentExtra = templateToSend?.ext;
+
         if (template?.type === 'image') {
             contentType = ChatType.Image;
         } else if (template?.type === 'video') {
@@ -425,21 +431,23 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
             contentType = ChatType.Slideshow;
         } else if (template?.type === 'map') {
             contentType = ChatType.Map;
+            // For map templates, we need to send both origin and destination
+            contentExtra = JSON.stringify({
+                origin: templateToSend?.origin || '',
+                destination: templateToSend?.destination || ''
+            });
         } else if (template?.type === 'document') {
             contentType = ChatType.Document;
         } else {
             contentType = ChatType.Text;
         }
 
-        console.info("template?.type",template?.type);
-        console.info("templateToSend",templateToSend);
-
         emitSendTemplate({
             refId: templateToSend?.id,
             langCode: langToSend,
             refType: contentType,
             station: Number(params.get("station") ?? 1),
-            contentExtra: templateToSend?.ext,
+            contentExtra: contentExtra,
         });
 
         if (!template.availableInSelectedLang) {
@@ -500,6 +508,8 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
             : (companyData?.defaultLangCode || "en");
 
         let contentType = "";
+        let contentExtra = templateToSend?.ext;
+
         if (template?.type === 'image') {
             contentType = ChatType.Image;
         } else if (template?.type === 'video') {
@@ -510,6 +520,11 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
             contentType = ChatType.Slideshow;
         } else if (template?.type === 'map') {
             contentType = ChatType.Map;
+            // For map templates, we need to send both origin and destination
+            contentExtra = JSON.stringify({
+                origin: templateToSend?.origin || '',
+                destination: templateToSend?.destination || ''
+            });
         } else if (template?.type === 'document') {
             contentType = ChatType.Document;
         } else {
@@ -521,7 +536,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
             langCode: langToSend,
             refType: contentType,
             station: Number(params.get("station") ?? 1),
-            contentExtra: templateToSend?.ext,
+            contentExtra: contentExtra,
             directContent: 'QR'
         });
 
@@ -789,7 +804,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
             <div style={{
                 width: '100%',
                 position: 'relative',
-                pointerEvents: 'none' // Allow clicks to pass through transparent areas
+                // Allow clicks to pass through transparent areas
             }}>
                 {/* Mobile Header */}
                 <div className="block lg:hidden" style={{ backgroundColor: '#3b5998' }}>
@@ -813,7 +828,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                 <Button
                                     type="text"
                                     icon={<MoreOutlined className="text-white text-xl" />}
-                                    onClick={showShortcutMenu}
+                                    onClick={openQuickActions}
                                     className="border-none shadow-none hover:bg-white/20 transition-colors duration-200 rounded-lg p-3"
                                     style={{
                                         background: 'transparent',
@@ -863,24 +878,16 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
 
                         {!isSAdmin && (
                             <div className="flex items-center gap-0.5 lg:gap-1">
+                                {/* Recording - First (leftmost) */}
                                 <div className="scale-75 lg:scale-100">
-                                    <ChatBot checkTooltip={isInIframe} />
+                                    <HeaderRecordingShortcut
+                                        confirmationNumber={searchValue !== "" ? searchValue : confirmationNumber}
+                                        clearConfirmationNumber={clearConfirmationNumber}
+                                        checkTooltip={isInIframe}
+                                    />
                                 </div>
 
-                                <div className="scale-75 lg:scale-100">
-                                    <TextSurveyShortcut
-                                        confirmationNumber={searchValue !== "" ? searchValue : confirmationNumber}
-                                        clearConfirmationNumber={clearConfirmationNumber}
-                                        checkTooltip={isInIframe}
-                                    />
-                                </div>
-                                <div className="scale-75 lg:scale-100">
-                                    <HeaderSurveyShortcut
-                                        confirmationNumber={searchValue !== "" ? searchValue : confirmationNumber}
-                                        clearConfirmationNumber={clearConfirmationNumber}
-                                        checkTooltip={isInIframe}
-                                    />
-                                </div>
+                                {/* Website Shortcut */}
                                 <div className="scale-75 lg:scale-100">
                                     <WebsiteShortcut
                                         confirmationNumber={searchValue !== "" ? searchValue : confirmationNumber}
@@ -889,11 +896,27 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                     />
                                 </div>
 
+                                {/* Survey Shortcut */}
                                 <div className="scale-75 lg:scale-100">
-                                    <HeaderRecordingShortcut
+                                    <HeaderSurveyShortcut
                                         confirmationNumber={searchValue !== "" ? searchValue : confirmationNumber}
                                         clearConfirmationNumber={clearConfirmationNumber}
-                                        checkTooltip={isInIframe} />
+                                        checkTooltip={isInIframe}
+                                    />
+                                </div>
+
+                                {/* Text Survey Shortcut */}
+                                <div className="scale-75 lg:scale-100">
+                                    <TextSurveyShortcut
+                                        confirmationNumber={searchValue !== "" ? searchValue : confirmationNumber}
+                                        clearConfirmationNumber={clearConfirmationNumber}
+                                        checkTooltip={isInIframe}
+                                    />
+                                </div>
+
+                                {/* ChatBot - Last (closest to input box) */}
+                                <div className="scale-75 lg:scale-100">
+                                    <ChatBot checkTooltip={isInIframe} />
                                 </div>
 
                                 {/* Template Search Input */}
@@ -946,8 +969,8 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                     </div>
                                 </div>
 
-                                <div ref={hamburgerMenuRef}
-                                    style={{ position: 'relative', marginLeft: '8px' }}>
+                                {/* Hamburger Menu */}
+                                <div ref={hamburgerMenuRef} style={{ position: 'relative', marginLeft: '8px' }}>
                                     <div
                                         onClick={() => {
                                             const newState = !isHamburgerMenuOpen;
@@ -1336,6 +1359,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                     </div>
                 )}
             </div>
+
             {/* Drawers remain the same */}
             <Drawer
                 title={
@@ -1457,7 +1481,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                         <Button
                             type="text"
                             icon={<CloseOutlined className="text-white" />}
-                            onClick={closeShortcutMenu}
+                            onClick={closeQuickActions}
                             className="border-none shadow-none hover:bg-white/20 rounded-lg"
                             style={{ background: 'transparent' }}
                         />
@@ -1465,7 +1489,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                 }
                 placement="right"
                 closable={false}
-                onClose={closeShortcutMenu}
+                onClose={closeQuickActions}
                 open={shortcutMenuOpen}
                 width={300}
                 className="block lg:hidden"

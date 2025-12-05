@@ -5,6 +5,7 @@ import { IoRecordingSharp } from "react-icons/io5";
 import { useSocketContext } from "../../../../context/SocketContextProvider";
 import { useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
+import { FaMicrophone } from "react-icons/fa";
 
 interface HeaderRecordingShortcutProps {
     confirmationNumber: string;
@@ -256,7 +257,7 @@ export const HeaderRecordingShortcut: React.FC<HeaderRecordingShortcutProps> = (
                 >
                     <Button
                         type="primary"
-                        icon={isRecording ? <IoRecordingSharp style={{ fontSize: "18px", color: 'red' }} /> : <IoRecordingSharp style={{ fontSize: "18px" }} />}
+                        icon={isRecording ? <FaMicrophone style={{ fontSize: "18px", color: 'red' }} /> : <FaMicrophone style={{ fontSize: "18px" }} />}
                         onClick={handleToggleRecording}
                         disabled={isUploading}
                         className={`flex items-center justify-center customHeaderButton ${isRecording ? 'recording-pulse' : ''}`}
@@ -271,7 +272,7 @@ export const HeaderRecordingShortcut: React.FC<HeaderRecordingShortcutProps> = (
             ) : (
                 <Button
                     type="primary"
-                    icon={isRecording ? <IoRecordingSharp style={{ fontSize: "18px", color: 'red' }} /> : <IoRecordingSharp style={{ fontSize: "18px" }} />}
+                    icon={isRecording ? <FaMicrophone style={{ fontSize: "18px", color: 'red' }} /> : <FaMicrophone style={{ fontSize: "18px" }} />}
                     onClick={handleToggleRecording}
                     disabled={isUploading}
                     className={`flex items-center justify-center customHeaderButton ${isRecording ? 'recording-pulse' : ''}`}
