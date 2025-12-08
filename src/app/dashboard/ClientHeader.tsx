@@ -981,13 +981,50 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                             setIsHamburgerMenuOpen(newState);
 
                                             if (isInIframe) {
+                                                // Generate station picker HTML with correct stationCount
+                                                const currentStation = params.get("station") ?? "1";
+                                                const stationCount = companyData?.stationCount || 10;
+
+                                                const stationOptions = Array(stationCount)
+                                                    .fill(1)
+                                                    .map((x, y) => x + y)
+                                                    .map(num => `
+        <option value="${num}" ${num == currentStation ? 'selected' : ''}>
+            Station ${num}
+        </option>
+    `)
+                                                    .join('');
+
+                                                const stationPickerHTML = `
+    <div style="position: relative;">
+        <select 
+            id="extension-station-select"
+            style="
+                width: 100%;
+                padding: 6px 12px;
+                border: 1px solid #e5e7eb;
+                border-radius: 6px;
+                font-size: 14px;
+                font-weight: 600;
+                color: #1f2937;
+                background: white;
+                cursor: pointer;
+                outline: none;
+            "
+        >
+            ${stationOptions}
+        </select>
+    </div>
+`;
+
                                                 window.parent.postMessage({
                                                     type: 'HAMBURGER_MENU',
                                                     isOpen: newState,
                                                     content: {
                                                         station: params.get("station") ?? 1,
                                                         companyName: companyData?.name || 'Company Name',
-                                                        userName: user?.user?.name || user?.user?.email || 'User Name'
+                                                        userName: user?.user?.name || user?.user?.email || 'User Name',
+                                                        stationPickerHTML: stationPickerHTML
                                                     }
                                                 }, '*');
                                             }

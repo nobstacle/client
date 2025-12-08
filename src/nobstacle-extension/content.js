@@ -235,7 +235,6 @@ function createRecordingIndicator(data) {
   document.body.appendChild(indicator);
   addDebugLog('✓ Recording indicator created');
 }
-
 function createHamburgerDropdown(content) {
   document.getElementById('nobstacle-hamburger-dropdown')?.remove();
 
@@ -271,7 +270,7 @@ function createHamburgerDropdown(content) {
         </div>
         <div style="flex: 1; min-width: 0;">
           <div style="font-size: 11px; color: #6b7280; font-weight: 500; margin-bottom: 2px; text-transform: uppercase;">Station</div>
-          <div id="station-picker-placeholder" style="font-size: 15px; font-weight: 600; color: #1f2937;">Loading...</div>
+          <div id="station-picker-placeholder">${content.stationPickerHTML || '<div style="font-size: 15px; font-weight: 600; color: #1f2937;">Loading...</div>'}</div>
         </div>
       </div>
     </div>
@@ -292,7 +291,23 @@ function createHamburgerDropdown(content) {
   `;
 
   document.body.appendChild(dropdown);
-  iframe.contentWindow.postMessage({ type: 'REQUEST_STATION_PICKER' }, '*');
+
+  // Attach event listener to the station select if it exists
+  setTimeout(() => {
+    const select = dropdown.querySelector('#extension-station-select');
+    if (select) {
+      select.addEventListener('change', (e) => {
+        const newStation = e.target.value;
+        addDebugLog(`Station changed to: ${newStation}`);
+
+        iframe.contentWindow.postMessage({
+          type: 'STATION_CHANGE',
+          station: newStation
+        }, '*');
+        dropdown.remove();
+      });
+    }
+  }, 100);
 
   setTimeout(() => {
     const closeHandler = (e) => {
@@ -588,7 +603,7 @@ async function injectHeader() {
             select.addEventListener('change', (e) => {
               const newStation = e.target.value;
               addDebugLog(`Station changed to: ${newStation}`);
-              
+
               iframe.contentWindow.postMessage({
                 type: 'STATION_CHANGE',
                 station: newStation
