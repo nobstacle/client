@@ -865,7 +865,7 @@ export const Content: React.FC = () => {
   }, [messageStore.receivedType, messageStore.receivedContent, messageStore.receivedSurvey, messageStore.receivedMessage]);
 
   console.info("TYPE", messageStore.receivedType);
-  
+
   useEffect(() => {
     if (messageStore.receivedType === "Recording") {
       const lastContent = localStorage.getItem('lastDisplayedContent');
@@ -1206,6 +1206,9 @@ export const Content: React.FC = () => {
       setIsMuted(newMutedState);
     }
   };
+
+  console.info("$$$$$$$$$$$$$$$$$", contentToDisplay);
+  console.info("messageStore", messageStore);
 
   if (hasHydrated) {
     return (
@@ -1804,31 +1807,33 @@ export const Content: React.FC = () => {
           )
         )}
 
-        {(
-          contentToDisplay?.type === "Map" ||
-          contentToDisplay?.type === "MapTemplateQr" ||
-          contentToDisplay?.type === "MapTemplateMessage"
-        ) && (() => {
-          return (
-            <>
-              {contentToDisplay?.type === "MapTemplateQr" ? (
-                <Card>
-                  <img
-                    src={qrCodeUrl}
-                    alt="QR Code"
-                    className="w-96 h-96 object-cover"
-                  />
-                </Card>
+        {(contentToDisplay?.type === "Map" ||
+          contentToDisplay?.type?.includes("Map") ||
+          contentToDisplay?.content?.type === "Map" ||
+          messageStore.receivedType?.includes("Map")
+        ) && (
+            <div className="w-full h-full">
+              {console.log("MAP BLOCK FINALLY TRIGGERED!", { contentToDisplay, receivedType: messageStore.receivedType })}
+
+              {/* QR version */}
+              {["MapTemplateQr", "WebsiteTemplateQr"].includes(contentToDisplay?.type) ? (
+                <div className="flex justify-center items-center h-screen bg-gray-50">
+                  <Card>
+                    <img src={qrCodeUrl} alt="QR Code" className="w-96 h-96" />
+                  </Card>
+                </div>
               ) : (
+                /* Normal interactive map */
                 <SimpleMap
-                  destination={messageStore.receivedContent?.extraContent ?? ""}
-                  origin={messageStore.receivedContent?.content ?? ""}
+                  destination={messageStore.receivedContent?.extraContent ??
+                    contentToDisplay?.content?.extraContent ?? ""}
+                  origin={messageStore.receivedContent?.content ??
+                    contentToDisplay?.content?.content ?? ""}
                   languageCode={messageStore.receivedContent?.langCode ?? "en"}
                 />
               )}
-            </>
-          )
-        })}
+            </div>
+          )}
 
 
         {contentToDisplay?.type === "Survey" && messageStore.receivedSurvey && (

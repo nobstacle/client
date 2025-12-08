@@ -12,6 +12,7 @@ const SimpleMap: React.FC<{
   destination: string;
   languageCode: string;
 }> = ({ origin, destination, languageCode }) => {
+  console.info("HHHHHHHHHHHHHHHHHH",origin,destination )
   return (
     <LoadScript
       googleMapsApiKey="AIzaSyBB5xoUCTVJoyYUy-4r7LAySR8SpfaVsHA"

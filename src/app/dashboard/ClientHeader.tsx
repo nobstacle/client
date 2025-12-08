@@ -372,8 +372,8 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
 
     const showDrawer = () => setDrawerOpen(true);
     const closeDrawer = () => setDrawerOpen(false);
+
     const openQuickActions = () => {
-        console.info("CKCLID");
         setShortcutMenuOpen(true);
     }
 
@@ -441,11 +441,11 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         } else {
             contentType = ChatType.Text;
         }
-        
-console.info("templateToSend",templateToSend);
-console.info("CHEKCING",contentExtra);
-console.info("contentType",contentType);
-console.info("template",template);
+
+        console.info("templateToSend", templateToSend);
+        console.info("CHEKCING", contentExtra);
+        console.info("contentType", contentType);
+        console.info("template", template);
 
         emitSendTemplate({
             refId: templateToSend?.id,
@@ -524,8 +524,7 @@ console.info("template",template);
         } else if (template?.type === 'slideshow') {
             contentType = ChatType.Slideshow;
         } else if (template?.type === 'map') {
-            contentType = ChatType.Map;
-            // For map templates, we need to send both origin and destination
+            contentType = 'MapTemplateQr';
             contentExtra = JSON.stringify({
                 origin: templateToSend?.origin || '',
                 destination: templateToSend?.destination || ''
