@@ -1187,3 +1187,7 @@ button {
 #nobstacle-header-iframe {
   transition: height 0.25s ease !important;
 }
+
+#card-wrapper {
+  z-index: 0 !important;
+}

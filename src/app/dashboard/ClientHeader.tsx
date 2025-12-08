@@ -441,6 +441,11 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         } else {
             contentType = ChatType.Text;
         }
+        
+console.info("templateToSend",templateToSend);
+console.info("CHEKCING",contentExtra);
+console.info("contentType",contentType);
+console.info("template",template);
 
         emitSendTemplate({
             refId: templateToSend?.id,
