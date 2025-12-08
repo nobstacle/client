@@ -324,6 +324,7 @@ function createHamburgerDropdown(content) {
   addDebugLog('✓ Hamburger dropdown created');
 }
 
+
 function createChatPopup(content) {
   document.getElementById('nobstacle-chat-popup')?.remove();
 
@@ -614,6 +615,34 @@ async function injectHeader() {
         }, 100);
       }
     }
+
+    if (event.data.type === 'STATION_CHANGE') {
+    const newStation = event.data.station;
+
+    // Update URL params
+    const currentUrl = new URL(window.location.href);
+    currentUrl.searchParams.set('station', newStation);
+
+    // Push new state
+    window.history.pushState({}, '', currentUrl.toString());
+
+    // Create and dispatch a custom event for socket context
+    const stationEvent = new CustomEvent('stationChanged', {
+        detail: { station: newStation }
+    });
+    window.dispatchEvent(stationEvent);
+
+    // Force a re-render by updating router
+    if (typeof window !== 'undefined') {
+        const popStateEvent = new PopStateEvent('popstate', { state: {} });
+        window.dispatchEvent(popStateEvent);
+    }
+
+    message.success(`Switched to Station ${newStation}`);
+    
+    // Close the hamburger menu
+    setIsHamburgerMenuOpen(false);
+}
 
     if (event.data.type === 'BACKEND_TOKEN') {
       addDebugLog('✓ Received backend token');
