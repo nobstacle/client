@@ -1,5 +1,5 @@
 'use client';
-import ReactDOM from 'react-dom';
+// import ReactDOM from 'react-dom';
 import { useCallback, useEffect, useRef, useMemo } from "react";
 import { useState } from "react";
 import { Drawer, Button, Input, List, Tag, Spin, Empty, message } from "antd";
@@ -359,17 +359,6 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    // useEffect(() => {
-    //     if (isDropdownVisible && searchRef.current) {
-    //         const rect = searchRef.current.getBoundingClientRect();
-    //         setDropdownPosition({
-    //             top: rect.bottom + 4,
-    //             right: window.innerWidth - rect.right,
-    //             width: Math.max(300, rect.width)
-    //         });
-    //     }
-    // }, [isDropdownVisible]);
-
     const showDrawer = () => setDrawerOpen(true);
     const closeDrawer = () => setDrawerOpen(false);
 
@@ -441,11 +430,6 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         } else {
             contentType = ChatType.Text;
         }
-
-        console.info("templateToSend", templateToSend);
-        console.info("CHEKCING", contentExtra);
-        console.info("contentType", contentType);
-        console.info("template", template);
 
         emitSendTemplate({
             refId: templateToSend?.id,
@@ -650,7 +634,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
             image: '<svg style="width: 24px; height: 24px;" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clip-rule="evenodd"></path></svg>',
             video: '<svg style="width: 24px; height: 24px;" fill="currentColor" viewBox="0 0 20 20"><path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zm12.553 1.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z"></path></svg>',
             website: '<svg style="width: 24px; height: 24px;" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.083 9h1.946c.089-1.546.383-2.97.837-4.118A6.004 6.004 0 004.083 9zM10 2a8 8 0 100 16 8 8 0 000-16zm0 2c-.076 0-.232.032-.465.262-.238.234-.497.623-.737 1.182-.389.907-.673 2.142-.766 3.556h3.936c-.093-1.414-.377-2.649-.766-3.556-.24-.56-.5-.948-.737-1.182C10.232 4.032 10.076 4 10 4zm3.971 5c-.089-1.546-.383-2.97-.837-4.118A6.004 6.004 0 0115.917 9h-1.946zm-2.003 2H8.032c.093 1.414.377 2.649.766 3.556.24.56.5.948.737 1.182.233.23.389.262.465.262.076 0 .232-.032.465-.262.238-.234.498-.623.737-1.182.389-.907.673-2.142.766-3.556zm1.166 4.118c.454-1.147.748-2.572.837-4.118h1.946a6.004 6.004 0 01-2.783 4.118zm-6.268 0C6.412 13.97 6.118 12.546 6.03 11H4.083a6.004 6.004 0 002.783 4.118z" clip-rule="evenodd"></path></svg>',
-            slideshow: '<svg style="width: 24px; height: 24px;" fill="currentColor" viewBox="0 0 20 20"><path d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z"></path></svg>',
+            slideshow: '<svg style="width: 24px; height: 24px;" fill="currentColor" viewBox="0 0 20 20"><path d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm0 2h4v4H4V5zm6 0h6v4h-6V5zm-6 6h4v4H4v-4zm6 0h6v4h-6v-4z"></path></svg>',
             map: '<svg style="width: 24px; height: 24px;" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M12 1.586l-4 4v12.828l4-4V1.586zM3.707 3.293A1 1 0 002 4v10a1 1 0 00.293.707L6 18.414V5.586L3.707 3.293zM17.707 5.293L14 1.586v12.828l2.293 2.293A1 1 0 0018 16V6a1 1 0 00-.293-.707z" clip-rule="evenodd"></path></svg>',
             document: '<svg style="width: 24px; height: 24px;" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd"></path></svg>'
         };
@@ -747,7 +731,6 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
             });
         }
     }, [isDropdownVisible, filteredTemplates, isLoading, isInIframe, generateSearchDropdownHTML]);
-
 
     // Add this useEffect near the top with other useEffects:
     useEffect(() => {
@@ -913,14 +896,31 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                 >
                     <div className="flex h-full w-full items-center justify-between mx-auto">
                         <div className="flex items-center gap-2 lg:gap-6">
-                            <div style={{
-                                paddingTop: "0.2em",
-                                paddingRight: isInIframe ? "0.5em" : "1em",
-                                width: isInIframe ? '3vw' : '4vw',
-                                minWidth: '40px'
-                            }}>
+                            <div
+                                onClick={() => {
+                                    const defaultSlideshow = slideshowTemplates?.[0];
+                                    if (defaultSlideshow && socketConnected) {
+                                        const isAvailable = defaultSlideshow.langCode?.includes(selectedLang);
+                                        emitSendTemplate({
+                                            refId: defaultSlideshow.id,
+                                            langCode: isAvailable ? selectedLang : (companyData?.defaultLangCode || "en"),
+                                            refType: ChatType.Slideshow,
+                                            station: Number(params.get("station") ?? 1),
+                                            contentExtra: defaultSlideshow.ext,
+                                        });
+                                    }
+                                }}
+                                style={{
+                                    paddingTop: "0.2em",
+                                    paddingRight: isInIframe ? "0.5em" : "1em",
+                                    width: isInIframe ? '3vw' : '4vw',
+                                    minWidth: '40px',
+                                    cursor: slideshowTemplates?.[0] ? 'pointer' : 'default'
+                                }}
+                            >
                                 <CompanyLogo />
                             </div>
+
                             {!isSAdmin && (
                                 <div className="flex items-center gap-1 lg:gap-4">
                                     <div className="bg-white/10 backdrop-blur-sm rounded-lg px-2 py-1 lg:px-4 text-xs lg:text-xs">

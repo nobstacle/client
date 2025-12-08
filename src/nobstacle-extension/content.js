@@ -235,6 +235,7 @@ function createRecordingIndicator(data) {
   document.body.appendChild(indicator);
   addDebugLog('✓ Recording indicator created');
 }
+
 function createHamburgerDropdown(content) {
   document.getElementById('nobstacle-hamburger-dropdown')?.remove();
 
@@ -306,24 +307,36 @@ function createHamburgerDropdown(content) {
         }, '*');
         dropdown.remove();
       });
+
+      // Prevent clicks on the select from closing the dropdown
+      select.addEventListener('mousedown', (e) => {
+        e.stopPropagation();
+      });
+
+      select.addEventListener('click', (e) => {
+        e.stopPropagation();
+      });
     }
   }, 100);
 
   setTimeout(() => {
     const closeHandler = (e) => {
       const iframeElement = document.getElementById('nobstacle-header-iframe');
-      if (!dropdown.contains(e.target) && e.target !== iframeElement) {
-        dropdown.remove();
-        iframe.contentWindow.postMessage({ type: 'HAMBURGER_CLOSED' }, '*');
-        document.removeEventListener('mousedown', closeHandler);
+
+      // Don't close if clicking inside the dropdown or on the iframe
+      if (dropdown.contains(e.target) || e.target === iframeElement) {
+        return;
       }
+
+      dropdown.remove();
+      iframe.contentWindow.postMessage({ type: 'HAMBURGER_CLOSED' }, '*');
+      document.removeEventListener('mousedown', closeHandler);
     };
     document.addEventListener('mousedown', closeHandler);
-  }, 100);
+  }, 200);  // Increased delay to ensure select listeners are attached first
 
   addDebugLog('✓ Hamburger dropdown created');
 }
-
 
 function createChatPopup(content) {
   document.getElementById('nobstacle-chat-popup')?.remove();
@@ -617,32 +630,32 @@ async function injectHeader() {
     }
 
     if (event.data.type === 'STATION_CHANGE') {
-    const newStation = event.data.station;
+      const newStation = event.data.station;
 
-    // Update URL params
-    const currentUrl = new URL(window.location.href);
-    currentUrl.searchParams.set('station', newStation);
+      // Update URL params
+      const currentUrl = new URL(window.location.href);
+      currentUrl.searchParams.set('station', newStation);
 
-    // Push new state
-    window.history.pushState({}, '', currentUrl.toString());
+      // Push new state
+      window.history.pushState({}, '', currentUrl.toString());
 
-    // Create and dispatch a custom event for socket context
-    const stationEvent = new CustomEvent('stationChanged', {
+      // Create and dispatch a custom event for socket context
+      const stationEvent = new CustomEvent('stationChanged', {
         detail: { station: newStation }
-    });
-    window.dispatchEvent(stationEvent);
+      });
+      window.dispatchEvent(stationEvent);
 
-    // Force a re-render by updating router
-    if (typeof window !== 'undefined') {
+      // Force a re-render by updating router
+      if (typeof window !== 'undefined') {
         const popStateEvent = new PopStateEvent('popstate', { state: {} });
         window.dispatchEvent(popStateEvent);
-    }
+      }
 
-    message.success(`Switched to Station ${newStation}`);
-    
-    // Close the hamburger menu
-    setIsHamburgerMenuOpen(false);
-}
+      message.success(`Switched to Station ${newStation}`);
+
+      // Close the hamburger menu
+      setIsHamburgerMenuOpen(false);
+    }
 
     if (event.data.type === 'BACKEND_TOKEN') {
       addDebugLog('✓ Received backend token');
