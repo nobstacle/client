@@ -66,195 +66,202 @@ export const TemplateShortcutPicker: React.FC<{ checkIframe?: boolean }> = ({
     return IconComponent ? <IconComponent size={iconSize} color={color || "white"} /> : null;
   };
 
-  const handleOnSendTemplateClick = (
-    id: number,
-    type: ChatType,
-    tag: string,
-  ) => {
-    let template:
-      | GetTextTemplateRes
-      | GetImageTemplateRes
-      | GetVideoTemplateRes
-      | GetSlideshowTemplateRes
-      | GetMapTemplateRes
-      | GetWebsiteTemplateRes
-      | GetDocumentTemplateRes
-      | undefined;
+const handleOnSendTemplateClick = (
+  id: number,
+  type: ChatType,
+  tag: string,
+) => {
+  const templateShortcut = templatesShortcuts.find(
+    (templateShortcut) => templateShortcut.id === id,
+  );
 
-    const templateShortcut = templatesShortcuts.find(
-      (templateShortcut) => templateShortcut.id === id,
-    );
+  if (!templateShortcut) return;
 
-    if (!templateShortcut) return;
+  console.info("template shortcut clicked", { id, type, tag });
 
-    console.info("template", template);
+  if (isInIframe) {
+    console.log('[TemplateShortcutPicker] Sending to parent window', { id, type, tag });
+    
+    window.parent.postMessage({
+      type: 'TEMPLATE_SHORTCUT_CLICK',
+      templateType: type, 
+      refType: type,       
+      id: id,
+      tag: tag
+    }, '*');
+    return;
+  }
 
-    if (isInIframe) {
-      console.log('[TemplateShortcutPicker] Sending to parent window');
-      window.parent.postMessage({
-        type: 'TEMPLATE_SHORTCUT_CLICK',
-        templateType: type,
-        id: id,
-        tag: tag
-      }, '*');
-      return;
-    }
+  // Rest of the function for non-iframe mode...
+  let template:
+    | GetTextTemplateRes
+    | GetImageTemplateRes
+    | GetVideoTemplateRes
+    | GetSlideshowTemplateRes
+    | GetMapTemplateRes
+    | GetWebsiteTemplateRes
+    | GetDocumentTemplateRes
+    | undefined;
 
-    let isExistOnDefaultLanguage = false;
-    if (!template) return;
+  let isExistOnDefaultLanguage = false;
 
-    switch (type) {
-      case "Text":
+  switch (type) {
+    case "Text":
+      template = texts.find(
+        (text) =>
+          text.tag === tag &&
+          text.langCode.includes(
+            params.get("lang") || company?.defaultLangCode || "en",
+          ),
+      );
+
+      if (!template && company?.defaultLangCode) {
         template = texts.find(
           (text) =>
             text.tag === tag &&
-            text.langCode.includes(
-              params.get("lang") || company?.defaultLangCode || "en",
-            ),
+            text.langCode.includes(company?.defaultLangCode),
         );
+        isExistOnDefaultLanguage = true;
+      }
+      break;
 
-        if (!template && company?.defaultLangCode) {
-          template = texts.find(
-            (text) =>
-              text.tag === tag &&
-              text.langCode.includes(company?.defaultLangCode),
-          );
-          isExistOnDefaultLanguage = true;
-        }
-        break;
+    case "Image":
+      template = images.find(
+        (image) =>
+          image.tag === tag &&
+          image.langCode.includes(
+            params.get("lang") || company?.defaultLangCode || "en",
+          ),
+      );
 
-      case "Image":
+      if (!template && company?.defaultLangCode) {
         template = images.find(
           (image) =>
             image.tag === tag &&
-            image.langCode.includes(
-              params.get("lang") || company?.defaultLangCode || "en",
-            ),
+            image.langCode.includes(company?.defaultLangCode),
         );
+        isExistOnDefaultLanguage = true;
+      }
+      break;
 
-        if (!template && company?.defaultLangCode) {
-          template = images.find(
-            (image) =>
-              image.tag === tag &&
-              image.langCode.includes(company?.defaultLangCode),
-          );
-          isExistOnDefaultLanguage = true;
-        }
-        break;
+    case "Video":
+      template = videos.find(
+        (video) =>
+          video.tag === tag &&
+          video.langCode.includes(
+            params.get("lang") || company?.defaultLangCode || "en",
+          ),
+      );
 
-      case "Video":
+      if (!template && company?.defaultLangCode) {
         template = videos.find(
           (video) =>
             video.tag === tag &&
-            video.langCode.includes(
-              params.get("lang") || company?.defaultLangCode || "en",
-            ),
+            video.langCode.includes(company?.defaultLangCode),
         );
+        isExistOnDefaultLanguage = true;
+      }
+      break;
 
-        if (!template && company?.defaultLangCode) {
-          template = videos.find(
-            (video) =>
-              video.tag === tag &&
-              video.langCode.includes(company?.defaultLangCode),
-          );
-          isExistOnDefaultLanguage = true;
-        }
-        break;
+    case "Slideshow":
+      template = slideshows.find(
+        (slideshow) =>
+          slideshow.tag === tag &&
+          slideshow.langCode.includes(
+            params.get("lang") || company?.defaultLangCode || "en",
+          ),
+      );
 
-      case "Slideshow":
+      if (!template && company?.defaultLangCode) {
         template = slideshows.find(
           (slideshow) =>
             slideshow.tag === tag &&
-            slideshow.langCode.includes(
-              params.get("lang") || company?.defaultLangCode || "en",
-            ),
+            slideshow.langCode.includes(company?.defaultLangCode),
         );
+        isExistOnDefaultLanguage = true;
+      }
+      break;
 
-        if (!template && company?.defaultLangCode) {
-          template = slideshows.find(
-            (slideshow) =>
-              slideshow.tag === tag &&
-              slideshow.langCode.includes(company?.defaultLangCode),
-          );
-          isExistOnDefaultLanguage = true;
-        }
-        break;
+    case "Map":
+      template = maps.find(
+        (map) =>
+          map.tag === tag &&
+          map.langCode.includes(
+            params.get("lang") || company?.defaultLangCode || "en",
+          ),
+      );
 
-      case "Map":
+      if (!template && company?.defaultLangCode) {
         template = maps.find(
           (map) =>
             map.tag === tag &&
-            map.langCode.includes(
-              params.get("lang") || company?.defaultLangCode || "en",
-            ),
+            map.langCode.includes(company?.defaultLangCode),
         );
+        isExistOnDefaultLanguage = true;
+      }
+      break;
 
-        if (!template && company?.defaultLangCode) {
-          template = maps.find(
-            (map) =>
-              map.tag === tag &&
-              map.langCode.includes(company?.defaultLangCode),
-          );
-          isExistOnDefaultLanguage = true;
-        }
-        break;
+    case "Website":
+      template = websites.find(
+        (website) =>
+          website.tag === tag &&
+          website.langCode.includes(
+            params.get("lang") || company?.defaultLangCode || "en",
+          ),
+      );
 
-      case "Website":
+      if (!template && company?.defaultLangCode) {
         template = websites.find(
           (website) =>
             website.tag === tag &&
-            website.langCode.includes(
-              params.get("lang") || company?.defaultLangCode || "en",
-            ),
+            website.langCode.includes(company?.defaultLangCode),
         );
+        isExistOnDefaultLanguage = true;
+      }
+      break;
 
-        if (!template && company?.defaultLangCode) {
-          template = websites.find(
-            (website) =>
-              website.tag === tag &&
-              website.langCode.includes(company?.defaultLangCode),
-          );
-          isExistOnDefaultLanguage = true;
-        }
-        break;
+    case "Document":
+      template = documents.find(
+        (document) =>
+          document.tag === tag &&
+          document.langCode.includes(
+            params.get("lang") || company?.defaultLangCode || "en",
+          ),
+      );
 
-      case "Document":
+      if (!template && company?.defaultLangCode) {
         template = documents.find(
           (document) =>
             document.tag === tag &&
-            document.langCode.includes(
-              params.get("lang") || company?.defaultLangCode || "en",
-            ),
+            document.langCode.includes(company?.defaultLangCode),
         );
+        isExistOnDefaultLanguage = true;
+      }
+      break;
 
-        if (!template && company?.defaultLangCode) {
-          template = documents.find(
-            (document) =>
-              document.tag === tag &&
-              document.langCode.includes(company?.defaultLangCode),
-          );
-          isExistOnDefaultLanguage = true;
-        }
-        break;
+    default:
+      template = undefined;
+  }
 
-      default:
-        template = undefined;
-    }
+  if (!template) {
+    console.error('[TemplateShortcutPicker] Template not found', { type, tag });
+    return;
+  }
 
-    emitSendTemplate({
-      refId: template.id,
-      langCode: isExistOnDefaultLanguage
-        ? company?.defaultLangCode || "en"
-        : params.get("lang") || company?.defaultLangCode || "en",
-      refType: type as any,
-      station: Number(params.get("station") ?? 1),
-      contentExtra:
-        (template as GetImageTemplateRes | GetVideoTemplateRes)?.ext ??
-        undefined,
-    });
+  emitSendTemplate({
+    refId: template.id,
+    langCode: isExistOnDefaultLanguage
+      ? company?.defaultLangCode || "en"
+      : params.get("lang") || company?.defaultLangCode || "en",
+    refType: type as any,
+    station: Number(params.get("station") ?? 1),
+    contentExtra:
+      (template as GetImageTemplateRes | GetVideoTemplateRes)?.ext ??
+      undefined,
+  });
 
-    console.log('[TemplateShortcutPicker] Template sent');
-  };
+  console.log('[TemplateShortcutPicker] Template sent');
+};
 
   if (!isHydrated || shortcutsLoading) {
     return (

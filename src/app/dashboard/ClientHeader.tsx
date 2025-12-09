@@ -831,58 +831,161 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
             }
 
             if (event.data.type === 'TEMPLATE_SHORTCUT_CLICK') {
-                const { id, templateType, tag } = event.data;
+                const { id, templateType, refType, tag } = event.data;
 
-                console.log('[ClientHeader] Received', { id, templateType, tag }); // ADD THIS
-                console.log('[ClientHeader] Templates?', {
-                    text: textTemplates?.length,
-                    image: imageTemplates?.length
+                const type = refType || templateType;
+
+                console.log('[ClientHeader] Received template shortcut click', {
+                    id,
+                    type,
+                    tag,
+                    hasTextTemplates: !!textTemplates,
+                    textTemplatesCount: textTemplates?.length,
+                    hasImageTemplates: !!imageTemplates,
+                    imageTemplatesCount: imageTemplates?.length
                 });
 
                 let template;
                 let contentExtra;
-                let contentType = templateType;
-                const type = templateType;
 
                 if (type === 'Text' && textTemplates) {
-                    template = textTemplates.find(t => t.tag === tag && t.langCode?.includes(selectedLang));
+                    template = textTemplates.find(t =>
+                        t.tag === tag &&
+                        t.langCode?.includes(selectedLang)
+                    );
+
+                    // Fallback to default language
+                    if (!template && companyData?.defaultLangCode) {
+                        template = textTemplates.find(t =>
+                            t.tag === tag &&
+                            t.langCode?.includes(companyData.defaultLangCode)
+                        );
+                    }
                 } else if (type === 'Image' && imageTemplates) {
-                    template = imageTemplates.find(t => t.tag === tag && t.langCode?.includes(selectedLang));
+                    template = imageTemplates.find(t =>
+                        t.tag === tag &&
+                        t.langCode?.includes(selectedLang)
+                    );
                     contentExtra = template?.ext;
+
+                    if (!template && companyData?.defaultLangCode) {
+                        template = imageTemplates.find(t =>
+                            t.tag === tag &&
+                            t.langCode?.includes(companyData.defaultLangCode)
+                        );
+                        contentExtra = template?.ext;
+                    }
                 } else if (type === 'Video' && videoTemplates) {
-                    template = videoTemplates.find(t => t.tag === tag && t.langCode?.includes(selectedLang));
+                    template = videoTemplates.find(t =>
+                        t.tag === tag &&
+                        t.langCode?.includes(selectedLang)
+                    );
                     contentExtra = template?.ext;
+
+                    if (!template && companyData?.defaultLangCode) {
+                        template = videoTemplates.find(t =>
+                            t.tag === tag &&
+                            t.langCode?.includes(companyData.defaultLangCode)
+                        );
+                        contentExtra = template?.ext;
+                    }
                 } else if (type === 'Website' && websiteTemplates) {
-                    template = websiteTemplates.find(t => t.tag === tag && t.langCode?.includes(selectedLang));
+                    template = websiteTemplates.find(t =>
+                        t.tag === tag &&
+                        t.langCode?.includes(selectedLang)
+                    );
                     contentExtra = template?.ext;
+
+                    if (!template && companyData?.defaultLangCode) {
+                        template = websiteTemplates.find(t =>
+                            t.tag === tag &&
+                            t.langCode?.includes(companyData.defaultLangCode)
+                        );
+                        contentExtra = template?.ext;
+                    }
                 } else if (type === 'Slideshow' && slideshowTemplates) {
-                    template = slideshowTemplates.find(t => t.tag === tag && t.langCode?.includes(selectedLang));
+                    template = slideshowTemplates.find(t =>
+                        t.tag === tag &&
+                        t.langCode?.includes(selectedLang)
+                    );
                     contentExtra = template?.ext;
+
+                    if (!template && companyData?.defaultLangCode) {
+                        template = slideshowTemplates.find(t =>
+                            t.tag === tag &&
+                            t.langCode?.includes(companyData.defaultLangCode)
+                        );
+                        contentExtra = template?.ext;
+                    }
                 } else if (type === 'Map' && mapTemplates) {
-                    template = mapTemplates.find(t => t.tag === tag && t.langCode?.includes(selectedLang));
+                    template = mapTemplates.find(t =>
+                        t.tag === tag &&
+                        t.langCode?.includes(selectedLang)
+                    );
                     contentExtra = JSON.stringify({
                         origin: template?.origin || '',
                         destination: template?.destination || ''
                     });
+
+                    if (!template && companyData?.defaultLangCode) {
+                        template = mapTemplates.find(t =>
+                            t.tag === tag &&
+                            t.langCode?.includes(companyData.defaultLangCode)
+                        );
+                        contentExtra = JSON.stringify({
+                            origin: template?.origin || '',
+                            destination: template?.destination || ''
+                        });
+                    }
                 } else if (type === 'Document' && documentTemplates) {
-                    template = documentTemplates.find(t => t.tag === tag && t.langCode?.includes(selectedLang));
+                    template = documentTemplates.find(t =>
+                        t.tag === tag &&
+                        t.langCode?.includes(selectedLang)
+                    );
                     contentExtra = template?.ext;
+
+                    if (!template && companyData?.defaultLangCode) {
+                        template = documentTemplates.find(t =>
+                            t.tag === tag &&
+                            t.langCode?.includes(companyData.defaultLangCode)
+                        );
+                        contentExtra = template?.ext;
+                    }
                 }
 
                 if (template && socketConnected) {
-                    console.log('[ClientHeader] Sending via socket', template.id); // ADD THIS
+                    console.log('[ClientHeader] Sending template via socket', {
+                        templateId: template.id,
+                        type: type,
+                        tag: tag,
+                        hasContentExtra: !!contentExtra
+                    });
+
                     emitSendTemplate({
                         refId: template.id,
                         langCode: selectedLang,
-                        refType: type, // Use original type
+                        refType: type,
                         station: Number(params.get("station") ?? 1),
                         contentExtra: contentExtra,
                     });
+
+                    console.log('[ClientHeader] ✓ Template sent successfully');
                 } else {
-                    console.error('[ClientHeader] Failed', {
+                    console.error('[ClientHeader] Failed to send template', {
                         hasTemplate: !!template,
-                        socketConnected
-                    }); // ADD THIS
+                        socketConnected,
+                        type,
+                        tag,
+                        availableTemplates: {
+                            text: textTemplates?.length || 0,
+                            image: imageTemplates?.length || 0,
+                            video: videoTemplates?.length || 0,
+                            website: websiteTemplates?.length || 0,
+                            slideshow: slideshowTemplates?.length || 0,
+                            map: mapTemplates?.length || 0,
+                            document: documentTemplates?.length || 0
+                        }
+                    });
                 }
             }
 
