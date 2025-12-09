@@ -83,11 +83,7 @@ export const TemplateShortcutPicker: React.FC<{ checkIframe?: boolean }> = ({
 
     console.log('[TemplateShortcutPicker] Click detected', { id, type, tag });
     console.log('[TemplateShortcutPicker] Socket connected?', !!emitSendTemplate);
-    console.log('[TemplateShortcutPicker] Templates loaded?', {
-      texts: texts?.length,
-      images: images?.length,
-      videos: videos?.length
-    });
+    console.log('[TemplateShortcutPicker] Templates loaded?', templatesShortcuts);
 
     const templateShortcut = templatesShortcuts.find(
       (templateShortcut) => templateShortcut.id === id,
