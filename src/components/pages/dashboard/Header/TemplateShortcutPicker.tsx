@@ -244,18 +244,26 @@ export const TemplateShortcutPicker: React.FC<{ checkIframe?: boolean }> = ({
       station: Number(params.get("station") ?? 1),
     });
 
-    emitSendTemplate({
-      refId: template.id,
-      langCode: isExistOnDefaultLanguage
-        ? company?.defaultLangCode || "en"
-        : params.get("lang") || company?.defaultLangCode || "en",
-      refType: type as any,
-      station: Number(params.get("station") ?? 1),
-      contentExtra:
-        (template as GetImageTemplateRes | GetVideoTemplateRes)?.ext ??
-        undefined,
-    });
-
+    if (isInIframe) {
+      window.parent.postMessage({
+        type: 'TEMPLATE_SHORTCUT_CLICK',
+        id: id,
+        templateType: type,
+        tag: tag
+      }, '*');
+    } else {
+      emitSendTemplate({
+        refId: template.id,
+        langCode: isExistOnDefaultLanguage
+          ? company?.defaultLangCode || "en"
+          : params.get("lang") || company?.defaultLangCode || "en",
+        refType: type as any,
+        station: Number(params.get("station") ?? 1),
+        contentExtra:
+          (template as GetImageTemplateRes | GetVideoTemplateRes)?.ext ??
+          undefined,
+      });
+    }
     console.log('[TemplateShortcutPicker] Template sent');
   };
 
