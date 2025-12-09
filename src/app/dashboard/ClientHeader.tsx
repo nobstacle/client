@@ -44,6 +44,7 @@ import { GiHamburgerMenu } from "react-icons/gi";
 import { RiLockPasswordLine, RiLogoutBoxLine } from 'react-icons/ri';
 import { HiOutlineOfficeBuilding, HiOutlineUser } from 'react-icons/hi';
 import { signOut } from "next-auth/react";
+import { useMessageStore } from "../../lib/zustand/store/messageStore";
 
 interface ClientHeaderProps {
     user: Session | null;
@@ -69,6 +70,8 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
     const [dropdownPosition, setDropdownPosition] = useState({ top: 0, right: 0, width: 0 });
     const [hamburgerPosition, setHamburgerPosition] = useState({ top: 0, right: 0 });
     const [isInIframe, setIsInIframe] = useState(false);
+    const messageStore = useMessageStore();
+    const { emitSendMessage, emitClearMessage } = useSocketContext();
 
     useEffect(() => {
         setIsInIframe(window.self !== window.top);
@@ -732,13 +735,98 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         }
     }, [isDropdownVisible, filteredTemplates, isLoading, isInIframe, generateSearchDropdownHTML]);
 
+    const updateChatPopupMessages = useCallback(() => {
+        if (!isInIframe) return;
+
+        const userRole = user?.user?.Roles?.[0];
+        const currentUserDefaultLang = companyData?.defaultLangCode || 'en';
+
+        // Get messages for current station
+        const stationMessages = messageStore.receivedMessage.filter(
+            (msg) => msg.station === Number(params.get("station") ?? 1)
+        );
+
+        // Helper to determine if message is from current user
+        const isCurrentUserMessage = (messageRole: string) => {
+            return messageRole === userRole;
+        };
+
+        useEffect(() => {
+            if (isInIframe && messageStore.receivedMessage.length > 0) {
+                updateChatPopupMessages();
+            }
+        }, [messageStore.receivedMessage.length, isInIframe, updateChatPopupMessages]);
+
+        // Helper to get display message based on role
+        const getDisplayMessage = (messageObj) => {
+            const { message, originalMessage, role } = messageObj;
+
+            if (userRole === 'Admin') {
+                if (role === 'Admin') {
+                    return originalMessage || message;
+                } else {
+                    return message;
+                }
+            } else {
+                if (role === 'User') {
+                    return originalMessage || message;
+                } else {
+                    return message;
+                }
+            }
+        };
+
+        // Generate messages HTML
+        const messagesHTML = stationMessages.length === 0 ? `
+    <div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #9ca3af; font-size: 14px;">
+      No messages yet. Start a conversation!
+    </div>
+  ` : stationMessages.map(messageObj => {
+            const isRight = isCurrentUserMessage(messageObj.role);
+            const displayMessage = getDisplayMessage(messageObj);
+
+            return `
+      <div style="display: flex; justify-content: ${isRight ? 'flex-end' : 'flex-start'}; margin-bottom: 16px;">
+        <div style="
+          max-width: 70%;
+          padding: 12px 16px;
+          border-radius: 12px;
+          background: ${isRight ? '#3b5998' : '#f3f4f6'};
+          color: ${isRight ? 'white' : '#1f2937'};
+          word-wrap: break-word;
+        ">
+          <div style="font-size: 14px; line-height: 1.5;">
+            ${displayMessage}
+          </div>
+          ${messageObj.originalMessage && messageObj.originalMessage !== displayMessage ? `
+            <div style="
+              font-size: 12px;
+              opacity: 0.7;
+              font-style: italic;
+              border-top: ${isRight ? '1px solid rgba(255,255,255,0.2)' : '1px solid rgba(0,0,0,0.1)'};
+              padding-top: 6px;
+              margin-top: 6px;
+            ">
+              Original: ${messageObj.originalMessage}
+            </div>
+          ` : ''}
+        </div>
+      </div>
+    `;
+        }).join('');
+
+        // Send update to parent
+        window.parent.postMessage({
+            type: 'CHAT_UPDATE_MESSAGES',
+            html: messagesHTML
+        }, '*');
+    }, [isInIframe, messageStore.receivedMessage, params, user, companyData]);
+
     // Add this useEffect near the top with other useEffects:
     useEffect(() => {
         if (!isInIframe) return;
 
         const handler = (event: MessageEvent) => {
-
-            console.info("CHECKING", event.data.type);
 
             if (event.data.type === 'HAMBURGER_CLOSED') {
                 setIsHamburgerMenuOpen(false);
@@ -992,6 +1080,42 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
             if (event.data.type === 'SEARCH_DROPDOWN_CLOSED') {
                 setIsDropdownVisible(false);
             }
+
+            if (event.data.type === 'CHAT_SEND_MESSAGE') {
+                const messageText = event.data.message;
+                console.log('[ClientHeader] Chat message received:', messageText);
+
+                // Send the message through socket
+                if (socketConnected) {
+                    emitSendMessage({
+                        message: messageText,
+                        station: Number(params.get("station") ?? 1),
+                        refType: "ChatMessage",
+                        langCode: companyData?.defaultLangCode ?? "en",
+                    });
+
+                    // After sending, update the chat popup with new messages
+                    setTimeout(() => {
+                        updateChatPopupMessages();
+                    }, 100);
+                } else {
+                    message.warning('Connection not ready');
+                }
+            }
+
+            if (event.data.type === 'CHAT_CLEAR') {
+                console.log('[ClientHeader] Chat cleared');
+                // Clear messages in your message store
+                messageStore.reset();
+
+                // Update the popup to show empty state
+                updateChatPopupMessages();
+            }
+
+            if (event.data.type === 'CHAT_POPUP_CLOSED') {
+                console.log('[ClientHeader] Chat popup closed');
+            }
+
         };
 
         window.addEventListener('message', handler);
@@ -1011,7 +1135,12 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         selectedLang,
         socketConnected,
         emitSendTemplate,
-        params
+        params,
+        companyData,
+        user,
+        emitSendMessage,
+        messageStore,
+        updateChatPopupMessages
     ]);
 
     return (
@@ -1092,7 +1221,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                     paddingRight: isInIframe ? "0.5em" : "1em",
                                     width: isInIframe ? '3vw' : '4vw',
                                     minWidth: '40px',
-                                    cursor: slideshowTemplates?.[0] ? 'pointer' : 'default'
+                                    cursor: 'pointer'
                                 }}
                             >
                                 <CompanyLogo />

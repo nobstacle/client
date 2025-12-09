@@ -717,41 +717,16 @@ export const Content: React.FC = () => {
     const updateVideoStyles = () => {
       if (!videoElement.current) return;
 
-      const containerWidth = window.innerWidth;
-      const containerHeight = window.innerHeight;
-      const containerAspectRatio = containerWidth / containerHeight;
-
       const video = videoElement.current;
 
       const handleLoadedMetadata = () => {
-        const videoWidth = video.videoWidth;
-        const videoHeight = video.videoHeight;
-        const videoAspectRatio = videoWidth / videoHeight;
-
-        let width: any;
-        let height: any;
-
-        if (videoAspectRatio > containerAspectRatio) {
-          width = containerWidth;
-          height = containerWidth / videoAspectRatio;
-
-          if (height > containerHeight) {
-            height = containerHeight;
-            width = containerHeight * videoAspectRatio;
-          }
-        } else {
-          height = containerHeight;
-          width = containerHeight * videoAspectRatio;
-
-          if (width > containerWidth) {
-            width = containerWidth;
-            height = containerWidth / videoAspectRatio;
-          }
-        }
-
-        video.style.width = `${width}px`;
-        video.style.height = `${height}px`;
+        // Force video to cover the entire viewport
+        video.style.width = '100vw';
+        video.style.height = '100vh';
         video.style.objectFit = 'contain';
+        video.style.position = 'absolute';
+        video.style.top = '0';
+        video.style.left = '0';
       };
 
       if (video.readyState >= 1) {
@@ -766,7 +741,11 @@ export const Content: React.FC = () => {
     };
 
     const handleResize = () => {
-      setTimeout(updateVideoStyles, 100);
+      if (videoElement.current) {
+        videoElement.current.style.width = '100vw';
+        videoElement.current.style.height = '100vh';
+        videoElement.current.style.objectFit = 'contain';
+      }
     };
 
     updateVideoStyles();
@@ -1659,32 +1638,44 @@ export const Content: React.FC = () => {
           ) : (
             <>
               <style jsx>{`
-          @keyframes fadeOut {
-            0% { opacity: 1; }
-            70% { opacity: 1; }
-            100% { opacity: 0; pointer-events: none; }
-          }
+        @keyframes fadeOut {
+          0% { opacity: 1; }
+          70% { opacity: 1; }
+          100% { opacity: 0; pointer-events: none; }
+        }
 
-          .fade-out-prompt {
-            animation: fadeOut 3s forwards;
-          }
-        `}</style>
+        .fade-out-prompt {
+          animation: fadeOut 3s forwards;
+        }
 
-              <div
-                style={{
-                  position: 'fixed',
-                  top: 0,
-                  left: 0,
-                  width: '100vw',
-                  height: '100vh',
-                  overflow: 'hidden',
-                  zIndex: 9,
-                  backgroundColor: 'black',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
+        .video-container {
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100vw;
+          height: 100vh;
+          overflow: hidden;
+          z-index: 9;
+          background-color: black;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .fullscreen-video {
+          width: 100vw !important;
+          height: 100vh !important;
+          max-width: 100vw !important;
+          max-height: 100vh !important;
+          object-fit: contain !important;
+          position: absolute !important;
+          top: 0 !important;
+          left: 0 !important;
+          display: block !important;
+        }
+      `}</style>
+
+              <div className="video-container">
                 <video
                   ref={videoElement}
                   autoPlay
@@ -1692,6 +1683,7 @@ export const Content: React.FC = () => {
                   loop
                   playsInline
                   preload="auto"
+                  className="fullscreen-video"
                   key={messageStore.receivedContent?.content ?? ""}
                   onLoadedData={() => {
                     if (videoElement.current) {
@@ -1700,14 +1692,6 @@ export const Content: React.FC = () => {
                         console.error("Video play failed:", err);
                       });
                     }
-                  }}
-                  style={{
-                    maxWidth: '100%',
-                    maxHeight: '100%',
-                    width: 'auto',
-                    height: 'auto',
-                    objectFit: 'contain',
-                    display: 'block',
                   }}
                 >
                   <source
@@ -1732,6 +1716,7 @@ export const Content: React.FC = () => {
                       alignItems: 'center',
                       justifyContent: 'center',
                       cursor: 'pointer',
+                      zIndex: 10,
                     }}
                   >
                     <div
@@ -1775,6 +1760,7 @@ export const Content: React.FC = () => {
                       justifyContent: 'center',
                       backdropFilter: 'blur(5px)',
                       transition: 'all 0.2s ease',
+                      zIndex: 11,
                     }}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
@@ -1813,8 +1799,6 @@ export const Content: React.FC = () => {
           messageStore.receivedType?.includes("Map")
         ) && (
             <div className="w-full h-full">
-              {console.log("MAP BLOCK FINALLY TRIGGERED!", { contentToDisplay, receivedType: messageStore.receivedType })}
-
               {/* QR version */}
               {["MapTemplateQr", "WebsiteTemplateQr"].includes(contentToDisplay?.type) ? (
                 <div className="flex justify-center items-center h-screen bg-gray-50">

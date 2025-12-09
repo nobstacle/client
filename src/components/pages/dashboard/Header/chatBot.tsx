@@ -3,6 +3,9 @@
 import { useState, useEffect, useRef } from "react";
 import { Modal, Button, Tooltip, message as antMessage } from "antd";
 import { IoChatbubbles, IoMicOutline, IoMicOffOutline } from "react-icons/io5";
+import { useSocketContext } from "../../../context/SocketContextProvider";
+import { useSearchParams } from "next/navigation";
+import { useMessageStore } from "../../../lib/zustand/store/messageStore";
 
 interface Message {
   id: string;
@@ -25,11 +28,16 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [isRecording, setIsRecording] = useState(false);
-  const [userLang, setUserLang] = useState("en"); // User's preferred language
-  const [targetLang, setTargetLang] = useState("es"); // Customer's language
+  const [userLang, setUserLang] = useState("en");
+  const [targetLang, setTargetLang] = useState("es");
   const chatBoxRef = useRef<HTMLDivElement | null>(null);
   const buttonRef = useRef<HTMLButtonElement | null>(null);
   const recognitionRef = useRef<any>(null);
+  
+  // Add socket and params
+  const { emitSendMessage, socketConnected } = useSocketContext();
+  const params = useSearchParams();
+  const messageStore = useMessageStore();
 
   // Initialize speech recognition
   useEffect(() => {
@@ -46,8 +54,6 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
           const transcript = event.results[0][0].transcript;
           setInputValue(transcript);
           setIsRecording(false);
-          
-          // Auto-send the transcribed message
           await handleSendMessage(transcript);
         };
 
@@ -74,11 +80,9 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
     }
   }, [messages]);
 
-  // Simulate translation API call (replace with actual API)
+  // Simulate translation API call
   const translateText = async (text: string, fromLang: string, toLang: string): Promise<string> => {
-    // Mock translation - replace with actual Google Translate API or similar
     try {
-      // Example using a free translation API
       const response = await fetch(
         `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${fromLang}|${toLang}`
       );
@@ -86,7 +90,7 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
       return data.responseData.translatedText || text;
     } catch (error) {
       console.error('Translation error:', error);
-      return text; // Return original text if translation fails
+      return text;
     }
   };
 
@@ -98,7 +102,6 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
       return;
     }
 
-    // Create user message
     const userMessage: Message = {
       id: Date.now().toString(),
       sender: 'user',
@@ -108,7 +111,6 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
       timestamp: Date.now()
     };
 
-    // Translate user message to target language
     try {
       const translated = await translateText(textToSend, userLang, targetLang);
       userMessage.translatedText = translated;
@@ -116,7 +118,7 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
       setMessages(prev => [...prev, userMessage]);
       setInputValue("");
 
-      // Simulate receiving a response (replace with actual socket/API call)
+      // Simulate response
       setTimeout(async () => {
         const responseText = "Thank you for your message. How can I help you?";
         const translatedResponse = await translateText(responseText, targetLang, userLang);
@@ -174,8 +176,166 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
     }
   };
 
+  const generateMessagesHTML = () => {
+    if (messages.length === 0) {
+      return `
+        <div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #9ca3af; font-size: 14px;">
+          No messages yet. Start a conversation!
+        </div>
+      `;
+    }
+
+    return messages.map(msg => {
+      const isUser = msg.sender === 'user';
+      return `
+        <div style="display: flex; justify-content: ${isUser ? 'flex-end' : 'flex-start'}; margin-bottom: 16px;">
+          <div style="
+            max-width: 70%;
+            padding: 12px 16px;
+            border-radius: 12px;
+            background: ${isUser ? '#3b5998' : '#f3f4f6'};
+            color: ${isUser ? 'white' : '#1f2937'};
+          ">
+            <div style="font-size: 14px; line-height: 1.5; margin-bottom: ${msg.originalText !== msg.translatedText ? '8px' : '0'};">
+              ${msg.translatedText || msg.originalText}
+            </div>
+            ${msg.originalText !== msg.translatedText && msg.translatedText ? `
+              <div style="
+                font-size: 12px;
+                opacity: 0.7;
+                font-style: italic;
+                border-top: ${isUser ? '1px solid rgba(255,255,255,0.2)' : '1px solid rgba(0,0,0,0.1)'};
+                padding-top: 6px;
+              ">
+                Original: ${msg.originalText}
+              </div>
+            ` : ''}
+          </div>
+        </div>
+      `;
+    }).join('');
+  };
+
   const showModal = () => {
-    setIsModalOpen(true);
+    if (isInIframe && buttonRef.current) {
+      // Send message to parent to create chat popup
+      const rect = buttonRef.current.getBoundingClientRect();
+      
+      const chatHTML = `
+        <div style="display: flex; flex-direction: column; height: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;">
+          <!-- Header -->
+          <div style="padding: 16px 20px; border-bottom: 1px solid #e5e7eb; background: #f9fafb; display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-weight: 600; font-size: 16px;">Chat Assistant</span>
+            <div style="display: flex; gap: 12px; font-size: 12px; color: #666;">
+              <span>You: ${userLang.toUpperCase()}</span>
+              <span>→</span>
+              <span>Customer: ${targetLang.toUpperCase()}</span>
+            </div>
+          </div>
+
+          <!-- Messages Container -->
+          <div id="chat-messages-container" style="flex: 1; overflow-y: auto; padding: 20px; background: white;">
+            ${generateMessagesHTML()}
+          </div>
+
+          <!-- Input Area -->
+          <div style="padding: 16px 20px; border-top: 1px solid #e5e7eb; background: #f9fafb;">
+            <div style="display: flex; gap: 12px; align-items: flex-end;">
+              <textarea
+                id="chat-message-input"
+                placeholder="Type in ${userLang.toUpperCase()}... (Press Enter to send)"
+                style="
+                  flex: 1;
+                  padding: 12px;
+                  border: 1px solid #e5e7eb;
+                  border-radius: 8px;
+                  fontSize: 14px;
+                  font-family: inherit;
+                  resize: none;
+                  min-height: 44px;
+                  max-height: 120px;
+                  outline: none;
+                "
+              ></textarea>
+              
+              <button
+                id="chat-send-button"
+                style="
+                  padding: 12px;
+                  background: #3b5998;
+                  color: white;
+                  border: none;
+                  border-radius: 8px;
+                  cursor: pointer;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  min-width: 44px;
+                  transition: all 0.2s;
+                "
+              >
+                <svg viewBox="0 0 512 512" style="width: 20px; height: 20px;">
+                  <polygon style="fill: white;" points="97.478,235.728 147.096,478.242 512,33.758 "/>
+                  <polygon style="fill: #ccc;" points="251.837,373.231 147.096,478.242 164.932,325.531 231.773,327.360 "/>
+                  <polygon style="fill: white;" points="512,33.758 109.455,294.271 0,232.606"/>
+                  <polygon style="fill: white;" points="512,33.758 511.471,35.232 300.246,399.799 164.932,325.531"/>
+                </svg>
+              </button>
+
+              <button
+                id="chat-clear-button"
+                style="
+                  padding: 12px;
+                  background: transparent;
+                  color: #ef4444;
+                  border: 1px solid #e5e7eb;
+                  border-radius: 8px;
+                  cursor: pointer;
+                  font-size: 13px;
+                  font-weight: 500;
+                  transition: all 0.2s;
+                "
+              >
+                Clear
+              </button>
+
+              <button
+                id="chat-close-button"
+                style="
+                  padding: 12px;
+                  background: transparent;
+                  color: #6b7280;
+                  border: 1px solid #e5e7eb;
+                  border-radius: 8px;
+                  cursor: pointer;
+                  font-size: 13px;
+                  font-weight: 500;
+                  transition: all 0.2s;
+                "
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+
+      window.parent.postMessage({
+        type: 'CHAT_POPUP',
+        isOpen: true,
+        content: {
+          html: chatHTML,
+          position: {
+            top: rect.bottom + 8,
+            right: window.innerWidth - rect.right,
+            width: 600,
+            height: 500
+          }
+        }
+      }, '*');
+    } else {
+      setIsModalOpen(true);
+    }
     cb?.();
   };
 
@@ -204,7 +364,6 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
             color: isUser ? 'white' : '#1f2937'
           }}
         >
-          {/* Show translated text prominently */}
           <div style={{ 
             fontSize: '14px', 
             lineHeight: '1.5',
@@ -213,7 +372,6 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
             {msg.translatedText || msg.originalText}
           </div>
           
-          {/* Show original text in smaller font if different */}
           {msg.originalText !== msg.translatedText && msg.translatedText && (
             <div style={{
               fontSize: '12px',
@@ -287,7 +445,6 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
             height: '100%',
             fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
           }}>
-            {/* Messages Container */}
             <div 
               ref={chatBoxRef}
               style={{
@@ -313,7 +470,6 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
               )}
             </div>
 
-            {/* Input Area */}
             <div style={{
               padding: '16px 20px',
               borderTop: '1px solid #e5e7eb',
@@ -339,7 +495,6 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
                   }}
                 />
                 
-                {/* Microphone Button */}
                 <button
                   onClick={toggleRecording}
                   style={{
@@ -363,7 +518,6 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
                   )}
                 </button>
 
-                {/* Send Button */}
                 <button
                   onClick={() => handleSendMessage()}
                   style={{
@@ -388,7 +542,6 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
                   </svg>
                 </button>
 
-                {/* Clear Button */}
                 <button
                   onClick={handleClearChat}
                   style={{
