@@ -81,17 +81,27 @@ export const TemplateShortcutPicker: React.FC<{ checkIframe?: boolean }> = ({
       | GetDocumentTemplateRes
       | undefined;
 
-    console.log('[TemplateShortcutPicker] Click detected', { id, type, tag });
-    console.log('[TemplateShortcutPicker] Socket connected?', !!emitSendTemplate);
-
-
     const templateShortcut = templatesShortcuts.find(
       (templateShortcut) => templateShortcut.id === id,
     );
 
     if (!templateShortcut) return;
 
+    console.info("template", template);
+
+    if (isInIframe) {
+      console.log('[TemplateShortcutPicker] Sending to parent window');
+      window.parent.postMessage({
+        type: 'TEMPLATE_SHORTCUT_CLICK',
+        templateType: type,
+        id: id,
+        tag: tag
+      }, '*');
+      return;
+    }
+
     let isExistOnDefaultLanguage = false;
+    if (!template) return;
 
     switch (type) {
       case "Text":
@@ -230,34 +240,19 @@ export const TemplateShortcutPicker: React.FC<{ checkIframe?: boolean }> = ({
       default:
         template = undefined;
     }
-    
-    console.info("template",template);
-    
-    if (!template) return;
 
-    console.log('[TemplateShortcutPicker] Sending template', templateShortcut);
+    emitSendTemplate({
+      refId: template.id,
+      langCode: isExistOnDefaultLanguage
+        ? company?.defaultLangCode || "en"
+        : params.get("lang") || company?.defaultLangCode || "en",
+      refType: type as any,
+      station: Number(params.get("station") ?? 1),
+      contentExtra:
+        (template as GetImageTemplateRes | GetVideoTemplateRes)?.ext ??
+        undefined,
+    });
 
-    if (isInIframe) {
-      window.parent.postMessage({
-      messageType: 'TEMPLATE_SHORTCUT_CLICK',
-      id: id,
-      templateType: type,
-      tag: tag
-    }, '*');
-    return;
-    } else {
-      emitSendTemplate({
-        refId: template.id,
-        langCode: isExistOnDefaultLanguage
-          ? company?.defaultLangCode || "en"
-          : params.get("lang") || company?.defaultLangCode || "en",
-        refType: type as any,
-        station: Number(params.get("station") ?? 1),
-        contentExtra:
-          (template as GetImageTemplateRes | GetVideoTemplateRes)?.ext ??
-          undefined,
-      });
-    }
     console.log('[TemplateShortcutPicker] Template sent');
   };
 

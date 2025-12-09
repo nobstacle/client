@@ -828,34 +828,34 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
             }
 
             if (event.data.type === 'TEMPLATE_SHORTCUT_CLICK') {
-                const { id, type, tag } = event.data;
+                const { id, templateType, tag } = event.data;
 
                 let template;
                 let contentExtra;
+                let contentType = templateType;
+                const typeUpper = templateType.toUpperCase();
 
-                console.info("))))))))))))))))))))",id, type,tag);
-                
-                if (type === 'Text' && textTemplates) {
+                if (typeUpper === 'Text' && textTemplates) {
                     template = textTemplates.find(t => t.tag === tag && t.langCode?.includes(selectedLang));
-                } else if (type === 'Image' && imageTemplates) {
+                } else if (typeUpper === 'Image' && imageTemplates) {
                     template = imageTemplates.find(t => t.tag === tag && t.langCode?.includes(selectedLang));
                     contentExtra = template?.ext;
-                } else if (type === 'Video' && videoTemplates) {
+                } else if (typeUpper === 'Video' && videoTemplates) {
                     template = videoTemplates.find(t => t.tag === tag && t.langCode?.includes(selectedLang));
                     contentExtra = template?.ext;
-                } else if (type === 'Website' && websiteTemplates) {
+                } else if (typeUpper === 'Website' && websiteTemplates) {
                     template = websiteTemplates.find(t => t.tag === tag && t.langCode?.includes(selectedLang));
                     contentExtra = template?.ext;
-                } else if (type === 'Slideshow' && slideshowTemplates) {
+                } else if (typeUpper === 'Slideshow' && slideshowTemplates) {
                     template = slideshowTemplates.find(t => t.tag === tag && t.langCode?.includes(selectedLang));
                     contentExtra = template?.ext;
-                } else if (type === 'Map' && mapTemplates) {
+                } else if (typeUpper === 'Map' && mapTemplates) {
                     template = mapTemplates.find(t => t.tag === tag && t.langCode?.includes(selectedLang));
                     contentExtra = JSON.stringify({
                         origin: template?.origin || '',
                         destination: template?.destination || ''
                     });
-                } else if (type === 'Document' && documentTemplates) {
+                } else if (typeUpper === 'Document' && documentTemplates) {
                     template = documentTemplates.find(t => t.tag === tag && t.langCode?.includes(selectedLang));
                     contentExtra = template?.ext;
                 }
@@ -864,7 +864,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                     emitSendTemplate({
                         refId: template.id,
                         langCode: selectedLang,
-                        refType: type,
+                        refType: typeUpper,
                         station: Number(params.get("station") ?? 1),
                         contentExtra: contentExtra,
                     });
