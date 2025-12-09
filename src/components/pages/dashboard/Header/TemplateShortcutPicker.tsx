@@ -40,7 +40,7 @@ export const TemplateShortcutPicker: React.FC<{ checkIframe?: boolean }> = ({
   }, [checkIframe]);
 
   // REPLACED: useShortcutStore() → direct API call
-  const { data: templatesShortcuts = [], isLoading: shortcutsLoading } =
+  const { data: templatesShortcuts = [], isLoading: shortcutsLoading, isError } =
     useShortcutControllerGetShortcutMany(
       { type: "Template" },
       {
@@ -48,9 +48,17 @@ export const TemplateShortcutPicker: React.FC<{ checkIframe?: boolean }> = ({
           queryKey: ["shortcuts", "template"],
           staleTime: 1000 * 60 * 5,
           refetchOnWindowFocus: false,
+          retry: 2,
+          enabled: isHydrated,
         },
       }
     );
+
+  useEffect(() => {
+    if (isError) {
+      console.error('[TemplateShortcutPicker] Failed to load shortcuts');
+    }
+  }, [isError]);
 
   const renderIcon = (iconName: string, color?: string) => {
     const IconComponent = (Io5Icons as any)[iconName];
