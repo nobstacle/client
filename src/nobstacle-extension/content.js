@@ -565,6 +565,21 @@ async function injectHeader() {
       addDebugLog('Auth response sent');
     }
 
+    if (event.data.type === 'TEMPLATE_SHORTCUT_CLICK') {
+      addDebugLog('Template shortcut clicked, forwarding to iframe');
+      const iframe = document.getElementById('nobstacle-header-iframe');
+      if (iframe) {
+        iframe.contentWindow.postMessage({
+          type: 'TEMPLATE_SHORTCUT_CLICK',
+          id: event.data.id,
+          templateType: event.data.templateType,
+          refType: event.data.refType,
+          tag: event.data.tag
+        }, '*');
+        addDebugLog('✓ Template shortcut message forwarded');
+      }
+    }
+
     if (event.data.type === 'RECORDING_INDICATOR') {
       if (event.data.show) {
         createRecordingIndicator(event.data);
