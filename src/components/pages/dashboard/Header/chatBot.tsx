@@ -3,9 +3,9 @@
 import { useState, useEffect, useRef } from "react";
 import { Modal, Button, Tooltip, message as antMessage } from "antd";
 import { IoChatbubbles, IoMicOutline, IoMicOffOutline } from "react-icons/io5";
-import { useSocketContext } from "../../../context/SocketContextProvider";
+import { useSocketContext } from "../../../../context/SocketContextProvider";
 import { useSearchParams } from "next/navigation";
-import { useMessageStore } from "../../../lib/zustand/store/messageStore";
+import { useMessageStore } from "../../../../lib/zustand/store/messageStore";
 
 interface Message {
   id: string;
@@ -217,9 +217,13 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
   };
 
   const showModal = () => {
+    console.log('[ChatBot] showModal called, isInIframe:', isInIframe);
+    
     if (isInIframe && buttonRef.current) {
+      console.log('[ChatBot] Sending CHAT_POPUP message to parent');
       // Send message to parent to create chat popup
       const rect = buttonRef.current.getBoundingClientRect();
+      console.log('[ChatBot] Button rect:', rect);
       
       const chatHTML = `
         <div style="display: flex; flex-direction: column; height: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;">
@@ -333,7 +337,10 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
           }
         }
       }, '*');
+      
+      console.log('[ChatBot] ✓ CHAT_POPUP message sent to parent');
     } else {
+      console.log('[ChatBot] Opening modal (not in iframe)');
       setIsModalOpen(true);
     }
     cb?.();
@@ -343,7 +350,7 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
     setIsModalOpen(false);
   };
 
-  const renderMessage = (msg: Message) => {
+ const renderMessage = (msg: Message) => {
     const isUser = msg.sender === 'user';
     
     return (

@@ -340,11 +340,18 @@ function createHamburgerDropdown(content) {
 }
 
 function createChatPopup(content) {
+  console.log('[Content Script] ===== createChatPopup called =====');
+  console.log('[Content Script] Content:', content);
+
   document.getElementById('nobstacle-chat-popup')?.remove();
 
   const iframe = document.getElementById('nobstacle-header-iframe');
-  if (!iframe) return;
+  if (!iframe) {
+    console.error('[Content Script] ERROR: Header iframe not found!');
+    return;
+  }
 
+  console.log('[Content Script] Creating chat popup element');
   const popup = document.createElement('div');
   popup.id = 'nobstacle-chat-popup';
   popup.style.cssText = `
@@ -365,19 +372,27 @@ function createChatPopup(content) {
   `;
 
   popup.innerHTML = content.html;
-
   document.body.appendChild(popup);
+  console.log('[Content Script] ✓ Chat popup appended to body');
 
-  // Forward events from popup to iframe
   setTimeout(() => {
+    console.log('[Content Script] Setting up event listeners');
     const messageInput = popup.querySelector('#chat-message-input');
     const sendButton = popup.querySelector('#chat-send-button');
     const clearButton = popup.querySelector('#chat-clear-button');
     const closeButton = popup.querySelector('#chat-close-button');
 
+    console.log('[Content Script] Found elements:', {
+      messageInput: !!messageInput,
+      sendButton: !!sendButton,
+      clearButton: !!clearButton,
+      closeButton: !!closeButton
+    });
+
     if (messageInput && sendButton) {
       const sendMessage = () => {
         const message = messageInput.value.trim();
+        console.log('[Content Script] Sending message:', message);
         if (message) {
           iframe.contentWindow.postMessage({
             type: 'CHAT_SEND_MESSAGE',
@@ -394,27 +409,34 @@ function createChatPopup(content) {
           sendMessage();
         }
       });
+      console.log('[Content Script] ✓ Message send listeners attached');
     }
 
     if (clearButton) {
       clearButton.addEventListener('click', () => {
+        console.log('[Content Script] Clear button clicked');
         iframe.contentWindow.postMessage({ type: 'CHAT_CLEAR' }, '*');
       });
+      console.log('[Content Script] ✓ Clear button listener attached');
     }
 
     if (closeButton) {
       closeButton.addEventListener('click', () => {
+        console.log('[Content Script] Close button clicked');
         popup.remove();
         iframe.contentWindow.postMessage({ type: 'CHAT_POPUP_CLOSED' }, '*');
       });
+      console.log('[Content Script] ✓ Close button listener attached');
     }
   }, 100);
+
 
   // Close on click outside
   setTimeout(() => {
     const closeHandler = (e) => {
       const iframeElement = document.getElementById('nobstacle-header-iframe');
       if (!popup.contains(e.target) && e.target !== iframeElement) {
+        console.log('[Content Script] Click outside detected, closing popup');
         popup.remove();
         iframe.contentWindow.postMessage({ type: 'CHAT_POPUP_CLOSED' }, '*');
         document.removeEventListener('mousedown', closeHandler);
@@ -554,6 +576,10 @@ async function injectHeader() {
       return;
     }
 
+    console.log('[Content Script] ===== Message received =====');
+    console.log('[Content Script] Type:', event.data.type);
+    console.log('[Content Script] Origin:', event.origin);
+
     if (event.data.type === 'REQUEST_AUTH') {
       addDebugLog('Iframe requested auth');
       const authData = cachedAuthData || await prefetchAuthData();
@@ -597,11 +623,19 @@ async function injectHeader() {
     }
 
     if (event.data.type === 'CHAT_POPUP') {
+      console.log('[Content Script] ===== CHAT_POPUP message received =====');
+      console.log('[Content Script] isOpen:', event.data.isOpen);
+      console.log('[Content Script] content:', event.data.content);
+      addDebugLog('Chat popup message received');
+
       if (event.data.isOpen) {
+        console.log('[Content Script] Calling createChatPopup');
         createChatPopup(event.data.content);
       } else {
+        console.log('[Content Script] Closing chat popup');
         document.getElementById('nobstacle-chat-popup')?.remove();
       }
+      console.log('[Content Script] ===== CHAT_POPUP handler complete =====');
     }
 
     if (event.data.type === 'CHAT_UPDATE_MESSAGES') {
