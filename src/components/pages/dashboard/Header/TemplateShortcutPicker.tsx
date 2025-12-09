@@ -81,6 +81,14 @@ export const TemplateShortcutPicker: React.FC<{ checkIframe?: boolean }> = ({
       | GetDocumentTemplateRes
       | undefined;
 
+    console.log('[TemplateShortcutPicker] Click detected', { id, type, tag });
+    console.log('[TemplateShortcutPicker] Socket connected?', !!emitSendTemplate);
+    console.log('[TemplateShortcutPicker] Templates loaded?', {
+      texts: texts?.length,
+      images: images?.length,
+      videos: videos?.length
+    });
+
     const templateShortcut = templatesShortcuts.find(
       (templateShortcut) => templateShortcut.id === id,
     );
@@ -227,7 +235,14 @@ export const TemplateShortcutPicker: React.FC<{ checkIframe?: boolean }> = ({
         template = undefined;
     }
 
+    console.error('[TemplateShortcutPicker] Template not found', { tag, type });
+
     if (!template) return;
+
+    console.log('[TemplateShortcutPicker] Sending template', {
+      refId: template.id,
+      station: Number(params.get("station") ?? 1),
+    });
 
     emitSendTemplate({
       refId: template.id,
@@ -240,6 +255,8 @@ export const TemplateShortcutPicker: React.FC<{ checkIframe?: boolean }> = ({
         (template as GetImageTemplateRes | GetVideoTemplateRes)?.ext ??
         undefined,
     });
+
+    console.log('[TemplateShortcutPicker] Template sent');
   };
 
   if (!isHydrated || shortcutsLoading) {
