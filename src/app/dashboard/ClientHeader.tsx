@@ -833,6 +833,8 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                 let template;
                 let contentExtra;
 
+                console.info("))))))))))))))))))))",id, type,tag);
+                
                 if (type === 'Text' && textTemplates) {
                     template = textTemplates.find(t => t.tag === tag && t.langCode?.includes(selectedLang));
                 } else if (type === 'Image' && imageTemplates) {

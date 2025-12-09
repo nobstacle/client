@@ -246,11 +246,12 @@ export const TemplateShortcutPicker: React.FC<{ checkIframe?: boolean }> = ({
 
     if (isInIframe) {
       window.parent.postMessage({
-        type: 'TEMPLATE_SHORTCUT_CLICK',
-        id: id,
-        templateType: type,
-        tag: tag
-      }, '*');
+      messageType: 'TEMPLATE_SHORTCUT_CLICK',
+      id: id,
+      templateType: type,
+      tag: tag
+    }, '*');
+    return;
     } else {
       emitSendTemplate({
         refId: template.id,
