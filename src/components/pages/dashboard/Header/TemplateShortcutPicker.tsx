@@ -83,7 +83,7 @@ export const TemplateShortcutPicker: React.FC<{ checkIframe?: boolean }> = ({
 
     console.log('[TemplateShortcutPicker] Click detected', { id, type, tag });
     console.log('[TemplateShortcutPicker] Socket connected?', !!emitSendTemplate);
-    console.log('[TemplateShortcutPicker] Templates loaded?', templatesShortcuts);
+
 
     const templateShortcut = templatesShortcuts.find(
       (templateShortcut) => templateShortcut.id === id,
@@ -230,15 +230,12 @@ export const TemplateShortcutPicker: React.FC<{ checkIframe?: boolean }> = ({
       default:
         template = undefined;
     }
-
-    console.error('[TemplateShortcutPicker] Template not found', { tag, type });
-
+    
+    console.info("template",template);
+    
     if (!template) return;
 
-    console.log('[TemplateShortcutPicker] Sending template', {
-      refId: template.id,
-      station: Number(params.get("station") ?? 1),
-    });
+    console.log('[TemplateShortcutPicker] Sending template', templateShortcut);
 
     if (isInIframe) {
       window.parent.postMessage({
