@@ -737,6 +737,9 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         if (!isInIframe) return;
 
         const handler = (event: MessageEvent) => {
+
+            console.info("CHECKING", event.data.type);
+
             if (event.data.type === 'HAMBURGER_CLOSED') {
                 setIsHamburgerMenuOpen(false);
             }
@@ -830,11 +833,11 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
             if (event.data.type === 'TEMPLATE_SHORTCUT_CLICK') {
                 const { id, templateType, tag } = event.data;
 
-                   console.log('[ClientHeader] Received', { id, templateType, tag }); // ADD THIS
-    console.log('[ClientHeader] Templates?', { 
-        text: textTemplates?.length, 
-        image: imageTemplates?.length 
-    });
+                console.log('[ClientHeader] Received', { id, templateType, tag }); // ADD THIS
+                console.log('[ClientHeader] Templates?', {
+                    text: textTemplates?.length,
+                    image: imageTemplates?.length
+                });
 
                 let template;
                 let contentExtra;
@@ -866,21 +869,21 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                     contentExtra = template?.ext;
                 }
 
-                 if (template && socketConnected) {
-        console.log('[ClientHeader] Sending via socket', template.id); // ADD THIS
-        emitSendTemplate({
-            refId: template.id,
-            langCode: selectedLang,
-            refType: type, // Use original type
-            station: Number(params.get("station") ?? 1),
-            contentExtra: contentExtra,
-        });
-    } else {
-        console.error('[ClientHeader] Failed', { 
-            hasTemplate: !!template, 
-            socketConnected 
-        }); // ADD THIS
-    }
+                if (template && socketConnected) {
+                    console.log('[ClientHeader] Sending via socket', template.id); // ADD THIS
+                    emitSendTemplate({
+                        refId: template.id,
+                        langCode: selectedLang,
+                        refType: type, // Use original type
+                        station: Number(params.get("station") ?? 1),
+                        contentExtra: contentExtra,
+                    });
+                } else {
+                    console.error('[ClientHeader] Failed', {
+                        hasTemplate: !!template,
+                        socketConnected
+                    }); // ADD THIS
+                }
             }
 
             if (event.data.type === 'SEARCH_DROPDOWN_CLOSED') {
@@ -890,7 +893,23 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
 
         window.addEventListener('message', handler);
         return () => window.removeEventListener('message', handler);
-    }, [isInIframe, filteredTemplates, handleTemplateSelect, handleQRCodeClick]);
+    }, [
+        isInIframe,
+        filteredTemplates,
+        handleTemplateSelect,
+        handleQRCodeClick,
+        textTemplates,
+        imageTemplates,
+        videoTemplates,
+        websiteTemplates,
+        slideshowTemplates,
+        mapTemplates,
+        documentTemplates,
+        selectedLang,
+        socketConnected,
+        emitSendTemplate,
+        params
+    ]);
 
     return (
         <>
