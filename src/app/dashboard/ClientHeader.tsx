@@ -889,7 +889,6 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                     style={{
                         backgroundColor: '#3b5998',
                         height: isInIframe ? '3.5rem' : '4.09rem',
-                        pointerEvents: 'auto',
                         position: 'relative',
                         zIndex: 1
                     }}

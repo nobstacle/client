@@ -80,6 +80,7 @@ function injectStyles() {
       margin: 0 !important;
       padding: 0 !important;
       overflow: visible !important;
+      pointer-events: auto !important;
     }
     @keyframes slideDown {
       from {
