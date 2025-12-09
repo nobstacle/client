@@ -830,45 +830,57 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
             if (event.data.type === 'TEMPLATE_SHORTCUT_CLICK') {
                 const { id, templateType, tag } = event.data;
 
+                   console.log('[ClientHeader] Received', { id, templateType, tag }); // ADD THIS
+    console.log('[ClientHeader] Templates?', { 
+        text: textTemplates?.length, 
+        image: imageTemplates?.length 
+    });
+
                 let template;
                 let contentExtra;
                 let contentType = templateType;
-                const typeUpper = templateType.toUpperCase();
+                const type = templateType;
 
-                if (typeUpper === 'Text' && textTemplates) {
+                if (type === 'Text' && textTemplates) {
                     template = textTemplates.find(t => t.tag === tag && t.langCode?.includes(selectedLang));
-                } else if (typeUpper === 'Image' && imageTemplates) {
+                } else if (type === 'Image' && imageTemplates) {
                     template = imageTemplates.find(t => t.tag === tag && t.langCode?.includes(selectedLang));
                     contentExtra = template?.ext;
-                } else if (typeUpper === 'Video' && videoTemplates) {
+                } else if (type === 'Video' && videoTemplates) {
                     template = videoTemplates.find(t => t.tag === tag && t.langCode?.includes(selectedLang));
                     contentExtra = template?.ext;
-                } else if (typeUpper === 'Website' && websiteTemplates) {
+                } else if (type === 'Website' && websiteTemplates) {
                     template = websiteTemplates.find(t => t.tag === tag && t.langCode?.includes(selectedLang));
                     contentExtra = template?.ext;
-                } else if (typeUpper === 'Slideshow' && slideshowTemplates) {
+                } else if (type === 'Slideshow' && slideshowTemplates) {
                     template = slideshowTemplates.find(t => t.tag === tag && t.langCode?.includes(selectedLang));
                     contentExtra = template?.ext;
-                } else if (typeUpper === 'Map' && mapTemplates) {
+                } else if (type === 'Map' && mapTemplates) {
                     template = mapTemplates.find(t => t.tag === tag && t.langCode?.includes(selectedLang));
                     contentExtra = JSON.stringify({
                         origin: template?.origin || '',
                         destination: template?.destination || ''
                     });
-                } else if (typeUpper === 'Document' && documentTemplates) {
+                } else if (type === 'Document' && documentTemplates) {
                     template = documentTemplates.find(t => t.tag === tag && t.langCode?.includes(selectedLang));
                     contentExtra = template?.ext;
                 }
 
-                if (template && socketConnected) {
-                    emitSendTemplate({
-                        refId: template.id,
-                        langCode: selectedLang,
-                        refType: typeUpper,
-                        station: Number(params.get("station") ?? 1),
-                        contentExtra: contentExtra,
-                    });
-                }
+                 if (template && socketConnected) {
+        console.log('[ClientHeader] Sending via socket', template.id); // ADD THIS
+        emitSendTemplate({
+            refId: template.id,
+            langCode: selectedLang,
+            refType: type, // Use original type
+            station: Number(params.get("station") ?? 1),
+            contentExtra: contentExtra,
+        });
+    } else {
+        console.error('[ClientHeader] Failed', { 
+            hasTemplate: !!template, 
+            socketConnected 
+        }); // ADD THIS
+    }
             }
 
             if (event.data.type === 'SEARCH_DROPDOWN_CLOSED') {
