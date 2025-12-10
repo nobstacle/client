@@ -639,14 +639,44 @@ async function injectHeader() {
     }
 
     if (event.data.type === 'CHAT_UPDATE_MESSAGES') {
+      console.log('[Content Script] Updating chat messages');
       const popup = document.getElementById('nobstacle-chat-popup');
       if (popup) {
         const messagesContainer = popup.querySelector('#chat-messages-container');
         if (messagesContainer) {
           messagesContainer.innerHTML = event.data.html;
+          // Auto-scroll to bottom
           messagesContainer.scrollTop = messagesContainer.scrollHeight;
+          console.log('[Content Script] ✓ Messages updated and scrolled');
         }
       }
+    }
+
+    if (event.data.type === 'CHAT_SEND_MESSAGE') {
+      const messageText = event.data.message;
+      console.log('[Content Script] Chat message to send:', messageText);
+
+      // Send message back to iframe to be processed by socket
+      iframe.contentWindow.postMessage({
+        type: 'PROCESS_CHAT_MESSAGE',
+        message: messageText
+      }, '*');
+
+      console.log('[Content Script] ✓ Message forwarded to iframe for socket processing');
+    }
+
+    if (event.data.type === 'CHAT_CLEAR') {
+      console.log('[Content Script] Chat clear request');
+      // Forward to iframe to clear message store
+      iframe.contentWindow.postMessage({
+        type: 'CLEAR_CHAT_MESSAGES'
+      }, '*');
+      console.log('[Content Script] ✓ Clear request forwarded to iframe');
+    }
+
+    if (event.data.type === 'CHAT_POPUP_CLOSED') {
+      console.log('[Content Script] Chat popup closed by user');
+      document.getElementById('nobstacle-chat-popup')?.remove();
     }
 
     if (event.data.type === 'SEARCH_DROPDOWN') {

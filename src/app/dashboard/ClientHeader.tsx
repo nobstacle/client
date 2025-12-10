@@ -831,13 +831,16 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
             if (event.data.type === 'HAMBURGER_CLOSED') {
                 setIsHamburgerMenuOpen(false);
             }
+
             if (event.data.type === 'LOGOUT') {
                 handleLogout();
             }
+
             if (event.data.type === 'CHANGE_PASSWORD') {
                 // Handle password change
                 console.log('Change password clicked');
             }
+
             if (event.data.type === 'REQUEST_STATION_PICKER') {
                 const currentStation = params.get("station") ?? "1";
                 const stationCount = companyData?.stationCount || 10;
@@ -879,6 +882,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                     html: stationPickerHTML
                 }, '*');
             }
+
             if (event.data.type === 'STATION_CHANGE') {
                 const newStation = event.data.station;
 
@@ -1104,16 +1108,73 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
             }
 
             if (event.data.type === 'CHAT_CLEAR') {
-                console.log('[ClientHeader] Chat cleared');
-                // Clear messages in your message store
+                console.log('[ClientHeader] Chat cleared from extension');
                 messageStore.reset();
 
                 // Update the popup to show empty state
-                updateChatPopupMessages();
+                setTimeout(() => {
+                    updateChatPopupMessages();
+                }, 100);
             }
 
             if (event.data.type === 'CHAT_POPUP_CLOSED') {
                 console.log('[ClientHeader] Chat popup closed');
+            }
+
+            if (event.data.type === 'PROCESS_CHAT_MESSAGE') {
+                const messageText = event.data.message;
+                console.log('[ClientHeader] Processing chat message:', messageText);
+
+                if (socketConnected) {
+                    emitSendMessage({
+                        message: messageText,
+                        station: Number(params.get("station") ?? 1),
+                        refType: "ChatMessage",
+                        langCode: companyData?.defaultLangCode ?? "en",
+                    });
+
+                    console.log('[ClientHeader] ✓ Message sent via socket');
+
+                    // After a brief delay, update the chat popup
+                    setTimeout(() => {
+                        updateChatPopupMessages();
+                    }, 200);
+                } else {
+                    console.error('[ClientHeader] Socket not connected');
+                }
+            }
+
+            if (event.data.type === 'CLEAR_CHAT_MESSAGES') {
+                console.log('[ClientHeader] Clearing chat messages');
+                messageStore.reset();
+
+                // Update the popup to show empty state
+                setTimeout(() => {
+                    updateChatPopupMessages();
+                }, 100);
+            }
+
+            if (event.data.type === 'CHAT_SEND_MESSAGE') {
+                const messageText = event.data.message;
+                console.log('[ClientHeader] Chat message received from extension:', messageText);
+
+                if (socketConnected) {
+                    emitSendMessage({
+                        message: messageText,
+                        station: Number(params.get("station") ?? 1),
+                        refType: "ChatMessage",
+                        langCode: companyData?.defaultLangCode ?? "en",
+                    });
+
+                    console.log('[ClientHeader] ✓ Message sent via socket');
+
+                    // Update the chat popup with new messages
+                    setTimeout(() => {
+                        updateChatPopupMessages();
+                    }, 200);
+                } else {
+                    console.error('[ClientHeader] Socket not connected');
+                }
             }
 
         };

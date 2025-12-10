@@ -6,6 +6,8 @@ import { IoChatbubbles, IoMicOutline, IoMicOffOutline } from "react-icons/io5";
 import { useSocketContext } from "../../../../context/SocketContextProvider";
 import { useSearchParams } from "next/navigation";
 import { useMessageStore } from "../../../../lib/zustand/store/messageStore";
+import { useCompanyControllerGetCompany } from '../../../../lib/client/api';
+import { useSession } from "next-auth/react";
 
 interface Message {
   id: string;
@@ -25,19 +27,31 @@ interface ChatBotProps {
 export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isInIframe, setIsInIframe] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [isRecording, setIsRecording] = useState(false);
-  const [userLang, setUserLang] = useState("en");
-  const [targetLang, setTargetLang] = useState("es");
   const chatBoxRef = useRef<HTMLDivElement | null>(null);
   const buttonRef = useRef<HTMLButtonElement | null>(null);
   const recognitionRef = useRef<any>(null);
   
-  // Add socket and params
   const { emitSendMessage, socketConnected } = useSocketContext();
   const params = useSearchParams();
   const messageStore = useMessageStore();
+  const { data: session } = useSession();
+  const { data: companyData } = useCompanyControllerGetCompany({
+    query: {
+      queryKey: ['company'],
+      staleTime: 1000 * 60 * 5,
+    }
+  });
+
+  const userRole = session?.user?.Roles?.[0];
+  const currentUserDefaultLang = companyData?.defaultLangCode || 'en';
+  const currentStation = Number(params.get("station") ?? 1);
+
+  // Get messages for current station from message store
+  const stationMessages = messageStore.receivedMessage.filter(
+    (msg) => msg.station === currentStation
+  );
 
   // Initialize speech recognition
   useEffect(() => {
@@ -48,7 +62,7 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
         recognitionRef.current = new SpeechRecognition();
         recognitionRef.current.continuous = false;
         recognitionRef.current.interimResults = false;
-        recognitionRef.current.lang = userLang;
+        recognitionRef.current.lang = currentUserDefaultLang;
 
         recognitionRef.current.onresult = async (event: any) => {
           const transcript = event.results[0][0].transcript;
@@ -68,7 +82,7 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
         };
       }
     }
-  }, [userLang]);
+  }, [currentUserDefaultLang]);
 
   useEffect(() => {
     setIsInIframe(window.self !== window.top);
@@ -78,19 +92,29 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
     if (chatBoxRef.current) {
       chatBoxRef.current.scrollTop = chatBoxRef.current.scrollHeight;
     }
-  }, [messages]);
+  }, [stationMessages]);
 
-  // Simulate translation API call
-  const translateText = async (text: string, fromLang: string, toLang: string): Promise<string> => {
-    try {
-      const response = await fetch(
-        `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${fromLang}|${toLang}`
-      );
-      const data = await response.json();
-      return data.responseData.translatedText || text;
-    } catch (error) {
-      console.error('Translation error:', error);
-      return text;
+  // Helper to determine if message is from current user
+  const isCurrentUserMessage = (messageRole: string) => {
+    return messageRole === userRole;
+  };
+
+  // Helper to get display message based on role
+  const getDisplayMessage = (messageObj: any) => {
+    const { message, originalMessage, role } = messageObj;
+
+    if (userRole === 'Admin') {
+      if (role === 'Admin') {
+        return originalMessage || message;
+      } else {
+        return message;
+      }
+    } else {
+      if (role === 'User') {
+        return originalMessage || message;
+      } else {
+        return message;
+      }
     }
   };
 
@@ -102,45 +126,89 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
       return;
     }
 
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      sender: 'user',
-      originalText: textToSend,
-      originalLang: userLang,
-      targetLang: targetLang,
-      timestamp: Date.now()
-    };
+    if (!socketConnected) {
+      antMessage.warning('Connection not ready, please try again');
+      return;
+    }
 
     try {
-      const translated = await translateText(textToSend, userLang, targetLang);
-      userMessage.translatedText = translated;
-      
-      setMessages(prev => [...prev, userMessage]);
-      setInputValue("");
+      // Send the message through socket
+      emitSendMessage({
+        message: textToSend,
+        station: currentStation,
+        refType: "ChatMessage",
+        langCode: currentUserDefaultLang,
+      });
 
-      // Simulate response
-      setTimeout(async () => {
-        const responseText = "Thank you for your message. How can I help you?";
-        const translatedResponse = await translateText(responseText, targetLang, userLang);
-        
-        const assistantMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          sender: 'assistant',
-          originalText: responseText,
-          translatedText: translatedResponse,
-          originalLang: targetLang,
-          targetLang: userLang,
-          timestamp: Date.now() + 1
-        };
-        
-        setMessages(prev => [...prev, assistantMessage]);
-      }, 1000);
+      setInputValue("");
+      antMessage.success('Message sent');
+
+      // Update chat popup in extension if in iframe
+      if (isInIframe) {
+        setTimeout(() => {
+          updateChatPopupMessages();
+        }, 100);
+      }
       
     } catch (error) {
       console.error('Error sending message:', error);
       antMessage.error('Failed to send message');
     }
   };
+
+  const updateChatPopupMessages = () => {
+    if (!isInIframe) return;
+
+    const messagesHTML = stationMessages.length === 0 ? `
+      <div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #9ca3af; font-size: 14px;">
+        No messages yet. Start a conversation!
+      </div>
+    ` : stationMessages.map(messageObj => {
+      const isRight = isCurrentUserMessage(messageObj.role);
+      const displayMessage = getDisplayMessage(messageObj);
+
+      return `
+        <div style="display: flex; justify-content: ${isRight ? 'flex-end' : 'flex-start'}; margin-bottom: 16px;">
+          <div style="
+            max-width: 70%;
+            padding: 12px 16px;
+            border-radius: 12px;
+            background: ${isRight ? '#3b5998' : '#f3f4f6'};
+            color: ${isRight ? 'white' : '#1f2937'};
+            word-wrap: break-word;
+          ">
+            <div style="font-size: 14px; line-height: 1.5;">
+              ${displayMessage}
+            </div>
+            ${messageObj.originalMessage && messageObj.originalMessage !== displayMessage ? `
+              <div style="
+                font-size: 12px;
+                opacity: 0.7;
+                font-style: italic;
+                border-top: ${isRight ? '1px solid rgba(255,255,255,0.2)' : '1px solid rgba(0,0,0,0.1)'};
+                padding-top: 6px;
+                margin-top: 6px;
+              ">
+                Original: ${messageObj.originalMessage}
+              </div>
+            ` : ''}
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    window.parent.postMessage({
+      type: 'CHAT_UPDATE_MESSAGES',
+      html: messagesHTML
+    }, '*');
+  };
+
+  // Update messages when they change
+  useEffect(() => {
+    if (isInIframe && isModalOpen) {
+      updateChatPopupMessages();
+    }
+  }, [stationMessages, isInIframe, isModalOpen]);
 
   const toggleRecording = () => {
     if (!recognitionRef.current) {
@@ -153,7 +221,7 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
       setIsRecording(false);
     } else {
       try {
-        recognitionRef.current.lang = userLang;
+        recognitionRef.current.lang = currentUserDefaultLang;
         recognitionRef.current.start();
         setIsRecording(true);
         antMessage.info('Listening... Speak now');
@@ -165,8 +233,15 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
   };
 
   const handleClearChat = () => {
-    setMessages([]);
+    messageStore.reset();
     antMessage.success('Chat cleared');
+    
+    if (isInIframe) {
+      // Send clear message to extension
+      window.parent.postMessage({
+        type: 'CHAT_CLEAR'
+      }, '*');
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -177,7 +252,7 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
   };
 
   const generateMessagesHTML = () => {
-    if (messages.length === 0) {
+    if (stationMessages.length === 0) {
       return `
         <div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #9ca3af; font-size: 14px;">
           No messages yet. Start a conversation!
@@ -185,29 +260,33 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
       `;
     }
 
-    return messages.map(msg => {
-      const isUser = msg.sender === 'user';
+    return stationMessages.map(messageObj => {
+      const isRight = isCurrentUserMessage(messageObj.role);
+      const displayMessage = getDisplayMessage(messageObj);
+
       return `
-        <div style="display: flex; justify-content: ${isUser ? 'flex-end' : 'flex-start'}; margin-bottom: 16px;">
+        <div style="display: flex; justify-content: ${isRight ? 'flex-end' : 'flex-start'}; margin-bottom: 16px;">
           <div style="
             max-width: 70%;
             padding: 12px 16px;
             border-radius: 12px;
-            background: ${isUser ? '#3b5998' : '#f3f4f6'};
-            color: ${isUser ? 'white' : '#1f2937'};
+            background: ${isRight ? '#3b5998' : '#f3f4f6'};
+            color: ${isRight ? 'white' : '#1f2937'};
+            word-wrap: break-word;
           ">
-            <div style="font-size: 14px; line-height: 1.5; margin-bottom: ${msg.originalText !== msg.translatedText ? '8px' : '0'};">
-              ${msg.translatedText || msg.originalText}
+            <div style="font-size: 14px; line-height: 1.5;">
+              ${displayMessage}
             </div>
-            ${msg.originalText !== msg.translatedText && msg.translatedText ? `
+            ${messageObj.originalMessage && messageObj.originalMessage !== displayMessage ? `
               <div style="
                 font-size: 12px;
                 opacity: 0.7;
                 font-style: italic;
-                border-top: ${isUser ? '1px solid rgba(255,255,255,0.2)' : '1px solid rgba(0,0,0,0.1)'};
+                border-top: ${isRight ? '1px solid rgba(255,255,255,0.2)' : '1px solid rgba(0,0,0,0.1)'};
                 padding-top: 6px;
+                margin-top: 6px;
               ">
-                Original: ${msg.originalText}
+                Original: ${messageObj.originalMessage}
               </div>
             ` : ''}
           </div>
@@ -221,9 +300,7 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
     
     if (isInIframe && buttonRef.current) {
       console.log('[ChatBot] Sending CHAT_POPUP message to parent');
-      // Send message to parent to create chat popup
       const rect = buttonRef.current.getBoundingClientRect();
-      console.log('[ChatBot] Button rect:', rect);
       
       const chatHTML = `
         <div style="display: flex; flex-direction: column; height: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;">
@@ -231,9 +308,7 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
           <div style="padding: 16px 20px; border-bottom: 1px solid #e5e7eb; background: #f9fafb; display: flex; justify-content: space-between; align-items: center;">
             <span style="font-weight: 600; font-size: 16px;">Chat Assistant</span>
             <div style="display: flex; gap: 12px; font-size: 12px; color: #666;">
-              <span>You: ${userLang.toUpperCase()}</span>
-              <span>→</span>
-              <span>Customer: ${targetLang.toUpperCase()}</span>
+              <span>Station ${currentStation}</span>
             </div>
           </div>
 
@@ -247,7 +322,7 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
             <div style="display: flex; gap: 12px; align-items: flex-end;">
               <textarea
                 id="chat-message-input"
-                placeholder="Type in ${userLang.toUpperCase()}... (Press Enter to send)"
+                placeholder="Type your message... (Press Enter to send)"
                 style="
                   flex: 1;
                   padding: 12px;
@@ -338,9 +413,8 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
         }
       }, '*');
       
-      console.log('[ChatBot] ✓ CHAT_POPUP message sent to parent');
+      setIsModalOpen(true);
     } else {
-      console.log('[ChatBot] Opening modal (not in iframe)');
       setIsModalOpen(true);
     }
     cb?.();
@@ -348,17 +422,25 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
 
   const handleCancel = () => {
     setIsModalOpen(false);
+    
+    if (isInIframe) {
+      window.parent.postMessage({
+        type: 'CHAT_POPUP',
+        isOpen: false
+      }, '*');
+    }
   };
 
- const renderMessage = (msg: Message) => {
-    const isUser = msg.sender === 'user';
+  const renderMessage = (messageObj: any) => {
+    const isRight = isCurrentUserMessage(messageObj.role);
+    const displayMessage = getDisplayMessage(messageObj);
     
     return (
       <div
-        key={msg.id}
+        key={messageObj.id}
         style={{
           display: 'flex',
-          justifyContent: isUser ? 'flex-end' : 'flex-start',
+          justifyContent: isRight ? 'flex-end' : 'flex-start',
           marginBottom: '16px'
         }}
       >
@@ -367,27 +449,28 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
             maxWidth: '70%',
             padding: '12px 16px',
             borderRadius: '12px',
-            background: isUser ? '#3b5998' : '#f3f4f6',
-            color: isUser ? 'white' : '#1f2937'
+            background: isRight ? '#3b5998' : '#f3f4f6',
+            color: isRight ? 'white' : '#1f2937',
+            wordWrap: 'break-word'
           }}
         >
           <div style={{ 
             fontSize: '14px', 
             lineHeight: '1.5',
-            marginBottom: msg.originalText !== msg.translatedText ? '8px' : '0'
+            marginBottom: messageObj.originalMessage && messageObj.originalMessage !== displayMessage ? '8px' : '0'
           }}>
-            {msg.translatedText || msg.originalText}
+            {displayMessage}
           </div>
           
-          {msg.originalText !== msg.translatedText && msg.translatedText && (
+          {messageObj.originalMessage && messageObj.originalMessage !== displayMessage && (
             <div style={{
               fontSize: '12px',
               opacity: 0.7,
               fontStyle: 'italic',
-              borderTop: isUser ? '1px solid rgba(255,255,255,0.2)' : '1px solid rgba(0,0,0,0.1)',
+              borderTop: isRight ? '1px solid rgba(255,255,255,0.2)' : '1px solid rgba(0,0,0,0.1)',
               paddingTop: '6px'
             }}>
-              Original: {msg.originalText}
+              Original: {messageObj.originalMessage}
             </div>
           )}
         </div>
@@ -426,9 +509,7 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span>Chat Assistant</span>
               <div style={{ display: 'flex', gap: '12px', fontSize: '12px', color: '#666' }}>
-                <span>You: {userLang.toUpperCase()}</span>
-                <span>→</span>
-                <span>Customer: {targetLang.toUpperCase()}</span>
+                <span>Station {currentStation}</span>
               </div>
             </div>
           }
@@ -461,7 +542,7 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
                 background: 'white'
               }}
             >
-              {messages.length === 0 ? (
+              {stationMessages.length === 0 ? (
                 <div style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -473,7 +554,7 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
                   No messages yet. Start a conversation!
                 </div>
               ) : (
-                messages.map(renderMessage)
+                stationMessages.map(renderMessage)
               )}
             </div>
 
@@ -484,7 +565,7 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
             }}>
               <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-end' }}>
                 <textarea
-                  placeholder={`Type in ${userLang.toUpperCase()}... (Press Enter to send)`}
+                  placeholder="Type your message... (Press Enter to send)"
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
                   onKeyPress={handleKeyPress}
