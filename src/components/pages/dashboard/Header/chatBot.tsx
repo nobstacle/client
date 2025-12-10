@@ -131,24 +131,22 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
       return;
     }
 
+    // Get selected language from URL params
+    const selectedLang = params.get("lang") || currentUserDefaultLang;
+
     try {
-      // Send the message through socket
+      // Send the message through socket with selected language
       emitSendMessage({
         message: textToSend,
         station: currentStation,
         refType: "ChatMessage",
-        langCode: currentUserDefaultLang,
+        langCode: selectedLang, // Use selected language instead of default
       });
 
       setInputValue("");
-      antMessage.success('Message sent');
 
-      // Update chat popup in extension if in iframe
-      if (isInIframe) {
-        setTimeout(() => {
-          updateChatPopupMessages();
-        }, 100);
-      }
+      // DON'T update chat popup here - let the socket response handle it
+      // The message will automatically appear when it comes back through the socket
       
     } catch (error) {
       console.error('Error sending message:', error);
@@ -203,12 +201,12 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
     }, '*');
   };
 
-  // Update messages when they change
+  // Update messages when they change - ONLY update the popup, don't send messages
   useEffect(() => {
-    if (isInIframe && isModalOpen) {
+    if (isInIframe && stationMessages.length > 0) {
       updateChatPopupMessages();
     }
-  }, [stationMessages, isInIframe, isModalOpen]);
+  }, [stationMessages.length, isInIframe]); // Watch stationMessages.length instead of entire array
 
   const toggleRecording = () => {
     if (!recognitionRef.current) {

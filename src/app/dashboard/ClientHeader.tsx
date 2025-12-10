@@ -753,6 +753,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
 
         useEffect(() => {
             if (isInIframe && messageStore.receivedMessage.length > 0) {
+                console.log('[ClientHeader] Messages updated in store, refreshing chat popup');
                 updateChatPopupMessages();
             }
         }, [messageStore.receivedMessage.length, isInIframe, updateChatPopupMessages]);
@@ -1087,23 +1088,27 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
 
             if (event.data.type === 'CHAT_SEND_MESSAGE') {
                 const messageText = event.data.message;
-                console.log('[ClientHeader] Chat message received:', messageText);
+                console.log('[ClientHeader] Chat message received from extension:', messageText);
 
-                // Send the message through socket
                 if (socketConnected) {
+                    // Get selected language from URL params
+                    const selectedLang = params.get("lang") || companyData?.defaultLangCode || "en";
+
+                    console.log('[ClientHeader] Sending message with language:', selectedLang);
+
                     emitSendMessage({
                         message: messageText,
                         station: Number(params.get("station") ?? 1),
                         refType: "ChatMessage",
-                        langCode: companyData?.defaultLangCode ?? "en",
+                        langCode: selectedLang, // Use selected language
                     });
 
-                    // After sending, update the chat popup with new messages
-                    setTimeout(() => {
-                        updateChatPopupMessages();
-                    }, 100);
+                    console.log('[ClientHeader] ✓ Message sent via socket with lang:', selectedLang);
+
+                    // DON'T manually update the popup - let the socket response handle it
+                    // The message will appear automatically when it comes back through the socket
                 } else {
-                    message.warning('Connection not ready');
+                    console.error('[ClientHeader] Socket not connected');
                 }
             }
 
@@ -1121,28 +1126,28 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                 console.log('[ClientHeader] Chat popup closed');
             }
 
-            if (event.data.type === 'PROCESS_CHAT_MESSAGE') {
-                const messageText = event.data.message;
-                console.log('[ClientHeader] Processing chat message:', messageText);
+            // if (event.data.type === 'PROCESS_CHAT_MESSAGE') {
+            //     const messageText = event.data.message;
+            //     console.log('[ClientHeader] Processing chat message:', messageText);
 
-                if (socketConnected) {
-                    emitSendMessage({
-                        message: messageText,
-                        station: Number(params.get("station") ?? 1),
-                        refType: "ChatMessage",
-                        langCode: companyData?.defaultLangCode ?? "en",
-                    });
+            //     if (socketConnected) {
+            //         emitSendMessage({
+            //             message: messageText,
+            //             station: Number(params.get("station") ?? 1),
+            //             refType: "ChatMessage",
+            //             langCode: companyData?.defaultLangCode ?? "en",
+            //         });
 
-                    console.log('[ClientHeader] ✓ Message sent via socket');
+            //         console.log('[ClientHeader] ✓ Message sent via socket');
 
-                    // After a brief delay, update the chat popup
-                    setTimeout(() => {
-                        updateChatPopupMessages();
-                    }, 200);
-                } else {
-                    console.error('[ClientHeader] Socket not connected');
-                }
-            }
+            //         // After a brief delay, update the chat popup
+            //         setTimeout(() => {
+            //             updateChatPopupMessages();
+            //         }, 200);
+            //     } else {
+            //         console.error('[ClientHeader] Socket not connected');
+            //     }
+            // }
 
             if (event.data.type === 'CLEAR_CHAT_MESSAGES') {
                 console.log('[ClientHeader] Clearing chat messages');
@@ -1152,29 +1157,6 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                 setTimeout(() => {
                     updateChatPopupMessages();
                 }, 100);
-            }
-
-            if (event.data.type === 'CHAT_SEND_MESSAGE') {
-                const messageText = event.data.message;
-                console.log('[ClientHeader] Chat message received from extension:', messageText);
-
-                if (socketConnected) {
-                    emitSendMessage({
-                        message: messageText,
-                        station: Number(params.get("station") ?? 1),
-                        refType: "ChatMessage",
-                        langCode: companyData?.defaultLangCode ?? "en",
-                    });
-
-                    console.log('[ClientHeader] ✓ Message sent via socket');
-
-                    // Update the chat popup with new messages
-                    setTimeout(() => {
-                        updateChatPopupMessages();
-                    }, 200);
-                } else {
-                    console.error('[ClientHeader] Socket not connected');
-                }
             }
 
         };

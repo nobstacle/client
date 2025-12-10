@@ -655,21 +655,21 @@ async function injectHeader() {
     if (event.data.type === 'CHAT_SEND_MESSAGE') {
       const messageText = event.data.message;
       console.log('[Content Script] Chat message to send:', messageText);
-
-      // Send message back to iframe to be processed by socket
+      
+      // Forward directly to iframe - no need for intermediate PROCESS_CHAT_MESSAGE
       iframe.contentWindow.postMessage({
-        type: 'PROCESS_CHAT_MESSAGE',
+        type: 'CHAT_SEND_MESSAGE',
         message: messageText
       }, '*');
-
-      console.log('[Content Script] ✓ Message forwarded to iframe for socket processing');
+      
+      console.log('[Content Script] ✓ Message forwarded to iframe');
     }
 
     if (event.data.type === 'CHAT_CLEAR') {
       console.log('[Content Script] Chat clear request');
       // Forward to iframe to clear message store
       iframe.contentWindow.postMessage({
-        type: 'CLEAR_CHAT_MESSAGES'
+        type: 'CHAT_CLEAR'
       }, '*');
       console.log('[Content Script] ✓ Clear request forwarded to iframe');
     }
