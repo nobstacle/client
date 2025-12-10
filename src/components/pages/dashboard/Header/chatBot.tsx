@@ -9,16 +9,6 @@ import { useMessageStore } from "../../../../lib/zustand/store/messageStore";
 import { useCompanyControllerGetCompany } from '../../../../lib/client/api';
 import { useSession } from "next-auth/react";
 
-interface Message {
-  id: string;
-  sender: 'user' | 'assistant';
-  originalText: string;
-  translatedText?: string;
-  originalLang: string;
-  targetLang: string;
-  timestamp: number;
-}
-
 interface ChatBotProps {
   cb?: () => void;
   checkTooltip?: boolean;
@@ -48,7 +38,6 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
   const currentUserDefaultLang = companyData?.defaultLangCode || 'en';
   const currentStation = Number(params.get("station") ?? 1);
 
-  // Get messages for current station from message store
   const stationMessages = messageStore.receivedMessage.filter(
     (msg) => msg.station === currentStation
   );
@@ -94,12 +83,34 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
     }
   }, [stationMessages]);
 
-  // Helper to determine if message is from current user
+  // Listen for recording state from extension
+  useEffect(() => {
+    if (!isInIframe) return;
+
+    const handler = (event: MessageEvent) => {
+      if (event.data.type === 'CHAT_TOGGLE_RECORDING') {
+        toggleRecording();
+      }
+    };
+
+    window.addEventListener('message', handler);
+    return () => window.removeEventListener('message', handler);
+  }, [isInIframe, isRecording]);
+
+  // Send recording state to extension
+  useEffect(() => {
+    if (isInIframe && isModalOpen) {
+      window.parent.postMessage({
+        type: 'CHAT_RECORDING_STATE',
+        isRecording: isRecording
+      }, '*');
+    }
+  }, [isRecording, isInIframe, isModalOpen]);
+
   const isCurrentUserMessage = (messageRole: string) => {
     return messageRole === userRole;
   };
 
-  // Helper to get display message based on role
   const getDisplayMessage = (messageObj: any) => {
     const { message, originalMessage, role } = messageObj;
 
@@ -131,22 +142,17 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
       return;
     }
 
-    // Get selected language from URL params
     const selectedLang = params.get("lang") || currentUserDefaultLang;
 
     try {
-      // Send the message through socket with selected language
       emitSendMessage({
         message: textToSend,
         station: currentStation,
         refType: "ChatMessage",
-        langCode: selectedLang, // Use selected language instead of default
+        langCode: selectedLang,
       });
 
       setInputValue("");
-
-      // DON'T update chat popup here - let the socket response handle it
-      // The message will automatically appear when it comes back through the socket
       
     } catch (error) {
       console.error('Error sending message:', error);
@@ -201,12 +207,11 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
     }, '*');
   };
 
-  // Update messages when they change - ONLY update the popup, don't send messages
   useEffect(() => {
     if (isInIframe && stationMessages.length > 0) {
       updateChatPopupMessages();
     }
-  }, [stationMessages.length, isInIframe]); // Watch stationMessages.length instead of entire array
+  }, [stationMessages.length, isInIframe]);
 
   const toggleRecording = () => {
     if (!recognitionRef.current) {
@@ -235,7 +240,6 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
     antMessage.success('Chat cleared');
     
     if (isInIframe) {
-      // Send clear message to extension
       window.parent.postMessage({
         type: 'CHAT_CLEAR'
       }, '*');
@@ -336,6 +340,28 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
               ></textarea>
               
               <button
+                id="chat-mic-button"
+                style="
+                  padding: 12px;
+                  background: #3b5998;
+                  color: white;
+                  border: none;
+                  border-radius: 8px;
+                  cursor: pointer;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  min-width: 44px;
+                  transition: all 0.2s;
+                "
+                data-recording="false"
+              >
+                <svg viewBox="0 0 24 24" style="width: 20px; height: 20px; fill: white;">
+                  <path d="M12 14c1.66 0 2.99-1.34 2.99-3L15 5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z"/>
+                </svg>
+              </button>
+
+              <button
                 id="chat-send-button"
                 style="
                   padding: 12px;
@@ -357,23 +383,6 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
                   <polygon style="fill: white;" points="512,33.758 109.455,294.271 0,232.606"/>
                   <polygon style="fill: white;" points="512,33.758 511.471,35.232 300.246,399.799 164.932,325.531"/>
                 </svg>
-              </button>
-
-              <button
-                id="chat-clear-button"
-                style="
-                  padding: 12px;
-                  background: transparent;
-                  color: #ef4444;
-                  border: 1px solid #e5e7eb;
-                  border-radius: 8px;
-                  cursor: pointer;
-                  font-size: 13px;
-                  font-weight: 500;
-                  transition: all 0.2s;
-                "
-              >
-                Clear
               </button>
 
               <button

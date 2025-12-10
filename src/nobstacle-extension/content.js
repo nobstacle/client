@@ -655,13 +655,13 @@ async function injectHeader() {
     if (event.data.type === 'CHAT_SEND_MESSAGE') {
       const messageText = event.data.message;
       console.log('[Content Script] Chat message to send:', messageText);
-      
+
       // Forward directly to iframe - no need for intermediate PROCESS_CHAT_MESSAGE
       iframe.contentWindow.postMessage({
         type: 'CHAT_SEND_MESSAGE',
         message: messageText
       }, '*');
-      
+
       console.log('[Content Script] ✓ Message forwarded to iframe');
     }
 
