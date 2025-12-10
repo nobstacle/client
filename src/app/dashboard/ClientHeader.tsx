@@ -1126,29 +1126,6 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                 console.log('[ClientHeader] Chat popup closed');
             }
 
-            // if (event.data.type === 'PROCESS_CHAT_MESSAGE') {
-            //     const messageText = event.data.message;
-            //     console.log('[ClientHeader] Processing chat message:', messageText);
-
-            //     if (socketConnected) {
-            //         emitSendMessage({
-            //             message: messageText,
-            //             station: Number(params.get("station") ?? 1),
-            //             refType: "ChatMessage",
-            //             langCode: companyData?.defaultLangCode ?? "en",
-            //         });
-
-            //         console.log('[ClientHeader] ✓ Message sent via socket');
-
-            //         // After a brief delay, update the chat popup
-            //         setTimeout(() => {
-            //             updateChatPopupMessages();
-            //         }, 200);
-            //     } else {
-            //         console.error('[ClientHeader] Socket not connected');
-            //     }
-            // }
-
             if (event.data.type === 'CLEAR_CHAT_MESSAGES') {
                 console.log('[ClientHeader] Clearing chat messages');
                 messageStore.reset();
@@ -1159,6 +1136,35 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                 }, 100);
             }
 
+            if (event.data.type === 'CHAT_TOGGLE_RECORDING') {
+                console.log('[ClientHeader] Received mic toggle request from extension');
+
+                // Get the iframe element
+                const iframeElement = document.getElementById('nobstacle-header-iframe') as HTMLIFrameElement;
+
+                if (iframeElement && iframeElement.contentWindow) {
+                    // Forward to iframe to trigger recording
+                    iframeElement.contentWindow.postMessage({
+                        type: 'CHAT_TOGGLE_RECORDING'
+                    }, '*');
+
+                    console.log('[ClientHeader] ✓ Mic toggle request forwarded to iframe');
+                } else {
+                    console.error('[ClientHeader] ERROR: Header iframe not found or contentWindow not available');
+                }
+            }
+
+            if (event.data.type === 'CHAT_RECORDING_RESULT') {
+                console.log('[ClientHeader] Received recording result:', event.data.text);
+
+                // Forward transcribed text back to extension
+                window.parent.postMessage({
+                    type: 'CHAT_RECORDING_RESULT',
+                    text: event.data.text
+                }, '*');
+
+                console.log('[ClientHeader] ✓ Recording result forwarded to extension');
+            }
         };
 
         window.addEventListener('message', handler);

@@ -22,7 +22,7 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
   const chatBoxRef = useRef<HTMLDivElement | null>(null);
   const buttonRef = useRef<HTMLButtonElement | null>(null);
   const recognitionRef = useRef<any>(null);
-  
+
   const { emitSendMessage, socketConnected } = useSocketContext();
   const params = useSearchParams();
   const messageStore = useMessageStore();
@@ -46,7 +46,7 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-      
+
       if (SpeechRecognition) {
         recognitionRef.current = new SpeechRecognition();
         recognitionRef.current.continuous = false;
@@ -57,6 +57,15 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
           const transcript = event.results[0][0].transcript;
           setInputValue(transcript);
           setIsRecording(false);
+
+          // If in iframe, send the transcribed text back to extension
+          if (isInIframe) {
+            window.parent.postMessage({
+              type: 'CHAT_RECORDING_RESULT',
+              text: transcript
+            }, '*');
+          }
+
           await handleSendMessage(transcript);
         };
 
@@ -131,7 +140,7 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
 
   const handleSendMessage = async (messageText?: string) => {
     const textToSend = messageText || inputValue.trim();
-    
+
     if (!textToSend) {
       antMessage.warning('Please enter a message');
       return;
@@ -153,7 +162,7 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
       });
 
       setInputValue("");
-      
+
     } catch (error) {
       console.error('Error sending message:', error);
       antMessage.error('Failed to send message');
@@ -238,7 +247,7 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
   const handleClearChat = () => {
     messageStore.reset();
     antMessage.success('Chat cleared');
-    
+
     if (isInIframe) {
       window.parent.postMessage({
         type: 'CHAT_CLEAR'
@@ -299,11 +308,11 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
 
   const showModal = () => {
     console.log('[ChatBot] showModal called, isInIframe:', isInIframe);
-    
+
     if (isInIframe && buttonRef.current) {
       console.log('[ChatBot] Sending CHAT_POPUP message to parent');
       const rect = buttonRef.current.getBoundingClientRect();
-      
+
       const chatHTML = `
         <div style="display: flex; flex-direction: column; height: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;">
           <!-- Header -->
@@ -419,7 +428,7 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
           }
         }
       }, '*');
-      
+
       setIsModalOpen(true);
     } else {
       setIsModalOpen(true);
@@ -429,7 +438,7 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
 
   const handleCancel = () => {
     setIsModalOpen(false);
-    
+
     if (isInIframe) {
       window.parent.postMessage({
         type: 'CHAT_POPUP',
@@ -441,7 +450,7 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
   const renderMessage = (messageObj: any) => {
     const isRight = isCurrentUserMessage(messageObj.role);
     const displayMessage = getDisplayMessage(messageObj);
-    
+
     return (
       <div
         key={messageObj.id}
@@ -461,14 +470,14 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
             wordWrap: 'break-word'
           }}
         >
-          <div style={{ 
-            fontSize: '14px', 
+          <div style={{
+            fontSize: '14px',
             lineHeight: '1.5',
             marginBottom: messageObj.originalMessage && messageObj.originalMessage !== displayMessage ? '8px' : '0'
           }}>
             {displayMessage}
           </div>
-          
+
           {messageObj.originalMessage && messageObj.originalMessage !== displayMessage && (
             <div style={{
               fontSize: '12px',
@@ -534,13 +543,13 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
             },
           }}
         >
-          <div style={{ 
-            display: 'flex', 
-            flexDirection: 'column', 
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
             height: '100%',
             fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
           }}>
-            <div 
+            <div
               ref={chatBoxRef}
               style={{
                 flex: 1,
@@ -589,7 +598,7 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
                     outline: 'none'
                   }}
                 />
-                
+
                 <button
                   onClick={toggleRecording}
                   style={{
@@ -630,10 +639,10 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
                   }}
                 >
                   <svg viewBox="0 0 512 512" style={{ width: '20px', height: '20px' }}>
-                    <polygon style={{ fill: 'white' }} points="97.478,235.728 147.096,478.242 512,33.758 "/>
-                    <polygon style={{ fill: '#ccc' }} points="251.837,373.231 147.096,478.242 164.932,325.531 231.773,327.360 "/>
-                    <polygon style={{ fill: 'white' }} points="512,33.758 109.455,294.271 0,232.606"/>
-                    <polygon style={{ fill: 'white' }} points="512,33.758 511.471,35.232 300.246,399.799 164.932,325.531"/>
+                    <polygon style={{ fill: 'white' }} points="97.478,235.728 147.096,478.242 512,33.758 " />
+                    <polygon style={{ fill: '#ccc' }} points="251.837,373.231 147.096,478.242 164.932,325.531 231.773,327.360 " />
+                    <polygon style={{ fill: 'white' }} points="512,33.758 109.455,294.271 0,232.606" />
+                    <polygon style={{ fill: 'white' }} points="512,33.758 511.471,35.232 300.246,399.799 164.932,325.531" />
                   </svg>
                 </button>
 
