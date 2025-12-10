@@ -317,7 +317,7 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
         <div style="display: flex; flex-direction: column; height: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;">
           <!-- Header -->
           <div style="padding: 16px 20px; border-bottom: 1px solid #e5e7eb; background: #f9fafb; display: flex; justify-content: space-between; align-items: center;">
-            <span style="font-weight: 600; font-size: 16px;">Chat Assistant</span>
+            <span style="font-weight: 600; font-size: 16px; color:'#000'">Chat Assistant</span>
             <div style="display: flex; gap: 12px; font-size: 12px; color: #666;">
               <span>Station ${currentStation}</span>
             </div>
@@ -345,6 +345,7 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
                   min-height: 44px;
                   max-height: 120px;
                   outline: none;
+                  color:'#000'
                 "
               ></textarea>
               
