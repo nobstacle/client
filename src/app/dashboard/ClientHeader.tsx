@@ -45,7 +45,6 @@ import { RiLockPasswordLine, RiLogoutBoxLine } from 'react-icons/ri';
 import { HiOutlineOfficeBuilding, HiOutlineUser } from 'react-icons/hi';
 import { signOut } from "next-auth/react";
 import { useMessageStore } from "../../lib/zustand/store/messageStore";
-
 interface ClientHeaderProps {
     user: Session | null;
 }

@@ -74,8 +74,8 @@ const AudioRecorder: React.FC = () => {
     const langCode = isAdminOrStaff
       ? companyData?.defaultLangCode || "en"
       : messageStore.receivedLangCode ||
-        localStorage.getItem("lang-code") ||
-        "en";
+      localStorage.getItem("lang-code") ||
+      "en";
 
     try {
       speechToTextFileMutation.mutate(
@@ -104,7 +104,7 @@ const AudioRecorder: React.FC = () => {
 
   return (
     <Button
-      className="border-1 relative flex flex-col items-center justify-center rounded-md  border-black  px-6  text-center text-white"
+      className="border-1 relative flex flex-col items-center justify-center rounded-md  border-black  px-3  text-center text-white"
       type="button"
       onClick={recording ? stopRecording : startRecording}
       isLoading={speechToTextFileMutation.status === "pending"}

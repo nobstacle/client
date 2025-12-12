@@ -8,6 +8,7 @@ import { useSearchParams } from "next/navigation";
 import { useMessageStore } from "../../../../lib/zustand/store/messageStore";
 import { useCompanyControllerGetCompany } from '../../../../lib/client/api';
 import { useSession } from "next-auth/react";
+import AudioRecorder from "../../../../components/AudioRecorder";
 
 interface ChatBotProps {
   cb?: () => void;
@@ -21,9 +22,10 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
   const [isRecording, setIsRecording] = useState(false);
   const chatBoxRef = useRef<HTMLDivElement | null>(null);
   const buttonRef = useRef<HTMLButtonElement | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const recognitionRef = useRef<any>(null);
 
-  const { emitSendMessage, socketConnected } = useSocketContext();
+  const { emitSendMessage, emitClearMessage, emitLeaveChat, socketConnected } = useSocketContext();
   const params = useSearchParams();
   const messageStore = useMessageStore();
   const { data: session } = useSession();
@@ -42,9 +44,9 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
     (msg) => msg.station === currentStation
   );
 
-  // Initialize speech recognition
+  // Initialize speech recognition for iframe
   useEffect(() => {
-    if (typeof window !== 'undefined') {
+    if (typeof window !== 'undefined' && isInIframe) {
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
       if (SpeechRecognition) {
@@ -58,13 +60,11 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
           setInputValue(transcript);
           setIsRecording(false);
 
-          // If in iframe, send the transcribed text back to extension
-          if (isInIframe) {
-            window.parent.postMessage({
-              type: 'CHAT_RECORDING_RESULT',
-              text: transcript
-            }, '*');
-          }
+          // Send the transcribed text back to extension
+          window.parent.postMessage({
+            type: 'CHAT_RECORDING_RESULT',
+            text: transcript
+          }, '*');
 
           await handleSendMessage(transcript);
         };
@@ -80,7 +80,7 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
         };
       }
     }
-  }, [currentUserDefaultLang]);
+  }, [currentUserDefaultLang, isInIframe]);
 
   useEffect(() => {
     setIsInIframe(window.self !== window.top);
@@ -115,6 +115,13 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
       }, '*');
     }
   }, [isRecording, isInIframe, isModalOpen]);
+
+  // Update iframe popup messages
+  useEffect(() => {
+    if (isInIframe && stationMessages.length > 0) {
+      updateChatPopupMessages();
+    }
+  }, [stationMessages.length, isInIframe]);
 
   const isCurrentUserMessage = (messageRole: string) => {
     return messageRole === userRole;
@@ -169,6 +176,78 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
     }
   };
 
+  const handleEndSession = () => {
+    try {
+      emitLeaveChat({
+        station: currentStation,
+      });
+      messageStore.clearReceivedContent();
+      antMessage.success('Session ended successfully');
+      handleCancel();
+    } catch (error) {
+      console.error('Error ending session:', error);
+      antMessage.error('Failed to end session');
+    }
+  };
+
+  const handleClearChat = () => {
+    messageStore.reset();
+    antMessage.success('Chat cleared');
+
+    try {
+      emitClearMessage({
+        station: Number(params.get("station") ?? 1),
+      })
+
+      setInputValue("");
+
+    } catch (error) {
+      console.error('Error sending message:', error);
+      antMessage.error('Failed to send message');
+    }
+
+    if (isInIframe) {
+      window.parent.postMessage({
+        type: 'CHAT_CLEAR'
+      }, '*');
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter") {
+      if (e.shiftKey) {
+        // Allow new line with Shift+Enter
+        return;
+      } else {
+        // Send message with Enter
+        e.preventDefault();
+        handleSendMessage();
+      }
+    }
+  };
+
+  const toggleRecording = () => {
+    if (!recognitionRef.current) {
+      antMessage.error('Speech recognition is not supported in this browser');
+      return;
+    }
+
+    if (isRecording) {
+      recognitionRef.current.stop();
+      setIsRecording(false);
+    } else {
+      try {
+        recognitionRef.current.lang = currentUserDefaultLang;
+        recognitionRef.current.start();
+        setIsRecording(true);
+        antMessage.info('Listening... Speak now');
+      } catch (error) {
+        console.error('Error starting recognition:', error);
+        antMessage.error('Failed to start speech recognition');
+      }
+    }
+  };
+
   const updateChatPopupMessages = () => {
     if (!isInIframe) return;
 
@@ -216,52 +295,6 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
     }, '*');
   };
 
-  useEffect(() => {
-    if (isInIframe && stationMessages.length > 0) {
-      updateChatPopupMessages();
-    }
-  }, [stationMessages.length, isInIframe]);
-
-  const toggleRecording = () => {
-    if (!recognitionRef.current) {
-      antMessage.error('Speech recognition is not supported in this browser');
-      return;
-    }
-
-    if (isRecording) {
-      recognitionRef.current.stop();
-      setIsRecording(false);
-    } else {
-      try {
-        recognitionRef.current.lang = currentUserDefaultLang;
-        recognitionRef.current.start();
-        setIsRecording(true);
-        antMessage.info('Listening... Speak now');
-      } catch (error) {
-        console.error('Error starting recognition:', error);
-        antMessage.error('Failed to start speech recognition');
-      }
-    }
-  };
-
-  const handleClearChat = () => {
-    messageStore.reset();
-    antMessage.success('Chat cleared');
-
-    if (isInIframe) {
-      window.parent.postMessage({
-        type: 'CHAT_CLEAR'
-      }, '*');
-    }
-  };
-
-  const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage();
-    }
-  };
-
   const generateMessagesHTML = () => {
     if (stationMessages.length === 0) {
       return `
@@ -288,18 +321,6 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
             <div style="font-size: 14px; line-height: 1.5;">
               ${displayMessage}
             </div>
-            ${messageObj.originalMessage && messageObj.originalMessage !== displayMessage ? `
-              <div style="
-                font-size: 12px;
-                opacity: 0.7;
-                font-style: italic;
-                border-top: ${isRight ? '1px solid rgba(255,255,255,0.2)' : '1px solid rgba(0,0,0,0.1)'};
-                padding-top: 6px;
-                margin-top: 6px;
-              ">
-                Original: ${messageObj.originalMessage}
-              </div>
-            ` : ''}
           </div>
         </div>
       `;
@@ -317,9 +338,25 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
         <div style="display: flex; flex-direction: column; height: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;">
           <!-- Header -->
           <div style="padding: 16px 20px; border-bottom: 1px solid #e5e7eb; background: #f9fafb; display: flex; justify-content: space-between; align-items: center;">
-            <span style="font-weight: 600; font-size: 16px; color:'#000'">Chat Assistant</span>
-            <div style="display: flex; gap: 12px; font-size: 12px; color: #666;">
-              <span>Station ${currentStation}</span>
+            <span style="font-weight: 600; font-size: 16px; color: #000;">Chat Assistant</span>
+            <div style="display: flex; gap: 12px; align-items: center;">
+              <span style="font-size: 12px; color: #666;">Station ${currentStation}</span>
+              <button
+                id="chat-end-session-button"
+                style="
+                  padding: 8px 16px;
+                  background: #ef4444;
+                  color: white;
+                  border: none;
+                  border-radius: 6px;
+                  cursor: pointer;
+                  font-size: 13px;
+                  font-weight: 500;
+                  transition: all 0.2s;
+                "
+              >
+                End Session
+              </button>
             </div>
           </div>
 
@@ -333,19 +370,21 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
             <div style="display: flex; gap: 12px; align-items: flex-end;">
               <textarea
                 id="chat-message-input"
-                placeholder="Type your message... (Press Enter to send)"
+                placeholder="Type your message... (Shift+Enter for new line)"
                 style="
                   flex: 1;
                   padding: 12px;
                   border: 1px solid #e5e7eb;
                   border-radius: 8px;
-                  fontSize: 14px;
+                  font-size: 14px;
                   font-family: inherit;
                   resize: none;
                   min-height: 44px;
                   max-height: 120px;
                   outline: none;
-                  color:'#000'
+                  color: #000;
+                  scrollbar-width: thin;
+                  scrollbar-color: #888 transparent;
                 "
               ></textarea>
               
@@ -393,6 +432,23 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
                   <polygon style="fill: white;" points="512,33.758 109.455,294.271 0,232.606"/>
                   <polygon style="fill: white;" points="512,33.758 511.471,35.232 300.246,399.799 164.932,325.531"/>
                 </svg>
+              </button>
+
+              <button
+                id="chat-clear-button"
+                style="
+                  padding: 8px 16px;
+                  background: transparent;
+                  color: #ef4444;
+                  border: 1px solid #ef4444;
+                  border-radius: 6px;
+                  cursor: pointer;
+                  font-size: 13px;
+                  font-weight: 500;
+                  transition: all 0.2s;
+                "
+              >
+                Clear
               </button>
 
               <button
@@ -523,10 +579,32 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
       {!isInIframe && (
         <Modal
           title={
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', paddingRight:'2rem' }}>
               <span>Chat Assistant</span>
-              <div style={{ display: 'flex', gap: '12px', fontSize: '12px', color: '#666' }}>
-                <span>Station {currentStation}</span>
+              <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                <span style={{ fontSize: '12px', color: '#666' }}>Station {currentStation}</span>
+                <button
+                  onClick={handleEndSession}
+                  style={{
+                    padding: '8px 16px',
+                    background: '#ef4444',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontSize: '13px',
+                    fontWeight: '500',
+                    transition: 'all 0.2s'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = '#dc2626';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = '#ef4444';
+                  }}
+                >
+                  End Session
+                </button>
               </div>
             </div>
           }
@@ -582,10 +660,11 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
             }}>
               <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-end' }}>
                 <textarea
-                  placeholder="Type your message... (Press Enter to send)"
+                  ref={textareaRef}
+                  placeholder="Type your message... (Shift+Enter for new line)"
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
-                  onKeyPress={handleKeyPress}
+                  onKeyDown={handleKeyDown}
                   style={{
                     flex: 1,
                     padding: '12px',
@@ -596,72 +675,61 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
                     resize: 'none',
                     minHeight: '44px',
                     maxHeight: '120px',
-                    outline: 'none'
+                    outline: 'none',
+                    scrollbarWidth: 'thin',
+                    scrollbarColor: '#888 transparent'
                   }}
                 />
 
-                <button
-                  onClick={toggleRecording}
-                  style={{
-                    padding: '12px',
-                    background: isRecording ? '#ef4444' : '#3b5998',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    minWidth: '44px',
-                    transition: 'all 0.2s'
-                  }}
-                >
-                  {isRecording ? (
-                    <IoMicOffOutline style={{ fontSize: '20px' }} />
-                  ) : (
-                    <IoMicOutline style={{ fontSize: '20px' }} />
-                  )}
-                </button>
+                <div style={{ display: 'flex', gap: '12px' }}>
+                  <button
+                    onClick={() => handleSendMessage()}
+                    style={{
+                      padding: '12px',
+                      background: '#3b5998',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      minWidth: '44px',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    <svg viewBox="0 0 512 512" style={{ width: '20px', height: '20px' }}>
+                      <polygon style={{ fill: 'white' }} points="97.478,235.728 147.096,478.242 512,33.758 " />
+                      <polygon style={{ fill: '#ccc' }} points="251.837,373.231 147.096,478.242 164.932,325.531 231.773,327.360 " />
+                      <polygon style={{ fill: 'white' }} points="512,33.758 109.455,294.271 0,232.606" />
+                      <polygon style={{ fill: 'white' }} points="512,33.758 511.471,35.232 300.246,399.799 164.932,325.531" />
+                    </svg>
+                  </button>
 
-                <button
-                  onClick={() => handleSendMessage()}
-                  style={{
-                    padding: '12px',
-                    background: '#3b5998',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    minWidth: '44px',
-                    transition: 'all 0.2s'
-                  }}
-                >
-                  <svg viewBox="0 0 512 512" style={{ width: '20px', height: '20px' }}>
-                    <polygon style={{ fill: 'white' }} points="97.478,235.728 147.096,478.242 512,33.758 " />
-                    <polygon style={{ fill: '#ccc' }} points="251.837,373.231 147.096,478.242 164.932,325.531 231.773,327.360 " />
-                    <polygon style={{ fill: 'white' }} points="512,33.758 109.455,294.271 0,232.606" />
-                    <polygon style={{ fill: 'white' }} points="512,33.758 511.471,35.232 300.246,399.799 164.932,325.531" />
-                  </svg>
-                </button>
+                  <AudioRecorder />
+                </div>
 
                 <button
                   onClick={handleClearChat}
                   style={{
-                    padding: '12px',
+                    padding: '8px 16px',
                     background: 'transparent',
                     color: '#ef4444',
-                    border: '1px solid #e5e7eb',
-                    borderRadius: '8px',
+                    border: '1px solid #ef4444',
+                    borderRadius: '6px',
                     cursor: 'pointer',
                     fontSize: '13px',
                     fontWeight: '500',
                     transition: 'all 0.2s'
                   }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = '#fef2f2';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'transparent';
+                  }}
                 >
-                  Clear
+                  Clear Chat
                 </button>
               </div>
             </div>
