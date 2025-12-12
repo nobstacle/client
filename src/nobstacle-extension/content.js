@@ -382,13 +382,15 @@ function createChatPopup(content) {
     const micButton = popup.querySelector('#chat-mic-button');
     const clearButton = popup.querySelector('#chat-clear-button');
     const closeButton = popup.querySelector('#chat-close-button');
+    const endSessionButton = popup.querySelector('#chat-end-session-button');
 
     console.log('[Content Script] Found elements:', {
       messageInput: !!messageInput,
       sendButton: !!sendButton,
       micButton: !!micButton,
       clearButton: !!clearButton,
-      closeButton: !!closeButton
+      closeButton: !!closeButton,
+      endSessionButton: !!endSessionButton
     });
 
     if (messageInput && sendButton) {
@@ -443,12 +445,27 @@ function createChatPopup(content) {
       console.log('[Content Script] ✓ Mic button listener attached');
     }
 
+    // Clear button handler
     if (clearButton) {
       clearButton.addEventListener('click', () => {
         console.log('[Content Script] Clear button clicked');
-        iframe.contentWindow.postMessage({ type: 'CHAT_CLEAR' }, '*');
+        iframe.contentWindow.postMessage({
+          type: 'CHAT_CLEAR'
+        }, '*');
       });
       console.log('[Content Script] ✓ Clear button listener attached');
+    }
+
+    // End Session button handler
+    if (endSessionButton) {
+      endSessionButton.addEventListener('click', () => {
+        console.log('[Content Script] End Session button clicked');
+        iframe.contentWindow.postMessage({
+          type: 'CHAT_END_SESSION'
+        }, '*');
+        popup.remove();
+      });
+      console.log('[Content Script] ✓ End Session button listener attached');
     }
 
     if (closeButton) {

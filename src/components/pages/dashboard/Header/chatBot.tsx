@@ -100,6 +100,14 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
       if (event.data.type === 'CHAT_TOGGLE_RECORDING') {
         toggleRecording();
       }
+      
+      if (event.data.type === 'CHAT_CLEAR') {
+        handleClearChat();
+      }
+      
+      if (event.data.type === 'CHAT_END_SESSION') {
+        handleEndSession();
+      }
     };
 
     window.addEventListener('message', handler);
@@ -321,6 +329,18 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
             <div style="font-size: 14px; line-height: 1.5;">
               ${displayMessage}
             </div>
+            ${messageObj.originalMessage && messageObj.originalMessage !== displayMessage ? `
+              <div style="
+                font-size: 12px;
+                opacity: 0.7;
+                font-style: italic;
+                border-top: ${isRight ? '1px solid rgba(255,255,255,0.2)' : '1px solid rgba(0,0,0,0.1)'};
+                padding-top: 6px;
+                margin-top: 6px;
+              ">
+                Original: ${messageObj.originalMessage}
+              </div>
+            ` : ''}
           </div>
         </div>
       `;
@@ -579,7 +599,7 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
       {!isInIframe && (
         <Modal
           title={
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', paddingRight:'2rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', paddingRight: '2rem' }}>
               <span>Chat Assistant</span>
               <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
                 <span style={{ fontSize: '12px', color: '#666' }}>Station {currentStation}</span>
