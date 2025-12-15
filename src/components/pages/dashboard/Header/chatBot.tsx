@@ -392,7 +392,7 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
                   min-height: 44px;
                   max-height: 120px;
                   outline: none;
-                  color: #000;
+                  color: #fff;
                   scrollbar-width: thin;
                   scrollbar-color: #888 transparent;
                 "
