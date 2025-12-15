@@ -7,6 +7,9 @@ const HEADER_HEIGHT = '56px';
 const DEBUG_MODE = false; // Set to true for debugging
 let isEnabled = true;
 let headerInjected = false;
+let mediaRecorder = null;
+let audioChunks = [];
+let isRecording = false;
 
 // List of allowed iframe origins
 const ALLOWED_IFRAME_ORIGINS = Isproduction
@@ -23,6 +26,23 @@ function shouldInject() {
   if (hostname.includes('nobstacle.com') || hostname === 'localhost') return false;
   if (window.location.protocol === 'chrome:' || window.location.protocol === 'chrome-extension:') return false;
   return true;
+}
+
+function getSupportedMimeType() {
+  const types = [
+    'audio/webm;codecs=opus',
+    'audio/webm',
+    'audio/ogg;codecs=opus',
+    'audio/mp4'
+  ];
+
+  for (const type of types) {
+    if (MediaRecorder.isTypeSupported(type)) {
+      return type;
+    }
+  }
+
+  return 'audio/webm';
 }
 
 chrome.storage.local.get(['extensionEnabled'], (result) => {
@@ -105,6 +125,130 @@ function injectStyles() {
     }
   `;
   document.head.appendChild(style);
+}
+
+async function startAudioRecording() {
+  try {
+    console.log('[Content Script] Requesting microphone permission...');
+
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    console.log('[Content Script] ✓ Microphone permission granted');
+
+    audioChunks = [];
+
+    const mimeType = getSupportedMimeType();
+    mediaRecorder = new MediaRecorder(stream, { mimeType });
+
+    mediaRecorder.ondataavailable = (event) => {
+      if (event.data.size > 0) {
+        audioChunks.push(event.data);
+      }
+    };
+
+    mediaRecorder.onstop = async () => {
+      console.log('[Content Script] Recording stopped, processing audio...');
+      const audioBlob = new Blob(audioChunks, { type: mimeType });
+      await sendAudioToBackend(audioBlob);
+
+      // Stop all tracks
+      stream.getTracks().forEach(track => track.stop());
+    };
+
+    mediaRecorder.start();
+    isRecording = true;
+    console.log('[Content Script] ✓ Recording started');
+
+    // Show recording indicator
+    createRecordingIndicator({ text: 'Recording... Speak now' });
+
+    // Update mic button in popup
+    updateMicButtonState(true);
+
+    return true;
+  } catch (error) {
+    console.error('[Content Script] Microphone error:', error);
+
+    if (error.name === 'NotAllowedError') {
+      alert('Microphone permission denied. Please allow microphone access in your browser settings.');
+    } else if (error.name === 'NotFoundError') {
+      alert('No microphone found. Please connect a microphone and try again.');
+    } else {
+      alert('Failed to access microphone: ' + error.message);
+    }
+
+    return false;
+  }
+}
+
+function stopAudioRecording() {
+  if (mediaRecorder && isRecording) {
+    console.log('[Content Script] Stopping recording...');
+    mediaRecorder.stop();
+    isRecording = false;
+
+    // Remove recording indicator
+    document.getElementById('nobstacle-recording-indicator')?.remove();
+
+    // Update mic button in popup
+    updateMicButtonState(false);
+
+    return true;
+  }
+  return false;
+}
+
+async function sendAudioToBackend(audioBlob) {
+  try {
+    console.log('[Content Script] Sending audio to backend...');
+
+    const iframe = document.getElementById('nobstacle-header-iframe');
+    if (!iframe) {
+      console.error('[Content Script] ERROR: Iframe not found');
+      return;
+    }
+
+    // Convert blob to base64
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64Audio = reader.result.split(',')[1];
+
+      // Send to iframe for processing
+      iframe.contentWindow.postMessage({
+        type: 'PROCESS_AUDIO',
+        audioData: base64Audio,
+        mimeType: audioBlob.type
+      }, '*');
+
+      console.log('[Content Script] ✓ Audio sent to iframe for processing');
+    };
+    reader.readAsDataURL(audioBlob);
+
+  } catch (error) {
+    console.error('[Content Script] Error sending audio:', error);
+    alert('Failed to process audio. Please try again.');
+  }
+}
+
+
+function updateMicButtonState(recording) {
+  const popup = document.getElementById('nobstacle-chat-popup');
+  if (popup) {
+    const micButton = popup.querySelector('#chat-mic-button');
+    if (micButton) {
+      micButton.setAttribute('data-recording', recording ? 'true' : 'false');
+      micButton.style.background = recording ? '#ef4444' : '#3b5998';
+
+      micButton.innerHTML = recording ? `
+        <svg viewBox="0 0 24 24" style="width: 20px; height: 20px; fill: white;">
+          <path d="M19 11h-1.7c0 .74-.16 1.43-.43 2.05l1.23 1.23c.56-.98.9-2.09.9-3.28zm-4.02.17c0-.06.02-.11.02-.17V5c0-1.66-1.34-3-3-3S9 3.34 9 5v.18l5.98 5.99zM4.27 3L3 4.27l6.01 6.01V11c0 1.66 1.33 3 2.99 3 .22 0 .44-.03.65-.08l1.66 1.66c-.71.33-1.5.52-2.31.52-2.76 0-5.3-2.1-5.3-5.1H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c.91-.13 1.77-.45 2.54-.9L19.73 21 21 19.73 4.27 3z"/>
+        </svg>
+      ` : `
+        <svg viewBox="0 0 24 24" style="width: 20px; height: 20px; fill: white;">
+          <path d="M12 14c1.66 0 2.99-1.34 2.99-3L15 5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z"/>
+        </svg>
+      `;
+    }
+  }
 }
 
 function injectDebugPanel() {
@@ -418,29 +562,22 @@ function createChatPopup(content) {
 
     // Microphone button handler
     if (micButton) {
-      micButton.addEventListener('click', () => {
+      micButton.addEventListener('click', async () => {
         console.log('[Content Script] Mic button clicked');
-        const isRecording = micButton.getAttribute('data-recording') === 'true';
 
-        // Toggle recording state visually
-        micButton.setAttribute('data-recording', (!isRecording).toString());
-        micButton.style.background = !isRecording ? '#ef4444' : '#3b5998';
-
-        // Update icon
-        micButton.innerHTML = !isRecording ? `
-          <svg viewBox="0 0 24 24" style="width: 20px; height: 20px; fill: white;">
-            <path d="M19 11h-1.7c0 .74-.16 1.43-.43 2.05l1.23 1.23c.56-.98.9-2.09.9-3.28zm-4.02.17c0-.06.02-.11.02-.17V5c0-1.66-1.34-3-3-3S9 3.34 9 5v.18l5.98 5.99zM4.27 3L3 4.27l6.01 6.01V11c0 1.66 1.33 3 2.99 3 .22 0 .44-.03.65-.08l1.66 1.66c-.71.33-1.5.52-2.31.52-2.76 0-5.3-2.1-5.3-5.1H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c.91-.13 1.77-.45 2.54-.9L19.73 21 21 19.73 4.27 3z"/>
-          </svg>
-        ` : `
-          <svg viewBox="0 0 24 24" style="width: 20px; height: 20px; fill: white;">
-            <path d="M12 14c1.66 0 2.99-1.34 2.99-3L15 5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z"/>
-          </svg>
-        `;
-
-        // Send message to iframe to toggle recording
-        iframe.contentWindow.postMessage({
-          type: 'CHAT_TOGGLE_RECORDING'
-        }, '*');
+        if (!isRecording) {
+          // Start recording
+          const started = await startAudioRecording();
+          if (started) {
+            console.log('[Content Script] ✓ Recording started successfully');
+          }
+        } else {
+          // Stop recording
+          const stopped = stopAudioRecording();
+          if (stopped) {
+            console.log('[Content Script] ✓ Recording stopped successfully');
+          }
+        }
       });
       console.log('[Content Script] ✓ Mic button listener attached');
     }
@@ -829,6 +966,26 @@ async function injectHeader() {
         if (messageInput) {
           messageInput.value = event.data.text;
           console.log('[Content Script] ✓ Transcribed text inserted into input');
+        }
+      }
+    }
+
+    if (event.data.type === 'PROCESS_AUDIO') {
+      console.log('[Content Script] Audio processing requested');
+      // This will be handled by the iframe which has access to the backend
+      // The iframe will call the speech-to-text API and return the transcription
+    }
+
+    if (event.data.type === 'AUDIO_TRANSCRIPTION') {
+      console.log('[Content Script] Received transcription:', event.data.text);
+
+      // Update the input field in the chat popup
+      const popup = document.getElementById('nobstacle-chat-popup');
+      if (popup) {
+        const messageInput = popup.querySelector('#chat-message-input');
+        if (messageInput) {
+          messageInput.value = event.data.text;
+          console.log('[Content Script] ✓ Transcription inserted into input');
         }
       }
     }

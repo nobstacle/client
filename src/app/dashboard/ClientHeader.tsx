@@ -45,6 +45,8 @@ import { RiLockPasswordLine, RiLogoutBoxLine } from 'react-icons/ri';
 import { HiOutlineOfficeBuilding, HiOutlineUser } from 'react-icons/hi';
 import { signOut } from "next-auth/react";
 import { useMessageStore } from "../../lib/zustand/store/messageStore";
+import { useUploadControllerUploadSpeechToTextFile } from '../../lib/client/api';
+
 interface ClientHeaderProps {
     user: Session | null;
 }
@@ -71,6 +73,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
     const [isInIframe, setIsInIframe] = useState(false);
     const messageStore = useMessageStore();
     const { emitSendMessage, emitClearMessage } = useSocketContext();
+    const speechToTextMutation = useUploadControllerUploadSpeechToTextFile();
 
     useEffect(() => {
         setIsInIframe(window.self !== window.top);
@@ -1163,6 +1166,67 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                 }, '*');
 
                 console.log('[ClientHeader] ✓ Recording result forwarded to extension');
+            }
+
+            if (event.data.type === 'PROCESS_AUDIO') {
+                console.log('[ClientHeader] Processing audio from extension');
+
+                try {
+                    // Convert base64 back to blob
+                    const base64Audio = event.data.audioData;
+                    const mimeType = event.data.mimeType;
+
+                    // Decode base64 to binary
+                    const binaryString = atob(base64Audio);
+                    const bytes = new Uint8Array(binaryString.length);
+                    for (let i = 0; i < binaryString.length; i++) {
+                        bytes[i] = binaryString.charCodeAt(i);
+                    }
+
+                    // Create blob from binary data
+                    const audioBlob = new Blob([bytes], { type: mimeType });
+
+                    // Determine language code
+                    const selectedLang = params.get("lang") || companyData?.defaultLangCode || "en";
+
+                    console.log('[ClientHeader] Sending audio to speech-to-text API with lang:', selectedLang);
+
+                    // Call the speech-to-text API
+                    speechToTextMutation.mutate(
+                        {
+                            data: {
+                                file: audioBlob,
+                                langCode: selectedLang
+                            }
+                        },
+                        {
+                            onSuccess: (response) => {
+                                console.log('[ClientHeader] ✓ Transcription received:', response.transcription);
+
+                                // Send transcription back to content script
+                                window.parent.postMessage({
+                                    type: 'AUDIO_TRANSCRIPTION',
+                                    text: response.transcription
+                                }, '*');
+
+                                console.log('[ClientHeader] ✓ Transcription sent to extension');
+                            },
+                            onError: (error) => {
+                                console.error('[ClientHeader] Speech-to-text error:', error);
+                                window.parent.postMessage({
+                                    type: 'AUDIO_TRANSCRIPTION_ERROR',
+                                    error: 'Failed to transcribe audio'
+                                }, '*');
+                            }
+                        }
+                    );
+                } catch (error) {
+                    console.error('[ClientHeader] Error processing audio:', error);
+                    window.parent.postMessage({
+                        type: 'AUDIO_TRANSCRIPTION_ERROR',
+                        error: 'Failed to process audio data'
+                    }, '*');
+                }
             }
         };
 

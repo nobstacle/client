@@ -100,11 +100,11 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
       if (event.data.type === 'CHAT_TOGGLE_RECORDING') {
         toggleRecording();
       }
-      
+
       if (event.data.type === 'CHAT_CLEAR') {
         handleClearChat();
       }
-      
+
       if (event.data.type === 'CHAT_END_SESSION') {
         handleEndSession();
       }
@@ -359,25 +359,6 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
           <!-- Header -->
           <div style="padding: 16px 20px; border-bottom: 1px solid #e5e7eb; background: #f9fafb; display: flex; justify-content: space-between; align-items: center;">
             <span style="font-weight: 600; font-size: 16px; color: #000;">Chat Assistant</span>
-            <div style="display: flex; gap: 12px; align-items: center;">
-              <span style="font-size: 12px; color: #666;">Station ${currentStation}</span>
-              <button
-                id="chat-end-session-button"
-                style="
-                  padding: 8px 16px;
-                  background: #ef4444;
-                  color: white;
-                  border: none;
-                  border-radius: 6px;
-                  cursor: pointer;
-                  font-size: 13px;
-                  font-weight: 500;
-                  transition: all 0.2s;
-                "
-              >
-                End Session
-              </button>
-            </div>
           </div>
 
           <!-- Messages Container -->
@@ -603,28 +584,6 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
               <span>Chat Assistant</span>
               <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
                 <span style={{ fontSize: '12px', color: '#666' }}>Station {currentStation}</span>
-                <button
-                  onClick={handleEndSession}
-                  style={{
-                    padding: '8px 16px',
-                    background: '#ef4444',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    fontSize: '13px',
-                    fontWeight: '500',
-                    transition: 'all 0.2s'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = '#dc2626';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = '#ef4444';
-                  }}
-                >
-                  End Session
-                </button>
               </div>
             </div>
           }
