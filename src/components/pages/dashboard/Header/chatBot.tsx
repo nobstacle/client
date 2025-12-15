@@ -199,35 +199,44 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
   };
 
   const handleClearChat = () => {
+    // Clear the store first
     messageStore.reset();
-    antMessage.success('Chat cleared');
 
     try {
+      // Clear on backend
       emitClearMessage({
         station: Number(params.get("station") ?? 1),
-      })
+      });
 
       setInputValue("");
+
+      // Force immediate UI update in extension popup
+      if (isInIframe) {
+        const emptyStateHTML = `
+        <div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #9ca3af; font-size: 14px;">
+          No messages yet. Start a conversation!
+        </div>
+      `;
+
+        window.parent.postMessage({
+          type: 'CHAT_UPDATE_MESSAGES',
+          html: emptyStateHTML
+        }, '*');
+      }
+
+      antMessage.success('Chat cleared');
 
     } catch (error) {
       console.error('Error sending message:', error);
       antMessage.error('Failed to send message');
-    }
-
-    if (isInIframe) {
-      window.parent.postMessage({
-        type: 'CHAT_CLEAR'
-      }, '*');
     }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter") {
       if (e.shiftKey) {
-        // Allow new line with Shift+Enter
         return;
       } else {
-        // Send message with Enter
         e.preventDefault();
         handleSendMessage();
       }
