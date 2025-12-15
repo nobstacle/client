@@ -72,7 +72,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
     const [hamburgerPosition, setHamburgerPosition] = useState({ top: 0, right: 0 });
     const [isInIframe, setIsInIframe] = useState(false);
     const messageStore = useMessageStore();
-    const { emitSendMessage, emitClearMessage } = useSocketContext();
+    const { emitSendMessage, emitClearMessage, emitLeaveChat } = useSocketContext();
     const speechToTextMutation = useUploadControllerUploadSpeechToTextFile();
 
     useEffect(() => {
@@ -1115,13 +1115,41 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
             }
 
             if (event.data.type === 'CHAT_CLEAR') {
-                console.log('[ClientHeader] Chat cleared from extension');
-                messageStore.reset();
+                console.log('[ClientHeader] Chat clear request - clearing messages and ending session');
 
-                // Update the popup to show empty state
-                setTimeout(() => {
-                    updateChatPopupMessages();
-                }, 100);
+                try {
+                    // Clear the message store
+                    messageStore.reset();
+                    console.log('[ClientHeader] ✓ Message store cleared');
+
+                    // End the chat session
+                    emitLeaveChat({
+                        station: Number(params.get("station") ?? 1),
+                    });
+                    console.log('[ClientHeader] ✓ Chat session ended');
+
+                    // Also emit clear message to backend
+                    emitClearMessage({
+                        station: Number(params.get("station") ?? 1),
+                    });
+                    console.log('[ClientHeader] ✓ Clear message sent to backend');
+
+                    // Send confirmation back to extension
+                    window.parent.postMessage({
+                        type: 'CHAT_CLEARED',
+                        success: true
+                    }, '*');
+
+                    console.log('[ClientHeader] ✓ Clear request completed successfully');
+                } catch (error) {
+                    console.error('[ClientHeader] Error clearing chat:', error);
+
+                    window.parent.postMessage({
+                        type: 'CHAT_CLEARED',
+                        success: false,
+                        error: error.message
+                    }, '*');
+                }
             }
 
             if (event.data.type === 'CHAT_POPUP_CLOSED') {

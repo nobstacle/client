@@ -229,7 +229,6 @@ async function sendAudioToBackend(audioBlob) {
   }
 }
 
-
 function updateMicButtonState(recording) {
   const popup = document.getElementById('nobstacle-chat-popup');
   if (popup) {
@@ -581,7 +580,6 @@ function createChatPopup(content) {
       });
       console.log('[Content Script] ✓ Mic button listener attached');
     }
-
     // Clear button handler
     if (clearButton) {
       clearButton.addEventListener('click', () => {
@@ -979,13 +977,26 @@ async function injectHeader() {
     if (event.data.type === 'AUDIO_TRANSCRIPTION') {
       console.log('[Content Script] Received transcription:', event.data.text);
 
-      // Update the input field in the chat popup
       const popup = document.getElementById('nobstacle-chat-popup');
       if (popup) {
         const messageInput = popup.querySelector('#chat-message-input');
-        if (messageInput) {
+        if (messageInput && event.data.text) {
+          // Set the value in the input field
           messageInput.value = event.data.text;
           console.log('[Content Script] ✓ Transcription inserted into input');
+
+          // Automatically send the message
+          const iframe = document.getElementById('nobstacle-header-iframe');
+          if (iframe) {
+            iframe.contentWindow.postMessage({
+              type: 'CHAT_SEND_MESSAGE',
+              message: event.data.text
+            }, '*');
+
+            // Clear the input after sending
+            messageInput.value = '';
+            console.log('[Content Script] ✓ Message automatically sent');
+          }
         }
       }
     }
