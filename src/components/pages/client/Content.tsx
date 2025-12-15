@@ -224,26 +224,6 @@ const PackageCard = ({ packageData, handleClick, loadingButton, langCode = 'en' 
   const hasMultipleImages = imageArray.length > 1;
   const hasVideos = videoArray.length > 0;
 
-  // Build media array (images + videos)
-  // const mediaArray = [
-  //   ...(packageData.signedImageUrls?.length
-  //     ? packageData.signedImageUrls
-  //     : packageData.images || []
-  //   ).map((img) => ({
-  //     type: "image",
-  //     url: img.signedUrl || img.url || img,
-  //     alt: img.alt || "Package Image",
-  //     order: img.order || 0,
-  //   })),
-  //   ...(packageData.videos || []).map((vid, idx) => ({
-  //     type: "video",
-  //     url: vid.url,
-  //     alt: vid.tag || "Package Video",
-  //     order: vid.order || idx + 1,
-  //   })),
-  // ].sort((a, b) => (a.order || 0) - (b.order || 0));
-
-  // Reset currentSlide when imageArray changes
   useEffect(() => {
     setCurrentSlide(0);
   }, [imageArray.length]);
@@ -338,6 +318,7 @@ const PackageCard = ({ packageData, handleClick, loadingButton, langCode = 'en' 
   const openBigModal = () => {
     setisIsModalOpen(true);
   }
+
 
   return (
     <>
@@ -843,8 +824,6 @@ export const Content: React.FC = () => {
     }
   }, [messageStore.receivedType, messageStore.receivedContent, messageStore.receivedSurvey, messageStore.receivedMessage]);
 
-  console.info("TYPE", messageStore.receivedType);
-
   useEffect(() => {
     if (messageStore.receivedType === "Recording") {
       const lastContent = localStorage.getItem('lastDisplayedContent');
@@ -1186,9 +1165,6 @@ export const Content: React.FC = () => {
     }
   };
 
-  console.info("$$$$$$$$$$$$$$$$$", contentToDisplay);
-  console.info("messageStore", messageStore);
-
   if (hasHydrated) {
     return (
       <>
@@ -1234,6 +1210,8 @@ export const Content: React.FC = () => {
             return combinedImages;
           };
 
+          console.warn("parseData",parseData);
+          
           const processedPackages = parseData.map(pkg => ({
             ...pkg,
             signedImageUrls: pkg.to_category_id ?
@@ -1247,6 +1225,7 @@ export const Content: React.FC = () => {
             return purchasesB - purchasesA;
           });
 
+
           return (
             <div
               className="w-full space-y-6 relative"
@@ -1259,7 +1238,6 @@ export const Content: React.FC = () => {
                   langCode={currentLangCode}
                   handleClick={(data) => handlePackageClicked(data)}
                   loadingButton={loading}
-
                 />
               ))}
             </div>

@@ -181,10 +181,8 @@ export default function Upsell() {
         }
     }, [data?.user?.backendTokens?.at, allPackages.length, Url]);
 
-    // Packages for dropdown - only those without from/to categories
     const dropdownPackages = allPackages.filter(pkg => pkg?.roomUpgrade === false);
 
-    // Modified fetch function - remove visibility and loading checks that cause issues
     const fetchTransactions = useCallback((searchValue: string = "") => {
         setLoadingData(true);
         fetch(`${Url}/api/v1/uploads/get-al-upsell-transactions`, {
