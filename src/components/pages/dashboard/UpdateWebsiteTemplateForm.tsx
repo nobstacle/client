@@ -109,45 +109,11 @@ export const UpdateWebsiteTemplateForm: React.FC<{
             placeholder="Type content here..."
           />
         </div>
-        {/* <div className="flex flex-col items-end">
-          <div className="mt-4 flex">
-            <select {...register("tagSelect")}>
-              <option value="">Select tag...</option>
-              {textTags.data?.map((value, index) => (
-                <option value={value} key={`${value}-${index}`}>
-                  {value}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div> */}
-
-        {/* <div className="flex flex-col">
-          <label className="text-md text-gray-500">Language</label>
-          <div>
-            <select {...register("langCode")}>
-              <option value="">Select language...</option>
-              {languages.map(({ code, name }) => (
-                <option value={code} key={code}>
-                  {name}
-                </option>
-              ))}
-              <option value="tr">Turkish</option>
-              <option value="fr">French</option>
-            </select>
-          </div>
-        </div> */}
 
         <div className="text-center">
           {errors.url && (
             <p className="text-xs text-rose-600">{errors.url.message}</p>
           )}
-          {/* {errors.tagSelect && (
-            <p className="text-xs text-rose-600">{errors.tagSelect?.message}</p>
-          )}
-          {errors.langCode && (
-            <p className="text-xs text-rose-600">{errors.langCode.message}</p>
-          )} */}
 
           {updateWebsiteTemplate.error?.message && (
             <p className="text-xs text-rose-600">

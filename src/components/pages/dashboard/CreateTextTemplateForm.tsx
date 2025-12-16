@@ -175,8 +175,6 @@ export const CreateTextTemplateForm: React.FC<{
                     {name}
                   </Select.Option>
                 ))}
-                <Select.Option value="tr">Turkish</Select.Option>
-                <Select.Option value="fr">French</Select.Option>
               </Select>
             )}
           />

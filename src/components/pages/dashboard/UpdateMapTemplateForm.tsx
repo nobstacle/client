@@ -135,35 +135,7 @@ export const UpdateMapTemplateForm: React.FC<{
             />
           </Autocomplete>
         </div>
-        {/* <div className="flex flex-col items-end">
-          <div className="mt-4 flex">
-            <select {...register("tagSelect")}>
-              <option value="">Select tag...</option>
-              {MapTags.data?.map((value, index) => (
-                <option value={value} key={`${value}-${index}`}>
-                  {value}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div> */}
-
-        {/* <div className="flex flex-col">
-          <label className="Map-md Map-gray-500">Language</label>
-          <div>
-            <select {...register("langCode")}>
-              <option value="">Select language...</option>
-              {languages.map(({ code, name }) => (
-                <option value={code} key={code}>
-                  {name}
-                </option>
-              ))}
-              <option value="tr">Turkish</option>
-              <option value="fr">French</option>
-            </select>
-          </div>
-        </div> */}
-
+       
         <div className="Map-center">
           {errors.origin && (
             <p className="text-xs text-rose-600">{errors.origin.message}</p>
@@ -174,12 +146,6 @@ export const UpdateMapTemplateForm: React.FC<{
               {errors.destination.message}
             </p>
           )}
-          {/* {errors.tagSelect && (
-            <p className="Map-xs Map-rose-600">{errors.tagSelect?.message}</p>
-          )}
-          {errors.langCode && (
-            <p className="Map-xs Map-rose-600">{errors.langCode.message}</p>
-          )} */}
 
           {updateMapTemplate.error?.message && (
             <p className="text-xs text-rose-600">

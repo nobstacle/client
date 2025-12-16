@@ -2,7 +2,7 @@
 // import ReactDOM from 'react-dom';
 import { useCallback, useEffect, useRef, useMemo } from "react";
 import { useState } from "react";
-import { Drawer, Button, Input, List, Tag, Spin, Empty, message } from "antd";
+import { Drawer, Button, List, Tag, Spin, Empty, message } from "antd";
 import { MenuOutlined, CloseOutlined, SettingOutlined, MoreOutlined } from "@ant-design/icons";
 import { HeaderLanguagePicker } from "../../components/pages/dashboard/Header/LanguagePicker";
 import { LanguageShortcutPicker } from "../../components/pages/dashboard/Header/LanguageShortcutPicker";
@@ -33,7 +33,6 @@ import {
     IoGlobe,
     IoDocuments,
     IoMap,
-    IoChatboxEllipses,
     IoQrCode
 } from 'react-icons/io5';
 import { Logout } from "../../components/pages/dashboard/Header/Logout";
@@ -80,6 +79,9 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
     const [allPackages, setAllPackages] = useState([]);
     let Url = process.env.NEXT_PUBLIC_BACKEND_URL;
     const { data } = useSession();
+    const [selectedCategoryForUpsell, setSelectedCategoryForUpsell] = useState<number | null>(null);
+    const [selectedCategories, setSelectedCategories] = useState(null);
+    const [selectedPackages, setSelectedPackages] = useState([]);
 
     useEffect(() => {
         setIsInIframe(window.self !== window.top);
@@ -1341,15 +1343,18 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                     }, '*');
                 }
             }
-
-            // Add to useEffect with message listener
             if (event.data.type === 'SEND_UPSELL_PACKAGES') {
-                const categoryId = event.data.categoryId;
-                console.log('[ClientHeader] Sending upsell packages with category:', categoryId);
+                // Use category from message (extension) or local state (web app)
+                const categoryId = event.data.categoryId ?? selectedCategories;
+
+                console.log('[ClientHeader] === Sending upsell packages ===');
+                console.log('[ClientHeader] Category from message:', event.data.categoryId);
+                console.log('[ClientHeader] Category from state:', selectedCategories);
+                console.log('[ClientHeader] Using category:', categoryId);
 
                 const selectedLang = params.get("lang") || companyData?.defaultLangCode || "en";
 
-                // Filter packages by language
+                // Filter packages by language requirements
                 let filteredPackages = allPackages.filter((item) => {
                     return (
                         item?.packageNames?.[selectedLang] != null &&
@@ -1363,17 +1368,46 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                     );
                 });
 
+                console.log('[ClientHeader] Total packages after language filter:', filteredPackages.length);
+
                 // Filter by category if provided
                 if (categoryId && categoryId !== null) {
+                    console.log('[ClientHeader] Applying category filter for ID:', categoryId);
+                    const beforeCount = filteredPackages.length;
+
                     filteredPackages = filteredPackages.filter(pkg => {
+                        // For room upgrades, check from_category_id
                         if (pkg.roomUpgrade === true) {
-                            return pkg.from_category_id === categoryId;
+                            const matches = pkg.from_category_id === categoryId;
+                            console.log('[ClientHeader] Package', pkg.packageNames?.en,
+                                'roomUpgrade:', pkg.roomUpgrade,
+                                'from_category:', pkg.from_category_id,
+                                'matches:', matches);
+                            return matches;
                         }
+                        // For non-room upgrades, include all
+                        console.log('[ClientHeader] Package', pkg.packageNames?.en,
+                            'not room upgrade, including');
                         return true;
                     });
+
+                    console.log('[ClientHeader] Packages after category filter:', filteredPackages.length,
+                        '(was', beforeCount, ')');
+                }
+
+                // Also filter out selected packages if any
+                if (selectedPackages && selectedPackages?.length > 0) {
+                    console.log('[ClientHeader] Filtering out', selectedPackages.length, 'excluded packages');
+                    filteredPackages = filteredPackages.filter(pkg =>
+                        !selectedPackages.some(selected => selected.id === pkg.id)
+                    );
+                    console.log('[ClientHeader] Packages after exclusion filter:', filteredPackages.length);
                 }
 
                 if (filteredPackages.length > 0) {
+                    console.log('[ClientHeader] ✓ Sending', filteredPackages.length, 'packages to station',
+                        params.get("station") ?? 1);
+
                     emitSendPackages({
                         refId: filteredPackages[0].id,
                         langCode: selectedLang,
@@ -1383,16 +1417,37 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                         contentExtra: JSON.stringify(filteredPackages)
                     } as SendPackagePayloadType, (response) => {
                         if (response && (response === true)) {
-                            message.success(`Sent ${filteredPackages.length} packages` +
-                                (categoryId ? ' for selected category' : ''));
+                            const categoryMsg = categoryId ? ' for selected category' : '';
+                            message.success(`✓ Sent ${filteredPackages.length} packages${categoryMsg}`);
+                            console.log('[ClientHeader] ✓ Packages sent successfully');
                         } else {
                             message.error("Failed to send packages");
+                            console.error('[ClientHeader] ✗ Failed to send packages');
                         }
                     });
                 } else {
-                    message.warning("No packages available for selected criteria");
+                    const reason = categoryId
+                        ? "No room upgrade packages available for the selected category"
+                        : "No packages available for selected criteria";
+                    message.warning(reason);
+                    console.log('[ClientHeader] ⚠ No packages to send:', reason);
                 }
             }
+            if (event.data.type === 'CATEGORY_SELECTED') {
+                const categoryId = event.data.categoryId;
+                setSelectedCategoryForUpsell(categoryId);
+                console.log('[ClientHeader] Category selected from extension:', categoryId);
+
+                if (categoryId) {
+                    // Find category name for better UX
+                    const category = categoryData?.find(c => c.id === categoryId);
+                    const categoryName = category?.name || `ID ${categoryId}`;
+                    message.info(`Category "${categoryName}" selected for upsell`, 3);
+                } else {
+                    message.info('Category selection cleared');
+                }
+            }
+
         };
 
         window.addEventListener('message', handler);
@@ -1417,12 +1472,15 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         user,
         emitSendMessage,
         messageStore,
-        updateChatPopupMessages
+        updateChatPopupMessages,
+        allPackages,
+        selectedPackages,
+        selectedCategories,
+        selectedCategoryForUpsell,
     ]);
 
     return (
         <>
-
             <style jsx global>{`
                 html, body {
                     background: transparent !important;

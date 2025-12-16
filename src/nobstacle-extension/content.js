@@ -12,6 +12,7 @@ let audioChunks = [];
 let isRecording = false;
 let selectedCategory = null;
 let categoriesData = [];
+let categoriesFetched = false;
 
 // List of allowed iframe origins
 const ALLOWED_IFRAME_ORIGINS = Isproduction
@@ -55,7 +56,7 @@ chrome.storage.local.get(['extensionEnabled'], (result) => {
 });
 
 chrome.runtime.onMessage.addListener((req, sender, respond) => {
-  if (req.action === 'toggle') {
+    if (req.action === 'toggle') {
     isEnabled = !isEnabled;
     chrome.storage.local.set({ extensionEnabled: isEnabled });
 
@@ -68,38 +69,82 @@ chrome.runtime.onMessage.addListener((req, sender, respond) => {
       document.getElementById('nobstacle-chat-popup')?.remove();
       document.getElementById('nobstacle-search-dropdown')?.remove();
       document.getElementById('nobstacle-recording-indicator')?.remove();
+      document.getElementById('nobstacle-category-dropdown')?.remove(); // ✅ NEW
       document.body.style.marginTop = `${window.nobstacleOriginalMargin}px`;
       headerInjected = false;
       respond({ injected: false });
     }
     return true;
   }
-  if (req.action === 'triggerUpsell') {
+
+   if (req.action === 'triggerUpsell') {
+    console.log('[Content Script] Wallet icon clicked, sending upsell for category:', selectedCategory);
+    
     const iframe = document.getElementById('nobstacle-header-iframe');
     if (iframe) {
       iframe.contentWindow.postMessage({
-        type: 'TRIGGER_UPSELL',
+        type: 'SEND_UPSELL_PACKAGES',
         categoryId: selectedCategory
       }, '*');
-      console.log('[Content Script] ✓ Upsell triggered with category:', selectedCategory);
+      console.log('[Content Script] ✓ Upsell message sent to iframe');
+    } else {
+      console.error('[Content Script] ERROR: Header iframe not found!');
     }
+    
+    respond({ success: true, category: selectedCategory });
     return true;
   }
 
   if (req.action === 'showCategories') {
-    if (categoriesData.length === 0) {
-      // Fetch categories if not already cached
+    console.log('[Content Script] Show categories requested');
+    
+    if (categoriesData.length === 0 && !categoriesFetched) {
       fetchCategories().then(categories => {
         if (categories.length > 0) {
           createCategoryDropdown(categories);
         }
       });
-    } else {
+    } else if (categoriesData.length > 0) {
       createCategoryDropdown(categoriesData);
     }
+    
+    respond({ success: true });
     return true;
   }
 });
+
+function isInputFocused() {
+  const activeElement = document.activeElement;
+  const inputs = ['input', 'textarea', 'select'];
+  return inputs.includes(activeElement?.tagName?.toLowerCase()) || 
+         activeElement?.isContentEditable;
+}
+
+function setupKeyboardListener() {
+  document.addEventListener('keydown', (e) => {
+    // Check if user typed '/' and not in an input field
+    if (e.key === '/' && !isInputFocused()) {
+      e.preventDefault();
+      console.log('[Content Script] "/" key pressed - showing categories');
+      
+      if (categoriesData.length === 0 && !categoriesFetched) {
+        fetchCategories().then(categories => {
+          if (categories.length > 0) {
+            createCategoryDropdown(categories);
+          } else {
+            alert('No categories found. Please try again.');
+          }
+        });
+      } else if (categoriesData.length > 0) {
+        createCategoryDropdown(categoriesData);
+      } else {
+        alert('No categories available.');
+      }
+    }
+  });
+  
+  console.log('[Content Script] ✓ Keyboard listener for "/" added');
+}
 
 function injectStyles() {
   if (document.getElementById('nobstacle-header-styles')) return;
@@ -155,10 +200,14 @@ function injectStyles() {
 }
 
 function createCategoryDropdown(categories) {
+  // Remove existing dropdown
   document.getElementById('nobstacle-category-dropdown')?.remove();
 
   const iframe = document.getElementById('nobstacle-header-iframe');
-  if (!iframe) return;
+  if (!iframe) {
+    console.error('[Content Script] Header iframe not found!');
+    return;
+  }
 
   const iframeRect = iframe.getBoundingClientRect();
 
@@ -187,7 +236,10 @@ function createCategoryDropdown(categories) {
     (a.priceLevel || 0) - (b.priceLevel || 0)
   );
 
-  const categoriesHTML = sortedCategories.map(category => `
+  // ✅ IMPROVED: Better visual feedback for selected category
+  const categoriesHTML = sortedCategories.map(category => {
+    const isSelected = selectedCategory === category.id;
+    return `
     <div 
       class="category-item"
       data-category-id="${category.id}"
@@ -195,12 +247,18 @@ function createCategoryDropdown(categories) {
         padding: 16px 20px;
         border-bottom: 1px solid #f0f0f0;
         cursor: pointer;
-        transition: background-color 0.2s;
+        transition: all 0.2s;
+        background: ${isSelected ? '#e8eef7' : 'white'};
       "
     >
       <div style="display: flex; align-items: center; justify-content: space-between;">
         <div style="flex: 1;">
-          <div style="font-weight: 600; font-size: 15px; color: #1f2937; margin-bottom: 4px;">
+          <div style="
+            font-weight: 600; 
+            font-size: 15px; 
+            color: ${isSelected ? '#3b5998' : '#1f2937'}; 
+            margin-bottom: 4px;
+          ">
             ${category.name}
           </div>
           ${category.priceLevel ? `
@@ -213,19 +271,21 @@ function createCategoryDropdown(categories) {
           width: 32px;
           height: 32px;
           border-radius: 8px;
-          background: ${selectedCategory === category.id ? '#10b981' : '#3b5998'};
+          background: ${isSelected ? '#10b981' : '#3b5998'};
           display: flex;
           align-items: center;
           justify-content: center;
           color: white;
-          font-size: 12px;
+          font-size: ${isSelected ? '16px' : '12px'};
           font-weight: 600;
+          transition: all 0.2s;
         ">
-          ${selectedCategory === category.id ? '✓' : (category.priceLevel || '?')}
+          ${isSelected ? '✓' : (category.priceLevel || '?')}
         </div>
       </div>
     </div>
-  `).join('');
+  `;
+  }).join('');
 
   dropdown.innerHTML = `
     <div style="padding: 16px 20px; border-bottom: 2px solid #3b5998; background: #f8fafc;">
@@ -233,17 +293,19 @@ function createCategoryDropdown(categories) {
         Select Category for Upsell
       </h3>
       <p style="margin: 4px 0 0 0; font-size: 12px; color: #6b7280;">
-        Type / to open this menu • Click category to select
+        ${selectedCategory 
+          ? 'Category selected. Click wallet icon to send packages.' 
+          : 'Choose a category to filter room upgrade packages'}
       </p>
     </div>
     <div style="max-height: 320px; overflow-y: auto;">
       ${categoriesHTML}
     </div>
-    <div style="padding: 12px 20px; border-top: 1px solid #e5e7eb; background: #f8fafc;">
+    <div style="padding: 12px 20px; border-top: 1px solid #e5e7eb; background: #f8fafc; display: flex; gap: 8px;">
       <button 
         id="clear-category-btn"
         style="
-          width: 100%;
+          flex: 1;
           padding: 10px;
           background: #ef4444;
           color: white;
@@ -256,12 +318,30 @@ function createCategoryDropdown(categories) {
       >
         Clear Selection
       </button>
+      ${selectedCategory ? `
+      <button 
+        id="send-upsell-btn"
+        style="
+          flex: 1;
+          padding: 10px;
+          background: #10b981;
+          color: white;
+          border: none;
+          border-radius: 8px;
+          font-weight: 500;
+          cursor: pointer;
+          transition: background-color 0.2s;
+        "
+      >
+        Send Packages
+      </button>
+      ` : ''}
     </div>
   `;
 
   document.body.appendChild(dropdown);
 
-  // Add click handlers
+  // ✅ FIXED: Attach click handlers properly
   setTimeout(() => {
     const categoryItems = dropdown.querySelectorAll('.category-item');
     categoryItems.forEach(item => {
@@ -269,22 +349,39 @@ function createCategoryDropdown(categories) {
         const categoryId = parseInt(item.getAttribute('data-category-id'));
         selectedCategory = categoryId;
 
-        // Visual feedback
-        categoryItems.forEach(i => i.style.background = 'white');
-        item.style.background = '#e8eef7';
+        console.log(`[Content Script] ✓ Category selected: ${categoryId}`);
 
-        console.log(`[Content Script] Category selected: ${categoryId}`);
+        // ✅ NEW: Send to iframe for state sync
+        const iframe = document.getElementById('nobstacle-header-iframe');
+        if (iframe) {
+          iframe.contentWindow.postMessage({
+            type: 'CATEGORY_SELECTED',
+            categoryId: categoryId
+          }, '*');
+        }
 
-        // Notify popup
+        // ✅ NEW: Notify popup to update UI
         chrome.runtime.sendMessage({
           action: 'categorySelected',
           categoryId: categoryId
         });
 
-        // Close dropdown after delay
+        // Close dropdown after brief delay
         setTimeout(() => {
           dropdown.remove();
-        }, 500);
+        }, 300);
+      });
+
+      // Hover effect
+      item.addEventListener('mouseenter', () => {
+        if (selectedCategory !== parseInt(item.getAttribute('data-category-id'))) {
+          item.style.background = '#f3f4f6';
+        }
+      });
+      item.addEventListener('mouseleave', () => {
+        if (selectedCategory !== parseInt(item.getAttribute('data-category-id'))) {
+          item.style.background = 'white';
+        }
       });
     });
 
@@ -294,10 +391,41 @@ function createCategoryDropdown(categories) {
       clearBtn.addEventListener('click', () => {
         selectedCategory = null;
         console.log('[Content Script] Category selection cleared');
+        
+        // Notify iframe
+        const iframe = document.getElementById('nobstacle-header-iframe');
+        if (iframe) {
+          iframe.contentWindow.postMessage({
+            type: 'CATEGORY_SELECTED',
+            categoryId: null
+          }, '*');
+        }
+        
+        // Notify popup
         chrome.runtime.sendMessage({
           action: 'categorySelected',
           categoryId: null
         });
+        
+        dropdown.remove();
+      });
+    }
+
+    // ✅ NEW: Send packages button
+    const sendBtn = dropdown.querySelector('#send-upsell-btn');
+    if (sendBtn) {
+      sendBtn.addEventListener('click', () => {
+        console.log('[Content Script] Sending packages for category:', selectedCategory);
+        
+        // Send to iframe to handle the upsell
+        const iframe = document.getElementById('nobstacle-header-iframe');
+        if (iframe) {
+          iframe.contentWindow.postMessage({
+            type: 'SEND_UPSELL_PACKAGES',
+            categoryId: selectedCategory
+          }, '*');
+        }
+        
         dropdown.remove();
       });
     }
@@ -310,11 +438,29 @@ function createCategoryDropdown(categories) {
       }
     };
     document.addEventListener('mousedown', closeHandler);
+
+    // ✅ NEW: Close on Escape key
+    const escapeHandler = (e) => {
+      if (e.key === 'Escape') {
+        dropdown.remove();
+        document.removeEventListener('keydown', escapeHandler);
+      }
+    };
+    document.addEventListener('keydown', escapeHandler);
   }, 100);
+
+  addDebugLog('✓ Category dropdown created');
 }
 
+
 async function fetchCategories() {
+  if (categoriesFetched && categoriesData.length > 0) {
+    console.log('[Content Script] Using cached categories');
+    return categoriesData;
+  }
+
   try {
+    console.log('[Content Script] Fetching categories...');
     const Url = Isproduction
       ? 'https://nobstacle.com'
       : 'http://localhost:3000';
@@ -329,13 +475,17 @@ async function fetchCategories() {
     if (response.ok) {
       const json = await response.json();
       categoriesData = json.data || json;
+      categoriesFetched = true;
       console.log(`[Content Script] ✓ Fetched ${categoriesData.length} categories`);
       return categoriesData;
+    } else {
+      console.error('[Content Script] Failed to fetch categories:', response.status);
+      return [];
     }
   } catch (error) {
     console.error('[Content Script] Error fetching categories:', error);
+    return [];
   }
-  return [];
 }
 
 async function startAudioRecording() {
@@ -929,6 +1079,7 @@ async function injectHeader() {
   document.body.style.marginTop = `${baseMargin}px`;
 
   injectDebugPanel();
+   setupKeyboardListener();
   addDebugLog('Header iframe created');
 
   // Send auth IMMEDIATELY when iframe loads

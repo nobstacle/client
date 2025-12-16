@@ -280,8 +280,6 @@ export const CreateMapsTemplateForm: React.FC<{
                     {name}
                   </Select.Option>
                 ))}
-                <Option value="tr">Turkish</Option>
-                <Option value="fr">French</Option>
               </Select>
             )}
           />
