@@ -1280,16 +1280,20 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
                           placeholder="Select Language"
                           style={{ minWidth: 150 }}
                           onChange={(value) => updateLanguageCard(card.id, 'langCode', value)}
-                          options={getAvailableLanguages(card.langCode).map(lang => ({
-                            value: lang.code,
-                            label: lang.name
-                          }))}
                           disabled={isLoading}
                           showSearch
                           optionFilterProp="label"
                           filterOption={(input, option) =>
-                            (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                            (option?.label ?? '').toString().toLowerCase().includes(input.toLowerCase())
                           }
+                          // Critical fix: ensure unique keys
+                          options={getAvailableLanguages(card.langCode)
+                            .map((lang, index) => ({
+                              value: lang.code,
+                              label: lang.name,
+                              key: `${lang.code}-${index}`,
+                            }))}
+                          dropdownMatchSelectWidth={false}
                         />
 
                         {/* Import Translation Button - Only show for non-first cards */}

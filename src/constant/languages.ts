@@ -156,10 +156,6 @@ export const languages = [
     code: "is",
   },
   {
-    name: "Icelandic",
-    code: "is",
-  },
-  {
     name: "Igbo",
     code: "ig",
   },
@@ -398,10 +394,6 @@ export const languages = [
   {
     name: "Turkmen",
     code: "tk",
-  },
-  {
-    name: "Ukrainian",
-    code: "uk",
   },
   {
     name: "Ukrainian",

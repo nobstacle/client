@@ -275,10 +275,10 @@ export const CreateMapsTemplateForm: React.FC<{
                 style={{ width: '100%' }}
                 status={errors.langCode ? 'error' : ''}
               >
-                {languages.map(({ code, name }) => (
-                  <Option value={code} key={code}>
+                {languages.map(({ code, name }, index) => (
+                  <Select.Option value={code} key={index}>
                     {name}
-                  </Option>
+                  </Select.Option>
                 ))}
                 <Option value="tr">Turkish</Option>
                 <Option value="fr">French</Option>

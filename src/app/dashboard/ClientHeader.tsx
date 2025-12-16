@@ -46,6 +46,7 @@ import { HiOutlineOfficeBuilding, HiOutlineUser } from 'react-icons/hi';
 import { signOut } from "next-auth/react";
 import { useMessageStore } from "../../lib/zustand/store/messageStore";
 import { useUploadControllerUploadSpeechToTextFile } from '../../lib/client/api';
+import { IoChatbubbleEllipses } from "react-icons/io5";
 
 interface ClientHeaderProps {
     user: Session | null;
@@ -189,7 +190,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
 
     // Template type configurations
     const templateConfig = useMemo(() => ({
-        text: { icon: <IoChatboxEllipses />, color: '#3b5998', label: 'Text' },
+        text: { icon: <IoChatbubbleEllipses />, color: '#3b5998', label: 'Text' },
         image: { icon: <IoImage />, color: '#3b5998', label: 'Image' },
         video: { icon: <IoPlay />, color: '#3b5998', label: 'Video' },
         website: { icon: <IoGlobe />, color: '#3b5998', label: 'Website' },
@@ -634,17 +635,64 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         `;
         }
 
+
         const templateIcons = {
-            text: '<svg style="width: 24px; height: 24px;" fill="currentColor" viewBox="0 0 20 20"><path d="M2 5a2 2 0 012-2h12a2 2 0 012 2v2a2 2 0 01-2 2H4a2 2 0 01-2-2V5z"></path><path d="M6 13a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1z"></path></svg>',
-            image: '<svg style="width: 24px; height: 24px;" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clip-rule="evenodd"></path></svg>',
-            video: '<svg style="width: 24px; height: 24px;" fill="currentColor" viewBox="0 0 20 20"><path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zm12.553 1.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z"></path></svg>',
-            website: '<svg style="width: 24px; height: 24px;" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.083 9h1.946c.089-1.546.383-2.97.837-4.118A6.004 6.004 0 004.083 9zM10 2a8 8 0 100 16 8 8 0 000-16zm0 2c-.076 0-.232.032-.465.262-.238.234-.497.623-.737 1.182-.389.907-.673 2.142-.766 3.556h3.936c-.093-1.414-.377-2.649-.766-3.556-.24-.56-.5-.948-.737-1.182C10.232 4.032 10.076 4 10 4zm3.971 5c-.089-1.546-.383-2.97-.837-4.118A6.004 6.004 0 0115.917 9h-1.946zm-2.003 2H8.032c.093 1.414.377 2.649.766 3.556.24.56.5.948.737 1.182.233.23.389.262.465.262.076 0 .232-.032.465-.262.238-.234.498-.623.737-1.182.389-.907.673-2.142.766-3.556zm1.166 4.118c.454-1.147.748-2.572.837-4.118h1.946a6.004 6.004 0 01-2.783 4.118zm-6.268 0C6.412 13.97 6.118 12.546 6.03 11H4.083a6.004 6.004 0 002.783 4.118z" clip-rule="evenodd"></path></svg>',
-            slideshow: '<svg style="width: 24px; height: 24px;" fill="currentColor" viewBox="0 0 20 20"><path d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm0 2h4v4H4V5zm6 0h6v4h-6V5zm-6 6h4v4H4v-4zm6 0h6v4h-6v-4z"></path></svg>',
-            map: '<svg style="width: 24px; height: 24px;" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M12 1.586l-4 4v12.828l4-4V1.586zM3.707 3.293A1 1 0 002 4v10a1 1 0 00.293.707L6 18.414V5.586L3.707 3.293zM17.707 5.293L14 1.586v12.828l2.293 2.293A1 1 0 0018 16V6a1 1 0 00-.293-.707z" clip-rule="evenodd"></path></svg>',
-            document: '<svg style="width: 24px; height: 24px;" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd"></path></svg>'
+            // IoChatbubbleEllipses - Text icon
+            text: `<svg style="width: 24px; height: 24px;" fill="currentColor" viewBox="0 0 512 512">
+    <path d="M398 81.84A227.4 227.4 0 00255.82 32C194.9 32 138 55.47 95.46 98.09 54.35 139.33 31.82 193.78 32 251.37a215.66 215.66 0 007.3 58.83c1.85 6.37-1.18 13.31-7.21 16.55l-56.74 30.53c-8.15 4.38-11.33 14.47-7.11 22.65 4.17 8.18 14.08 11.54 22.19 7.56l59.15-29.19c5.93-2.93 13.19-1.82 18.2 2.77l1.31 1.32c29.63 29.63 65.94 50 107.22 60.22 9.66 2.39 17.38 9.93 19.36 19.67.81 3.94 2.13 7.73 3.88 11.33 4.23 8.18 14.15 11.54 22.25 7.56l72.42-35.74c8.1-4 11.29-14.08 7.06-22.26-1.73-3.35-2.85-7.03-3.31-10.86-1.99-16.66 9.38-31.76 25.72-34.28a225.5 225.5 0 0048.78-13c27.75-10.71 52.46-28.15 71.44-50.48 40.72-47.88 60.22-111.64 52.49-178.06-7.73-66.43-39.84-128.05-86.74-166.31z"/>
+  </svg>`,
+
+            // IoImage - Image icon
+            image: `<svg style="width: 24px; height: 24px;" fill="currentColor" viewBox="0 0 512 512">
+    <path d="M416 64H96a64.07 64.07 0 00-64 64v256a64.07 64.07 0 0064 64h320a64.07 64.07 0 0064-64V128a64.07 64.07 0 00-64-64zm-80 64a48 48 0 11-48 48 48.05 48.05 0 0148-48zM96 416a32 32 0 01-32-32v-67.63l94.84-84.3a48.06 48.06 0 0165.8 1.9l64.95 64.81L172.37 416zm352-32a32 32 0 01-32 32H217.63l121.42-121.42a47.72 47.72 0 0161.64-.16L448 333.84z"/>
+  </svg>`,
+
+            // IoPlay - Video icon
+            video: `<svg style="width: 24px; height: 24px;" fill="currentColor" viewBox="0 0 512 512">
+    <path d="M112 111v290c0 17.44 17 28.52 31 20.16l247.9-148.37c12.12-7.25 12.12-26.33 0-33.58L143 90.84c-14-8.36-31 2.72-31 20.16z"/>
+  </svg>`,
+
+            // IoGlobe - Website icon
+            website: `<svg style="width: 24px; height: 24px;" fill="currentColor" viewBox="0 0 512 512">
+    <path d="M256 48C141.13 48 48 141.13 48 256s93.13 208 208 208 208-93.13 208-208S370.87 48 256 48z" fill="none" stroke="currentColor" stroke-miterlimit="10" stroke-width="32"/>
+    <path d="M256 48c-58.07 0-112.67 93.13-112.67 208S197.93 464 256 464s112.67-93.13 112.67-208S314.07 48 256 48z" fill="none" stroke="currentColor" stroke-miterlimit="10" stroke-width="32"/>
+    <path d="M117.33 117.33c38.24 27.15 86.38 43.34 138.67 43.34s100.43-16.19 138.67-43.34M394.67 394.67c-38.24-27.15-86.38-43.34-138.67-43.34s-100.43 16.19-138.67 43.34" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="32"/>
+    <path fill="none" stroke="currentColor" stroke-miterlimit="10" stroke-width="32" d="M256 48v416M464 256H48"/>
+  </svg>`,
+
+            // IoImages - Slideshow icon
+            slideshow: `<svg style="width: 24px; height: 24px;" fill="currentColor" viewBox="0 0 512 512">
+    <path d="M450.29 112H142c-34 0-62 27.51-62 61.33v245.34c0 33.82 28 61.33 62 61.33h308.29c34 0 61.71-27.51 61.71-61.33V173.33c0-33.82-27.68-61.33-61.71-61.33zm-77.15 61.34a46 46 0 11-46.28 46 46.19 46.19 0 0146.28-46.01zm-231.55 276c-17 0-29.86-13.75-29.86-30.66v-64.83l90.46-80.79a46.54 46.54 0 0163.44 1.83L328.27 337l-112 112.33zM480 418.67a30.67 30.67 0 01-30.71 30.66H259L376.08 333a46.24 46.24 0 0159.44-.16L480 370.59z"/>
+    <path d="M384 32H64A64 64 0 000 96v256a64.11 64.11 0 0048 62V152a72 72 0 0172-72h326a64.11 64.11 0 00-62-48z"/>
+  </svg>`,
+
+            // IoMap - Map icon
+            map: `<svg style="width: 24px; height: 24px;" fill="currentColor" viewBox="0 0 512 512">
+    <path d="M48.17 113.34A32 32 0 0032 141.24V438a32 32 0 0047 28.37c.43-.23.85-.47 1.26-.74l84.14-55.05a8 8 0 003.63-6.72V46.45a8 8 0 00-12.51-6.63zM212.36 39.31a8 8 0 00-8.42.15L171 58.55a8 8 0 00-3 6.78v357.51a8 8 0 0011.58 7.15 183.28 183.28 0 0140.43-17.16 8 8 0 004.99-7.42V46.45a8 8 0 00-12.64-6.63zM464.53 46.47a31.64 31.64 0 00-31.5-.88 201.48 201.48 0 01-70.55 14.77 201.32 201.32 0 01-70.68-12.87 8 8 0 00-11.8 7.14v358.12a8 8 0 004.52 7.21A183.87 183.87 0 01345 436a177.06 177.06 0 0171-15.29q5.14 0 10.13.32a31.62 31.62 0 0038.38-30.81V76.92a32 32 0 00-16.98-30.45z"/>
+  </svg>`,
+
+            // IoDocuments - Document icon
+            document: `<svg style="width: 24px; height: 24px;" fill="currentColor" viewBox="0 0 512 512">
+    <path d="M298.39 248a4 4 0 002.86-6.8l-78.4-79.72a4 4 0 00-6.85 2.81V236a12 12 0 0012 12z"/>
+    <path d="M197 267a43.67 43.67 0 01-13-31v-92h-72a64.19 64.19 0 00-64 64v224a64 64 0 0064 64h144a64 64 0 0064-64V280h-92a43.61 43.61 0 01-31-13zm175-147h70.39a4 4 0 002.86-6.8l-78.4-79.72a4 4 0 00-6.85 2.81V108a12 12 0 0012 12z"/>
+    <path d="M372 152a44.34 44.34 0 01-44-44V16H220a60.07 60.07 0 00-60 60v36h42.12A40.81 40.81 0 01231 124.14l109.16 111a41.11 41.11 0 0111.83 29V400h53.05c32.51 0 58.95-26.92 58.95-60V152z"/>
+  </svg>`
         };
 
-        const qrIcon = '<svg style="width: 20px; height: 20px;" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M3 4a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1H4a1 1 0 01-1-1V4zm2 2V5h1v1H5zM3 13a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1H4a1 1 0 01-1-1v-3zm2 2v-1h1v1H5zM13 3a1 1 0 00-1 1v3a1 1 0 001 1h3a1 1 0 001-1V4a1 1 0 00-1-1h-3zm1 2v1h1V5h-1z" clip-rule="evenodd"></path><path d="M11 4a1 1 0 10-2 0v1a1 1 0 002 0V4zM10 7a1 1 0 011 1v1h2a1 1 0 110 2h-3a1 1 0 01-1-1V8a1 1 0 011-1zM16 9a1 1 0 100 2 1 1 0 000-2zM9 13a1 1 0 011-1h1a1 1 0 110 2v2a1 1 0 11-2 0v-3zM7 11a1 1 0 10-2 0v2a1 1 0 102 0v-2zM13 13a1 1 0 011-1h2a1 1 0 110 2h-2a1 1 0 01-1-1zM14 15a1 1 0 100 2h1a1 1 0 100-2h-1z"></path></svg>';
+        // QR Code icon (IoQrCode)
+        const qrIcon = `<svg style="width: 20px; height: 20px;" fill="currentColor" viewBox="0 0 512 512">
+  <rect x="336" y="336" width="80" height="80" rx="8" ry="8"/>
+  <rect x="272" y="272" width="64" height="64" rx="8" ry="8"/>
+  <rect x="416" y="416" width="64" height="64" rx="8" ry="8"/>
+  <rect x="432" y="272" width="48" height="48" rx="8" ry="8"/>
+  <rect x="272" y="432" width="48" height="48" rx="8" ry="8"/>
+  <rect x="336" y="96" width="80" height="80" rx="8" ry="8"/>
+  <rect x="288" y="48" width="176" height="176" rx="16" ry="16" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="32"/>
+  <rect x="96" y="96" width="80" height="80" rx="8" ry="8"/>
+  <rect x="48" y="48" width="176" height="176" rx="16" ry="16" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="32"/>
+  <rect x="96" y="336" width="80" height="80" rx="8" ry="8"/>
+  <rect x="48" y="288" width="176" height="176" rx="16" ry="16" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="32"/>
+</svg>`;
 
         return templates.map(template => {
             const icon = templateIcons[template.type] || templateIcons.text;
@@ -1256,6 +1304,58 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                     }, '*');
                 }
             }
+
+            // Add to useEffect with message listener
+if (event.data.type === 'SEND_UPSELL_PACKAGES') {
+  const categoryId = event.data.categoryId;
+  console.log('[ClientHeader] Sending upsell packages with category:', categoryId);
+  
+  const selectedLang = params.get("lang") || companyData?.defaultLangCode || "en";
+
+  // Filter packages by language
+  let filteredPackages = allPackages.filter((item) => {
+    return (
+      item?.packageNames?.[selectedLang] != null &&
+      item?.packageDescriptions?.[selectedLang] != null &&
+      item?.packageBenefits?.[selectedLang] != null &&
+      item?.packageTags?.[selectedLang] != null &&
+      item?.taxInformation?.[selectedLang] != null &&
+      item?.currencies?.[selectedLang] != null &&
+      item?.buttonTexts?.[selectedLang] != null &&
+      item?.packageAlerts?.[selectedLang] != null
+    );
+  });
+
+  // Filter by category if provided
+  if (categoryId && categoryId !== null) {
+    filteredPackages = filteredPackages.filter(pkg => {
+      if (pkg.roomUpgrade === true) {
+        return pkg.from_category_id === categoryId;
+      }
+      return true;
+    });
+  }
+
+  if (filteredPackages.length > 0) {
+    emitSendPackages({
+      refId: filteredPackages[0].id,
+      langCode: selectedLang,
+      refType: "Packages",
+      station: Number(params.get("station") ?? 1),
+      sentBy: JSON.stringify(user),
+      contentExtra: JSON.stringify(filteredPackages)
+    } as SendPackagePayloadType, (response) => {
+      if (response && (response === true)) {
+        message.success(`Sent ${filteredPackages.length} packages` + 
+          (categoryId ? ' for selected category' : ''));
+      } else {
+        message.error("Failed to send packages");
+      }
+    });
+  } else {
+    message.warning("No packages available for selected criteria");
+  }
+}
         };
 
         window.addEventListener('message', handler);

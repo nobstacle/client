@@ -1,10 +1,11 @@
+<!-- popup.html -->
 <!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
     <style>
         body {
-            width: 300px;
+            width: 320px;
             padding: 20px;
             font-family: system-ui, -apple-system, sans-serif;
             margin: 0;
@@ -42,10 +43,16 @@
             cursor: pointer;
             font-size: 14px;
             font-weight: 500;
+            margin-bottom: 10px;
         }
         
         button:hover {
             background: #5568d3;
+        }
+        
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
         }
         
         .link {
@@ -62,6 +69,109 @@
         .link a:hover {
             text-decoration: underline;
         }
+
+        /* New styles for action buttons */
+        .action-section {
+            margin: 20px 0;
+            padding-top: 15px;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .action-section h3 {
+            font-size: 14px;
+            color: #555;
+            margin: 0 0 10px 0;
+            font-weight: 600;
+        }
+
+        .icon-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .icon-button {
+            flex: 1;
+            padding: 12px;
+            background: #f5f5f5;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+
+        .icon-button:hover {
+            background: #e8eef7;
+            border-color: #667eea;
+        }
+
+        .icon-button.selected {
+            background: #e8eef7;
+            border-color: #667eea;
+        }
+
+        .icon-button svg {
+            width: 24px;
+            height: 24px;
+            color: #667eea;
+        }
+
+        .icon-button span {
+            font-size: 11px;
+            color: #666;
+            font-weight: 500;
+        }
+
+        .category-status {
+            padding: 10px;
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            font-size: 12px;
+            display: none;
+        }
+
+        .category-status.active {
+            display: block;
+        }
+
+        .category-status strong {
+            color: #856404;
+        }
+
+        .category-status span {
+            color: #856404;
+            font-weight: 600;
+        }
+
+        .primary-button {
+            background: #3b5998;
+        }
+
+        .primary-button:hover {
+            background: #2d4373;
+        }
+
+        .secondary-button {
+            background: #10b981;
+        }
+
+        .secondary-button:hover {
+            background: #059669;
+        }
+
+        .info-text {
+            font-size: 12px;
+            color: #999;
+            text-align: center;
+            margin-top: 10px;
+            font-style: italic;
+        }
     </style>
 </head>
 <body>
@@ -73,13 +183,45 @@
     
     <p>Your Nobstacle header is now displayed at the top of every webpage you visit.</p>
     
-    <button id="openDashboard">Open Dashboard</button>
+    <!-- Upsell Actions Section -->
+    <div class="action-section">
+        <h3>📦 Upsell Actions</h3>
+        
+        <!-- Category Status Display -->
+        <div id="category-status" class="category-status">
+            <strong>Selected Category:</strong> <span id="category-name">None</span>
+        </div>
+
+        <!-- Icon Buttons Row -->
+        <div class="icon-buttons">
+            <!-- Category Selection Button -->
+            <div class="icon-button" id="show-categories-btn" title="Select Category (Type / in page)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M4 6h16M4 12h16M4 18h16"/>
+                </svg>
+                <span>Categories</span>
+            </div>
+
+            <!-- Upsell Trigger Button -->
+            <div class="icon-button" id="trigger-upsell-btn" title="Send Upsell Packages">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M21 18v1c0 1.1-.9 2-2 2H5c-1.11 0-2-.9-2-2V5c0-1.1.89-2 2-2h14c1.1 0 2 .9 2 2v1h-9c-1.11 0-2 .9-2 2v8c0 1.1.89 2 2 2h9zm-9-2h10V8H12v8zm4-2.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/>
+                </svg>
+                <span>Upsell</span>
+            </div>
+        </div>
+
+        <div class="info-text">
+            Tip: Type <strong>/</strong> on any page to select a category
+        </div>
+    </div>
+    
+    <button id="openDashboard" class="primary-button">Open Dashboard</button>
     
     <div class="link">
         <a href="https://nobstacle.com" target="_blank">Visit Nobstacle.com</a>
     </div>
     
-    <!-- External script instead of inline -->
     <script src="popup.js"></script>
 </body>
 </html>

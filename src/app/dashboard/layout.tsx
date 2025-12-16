@@ -1,9 +1,9 @@
-
 import { getServerSession } from "next-auth";
-import { PropsWithChildren, useState } from "react";
+import { PropsWithChildren } from "react";
 import { SocketContextProvider } from "../../context/SocketContextProvider";
 import { TemplateContextProvider } from "../../context/TemplatesProvider";
 import { CompanyContextProvider } from "../../context/CompanyProvider";
+import { ShortcutsProvider } from "./ShortcutProvider";
 import { authOptions } from "../api/auth/[...nextauth]/route";
 import ClientSidebar from './Sidebar';
 import ClientHeader from './ClientHeader';
@@ -14,11 +14,13 @@ function DashboardLayout({ children }: { children: React.ReactNode }) {
       <CompanyContextProvider>
         <SocketContextProvider>
           <TemplateContextProvider>
-            <ServerHeaderWrapper />
-            <div className="flex flex-1 flex-row overflow-hidden">
-              <ServerSidebarWrapper />
-              <Body>{children}</Body>
-            </div>
+            <ShortcutsProvider> {/* ← Add this wrapper */}
+              <ServerHeaderWrapper />
+              <div className="flex flex-1 flex-row overflow-hidden">
+                <ServerSidebarWrapper />
+                <Body>{children}</Body>
+              </div>
+            </ShortcutsProvider> {/* ← Close wrapper */}
           </TemplateContextProvider>
         </SocketContextProvider>
       </CompanyContextProvider>
@@ -33,7 +35,6 @@ const ServerHeaderWrapper = async () => {
 
 const ServerSidebarWrapper = async () => {
   const user = await getServerSession(authOptions);
-
   return <ClientSidebar user={user} />;
 };
 

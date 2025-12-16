@@ -1,15 +1,17 @@
 // Configuration
-const Isproduction = true; // Set to true for production
+const Isproduction = true;
 const HEADER_URL = Isproduction
   ? 'https://nobstacle.com/header-only'
   : 'http://localhost:3000/header-only';
 const HEADER_HEIGHT = '56px';
-const DEBUG_MODE = false; // Set to true for debugging
+const DEBUG_MODE = false;
 let isEnabled = true;
 let headerInjected = false;
 let mediaRecorder = null;
 let audioChunks = [];
 let isRecording = false;
+let selectedCategory = null;
+let categoriesData = [];
 
 // List of allowed iframe origins
 const ALLOWED_IFRAME_ORIGINS = Isproduction
@@ -72,6 +74,31 @@ chrome.runtime.onMessage.addListener((req, sender, respond) => {
     }
     return true;
   }
+  if (req.action === 'triggerUpsell') {
+    const iframe = document.getElementById('nobstacle-header-iframe');
+    if (iframe) {
+      iframe.contentWindow.postMessage({
+        type: 'TRIGGER_UPSELL',
+        categoryId: selectedCategory
+      }, '*');
+      console.log('[Content Script] ✓ Upsell triggered with category:', selectedCategory);
+    }
+    return true;
+  }
+
+  if (req.action === 'showCategories') {
+    if (categoriesData.length === 0) {
+      // Fetch categories if not already cached
+      fetchCategories().then(categories => {
+        if (categories.length > 0) {
+          createCategoryDropdown(categories);
+        }
+      });
+    } else {
+      createCategoryDropdown(categoriesData);
+    }
+    return true;
+  }
 });
 
 function injectStyles() {
@@ -125,6 +152,190 @@ function injectStyles() {
     }
   `;
   document.head.appendChild(style);
+}
+
+function createCategoryDropdown(categories) {
+  document.getElementById('nobstacle-category-dropdown')?.remove();
+
+  const iframe = document.getElementById('nobstacle-header-iframe');
+  if (!iframe) return;
+
+  const iframeRect = iframe.getBoundingClientRect();
+
+  const dropdown = document.createElement('div');
+  dropdown.id = 'nobstacle-category-dropdown';
+  dropdown.style.cssText = `
+    position: fixed !important;
+    top: ${iframeRect.bottom + 8}px !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    background: white !important;
+    border-radius: 12px !important;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15) !important;
+    min-width: 320px !important;
+    max-width: 500px !important;
+    max-height: 400px !important;
+    overflow-y: auto !important;
+    z-index: 2147483647 !important;
+    border: 1px solid #e5e7eb !important;
+    animation: slideDown 0.2s ease-out !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+  `;
+
+  // Sort categories by priceLevel
+  const sortedCategories = [...categories].sort((a, b) =>
+    (a.priceLevel || 0) - (b.priceLevel || 0)
+  );
+
+  const categoriesHTML = sortedCategories.map(category => `
+    <div 
+      class="category-item"
+      data-category-id="${category.id}"
+      style="
+        padding: 16px 20px;
+        border-bottom: 1px solid #f0f0f0;
+        cursor: pointer;
+        transition: background-color 0.2s;
+      "
+    >
+      <div style="display: flex; align-items: center; justify-content: space-between;">
+        <div style="flex: 1;">
+          <div style="font-weight: 600; font-size: 15px; color: #1f2937; margin-bottom: 4px;">
+            ${category.name}
+          </div>
+          ${category.priceLevel ? `
+            <div style="font-size: 12px; color: #6b7280;">
+              Level ${category.priceLevel}
+            </div>
+          ` : ''}
+        </div>
+        <div style="
+          width: 32px;
+          height: 32px;
+          border-radius: 8px;
+          background: ${selectedCategory === category.id ? '#10b981' : '#3b5998'};
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: white;
+          font-size: 12px;
+          font-weight: 600;
+        ">
+          ${selectedCategory === category.id ? '✓' : (category.priceLevel || '?')}
+        </div>
+      </div>
+    </div>
+  `).join('');
+
+  dropdown.innerHTML = `
+    <div style="padding: 16px 20px; border-bottom: 2px solid #3b5998; background: #f8fafc;">
+      <h3 style="margin: 0; font-size: 16px; font-weight: 600; color: #1f2937;">
+        Select Category for Upsell
+      </h3>
+      <p style="margin: 4px 0 0 0; font-size: 12px; color: #6b7280;">
+        Type / to open this menu • Click category to select
+      </p>
+    </div>
+    <div style="max-height: 320px; overflow-y: auto;">
+      ${categoriesHTML}
+    </div>
+    <div style="padding: 12px 20px; border-top: 1px solid #e5e7eb; background: #f8fafc;">
+      <button 
+        id="clear-category-btn"
+        style="
+          width: 100%;
+          padding: 10px;
+          background: #ef4444;
+          color: white;
+          border: none;
+          border-radius: 8px;
+          font-weight: 500;
+          cursor: pointer;
+          transition: background-color 0.2s;
+        "
+      >
+        Clear Selection
+      </button>
+    </div>
+  `;
+
+  document.body.appendChild(dropdown);
+
+  // Add click handlers
+  setTimeout(() => {
+    const categoryItems = dropdown.querySelectorAll('.category-item');
+    categoryItems.forEach(item => {
+      item.addEventListener('click', () => {
+        const categoryId = parseInt(item.getAttribute('data-category-id'));
+        selectedCategory = categoryId;
+
+        // Visual feedback
+        categoryItems.forEach(i => i.style.background = 'white');
+        item.style.background = '#e8eef7';
+
+        console.log(`[Content Script] Category selected: ${categoryId}`);
+
+        // Notify popup
+        chrome.runtime.sendMessage({
+          action: 'categorySelected',
+          categoryId: categoryId
+        });
+
+        // Close dropdown after delay
+        setTimeout(() => {
+          dropdown.remove();
+        }, 500);
+      });
+    });
+
+    // Clear button
+    const clearBtn = dropdown.querySelector('#clear-category-btn');
+    if (clearBtn) {
+      clearBtn.addEventListener('click', () => {
+        selectedCategory = null;
+        console.log('[Content Script] Category selection cleared');
+        chrome.runtime.sendMessage({
+          action: 'categorySelected',
+          categoryId: null
+        });
+        dropdown.remove();
+      });
+    }
+
+    // Close on outside click
+    const closeHandler = (e) => {
+      if (!dropdown.contains(e.target)) {
+        dropdown.remove();
+        document.removeEventListener('mousedown', closeHandler);
+      }
+    };
+    document.addEventListener('mousedown', closeHandler);
+  }, 100);
+}
+
+async function fetchCategories() {
+  try {
+    const Url = Isproduction
+      ? 'https://nobstacle.com'
+      : 'http://localhost:3000';
+
+    const response = await fetch(`${Url}/api/v1/uploads/get-all-categories?fetchAll=true&limit=100`, {
+      headers: {
+        Authorization: `Bearer ${cachedAuthData?.sessionToken}`,
+        'Cache-Control': 'no-cache'
+      },
+    });
+
+    if (response.ok) {
+      const json = await response.json();
+      categoriesData = json.data || json;
+      console.log(`[Content Script] ✓ Fetched ${categoriesData.length} categories`);
+      return categoriesData;
+    }
+  } catch (error) {
+    console.error('[Content Script] Error fetching categories:', error);
+  }
+  return [];
 }
 
 async function startAudioRecording() {
@@ -758,10 +969,6 @@ async function injectHeader() {
       return;
     }
 
-    console.log('[Content Script] ===== Message received =====');
-    console.log('[Content Script] Type:', event.data.type);
-    console.log('[Content Script] Origin:', event.origin);
-
     if (event.data.type === 'REQUEST_AUTH') {
       addDebugLog('Iframe requested auth');
       const authData = cachedAuthData || await prefetchAuthData();
@@ -970,8 +1177,6 @@ async function injectHeader() {
 
     if (event.data.type === 'PROCESS_AUDIO') {
       console.log('[Content Script] Audio processing requested');
-      // This will be handled by the iframe which has access to the backend
-      // The iframe will call the speech-to-text API and return the transcription
     }
 
     if (event.data.type === 'AUDIO_TRANSCRIPTION') {
@@ -998,6 +1203,29 @@ async function injectHeader() {
             console.log('[Content Script] ✓ Message automatically sent');
           }
         }
+      }
+    }
+
+    if (event.data.type === 'SHOW_CATEGORIES') {
+      if (categoriesData.length === 0) {
+        fetchCategories().then(categories => {
+          if (categories.length > 0) {
+            createCategoryDropdown(categories);
+          }
+        });
+      } else {
+        createCategoryDropdown(categoriesData);
+      }
+    }
+
+    if (event.data.type === 'TRIGGER_UPSELL') {
+      // This will be sent from iframe when user clicks upsell icon
+      const iframe = document.getElementById('nobstacle-header-iframe');
+      if (iframe) {
+        iframe.contentWindow.postMessage({
+          type: 'SEND_UPSELL_PACKAGES',
+          categoryId: selectedCategory
+        }, '*');
       }
     }
   };

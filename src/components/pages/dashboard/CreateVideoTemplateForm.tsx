@@ -204,8 +204,8 @@ export const CreateVideoTemplateForm: React.FC<{
                 placeholder="Select language..."
                 style={{ width: "100%" }}
               >
-                {languages.map(({ code, name }) => (
-                  <Select.Option value={code} key={code}>
+                {languages.map(({ code, name }, index) => (
+                  <Select.Option value={code} key={index}>
                     {name}
                   </Select.Option>
                 ))}

@@ -117,14 +117,11 @@ export const CreateImageTemplateForm: React.FC<{
     label: value.tag,
   })) || [];
 
-  const languageOptions = [
-    ...languages.map(({ code, name }) => ({
-      value: code,
-      label: name,
-    })),
-    { value: "tr", label: "Turkish" },
-    { value: "fr", label: "French" },
-  ];
+  const languageOptions = languages.map(({ code, name }, index) => ({
+    value: code,
+    label: name,
+    key: `lang-${code}-${index}`,
+  }));
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="create-template-form">

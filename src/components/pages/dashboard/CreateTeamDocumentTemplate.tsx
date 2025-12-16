@@ -285,19 +285,31 @@ export const UploadTeamDocumentTemplateForm: React.FC<{
                     <label className="block text-sm font-medium mb-1">Language *</label>
                     <select
                         {...register("langCode")}
-                        className={`w-full border p-2 rounded ${errors.langCode ? "border-red-500" : "border-gray-300"
-                            }`}
+                        className={`w-full border p-2 rounded transition-colors ${errors.langCode ? "border-red-500 bg-red-50" : "border-gray-300 focus:border-blue-500"
+                            } focus:outline-none`}
                         required
+                        aria-invalid={!!errors.langCode}
+                        aria-describedby={errors.langCode ? "langCode-error" : undefined}
                     >
-                        <option value="">Select language...</option>
-                        {languages.map((l) => (
-                            <option key={l.code} value={l.code}>
-                                {l.name}
-                            </option>
-                        ))}
-                        <option value="tr">Turkish</option>
-                        <option value="fr">French</option>
+                        <option value="" disabled>
+                            Select language...
+                        </option>
+
+                        {[...languages]
+                            .sort((a, b) => a.name.localeCompare(b.name))
+                            .map((language, index) => (
+                                <option key={`${language.code}-${index}`} value={language.code}>
+                                    {language.name}
+                                </option>
+                            ))}
                     </select>
+
+                    {/* Optional: Show error message below */}
+                    {errors.langCode && (
+                        <p id="langCode-error" className="mt-1 text-sm text-red-600">
+                            {errors.langCode.message || "Language is required"}
+                        </p>
+                    )}
                 </div>
 
                 {/* Form Actions */}

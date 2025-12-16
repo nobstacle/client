@@ -65,7 +65,7 @@ export const CreateTextTemplateForm: React.FC<{
   });
 
   const createTextTemplate = useTextTemplateControllerCreateTextTemplate();
-  
+
   const handleCreateTextTemplate = (
     data: CreateTextTemplateFormFieldValues,
   ) => {
@@ -98,7 +98,7 @@ export const CreateTextTemplateForm: React.FC<{
   return (
     <form onSubmit={handleSubmit(onSubmit)}>
       <Space direction="vertical" size="middle" style={{ width: '100%', marginTop: 12 }}>
-        
+
         {/* Content Field */}
         <div>
           <Text style={{ color: '#6b7280', fontSize: '14px' }}>Content</Text>
@@ -133,7 +133,7 @@ export const CreateTextTemplateForm: React.FC<{
               )}
             />
           </div>
-          
+
           <div style={{ marginTop: 16 }}>
             <Controller
               name="tagSelect"
@@ -170,8 +170,8 @@ export const CreateTextTemplateForm: React.FC<{
                 style={{ width: '100%', marginTop: 8 }}
                 status={errors.langCode ? 'error' : ''}
               >
-                {languages.map(({ code, name }) => (
-                  <Select.Option value={code} key={code}>
+                {languages.map(({ code, name }, index) => (
+                  <Select.Option value={code} key={index}>
                     {name}
                   </Select.Option>
                 ))}

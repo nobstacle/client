@@ -2,15 +2,15 @@ import * as React from "react";
 import { SubmitHandler, useForm, Controller } from "react-hook-form";
 import * as yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
-import { 
-    Form, 
-    Input, 
-    Select, 
-    Upload, 
-    Button, 
-    Space, 
-    Typography, 
-    message 
+import {
+    Form,
+    Input,
+    Select,
+    Upload,
+    Button,
+    Space,
+    Typography,
+    message
 } from "antd";
 import { UploadOutlined, InboxOutlined } from "@ant-design/icons";
 import { languages } from "../../../constant/languages";
@@ -260,7 +260,7 @@ export const UploadDocumentTemplateForm: React.FC<{
 
     return (
         <Form layout="vertical" onFinish={handleSubmit(onSubmit)} className="create-template-form space-y-4">
-                 <hr />
+            <hr />
             {/* File Upload Section */}
             <Form.Item
                 label={isUpdateMode ? "Replace Document (Optional)" : "Upload Document"}
@@ -308,7 +308,7 @@ export const UploadDocumentTemplateForm: React.FC<{
                     value={watch('tagCreate') || ''}
                     onChange={(e) => handleTagCreate(e.target.value)}
                 />
-                
+
                 {/* Tag Dropdown */}
                 <div className="mt-2">
                     <Text type="secondary" className="block mb-1">
@@ -344,14 +344,14 @@ export const UploadDocumentTemplateForm: React.FC<{
                         <Select
                             {...field}
                             placeholder="Select language..."
-                                 status={errors.langCode ? "error" : ""}
+                            status={errors.langCode ? "error" : ""}
                             className="w-full"
                         >
-                          {languages.map(({ code, name }) => (
-                                            <Option value={code} key={code}>
-                                              {name}
-                                            </Option>
-                                          ))}
+                            {languages.map(({ code, name }, index) => (
+                                <Select.Option value={code} key={index}>
+                                    {name}
+                                </Select.Option>
+                            ))}
                             <Option value="tr">Turkish</Option>
                             <Option value="fr">French</Option>
                         </Select>
@@ -359,25 +359,16 @@ export const UploadDocumentTemplateForm: React.FC<{
                 />
             </Form.Item>
 
-            {/* Form Actions */}
-                    {/* {onClose && (
-                        <Button
-                            onClick={onClose}
-                            disabled={uploadDocument.isPending}
-                        >
-                            Cancel
-                        </Button>
-                    )} */}
-                    <Button
-                        type="primary"
-                        htmlType="submit"
-                        loading={uploadDocument.isPending}
-                        disabled={uploadDocument.isPending}
-                          style={{ width: "100%" }}
-          className="create-template-button"
-                    >
-                        {isUpdateMode ? 'Update Document' : 'Upload Document'}
-                    </Button>
+            <Button
+                type="primary"
+                htmlType="submit"
+                loading={uploadDocument.isPending}
+                disabled={uploadDocument.isPending}
+                style={{ width: "100%" }}
+                className="create-template-button"
+            >
+                {isUpdateMode ? 'Update Document' : 'Upload Document'}
+            </Button>
         </Form>
     );
 };

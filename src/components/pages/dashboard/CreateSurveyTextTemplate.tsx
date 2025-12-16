@@ -63,17 +63,17 @@ export const CreateSurveyTextTemplateForm: React.FC<{
     try {
       // Replace with your actual API call
       // const result = await createSurveyTemplate(data);
-      
+
       // Simulated API call - remove this and use actual API
       await new Promise((resolve) => setTimeout(resolve, 1000));
-      
+
       console.log("Survey template data:", data);
-      
+
       if (cb) {
         // Pass the created template and false for isUpdate
         cb(data, false);
       }
-      
+
       reset();
       setIsLoading(false);
     } catch (error: any) {
@@ -86,14 +86,11 @@ export const CreateSurveyTextTemplateForm: React.FC<{
     data,
   ) => handleCreateSurveyTemplate(data);
 
-  const languageOptions = [
-    ...languages.map(({ code, name }) => ({
-      value: code,
-      label: name,
-    })),
-    { value: "tr", label: "Turkish" },
-    { value: "fr", label: "French" },
-  ];
+  const languageOptions = languages.map(({ code, name }, index) => ({
+    value: code,
+    label: name,
+    key: `lang-${code}-${index}`,
+  }));
 
   return (
     <form

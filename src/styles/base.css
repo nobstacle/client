@@ -598,10 +598,12 @@ button {
 
 .customSurveyTable .ant-table tr th {
   padding: 15px 15px !important;
+  z-index: 0;
 }
 
 .customSurveyTable .ant-table tr td {
   padding: 10px 15px !important;
+  z-index: 0;
 }
 
 .swal2-popup .swal2-confirm {
@@ -1190,4 +1192,11 @@ button {
 
 #card-wrapper {
   z-index: 0 !important;
+}
+
+.category-item:hover {
+  background-color: #f3f4f6 !important;
+}
+.category-item.selected {
+  background-color: #e8eef7 !important;
 }
