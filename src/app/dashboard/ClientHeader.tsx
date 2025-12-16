@@ -47,6 +47,7 @@ import { signOut } from "next-auth/react";
 import { useMessageStore } from "../../lib/zustand/store/messageStore";
 import { useUploadControllerUploadSpeechToTextFile } from '../../lib/client/api';
 import { IoChatbubbleEllipses } from "react-icons/io5";
+import { SendPackagePayloadType } from "../../constant/types";
 
 interface ClientHeaderProps {
     user: Session | null;
@@ -62,7 +63,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
     const searchRef = useRef(null);
     const inputRef = useRef(null);
     const params = useSearchParams();
-    const { emitSendTemplate, socketConnected } = useSocketContext();
+    const { emitSendTemplate, emitSendPackages, socketConnected } = useSocketContext();
     const debounceTimerRef = useRef(null);
     const confirmationTimerRef = useRef(null);
     const justSelectedRef = useRef(false);
@@ -1306,56 +1307,56 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
             }
 
             // Add to useEffect with message listener
-if (event.data.type === 'SEND_UPSELL_PACKAGES') {
-  const categoryId = event.data.categoryId;
-  console.log('[ClientHeader] Sending upsell packages with category:', categoryId);
-  
-  const selectedLang = params.get("lang") || companyData?.defaultLangCode || "en";
+            if (event.data.type === 'SEND_UPSELL_PACKAGES') {
+                const categoryId = event.data.categoryId;
+                console.log('[ClientHeader] Sending upsell packages with category:', categoryId);
 
-  // Filter packages by language
-  let filteredPackages = allPackages.filter((item) => {
-    return (
-      item?.packageNames?.[selectedLang] != null &&
-      item?.packageDescriptions?.[selectedLang] != null &&
-      item?.packageBenefits?.[selectedLang] != null &&
-      item?.packageTags?.[selectedLang] != null &&
-      item?.taxInformation?.[selectedLang] != null &&
-      item?.currencies?.[selectedLang] != null &&
-      item?.buttonTexts?.[selectedLang] != null &&
-      item?.packageAlerts?.[selectedLang] != null
-    );
-  });
+                const selectedLang = params.get("lang") || companyData?.defaultLangCode || "en";
 
-  // Filter by category if provided
-  if (categoryId && categoryId !== null) {
-    filteredPackages = filteredPackages.filter(pkg => {
-      if (pkg.roomUpgrade === true) {
-        return pkg.from_category_id === categoryId;
-      }
-      return true;
-    });
-  }
+                // Filter packages by language
+                let filteredPackages = allPackages.filter((item) => {
+                    return (
+                        item?.packageNames?.[selectedLang] != null &&
+                        item?.packageDescriptions?.[selectedLang] != null &&
+                        item?.packageBenefits?.[selectedLang] != null &&
+                        item?.packageTags?.[selectedLang] != null &&
+                        item?.taxInformation?.[selectedLang] != null &&
+                        item?.currencies?.[selectedLang] != null &&
+                        item?.buttonTexts?.[selectedLang] != null &&
+                        item?.packageAlerts?.[selectedLang] != null
+                    );
+                });
 
-  if (filteredPackages.length > 0) {
-    emitSendPackages({
-      refId: filteredPackages[0].id,
-      langCode: selectedLang,
-      refType: "Packages",
-      station: Number(params.get("station") ?? 1),
-      sentBy: JSON.stringify(user),
-      contentExtra: JSON.stringify(filteredPackages)
-    } as SendPackagePayloadType, (response) => {
-      if (response && (response === true)) {
-        message.success(`Sent ${filteredPackages.length} packages` + 
-          (categoryId ? ' for selected category' : ''));
-      } else {
-        message.error("Failed to send packages");
-      }
-    });
-  } else {
-    message.warning("No packages available for selected criteria");
-  }
-}
+                // Filter by category if provided
+                if (categoryId && categoryId !== null) {
+                    filteredPackages = filteredPackages.filter(pkg => {
+                        if (pkg.roomUpgrade === true) {
+                            return pkg.from_category_id === categoryId;
+                        }
+                        return true;
+                    });
+                }
+
+                if (filteredPackages.length > 0) {
+                    emitSendPackages({
+                        refId: filteredPackages[0].id,
+                        langCode: selectedLang,
+                        refType: "Packages",
+                        station: Number(params.get("station") ?? 1),
+                        sentBy: JSON.stringify(user),
+                        contentExtra: JSON.stringify(filteredPackages)
+                    } as SendPackagePayloadType, (response) => {
+                        if (response && (response === true)) {
+                            message.success(`Sent ${filteredPackages.length} packages` +
+                                (categoryId ? ' for selected category' : ''));
+                        } else {
+                            message.error("Failed to send packages");
+                        }
+                    });
+                } else {
+                    message.warning("No packages available for selected criteria");
+                }
+            }
         };
 
         window.addEventListener('message', handler);
