@@ -639,9 +639,20 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
 
         const templateIcons = {
             // IoChatbubbleEllipses - Text icon
-            text: `<svg style="width: 24px; height: 24px;" fill="currentColor" viewBox="0 0 512 512">
-    <path d="M256 32C114.6 32 0 125.1 0 240c0 47.6 19.9 91.2 52.9 126.3C38.5 405.7 0 442.4 0 480c0 17.7 14.3 32 32 32h128c17.7 0 32-14.3 32-32 0-37.6-38.5-74.3-52.9-113.7C155.1 331.2 208 288 256 288c141.4 0 256-93.1 256-208S397.4 32 256 32z"/>
-  </svg>`,
+            text: `<svg
+  xmlns="http://www.w3.org/2000/svg"
+  viewBox="0 0 512 512"
+  fill="currentColor"
+>
+  <!-- Chat bubble -->
+  <path d="M256 32C132.3 32 32 115.6 32 218.7c0 57.4 32.2 108.6 82.6 143.2L96 480l120.4-67.6c12.6 1.7 25.5 2.6 39.6 2.6 123.7 0 224-83.6 224-186.7S379.7 32 256 32z"/>
+
+  <!-- Dots -->
+  <circle cx="176" cy="224" r="24" fill="#fff"/>
+  <circle cx="256" cy="224" r="24" fill="#fff"/>
+  <circle cx="336" cy="224" r="24" fill="#fff"/>
+</svg>
+`,
 
             // IoImage - Image icon
             image: `<svg style="width: 24px; height: 24px;" fill="currentColor" viewBox="0 0 512 512">
