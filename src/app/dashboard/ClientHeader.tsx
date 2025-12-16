@@ -643,16 +643,13 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
   xmlns="http://www.w3.org/2000/svg"
   viewBox="0 0 512 512"
   fill="currentColor"
+  style="width: 24px; height: 24px;"
 >
-  <!-- Chat bubble -->
   <path d="M256 32C132.3 32 32 115.6 32 218.7c0 57.4 32.2 108.6 82.6 143.2L96 480l120.4-67.6c12.6 1.7 25.5 2.6 39.6 2.6 123.7 0 224-83.6 224-186.7S379.7 32 256 32z"/>
-
-  <!-- Dots -->
   <circle cx="176" cy="224" r="24" fill="#fff"/>
   <circle cx="256" cy="224" r="24" fill="#fff"/>
   <circle cx="336" cy="224" r="24" fill="#fff"/>
-</svg>
-`,
+</svg>`,
 
             // IoImage - Image icon
             image: `<svg style="width: 24px; height: 24px;" fill="currentColor" viewBox="0 0 512 512">
