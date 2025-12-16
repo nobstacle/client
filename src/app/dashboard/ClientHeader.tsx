@@ -48,6 +48,7 @@ import { useMessageStore } from "../../lib/zustand/store/messageStore";
 import { useUploadControllerUploadSpeechToTextFile } from '../../lib/client/api';
 import { IoChatbubbleEllipses } from "react-icons/io5";
 import { SendPackagePayloadType } from "../../constant/types";
+import { useSession } from "next-auth/react";
 
 interface ClientHeaderProps {
     user: Session | null;
@@ -76,6 +77,9 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
     const messageStore = useMessageStore();
     const { emitSendMessage, emitClearMessage, emitLeaveChat } = useSocketContext();
     const speechToTextMutation = useUploadControllerUploadSpeechToTextFile();
+    const [allPackages, setAllPackages] = useState([]);
+    let Url = process.env.NEXT_PUBLIC_BACKEND_URL;
+    const { data } = useSession();
 
     useEffect(() => {
         setIsInIframe(window.self !== window.top);
@@ -92,6 +96,35 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         }
     });
 
+
+    useEffect(() => {
+        const fetchPackages = async () => {
+            if (allPackages.length > 0) return;
+
+            try {
+                const response = await fetch(`${Url}/api/v1/uploads/get-all-packages?limit=9999`, {
+                    method: 'GET',
+                    headers: {
+                        Authorization: `Bearer ${data?.user?.backendTokens?.at}`,
+                        'Cache-Control': 'no-cache'
+                    },
+                });
+                if (response.ok) {
+                    const packageData = await response.json();
+                    const filterPackages = packageData.data?.filter((item) => {
+                        return item?.active === true
+                    });
+                    setAllPackages(filterPackages);
+                }
+            } catch (error) {
+                console.error('Error fetching packages:', error);
+            }
+        };
+
+        if (data?.user?.backendTokens?.at && allPackages.length === 0) {
+            fetchPackages();
+        }
+    }, [data?.user?.backendTokens?.at, allPackages.length, Url]);
 
     const selectedLang = params.get("lang") || companyData?.defaultLangCode || "en";
 
