@@ -53,6 +53,25 @@ interface ClientHeaderProps {
     user: Session | null;
 }
 
+interface Category {
+    id: number;
+    name: string;
+    priceLevel: number;
+    taxPercentage: string;
+    soldOut: boolean;
+    images: string[];
+    signedImages: Array<{
+        url: string;
+        signedUrl: string;
+    }>;
+    packageCounts: {
+        packages: number;
+        fromCategoryPackages: number;
+        toCategoryPackages: number;
+        totalPackages: number;
+    };
+}
+
 const ClientHeader = ({ user }: ClientHeaderProps) => {
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [shortcutMenuOpen, setShortcutMenuOpen] = useState(false);
@@ -82,6 +101,8 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
     const [selectedCategoryForUpsell, setSelectedCategoryForUpsell] = useState<number | null>(null);
     const [selectedCategories, setSelectedCategories] = useState(null);
     const [selectedPackages, setSelectedPackages] = useState([]);
+    const [categoriesData, setCategoriesData] = useState([]);
+    const [categoriesFetched, setCategoriesFetched] = useState(false);
 
     useEffect(() => {
         setIsInIframe(window.self !== window.top);
@@ -129,6 +150,48 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
     }, [data?.user?.backendTokens?.at, allPackages.length, Url]);
 
     const selectedLang = params.get("lang") || companyData?.defaultLangCode || "en";
+
+    const fetchCategories = async () => {
+        if (categoriesFetched && categoriesData.length > 0) {
+            return categoriesData;
+        }
+
+        try {
+            const response = await fetch(`${Url}/api/v1/uploads/get-all-categories?fetchAll=true&limit=100`, {
+                headers: {
+                    Authorization: `Bearer ${data?.user?.backendTokens?.at}`,
+                    'Cache-Control': 'no-cache'
+                },
+            });
+            if (response.ok) {
+                const json = await response.json();
+                const categories = json.data || json;
+
+                setCategoriesData(categories);
+                setCategoriesFetched(true);
+                return categories;
+            } else {
+                return [];
+            }
+        } catch (error) {
+            return [];
+        }
+    };
+
+    const showCategoryDropdown = () => {
+
+        if (isInIframe) {
+            window.parent.postMessage({
+                type: 'CATEGORIES_DATA',
+                categories: categoriesData
+            }, '*');
+        } else {
+            window.parent.postMessage({
+                type: 'CATEGORIES_DATA',
+                categories: categoriesData
+            }, '*');
+        }
+    };
 
     // Fetch all template types with proper caching configuration
     const { data: textTemplates, isLoading: textLoading } = useTemplateControllerGetTextTemplates(
@@ -350,6 +413,11 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
             return;
         }
 
+        if (searchValue === '/') {
+            setIsDropdownVisible(true);
+            return;
+        }
+
         debounceTimerRef.current = setTimeout(() => {
             const searchLower = searchValue.toLowerCase().trim();
             const filtered = allTemplates.filter(template =>
@@ -503,10 +571,33 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         }
     }, []);
 
-    // REPLACE with:
     const handleSearchChange = useCallback((e) => {
-        setSearchValue(e.target.value);
-    }, []);
+        const value = e.target.value;
+        setSearchValue(value);
+
+        if (value === '/') {
+            if (categoriesData.length === 0 && !categoriesFetched) {
+                fetchCategories().then(categories => {
+                    if (categories.length > 0) {
+                        setFilteredTemplates([]);
+
+                        window.parent.postMessage({
+                            type: 'CATEGORIES_DATA',
+                            categories: categories
+                        }, '*');
+                    } else {
+                        message.warning('No categories found.');
+                    }
+                });
+            } else if (categoriesData.length > 0) {
+                setFilteredTemplates([]);
+                window.parent.postMessage({
+                    type: 'CATEGORIES_DATA',
+                    categories: categoriesData
+                }, '*');
+            }
+        }
+    }, [categoriesData, categoriesFetched, fetchCategories]);
 
     useEffect(() => {
         if (isHamburgerMenuOpen && hamburgerMenuRef.current) {
@@ -645,7 +736,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         });
     };
 
-    const generateSearchDropdownHTML = useCallback((templates, isLoading) => {
+    const generateSearchDropdownHTML = useCallback((templates, categories, isLoading, searchVal) => {
         if (isLoading) {
             return `
             <div style="padding: 20px; text-align: center;">
@@ -658,6 +749,58 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                 </style>
             </div>
         `;
+        }
+
+        if (searchVal === '/' && categories.length > 0) {
+            return categories.map(category => `
+            <div style="
+                cursor: pointer;
+                padding: 12px 16px;
+                border-bottom: 1px solid #f0f0f0;
+                transition: background-color 0.2s;
+                display: flex;
+                align-items: center;
+                gap: 12px;
+            "
+            data-category-id="${category.id}"
+            onmouseover="this.style.backgroundColor='#f5f5f5'"
+            onmouseout="this.style.backgroundColor='white'"
+            >
+                ${category.signedImages?.[0]?.signedUrl ? `
+                    <img 
+                        src="${category.signedImages[0].signedUrl}" 
+                        alt="${category.name}"
+                        style="width: 40px; height: 40px; border-radius: 8px; object-fit: cover;"
+                    />
+                ` : `
+                    <div style="
+                        width: 40px;
+                        height: 40px;
+                        border-radius: 8px;
+                        background-color: #3b5998;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        color: white;
+                        font-size: 18px;
+                        font-weight: bold;
+                    ">
+                        ${category.name.charAt(0).toUpperCase()}
+                    </div>
+                `}
+                <div style="flex: 1;">
+                    <div style="font-weight: 500; color: #1f2937; font-size: 14px; display: flex; align-items: center; gap: 8px;">
+                        ${category.name}
+                        <span style="display: inline-block; background: #3b5998; color: white; font-size: 10px; padding: 2px 6px; border-radius: 4px;">
+                            ${category.packageCounts.totalPackages} packages
+                        </span>
+                    </div>
+                    <div style="font-size: 12px; color: #6b7280; margin-top: 2px;">
+                        Price Level: ${category.priceLevel}
+                    </div>
+                </div>
+            </div>
+        `).join('');
         }
 
         if (templates.length === 0) {
@@ -791,7 +934,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         if (isDropdownVisible && isInIframe) {
             const rect = searchRef.current?.getBoundingClientRect();
             if (rect) {
-                const html = generateSearchDropdownHTML(filteredTemplates, isLoading);
+                const html = generateSearchDropdownHTML(filteredTemplates, categoriesData, isLoading, searchValue);
 
                 window.parent.postMessage({
                     type: 'SEARCH_DROPDOWN',
@@ -842,7 +985,6 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
 
         useEffect(() => {
             if (isInIframe && messageStore.receivedMessage.length > 0) {
-                console.log('[ClientHeader] Messages updated in store, refreshing chat popup');
                 updateChatPopupMessages();
             }
         }, [messageStore.receivedMessage.length, isInIframe, updateChatPopupMessages]);
@@ -1017,16 +1159,6 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
 
                 const type = refType || templateType;
 
-                console.log('[ClientHeader] Received template shortcut click', {
-                    id,
-                    type,
-                    tag,
-                    hasTextTemplates: !!textTemplates,
-                    textTemplatesCount: textTemplates?.length,
-                    hasImageTemplates: !!imageTemplates,
-                    imageTemplatesCount: imageTemplates?.length
-                });
-
                 let template;
                 let contentExtra;
 
@@ -1136,13 +1268,6 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                 }
 
                 if (template && socketConnected) {
-                    console.log('[ClientHeader] Sending template via socket', {
-                        templateId: template.id,
-                        type: type,
-                        tag: tag,
-                        hasContentExtra: !!contentExtra
-                    });
-
                     emitSendTemplate({
                         refId: template.id,
                         langCode: selectedLang,
@@ -1151,23 +1276,6 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                         contentExtra: contentExtra,
                     });
 
-                    console.log('[ClientHeader] ✓ Template sent successfully');
-                } else {
-                    console.error('[ClientHeader] Failed to send template', {
-                        hasTemplate: !!template,
-                        socketConnected,
-                        type,
-                        tag,
-                        availableTemplates: {
-                            text: textTemplates?.length || 0,
-                            image: imageTemplates?.length || 0,
-                            video: videoTemplates?.length || 0,
-                            website: websiteTemplates?.length || 0,
-                            slideshow: slideshowTemplates?.length || 0,
-                            map: mapTemplates?.length || 0,
-                            document: documentTemplates?.length || 0
-                        }
-                    });
                 }
             }
 
@@ -1177,57 +1285,35 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
 
             if (event.data.type === 'CHAT_SEND_MESSAGE') {
                 const messageText = event.data.message;
-                console.log('[ClientHeader] Chat message received from extension:', messageText);
-
                 if (socketConnected) {
-                    // Get selected language from URL params
                     const selectedLang = params.get("lang") || companyData?.defaultLangCode || "en";
-
-                    console.log('[ClientHeader] Sending message with language:', selectedLang);
 
                     emitSendMessage({
                         message: messageText,
                         station: Number(params.get("station") ?? 1),
                         refType: "ChatMessage",
-                        langCode: selectedLang, // Use selected language
+                        langCode: selectedLang,
                     });
-
-                    console.log('[ClientHeader] ✓ Message sent via socket with lang:', selectedLang);
-
-                    // DON'T manually update the popup - let the socket response handle it
-                    // The message will appear automatically when it comes back through the socket
                 } else {
                     console.error('[ClientHeader] Socket not connected');
                 }
             }
 
             if (event.data.type === 'CHAT_CLEAR') {
-                console.log('[ClientHeader] Chat clear request - clearing messages and ending session');
-
                 try {
                     // Clear the message store
                     messageStore.reset();
-                    console.log('[ClientHeader] ✓ Message store cleared');
-
-                    // End the chat session
                     emitLeaveChat({
                         station: Number(params.get("station") ?? 1),
                     });
-                    console.log('[ClientHeader] ✓ Chat session ended');
-
-                    // Also emit clear message to backend
                     emitClearMessage({
                         station: Number(params.get("station") ?? 1),
                     });
-                    console.log('[ClientHeader] ✓ Clear message sent to backend');
-
-                    // Send confirmation back to extension
                     window.parent.postMessage({
                         type: 'CHAT_CLEARED',
                         success: true
                     }, '*');
 
-                    console.log('[ClientHeader] ✓ Clear request completed successfully');
                 } catch (error) {
                     console.error('[ClientHeader] Error clearing chat:', error);
 
@@ -1244,7 +1330,6 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
             }
 
             if (event.data.type === 'CLEAR_CHAT_MESSAGES') {
-                console.log('[ClientHeader] Clearing chat messages');
                 messageStore.reset();
 
                 // Update the popup to show empty state
@@ -1254,9 +1339,6 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
             }
 
             if (event.data.type === 'CHAT_TOGGLE_RECORDING') {
-                console.log('[ClientHeader] Received mic toggle request from extension');
-
-                // Get the iframe element
                 const iframeElement = document.getElementById('nobstacle-header-iframe') as HTMLIFrameElement;
 
                 if (iframeElement && iframeElement.contentWindow) {
@@ -1265,27 +1347,19 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                         type: 'CHAT_TOGGLE_RECORDING'
                     }, '*');
 
-                    console.log('[ClientHeader] ✓ Mic toggle request forwarded to iframe');
                 } else {
                     console.error('[ClientHeader] ERROR: Header iframe not found or contentWindow not available');
                 }
             }
 
             if (event.data.type === 'CHAT_RECORDING_RESULT') {
-                console.log('[ClientHeader] Received recording result:', event.data.text);
-
-                // Forward transcribed text back to extension
                 window.parent.postMessage({
                     type: 'CHAT_RECORDING_RESULT',
                     text: event.data.text
                 }, '*');
-
-                console.log('[ClientHeader] ✓ Recording result forwarded to extension');
             }
 
             if (event.data.type === 'PROCESS_AUDIO') {
-                console.log('[ClientHeader] Processing audio from extension');
-
                 try {
                     // Convert base64 back to blob
                     const base64Audio = event.data.audioData;
@@ -1304,8 +1378,6 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                     // Determine language code
                     const selectedLang = params.get("lang") || companyData?.defaultLangCode || "en";
 
-                    console.log('[ClientHeader] Sending audio to speech-to-text API with lang:', selectedLang);
-
                     // Call the speech-to-text API
                     speechToTextMutation.mutate(
                         {
@@ -1316,15 +1388,11 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                         },
                         {
                             onSuccess: (response) => {
-                                console.log('[ClientHeader] ✓ Transcription received:', response.transcription);
-
-                                // Send transcription back to content script
                                 window.parent.postMessage({
                                     type: 'AUDIO_TRANSCRIPTION',
                                     text: response.transcription
                                 }, '*');
 
-                                console.log('[ClientHeader] ✓ Transcription sent to extension');
                             },
                             onError: (error) => {
                                 console.error('[ClientHeader] Speech-to-text error:', error);
@@ -1343,14 +1411,9 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                     }, '*');
                 }
             }
-            if (event.data.type === 'SEND_UPSELL_PACKAGES') {
-                // Use category from message (extension) or local state (web app)
-                const categoryId = event.data.categoryId ?? selectedCategories;
 
-                console.log('[ClientHeader] === Sending upsell packages ===');
-                console.log('[ClientHeader] Category from message:', event.data.categoryId);
-                console.log('[ClientHeader] Category from state:', selectedCategories);
-                console.log('[ClientHeader] Using category:', categoryId);
+            if (event.data.type === 'SEND_UPSELL_PACKAGES') {
+                const categoryId = event.data.categoryId ?? selectedCategories;
 
                 const selectedLang = params.get("lang") || companyData?.defaultLangCode || "en";
 
@@ -1368,46 +1431,28 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                     );
                 });
 
-                console.log('[ClientHeader] Total packages after language filter:', filteredPackages.length);
-
                 // Filter by category if provided
                 if (categoryId && categoryId !== null) {
-                    console.log('[ClientHeader] Applying category filter for ID:', categoryId);
                     const beforeCount = filteredPackages.length;
 
                     filteredPackages = filteredPackages.filter(pkg => {
                         // For room upgrades, check from_category_id
                         if (pkg.roomUpgrade === true) {
                             const matches = pkg.from_category_id === categoryId;
-                            console.log('[ClientHeader] Package', pkg.packageNames?.en,
-                                'roomUpgrade:', pkg.roomUpgrade,
-                                'from_category:', pkg.from_category_id,
-                                'matches:', matches);
                             return matches;
                         }
-                        // For non-room upgrades, include all
-                        console.log('[ClientHeader] Package', pkg.packageNames?.en,
-                            'not room upgrade, including');
                         return true;
                     });
-
-                    console.log('[ClientHeader] Packages after category filter:', filteredPackages.length,
-                        '(was', beforeCount, ')');
                 }
 
                 // Also filter out selected packages if any
                 if (selectedPackages && selectedPackages?.length > 0) {
-                    console.log('[ClientHeader] Filtering out', selectedPackages.length, 'excluded packages');
                     filteredPackages = filteredPackages.filter(pkg =>
                         !selectedPackages.some(selected => selected.id === pkg.id)
                     );
-                    console.log('[ClientHeader] Packages after exclusion filter:', filteredPackages.length);
                 }
 
                 if (filteredPackages.length > 0) {
-                    console.log('[ClientHeader] ✓ Sending', filteredPackages.length, 'packages to station',
-                        params.get("station") ?? 1);
-
                     emitSendPackages({
                         refId: filteredPackages[0].id,
                         langCode: selectedLang,
@@ -1419,7 +1464,6 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                         if (response && (response === true)) {
                             const categoryMsg = categoryId ? ' for selected category' : '';
                             message.success(`✓ Sent ${filteredPackages.length} packages${categoryMsg}`);
-                            console.log('[ClientHeader] ✓ Packages sent successfully');
                         } else {
                             message.error("Failed to send packages");
                             console.error('[ClientHeader] ✗ Failed to send packages');
@@ -1430,21 +1474,55 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                         ? "No room upgrade packages available for the selected category"
                         : "No packages available for selected criteria";
                     message.warning(reason);
-                    console.log('[ClientHeader] ⚠ No packages to send:', reason);
                 }
             }
-            if (event.data.type === 'CATEGORY_SELECTED') {
-                const categoryId = event.data.categoryId;
-                setSelectedCategoryForUpsell(categoryId);
-                console.log('[ClientHeader] Category selected from extension:', categoryId);
 
-                if (categoryId) {
-                    // Find category name for better UX
-                    const category = categoryData?.find(c => c.id === categoryId);
-                    const categoryName = category?.name || `ID ${categoryId}`;
-                    message.info(`Category "${categoryName}" selected for upsell`, 3);
+            if (event.data.type === 'CATEGORY_SELECT') {
+                const categoryId = event.data.categoryId;
+                const category = categoriesData?.find(c => c.id === categoryId);
+
+                if (category) {
+                    setSelectedCategories(categoryId);
+                    setSearchValue('');
+                    setIsDropdownVisible(false);
+
+                    // Call your existing function
+                    handleSendPackage(categoryId);
+
+                    message.success(`Category "${category.name}" selected for upsell`);
+                }
+            }
+            if (event.data.type === 'SHOW_CATEGORIES') {
+                if (categoriesData.length === 0 && !categoriesFetched) {
+                    fetchCategories().then(categories => {
+                        if (categories.length > 0) {
+                            window.parent.postMessage({
+                                type: 'CATEGORIES_DATA',
+                                categories: categories
+                            }, '*');
+                        }
+                    });
+                } else if (categoriesData.length > 0) {
+                    window.parent.postMessage({
+                        type: 'CATEGORIES_DATA',
+                        categories: categoriesData
+                    }, '*');
+                }
+            }
+
+            if (event.data.type === 'REQUEST_CATEGORIES') {
+                if (categoriesData.length === 0 && !categoriesFetched) {
+                    fetchCategories().then(categories => {
+                        window.parent.postMessage({
+                            type: 'CATEGORIES_DATA',
+                            categories: categories
+                        }, '*');
+                    });
                 } else {
-                    message.info('Category selection cleared');
+                    window.parent.postMessage({
+                        type: 'CATEGORIES_DATA',
+                        categories: categoriesData
+                    }, '*');
                 }
             }
 
@@ -1478,6 +1556,49 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         selectedCategories,
         selectedCategoryForUpsell,
     ]);
+
+    const handleSendPackage = (categoryId: any) => {
+        let filteredPackages = allPackages.filter((item) => {
+            return (
+                item?.packageNames?.[selectedLang] != null &&
+                item?.packageDescriptions?.[selectedLang] != null &&
+                item?.packageBenefits?.[selectedLang] != null &&
+                item?.packageTags?.[selectedLang] != null &&
+                item?.taxInformation?.[selectedLang] != null &&
+                item?.currencies?.[selectedLang] != null &&
+                item?.buttonTexts?.[selectedLang] != null &&
+                item?.packageAlerts?.[selectedLang] != null
+            );
+        });
+
+        if (categoryId && categoryId !== null) {
+            filteredPackages = filteredPackages.filter(pkg => {
+                if (pkg.roomUpgrade === true) {
+                    return pkg.from_category_id === categoryId;
+                }
+                return true;
+            });
+        }
+
+        if (filteredPackages.length > 0) {
+            emitSendPackages({
+                refId: filteredPackages[0].id,
+                langCode: selectedLang,
+                refType: "Packages",
+                station: Number(params.get("station") ?? 1),
+                sentBy: JSON.stringify(data.user),
+                contentExtra: JSON.stringify(filteredPackages)
+            } as SendPackagePayloadType, (response) => {
+                if (response && (response === true)) {
+                    message.success("Packages sent!");
+                } else {
+                    message.error("Failed to send packages. Please try again.");
+                }
+            });
+        } else {
+            message.warning("No packages available on selected language.");
+        }
+    }
 
     return (
         <>
@@ -1628,12 +1749,14 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                     <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                                         <input
                                             ref={inputRef}
-                                            autoComplete="off"
+                                            readOnly
+                                            autoComplete="search-template"
                                             type="text"
                                             placeholder="ID# or Search Template"
                                             value={searchValue}
                                             onChange={handleSearchChange}
-                                            onFocus={() => {
+                                            onFocus={(e) => {
+                                                e.target.removeAttribute('readOnly');
                                                 if (justSelectedRef.current) return;
                                                 if (searchValue.trim() && filteredTemplates.length > 0) {
                                                     setIsDropdownVisible(true);
@@ -2007,6 +2130,75 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                             <div style={{ padding: '20px', textAlign: 'center' }}>
                                 <Spin />
                             </div>
+                        ) : searchValue === '/' && categoriesData.length > 0 ? (
+                            <List
+                                dataSource={categoriesData}
+                                renderItem={(category: Category) => (
+                                    <List.Item
+                                        style={{
+                                            cursor: 'pointer',
+                                            padding: '12px 16px',
+                                            borderBottom: '1px solid #f0f0f0',
+                                            transition: 'background-color 0.2s'
+                                        }}
+                                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f5f5f5'}
+                                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
+                                        onMouseDown={(e) => {
+                                            e.preventDefault();
+                                            setSelectedCategories(category.id);
+                                            setSearchValue('');
+                                            setIsDropdownVisible(false);
+                                            handleSendPackage(category.id);
+                                            message.success(`Category "${category.name}" selected for upsell`);
+                                        }}
+                                    >
+                                        <List.Item.Meta
+                                            avatar={
+                                                category.signedImages?.[0]?.signedUrl ? (
+                                                    <img
+                                                        src={category.signedImages[0].signedUrl}
+                                                        alt={category.name}
+                                                        style={{
+                                                            width: '40px',
+                                                            height: '40px',
+                                                            borderRadius: '8px',
+                                                            objectFit: 'cover'
+                                                        }}
+                                                    />
+                                                ) : (
+                                                    <div style={{
+                                                        width: '40px',
+                                                        height: '40px',
+                                                        borderRadius: '8px',
+                                                        backgroundColor: '#3b5998',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        color: 'white',
+                                                        fontSize: '18px',
+                                                        fontWeight: 'bold'
+                                                    }}>
+                                                        {category.name.charAt(0).toUpperCase()}
+                                                    </div>
+                                                )
+                                            }
+                                            title={
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                    <span>{category.name}</span>
+                                                    <Tag color="blue" style={{ fontSize: '10px', padding: '0 4px', margin: 0 }}>
+                                                        {category.packageCounts.totalPackages} packages
+                                                    </Tag>
+                                                </div>
+                                            }
+                                            description={
+                                                <span style={{ fontSize: '12px', color: '#6b7280' }}>
+                                                    Price Level: {category.priceLevel}
+                                                </span>
+                                            }
+                                        />
+                                    </List.Item>
+                                )}
+                            />
                         ) : filteredTemplates.length > 0 ? (
                             <List
                                 dataSource={filteredTemplates}
@@ -2054,6 +2246,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                                     }
                                                 />
                                             </div>
+
                                             {template.type !== "slideshow" && template.type !== "text" && (
                                                 <div
                                                     onMouseDown={(e) => {

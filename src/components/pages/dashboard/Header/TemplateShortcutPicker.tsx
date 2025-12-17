@@ -30,7 +30,7 @@ export const TemplateShortcutPicker: React.FC<{ checkIframe?: boolean }> = ({
   const params = useSearchParams();
 
   // Get from shared provider (no API call here!)
-  const { templateShortcuts, isLoading } = useShortcuts();
+  const { templateShortcuts, isLoading, error } = useShortcuts();
 
   useEffect(() => {
     if (checkIframe) {
@@ -64,7 +64,7 @@ export const TemplateShortcutPicker: React.FC<{ checkIframe?: boolean }> = ({
       return;
     }
 
-    // ... rest of your existing click handler logic
+    // Rest of your existing click handler logic
     let template:
       | GetTextTemplateRes
       | GetImageTemplateRes
@@ -91,10 +91,97 @@ export const TemplateShortcutPicker: React.FC<{ checkIframe?: boolean }> = ({
           isExistOnDefaultLanguage = true;
         }
         break;
-      // ... add other cases (Image, Video, etc.)
+      case "Image":
+        template = images.find(
+          (img) =>
+            img.tag === tag &&
+            img.langCode.includes(params.get("lang") || company?.defaultLangCode || "en")
+        );
+        if (!template && company?.defaultLangCode) {
+          template = images.find(
+            (img) => img.tag === tag && img.langCode.includes(company?.defaultLangCode)
+          );
+          isExistOnDefaultLanguage = true;
+        }
+        break;
+      case "Video":
+        template = videos.find(
+          (vid) =>
+            vid.tag === tag &&
+            vid.langCode.includes(params.get("lang") || company?.defaultLangCode || "en")
+        );
+        if (!template && company?.defaultLangCode) {
+          template = videos.find(
+            (vid) => vid.tag === tag && vid.langCode.includes(company?.defaultLangCode)
+          );
+          isExistOnDefaultLanguage = true;
+        }
+        break;
+      case "Website":
+        template = websites.find(
+          (web) =>
+            web.tag === tag &&
+            web.langCode.includes(params.get("lang") || company?.defaultLangCode || "en")
+        );
+        if (!template && company?.defaultLangCode) {
+          template = websites.find(
+            (web) => web.tag === tag && web.langCode.includes(company?.defaultLangCode)
+          );
+          isExistOnDefaultLanguage = true;
+        }
+        break;
+      case "Slideshow":
+        template = slideshows.find(
+          (slide) =>
+            slide.tag === tag &&
+            slide.langCode.includes(params.get("lang") || company?.defaultLangCode || "en")
+        );
+        if (!template && company?.defaultLangCode) {
+          template = slideshows.find(
+            (slide) => slide.tag === tag && slide.langCode.includes(company?.defaultLangCode)
+          );
+          isExistOnDefaultLanguage = true;
+        }
+        break;
+      case "Map":
+        template = maps.find(
+          (map) =>
+            map.tag === tag &&
+            map.langCode.includes(params.get("lang") || company?.defaultLangCode || "en")
+        );
+        if (!template && company?.defaultLangCode) {
+          template = maps.find(
+            (map) => map.tag === tag && map.langCode.includes(company?.defaultLangCode)
+          );
+          isExistOnDefaultLanguage = true;
+        }
+        break;
+      case "Document":
+        template = documents.find(
+          (doc) =>
+            doc.tag === tag &&
+            doc.langCode.includes(params.get("lang") || company?.defaultLangCode || "en")
+        );
+        if (!template && company?.defaultLangCode) {
+          template = documents.find(
+            (doc) => doc.tag === tag && doc.langCode.includes(company?.defaultLangCode)
+          );
+          isExistOnDefaultLanguage = true;
+        }
+        break;
     }
 
     if (!template) return;
+
+    let contentExtra = undefined;
+    if (type === "Image" || type === "Video" || type === "Website" || type === "Document") {
+      contentExtra = (template as GetImageTemplateRes | GetVideoTemplateRes | GetWebsiteTemplateRes | GetDocumentTemplateRes)?.ext;
+    } else if (type === "Map") {
+      contentExtra = JSON.stringify({
+        origin: (template as GetMapTemplateRes)?.origin || '',
+        destination: (template as GetMapTemplateRes)?.destination || ''
+      });
+    }
 
     emitSendTemplate({
       refId: template.id,
@@ -103,11 +190,12 @@ export const TemplateShortcutPicker: React.FC<{ checkIframe?: boolean }> = ({
         : params.get("lang") || company?.defaultLangCode || "en",
       refType: type as any,
       station: Number(params.get("station") ?? 1),
-      contentExtra: (template as GetImageTemplateRes | GetVideoTemplateRes)?.ext ?? undefined,
+      contentExtra: contentExtra,
     });
   };
 
-  if (!isHydrated || isLoading) {
+  // Only show skeleton on initial mount
+  if (!isHydrated) {
     return (
       <div className="flex gap-2">
         {[1, 2, 3].map((i) => (
@@ -115,6 +203,28 @@ export const TemplateShortcutPicker: React.FC<{ checkIframe?: boolean }> = ({
         ))}
       </div>
     );
+  }
+
+  // If error, don't show anything
+  if (error) {
+    console.error('[TemplateShortcutPicker] Error loading shortcuts:', error);
+    return null;
+  }
+
+  // If loading and no data, show minimal loader
+  if (isLoading && templateShortcuts.length === 0) {
+    return (
+      <div className={`flex items-center ${isInIframe ? 'gap-1 px-2' : 'gap-2 px-3'}`}>
+        <span className={`text-white/60 ${isInIframe ? 'text-xs' : 'text-sm'}`}>
+          Loading...
+        </span>
+      </div>
+    );
+  }
+
+  // If no shortcuts
+  if (sortedShortcuts.length === 0) {
+    return null;
   }
 
   return (

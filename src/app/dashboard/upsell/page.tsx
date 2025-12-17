@@ -947,7 +947,6 @@ export default function Upsell() {
         debouncedSearch(searchValue);
     };
 
-
     // Function to send filtered package data
     const sendPackageData = (categoryId = null) => {
         const selectedLang = params.get("lang") || companyData?.defaultLangCode || "en";
@@ -1192,7 +1191,6 @@ export default function Upsell() {
         );
     };
 
-
     const rangePresets = [
         { label: 'Today', value: [dayjs().startOf('day'), dayjs().endOf('day')] },
         { label: 'Yesterday', value: [dayjs().subtract(1, 'day').startOf('day'), dayjs().subtract(1, 'day').endOf('day')] },
@@ -1294,7 +1292,6 @@ export default function Upsell() {
             </div>
         );
     };
-
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-6">

@@ -56,7 +56,7 @@ chrome.storage.local.get(['extensionEnabled'], (result) => {
 });
 
 chrome.runtime.onMessage.addListener((req, sender, respond) => {
-    if (req.action === 'toggle') {
+  if (req.action === 'toggle') {
     isEnabled = !isEnabled;
     chrome.storage.local.set({ extensionEnabled: isEnabled });
 
@@ -77,27 +77,22 @@ chrome.runtime.onMessage.addListener((req, sender, respond) => {
     return true;
   }
 
-   if (req.action === 'triggerUpsell') {
-    console.log('[Content Script] Wallet icon clicked, sending upsell for category:', selectedCategory);
-    
+  if (req.action === 'triggerUpsell') {
     const iframe = document.getElementById('nobstacle-header-iframe');
     if (iframe) {
       iframe.contentWindow.postMessage({
         type: 'SEND_UPSELL_PACKAGES',
         categoryId: selectedCategory
       }, '*');
-      console.log('[Content Script] ✓ Upsell message sent to iframe');
     } else {
       console.error('[Content Script] ERROR: Header iframe not found!');
     }
-    
+
     respond({ success: true, category: selectedCategory });
     return true;
   }
 
   if (req.action === 'showCategories') {
-    console.log('[Content Script] Show categories requested');
-    
     if (categoriesData.length === 0 && !categoriesFetched) {
       fetchCategories().then(categories => {
         if (categories.length > 0) {
@@ -107,7 +102,7 @@ chrome.runtime.onMessage.addListener((req, sender, respond) => {
     } else if (categoriesData.length > 0) {
       createCategoryDropdown(categoriesData);
     }
-    
+
     respond({ success: true });
     return true;
   }
@@ -116,34 +111,26 @@ chrome.runtime.onMessage.addListener((req, sender, respond) => {
 function isInputFocused() {
   const activeElement = document.activeElement;
   const inputs = ['input', 'textarea', 'select'];
-  return inputs.includes(activeElement?.tagName?.toLowerCase()) || 
-         activeElement?.isContentEditable;
+  return inputs.includes(activeElement?.tagName?.toLowerCase()) ||
+    activeElement?.isContentEditable;
 }
 
 function setupKeyboardListener() {
   document.addEventListener('keydown', (e) => {
-    // Check if user typed '/' and not in an input field
     if (e.key === '/' && !isInputFocused()) {
       e.preventDefault();
-      console.log('[Content Script] "/" key pressed - showing categories');
-      
-      if (categoriesData.length === 0 && !categoriesFetched) {
-        fetchCategories().then(categories => {
-          if (categories.length > 0) {
-            createCategoryDropdown(categories);
-          } else {
-            alert('No categories found. Please try again.');
-          }
-        });
-      } else if (categoriesData.length > 0) {
-        createCategoryDropdown(categoriesData);
+
+      const iframe = document.getElementById('nobstacle-header-iframe');
+      if (iframe) {
+        iframe.contentWindow.postMessage({
+          type: 'SHOW_CATEGORIES'
+        }, '*');
       } else {
-        alert('No categories available.');
+        console.error('[Content Script] Header iframe not found!');
       }
     }
   });
-  
-  console.log('[Content Script] ✓ Keyboard listener for "/" added');
+
 }
 
 function injectStyles() {
@@ -293,9 +280,9 @@ function createCategoryDropdown(categories) {
         Select Category for Upsell
       </h3>
       <p style="margin: 4px 0 0 0; font-size: 12px; color: #6b7280;">
-        ${selectedCategory 
-          ? 'Category selected. Click wallet icon to send packages.' 
-          : 'Choose a category to filter room upgrade packages'}
+        ${selectedCategory
+      ? 'Category selected. Click wallet icon to send packages.'
+      : 'Choose a category to filter room upgrade packages'}
       </p>
     </div>
     <div style="max-height: 320px; overflow-y: auto;">
@@ -318,30 +305,11 @@ function createCategoryDropdown(categories) {
       >
         Clear Selection
       </button>
-      ${selectedCategory ? `
-      <button 
-        id="send-upsell-btn"
-        style="
-          flex: 1;
-          padding: 10px;
-          background: #10b981;
-          color: white;
-          border: none;
-          border-radius: 8px;
-          font-weight: 500;
-          cursor: pointer;
-          transition: background-color 0.2s;
-        "
-      >
-        Send Packages
-      </button>
-      ` : ''}
     </div>
   `;
 
   document.body.appendChild(dropdown);
 
-  // ✅ FIXED: Attach click handlers properly
   setTimeout(() => {
     const categoryItems = dropdown.querySelectorAll('.category-item');
     categoryItems.forEach(item => {
@@ -349,24 +317,17 @@ function createCategoryDropdown(categories) {
         const categoryId = parseInt(item.getAttribute('data-category-id'));
         selectedCategory = categoryId;
 
-        console.log(`[Content Script] ✓ Category selected: ${categoryId}`);
-
-        // ✅ NEW: Send to iframe for state sync
         const iframe = document.getElementById('nobstacle-header-iframe');
         if (iframe) {
+          // Send category selection to iframe
           iframe.contentWindow.postMessage({
-            type: 'CATEGORY_SELECTED',
+            type: 'CATEGORY_SELECT',
             categoryId: categoryId
           }, '*');
+
+          addDebugLog(`✓ Category ${categoryId} sent to iframe`);
         }
 
-        // ✅ NEW: Notify popup to update UI
-        chrome.runtime.sendMessage({
-          action: 'categorySelected',
-          categoryId: categoryId
-        });
-
-        // Close dropdown after brief delay
         setTimeout(() => {
           dropdown.remove();
         }, 300);
@@ -385,14 +346,11 @@ function createCategoryDropdown(categories) {
       });
     });
 
-    // Clear button
     const clearBtn = dropdown.querySelector('#clear-category-btn');
     if (clearBtn) {
       clearBtn.addEventListener('click', () => {
         selectedCategory = null;
-        console.log('[Content Script] Category selection cleared');
-        
-        // Notify iframe
+
         const iframe = document.getElementById('nobstacle-header-iframe');
         if (iframe) {
           iframe.contentWindow.postMessage({
@@ -400,13 +358,7 @@ function createCategoryDropdown(categories) {
             categoryId: null
           }, '*');
         }
-        
-        // Notify popup
-        chrome.runtime.sendMessage({
-          action: 'categorySelected',
-          categoryId: null
-        });
-        
+
         dropdown.remove();
       });
     }
@@ -415,9 +367,6 @@ function createCategoryDropdown(categories) {
     const sendBtn = dropdown.querySelector('#send-upsell-btn');
     if (sendBtn) {
       sendBtn.addEventListener('click', () => {
-        console.log('[Content Script] Sending packages for category:', selectedCategory);
-        
-        // Send to iframe to handle the upsell
         const iframe = document.getElementById('nobstacle-header-iframe');
         if (iframe) {
           iframe.contentWindow.postMessage({
@@ -425,7 +374,7 @@ function createCategoryDropdown(categories) {
             categoryId: selectedCategory
           }, '*');
         }
-        
+
         dropdown.remove();
       });
     }
@@ -455,12 +404,10 @@ function createCategoryDropdown(categories) {
 
 async function fetchCategories() {
   if (categoriesFetched && categoriesData.length > 0) {
-    console.log('[Content Script] Using cached categories');
     return categoriesData;
   }
 
   try {
-    console.log('[Content Script] Fetching categories...');
     const Url = Isproduction
       ? 'https://nobstacle.com'
       : 'http://localhost:3000';
@@ -476,7 +423,6 @@ async function fetchCategories() {
       const json = await response.json();
       categoriesData = json.data || json;
       categoriesFetched = true;
-      console.log(`[Content Script] ✓ Fetched ${categoriesData.length} categories`);
       return categoriesData;
     } else {
       console.error('[Content Script] Failed to fetch categories:', response.status);
@@ -490,10 +436,7 @@ async function fetchCategories() {
 
 async function startAudioRecording() {
   try {
-    console.log('[Content Script] Requesting microphone permission...');
-
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    console.log('[Content Script] ✓ Microphone permission granted');
 
     audioChunks = [];
 
@@ -507,7 +450,6 @@ async function startAudioRecording() {
     };
 
     mediaRecorder.onstop = async () => {
-      console.log('[Content Script] Recording stopped, processing audio...');
       const audioBlob = new Blob(audioChunks, { type: mimeType });
       await sendAudioToBackend(audioBlob);
 
@@ -517,7 +459,7 @@ async function startAudioRecording() {
 
     mediaRecorder.start();
     isRecording = true;
-    console.log('[Content Script] ✓ Recording started');
+
 
     // Show recording indicator
     createRecordingIndicator({ text: 'Recording... Speak now' });
@@ -543,7 +485,6 @@ async function startAudioRecording() {
 
 function stopAudioRecording() {
   if (mediaRecorder && isRecording) {
-    console.log('[Content Script] Stopping recording...');
     mediaRecorder.stop();
     isRecording = false;
 
@@ -560,8 +501,6 @@ function stopAudioRecording() {
 
 async function sendAudioToBackend(audioBlob) {
   try {
-    console.log('[Content Script] Sending audio to backend...');
-
     const iframe = document.getElementById('nobstacle-header-iframe');
     if (!iframe) {
       console.error('[Content Script] ERROR: Iframe not found');
@@ -579,8 +518,6 @@ async function sendAudioToBackend(audioBlob) {
         audioData: base64Audio,
         mimeType: audioBlob.type
       }, '*');
-
-      console.log('[Content Script] ✓ Audio sent to iframe for processing');
     };
     reader.readAsDataURL(audioBlob);
 
@@ -652,7 +589,6 @@ function addDebugLog(message) {
     logEl.appendChild(entry);
     logEl.scrollTop = logEl.scrollHeight;
   }
-  console.log('[Nobstacle Extension]', message);
 }
 
 function updateDebugAuth(hasAuth, count, tokenPreview = '') {
@@ -844,9 +780,6 @@ function createHamburgerDropdown(content) {
 }
 
 function createChatPopup(content) {
-  console.log('[Content Script] ===== createChatPopup called =====');
-  console.log('[Content Script] Content:', content);
-
   document.getElementById('nobstacle-chat-popup')?.remove();
 
   const iframe = document.getElementById('nobstacle-header-iframe');
@@ -855,7 +788,6 @@ function createChatPopup(content) {
     return;
   }
 
-  console.log('[Content Script] Creating chat popup element');
   const popup = document.createElement('div');
   popup.id = 'nobstacle-chat-popup';
   popup.style.cssText = `
@@ -877,10 +809,8 @@ function createChatPopup(content) {
 
   popup.innerHTML = content.html;
   document.body.appendChild(popup);
-  console.log('[Content Script] ✓ Chat popup appended to body');
 
   setTimeout(() => {
-    console.log('[Content Script] Setting up event listeners');
     const messageInput = popup.querySelector('#chat-message-input');
     const sendButton = popup.querySelector('#chat-send-button');
     const micButton = popup.querySelector('#chat-mic-button');
@@ -888,19 +818,9 @@ function createChatPopup(content) {
     const closeButton = popup.querySelector('#chat-close-button');
     const endSessionButton = popup.querySelector('#chat-end-session-button');
 
-    console.log('[Content Script] Found elements:', {
-      messageInput: !!messageInput,
-      sendButton: !!sendButton,
-      micButton: !!micButton,
-      clearButton: !!clearButton,
-      closeButton: !!closeButton,
-      endSessionButton: !!endSessionButton
-    });
-
     if (messageInput && sendButton) {
       const sendMessage = () => {
         const message = messageInput.value.trim();
-        console.log('[Content Script] Sending message:', message);
         if (message) {
           iframe.contentWindow.postMessage({
             type: 'CHAT_SEND_MESSAGE',
@@ -917,60 +837,49 @@ function createChatPopup(content) {
           sendMessage();
         }
       });
-      console.log('[Content Script] ✓ Message send listeners attached');
     }
 
     // Microphone button handler
     if (micButton) {
       micButton.addEventListener('click', async () => {
-        console.log('[Content Script] Mic button clicked');
-
         if (!isRecording) {
           // Start recording
           const started = await startAudioRecording();
           if (started) {
-            console.log('[Content Script] ✓ Recording started successfully');
           }
         } else {
           // Stop recording
           const stopped = stopAudioRecording();
           if (stopped) {
-            console.log('[Content Script] ✓ Recording stopped successfully');
+            console.log('Recording stopped');
           }
         }
       });
-      console.log('[Content Script] ✓ Mic button listener attached');
     }
     // Clear button handler
     if (clearButton) {
       clearButton.addEventListener('click', () => {
-        console.log('[Content Script] Clear button clicked');
         iframe.contentWindow.postMessage({
           type: 'CHAT_CLEAR'
         }, '*');
       });
-      console.log('[Content Script] ✓ Clear button listener attached');
     }
 
     // End Session button handler
     if (endSessionButton) {
       endSessionButton.addEventListener('click', () => {
-        console.log('[Content Script] End Session button clicked');
         iframe.contentWindow.postMessage({
           type: 'CHAT_END_SESSION'
         }, '*');
         popup.remove();
       });
-      console.log('[Content Script] ✓ End Session button listener attached');
     }
 
     if (closeButton) {
       closeButton.addEventListener('click', () => {
-        console.log('[Content Script] Close button clicked');
         popup.remove();
         iframe.contentWindow.postMessage({ type: 'CHAT_POPUP_CLOSED' }, '*');
       });
-      console.log('[Content Script] ✓ Close button listener attached');
     }
   }, 100);
 
@@ -979,7 +888,6 @@ function createChatPopup(content) {
     const closeHandler = (e) => {
       const iframeElement = document.getElementById('nobstacle-header-iframe');
       if (!popup.contains(e.target) && e.target !== iframeElement) {
-        console.log('[Content Script] Click outside detected, closing popup');
         popup.remove();
         iframe.contentWindow.postMessage({ type: 'CHAT_POPUP_CLOSED' }, '*');
         document.removeEventListener('mousedown', closeHandler);
@@ -1079,7 +987,7 @@ async function injectHeader() {
   document.body.style.marginTop = `${baseMargin}px`;
 
   injectDebugPanel();
-   setupKeyboardListener();
+  setupKeyboardListener();
   addDebugLog('Header iframe created');
 
   // Send auth IMMEDIATELY when iframe loads
@@ -1163,59 +1071,41 @@ async function injectHeader() {
     }
 
     if (event.data.type === 'CHAT_POPUP') {
-      console.log('[Content Script] ===== CHAT_POPUP message received =====');
-      console.log('[Content Script] isOpen:', event.data.isOpen);
-      console.log('[Content Script] content:', event.data.content);
       addDebugLog('Chat popup message received');
 
       if (event.data.isOpen) {
-        console.log('[Content Script] Calling createChatPopup');
         createChatPopup(event.data.content);
       } else {
-        console.log('[Content Script] Closing chat popup');
         document.getElementById('nobstacle-chat-popup')?.remove();
       }
-      console.log('[Content Script] ===== CHAT_POPUP handler complete =====');
     }
 
     if (event.data.type === 'CHAT_UPDATE_MESSAGES') {
-      console.log('[Content Script] Updating chat messages');
       const popup = document.getElementById('nobstacle-chat-popup');
       if (popup) {
         const messagesContainer = popup.querySelector('#chat-messages-container');
         if (messagesContainer) {
           messagesContainer.innerHTML = event.data.html;
-          // Auto-scroll to bottom
           messagesContainer.scrollTop = messagesContainer.scrollHeight;
-          console.log('[Content Script] ✓ Messages updated and scrolled');
         }
       }
     }
 
     if (event.data.type === 'CHAT_SEND_MESSAGE') {
       const messageText = event.data.message;
-      console.log('[Content Script] Chat message to send:', messageText);
-
-      // Forward directly to iframe - no need for intermediate PROCESS_CHAT_MESSAGE
       iframe.contentWindow.postMessage({
         type: 'CHAT_SEND_MESSAGE',
         message: messageText
       }, '*');
-
-      console.log('[Content Script] ✓ Message forwarded to iframe');
     }
 
     if (event.data.type === 'CHAT_CLEAR') {
-      console.log('[Content Script] Chat clear request');
-      // Forward to iframe to clear message store
       iframe.contentWindow.postMessage({
         type: 'CHAT_CLEAR'
       }, '*');
-      console.log('[Content Script] ✓ Clear request forwarded to iframe');
     }
 
     if (event.data.type === 'CHAT_POPUP_CLOSED') {
-      console.log('[Content Script] Chat popup closed by user');
       document.getElementById('nobstacle-chat-popup')?.remove();
     }
 
@@ -1358,13 +1248,13 @@ async function injectHeader() {
     }
 
     if (event.data.type === 'SHOW_CATEGORIES') {
-      if (categoriesData.length === 0) {
+      if (categoriesData.length === 0 && !categoriesFetched) {
         fetchCategories().then(categories => {
           if (categories.length > 0) {
             createCategoryDropdown(categories);
           }
         });
-      } else {
+      } else if (categoriesData.length > 0) {
         createCategoryDropdown(categoriesData);
       }
     }
@@ -1379,6 +1269,36 @@ async function injectHeader() {
         }, '*');
       }
     }
+
+    if (event.data.type === 'CATEGORIES_DATA') {
+      categoriesData = event.data.categories;
+      categoriesFetched = true;
+
+      // Show dropdown
+      if (categoriesData.length > 0) {
+        createCategoryDropdown(categoriesData);
+      } else {
+        alert('No categories available.');
+      }
+    }
+
+    // In content.js, inside the message handler
+    if (event.data.type === 'CATEGORY_SELECT') {
+      const categoryId = event.data.categoryId;
+      selectedCategory = categoryId;
+
+      // Send to iframe for processing
+      const iframe = document.getElementById('nobstacle-header-iframe');
+      if (iframe) {
+        iframe.contentWindow.postMessage({
+          type: 'CATEGORY_SELECT',
+          categoryId: categoryId
+        }, '*');
+      }
+
+      addDebugLog(`Category ${categoryId} selected`);
+    }
+
   };
 
   window.addEventListener('message', handler);
