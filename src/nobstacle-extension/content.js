@@ -941,6 +941,21 @@ function createSearchDropdown(content) {
         dropdown.remove();
       });
     });
+    const categoryItems = dropdown.querySelectorAll('.category-item');
+    categoryItems.forEach(item => {
+      item.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        const categoryId = parseInt(item.getAttribute('data-category-id'));
+
+        iframe.contentWindow.postMessage({
+          type: 'CATEGORY_SELECT',
+          categoryId: categoryId
+        }, '*');
+
+        dropdown.remove();
+        addDebugLog(`✓ Category ${categoryId} selected and sent to iframe`);
+      });
+    });
   }, 100);
 
   setTimeout(() => {
@@ -1247,18 +1262,6 @@ async function injectHeader() {
       }
     }
 
-    if (event.data.type === 'SHOW_CATEGORIES') {
-      if (categoriesData.length === 0 && !categoriesFetched) {
-        fetchCategories().then(categories => {
-          if (categories.length > 0) {
-            createCategoryDropdown(categories);
-          }
-        });
-      } else if (categoriesData.length > 0) {
-        createCategoryDropdown(categoriesData);
-      }
-    }
-
     if (event.data.type === 'TRIGGER_UPSELL') {
       // This will be sent from iframe when user clicks upsell icon
       const iframe = document.getElementById('nobstacle-header-iframe');
@@ -1273,13 +1276,6 @@ async function injectHeader() {
     if (event.data.type === 'CATEGORIES_DATA') {
       categoriesData = event.data.categories;
       categoriesFetched = true;
-
-      // Show dropdown
-      if (categoriesData.length > 0) {
-        createCategoryDropdown(categoriesData);
-      } else {
-        alert('No categories available.');
-      }
     }
 
     // In content.js, inside the message handler

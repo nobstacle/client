@@ -752,56 +752,82 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         }
 
         if (searchVal === '/' && categories.length > 0) {
-            return categories.map(category => `
-            <div style="
-                cursor: pointer;
-                padding: 12px 16px;
-                border-bottom: 1px solid #f0f0f0;
-                transition: background-color 0.2s;
-                display: flex;
-                align-items: center;
-                gap: 12px;
-            "
-            data-category-id="${category.id}"
-            onmouseover="this.style.backgroundColor='#f5f5f5'"
-            onmouseout="this.style.backgroundColor='white'"
-            >
-                ${category.signedImages?.[0]?.signedUrl ? `
-                    <img 
-                        src="${category.signedImages[0].signedUrl}" 
-                        alt="${category.name}"
-                        style="width: 40px; height: 40px; border-radius: 8px; object-fit: cover;"
-                    />
-                ` : `
+            return `
+            <div style="padding: 12px 16px; border-bottom: 2px solid #3b5998; background: #f8fafc; position: sticky; top: 0; z-index: 1;">
+                <div style="font-weight: 600; font-size: 14px; color: #1f2937;">
+                    Select Category for Upsell
+                </div>
+                <div style="font-size: 11px; color: #6b7280; margin-top: 2px;">
+                    Click to send room upgrade packages
+                </div>
+            </div>
+            ${categories.map(category => `
+                <div 
+                    class="category-item"
+                    data-category-id="${category.id}"
+                    style="
+                        cursor: pointer;
+                        padding: 12px 16px;
+                        border-bottom: 1px solid #f0f0f0;
+                        transition: background-color 0.2s;
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                    "
+                    onmouseover="this.style.backgroundColor='#f5f5f5'"
+                    onmouseout="this.style.backgroundColor='white'"
+                >
+                    <div style="flex: 1; display: flex; align-items: center; gap: 12px;">
+                        ${category.signedImages?.[0]?.signedUrl ? `
+                            <img 
+                                src="${category.signedImages[0].signedUrl}" 
+                                alt="${category.name}"
+                                style="width: 40px; height: 40px; border-radius: 8px; object-fit: cover;"
+                            />
+                        ` : `
+                            <div style="
+                                width: 40px;
+                                height: 40px;
+                                border-radius: 8px;
+                                background-color: #3b5998;
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                                color: white;
+                                font-size: 18px;
+                                font-weight: bold;
+                            ">
+                                ${category.name.charAt(0).toUpperCase()}
+                            </div>
+                        `}
+                        <div style="flex: 1;">
+                            <div style="font-weight: 500; font-size: 14px; color: #1f2937;">
+                                ${category.name}
+                            </div>
+                            <div style="font-size: 12px; color: #6b7280; margin-top: 2px;">
+                                Level ${category.priceLevel} • ${category.packageCounts.totalPackages} packages
+                            </div>
+                        </div>
+                    </div>
                     <div style="
-                        width: 40px;
-                        height: 40px;
+                        width: 32px;
+                        height: 32px;
                         border-radius: 8px;
                         background-color: #3b5998;
                         display: flex;
                         align-items: center;
                         justify-content: center;
                         color: white;
-                        font-size: 18px;
-                        font-weight: bold;
+                        font-size: 12px;
+                        font-weight: 600;
                     ">
-                        ${category.name.charAt(0).toUpperCase()}
-                    </div>
-                `}
-                <div style="flex: 1;">
-                    <div style="font-weight: 500; color: #1f2937; font-size: 14px; display: flex; align-items: center; gap: 8px;">
-                        ${category.name}
-                        <span style="display: inline-block; background: #3b5998; color: white; font-size: 10px; padding: 2px 6px; border-radius: 4px;">
-                            ${category.packageCounts.totalPackages} packages
-                        </span>
-                    </div>
-                    <div style="font-size: 12px; color: #6b7280; margin-top: 2px;">
-                        Price Level: ${category.priceLevel}
+                        ${category.priceLevel}
                     </div>
                 </div>
-            </div>
-        `).join('');
+            `).join('')}
+        `;
         }
+
 
         if (templates.length === 0) {
             return `
