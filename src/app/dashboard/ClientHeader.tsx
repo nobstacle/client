@@ -816,20 +816,6 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                             </div>
                         </div>
                     </div>
-                    <div style="
-                        width: 32px;
-                        height: 32px;
-                        border-radius: 8px;
-                        background-color: #3b5998;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        color: white;
-                        font-size: 12px;
-                        font-weight: 600;
-                    ">
-                        ${category.priceLevel}
-                    </div>
                 </div>
             `).join('')}
         `;
