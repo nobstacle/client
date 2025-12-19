@@ -119,6 +119,13 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         }
     });
 
+    useEffect(() => {
+        // Prefetch categories on mount
+        if (data?.user?.backendTokens?.at && !categoriesFetched) {
+            fetchCategories();
+        }
+    }, [data?.user?.backendTokens?.at, categoriesFetched]);
+
 
     useEffect(() => {
         const fetchPackages = async () => {
@@ -2215,11 +2222,6 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                                         {category.packageCounts.totalPackages} packages
                                                     </Tag>
                                                 </div>
-                                            }
-                                            description={
-                                                <span style={{ fontSize: '12px', color: '#6b7280' }}>
-                                                    Price Level: {category.priceLevel}
-                                                </span>
                                             }
                                         />
                                     </List.Item>

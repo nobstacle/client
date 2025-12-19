@@ -19,6 +19,37 @@ chrome.runtime.onInstalled.addListener((details) => {
   restoreTokenFromStorage();
 });
 
+async function fetchAuthFromNobstacle() {
+  try {
+    // Get cookies from nobstacle.com domain
+    const cookies = await chrome.cookies.getAll({ 
+      domain: 'nobstacle.com' 
+    });
+    
+    const sessionCookie = cookies.find(c =>
+      c.name === '__Secure-next-auth.session-token' ||
+      c.name === 'next-auth.session-token'
+    );
+
+    if (sessionCookie) {
+      // Store in chrome.storage for cross-domain access
+      await chrome.storage.local.set({
+        authSessionToken: sessionCookie.value,
+        authCookies: cookies,
+        authTimestamp: Date.now()
+      });
+      
+      console.log('[Background] ✓ Auth data stored from nobstacle.com');
+      return { sessionToken: sessionCookie.value, cookies };
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('[Background] Error fetching auth:', error);
+    return null;
+  }
+}
+
 // Restore token from chrome.storage when service worker starts
 async function restoreTokenFromStorage() {
   try {
@@ -52,6 +83,24 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     sendResponse({ success: true });
   }
   
+    if (request.action === 'getAuthData') {
+    chrome.storage.local.get(['authSessionToken', 'authCookies', 'authTimestamp'], async (result) => {
+      // Check if auth data exists and is recent (less than 5 minutes old)
+      if (result.authSessionToken && result.authTimestamp && 
+          (Date.now() - result.authTimestamp < 5 * 60 * 1000)) {
+        sendResponse({ 
+          sessionToken: result.authSessionToken, 
+          cookies: result.authCookies 
+        });
+      } else {
+        // Fetch fresh auth data from nobstacle.com
+        const authData = await fetchAuthFromNobstacle();
+        sendResponse(authData || { sessionToken: null, cookies: [] });
+      }
+    });
+    return true;
+  }
+
   // Handle cookie requests
   if (request.action === 'getCookies') {
     chrome.cookies.getAll({ domain: request.domain }, (cookies) => {
@@ -108,6 +157,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   return true;
 });
 
+setInterval(async () => {
+  await fetchAuthFromNobstacle();
+}, 2 * 60 * 1000);
+
 // Modify headers using declarativeNetRequest API (Manifest V3 way)
 // This intercepts requests and modifies headers
 chrome.webRequest.onBeforeSendHeaders.addListener(
@@ -156,6 +209,15 @@ chrome.webRequest.onHeadersReceived.addListener(
   { urls: ["https://nobstacle-production-d145.up.railway.app/*"] },
   ["responseHeaders"]
 );
+
+chrome.runtime.onStartup.addListener(() => {
+  fetchAuthFromNobstacle();
+});
+
+chrome.runtime.onInstalled.addListener(() => {
+  fetchAuthFromNobstacle();
+  restoreTokenFromStorage();
+});
 
 // Periodically check token expiry
 setInterval(() => {

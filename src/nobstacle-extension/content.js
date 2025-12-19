@@ -254,21 +254,6 @@ function createCategoryDropdown(categories) {
             </div>
           ` : ''}
         </div>
-        <div style="
-          width: 32px;
-          height: 32px;
-          border-radius: 8px;
-          background: ${isSelected ? '#10b981' : '#3b5998'};
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: white;
-          font-size: ${isSelected ? '16px' : '12px'};
-          font-weight: 600;
-          transition: all 0.2s;
-        ">
-          ${isSelected ? '✓' : (category.priceLevel || '?')}
-        </div>
       </div>
     </div>
   `;
@@ -619,30 +604,102 @@ function updateBackendTokenStatus(hasToken) {
 async function getAuthCookies() {
   return new Promise((resolve) => {
     chrome.runtime.sendMessage({
-      action: 'getCookies',
-      domain: Isproduction ? 'nobstacle.com' : 'localhost'
+      action: 'getAuthData'
     }, (response) => {
-      resolve(response?.cookies || []);
+      if (chrome.runtime.lastError) {
+        console.error('[Content] Error getting auth:', chrome.runtime.lastError);
+        resolve([]);
+      } else {
+        resolve(response?.cookies || []);
+      }
     });
   });
 }
 
-// Pre-fetch auth data BEFORE iframe loads to prevent login flash
+function showLoginPrompt() {
+  const existingPrompt = document.getElementById('nobstacle-login-prompt');
+  if (existingPrompt) return;
+
+  const prompt = document.createElement('div');
+  prompt.id = 'nobstacle-login-prompt';
+  prompt.style.cssText = `
+    position: fixed !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    background: white !important;
+    padding: 30px !important;
+    border-radius: 12px !important;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2) !important;
+    z-index: 2147483647 !important;
+    text-align: center !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+  `;
+
+  prompt.innerHTML = `
+    <h2 style="margin: 0 0 15px 0; color: #333; font-size: 20px;">🔐 Login Required</h2>
+    <p style="margin: 0 0 20px 0; color: #666; font-size: 14px;">
+      Please log in to Nobstacle to use the header extension.
+    </p>
+    <button 
+      id="nobstacle-login-btn"
+      style="
+        padding: 12px 24px;
+        background: #3b5998;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 600;
+      "
+    >
+      Login to Nobstacle
+    </button>
+    <button 
+      id="nobstacle-close-prompt"
+      style="
+        padding: 12px 24px;
+        background: #f0f0f0;
+        color: #666;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 600;
+        margin-left: 10px;
+      "
+    >
+      Close
+    </button>
+  `;
+
+  document.body.appendChild(prompt);
+
+  document.getElementById('nobstacle-login-btn').addEventListener('click', () => {
+    chrome.tabs.create({ url: 'https://nobstacle.com/dashboard' });
+  });
+
+  document.getElementById('nobstacle-close-prompt').addEventListener('click', () => {
+    prompt.remove();
+  });
+}
+
 async function prefetchAuthData() {
-  const cookies = await getAuthCookies();
-  const sessionCookie = cookies.find(c =>
-    c.name === '__Secure-next-auth.session-token' ||
-    c.name === 'next-auth.session-token'
-  );
+  return new Promise((resolve) => {
+    chrome.runtime.sendMessage({
+      action: 'getAuthData'
+    }, (response) => {
+      cachedAuthData = {
+        sessionToken: response?.sessionToken || null,
+        cookies: response?.cookies || []
+      };
 
-  cachedAuthData = {
-    sessionToken: sessionCookie?.value || null,
-    cookies: cookies
-  };
-
-  authDataReady = true;
-  addDebugLog(`Pre-fetched auth: ${cachedAuthData.sessionToken ? 'YES' : 'NO'}`);
-  return cachedAuthData;
+      authDataReady = true;
+      addDebugLog(`Pre-fetched auth: ${cachedAuthData.sessionToken ? 'YES' : 'NO'}`);
+      resolve(cachedAuthData);
+    });
+  });
 }
 
 function createRecordingIndicator(data) {
@@ -980,12 +1037,17 @@ if (typeof window.nobstacleOriginalMargin === 'undefined') {
 async function injectHeader() {
   if (document.getElementById('nobstacle-header-container')) return;
 
+  await prefetchAuthData();
+
+    if (!cachedAuthData?.sessionToken) {
+    showLoginPrompt();
+    return;
+  }
+
   headerInjected = true;
   addDebugLog('Starting header injection...');
   injectStyles();
 
-  // Pre-fetch auth BEFORE creating iframe to prevent login flash
-  await prefetchAuthData();
 
   const container = document.createElement('div');
   container.id = 'nobstacle-header-container';
