@@ -18,7 +18,11 @@ const schema = yup.object().shape({
   identifier: yup.string().required("Recording tag is required"),
 });
 
-export const SendRecordingTrigger: React.FC = () => {
+interface SendRecordingTriggerProps {
+  onSearch?: (searchTerm: string) => void;
+}
+
+export const SendRecordingTrigger: React.FC<SendRecordingTriggerProps> = ({ onSearch }) => {
   const {
     register,
     handleSubmit,
@@ -26,6 +30,7 @@ export const SendRecordingTrigger: React.FC = () => {
     reset,
     control,
     setValue,
+    watch,
   } = useForm<SendRecordingFormValues>({
     resolver: yupResolver(schema),
     defaultValues: {
@@ -35,6 +40,17 @@ export const SendRecordingTrigger: React.FC = () => {
 
   const params = useSearchParams();
   const { emitSendRecording } = useSocketContext();
+  const identifierValue = watch("identifier");
+  
+    React.useEffect(() => {
+    const timer = setTimeout(() => {
+      if (onSearch) {
+        onSearch(identifierValue || "");
+      }
+    }, 500); 
+
+    return () => clearTimeout(timer);
+  }, [identifierValue, onSearch]);
 
   const handleSendRecording: SubmitHandler<SendRecordingFormValues> = (data) => {
     emitSendRecording({
@@ -66,11 +82,12 @@ export const SendRecordingTrigger: React.FC = () => {
             render={({ field }) => (
               <AntdInput
                 {...field}
-                placeholder="Type conformation tag"
+                placeholder="Type to search or enter confirmation tag to trigger recording"
                 status={errors.identifier ? "error" : ""}
                 onChange={(e) => field.onChange(e)}
                 style={{ width: "100%" }}
                 className="recording-tag-input"
+                allowClear
               />
             )}
           />
