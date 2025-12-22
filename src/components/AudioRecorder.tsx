@@ -64,22 +64,11 @@ const AudioRecorder: React.FC = () => {
   };
 
   const sendAudioToBackend = async (audioBlob: Blob) => {
-    const formData = new FormData();
-    formData.append("audio", audioBlob, "audio.flac");
-
-    const isAdminOrStaff =
-      userData?.user.Roles?.includes("Admin") ||
-      userData?.user.Roles?.includes("Staff");
-
-    const langCode = isAdminOrStaff
-      ? companyData?.defaultLangCode || "en"
-      : messageStore.receivedLangCode ||
-      localStorage.getItem("lang-code") ||
-      "en";
+    const recognitionLangCode = "en";
 
     try {
       speechToTextFileMutation.mutate(
-        { data: { file: audioBlob, langCode } },
+        { data: { file: audioBlob, langCode: recognitionLangCode } },
         {
           onSuccess: (res) => {
             sendMessage(res.transcription);

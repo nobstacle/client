@@ -1394,24 +1394,25 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                     // Create blob from binary data
                     const audioBlob = new Blob([bytes], { type: mimeType });
 
-                    // Determine language code
-                    const selectedLang = params.get("lang") || companyData?.defaultLangCode || "en";
+                    // ALWAYS use English for speech recognition
+                    const recognitionLangCode = "en";
 
-                    // Call the speech-to-text API
+                    // Call the speech-to-text API with English
                     speechToTextMutation.mutate(
                         {
                             data: {
                                 file: audioBlob,
-                                langCode: selectedLang
+                                langCode: recognitionLangCode
                             }
                         },
                         {
                             onSuccess: (response) => {
+                                // Send English transcription back
+                                // Backend will handle translation based on selected language
                                 window.parent.postMessage({
                                     type: 'AUDIO_TRANSCRIPTION',
                                     text: response.transcription
                                 }, '*');
-
                             },
                             onError: (error) => {
                                 console.error('[ClientHeader] Speech-to-text error:', error);
@@ -1511,6 +1512,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                     message.success(`Category "${category.name}" selected for upsell`);
                 }
             }
+
             if (event.data.type === 'SHOW_CATEGORIES') {
                 if (categoriesData.length === 0 && !categoriesFetched) {
                     fetchCategories().then(categories => {

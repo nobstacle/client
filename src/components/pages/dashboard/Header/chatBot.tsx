@@ -44,7 +44,7 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
     (msg) => msg.station === currentStation
   );
 
-  // Initialize speech recognition for iframe
+  // Initialize speech recognition for iframe - ALWAYS use English
   useEffect(() => {
     if (typeof window !== 'undefined' && isInIframe) {
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -53,19 +53,21 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
         recognitionRef.current = new SpeechRecognition();
         recognitionRef.current.continuous = false;
         recognitionRef.current.interimResults = false;
-        recognitionRef.current.lang = currentUserDefaultLang;
+        // ALWAYS use English for speech recognition
+        recognitionRef.current.lang = 'en-US';
 
         recognitionRef.current.onresult = async (event: any) => {
           const transcript = event.results[0][0].transcript;
           setInputValue(transcript);
           setIsRecording(false);
 
-          // Send the transcribed text back to extension
+          // Send the English transcription back to extension
           window.parent.postMessage({
             type: 'CHAT_RECORDING_RESULT',
             text: transcript
           }, '*');
 
+          // Send English message - backend handles translation
           await handleSendMessage(transcript);
         };
 
@@ -80,7 +82,7 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
         };
       }
     }
-  }, [currentUserDefaultLang, isInIframe]);
+  }, [isInIframe]); // Removed currentUserDefaultLang dependency
 
   useEffect(() => {
     setIsInIframe(window.self !== window.top);
@@ -169,6 +171,8 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
     const selectedLang = params.get("lang") || currentUserDefaultLang;
 
     try {
+      // Send English message with selected language code
+      // Backend handles translation
       emitSendMessage({
         message: textToSend,
         station: currentStation,
@@ -199,18 +203,15 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
   };
 
   const handleClearChat = () => {
-    // Clear the store first
     messageStore.reset();
 
     try {
-      // Clear on backend
       emitClearMessage({
         station: Number(params.get("station") ?? 1),
       });
 
       setInputValue("");
 
-      // Force immediate UI update in extension popup
       if (isInIframe) {
         const emptyStateHTML = `
         <div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #9ca3af; font-size: 14px;">
@@ -254,10 +255,11 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
       setIsRecording(false);
     } else {
       try {
-        recognitionRef.current.lang = currentUserDefaultLang;
+        // ALWAYS use English for speech recognition
+        recognitionRef.current.lang = 'en-US';
         recognitionRef.current.start();
         setIsRecording(true);
-        antMessage.info('Listening... Speak now');
+        antMessage.info('Listening... Speak in English');
       } catch (error) {
         console.error('Error starting recognition:', error);
         antMessage.error('Failed to start speech recognition');
@@ -357,25 +359,19 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
   };
 
   const showModal = () => {
-    console.log('[ChatBot] showModal called, isInIframe:', isInIframe);
-
     if (isInIframe && buttonRef.current) {
-      console.log('[ChatBot] Sending CHAT_POPUP message to parent');
       const rect = buttonRef.current.getBoundingClientRect();
 
       const chatHTML = `
         <div style="display: flex; flex-direction: column; height: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;">
-          <!-- Header -->
           <div style="padding: 16px 20px; border-bottom: 1px solid #e5e7eb; background: #f9fafb; display: flex; justify-content: space-between; align-items: center;">
             <span style="font-weight: 600; font-size: 16px; color: #000;">Chat Assistant</span>
           </div>
 
-          <!-- Messages Container -->
           <div id="chat-messages-container" style="flex: 1; overflow-y: auto; padding: 20px; background: white;">
             ${generateMessagesHTML()}
           </div>
 
-          <!-- Input Area -->
           <div style="padding: 16px 20px; border-top: 1px solid #e5e7eb; background: #f9fafb;">
             <div style="display: flex; gap: 12px; align-items: flex-end;">
               <textarea
