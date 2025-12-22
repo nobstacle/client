@@ -677,7 +677,10 @@ function showLoginPrompt() {
   document.body.appendChild(prompt);
 
   document.getElementById('nobstacle-login-btn').addEventListener('click', () => {
-    chrome.tabs.create({ url: 'https://nobstacle.com/dashboard' });
+    chrome.runtime.sendMessage({
+  action: 'openTab',
+  url: 'https://nobstacle.com/'
+});
   });
 
   document.getElementById('nobstacle-close-prompt').addEventListener('click', () => {

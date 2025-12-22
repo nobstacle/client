@@ -7,14 +7,14 @@ const API_BASE_URL = 'https://nobstacle-production-d145.up.railway.app';
 
 chrome.runtime.onInstalled.addListener((details) => {
   console.log('Nobstacle Header extension installed');
-  
+
   if (details.reason === 'install') {
     console.log('Extension installed for the first time');
   } else if (details.reason === 'update') {
     console.log('Extension updated');
     restoreTokenFromStorage();
   }
-  
+
   // Restore token on startup
   restoreTokenFromStorage();
 });
@@ -22,10 +22,10 @@ chrome.runtime.onInstalled.addListener((details) => {
 async function fetchAuthFromNobstacle() {
   try {
     // Get cookies from nobstacle.com domain
-    const cookies = await chrome.cookies.getAll({ 
-      domain: 'nobstacle.com' 
+    const cookies = await chrome.cookies.getAll({
+      domain: 'nobstacle.com'
     });
-    
+
     const sessionCookie = cookies.find(c =>
       c.name === '__Secure-next-auth.session-token' ||
       c.name === 'next-auth.session-token'
@@ -38,11 +38,11 @@ async function fetchAuthFromNobstacle() {
         authCookies: cookies,
         authTimestamp: Date.now()
       });
-      
+
       console.log('[Background] ✓ Auth data stored from nobstacle.com');
       return { sessionToken: sessionCookie.value, cookies };
     }
-    
+
     return null;
   } catch (error) {
     console.error('[Background] Error fetching auth:', error);
@@ -77,20 +77,20 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     console.log('Header loaded on tab:', sender.tab?.id);
     sendResponse({ success: true });
   }
-  
+
   if (request.action === 'toggle') {
     console.log('Toggle requested for tab:', sender.tab?.id);
     sendResponse({ success: true });
   }
-  
-    if (request.action === 'getAuthData') {
+
+  if (request.action === 'getAuthData') {
     chrome.storage.local.get(['authSessionToken', 'authCookies', 'authTimestamp'], async (result) => {
       // Check if auth data exists and is recent (less than 5 minutes old)
-      if (result.authSessionToken && result.authTimestamp && 
-          (Date.now() - result.authTimestamp < 5 * 60 * 1000)) {
-        sendResponse({ 
-          sessionToken: result.authSessionToken, 
-          cookies: result.authCookies 
+      if (result.authSessionToken && result.authTimestamp &&
+        (Date.now() - result.authTimestamp < 5 * 60 * 1000)) {
+        sendResponse({
+          sessionToken: result.authSessionToken,
+          cookies: result.authCookies
         });
       } else {
         // Fetch fresh auth data from nobstacle.com
@@ -108,16 +108,16 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     });
     return true;
   }
-  
+
   // Store backend token from iframe
   if (request.action === 'setBackendToken') {
     backendAccessToken = request.token;
     tokenExpiry = request.expiresIn;
-    
+
     console.log('[Background] Storing backend token...');
     console.log('[Background] Token preview:', request.token.substring(0, 40) + '...');
     console.log('[Background] Expires:', new Date(request.expiresIn).toLocaleString());
-    
+
     // Persist to storage
     chrome.storage.local.set({
       backendToken: request.token,
@@ -128,7 +128,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     });
     return true;
   }
-  
+
   // Get backend token
   if (request.action === 'getBackendToken') {
     if (tokenExpiry && tokenExpiry < Date.now()) {
@@ -142,7 +142,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     }
     return true;
   }
-  
+
+  if (request.action === 'openTab') {
+    chrome.tabs.create({ url: request.url });
+    sendResponse({ success: true });
+  }
+
   // Clear backend token (logout)
   if (request.action === 'clearBackendToken') {
     backendAccessToken = null;
@@ -153,7 +158,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     });
     return true;
   }
-  
+
   return true;
 });
 
@@ -170,21 +175,21 @@ chrome.webRequest.onBeforeSendHeaders.addListener(
       // Check if token exists and is valid
       if (backendAccessToken && (!tokenExpiry || tokenExpiry > Date.now())) {
         const headers = details.requestHeaders || [];
-        
+
         // Remove existing Authorization header if any
         const authIndex = headers.findIndex(h => h.name.toLowerCase() === 'authorization');
         if (authIndex !== -1) {
           headers.splice(authIndex, 1);
         }
-        
+
         // Add the backend token
         headers.push({
           name: 'Authorization',
           value: `Bearer ${backendAccessToken}`
         });
-        
+
         console.log('[Background] ✓ Added Authorization header to:', details.url);
-        
+
         return { requestHeaders: headers };
       } else {
         console.log('[Background] ⚠ No valid token available for:', details.url);
