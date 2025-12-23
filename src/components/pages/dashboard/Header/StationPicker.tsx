@@ -1,3 +1,4 @@
+
 "use client";
 
 import {
@@ -6,9 +7,7 @@ import {
 } from "../../../../lib/client/api";
 import { useRouterWithQueryParams } from "../../../../hooks/useRouterWithQueryParams";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
 
-// Type guard for Chrome API
 const isChromeExtension = (): boolean => {
   return typeof window !== 'undefined' && 
          typeof (window as any).chrome !== 'undefined' && 
@@ -24,53 +23,9 @@ export const StationPicker: React.FC<{ cb?: () => void }> = ({ cb }) => {
   });
   const router = useRouterWithQueryParams();
   const searchParams = useSearchParams();
-  const [currentStation, setCurrentStation] = useState<string>("1");
-  const [isInitialized, setIsInitialized] = useState(false);
-
-  // Load saved station on mount
-  useEffect(() => {
-    if (isInitialized) return; // Only run once
-
-    const initializeStation = async () => {
-      // Check if we're in the extension context
-      if (isChromeExtension()) {
-        try {
-          const result = await new Promise<any>((resolve) => {
-            (window as any).chrome.storage.local.get(['selectedStation'], resolve);
-          });
-
-          if (result.selectedStation) {
-            const savedStation = String(result.selectedStation);
-            console.log('[StationPicker] ✓ Loaded saved station:', savedStation);
-            setCurrentStation(savedStation);
-            
-            // Update URL if it doesn't match
-            const urlStation = searchParams.get("station");
-            if (!urlStation || urlStation !== savedStation) {
-              router.push("station", savedStation);
-            }
-          } else {
-            // No saved station, use URL or default
-            const urlStation = searchParams.get("station") ?? "1";
-            setCurrentStation(urlStation);
-            
-            // Save it for next time
-            (window as any).chrome.storage.local.set({ selectedStation: urlStation });
-          }
-        } catch (error) {
-          console.error('[StationPicker] Error loading station:', error);
-          setCurrentStation(searchParams.get("station") ?? "1");
-        }
-      } else {
-        // Not in extension, just use URL param
-        setCurrentStation(searchParams.get("station") ?? "1");
-      }
-      
-      setIsInitialized(true);
-    };
-
-    initializeStation();
-  }, [searchParams, router, isInitialized]);
+  
+  // Simply read from URL - don't manage state
+  const currentStation = searchParams.get("station") ?? "1";
 
   const handleStationChange = (newStation: string) => {
     console.log('[StationPicker] Station changed to:', newStation);
@@ -83,9 +38,6 @@ export const StationPicker: React.FC<{ cb?: () => void }> = ({ cb }) => {
         console.log('[StationPicker] ✓ Station saved to storage:', newStation);
       });
     }
-
-    // Update local state
-    setCurrentStation(newStation);
 
     // Update URL
     if (cb) {

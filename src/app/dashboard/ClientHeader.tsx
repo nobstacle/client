@@ -196,6 +196,37 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
 
     const selectedLang = params.get("lang") || companyData?.defaultLangCode || "en";
 
+    useEffect(() => {
+  // Only run in iframe mode
+  if (!isInIframe) return;
+
+  // Listen for INITIAL_STATION from content script
+  const handleInitialStation = (event: MessageEvent) => {
+    if (event.data.type === 'INITIAL_STATION') {
+      const savedStation = String(event.data.station);
+      console.log('[ClientHeader] Received INITIAL_STATION:', savedStation);
+      
+      const currentStation = params.get("station");
+      
+      // Only update if different or missing
+      if (!currentStation || currentStation !== savedStation) {
+        const currentUrl = new URL(window.location.href);
+        currentUrl.searchParams.set('station', savedStation);
+        window.history.replaceState({}, '', currentUrl.toString());
+        
+        // Trigger a router update
+        const popStateEvent = new PopStateEvent('popstate', { state: {} });
+        window.dispatchEvent(popStateEvent);
+        
+        console.log('[ClientHeader] ✓ Applied initial station:', savedStation);
+      }
+    }
+  };
+
+  window.addEventListener('message', handleInitialStation);
+  return () => window.removeEventListener('message', handleInitialStation);
+}, [isInIframe, params]);
+
     const fetchCategories = async () => {
         if (categoriesFetched && categoriesData.length > 0) {
             return categoriesData;

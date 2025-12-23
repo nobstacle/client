@@ -47,30 +47,21 @@ async function loadSavedStation() {
         selectedStation = String(result.selectedStation);
         stationLoadedFromStorage = true;
         console.log('[Content Script] ✓ Loaded saved station:', selectedStation);
-        
-        // Update URL with saved station
-        const currentUrl = new URL(window.location.href);
-        const urlStation = currentUrl.searchParams.get('station');
-        
-        // Only update URL if station param doesn't exist or is different
-        if (!urlStation || urlStation !== selectedStation) {
-          currentUrl.searchParams.set('station', selectedStation);
-          window.history.replaceState({}, '', currentUrl.toString());
-          console.log('[Content Script] ✓ Updated URL with saved station:', selectedStation);
-        }
-        
+
+        // DON'T update URL here - let the iframe handle it
+        // Just store it for later
         resolve(selectedStation);
       } else {
-        // No saved station, use URL param or default to "1"
+        // No saved station, get from URL or use default
         const currentUrl = new URL(window.location.href);
         const urlStation = currentUrl.searchParams.get('station') || '1';
         selectedStation = urlStation;
-        
+
         // Save this as the initial station
         chrome.storage.local.set({ selectedStation: urlStation }, () => {
           console.log('[Content Script] ✓ Saved initial station:', urlStation);
         });
-        
+
         resolve(urlStation);
       }
     });
@@ -724,9 +715,9 @@ function showLoginPrompt() {
 
   document.getElementById('nobstacle-login-btn').addEventListener('click', () => {
     chrome.runtime.sendMessage({
-  action: 'openTab',
-  url: 'https://nobstacle.com/'
-});
+      action: 'openTab',
+      url: 'https://nobstacle.com/'
+    });
   });
 
   document.getElementById('nobstacle-close-prompt').addEventListener('click', () => {
@@ -1089,7 +1080,7 @@ async function injectHeader() {
   await prefetchAuthData();
   await loadSavedStation();
 
-    if (!cachedAuthData?.sessionToken) {
+  if (!cachedAuthData?.sessionToken) {
     showLoginPrompt();
     return;
   }
@@ -1273,42 +1264,62 @@ async function injectHeader() {
       }
     }
 
-if (event.data.type === 'STATION_CHANGE') {
-  const newStation = String(event.data.station);
-  
-  // ✅ Save to chrome.storage FIRST
-  chrome.storage.local.set({
-    selectedStation: newStation
-  }, () => {
-    if (chrome.runtime.lastError) {
-      console.error('[Content Script] Error saving station:', chrome.runtime.lastError);
-    } else {
-      console.log('[Content Script] ✓ Station saved:', newStation);
-      selectedStation = newStation;
-      
-      // Update URL params
-      const currentUrl = new URL(window.location.href);
-      currentUrl.searchParams.set('station', newStation);
+    if (event.data.type === 'STATION_CHANGE') {
+      const newStation = String(event.data.station);
 
-      // Push new state
-      window.history.pushState({}, '', currentUrl.toString());
-
-      // Create and dispatch a custom event for socket context
-      const stationEvent = new CustomEvent('stationChanged', {
-        detail: { station: newStation }
+      // Save to storage
+      chrome.storage.local.set({
+        selectedStation: newStation
+      }, () => {
+        if (chrome.runtime.lastError) {
+          console.error('[Content Script] Error saving station:', chrome.runtime.lastError);
+        } else {
+          console.log('[Content Script] ✓ Station saved:', newStation);
+          selectedStation = newStation;
+        }
       });
-      window.dispatchEvent(stationEvent);
 
-      // Force a re-render by updating router
-      if (typeof window !== 'undefined') {
-        const popStateEvent = new PopStateEvent('popstate', { state: {} });
-        window.dispatchEvent(popStateEvent);
-      }
-
-      addDebugLog(`✓ Station changed to: ${newStation}`);
+      // Don't update URL here - the iframe/ClientHeader handles that
+      // Just log it
+      addDebugLog(`✓ Station will be changed to: ${newStation}`);
     }
-  });
-}
+
+    // if (event.data.type === 'STATION_CHANGE') {
+    //   const newStation = String(event.data.station);
+
+    //   // ✅ Save to chrome.storage FIRST
+    //   chrome.storage.local.set({
+    //     selectedStation: newStation
+    //   }, () => {
+    //     if (chrome.runtime.lastError) {
+    //       console.error('[Content Script] Error saving station:', chrome.runtime.lastError);
+    //     } else {
+    //       console.log('[Content Script] ✓ Station saved:', newStation);
+    //       selectedStation = newStation;
+
+    //       // Update URL params
+    //       const currentUrl = new URL(window.location.href);
+    //       currentUrl.searchParams.set('station', newStation);
+
+    //       // Push new state
+    //       window.history.pushState({}, '', currentUrl.toString());
+
+    //       // Create and dispatch a custom event for socket context
+    //       const stationEvent = new CustomEvent('stationChanged', {
+    //         detail: { station: newStation }
+    //       });
+    //       window.dispatchEvent(stationEvent);
+
+    //       // Force a re-render by updating router
+    //       if (typeof window !== 'undefined') {
+    //         const popStateEvent = new PopStateEvent('popstate', { state: {} });
+    //         window.dispatchEvent(popStateEvent);
+    //       }
+
+    //       addDebugLog(`✓ Station changed to: ${newStation}`);
+    //     }
+    //   });
+    // }
 
     if (event.data.type === 'BACKEND_TOKEN') {
       addDebugLog('✓ Received backend token');
