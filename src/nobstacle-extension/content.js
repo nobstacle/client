@@ -13,6 +13,7 @@ let isRecording = false;
 let selectedCategory = null;
 let categoriesData = [];
 let categoriesFetched = false;
+let selectedStation = null;
 
 // List of allowed iframe origins
 const ALLOWED_IFRAME_ORIGINS = Isproduction
@@ -29,6 +30,26 @@ function shouldInject() {
   if (hostname.includes('nobstacle.com') || hostname === 'localhost') return false;
   if (window.location.protocol === 'chrome:' || window.location.protocol === 'chrome-extension:') return false;
   return true;
+}
+
+//function to load saved station on initialization
+async function loadSavedStation() {
+  return new Promise((resolve) => {
+    chrome.storage.local.get(['selectedStation'], (result) => {
+      if (result.selectedStation) {
+        selectedStation = result.selectedStation;
+        console.log('[Content Script] Loaded saved station:', selectedStation);
+        
+        // Update URL with saved station if not already set
+        const currentUrl = new URL(window.location.href);
+        if (!currentUrl.searchParams.has('station')) {
+          currentUrl.searchParams.set('station', selectedStation);
+          window.history.replaceState({}, '', currentUrl.toString());
+        }
+      }
+      resolve(selectedStation);
+    });
+  });
 }
 
 function getSupportedMimeType() {
@@ -1041,6 +1062,7 @@ async function injectHeader() {
   if (document.getElementById('nobstacle-header-container')) return;
 
   await prefetchAuthData();
+  await loadSavedStation();
 
     if (!cachedAuthData?.sessionToken) {
     showLoginPrompt();
@@ -1222,6 +1244,14 @@ async function injectHeader() {
     if (event.data.type === 'STATION_CHANGE') {
       const newStation = event.data.station;
 
+       chrome.storage.local.set({
+        selectedStation: newStation
+      }, () => {
+        console.log('[Content Script] Station saved:', newStation);
+      });
+      
+      selectedStation = newStation;
+      
       // Update URL params
       const currentUrl = new URL(window.location.href);
       currentUrl.searchParams.set('station', newStation);

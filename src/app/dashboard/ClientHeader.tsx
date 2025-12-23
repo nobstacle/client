@@ -1,6 +1,19 @@
 'use client';
 // import ReactDOM from 'react-dom';
 import { useCallback, useEffect, useRef, useMemo } from "react";
+
+declare global {
+    interface Window {
+        chrome?: {
+            storage?: {
+                local: {
+                    get: (keys: string[], callback: (result: Record<string, unknown>) => void) => void;
+                    set: (items: Record<string, unknown>, callback?: () => void) => void;
+                };
+            };
+        };
+    }
+}
 import { useState } from "react";
 import { Drawer, Button, List, Tag, Spin, Empty, message } from "antd";
 import { MenuOutlined, CloseOutlined, SettingOutlined, MoreOutlined } from "@ant-design/icons";
@@ -126,6 +139,25 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         }
     }, [data?.user?.backendTokens?.at, categoriesFetched]);
 
+    useEffect(() => {
+        if (typeof window !== 'undefined' && window.chrome?.storage) {
+            window.chrome.storage.local.get(['selectedStation'], (result) => {
+                if (result.selectedStation) {
+                    const savedStation = result.selectedStation;
+                    const currentStation = params.get("station");
+
+                    // If URL doesn't have station or is different, update it
+                    if (!currentStation || currentStation !== String(savedStation)) {
+                        const currentUrl = new URL(window.location.href);
+                        currentUrl.searchParams.set('station', String(savedStation));
+                        window.history.replaceState({}, '', currentUrl.toString());
+
+                        console.log('[ClientHeader] Restored saved station:', savedStation);
+                    }
+                }
+            });
+        }
+    }, []);
 
     useEffect(() => {
         const fetchPackages = async () => {
@@ -1136,6 +1168,15 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
 
             if (event.data.type === 'STATION_CHANGE') {
                 const newStation = event.data.station;
+
+                // ✅ Save to chrome.storage if in extension
+                if (typeof window !== 'undefined' && window.chrome?.storage) {
+                    window.chrome.storage.local.set({
+                        selectedStation: newStation
+                    }, () => {
+                        console.log('[ClientHeader] Station saved:', newStation);
+                    });
+                }
 
                 // Update URL params
                 const currentUrl = new URL(window.location.href);
