@@ -1,18 +1,5 @@
 "use client";
 
-declare global {
-  interface Window {
-    chrome?: {
-      storage?: {
-        local: {
-          get: (keys: string[], callback: (result: Record<string, unknown>) => void) => void;
-          set: (items: Record<string, unknown>, callback?: () => void) => void;
-        };
-      };
-    };
-  }
-}
-
 import {
   getCompanyControllerGetCompanyQueryKey,
   useCompanyControllerGetCompany,
@@ -20,6 +7,13 @@ import {
 import { useRouterWithQueryParams } from "../../../../hooks/useRouterWithQueryParams";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
+
+// Type guard for Chrome API
+const isChromeExtension = (): boolean => {
+  return typeof window !== 'undefined' && 
+         typeof (window as any).chrome !== 'undefined' && 
+         typeof (window as any).chrome.storage !== 'undefined';
+};
 
 export const StationPicker: React.FC<{ cb?: () => void }> = ({ cb }) => {
   const { data, isLoading } = useCompanyControllerGetCompany({
@@ -31,39 +25,62 @@ export const StationPicker: React.FC<{ cb?: () => void }> = ({ cb }) => {
   const router = useRouterWithQueryParams();
   const searchParams = useSearchParams();
   const [currentStation, setCurrentStation] = useState<string>("1");
+  const [isInitialized, setIsInitialized] = useState(false);
 
   // Load saved station on mount
   useEffect(() => {
-    // Check if we're in the extension context
-    if (typeof window !== 'undefined' && window.chrome?.storage) {
-      window.chrome.storage.local.get(['selectedStation'], (result) => {
-        if (result.selectedStation) {
-          const savedStation = String(result.selectedStation);
-          setCurrentStation(savedStation);
-          
-          // If URL doesn't have station param, set it
-          if (!searchParams.get("station")) {
-            router.push("station", savedStation);
+    if (isInitialized) return; // Only run once
+
+    const initializeStation = async () => {
+      // Check if we're in the extension context
+      if (isChromeExtension()) {
+        try {
+          const result = await new Promise<any>((resolve) => {
+            (window as any).chrome.storage.local.get(['selectedStation'], resolve);
+          });
+
+          if (result.selectedStation) {
+            const savedStation = String(result.selectedStation);
+            console.log('[StationPicker] ✓ Loaded saved station:', savedStation);
+            setCurrentStation(savedStation);
+            
+            // Update URL if it doesn't match
+            const urlStation = searchParams.get("station");
+            if (!urlStation || urlStation !== savedStation) {
+              router.push("station", savedStation);
+            }
+          } else {
+            // No saved station, use URL or default
+            const urlStation = searchParams.get("station") ?? "1";
+            setCurrentStation(urlStation);
+            
+            // Save it for next time
+            (window as any).chrome.storage.local.set({ selectedStation: urlStation });
           }
-        } else {
-          // Use URL param or default to 1
-          const urlStation = searchParams.get("station") ?? "1";
-          setCurrentStation(urlStation);
+        } catch (error) {
+          console.error('[StationPicker] Error loading station:', error);
+          setCurrentStation(searchParams.get("station") ?? "1");
         }
-      });
-    } else {
-      // Not in extension, just use URL param
-      setCurrentStation(searchParams.get("station") ?? "1");
-    }
-  }, [searchParams, router]);
+      } else {
+        // Not in extension, just use URL param
+        setCurrentStation(searchParams.get("station") ?? "1");
+      }
+      
+      setIsInitialized(true);
+    };
+
+    initializeStation();
+  }, [searchParams, router, isInitialized]);
 
   const handleStationChange = (newStation: string) => {
+    console.log('[StationPicker] Station changed to:', newStation);
+    
     // Save to chrome.storage if available
-    if (typeof window !== 'undefined' && window.chrome?.storage) {
-      window.chrome.storage.local.set({
+    if (isChromeExtension()) {
+      (window as any).chrome.storage.local.set({
         selectedStation: newStation
       }, () => {
-        console.log('[StationPicker] Station saved:', newStation);
+        console.log('[StationPicker] ✓ Station saved to storage:', newStation);
       });
     }
 
@@ -75,6 +92,14 @@ export const StationPicker: React.FC<{ cb?: () => void }> = ({ cb }) => {
       cb();
     }
     router.push("station", newStation);
+    
+    // Notify extension if in iframe
+    if (window.self !== window.top) {
+      window.parent.postMessage({
+        type: 'STATION_CHANGE',
+        station: newStation
+      }, '*');
+    }
   };
 
   if (isLoading) return null;

@@ -14,6 +14,7 @@ let selectedCategory = null;
 let categoriesData = [];
 let categoriesFetched = false;
 let selectedStation = null;
+let stationLoadedFromStorage = false;
 
 // List of allowed iframe origins
 const ALLOWED_IFRAME_ORIGINS = Isproduction
@@ -36,18 +37,42 @@ function shouldInject() {
 async function loadSavedStation() {
   return new Promise((resolve) => {
     chrome.storage.local.get(['selectedStation'], (result) => {
+      if (chrome.runtime.lastError) {
+        console.error('[Content Script] Error loading station:', chrome.runtime.lastError);
+        resolve(null);
+        return;
+      }
+
       if (result.selectedStation) {
-        selectedStation = result.selectedStation;
-        console.log('[Content Script] Loaded saved station:', selectedStation);
+        selectedStation = String(result.selectedStation);
+        stationLoadedFromStorage = true;
+        console.log('[Content Script] ✓ Loaded saved station:', selectedStation);
         
-        // Update URL with saved station if not already set
+        // Update URL with saved station
         const currentUrl = new URL(window.location.href);
-        if (!currentUrl.searchParams.has('station')) {
+        const urlStation = currentUrl.searchParams.get('station');
+        
+        // Only update URL if station param doesn't exist or is different
+        if (!urlStation || urlStation !== selectedStation) {
           currentUrl.searchParams.set('station', selectedStation);
           window.history.replaceState({}, '', currentUrl.toString());
+          console.log('[Content Script] ✓ Updated URL with saved station:', selectedStation);
         }
+        
+        resolve(selectedStation);
+      } else {
+        // No saved station, use URL param or default to "1"
+        const currentUrl = new URL(window.location.href);
+        const urlStation = currentUrl.searchParams.get('station') || '1';
+        selectedStation = urlStation;
+        
+        // Save this as the initial station
+        chrome.storage.local.set({ selectedStation: urlStation }, () => {
+          console.log('[Content Script] ✓ Saved initial station:', urlStation);
+        });
+        
+        resolve(urlStation);
       }
-      resolve(selectedStation);
     });
   });
 }
@@ -1073,7 +1098,6 @@ async function injectHeader() {
   addDebugLog('Starting header injection...');
   injectStyles();
 
-
   const container = document.createElement('div');
   container.id = 'nobstacle-header-container';
 
@@ -1111,6 +1135,15 @@ async function injectHeader() {
       );
     }
 
+    // ✅ SEND SAVED STATION TO IFRAME
+    if (selectedStation && stationLoadedFromStorage) {
+      iframe.contentWindow.postMessage({
+        type: 'INITIAL_STATION',
+        station: selectedStation
+      }, '*');
+      addDebugLog(`✓ Sent saved station to iframe: ${selectedStation}`);
+    }
+
     // Refresh in background
     setTimeout(async () => {
       const freshAuth = await prefetchAuthData();
@@ -1122,7 +1155,6 @@ async function injectHeader() {
       addDebugLog('✓ Fresh auth sent');
     }, 100);
   };
-
   // Listen for messages from iframe
   const handler = async (event) => {
     if (!ALLOWED_IFRAME_ORIGINS.includes(event.origin)) {
@@ -1241,15 +1273,17 @@ async function injectHeader() {
       }
     }
 
-    if (event.data.type === 'STATION_CHANGE') {
-      const newStation = event.data.station;
-
-       chrome.storage.local.set({
-        selectedStation: newStation
-      }, () => {
-        console.log('[Content Script] Station saved:', newStation);
-      });
-      
+if (event.data.type === 'STATION_CHANGE') {
+  const newStation = String(event.data.station);
+  
+  // ✅ Save to chrome.storage FIRST
+  chrome.storage.local.set({
+    selectedStation: newStation
+  }, () => {
+    if (chrome.runtime.lastError) {
+      console.error('[Content Script] Error saving station:', chrome.runtime.lastError);
+    } else {
+      console.log('[Content Script] ✓ Station saved:', newStation);
       selectedStation = newStation;
       
       // Update URL params
@@ -1271,11 +1305,10 @@ async function injectHeader() {
         window.dispatchEvent(popStateEvent);
       }
 
-      message.success(`Switched to Station ${newStation}`);
-
-      // Close the hamburger menu
-      setIsHamburgerMenuOpen(false);
+      addDebugLog(`✓ Station changed to: ${newStation}`);
     }
+  });
+}
 
     if (event.data.type === 'BACKEND_TOKEN') {
       addDebugLog('✓ Received backend token');
