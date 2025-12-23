@@ -36,35 +36,42 @@ function shouldInject() {
 //function to load saved station on initialization
 async function loadSavedStation() {
   return new Promise((resolve) => {
-    chrome.storage.local.get(['selectedStation'], (result) => {
-      if (chrome.runtime.lastError) {
-        console.error('[Content Script] Error loading station:', chrome.runtime.lastError);
-        resolve(null);
-        return;
-      }
+    // Try to get from localStorage (works in content script)
+    try {
+      const savedStation = localStorage.getItem('nobstacle_selected_station');
 
-      if (result.selectedStation) {
-        selectedStation = String(result.selectedStation);
+      if (savedStation) {
+        selectedStation = savedStation;
         stationLoadedFromStorage = true;
-        console.log('[Content Script] ✓ Loaded saved station:', selectedStation);
+        console.log('[Content Script] ✓ Loaded saved station from localStorage:', savedStation);
 
-        // DON'T update URL here - let the iframe handle it
-        // Just store it for later
-        resolve(selectedStation);
+        // Update URL if needed
+        const currentUrl = new URL(window.location.href);
+        const urlStation = currentUrl.searchParams.get('station');
+
+        if (!urlStation || urlStation !== savedStation) {
+          currentUrl.searchParams.set('station', savedStation);
+          window.history.replaceState({}, '', currentUrl.toString());
+          console.log('[Content Script] ✓ Updated URL with saved station');
+        }
+
+        resolve(savedStation);
       } else {
-        // No saved station, get from URL or use default
+        // No saved station, use URL or default
         const currentUrl = new URL(window.location.href);
         const urlStation = currentUrl.searchParams.get('station') || '1';
         selectedStation = urlStation;
 
-        // Save this as the initial station
-        chrome.storage.local.set({ selectedStation: urlStation }, () => {
-          console.log('[Content Script] ✓ Saved initial station:', urlStation);
-        });
+        // Save it
+        localStorage.setItem('nobstacle_selected_station', urlStation);
+        console.log('[Content Script] ✓ Initialized station:', urlStation);
 
         resolve(urlStation);
       }
-    });
+    } catch (error) {
+      console.error('[Content Script] Error with localStorage:', error);
+      resolve('1');
+    }
   });
 }
 
@@ -1267,59 +1274,31 @@ async function injectHeader() {
     if (event.data.type === 'STATION_CHANGE') {
       const newStation = String(event.data.station);
 
-      // Save to storage
-      chrome.storage.local.set({
-        selectedStation: newStation
-      }, () => {
-        if (chrome.runtime.lastError) {
-          console.error('[Content Script] Error saving station:', chrome.runtime.lastError);
-        } else {
-          console.log('[Content Script] ✓ Station saved:', newStation);
-          selectedStation = newStation;
-        }
+      // Save to localStorage
+      try {
+        localStorage.setItem('nobstacle_selected_station', newStation);
+        console.log('[Content Script] ✓ Station saved to localStorage:', newStation);
+        selectedStation = newStation;
+      } catch (error) {
+        console.error('[Content Script] Error saving to localStorage:', error);
+      }
+
+      // Update URL
+      const currentUrl = new URL(window.location.href);
+      currentUrl.searchParams.set('station', newStation);
+      window.history.pushState({}, '', currentUrl.toString());
+
+      // Dispatch events
+      const stationEvent = new CustomEvent('stationChanged', {
+        detail: { station: newStation }
       });
+      window.dispatchEvent(stationEvent);
 
-      // Don't update URL here - the iframe/ClientHeader handles that
-      // Just log it
-      addDebugLog(`✓ Station will be changed to: ${newStation}`);
+      const popStateEvent = new PopStateEvent('popstate', { state: {} });
+      window.dispatchEvent(popStateEvent);
+
+      addDebugLog(`✓ Station changed to: ${newStation}`);
     }
-
-    // if (event.data.type === 'STATION_CHANGE') {
-    //   const newStation = String(event.data.station);
-
-    //   // ✅ Save to chrome.storage FIRST
-    //   chrome.storage.local.set({
-    //     selectedStation: newStation
-    //   }, () => {
-    //     if (chrome.runtime.lastError) {
-    //       console.error('[Content Script] Error saving station:', chrome.runtime.lastError);
-    //     } else {
-    //       console.log('[Content Script] ✓ Station saved:', newStation);
-    //       selectedStation = newStation;
-
-    //       // Update URL params
-    //       const currentUrl = new URL(window.location.href);
-    //       currentUrl.searchParams.set('station', newStation);
-
-    //       // Push new state
-    //       window.history.pushState({}, '', currentUrl.toString());
-
-    //       // Create and dispatch a custom event for socket context
-    //       const stationEvent = new CustomEvent('stationChanged', {
-    //         detail: { station: newStation }
-    //       });
-    //       window.dispatchEvent(stationEvent);
-
-    //       // Force a re-render by updating router
-    //       if (typeof window !== 'undefined') {
-    //         const popStateEvent = new PopStateEvent('popstate', { state: {} });
-    //         window.dispatchEvent(popStateEvent);
-    //       }
-
-    //       addDebugLog(`✓ Station changed to: ${newStation}`);
-    //     }
-    //   });
-    // }
 
     if (event.data.type === 'BACKEND_TOKEN') {
       addDebugLog('✓ Received backend token');

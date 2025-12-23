@@ -146,6 +146,30 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
     }, [data?.user?.backendTokens?.at, categoriesFetched]);
 
     useEffect(() => {
+      const STATION_STORAGE_KEY = 'nobstacle_selected_station';
+      
+      // On mount, check if we have a saved station
+      const savedStation = localStorage.getItem(STATION_STORAGE_KEY);
+      const currentStation = params.get("station");
+      
+      if (savedStation && !currentStation) {
+        // We have a saved station but no URL param - restore it
+        console.log('[ClientHeader] Restoring saved station:', savedStation);
+        const currentUrl = new URL(window.location.href);
+        currentUrl.searchParams.set('station', savedStation);
+        window.history.replaceState({}, '', currentUrl.toString());
+        
+        // Trigger router update
+        const popStateEvent = new PopStateEvent('popstate', { state: {} });
+        window.dispatchEvent(popStateEvent);
+      } else if (currentStation && savedStation !== currentStation) {
+        // URL has station but storage doesn't match - sync it
+        localStorage.setItem(STATION_STORAGE_KEY, currentStation);
+        console.log('[ClientHeader] Synced station to storage:', currentStation);
+      }
+    }, []);
+
+    useEffect(() => {
         if (isChromeExtension()) {
             (window as any).chrome.storage.local.get(['selectedStation'], (result: any) => {
                 if (result.selectedStation) {
@@ -1205,32 +1229,24 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
 
             if (event.data.type === 'STATION_CHANGE') {
                 const newStation = String(event.data.station);
-
-                if (isChromeExtension()) {
-                    (window as any).chrome.storage.local.set({
-                        selectedStation: newStation
-                    }, () => {
-                        console.log('[ClientHeader] Station saved:', newStation);
-                    });
-                }
+                
+                // Save to localStorage
+                localStorage.setItem('nobstacle_selected_station', newStation);
+                console.log('[ClientHeader] ✓ Saved station to localStorage:', newStation);
+                
                 // Update URL params
                 const currentUrl = new URL(window.location.href);
                 currentUrl.searchParams.set('station', newStation);
-
-                // Push new state
                 window.history.pushState({}, '', currentUrl.toString());
 
-                // Create and dispatch a custom event for socket context
+                // Trigger events
                 const stationEvent = new CustomEvent('stationChanged', {
                     detail: { station: newStation }
                 });
                 window.dispatchEvent(stationEvent);
 
-                // Force a re-render
-                if (typeof window !== 'undefined') {
-                    const popStateEvent = new PopStateEvent('popstate', { state: {} });
-                    window.dispatchEvent(popStateEvent);
-                }
+                const popStateEvent = new PopStateEvent('popstate', { state: {} });
+                window.dispatchEvent(popStateEvent);
 
                 message.success(`Switched to Station ${newStation}`);
             }
