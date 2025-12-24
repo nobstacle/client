@@ -145,8 +145,9 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         }
     }, [data?.user?.backendTokens?.at, categoriesFetched]);
 
+    const STATION_STORAGE_KEY = 'nobstacle_selected_station';
+
     useEffect(() => {
-        const STATION_STORAGE_KEY = 'nobstacle_selected_station';
 
         // Read from localStorage FIRST
         const savedStation = localStorage.getItem(STATION_STORAGE_KEY);
