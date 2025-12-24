@@ -145,29 +145,31 @@ export const StationPicker: React.FC<{ cb?: () => void }> = ({ cb }) => {
     };
   }, [isInExtension]);
 
-  const handleStationChange = async (newStation: string) => {
-    console.log('[StationPicker] 👤 User changed station to:', newStation);
+const handleStationChange = async (newStation: string) => {
+    console.log('[ClientHeader] 👤 User changed station to:', newStation);
 
     // Update state immediately
     setCurrentStation(newStation);
 
-    // Save to ALL storage locations
+    // Save to localStorage
     localStorage.setItem(STATION_STORAGE_KEY, newStation);
+    console.log('[ClientHeader] ✓ Saved to localStorage:', newStation);
     
-    if (isInExtension) {
-      await setChromeStation(newStation);
-    }
-
-    // Update URL
-    router.push("station", newStation);
-
-    // Notify extension if in iframe
+    // ✅ CRITICAL FIX: If in iframe, tell parent to save to Chrome storage
     if (window.self !== window.top) {
+      console.log('[ClientHeader] 📤 Sending STATION_CHANGE to extension...');
       window.parent.postMessage({
         type: 'STATION_CHANGE',
         station: newStation
       }, '*');
+    } else if (isInExtension) {
+      // Only try direct Chrome storage if NOT in iframe but Chrome API is available
+      await setChromeStation(newStation);
+      console.log('[ClientHeader] ✓ Saved to Chrome storage:', newStation);
     }
+
+    // Update URL
+    router.push("station", newStation);
 
     // Dispatch custom event
     const event = new CustomEvent('stationChanged', {

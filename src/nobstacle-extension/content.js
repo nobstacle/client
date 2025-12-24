@@ -1380,41 +1380,41 @@ async function injectHeader() {
       }
 
 
-      if (event.data.type === 'STATION_CHANGE') {
-          const newStation = String(event.data.station);
-          console.log('[Content Script] 📡 Station change requested:', newStation);
+     if (event.data.type === 'STATION_CHANGE') {
+    const newStation = String(event.data.station);
+    console.log('[Content Script] 📡 Station change requested:', newStation);
 
-          // ✅ Save to chrome storage FIRST with error handling
-          try {
-            chrome.storage.local.set({
-              nobstacle_selected_station: newStation
-            }, () => {
-              if (chrome.runtime.lastError) {
-                console.error('[Content Script] ✗ Chrome storage error:', chrome.runtime.lastError);
-              } else {
-                console.log('[Content Script] ✓ Saved to chrome storage:', newStation);
-              }
-            });
-          } catch (error) {
-            console.error('[Content Script] ✗ Exception saving to chrome storage:', error);
-          }
-
-          // Update in-memory variable
-          selectedStation = newStation;
-
-          // Update URL
-          const currentUrl = new URL(window.location.href);
-          currentUrl.searchParams.set('station', newStation);
-          window.history.pushState({}, '', currentUrl.toString());
-
-          // Dispatch events
-          const stationEvent = new CustomEvent('stationChanged', {
-            detail: { station: newStation }
-          });
-          window.dispatchEvent(stationEvent);
-
-          addDebugLog(`✓ Station change processed: ${newStation}`);
+    // ✅ Save to chrome storage FIRST with error handling
+    try {
+      chrome.storage.local.set({
+        nobstacle_selected_station: newStation
+      }, () => {
+        if (chrome.runtime.lastError) {
+          console.error('[Content Script] ✗ Chrome storage error:', chrome.runtime.lastError);
+        } else {
+          console.log('[Content Script] ✓ Saved to chrome storage:', newStation);
         }
+      });
+    } catch (error) {
+      console.error('[Content Script] ✗ Exception saving to chrome storage:', error);
+    }
+
+    // Update in-memory variable
+    selectedStation = newStation;
+
+    // Update URL
+    const currentUrl = new URL(window.location.href);
+    currentUrl.searchParams.set('station', newStation);
+    window.history.pushState({}, '', currentUrl.toString());
+
+    // Dispatch events
+    const stationEvent = new CustomEvent('stationChanged', {
+      detail: { station: newStation }
+    });
+    window.dispatchEvent(stationEvent);
+
+    addDebugLog(`✓ Station change processed: ${newStation}`);
+}
 
       if (event.data.type === 'BACKEND_TOKEN') {
         addDebugLog('✓ Received backend token');
