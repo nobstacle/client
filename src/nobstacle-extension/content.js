@@ -91,24 +91,57 @@ function hideLoader() {
 async function loadSavedStation() {
   return new Promise((resolve) => {
     try {
+      // First check URL
       const currentUrl = new URL(window.location.href);
       const urlStation = currentUrl.searchParams.get('station');
 
       if (urlStation) {
         selectedStation = urlStation;
         console.log('[Content Script] Found station in URL:', urlStation);
-      } else {
-        selectedStation = null;
-        console.log('[Content Script] No station in URL, React will handle it');
+
+        // Save to chrome storage for persistence
+        chrome.storage.local.set({
+          nobstacle_selected_station: urlStation
+        });
+
+        resolve(urlStation);
+        return;
       }
 
-      resolve(selectedStation);
+      // If no URL param, check chrome storage
+      chrome.storage.local.get(['nobstacle_selected_station'], (result) => {
+        if (result.nobstacle_selected_station) {
+          selectedStation = String(result.nobstacle_selected_station);
+          console.log('[Content Script] Restored from storage:', selectedStation);
+
+          // Update URL to match storage
+          currentUrl.searchParams.set('station', selectedStation);
+          window.history.replaceState({}, '', currentUrl.toString());
+
+          resolve(selectedStation);
+        } else {
+          // Default to station 1
+          selectedStation = "1";
+          console.log('[Content Script] Using default station: 1');
+
+          // Save default
+          chrome.storage.local.set({
+            nobstacle_selected_station: "1"
+          });
+
+          currentUrl.searchParams.set('station', "1");
+          window.history.replaceState({}, '', currentUrl.toString());
+
+          resolve("1");
+        }
+      });
     } catch (error) {
-      console.error('[Content Script] Error reading URL:', error);
-      resolve(null);
+      console.error('[Content Script] Error loading station:', error);
+      resolve("1");
     }
   });
 }
+
 
 function getSupportedMimeType() {
   const types = [
@@ -1162,7 +1195,7 @@ async function injectHeader() {
     iframe.onload = async () => {
       addDebugLog('Iframe loaded - sending cached auth immediately');
 
-           if (cachedAuthData && authDataReady) {
+      if (cachedAuthData && authDataReady) {
         iframe.contentWindow.postMessage({
           type: 'EXTENSION_AUTH',
           sessionToken: cachedAuthData.sessionToken,
@@ -1182,7 +1215,7 @@ async function injectHeader() {
         addDebugLog('✓ Header fully loaded');
       }, 500);
 
-          setTimeout(async () => {
+      setTimeout(async () => {
         const freshAuth = await prefetchAuthData();
         iframe.contentWindow.postMessage({
           type: 'EXTENSION_AUTH',
@@ -1311,19 +1344,23 @@ async function injectHeader() {
         }
       }
 
-      
+
       if (event.data.type === 'STATION_CHANGE') {
         const newStation = String(event.data.station);
+        console.log('[Content Script] Station change requested:', newStation);
 
-        // Save to chrome extension storage
         chrome.storage.local.set({
           nobstacle_selected_station: newStation
         }, () => {
-          console.log('[Content Script] ✓ Station saved to extension storage:', newStation);
-          selectedStation = newStation;
+          console.log('[Content Script] ✓ Saved to chrome storage:', newStation);
         });
 
-        // Dispatch events for React to pick up
+        selectedStation = newStation;
+
+        const currentUrl = new URL(window.location.href);
+        currentUrl.searchParams.set('station', newStation);
+        window.history.pushState({}, '', currentUrl.toString());
+
         const stationEvent = new CustomEvent('stationChanged', {
           detail: { station: newStation }
         });

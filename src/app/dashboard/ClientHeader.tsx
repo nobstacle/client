@@ -149,57 +149,6 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
     const STATION_STORAGE_KEY = 'nobstacle_selected_station';
 
     useEffect(() => {
-        const STATION_STORAGE_KEY = 'nobstacle_selected_station';
-
-        const savedStation = localStorage.getItem(STATION_STORAGE_KEY);
-        const urlStation = params.get("station");
-
-        console.log('[ClientHeader] Mount - Saved:', savedStation, 'URL:', urlStation);
-
-        if (savedStation) {
-            // We have a saved station - use it
-            if (!urlStation || urlStation !== savedStation) {
-                console.log('[ClientHeader] Restoring saved station:', savedStation);
-                const currentUrl = new URL(window.location.href);
-                currentUrl.searchParams.set('station', savedStation);
-                window.history.replaceState({}, '', currentUrl.toString());
-            }
-        } else if (urlStation) {
-            // No saved station but URL has one - save it
-            localStorage.setItem(STATION_STORAGE_KEY, urlStation);
-            console.log('[ClientHeader] Synced URL station to storage:', urlStation);
-        } else {
-            // Nothing saved, nothing in URL - use default
-            const defaultStation = "1";
-            localStorage.setItem(STATION_STORAGE_KEY, defaultStation);
-            const currentUrl = new URL(window.location.href);
-            currentUrl.searchParams.set('station', defaultStation);
-            window.history.replaceState({}, '', currentUrl.toString());
-            console.log('[ClientHeader] Initialized with default station:', defaultStation);
-        }
-    }, [params]);
-
-    useEffect(() => {
-        if (isChromeExtension()) {
-            (window as any).chrome.storage.local.get(['selectedStation'], (result: any) => {
-                if (result.selectedStation) {
-                    const savedStation = result.selectedStation;
-                    const currentStation = params.get("station");
-
-                    // If URL doesn't have station or is different, update it
-                    if (!currentStation || currentStation !== String(savedStation)) {
-                        const currentUrl = new URL(window.location.href);
-                        currentUrl.searchParams.set('station', String(savedStation));
-                        window.history.replaceState({}, '', currentUrl.toString());
-
-                        console.log('[ClientHeader] Restored saved station:', savedStation);
-                    }
-                }
-            });
-        }
-    }, []);
-
-    useEffect(() => {
         const fetchPackages = async () => {
             if (allPackages.length > 0) return;
 
@@ -230,35 +179,36 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
 
     const selectedLang = params.get("lang") || companyData?.defaultLangCode || "en";
 
-    useEffect(() => {
-        if (!isInIframe) return;
+useEffect(() => {
 
-        const handleInitialStation = (event: MessageEvent) => {
-            if (event.data.type === 'INITIAL_STATION') {
-                const extensionStation = String(event.data.station);
-                const savedStation = localStorage.getItem(STATION_STORAGE_KEY);
+  const handleStationChange = (event: MessageEvent) => {
+    if (event.data.type === 'STATION_CHANGE') {
+      const newStation = String(event.data.station);
+      console.log('[ClientHeader] Station change from extension:', newStation);
+      
+      // Save to localStorage
+      localStorage.setItem(STATION_STORAGE_KEY, newStation);
+      
+      // Update URL
+      const currentUrl = new URL(window.location.href);
+      currentUrl.searchParams.set('station', newStation);
+      window.history.pushState({}, '', currentUrl.toString());
+      
+      // Dispatch event for StationPicker to catch
+      const stationEvent = new CustomEvent('stationChanged', {
+        detail: { station: newStation }
+      });
+      window.dispatchEvent(stationEvent);
+      
+      message.success(`Switched to Station ${newStation}`);
+    }
+  };
 
-                if (!savedStation) {
-                    console.log('[ClientHeader] No saved station, accepting extension value:', extensionStation);
-                    localStorage.setItem(STATION_STORAGE_KEY, extensionStation);
-
-                    const currentUrl = new URL(window.location.href);
-                    currentUrl.searchParams.set('station', extensionStation);
-                    window.history.replaceState({}, '', currentUrl.toString());
-
-                    const stationEvent = new CustomEvent('stationChanged', {
-                        detail: { station: extensionStation }
-                    });
-                    window.dispatchEvent(stationEvent);
-                } else {
-                    console.log('[ClientHeader] Ignoring extension station, using saved:', savedStation);
-                }
-            }
-        };
-
-        window.addEventListener('message', handleInitialStation);
-        return () => window.removeEventListener('message', handleInitialStation);
-    }, [isInIframe]);
+  if (isInIframe) {
+    window.addEventListener('message', handleStationChange);
+    return () => window.removeEventListener('message', handleStationChange);
+  }
+}, [isInIframe]);
 
     const fetchCategories = async () => {
         if (categoriesFetched && categoriesData.length > 0) {
