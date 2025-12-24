@@ -145,35 +145,41 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         }
     }, [data?.user?.backendTokens?.at, categoriesFetched]);
 
-    const STATION_STORAGE_KEY = 'nobstacle_selected_station';
-
     useEffect(() => {
-        const savedStation = localStorage.getItem(STATION_STORAGE_KEY);
-        const currentStation = params.get("station");
+        const STATION_STORAGE_KEY = 'nobstacle_selected_station';
 
-        console.log('[ClientHeader] Mount - Saved:', savedStation, 'URL:', currentStation);
+        // Read from localStorage FIRST
+        const savedStation = localStorage.getItem(STATION_STORAGE_KEY);
+        const urlStation = params.get("station");
+
+        console.log('[ClientHeader] Mount - Saved:', savedStation, 'URL:', urlStation);
 
         if (savedStation) {
-            if (!currentStation || currentStation !== savedStation) {
+            // We have a saved station - this is the source of truth
+            if (!urlStation || urlStation !== savedStation) {
                 console.log('[ClientHeader] Restoring saved station:', savedStation);
+
+                // Update URL
                 const currentUrl = new URL(window.location.href);
                 currentUrl.searchParams.set('station', savedStation);
                 window.history.replaceState({}, '', currentUrl.toString());
 
-                const stationEvent = new CustomEvent('stationChanged', {
-                    detail: { station: savedStation }
-                });
-                window.dispatchEvent(stationEvent);
+                // Force router update
+                window.location.search = `?station=${savedStation}`;
             }
-        } else if (currentStation) {
-            localStorage.setItem(STATION_STORAGE_KEY, currentStation);
-            console.log('[ClientHeader] Synced URL station to storage:', currentStation);
+        } else if (urlStation) {
+            // URL has station but localStorage doesn't - save it
+            localStorage.setItem(STATION_STORAGE_KEY, urlStation);
+            console.log('[ClientHeader] Synced URL station to storage:', urlStation);
         } else {
+            // Nothing saved, nothing in URL - use default
             const defaultStation = "1";
             localStorage.setItem(STATION_STORAGE_KEY, defaultStation);
+
             const currentUrl = new URL(window.location.href);
             currentUrl.searchParams.set('station', defaultStation);
             window.history.replaceState({}, '', currentUrl.toString());
+
             console.log('[ClientHeader] Initialized with default station:', defaultStation);
         }
     }, []);

@@ -33,43 +33,24 @@ function shouldInject() {
   return true;
 }
 
-//function to load saved station on initialization
 async function loadSavedStation() {
   return new Promise((resolve) => {
     try {
-      const savedStation = localStorage.getItem('nobstacle_selected_station');
-
-      if (savedStation) {
-        selectedStation = savedStation;
-        stationLoadedFromStorage = true;
-        console.log('[Content Script] ✓ Loaded saved station from localStorage:', savedStation);
-
-        // Update URL if needed
-        const currentUrl = new URL(window.location.href);
-        const urlStation = currentUrl.searchParams.get('station');
-
-        if (!urlStation || urlStation !== savedStation) {
-          currentUrl.searchParams.set('station', savedStation);
-          window.history.replaceState({}, '', currentUrl.toString());
-          console.log('[Content Script] ✓ Updated URL with saved station');
-        }
-
-        resolve(savedStation);
-      } else {
-        // No saved station, use URL or default
-        const currentUrl = new URL(window.location.href);
-        const urlStation = currentUrl.searchParams.get('station') || '1';
+      const currentUrl = new URL(window.location.href);
+      const urlStation = currentUrl.searchParams.get('station');
+      
+      if (urlStation) {
         selectedStation = urlStation;
-
-        // Save it
-        localStorage.setItem('nobstacle_selected_station', urlStation);
-        console.log('[Content Script] ✓ Initialized station:', urlStation);
-
-        resolve(urlStation);
+        console.log('[Content Script] Found station in URL:', urlStation);
+      } else {
+        selectedStation = null;
+        console.log('[Content Script] No station in URL, React will handle it');
       }
+      
+      resolve(selectedStation);
     } catch (error) {
-      console.error('[Content Script] Error with localStorage:', error);
-      resolve('1');
+      console.error('[Content Script] Error reading URL:', error);
+      resolve(null);
     }
   });
 }
@@ -1132,15 +1113,6 @@ async function injectHeader() {
       );
     }
 
-    if (selectedStation && stationLoadedFromStorage) {
-      setTimeout(() => {
-        iframe.contentWindow.postMessage({
-          type: 'INITIAL_STATION',
-          station: selectedStation
-        }, '*');
-        addDebugLog(`✓ Sent saved station to iframe: ${selectedStation}`);
-      }, 100);
-    }
     // Refresh in background
     setTimeout(async () => {
       const freshAuth = await prefetchAuthData();
@@ -1152,6 +1124,7 @@ async function injectHeader() {
       addDebugLog('✓ Fresh auth sent');
     }, 100);
   };
+
   // Listen for messages from iframe
   const handler = async (event) => {
     if (!ALLOWED_IFRAME_ORIGINS.includes(event.origin)) {
@@ -1270,34 +1243,26 @@ async function injectHeader() {
       }
     }
 
-    if (event.data.type === 'STATION_CHANGE') {
-      const newStation = String(event.data.station);
+if (event.data.type === 'STATION_CHANGE') {
+  const newStation = String(event.data.station);
 
-      // Save to localStorage
-      try {
-        localStorage.setItem('nobstacle_selected_station', newStation);
-        console.log('[Content Script] ✓ Station saved to localStorage:', newStation);
-        selectedStation = newStation;
-      } catch (error) {
-        console.error('[Content Script] Error saving to localStorage:', error);
-      }
+  chrome.storage.local.set({ 
+    nobstacle_selected_station: newStation 
+  }, () => {
+    console.log('[Content Script] ✓ Station saved to extension storage:', newStation);
+    selectedStation = newStation;
+  });
 
-      // Update URL
-      const currentUrl = new URL(window.location.href);
-      currentUrl.searchParams.set('station', newStation);
-      window.history.pushState({}, '', currentUrl.toString());
+  const stationEvent = new CustomEvent('stationChanged', {
+    detail: { station: newStation }
+  });
+  window.dispatchEvent(stationEvent);
 
-      // Dispatch events
-      const stationEvent = new CustomEvent('stationChanged', {
-        detail: { station: newStation }
-      });
-      window.dispatchEvent(stationEvent);
+  const popStateEvent = new PopStateEvent('popstate', { state: {} });
+  window.dispatchEvent(popStateEvent);
 
-      const popStateEvent = new PopStateEvent('popstate', { state: {} });
-      window.dispatchEvent(popStateEvent);
-
-      addDebugLog(`✓ Station changed to: ${newStation}`);
-    }
+  addDebugLog(`✓ Station changed to: ${newStation}`);
+}
 
     if (event.data.type === 'BACKEND_TOKEN') {
       addDebugLog('✓ Received backend token');
