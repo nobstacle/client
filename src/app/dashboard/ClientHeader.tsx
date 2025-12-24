@@ -173,32 +173,49 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
 
     const selectedLang = params.get("lang") || companyData?.defaultLangCode || "en";
 
-        useEffect(() => {
+    useEffect(() => {
         if (!isInIframe) return;
 
         const handleStationChange = (event: MessageEvent) => {
             if (event.data.type === 'STATION_CHANGE') {
-            const newStation = String(event.data.station);
-            console.log('[ClientHeader] Station change from extension:', newStation);
-            
-            localStorage.setItem(STATION_STORAGE_KEY, newStation);
-            
-            const currentUrl = new URL(window.location.href);
-            currentUrl.searchParams.set('station', newStation);
-            window.history.pushState({}, '', currentUrl.toString());
-            
-            const stationEvent = new CustomEvent('stationChanged', {
-                detail: { station: newStation }
-            });
-            window.dispatchEvent(stationEvent);
-            
-            message.success(`Switched to Station ${newStation}`);
+                const newStation = String(event.data.station);
+                console.log('[ClientHeader] Station change requested:', newStation);
+
+                // Save to localStorage
+                localStorage.setItem(STATION_STORAGE_KEY, newStation);
+                console.log('[ClientHeader] ✓ Saved to localStorage:', newStation);
+
+                // ✅ CRITICAL FIX: Save to Chrome storage if available
+                if (typeof (window as any).chrome !== 'undefined' &&
+                    typeof (window as any).chrome.storage !== 'undefined') {
+                    (window as any).chrome.storage.local.set({
+                        nobstacle_selected_station: newStation
+                    }, () => {
+                        console.log('[ClientHeader] ✓ Saved to Chrome storage:', newStation);
+                    });
+                }
+
+                // Update URL
+                const currentUrl = new URL(window.location.href);
+                currentUrl.searchParams.set('station', newStation);
+                window.history.pushState({}, '', currentUrl.toString());
+
+                // Trigger events
+                const stationEvent = new CustomEvent('stationChanged', {
+                    detail: { station: newStation }
+                });
+                window.dispatchEvent(stationEvent);
+
+                const popStateEvent = new PopStateEvent('popstate', { state: {} });
+                window.dispatchEvent(popStateEvent);
+
+                message.success(`Switched to Station ${newStation}`);
             }
         };
 
         window.addEventListener('message', handleStationChange);
         return () => window.removeEventListener('message', handleStationChange);
-        }, [isInIframe]);
+    }, [isInIframe]);
 
     const fetchCategories = async () => {
         if (categoriesFetched && categoriesData.length > 0) {
@@ -1178,12 +1195,21 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
 
             if (event.data.type === 'STATION_CHANGE') {
                 const newStation = String(event.data.station);
-
                 console.log('[ClientHeader] Station change requested:', newStation);
 
-                // Save to localStorage FIRST
+                // Save to localStorage
                 localStorage.setItem(STATION_STORAGE_KEY, newStation);
                 console.log('[ClientHeader] ✓ Saved to localStorage:', newStation);
+
+                // ✅ CRITICAL FIX: Save to Chrome storage if available
+                if (typeof (window as any).chrome !== 'undefined' &&
+                    typeof (window as any).chrome.storage !== 'undefined') {
+                    (window as any).chrome.storage.local.set({
+                        nobstacle_selected_station: newStation
+                    }, () => {
+                        console.log('[ClientHeader] ✓ Saved to Chrome storage:', newStation);
+                    });
+                }
 
                 // Update URL
                 const currentUrl = new URL(window.location.href);
