@@ -122,7 +122,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
     const [selectedPackages, setSelectedPackages] = useState([]);
     const [categoriesData, setCategoriesData] = useState([]);
     const [categoriesFetched, setCategoriesFetched] = useState(false);
-    const [isInitializing, setIsInitializing] = useState(true);
+    // const [isInitializing, setIsInitializing] = useState(true);
 
     useEffect(() => {
         setIsInIframe(window.self !== window.top);
@@ -157,6 +157,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         console.log('[ClientHeader] Mount - Saved:', savedStation, 'URL:', urlStation);
 
         if (savedStation) {
+            // We have a saved station - use it
             if (!urlStation || urlStation !== savedStation) {
                 console.log('[ClientHeader] Restoring saved station:', savedStation);
                 const currentUrl = new URL(window.location.href);
@@ -164,9 +165,11 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                 window.history.replaceState({}, '', currentUrl.toString());
             }
         } else if (urlStation) {
+            // No saved station but URL has one - save it
             localStorage.setItem(STATION_STORAGE_KEY, urlStation);
             console.log('[ClientHeader] Synced URL station to storage:', urlStation);
         } else {
+            // Nothing saved, nothing in URL - use default
             const defaultStation = "1";
             localStorage.setItem(STATION_STORAGE_KEY, defaultStation);
             const currentUrl = new URL(window.location.href);
@@ -174,12 +177,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
             window.history.replaceState({}, '', currentUrl.toString());
             console.log('[ClientHeader] Initialized with default station:', defaultStation);
         }
-
-        // Mark as initialized after a brief moment
-        setTimeout(() => {
-            setIsInitializing(false);
-        }, 100);
-    }, []);
+    }, [params]);
 
     useEffect(() => {
         if (isChromeExtension()) {
@@ -1745,10 +1743,6 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         }
     }
 
-    if (isInitializing && isInIframe) {
-        return null;
-    }
-
     return (
         <>
             <style jsx global>{`
@@ -1759,7 +1753,6 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
             <div style={{
                 width: '100%',
                 position: 'relative',
-                // Allow clicks to pass through transparent areas
             }}>
                 {/* Mobile Header */}
                 <div className="block lg:hidden" style={{ backgroundColor: '#3b5998' }}>

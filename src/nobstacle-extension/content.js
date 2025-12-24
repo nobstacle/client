@@ -1124,7 +1124,6 @@ async function injectHeader() {
   addDebugLog('Starting header injection...');
 
   try {
-    // 1. Fetch auth data first
     addDebugLog('Fetching auth data...');
     await prefetchAuthData();
 
@@ -1136,11 +1135,6 @@ async function injectHeader() {
 
     addDebugLog('Loading station...');
     await loadSavedStation();
-
-    if (!cachedAuthData?.sessionToken) {
-      showLoginPrompt();
-      return;
-    }
 
     headerInjected = true;
     addDebugLog('Starting header injection...');
@@ -1168,13 +1162,13 @@ async function injectHeader() {
     iframe.onload = async () => {
       addDebugLog('Iframe loaded - sending cached auth immediately');
 
-      if (cachedAuthData && authDataReady) {
+           if (cachedAuthData && authDataReady) {
         iframe.contentWindow.postMessage({
           type: 'EXTENSION_AUTH',
           sessionToken: cachedAuthData.sessionToken,
           cookies: cachedAuthData.cookies
         }, '*');
-        addDebugLog('✓ Cached auth sent instantly');
+        addDebugLog('✓ Auth sent');
 
         updateDebugAuth(
           !!cachedAuthData.sessionToken,
@@ -1184,14 +1178,11 @@ async function injectHeader() {
       }
 
       setTimeout(() => {
-        iframe.style.opacity = '1';
-        setTimeout(() => {
-          hideLoader();
-          addDebugLog('✓ Header fully loaded');
-        }, 300);
+        hideLoader();
+        addDebugLog('✓ Header fully loaded');
       }, 500);
 
-      setTimeout(async () => {
+          setTimeout(async () => {
         const freshAuth = await prefetchAuthData();
         iframe.contentWindow.postMessage({
           type: 'EXTENSION_AUTH',
@@ -1199,7 +1190,7 @@ async function injectHeader() {
           cookies: freshAuth.cookies
         }, '*');
         addDebugLog('✓ Fresh auth sent');
-      }, 100);
+      }, 1000);
     };
 
     // Listen for messages from iframe
@@ -1320,9 +1311,11 @@ async function injectHeader() {
         }
       }
 
+      
       if (event.data.type === 'STATION_CHANGE') {
         const newStation = String(event.data.station);
 
+        // Save to chrome extension storage
         chrome.storage.local.set({
           nobstacle_selected_station: newStation
         }, () => {
@@ -1330,6 +1323,7 @@ async function injectHeader() {
           selectedStation = newStation;
         });
 
+        // Dispatch events for React to pick up
         const stationEvent = new CustomEvent('stationChanged', {
           detail: { station: newStation }
         });
