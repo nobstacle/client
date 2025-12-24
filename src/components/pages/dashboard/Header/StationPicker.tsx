@@ -23,17 +23,24 @@ const getChromeStation = (): Promise<string | null> => {
   
   return new Promise((resolve) => {
     (window as any).chrome.storage.local.get(['nobstacle_selected_station'], (result: any) => {
-      resolve(result.nobstacle_selected_station || null);
+      const station = result.nobstacle_selected_station || null;
+      console.log('[StationPicker] Chrome storage read:', station);
+      resolve(station);
     });
   });
 };
 
 // Helper to save station to Chrome storage (for extension context)
-const setChromeStation = (station: string): void => {
-  if (!isChromeExtension()) return;
+const setChromeStation = (station: string): Promise<void> => {
+  if (!isChromeExtension()) return Promise.resolve();
   
-  (window as any).chrome.storage.local.set({
-    nobstacle_selected_station: station
+  return new Promise((resolve) => {
+    (window as any).chrome.storage.local.set({
+      nobstacle_selected_station: station
+    }, () => {
+      console.log('[StationPicker] Chrome storage saved:', station);
+      resolve();
+    });
   });
 };
 
@@ -47,27 +54,32 @@ export const StationPicker: React.FC<{ cb?: () => void }> = ({ cb }) => {
   const router = useRouterWithQueryParams();
   const searchParams = useSearchParams();
   const hasInitialized = useRef(false);
-  const isInExtension = useRef(isChromeExtension());
+  const isInExtension = isChromeExtension();
 
-  // Initialize station - ONLY read, don't write yet
+  // Start with station from localStorage immediately (synchronous)
   const [currentStation, setCurrentStation] = useState<string>(() => {
     if (typeof window === 'undefined') return "1";
     
-    // Just read from localStorage for initial render
     const saved = localStorage.getItem(STATION_STORAGE_KEY);
+    console.log('[StationPicker] Initial state from localStorage:', saved || "1");
     return saved || "1";
   });
 
-  // ONE-TIME initialization on mount
+  // Initialize station ONCE on mount
   useEffect(() => {
     if (hasInitialized.current) return;
     hasInitialized.current = true;
 
     const initializeStation = async () => {
+      console.log('[StationPicker] 🚀 Starting initialization...');
+      
       let finalStation = "1";
+      const urlStation = searchParams.get("station");
+      
+      console.log('[StationPicker] URL station:', urlStation);
 
-      // Priority 1: Chrome extension storage (if in extension)
-      if (isInExtension.current) {
+      // Priority 1: Chrome extension storage
+      if (isInExtension) {
         const chromeStation = await getChromeStation();
         if (chromeStation) {
           console.log('[StationPicker] ✓ Using Chrome storage:', chromeStation);
@@ -76,7 +88,7 @@ export const StationPicker: React.FC<{ cb?: () => void }> = ({ cb }) => {
       }
 
       // Priority 2: localStorage (if no Chrome storage)
-      if (finalStation === "1") {
+      if (finalStation === "1" && !isInExtension) {
         const localStation = localStorage.getItem(STATION_STORAGE_KEY);
         if (localStation) {
           console.log('[StationPicker] ✓ Using localStorage:', localStation);
@@ -84,83 +96,66 @@ export const StationPicker: React.FC<{ cb?: () => void }> = ({ cb }) => {
         }
       }
 
-      // Priority 3: URL parameter (if no storage)
-      if (finalStation === "1") {
-        const urlStation = searchParams.get("station");
-        if (urlStation) {
-          console.log('[StationPicker] ✓ Using URL param:', urlStation);
-          finalStation = urlStation;
-        }
+      // Priority 3: URL parameter (lowest priority)
+      if (finalStation === "1" && urlStation && urlStation !== "1") {
+        console.log('[StationPicker] ✓ Using URL param:', urlStation);
+        finalStation = urlStation;
       }
 
-      console.log('[StationPicker] Final station:', finalStation);
+      console.log('[StationPicker] 🎯 Final station decision:', finalStation);
 
       // Update state
       setCurrentStation(finalStation);
 
       // Sync to all storage locations
       localStorage.setItem(STATION_STORAGE_KEY, finalStation);
-      if (isInExtension.current) {
-        setChromeStation(finalStation);
+      if (isInExtension) {
+        await setChromeStation(finalStation);
       }
 
-      // Update URL if needed
-      const currentUrlStation = searchParams.get("station");
-      if (currentUrlStation !== finalStation) {
+      // CRITICAL: Update URL if it doesn't match
+      if (urlStation !== finalStation) {
+        console.log('[StationPicker] 🔄 Updating URL from', urlStation, 'to', finalStation);
         router.push("station", finalStation);
       }
     };
 
     initializeStation();
-  }, []); // Empty deps - run only once
+  }, []); // Run only once on mount
 
-  // Listen for external station changes (from extension or other tabs)
+  // Listen for external station changes
   useEffect(() => {
     if (!hasInitialized.current) return;
 
     const handleStationChange = (event: CustomEvent) => {
       const newStation = event.detail.station;
-      console.log('[StationPicker] External change detected:', newStation);
+      console.log('[StationPicker] 📡 External change detected:', newStation);
       
       setCurrentStation(newStation);
       localStorage.setItem(STATION_STORAGE_KEY, newStation);
-      if (isInExtension.current) {
+      if (isInExtension) {
         setChromeStation(newStation);
       }
     };
 
-    const handlePopState = () => {
-      const urlStation = searchParams.get("station");
-      if (urlStation && urlStation !== currentStation) {
-        console.log('[StationPicker] URL changed via popstate:', urlStation);
-        setCurrentStation(urlStation);
-        localStorage.setItem(STATION_STORAGE_KEY, urlStation);
-        if (isInExtension.current) {
-          setChromeStation(urlStation);
-        }
-      }
-    };
-
     window.addEventListener('stationChanged', handleStationChange as EventListener);
-    window.addEventListener('popstate', handlePopState);
 
     return () => {
       window.removeEventListener('stationChanged', handleStationChange as EventListener);
-      window.removeEventListener('popstate', handlePopState);
     };
-  }, [currentStation, searchParams, isInExtension.current]);
+  }, [isInExtension]);
 
-  const handleStationChange = (newStation: string) => {
-    console.log('[StationPicker] User changed station to:', newStation);
+  const handleStationChange = async (newStation: string) => {
+    console.log('[StationPicker] 👤 User changed station to:', newStation);
 
     // Update state immediately
     setCurrentStation(newStation);
 
-    // Save to ALL storage locations synchronously
+    // Save to ALL storage locations
     localStorage.setItem(STATION_STORAGE_KEY, newStation);
     
-    if (isInExtension.current) {
-      setChromeStation(newStation);
+    if (isInExtension) {
+      await setChromeStation(newStation);
     }
 
     // Update URL
@@ -174,7 +169,7 @@ export const StationPicker: React.FC<{ cb?: () => void }> = ({ cb }) => {
       }, '*');
     }
 
-    // Dispatch custom event for other components
+    // Dispatch custom event
     const event = new CustomEvent('stationChanged', {
       detail: { station: newStation }
     });

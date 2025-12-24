@@ -15,12 +15,6 @@ declare global {
     }
 }
 
-const isChromeExtension = (): boolean => {
-    return typeof window !== 'undefined' &&
-        typeof (window as any).chrome !== 'undefined' &&
-        typeof (window as any).chrome.storage !== 'undefined';
-};
-
 import { useState } from "react";
 import { Drawer, Button, List, Tag, Spin, Empty, message } from "antd";
 import { MenuOutlined, CloseOutlined, SettingOutlined, MoreOutlined } from "@ant-design/icons";
@@ -179,36 +173,32 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
 
     const selectedLang = params.get("lang") || companyData?.defaultLangCode || "en";
 
-useEffect(() => {
+        useEffect(() => {
+        if (!isInIframe) return;
 
-  const handleStationChange = (event: MessageEvent) => {
-    if (event.data.type === 'STATION_CHANGE') {
-      const newStation = String(event.data.station);
-      console.log('[ClientHeader] Station change from extension:', newStation);
-      
-      // Save to localStorage
-      localStorage.setItem(STATION_STORAGE_KEY, newStation);
-      
-      // Update URL
-      const currentUrl = new URL(window.location.href);
-      currentUrl.searchParams.set('station', newStation);
-      window.history.pushState({}, '', currentUrl.toString());
-      
-      // Dispatch event for StationPicker to catch
-      const stationEvent = new CustomEvent('stationChanged', {
-        detail: { station: newStation }
-      });
-      window.dispatchEvent(stationEvent);
-      
-      message.success(`Switched to Station ${newStation}`);
-    }
-  };
+        const handleStationChange = (event: MessageEvent) => {
+            if (event.data.type === 'STATION_CHANGE') {
+            const newStation = String(event.data.station);
+            console.log('[ClientHeader] Station change from extension:', newStation);
+            
+            localStorage.setItem(STATION_STORAGE_KEY, newStation);
+            
+            const currentUrl = new URL(window.location.href);
+            currentUrl.searchParams.set('station', newStation);
+            window.history.pushState({}, '', currentUrl.toString());
+            
+            const stationEvent = new CustomEvent('stationChanged', {
+                detail: { station: newStation }
+            });
+            window.dispatchEvent(stationEvent);
+            
+            message.success(`Switched to Station ${newStation}`);
+            }
+        };
 
-  if (isInIframe) {
-    window.addEventListener('message', handleStationChange);
-    return () => window.removeEventListener('message', handleStationChange);
-  }
-}, [isInIframe]);
+        window.addEventListener('message', handleStationChange);
+        return () => window.removeEventListener('message', handleStationChange);
+        }, [isInIframe]);
 
     const fetchCategories = async () => {
         if (categoriesFetched && categoriesData.length > 0) {

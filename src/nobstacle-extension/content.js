@@ -91,48 +91,47 @@ function hideLoader() {
 async function loadSavedStation() {
   return new Promise((resolve) => {
     try {
-      // First check URL
-      const currentUrl = new URL(window.location.href);
-      const urlStation = currentUrl.searchParams.get('station');
-
-      if (urlStation) {
-        selectedStation = urlStation;
-        console.log('[Content Script] Found station in URL:', urlStation);
-
-        // Save to chrome storage for persistence
-        chrome.storage.local.set({
-          nobstacle_selected_station: urlStation
-        });
-
-        resolve(urlStation);
-        return;
-      }
-
-      // If no URL param, check chrome storage
       chrome.storage.local.get(['nobstacle_selected_station'], (result) => {
-        if (result.nobstacle_selected_station) {
-          selectedStation = String(result.nobstacle_selected_station);
-          console.log('[Content Script] Restored from storage:', selectedStation);
-
-          // Update URL to match storage
-          currentUrl.searchParams.set('station', selectedStation);
-          window.history.replaceState({}, '', currentUrl.toString());
-
+        const storedStation = result.nobstacle_selected_station;
+        
+        if (storedStation) {
+          selectedStation = String(storedStation);
+          console.log('[Content Script] ✓ Restored from chrome storage:', selectedStation);
+          
+          const currentUrl = new URL(window.location.href);
+          const urlStation = currentUrl.searchParams.get('station');
+          
+          if (urlStation !== selectedStation) {
+            console.log('[Content Script] 🔄 Updating URL from', urlStation, 'to', selectedStation);
+            currentUrl.searchParams.set('station', selectedStation);
+            window.history.replaceState({}, '', currentUrl.toString());
+          }
+          
           resolve(selectedStation);
         } else {
-          // Default to station 1
-          selectedStation = "1";
-          console.log('[Content Script] Using default station: 1');
+          const currentUrl = new URL(window.location.href);
+          const urlStation = currentUrl.searchParams.get('station');
+          
+          if (urlStation) {
+            selectedStation = urlStation;
+            console.log('[Content Script] Using URL station:', urlStation);
+            
+            chrome.storage.local.set({ 
+              nobstacle_selected_station: urlStation 
+            });
+          } else {
+            selectedStation = "1";
+            console.log('[Content Script] Using default station: 1');
 
-          // Save default
-          chrome.storage.local.set({
-            nobstacle_selected_station: "1"
-          });
-
-          currentUrl.searchParams.set('station', "1");
-          window.history.replaceState({}, '', currentUrl.toString());
-
-          resolve("1");
+            chrome.storage.local.set({ 
+              nobstacle_selected_station: "1" 
+            });
+            
+            currentUrl.searchParams.set('station', "1");
+            window.history.replaceState({}, '', currentUrl.toString());
+          }
+          
+          resolve(selectedStation);
         }
       });
     } catch (error) {
@@ -141,7 +140,6 @@ async function loadSavedStation() {
     }
   });
 }
-
 
 function getSupportedMimeType() {
   const types = [
@@ -164,9 +162,13 @@ chrome.storage.local.get(['extensionEnabled'], async (result) => {
   isEnabled = result.extensionEnabled !== false;
 
   if (isEnabled && shouldInject()) {
+    await loadSavedStation();
+    console.log('[Content Script] ✓ Station loaded:', selectedStation);
+    
     await injectHeader();
   }
 });
+
 
 chrome.runtime.onMessage.addListener((req, sender, respond) => {
   if (req.action === 'toggle') {
@@ -1166,9 +1168,6 @@ async function injectHeader() {
       return;
     }
 
-    addDebugLog('Loading station...');
-    await loadSavedStation();
-
     headerInjected = true;
     addDebugLog('Starting header injection...');
     injectStyles();
@@ -1178,7 +1177,12 @@ async function injectHeader() {
 
     const iframe = document.createElement('iframe');
     iframe.id = 'nobstacle-header-iframe';
-    iframe.src = HEADER_URL;
+
+    const stationParam = selectedStation || "1";
+    const iframeUrl = `${HEADER_URL}?station=${stationParam}`;
+    console.log('[Content Script] 🎯 Loading iframe with station:', stationParam);
+    
+    iframe.src = iframeUrl;
     iframe.allow = 'clipboard-write; microphone';
 
     container.appendChild(iframe);
@@ -1347,7 +1351,7 @@ async function injectHeader() {
 
       if (event.data.type === 'STATION_CHANGE') {
         const newStation = String(event.data.station);
-        console.log('[Content Script] Station change requested:', newStation);
+        console.log('[Content Script] 📡 Station change requested:', newStation);
 
         chrome.storage.local.set({
           nobstacle_selected_station: newStation
@@ -1366,10 +1370,7 @@ async function injectHeader() {
         });
         window.dispatchEvent(stationEvent);
 
-        const popStateEvent = new PopStateEvent('popstate', { state: {} });
-        window.dispatchEvent(popStateEvent);
-
-        addDebugLog(`✓ Station changed to: ${newStation}`);
+        addDebugLog(`✓ Station saved: ${newStation}`);
       }
 
       if (event.data.type === 'BACKEND_TOKEN') {
