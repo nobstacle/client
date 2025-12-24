@@ -122,6 +122,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
     const [selectedPackages, setSelectedPackages] = useState([]);
     const [categoriesData, setCategoriesData] = useState([]);
     const [categoriesFetched, setCategoriesFetched] = useState(false);
+    const [isInitializing, setIsInitializing] = useState(true);
 
     useEffect(() => {
         setIsInIframe(window.self !== window.top);
@@ -148,41 +149,36 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
     const STATION_STORAGE_KEY = 'nobstacle_selected_station';
 
     useEffect(() => {
+        const STATION_STORAGE_KEY = 'nobstacle_selected_station';
 
-        // Read from localStorage FIRST
         const savedStation = localStorage.getItem(STATION_STORAGE_KEY);
         const urlStation = params.get("station");
 
         console.log('[ClientHeader] Mount - Saved:', savedStation, 'URL:', urlStation);
 
         if (savedStation) {
-            // We have a saved station - this is the source of truth
             if (!urlStation || urlStation !== savedStation) {
                 console.log('[ClientHeader] Restoring saved station:', savedStation);
-
-                // Update URL
                 const currentUrl = new URL(window.location.href);
                 currentUrl.searchParams.set('station', savedStation);
                 window.history.replaceState({}, '', currentUrl.toString());
-
-                // Force router update
-                window.location.search = `?station=${savedStation}`;
             }
         } else if (urlStation) {
-            // URL has station but localStorage doesn't - save it
             localStorage.setItem(STATION_STORAGE_KEY, urlStation);
             console.log('[ClientHeader] Synced URL station to storage:', urlStation);
         } else {
-            // Nothing saved, nothing in URL - use default
             const defaultStation = "1";
             localStorage.setItem(STATION_STORAGE_KEY, defaultStation);
-
             const currentUrl = new URL(window.location.href);
             currentUrl.searchParams.set('station', defaultStation);
             window.history.replaceState({}, '', currentUrl.toString());
-
             console.log('[ClientHeader] Initialized with default station:', defaultStation);
         }
+
+        // Mark as initialized after a brief moment
+        setTimeout(() => {
+            setIsInitializing(false);
+        }, 100);
     }, []);
 
     useEffect(() => {
@@ -1747,6 +1743,10 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         } else {
             message.warning("No packages available on selected language.");
         }
+    }
+
+    if (isInitializing && isInIframe) {
+        return null;
     }
 
     return (

@@ -11,6 +11,8 @@ import { useEffect, useState, useRef } from "react";
 const STATION_STORAGE_KEY = 'nobstacle_selected_station';
 
 export const StationPicker: React.FC<{ cb?: () => void }> = ({ cb }) => {
+  const [isInitializing, setIsInitializing] = useState(true);
+
   const { data, isLoading } = useCompanyControllerGetCompany({
     query: {
       staleTime: Infinity,
@@ -36,7 +38,6 @@ export const StationPicker: React.FC<{ cb?: () => void }> = ({ cb }) => {
   // Track if we've done the initial sync
   const hasInitialized = useRef(false);
 
-  // Initial sync - run once on mount
   useEffect(() => {
     if (hasInitialized.current) return;
     hasInitialized.current = true;
@@ -47,32 +48,29 @@ export const StationPicker: React.FC<{ cb?: () => void }> = ({ cb }) => {
     console.log('[StationPicker] Mount sync - Saved:', savedStation, 'URL:', urlStation);
 
     if (savedStation) {
-      // localStorage is the source of truth
       setCurrentStation(savedStation);
-
       if (!urlStation || urlStation !== savedStation) {
         console.log('[StationPicker] Syncing URL to saved station:', savedStation);
         router.push("station", savedStation);
       }
     } else if (urlStation) {
-      // No saved station, but URL has one - save it
       console.log('[StationPicker] Saving URL station to localStorage:', urlStation);
       localStorage.setItem(STATION_STORAGE_KEY, urlStation);
       setCurrentStation(urlStation);
     } else {
-      // No saved station, no URL - use default
       const defaultStation = "1";
       console.log('[StationPicker] Using default station:', defaultStation);
       localStorage.setItem(STATION_STORAGE_KEY, defaultStation);
       setCurrentStation(defaultStation);
       router.push("station", defaultStation);
     }
-  }, []); // Empty deps - run once
 
-  // Listen for URL changes from external sources (like extension)
+    setIsInitializing(false);
+  }, []);
+
+
   useEffect(() => {
-    if (!hasInitialized.current) return; // Skip on initial mount
-
+    if (!hasInitialized.current) return;
     const urlStation = searchParams.get("station");
 
     if (urlStation && urlStation !== currentStation) {
@@ -107,7 +105,13 @@ export const StationPicker: React.FC<{ cb?: () => void }> = ({ cb }) => {
     }
   };
 
-  if (isLoading) return null;
+  if (isLoading || isInitializing) {
+    return (
+      <div className="w-full min-w-[80px] rounded-md bg-gray-100 px-3 py-1.5">
+        <span className="text-gray-400 text-sm">Loading...</span>
+      </div>
+    );
+  }
 
   return (
     <select

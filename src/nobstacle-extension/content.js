@@ -33,12 +33,67 @@ function shouldInject() {
   return true;
 }
 
+function showLoader() {
+  // Remove any existing loader or login prompt
+  document.getElementById('nobstacle-loader')?.remove();
+  document.getElementById('nobstacle-login-prompt')?.remove();
+
+  const loader = document.createElement('div');
+  loader.id = 'nobstacle-loader';
+  loader.style.cssText = `
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    height: 56px !important;
+    background: #3b5998 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    z-index: 2147483647 !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+  `;
+
+  loader.innerHTML = `
+    <div style="display: flex; align-items: center; gap: 12px; color: white;">
+      <div style="
+        width: 20px;
+        height: 20px;
+        border: 3px solid rgba(255, 255, 255, 0.3);
+        border-top-color: white;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+      "></div>
+      <span style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; font-weight: 500;">
+        Loading Nobstacle...
+      </span>
+    </div>
+    <style>
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+    </style>
+  `;
+
+  document.body.insertBefore(loader, document.body.firstChild);
+  document.body.style.marginTop = '56px';
+}
+
+function hideLoader() {
+  const loader = document.getElementById('nobstacle-loader');
+  if (loader) {
+    loader.style.opacity = '0';
+    loader.style.transition = 'opacity 0.3s ease';
+    setTimeout(() => loader.remove(), 300);
+  }
+}
+
 async function loadSavedStation() {
   return new Promise((resolve) => {
     try {
       const currentUrl = new URL(window.location.href);
       const urlStation = currentUrl.searchParams.get('station');
-      
+
       if (urlStation) {
         selectedStation = urlStation;
         console.log('[Content Script] Found station in URL:', urlStation);
@@ -46,7 +101,7 @@ async function loadSavedStation() {
         selectedStation = null;
         console.log('[Content Script] No station in URL, React will handle it');
       }
-      
+
       resolve(selectedStation);
     } catch (error) {
       console.error('[Content Script] Error reading URL:', error);
@@ -72,10 +127,11 @@ function getSupportedMimeType() {
   return 'audio/webm';
 }
 
-chrome.storage.local.get(['extensionEnabled'], (result) => {
+chrome.storage.local.get(['extensionEnabled'], async (result) => {
   isEnabled = result.extensionEnabled !== false;
+
   if (isEnabled && shouldInject()) {
-    injectHeader();
+    await injectHeader();
   }
 });
 
@@ -1064,231 +1120,252 @@ if (typeof window.nobstacleOriginalMargin === 'undefined') {
 async function injectHeader() {
   if (document.getElementById('nobstacle-header-container')) return;
 
-  await prefetchAuthData();
-  await loadSavedStation();
-
-  if (!cachedAuthData?.sessionToken) {
-    showLoginPrompt();
-    return;
-  }
-
-  headerInjected = true;
+  showLoader();
   addDebugLog('Starting header injection...');
-  injectStyles();
 
-  const container = document.createElement('div');
-  container.id = 'nobstacle-header-container';
+  try {
+    // 1. Fetch auth data first
+    addDebugLog('Fetching auth data...');
+    await prefetchAuthData();
 
-  const iframe = document.createElement('iframe');
-  iframe.id = 'nobstacle-header-iframe';
-  iframe.src = HEADER_URL;
-  iframe.allow = 'clipboard-write; microphone';
-
-  container.appendChild(iframe);
-  document.body.insertBefore(container, document.body.firstChild);
-
-  const baseMargin = window.nobstacleOriginalMargin + parseInt(HEADER_HEIGHT);
-  document.body.style.marginTop = `${baseMargin}px`;
-
-  injectDebugPanel();
-  setupKeyboardListener();
-  addDebugLog('Header iframe created');
-
-  // Send auth IMMEDIATELY when iframe loads
-  iframe.onload = async () => {
-    addDebugLog('Iframe loaded - sending cached auth immediately');
-
-    if (cachedAuthData && authDataReady) {
-      iframe.contentWindow.postMessage({
-        type: 'EXTENSION_AUTH',
-        sessionToken: cachedAuthData.sessionToken,
-        cookies: cachedAuthData.cookies
-      }, '*');
-      addDebugLog('✓ Cached auth sent instantly');
-
-      updateDebugAuth(
-        !!cachedAuthData.sessionToken,
-        cachedAuthData.cookies.length,
-        cachedAuthData.sessionToken || ''
-      );
-    }
-
-    // Refresh in background
-    setTimeout(async () => {
-      const freshAuth = await prefetchAuthData();
-      iframe.contentWindow.postMessage({
-        type: 'EXTENSION_AUTH',
-        sessionToken: freshAuth.sessionToken,
-        cookies: freshAuth.cookies
-      }, '*');
-      addDebugLog('✓ Fresh auth sent');
-    }, 100);
-  };
-
-  // Listen for messages from iframe
-  const handler = async (event) => {
-    if (!ALLOWED_IFRAME_ORIGINS.includes(event.origin)) {
-      addDebugLog(`Blocked message from origin: ${event.origin}`);
+    if (!cachedAuthData?.sessionToken) {
+      hideLoader();
+      showLoginPrompt();
       return;
     }
 
-    if (event.data.type === 'REQUEST_AUTH') {
-      addDebugLog('Iframe requested auth');
-      const authData = cachedAuthData || await prefetchAuthData();
-      iframe.contentWindow.postMessage({
-        type: 'EXTENSION_AUTH',
-        sessionToken: authData.sessionToken,
-        cookies: authData.cookies
-      }, '*');
-      addDebugLog('Auth response sent');
+    addDebugLog('Loading station...');
+    await loadSavedStation();
+
+    if (!cachedAuthData?.sessionToken) {
+      showLoginPrompt();
+      return;
     }
 
-    if (event.data.type === 'TEMPLATE_SHORTCUT_CLICK') {
-      addDebugLog('Template shortcut clicked, forwarding to iframe');
-      const iframe = document.getElementById('nobstacle-header-iframe');
-      if (iframe) {
+    headerInjected = true;
+    addDebugLog('Starting header injection...');
+    injectStyles();
+
+    const container = document.createElement('div');
+    container.id = 'nobstacle-header-container';
+
+    const iframe = document.createElement('iframe');
+    iframe.id = 'nobstacle-header-iframe';
+    iframe.src = HEADER_URL;
+    iframe.allow = 'clipboard-write; microphone';
+
+    container.appendChild(iframe);
+    document.body.insertBefore(container, document.body.firstChild);
+
+    const baseMargin = window.nobstacleOriginalMargin + parseInt(HEADER_HEIGHT);
+    document.body.style.marginTop = `${baseMargin}px`;
+
+    injectDebugPanel();
+    setupKeyboardListener();
+    addDebugLog('Header iframe created');
+
+    // Send auth IMMEDIATELY when iframe loads
+    iframe.onload = async () => {
+      addDebugLog('Iframe loaded - sending cached auth immediately');
+
+      if (cachedAuthData && authDataReady) {
         iframe.contentWindow.postMessage({
-          type: 'TEMPLATE_SHORTCUT_CLICK',
-          id: event.data.id,
-          templateType: event.data.templateType,
-          refType: event.data.refType,
-          tag: event.data.tag
+          type: 'EXTENSION_AUTH',
+          sessionToken: cachedAuthData.sessionToken,
+          cookies: cachedAuthData.cookies
         }, '*');
-        addDebugLog('✓ Template shortcut message forwarded');
+        addDebugLog('✓ Cached auth sent instantly');
+
+        updateDebugAuth(
+          !!cachedAuthData.sessionToken,
+          cachedAuthData.cookies.length,
+          cachedAuthData.sessionToken || ''
+        );
       }
-    }
 
-    if (event.data.type === 'RECORDING_INDICATOR') {
-      if (event.data.show) {
-        createRecordingIndicator(event.data);
-      } else {
-        document.getElementById('nobstacle-recording-indicator')?.remove();
+      setTimeout(() => {
+        iframe.style.opacity = '1';
+        setTimeout(() => {
+          hideLoader();
+          addDebugLog('✓ Header fully loaded');
+        }, 300);
+      }, 500);
+
+      setTimeout(async () => {
+        const freshAuth = await prefetchAuthData();
+        iframe.contentWindow.postMessage({
+          type: 'EXTENSION_AUTH',
+          sessionToken: freshAuth.sessionToken,
+          cookies: freshAuth.cookies
+        }, '*');
+        addDebugLog('✓ Fresh auth sent');
+      }, 100);
+    };
+
+    // Listen for messages from iframe
+    const handler = async (event) => {
+      if (!ALLOWED_IFRAME_ORIGINS.includes(event.origin)) {
+        addDebugLog(`Blocked message from origin: ${event.origin}`);
+        return;
       }
-    }
 
-    if (event.data.type === 'HAMBURGER_MENU') {
-      if (event.data.isOpen) {
-        createHamburgerDropdown(event.data.content);
-      } else {
-        document.getElementById('nobstacle-hamburger-dropdown')?.remove();
+      if (event.data.type === 'REQUEST_AUTH') {
+        addDebugLog('Iframe requested auth');
+        const authData = cachedAuthData || await prefetchAuthData();
+        iframe.contentWindow.postMessage({
+          type: 'EXTENSION_AUTH',
+          sessionToken: authData.sessionToken,
+          cookies: authData.cookies
+        }, '*');
+        addDebugLog('Auth response sent');
       }
-    }
 
-    if (event.data.type === 'CHAT_POPUP') {
-      addDebugLog('Chat popup message received');
+      if (event.data.type === 'TEMPLATE_SHORTCUT_CLICK') {
+        addDebugLog('Template shortcut clicked, forwarding to iframe');
+        const iframe = document.getElementById('nobstacle-header-iframe');
+        if (iframe) {
+          iframe.contentWindow.postMessage({
+            type: 'TEMPLATE_SHORTCUT_CLICK',
+            id: event.data.id,
+            templateType: event.data.templateType,
+            refType: event.data.refType,
+            tag: event.data.tag
+          }, '*');
+          addDebugLog('✓ Template shortcut message forwarded');
+        }
+      }
 
-      if (event.data.isOpen) {
-        createChatPopup(event.data.content);
-      } else {
+      if (event.data.type === 'RECORDING_INDICATOR') {
+        if (event.data.show) {
+          createRecordingIndicator(event.data);
+        } else {
+          document.getElementById('nobstacle-recording-indicator')?.remove();
+        }
+      }
+
+      if (event.data.type === 'HAMBURGER_MENU') {
+        if (event.data.isOpen) {
+          createHamburgerDropdown(event.data.content);
+        } else {
+          document.getElementById('nobstacle-hamburger-dropdown')?.remove();
+        }
+      }
+
+      if (event.data.type === 'CHAT_POPUP') {
+        addDebugLog('Chat popup message received');
+
+        if (event.data.isOpen) {
+          createChatPopup(event.data.content);
+        } else {
+          document.getElementById('nobstacle-chat-popup')?.remove();
+        }
+      }
+
+      if (event.data.type === 'CHAT_UPDATE_MESSAGES') {
+        const popup = document.getElementById('nobstacle-chat-popup');
+        if (popup) {
+          const messagesContainer = popup.querySelector('#chat-messages-container');
+          if (messagesContainer) {
+            messagesContainer.innerHTML = event.data.html;
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+          }
+        }
+      }
+
+      if (event.data.type === 'CHAT_SEND_MESSAGE') {
+        const messageText = event.data.message;
+        iframe.contentWindow.postMessage({
+          type: 'CHAT_SEND_MESSAGE',
+          message: messageText
+        }, '*');
+      }
+
+      if (event.data.type === 'CHAT_CLEAR') {
+        iframe.contentWindow.postMessage({
+          type: 'CHAT_CLEAR'
+        }, '*');
+      }
+
+      if (event.data.type === 'CHAT_POPUP_CLOSED') {
         document.getElementById('nobstacle-chat-popup')?.remove();
       }
-    }
 
-    if (event.data.type === 'CHAT_UPDATE_MESSAGES') {
-      const popup = document.getElementById('nobstacle-chat-popup');
-      if (popup) {
-        const messagesContainer = popup.querySelector('#chat-messages-container');
-        if (messagesContainer) {
-          messagesContainer.innerHTML = event.data.html;
-          messagesContainer.scrollTop = messagesContainer.scrollHeight;
+      if (event.data.type === 'SEARCH_DROPDOWN') {
+        if (event.data.isOpen) {
+          createSearchDropdown(event.data.content);
+        } else {
+          document.getElementById('nobstacle-search-dropdown')?.remove();
         }
       }
-    }
 
-    if (event.data.type === 'CHAT_SEND_MESSAGE') {
-      const messageText = event.data.message;
-      iframe.contentWindow.postMessage({
-        type: 'CHAT_SEND_MESSAGE',
-        message: messageText
-      }, '*');
-    }
+      if (event.data.type === 'STATION_PICKER_HTML') {
+        const placeholder = document.getElementById('station-picker-placeholder');
+        if (placeholder) {
+          placeholder.outerHTML = event.data.html;
+          setTimeout(() => {
+            const select = document.getElementById('extension-station-select');
+            if (select) {
+              select.addEventListener('change', (e) => {
+                const newStation = e.target.value;
+                addDebugLog(`Station changed to: ${newStation}`);
 
-    if (event.data.type === 'CHAT_CLEAR') {
-      iframe.contentWindow.postMessage({
-        type: 'CHAT_CLEAR'
-      }, '*');
-    }
-
-    if (event.data.type === 'CHAT_POPUP_CLOSED') {
-      document.getElementById('nobstacle-chat-popup')?.remove();
-    }
-
-    if (event.data.type === 'SEARCH_DROPDOWN') {
-      if (event.data.isOpen) {
-        createSearchDropdown(event.data.content);
-      } else {
-        document.getElementById('nobstacle-search-dropdown')?.remove();
+                iframe.contentWindow.postMessage({
+                  type: 'STATION_CHANGE',
+                  station: newStation
+                }, '*');
+                document.getElementById('nobstacle-hamburger-dropdown')?.remove();
+              });
+            }
+          }, 100);
+        }
       }
-    }
 
-    if (event.data.type === 'STATION_PICKER_HTML') {
-      const placeholder = document.getElementById('station-picker-placeholder');
-      if (placeholder) {
-        placeholder.outerHTML = event.data.html;
-        setTimeout(() => {
-          const select = document.getElementById('extension-station-select');
-          if (select) {
-            select.addEventListener('change', (e) => {
-              const newStation = e.target.value;
-              addDebugLog(`Station changed to: ${newStation}`);
+      if (event.data.type === 'STATION_CHANGE') {
+        const newStation = String(event.data.station);
 
-              iframe.contentWindow.postMessage({
-                type: 'STATION_CHANGE',
-                station: newStation
-              }, '*');
-              document.getElementById('nobstacle-hamburger-dropdown')?.remove();
-            });
+        chrome.storage.local.set({
+          nobstacle_selected_station: newStation
+        }, () => {
+          console.log('[Content Script] ✓ Station saved to extension storage:', newStation);
+          selectedStation = newStation;
+        });
+
+        const stationEvent = new CustomEvent('stationChanged', {
+          detail: { station: newStation }
+        });
+        window.dispatchEvent(stationEvent);
+
+        const popStateEvent = new PopStateEvent('popstate', { state: {} });
+        window.dispatchEvent(popStateEvent);
+
+        addDebugLog(`✓ Station changed to: ${newStation}`);
+      }
+
+      if (event.data.type === 'BACKEND_TOKEN') {
+        addDebugLog('✓ Received backend token');
+        chrome.runtime.sendMessage({
+          action: 'setBackendToken',
+          token: event.data.token,
+          expiresIn: event.data.expiresIn
+        }, (response) => {
+          if (response?.success) {
+            addDebugLog('✓ Token stored');
+            updateBackendTokenStatus(true);
           }
-        }, 100);
+        });
       }
-    }
 
-if (event.data.type === 'STATION_CHANGE') {
-  const newStation = String(event.data.station);
+      if (event.data.type === 'CHAT_RECORDING_STATE') {
+        console.log('[Content Script] Recording state update:', event.data.isRecording);
+        const popup = document.getElementById('nobstacle-chat-popup');
+        if (popup) {
+          const micButton = popup.querySelector('#chat-mic-button');
+          if (micButton) {
+            micButton.setAttribute('data-recording', event.data.isRecording ? 'true' : 'false');
+            micButton.style.background = event.data.isRecording ? '#ef4444' : '#3b5998';
 
-  chrome.storage.local.set({ 
-    nobstacle_selected_station: newStation 
-  }, () => {
-    console.log('[Content Script] ✓ Station saved to extension storage:', newStation);
-    selectedStation = newStation;
-  });
-
-  const stationEvent = new CustomEvent('stationChanged', {
-    detail: { station: newStation }
-  });
-  window.dispatchEvent(stationEvent);
-
-  const popStateEvent = new PopStateEvent('popstate', { state: {} });
-  window.dispatchEvent(popStateEvent);
-
-  addDebugLog(`✓ Station changed to: ${newStation}`);
-}
-
-    if (event.data.type === 'BACKEND_TOKEN') {
-      addDebugLog('✓ Received backend token');
-      chrome.runtime.sendMessage({
-        action: 'setBackendToken',
-        token: event.data.token,
-        expiresIn: event.data.expiresIn
-      }, (response) => {
-        if (response?.success) {
-          addDebugLog('✓ Token stored');
-          updateBackendTokenStatus(true);
-        }
-      });
-    }
-
-    if (event.data.type === 'CHAT_RECORDING_STATE') {
-      console.log('[Content Script] Recording state update:', event.data.isRecording);
-      const popup = document.getElementById('nobstacle-chat-popup');
-      if (popup) {
-        const micButton = popup.querySelector('#chat-mic-button');
-        if (micButton) {
-          micButton.setAttribute('data-recording', event.data.isRecording ? 'true' : 'false');
-          micButton.style.background = event.data.isRecording ? '#ef4444' : '#3b5998';
-
-          // Update icon
-          micButton.innerHTML = event.data.isRecording ? `
+            // Update icon
+            micButton.innerHTML = event.data.isRecording ? `
         <svg viewBox="0 0 24 24" style="width: 20px; height: 20px; fill: white;">
           <path d="M19 11h-1.7c0 .74-.16 1.43-.43 2.05l1.23 1.23c.56-.98.9-2.09.9-3.28zm-4.02.17c0-.06.02-.11.02-.17V5c0-1.66-1.34-3-3-3S9 3.34 9 5v.18l5.98 5.99zM4.27 3L3 4.27l6.01 6.01V11c0 1.66 1.33 3 2.99 3 .22 0 .44-.03.65-.08l1.66 1.66c-.71.33-1.5.52-2.31.52-2.76 0-5.3-2.1-5.3-5.1H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c.91-.13 1.77-.45 2.54-.9L19.73 21 21 19.73 4.27 3z"/>
         </svg>
@@ -1297,88 +1374,93 @@ if (event.data.type === 'STATION_CHANGE') {
           <path d="M12 14c1.66 0 2.99-1.34 2.99-3L15 5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z"/>
         </svg>
       `;
-        }
-      }
-    }
-
-    if (event.data.type === 'CHAT_RECORDING_RESULT') {
-      console.log('[Content Script] Recording result received:', event.data.text);
-      const popup = document.getElementById('nobstacle-chat-popup');
-      if (popup) {
-        const messageInput = popup.querySelector('#chat-message-input');
-        if (messageInput) {
-          messageInput.value = event.data.text;
-          console.log('[Content Script] ✓ Transcribed text inserted into input');
-        }
-      }
-    }
-
-    if (event.data.type === 'PROCESS_AUDIO') {
-      console.log('[Content Script] Audio processing requested');
-    }
-
-    if (event.data.type === 'AUDIO_TRANSCRIPTION') {
-      console.log('[Content Script] Received transcription:', event.data.text);
-
-      const popup = document.getElementById('nobstacle-chat-popup');
-      if (popup) {
-        const messageInput = popup.querySelector('#chat-message-input');
-        if (messageInput && event.data.text) {
-          // Set the value in the input field
-          messageInput.value = event.data.text;
-          console.log('[Content Script] ✓ Transcription inserted into input');
-
-          // Automatically send the message
-          const iframe = document.getElementById('nobstacle-header-iframe');
-          if (iframe) {
-            iframe.contentWindow.postMessage({
-              type: 'CHAT_SEND_MESSAGE',
-              message: event.data.text
-            }, '*');
-
-            // Clear the input after sending
-            messageInput.value = '';
-            console.log('[Content Script] ✓ Message automatically sent');
           }
         }
       }
-    }
 
-    if (event.data.type === 'TRIGGER_UPSELL') {
-      // This will be sent from iframe when user clicks upsell icon
-      const iframe = document.getElementById('nobstacle-header-iframe');
-      if (iframe) {
-        iframe.contentWindow.postMessage({
-          type: 'SEND_UPSELL_PACKAGES',
-          categoryId: selectedCategory
-        }, '*');
-      }
-    }
-
-    if (event.data.type === 'CATEGORIES_DATA') {
-      categoriesData = event.data.categories;
-      categoriesFetched = true;
-    }
-
-    // In content.js, inside the message handler
-    if (event.data.type === 'CATEGORY_SELECT') {
-      const categoryId = event.data.categoryId;
-      selectedCategory = categoryId;
-
-      // Send to iframe for processing
-      const iframe = document.getElementById('nobstacle-header-iframe');
-      if (iframe) {
-        iframe.contentWindow.postMessage({
-          type: 'CATEGORY_SELECT',
-          categoryId: categoryId
-        }, '*');
+      if (event.data.type === 'CHAT_RECORDING_RESULT') {
+        console.log('[Content Script] Recording result received:', event.data.text);
+        const popup = document.getElementById('nobstacle-chat-popup');
+        if (popup) {
+          const messageInput = popup.querySelector('#chat-message-input');
+          if (messageInput) {
+            messageInput.value = event.data.text;
+            console.log('[Content Script] ✓ Transcribed text inserted into input');
+          }
+        }
       }
 
-      addDebugLog(`Category ${categoryId} selected`);
-    }
+      if (event.data.type === 'PROCESS_AUDIO') {
+        console.log('[Content Script] Audio processing requested');
+      }
 
-  };
+      if (event.data.type === 'AUDIO_TRANSCRIPTION') {
+        console.log('[Content Script] Received transcription:', event.data.text);
 
-  window.addEventListener('message', handler);
-  addDebugLog('✓ Header injection complete');
+        const popup = document.getElementById('nobstacle-chat-popup');
+        if (popup) {
+          const messageInput = popup.querySelector('#chat-message-input');
+          if (messageInput && event.data.text) {
+            // Set the value in the input field
+            messageInput.value = event.data.text;
+            console.log('[Content Script] ✓ Transcription inserted into input');
+
+            // Automatically send the message
+            const iframe = document.getElementById('nobstacle-header-iframe');
+            if (iframe) {
+              iframe.contentWindow.postMessage({
+                type: 'CHAT_SEND_MESSAGE',
+                message: event.data.text
+              }, '*');
+
+              // Clear the input after sending
+              messageInput.value = '';
+              console.log('[Content Script] ✓ Message automatically sent');
+            }
+          }
+        }
+      }
+
+      if (event.data.type === 'TRIGGER_UPSELL') {
+        // This will be sent from iframe when user clicks upsell icon
+        const iframe = document.getElementById('nobstacle-header-iframe');
+        if (iframe) {
+          iframe.contentWindow.postMessage({
+            type: 'SEND_UPSELL_PACKAGES',
+            categoryId: selectedCategory
+          }, '*');
+        }
+      }
+
+      if (event.data.type === 'CATEGORIES_DATA') {
+        categoriesData = event.data.categories;
+        categoriesFetched = true;
+      }
+
+      // In content.js, inside the message handler
+      if (event.data.type === 'CATEGORY_SELECT') {
+        const categoryId = event.data.categoryId;
+        selectedCategory = categoryId;
+
+        // Send to iframe for processing
+        const iframe = document.getElementById('nobstacle-header-iframe');
+        if (iframe) {
+          iframe.contentWindow.postMessage({
+            type: 'CATEGORY_SELECT',
+            categoryId: categoryId
+          }, '*');
+        }
+
+        addDebugLog(`Category ${categoryId} selected`);
+      }
+
+    };
+
+    window.addEventListener('message', handler);
+    addDebugLog('✓ Header injection complete');
+  } catch (error) {
+    console.error('[Content Script] Error injecting header:', error);
+    hideLoader();
+    showLoginPrompt();
+  }
 }
