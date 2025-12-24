@@ -145,28 +145,37 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         }
     }, [data?.user?.backendTokens?.at, categoriesFetched]);
 
+    const STATION_STORAGE_KEY = 'nobstacle_selected_station';
+
     useEffect(() => {
-      const STATION_STORAGE_KEY = 'nobstacle_selected_station';
-      
-      // On mount, check if we have a saved station
-      const savedStation = localStorage.getItem(STATION_STORAGE_KEY);
-      const currentStation = params.get("station");
-      
-      if (savedStation && !currentStation) {
-        // We have a saved station but no URL param - restore it
-        console.log('[ClientHeader] Restoring saved station:', savedStation);
-        const currentUrl = new URL(window.location.href);
-        currentUrl.searchParams.set('station', savedStation);
-        window.history.replaceState({}, '', currentUrl.toString());
-        
-        // Trigger router update
-        const popStateEvent = new PopStateEvent('popstate', { state: {} });
-        window.dispatchEvent(popStateEvent);
-      } else if (currentStation && savedStation !== currentStation) {
-        // URL has station but storage doesn't match - sync it
-        localStorage.setItem(STATION_STORAGE_KEY, currentStation);
-        console.log('[ClientHeader] Synced station to storage:', currentStation);
-      }
+        const savedStation = localStorage.getItem(STATION_STORAGE_KEY);
+        const currentStation = params.get("station");
+
+        console.log('[ClientHeader] Mount - Saved:', savedStation, 'URL:', currentStation);
+
+        if (savedStation) {
+            if (!currentStation || currentStation !== savedStation) {
+                console.log('[ClientHeader] Restoring saved station:', savedStation);
+                const currentUrl = new URL(window.location.href);
+                currentUrl.searchParams.set('station', savedStation);
+                window.history.replaceState({}, '', currentUrl.toString());
+
+                const stationEvent = new CustomEvent('stationChanged', {
+                    detail: { station: savedStation }
+                });
+                window.dispatchEvent(stationEvent);
+            }
+        } else if (currentStation) {
+            localStorage.setItem(STATION_STORAGE_KEY, currentStation);
+            console.log('[ClientHeader] Synced URL station to storage:', currentStation);
+        } else {
+            const defaultStation = "1";
+            localStorage.setItem(STATION_STORAGE_KEY, defaultStation);
+            const currentUrl = new URL(window.location.href);
+            currentUrl.searchParams.set('station', defaultStation);
+            window.history.replaceState({}, '', currentUrl.toString());
+            console.log('[ClientHeader] Initialized with default station:', defaultStation);
+        }
     }, []);
 
     useEffect(() => {
@@ -221,35 +230,34 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
     const selectedLang = params.get("lang") || companyData?.defaultLangCode || "en";
 
     useEffect(() => {
-  // Only run in iframe mode
-  if (!isInIframe) return;
+        if (!isInIframe) return;
 
-  // Listen for INITIAL_STATION from content script
-  const handleInitialStation = (event: MessageEvent) => {
-    if (event.data.type === 'INITIAL_STATION') {
-      const savedStation = String(event.data.station);
-      console.log('[ClientHeader] Received INITIAL_STATION:', savedStation);
-      
-      const currentStation = params.get("station");
-      
-      // Only update if different or missing
-      if (!currentStation || currentStation !== savedStation) {
-        const currentUrl = new URL(window.location.href);
-        currentUrl.searchParams.set('station', savedStation);
-        window.history.replaceState({}, '', currentUrl.toString());
-        
-        // Trigger a router update
-        const popStateEvent = new PopStateEvent('popstate', { state: {} });
-        window.dispatchEvent(popStateEvent);
-        
-        console.log('[ClientHeader] ✓ Applied initial station:', savedStation);
-      }
-    }
-  };
+        const handleInitialStation = (event: MessageEvent) => {
+            if (event.data.type === 'INITIAL_STATION') {
+                const extensionStation = String(event.data.station);
+                const savedStation = localStorage.getItem(STATION_STORAGE_KEY);
 
-  window.addEventListener('message', handleInitialStation);
-  return () => window.removeEventListener('message', handleInitialStation);
-}, [isInIframe, params]);
+                if (!savedStation) {
+                    console.log('[ClientHeader] No saved station, accepting extension value:', extensionStation);
+                    localStorage.setItem(STATION_STORAGE_KEY, extensionStation);
+
+                    const currentUrl = new URL(window.location.href);
+                    currentUrl.searchParams.set('station', extensionStation);
+                    window.history.replaceState({}, '', currentUrl.toString());
+
+                    const stationEvent = new CustomEvent('stationChanged', {
+                        detail: { station: extensionStation }
+                    });
+                    window.dispatchEvent(stationEvent);
+                } else {
+                    console.log('[ClientHeader] Ignoring extension station, using saved:', savedStation);
+                }
+            }
+        };
+
+        window.addEventListener('message', handleInitialStation);
+        return () => window.removeEventListener('message', handleInitialStation);
+    }, [isInIframe]);
 
     const fetchCategories = async () => {
         if (categoriesFetched && categoriesData.length > 0) {
@@ -1229,12 +1237,14 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
 
             if (event.data.type === 'STATION_CHANGE') {
                 const newStation = String(event.data.station);
-                
-                // Save to localStorage
-                localStorage.setItem('nobstacle_selected_station', newStation);
-                console.log('[ClientHeader] ✓ Saved station to localStorage:', newStation);
-                
-                // Update URL params
+
+                console.log('[ClientHeader] Station change requested:', newStation);
+
+                // Save to localStorage FIRST
+                localStorage.setItem(STATION_STORAGE_KEY, newStation);
+                console.log('[ClientHeader] ✓ Saved to localStorage:', newStation);
+
+                // Update URL
                 const currentUrl = new URL(window.location.href);
                 currentUrl.searchParams.set('station', newStation);
                 window.history.pushState({}, '', currentUrl.toString());

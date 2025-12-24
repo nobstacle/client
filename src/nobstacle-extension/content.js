@@ -36,7 +36,6 @@ function shouldInject() {
 //function to load saved station on initialization
 async function loadSavedStation() {
   return new Promise((resolve) => {
-    // Try to get from localStorage (works in content script)
     try {
       const savedStation = localStorage.getItem('nobstacle_selected_station');
 
@@ -1133,15 +1132,15 @@ async function injectHeader() {
       );
     }
 
-    // ✅ SEND SAVED STATION TO IFRAME
     if (selectedStation && stationLoadedFromStorage) {
-      iframe.contentWindow.postMessage({
-        type: 'INITIAL_STATION',
-        station: selectedStation
-      }, '*');
-      addDebugLog(`✓ Sent saved station to iframe: ${selectedStation}`);
+      setTimeout(() => {
+        iframe.contentWindow.postMessage({
+          type: 'INITIAL_STATION',
+          station: selectedStation
+        }, '*');
+        addDebugLog(`✓ Sent saved station to iframe: ${selectedStation}`);
+      }, 100);
     }
-
     // Refresh in background
     setTimeout(async () => {
       const freshAuth = await prefetchAuthData();
