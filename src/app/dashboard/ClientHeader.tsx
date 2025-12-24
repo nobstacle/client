@@ -1228,6 +1228,25 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                 message.success(`Switched to Station ${newStation}`);
             }
 
+            if (event.data.type === 'INITIAL_STATION') {
+                const savedStation = String(event.data.station);
+                console.log('[ClientHeader] Received initial station from extension:', savedStation);
+
+                // Update URL if needed
+                const currentStation = params.get("station");
+                if (!currentStation || currentStation !== savedStation) {
+                    const currentUrl = new URL(window.location.href);
+                    currentUrl.searchParams.set('station', savedStation);
+                    window.history.replaceState({}, '', currentUrl.toString());
+
+                    // Trigger re-render
+                    const stationEvent = new CustomEvent('stationChanged', {
+                        detail: { station: savedStation }
+                    });
+                    window.dispatchEvent(stationEvent);
+                }
+            }
+
             if (event.data.type === 'TEMPLATE_SELECT') {
                 const template = filteredTemplates.find(t => t.id === parseInt(event.data.templateId));
                 if (template) {
