@@ -21,6 +21,11 @@ const ALLOWED_IFRAME_ORIGINS = Isproduction
   ? ['https://nobstacle.com', 'https://www.nobstacle.com']
   : ['http://localhost:3000', 'http://localhost:3001'];
 
+
+if (typeof window.nobstacleOriginalMargin === 'undefined') {
+  window.nobstacleOriginalMargin = parseInt(getComputedStyle(document.body).marginTop) || 0;
+}
+
 let originalMarginTop = 0;
 let isDropdownOpen = false;
 let cachedAuthData = null;
@@ -92,66 +97,94 @@ async function loadSavedStation() {
   return new Promise((resolve) => {
     console.log('[Content Script] 🔍 Loading saved station...');
 
+    const localStorageStation = localStorage.getItem(STATION_STORAGE_KEY);
+    console.log('[Content Script] 📦 localStorage station:', localStorageStation);
+
     try {
-      chrome.storage.local.get(['nobstacle_selected_station'], (result) => {
+      chrome.storage.local.get([STATION_STORAGE_KEY], (result) => {
         if (chrome.runtime.lastError) {
           console.error('[Content Script] ❌ Chrome storage error:', chrome.runtime.lastError);
-          selectedStation = "1";
-          stationLoadedFromStorage = true;
-          console.log('[Content Script] ⚠️ Using default station: 1');
-          resolve("1");
+
+          if (localStorageStation) {
+            selectedStation = localStorageStation;
+            stationLoadedFromStorage = true;
+            console.log('[Content Script] ✅ Using localStorage fallback:', selectedStation);
+            resolve(selectedStation);
+          } else {
+            selectedStation = "1";
+            stationLoadedFromStorage = true;
+            console.log('[Content Script] ⚠️ Using default: 1');
+            resolve("1");
+          }
           return;
         }
 
-        const storedStation = result.nobstacle_selected_station;
+        const chromeStation = result[STATION_STORAGE_KEY];
+        console.log('[Content Script] 🔐 Chrome storage station:', chromeStation);
 
-        if (storedStation) {
-          selectedStation = String(storedStation);
-          stationLoadedFromStorage = true;
-          console.log('[Content Script] ✅ Loaded station from Chrome storage:', selectedStation);
-          resolve(selectedStation);
+        if (localStorageStation && localStorageStation !== chromeStation) {
+          console.log('[Content Script] 🔄 localStorage differs, syncing...');
+          selectedStation = localStorageStation;
+
+          chrome.storage.local.set({
+            [STATION_STORAGE_KEY]: localStorageStation
+          }, () => {
+            if (!chrome.runtime.lastError) {
+              console.log('[Content Script] ✅ Synced to Chrome storage:', localStorageStation);
+            }
+          });
+        } else if (chromeStation) {
+          selectedStation = String(chromeStation);
+
+          localStorage.setItem(STATION_STORAGE_KEY, chromeStation);
+          console.log('[Content Script] ✅ Synced to localStorage:', chromeStation);
+        } else if (localStorageStation) {
+          selectedStation = localStorageStation;
+
+          chrome.storage.local.set({
+            [STATION_STORAGE_KEY]: localStorageStation
+          });
+          console.log('[Content Script] ✅ Using localStorage:', localStorageStation);
         } else {
-          // Check URL as fallback
+          // Check URL as last resort
           const currentUrl = new URL(window.location.href);
           const urlStation = currentUrl.searchParams.get('station');
 
           if (urlStation) {
             selectedStation = urlStation;
-            stationLoadedFromStorage = true;
+
+            // Save to both storages
+            localStorage.setItem(STATION_STORAGE_KEY, urlStation);
+            chrome.storage.local.set({ [STATION_STORAGE_KEY]: urlStation });
+
             console.log('[Content Script] ✅ Using URL station:', urlStation);
-
-            // Save to chrome storage for next time
-            chrome.storage.local.set({
-              nobstacle_selected_station: urlStation
-            }, () => {
-              if (chrome.runtime.lastError) {
-                console.error('[Content Script] Error saving station:', chrome.runtime.lastError);
-              }
-            });
-            resolve(urlStation);
           } else {
-            // Default to station 1
             selectedStation = "1";
-            stationLoadedFromStorage = true;
-            console.log('[Content Script] ⚠️ No saved station, using default: 1');
 
-            chrome.storage.local.set({
-              nobstacle_selected_station: "1"
-            }, () => {
-              if (chrome.runtime.lastError) {
-                console.error('[Content Script] Error saving default station:', chrome.runtime.lastError);
-              }
-            });
+            // Save default to both storages
+            localStorage.setItem(STATION_STORAGE_KEY, "1");
+            chrome.storage.local.set({ [STATION_STORAGE_KEY]: "1" });
 
-            resolve("1");
+            console.log('[Content Script] ⚠️ Using default: 1');
           }
         }
+
+        stationLoadedFromStorage = true;
+        console.log('[Content Script] ✅ Final station:', selectedStation);
+        resolve(selectedStation);
       });
     } catch (error) {
-      console.error('[Content Script] ❌ Exception in loadSavedStation:', error);
-      selectedStation = "1";
+      console.error('[Content Script] ❌ Exception:', error);
+
+      // Final fallback to localStorage
+      if (localStorageStation) {
+        selectedStation = localStorageStation;
+      } else {
+        selectedStation = "1";
+      }
+
       stationLoadedFromStorage = true;
-      resolve("1");
+      resolve(selectedStation);
     }
   });
 }
@@ -196,11 +229,6 @@ chrome.runtime.onMessage.addListener((req, sender, respond) => {
       respond({ injected: true });
     } else if (!isEnabled && headerInjected) {
       document.getElementById('nobstacle-header-container')?.remove();
-      document.getElementById('nobstacle-hamburger-dropdown')?.remove();
-      document.getElementById('nobstacle-chat-popup')?.remove();
-      document.getElementById('nobstacle-search-dropdown')?.remove();
-      document.getElementById('nobstacle-recording-indicator')?.remove();
-      document.getElementById('nobstacle-category-dropdown')?.remove(); // ✅ NEW
       document.body.style.marginTop = `${window.nobstacleOriginalMargin}px`;
       headerInjected = false;
       respond({ injected: false });
@@ -830,7 +858,7 @@ async function prefetchAuthData() {
       };
 
       authDataReady = true;
-      addDebugLog(`Pre-fetched auth: ${cachedAuthData.sessionToken ? 'YES' : 'NO'}`);
+      console.log('[Content Script] ✅ Auth data ready');
       resolve(cachedAuthData);
     });
   });
@@ -1172,7 +1200,7 @@ async function injectHeader() {
   if (document.getElementById('nobstacle-header-container')) return;
 
   showLoader();
-  addDebugLog('Starting header injection...');
+  console.log('[Content Script] 🎬 Starting header injection...');
 
   try {
     console.log('[Content Script] 🔐 Fetching auth data...');
@@ -1190,7 +1218,6 @@ async function injectHeader() {
     }
 
     headerInjected = true;
-    addDebugLog('Starting header injection...');
     injectStyles();
 
     const container = document.createElement('div');
@@ -1224,7 +1251,7 @@ async function injectHeader() {
 
     // Send auth IMMEDIATELY when iframe loads
     iframe.onload = async () => {
-      addDebugLog('Iframe loaded - sending cached auth immediately');
+      console.log('[Content Script] 🎉 Iframe loaded!');
 
       if (cachedAuthData && authDataReady) {
         // ✅ Send auth
@@ -1269,19 +1296,17 @@ async function injectHeader() {
     // Listen for messages from iframe
     const handler = async (event) => {
       if (!ALLOWED_IFRAME_ORIGINS.includes(event.origin)) {
-        addDebugLog(`Blocked message from origin: ${event.origin}`);
         return;
       }
 
       if (event.data.type === 'REQUEST_AUTH') {
-        addDebugLog('Iframe requested auth');
+        console.log('[Content Script] 📨 Iframe requested auth');
         const authData = cachedAuthData || await prefetchAuthData();
         iframe.contentWindow.postMessage({
           type: 'EXTENSION_AUTH',
           sessionToken: authData.sessionToken,
           cookies: authData.cookies
         }, '*');
-        addDebugLog('Auth response sent');
       }
 
       if (event.data.type === 'TEMPLATE_SHORTCUT_CLICK') {
@@ -1384,16 +1409,20 @@ async function injectHeader() {
         }
       }
 
-
       if (event.data.type === 'STATION_CHANGE') {
         const newStation = String(event.data.station);
         console.log('[Content Script] 📡 Station change requested:', newStation);
 
-        // ✅ Save to Chrome storage with proper error handling
+        // ✅ Save to BOTH storages
         try {
+          // Save to localStorage
+          localStorage.setItem(STATION_STORAGE_KEY, newStation);
+          console.log('[Content Script] ✅ Saved to localStorage:', newStation);
+
+          // Save to Chrome storage
           await new Promise((resolve, reject) => {
             chrome.storage.local.set({
-              nobstacle_selected_station: newStation
+              [STATION_STORAGE_KEY]: newStation
             }, () => {
               if (chrome.runtime.lastError) {
                 console.error('[Content Script] ❌ Chrome storage error:', chrome.runtime.lastError);
@@ -1405,7 +1434,7 @@ async function injectHeader() {
             });
           });
         } catch (error) {
-          console.error('[Content Script] ❌ Exception saving to Chrome storage:', error);
+          console.error('[Content Script] ❌ Error saving station:', error);
         }
 
         // Update in-memory variable
@@ -1417,13 +1446,13 @@ async function injectHeader() {
         currentUrl.searchParams.set('station', newStation);
         window.history.pushState({}, '', currentUrl.toString());
 
-        // Dispatch events
+        // Dispatch event
         const stationEvent = new CustomEvent('stationChanged', {
           detail: { station: newStation }
         });
         window.dispatchEvent(stationEvent);
 
-        console.log('[Content Script] ✅ Station change processed:', newStation);
+        console.log('[Content Script] ✅ Station change complete:', newStation);
       }
 
       if (event.data.type === 'BACKEND_TOKEN') {

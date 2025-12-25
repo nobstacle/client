@@ -17,31 +17,42 @@ const isChromeExtension = (): boolean => {
     typeof (window as any).chrome.storage !== 'undefined';
 };
 
-// Helper to get station from Chrome storage (for extension context)
+// Helper to get station from Chrome storage
 const getChromeStation = (): Promise<string | null> => {
   if (!isChromeExtension()) return Promise.resolve(null);
   
   return new Promise((resolve) => {
-    (window as any).chrome.storage.local.get(['nobstacle_selected_station'], (result: any) => {
-      const station = result.nobstacle_selected_station || null;
+    (window as any).chrome.storage.local.get([STATION_STORAGE_KEY], (result: any) => {
+      const station = result[STATION_STORAGE_KEY] || null;
       console.log('[StationPicker] Chrome storage read:', station);
       resolve(station);
     });
   });
 };
 
-// Helper to save station to Chrome storage (for extension context)
-const setChromeStation = (station: string): Promise<void> => {
-  if (!isChromeExtension()) return Promise.resolve();
+// 🔧 CRITICAL FIX: Save to BOTH localStorage AND Chrome storage
+const saveStationToBothStorages = async (station: string): Promise<void> => {
+  console.log('[StationPicker] 💾 Saving station to both storages:', station);
   
-  return new Promise((resolve) => {
-    (window as any).chrome.storage.local.set({
-      nobstacle_selected_station: station
-    }, () => {
-      console.log('[StationPicker] Chrome storage saved:', station);
-      resolve();
+  // Always save to localStorage
+  localStorage.setItem(STATION_STORAGE_KEY, station);
+  console.log('[StationPicker] ✅ Saved to localStorage:', station);
+  
+  // Save to Chrome storage if available
+  if (isChromeExtension()) {
+    return new Promise((resolve) => {
+      (window as any).chrome.storage.local.set({
+        [STATION_STORAGE_KEY]: station
+      }, () => {
+        if ((window as any).chrome.runtime.lastError) {
+          console.error('[StationPicker] ❌ Chrome storage error:', (window as any).chrome.runtime.lastError);
+        } else {
+          console.log('[StationPicker] ✅ Saved to Chrome storage:', station);
+        }
+        resolve();
+      });
     });
-  });
+  }
 };
 
 export const StationPicker: React.FC<{ cb?: () => void }> = ({ cb }) => {
@@ -56,7 +67,7 @@ export const StationPicker: React.FC<{ cb?: () => void }> = ({ cb }) => {
   const hasInitialized = useRef(false);
   const isInExtension = isChromeExtension();
 
-  // Start with station from localStorage immediately (synchronous)
+  // Start with station from localStorage immediately
   const [currentStation, setCurrentStation] = useState<string>(() => {
     if (typeof window === 'undefined') return "1";
     
@@ -78,21 +89,19 @@ export const StationPicker: React.FC<{ cb?: () => void }> = ({ cb }) => {
       
       console.log('[StationPicker] URL station:', urlStation);
 
-      // Priority 1: Chrome extension storage
-      if (isInExtension) {
-        const chromeStation = await getChromeStation();
-        if (chromeStation) {
-          console.log('[StationPicker] ✓ Using Chrome storage:', chromeStation);
-          finalStation = chromeStation;
-        }
+      // Priority 1: localStorage (set by webapp or extension)
+      const localStation = localStorage.getItem(STATION_STORAGE_KEY);
+      if (localStation) {
+        console.log('[StationPicker] ✓ Found in localStorage:', localStation);
+        finalStation = localStation;
       }
 
-      // Priority 2: localStorage (if no Chrome storage)
-      if (finalStation === "1" && !isInExtension) {
-        const localStation = localStorage.getItem(STATION_STORAGE_KEY);
-        if (localStation) {
-          console.log('[StationPicker] ✓ Using localStorage:', localStation);
-          finalStation = localStation;
+      // Priority 2: Chrome extension storage (if different)
+      if (isInExtension) {
+        const chromeStation = await getChromeStation();
+        if (chromeStation && chromeStation !== finalStation) {
+          console.log('[StationPicker] ✓ Chrome storage differs, using:', chromeStation);
+          finalStation = chromeStation;
         }
       }
 
@@ -107,13 +116,10 @@ export const StationPicker: React.FC<{ cb?: () => void }> = ({ cb }) => {
       // Update state
       setCurrentStation(finalStation);
 
-      // Sync to all storage locations
-      localStorage.setItem(STATION_STORAGE_KEY, finalStation);
-      if (isInExtension) {
-        await setChromeStation(finalStation);
-      }
+      // 🔧 CRITICAL: Sync to BOTH storages
+      await saveStationToBothStorages(finalStation);
 
-      // CRITICAL: Update URL if it doesn't match
+      // Update URL if needed
       if (urlStation !== finalStation) {
         console.log('[StationPicker] 🔄 Updating URL from', urlStation, 'to', finalStation);
         router.push("station", finalStation);
@@ -121,21 +127,18 @@ export const StationPicker: React.FC<{ cb?: () => void }> = ({ cb }) => {
     };
 
     initializeStation();
-  }, []); // Run only once on mount
+  }, []);
 
   // Listen for external station changes
   useEffect(() => {
     if (!hasInitialized.current) return;
 
-    const handleStationChange = (event: CustomEvent) => {
+    const handleStationChange = async (event: CustomEvent) => {
       const newStation = event.detail.station;
       console.log('[StationPicker] 📡 External change detected:', newStation);
       
       setCurrentStation(newStation);
-      localStorage.setItem(STATION_STORAGE_KEY, newStation);
-      if (isInExtension) {
-        setChromeStation(newStation);
-      }
+      await saveStationToBothStorages(newStation);
     };
 
     window.addEventListener('stationChanged', handleStationChange as EventListener);
@@ -143,29 +146,24 @@ export const StationPicker: React.FC<{ cb?: () => void }> = ({ cb }) => {
     return () => {
       window.removeEventListener('stationChanged', handleStationChange as EventListener);
     };
-  }, [isInExtension]);
+  }, []);
 
-const handleStationChange = async (newStation: string) => {
-    console.log('[ClientHeader] 👤 User changed station to:', newStation);
+  const handleStationChange = async (newStation: string) => {
+    console.log('[StationPicker] 👤 User changed station to:', newStation);
 
     // Update state immediately
     setCurrentStation(newStation);
 
-    // Save to localStorage
-    localStorage.setItem(STATION_STORAGE_KEY, newStation);
-    console.log('[ClientHeader] ✓ Saved to localStorage:', newStation);
+    // 🔧 CRITICAL FIX: Save to BOTH storages
+    await saveStationToBothStorages(newStation);
     
-    // ✅ CRITICAL FIX: If in iframe, tell parent to save to Chrome storage
+    // If in iframe, notify parent
     if (window.self !== window.top) {
-      console.log('[ClientHeader] 📤 Sending STATION_CHANGE to extension...');
+      console.log('[StationPicker] 📤 Sending STATION_CHANGE to extension...');
       window.parent.postMessage({
         type: 'STATION_CHANGE',
         station: newStation
       }, '*');
-    } else if (isInExtension) {
-      // Only try direct Chrome storage if NOT in iframe but Chrome API is available
-      await setChromeStation(newStation);
-      console.log('[ClientHeader] ✓ Saved to Chrome storage:', newStation);
     }
 
     // Update URL
