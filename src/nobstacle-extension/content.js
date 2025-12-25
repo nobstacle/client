@@ -209,14 +209,16 @@ function getSupportedMimeType() {
   return 'audio/webm';
 }
 
+// In the top-level chrome.storage.local.get callback:
 chrome.storage.local.get(['extensionEnabled'], async (result) => {
   isEnabled = result.extensionEnabled !== false;
 
   if (isEnabled && shouldInject()) {
     console.log('[Content Script] 🚀 Extension enabled, initializing...');
 
-    await loadSavedStation();
-    console.log('[Content Script] ✅ Station ready:', selectedStation);
+    // ALWAYS load station fresh on init
+    selectedStation = await loadSavedStation();
+    console.log('[Content Script] ✅ Station loaded:', selectedStation);
 
     await injectHeader();
   }
@@ -1203,21 +1205,14 @@ async function injectHeader() {
   if (document.getElementById('nobstacle-header-container')) return;
 
   showLoader();
-  console.log('[Content Script] 🎬 Starting header injection...');
 
   try {
-    console.log('[Content Script] 🔐 Fetching auth data...');
     await prefetchAuthData();
 
     if (!cachedAuthData?.sessionToken) {
       hideLoader();
       showLoginPrompt();
       return;
-    }
-
-    if (!stationLoadedFromStorage) {
-      console.log('[Content Script] ⚠️ Station not loaded yet, loading now...');
-      await loadSavedStation();
     }
 
     headerInjected = true;
@@ -1228,11 +1223,6 @@ async function injectHeader() {
 
     const iframe = document.createElement('iframe');
     iframe.id = 'nobstacle-header-iframe';
-
-    if (!selectedStation) {
-      console.warn('[Content Script] ⚠️ Station not loaded, loading now...');
-      await loadSavedStation();
-    }
 
     const stationParam = selectedStation || "1";
     const iframeUrl = `${HEADER_URL}?station=${stationParam}`;
@@ -1414,15 +1404,11 @@ async function injectHeader() {
 
       if (event.data.type === 'STATION_CHANGE') {
         const newStation = String(event.data.station);
-        console.log('[Content Script] 📡 Station change requested:', newStation);
 
-        // ✅ Save to BOTH storages
         try {
-          // Save to localStorage
           localStorage.setItem(STATION_STORAGE_KEY, newStation);
           console.log('[Content Script] ✅ Saved to localStorage:', newStation);
 
-          // Save to Chrome storage
           await new Promise((resolve, reject) => {
             chrome.storage.local.set({
               [STATION_STORAGE_KEY]: newStation
@@ -1440,6 +1426,12 @@ async function injectHeader() {
           console.error('[Content Script] ❌ Error saving station:', error);
         }
 
+          const currentIframe = document.getElementById('nobstacle-header-iframe');
+  if (currentIframe && currentIframe.src.includes('station=')) {
+    const newUrl = currentIframe.src.replace(/station=[^&]*/, `station=${newStation}`);
+    currentIframe.src = newUrl;
+  }
+  
         // Update in-memory variable
         selectedStation = newStation;
         stationLoadedFromStorage = true;
