@@ -15,6 +15,7 @@ let categoriesData = [];
 let categoriesFetched = false;
 let selectedStation = null;
 let stationLoadedFromStorage = false;
+const STATION_STORAGE_KEY = 'nobstacle_selected_station';
 
 // List of allowed iframe origins
 const ALLOWED_IFRAME_ORIGINS = Isproduction
