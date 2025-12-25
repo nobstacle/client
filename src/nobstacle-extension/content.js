@@ -5,6 +5,8 @@ const HEADER_URL = Isproduction
   : 'http://localhost:3000/header-only';
 const HEADER_HEIGHT = '56px';
 const DEBUG_MODE = false;
+const STATION_STORAGE_KEY = 'nobstacle_selected_station';
+
 let isEnabled = true;
 let headerInjected = false;
 let mediaRecorder = null;
@@ -15,7 +17,7 @@ let categoriesData = [];
 let categoriesFetched = false;
 let selectedStation = null;
 let stationLoadedFromStorage = false;
-const STATION_STORAGE_KEY = 'nobstacle_selected_station';
+
 
 // List of allowed iframe origins
 const ALLOWED_IFRAME_ORIGINS = Isproduction
@@ -103,22 +105,22 @@ async function loadSavedStation() {
 
     try {
       chrome.storage.local.get([STATION_STORAGE_KEY], (result) => {
-        if (chrome.runtime.lastError) {
-          console.error('[Content Script] ❌ Chrome storage error:', chrome.runtime.lastError);
+        // if (chrome.runtime.lastError) {
+        //   console.error('[Content Script] ❌ Chrome storage error:', chrome.runtime.lastError);
 
-          if (localStorageStation) {
-            selectedStation = localStorageStation;
-            stationLoadedFromStorage = true;
-            console.log('[Content Script] ✅ Using localStorage fallback:', selectedStation);
-            resolve(selectedStation);
-          } else {
-            selectedStation = "1";
-            stationLoadedFromStorage = true;
-            console.log('[Content Script] ⚠️ Using default: 1');
-            resolve("1");
-          }
-          return;
-        }
+        //   if (localStorageStation) {
+        //     selectedStation = localStorageStation;
+        //     stationLoadedFromStorage = true;
+        //     console.log('[Content Script] ✅ Using localStorage fallback:', selectedStation);
+        //     resolve(selectedStation);
+        //   } else {
+        //     selectedStation = "1";
+        //     stationLoadedFromStorage = true;
+        //     console.log('[Content Script] ⚠️ Using default: 1');
+        //     resolve("1");
+        //   }
+        //   return;
+        // }
 
         const chromeStation = result[STATION_STORAGE_KEY];
         console.log('[Content Script] 🔐 Chrome storage station:', chromeStation);
