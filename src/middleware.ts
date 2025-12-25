@@ -130,6 +130,7 @@ export default withAuth(
           pathname === "/" || 
           pathname === "/home" || 
           pathname === "/welcome" || 
+           pathname === "/privacy" ||
           pathname.startsWith("/header-only")
         ) {
           return true;

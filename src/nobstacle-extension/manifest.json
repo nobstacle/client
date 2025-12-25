@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Nobstacle Header",
+  "name": "Magic Box by Nobstacle",
   "version": "1.0.2",
-  "description": "Injects Nobstacle header across all websites",
+  "description": "Use Nobstacle more efficiently without shifting tabs and maximize your efficiency.",
   "permissions": [
     "cookies",
     "storage",

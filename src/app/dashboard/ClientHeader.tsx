@@ -1754,7 +1754,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                 }}
                             />
                             <div className="flex items-center gap-2">
-                                <div className="customLogoutMobile">
+                                <div className="customLogoutMobile" onClick={() => handleLogout()}>
                                     <LogoutIcon />
                                     <Logout />
                                 </div>
@@ -1879,7 +1879,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                             readOnly
                                             autoComplete="search-template"
                                             type="text"
-                                            placeholder="ID# or Search Template"
+                                            placeholder={isInIframe ? 'Magic Box' : "ID# or Search Template"}
                                             value={searchValue}
                                             onChange={handleSearchChange}
                                             onFocus={(e) => {
@@ -1890,7 +1890,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                                 }
                                             }}
                                             style={{
-                                                width: isInIframe ? '140px' : '190px',
+                                                width: isInIframe ? '180px' : '190px',
                                                 color: 'white',
                                                 backgroundColor: 'transparent',
                                                 border: 'none',
