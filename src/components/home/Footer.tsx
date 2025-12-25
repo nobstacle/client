@@ -25,7 +25,7 @@ export default function Footer({ onPrivacyClick, onTermsClick }: FooterProps) {
           <div className="footer-col">
             <h4>Legal</h4>
             <ul>
-              <li><a onClick={onPrivacyClick}>Privacy Policy</a></li>
+              <li><a href="/privacy">Privacy Policy</a></li>
               <li><a onClick={onTermsClick}>Terms of Service</a></li>
             </ul>
           </div>
