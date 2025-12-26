@@ -2,11 +2,17 @@
 // Background service worker
 let backendAccessToken = null;
 let tokenExpiry = null;
-let currentStation = "1"; // In-memory station state
+let currentStation = null; // In-memory station state
 
 // API base URL
 const API_BASE_URL = 'https://nobstacle-production-d145.up.railway.app';
 const STATION_STORAGE_KEY = 'nobstacle_selected_station';
+
+chrome.storage.local.get([STATION_STORAGE_KEY], (result) => {
+  currentStation = result[STATION_STORAGE_KEY] || "1";
+  console.log('[Background] 🚀 Initial station:', currentStation);
+});
+
 
 // Initialize station on startup
 async function initializeStation() {
@@ -100,45 +106,33 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   
   // GET STATION - Returns current station
   if (request.action === 'getStation') {
-    console.log('[Background] 📍 Station requested, returning:', currentStation);
-    sendResponse({ 
-      success: true, 
-      station: currentStation 
-    });
+    // If currentStation is still null, read from storage
+    if (currentStation === null) {
+      chrome.storage.local.get([STATION_STORAGE_KEY], (result) => {
+        currentStation = result[STATION_STORAGE_KEY] || "1";
+        console.log('[Background] 📍 Returning station:', currentStation);
+        sendResponse({ success: true, station: currentStation });
+      });
+      return true; // Keep channel open for async response
+    } else {
+      console.log('[Background] 📍 Returning station:', currentStation);
+      sendResponse({ success: true, station: currentStation });
+    }
     return true;
   }
 
   // SET STATION - Saves new station
-  if (request.action === 'setStation') {
+if (request.action === 'setStation') {
     const newStation = String(request.station);
-    console.log('[Background] 💾 Setting station to:', newStation);
+    console.log('[Background] 💾 Saving station:', newStation);
     
     currentStation = newStation;
     
-    // Persist to chrome.storage
     chrome.storage.local.set({
       [STATION_STORAGE_KEY]: newStation
     }, () => {
-      if (chrome.runtime.lastError) {
-        console.error('[Background] ❌ Error saving station:', chrome.runtime.lastError);
-        sendResponse({ success: false, error: chrome.runtime.lastError });
-      } else {
-        console.log('[Background] ✅ Station saved:', newStation);
-        
-        // Broadcast to all tabs
-        chrome.tabs.query({}, (tabs) => {
-          tabs.forEach(tab => {
-            chrome.tabs.sendMessage(tab.id, {
-              action: 'stationChanged',
-              station: newStation
-            }).catch(() => {
-              // Ignore errors for tabs without content script
-            });
-          });
-        });
-        
-        sendResponse({ success: true, station: newStation });
-      }
+      console.log('[Background] ✅ Station saved to storage');
+      sendResponse({ success: true, station: newStation });
     });
     
     return true;

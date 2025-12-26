@@ -107,8 +107,9 @@ function hideLoader() {
 
 async function loadSavedStation() {
   return new Promise((resolve) => {
-    console.log('[Content Script] 🔍 Loading saved station from background...');
-
+    console.log('[Content Script] 🔍 Loading station...');
+    
+    // Ask background
     chrome.runtime.sendMessage({ action: 'getStation' }, (response) => {
       if (chrome.runtime.lastError) {
         console.error('[Content Script] ❌ Error:', chrome.runtime.lastError);
@@ -117,18 +118,12 @@ async function loadSavedStation() {
         return;
       }
 
-      if (response && response.success && response.station) {
-        selectedStation = response.station;
-        console.log('[Content Script] ✅ Station loaded:', selectedStation);
-        
-        // Also save to localStorage for iframe to read quickly
-        localStorage.setItem(STATION_STORAGE_KEY, selectedStation);
-      } else {
-        selectedStation = "1";
-        console.log('[Content Script] ⚠️ Using default station: 1');
-      }
-
-      stationLoadedFromStorage = true;
+      selectedStation = (response && response.station) ? response.station : "1";
+      console.log('[Content Script] ✅ Loaded station:', selectedStation);
+      
+      // Save to localStorage for iframe
+      localStorage.setItem(STATION_STORAGE_KEY, selectedStation);
+      
       resolve(selectedStation);
     });
   });
@@ -209,7 +204,7 @@ window.addEventListener('message', (event) => {
 
   if (event.data.type === 'STATION_CHANGE') {
     const newStation = String(event.data.station);
-    console.log('[Content Script] 🔄 Station change to:', newStation);
+    console.log('[Content Script] 🔄 Station change:', newStation);
 
     // Save to background
     chrome.runtime.sendMessage({
@@ -219,21 +214,12 @@ window.addEventListener('message', (event) => {
       if (response && response.success) {
         selectedStation = newStation;
         localStorage.setItem(STATION_STORAGE_KEY, newStation);
-        console.log('[Content Script] ✅ Station saved:', newStation);
+        console.log('[Content Script] ✅ Saved');
 
         // Update URL
         const url = new URL(window.location.href);
         url.searchParams.set('station', newStation);
         window.history.pushState({}, '', url.toString());
-        
-        // Reload iframe with new station
-        const iframe = document.getElementById('nobstacle-header-iframe');
-        if (iframe && iframe.src.includes('station=')) {
-          const newUrl = iframe.src.replace(/station=[^&]*/, `station=${newStation}`);
-          iframe.src = newUrl;
-        }
-      } else {
-        console.error('[Content Script] ❌ Failed to save station');
       }
     });
   }

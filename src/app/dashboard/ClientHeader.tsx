@@ -176,6 +176,68 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
     useEffect(() => {
         if (!isInIframe) return;
 
+        const handleMessage = (event: MessageEvent) => {
+            // When iframe loads, ask extension for station
+            if (event.data.type === 'INITIAL_STATION') {
+                const station = event.data.station;
+                console.log('[ClientHeader] 📍 Initial station from extension:', station);
+
+                // Update URL if needed
+                const currentUrl = new URL(window.location.href);
+                const urlStation = currentUrl.searchParams.get('station');
+
+                if (urlStation !== station) {
+                    currentUrl.searchParams.set('station', station);
+                    window.history.replaceState({}, '', currentUrl.toString());
+
+                    // Trigger re-render
+                    const event = new CustomEvent('stationChanged', {
+                        detail: { station }
+                    });
+                    window.dispatchEvent(event);
+                }
+            }
+
+            if (event.data.type === 'STATION_CHANGE') {
+                const newStation = String(event.data.station);
+                console.log('[ClientHeader] 🔄 Station change request:', newStation);
+
+                // Save via chrome message
+                if (typeof (window as any).chrome?.runtime?.sendMessage === 'function') {
+                    (window as any).chrome.runtime.sendMessage({
+                        action: 'setStation',
+                        station: newStation
+                    }, (response: any) => {
+                        if (response && response.success) {
+                            console.log('[ClientHeader] ✅ Saved to background');
+
+                            localStorage.setItem(STATION_STORAGE_KEY, newStation);
+
+                            // Update URL
+                            const currentUrl = new URL(window.location.href);
+                            currentUrl.searchParams.set('station', newStation);
+                            window.history.pushState({}, '', currentUrl.toString());
+
+                            // Dispatch event
+                            const stationEvent = new CustomEvent('stationChanged', {
+                                detail: { station: newStation }
+                            });
+                            window.dispatchEvent(stationEvent);
+
+                            message.success(`Station ${newStation} selected`);
+                        }
+                    });
+                }
+            }
+        };
+
+        window.addEventListener('message', handleMessage);
+        return () => window.removeEventListener('message', handleMessage);
+    }, [isInIframe]);
+
+    useEffect(() => {
+        if (!isInIframe) return;
+
         const handleStationChange = (event: MessageEvent) => {
             if (event.data.type === 'STATION_CHANGE') {
                 const newStation = String(event.data.station);
