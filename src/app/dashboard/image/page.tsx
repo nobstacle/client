@@ -144,7 +144,31 @@ export default function ImageDashboard() {
             isOpen={isOpen}
           >
             <CreateImageTemplateForm
+  cb={(image, isUpdate = false) => {
+    console.info("image created/updated:", image);
+
+    handleClose();
+
+    if (!isUpdate) {
+      setImages([...images, image]);
+    } else {
+      const updatedImages = images.map((item) =>
+        item.id === image.id
+          ? { ...item, url: image.url, langCode: image.langCode }
+          : item
+      );
+
+      if (!images.some((item) => item.id === image.id)) {
+        updatedImages.push(image);
+      }
+
+      setImages(updatedImages);
+    }
+  }}
+/>
+            {/* <CreateImageTemplateForm
               cb={(image, isUpdate) => {
+                console.info("image created:", image);
                 handleClose();
                 if (!isUpdate) {
                   images.push(image);
@@ -157,7 +181,7 @@ export default function ImageDashboard() {
                   setImages(shallow);
                 }
               }}
-            />
+            /> */}
           </Modal>
         )}
         <div id="card-wrapper" className="flex h-full w-full">

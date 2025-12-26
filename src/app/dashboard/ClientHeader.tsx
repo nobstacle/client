@@ -2059,7 +2059,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
 
                                             if (isInIframe) {
                                                 // Generate station picker HTML with correct stationCount
-                                                const currentStation = params.get("station") ?? "1";
+                                                let currentStation = params.get("station") ?? "1";
                                                 const localStation = localStorage.getItem(STATION_STORAGE_KEY);
                                                 if (localStation) {
                                                     currentStation = localStation;

@@ -384,8 +384,8 @@ export const HeaderRecordingShortcut: React.FC<HeaderRecordingShortcutProps> = (
                 <div
                     style={{
                         position: 'fixed',
-                        top: '80px',
-                        right: '20px',
+                        top: '33px',
+                        right: '6px',
                         backgroundColor: 'rgba(239, 68, 68, 0.95)',
                         color: 'white',
                         padding: '12px 20px',
@@ -399,7 +399,7 @@ export const HeaderRecordingShortcut: React.FC<HeaderRecordingShortcutProps> = (
                         fontSize: '14px'
                     }}
                 >
-                    <div className="recording-pulse" style={{ width: '10px', height: '10px', background: 'white', borderRadius: '50%' }}></div>
+                    <div className="recording-pulse" style={{ width: '20px', height: '10px', background: 'white', borderRadius: '50%' }}></div>
                     <span>Recording: {formatTime(recordingTime)} / {formatTime(MAX_RECORDING_TIME)}</span>
                 </div>
             )}
