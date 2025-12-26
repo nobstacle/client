@@ -20,7 +20,7 @@ const isChromeExtension = (): boolean => {
 // Helper to get station from Chrome storage
 const getChromeStation = (): Promise<string | null> => {
   if (!isChromeExtension()) return Promise.resolve(null);
-  
+
   return new Promise((resolve) => {
     (window as any).chrome.storage.local.get([STATION_STORAGE_KEY], (result: any) => {
       const station = result[STATION_STORAGE_KEY] || null;
@@ -33,7 +33,7 @@ const getChromeStation = (): Promise<string | null> => {
 // 🔧 CRITICAL FIX: Save to BOTH storages with proper error handling
 const saveStationToBothStorages = async (station: string): Promise<void> => {
   console.log('[StationPicker] 💾 Saving station to both storages:', station);
-  
+
   // Always save to localStorage first
   try {
     localStorage.setItem(STATION_STORAGE_KEY, station);
@@ -41,7 +41,7 @@ const saveStationToBothStorages = async (station: string): Promise<void> => {
   } catch (error) {
     console.error('[StationPicker] ❌ localStorage error:', error);
   }
-  
+
   // Save to Chrome storage if available
   if (isChromeExtension()) {
     return new Promise((resolve) => {
@@ -75,67 +75,44 @@ export const StationPicker: React.FC<{ cb?: () => void }> = ({ cb }) => {
   // Start with null to indicate we're loading
   const [currentStation, setCurrentStation] = useState<string | null>(null);
 
-  // Initialize station ONCE on mount - with debounce
   useEffect(() => {
-    if (hasInitialized.current || initializationPromise.current) return;
+    if (hasInitialized.current) return;
     hasInitialized.current = true;
 
-    initializationPromise.current = (async () => {
-      console.log('[StationPicker] 🚀 Starting initialization...');
-      
-      // CRITICAL: Wait a moment for extension to finish loading
-      if (isInExtension) {
-        console.log('[StationPicker] ⏳ Waiting for extension to initialize...');
-        await new Promise(resolve => setTimeout(resolve, 300));
+    const loadStation = async () => {
+      console.log('[StationPicker] 🚀 Loading station from background...');
+
+      // If in extension, ask background
+      if (typeof (window as any).chrome?.runtime?.sendMessage === 'function') {
+        (window as any).chrome.runtime.sendMessage(
+          { action: 'getStation' },
+          (response: any) => {
+            if (response && response.success && response.station) {
+              const station = response.station;
+              console.log('[StationPicker] ✓ Got station from background:', station);
+              setCurrentStation(station);
+
+              // Update URL if different
+              const urlStation = searchParams.get('station');
+              if (urlStation !== station) {
+                router.push('station', station);
+              }
+            } else {
+              // Fallback
+              const urlStation = searchParams.get('station') || '1';
+              setCurrentStation(urlStation);
+              console.log('[StationPicker] ⚠️ Using fallback:', urlStation);
+            }
+          }
+        );
+      } else {
+        // Not in extension
+        const urlStation = searchParams.get('station') || '1';
+        setCurrentStation(urlStation);
       }
-      
-      let finalStation = "1";
-      const urlStation = searchParams.get("station");
-      
-      console.log('[StationPicker] URL station:', urlStation);
+    };
 
-      // Priority 1: Chrome extension storage (most reliable for extension)
-      if (isInExtension) {
-        const chromeStation = await getChromeStation();
-        if (chromeStation) {
-          console.log('[StationPicker] ✓ Found in Chrome storage:', chromeStation);
-          finalStation = chromeStation;
-        }
-      }
-
-      // Priority 2: localStorage (might be more recent)
-      const localStation = localStorage.getItem(STATION_STORAGE_KEY);
-      if (localStation && localStation !== finalStation) {
-        console.log('[StationPicker] ✓ localStorage differs, checking recency...');
-        // If in extension and they differ, Chrome storage takes priority
-        if (!isInExtension) {
-          finalStation = localStation;
-          console.log('[StationPicker] ✓ Using localStorage:', localStation);
-        }
-      }
-
-      // Priority 3: URL parameter (only if nothing else is set)
-      if (finalStation === "1" && urlStation && urlStation !== "1") {
-        console.log('[StationPicker] ✓ Using URL param:', urlStation);
-        finalStation = urlStation;
-      }
-
-      console.log('[StationPicker] 🎯 Final station decision:', finalStation);
-
-      // Update state
-      setCurrentStation(finalStation);
-
-      // 🔧 CRITICAL: Sync to BOTH storages
-      await saveStationToBothStorages(finalStation);
-
-      // Update URL if needed
-      if (urlStation !== finalStation) {
-        console.log('[StationPicker] 🔄 Updating URL from', urlStation, 'to', finalStation);
-        router.push("station", finalStation);
-      }
-
-      initializationPromise.current = null;
-    })();
+    loadStation();
   }, []);
 
   // Listen for external station changes
@@ -145,7 +122,7 @@ export const StationPicker: React.FC<{ cb?: () => void }> = ({ cb }) => {
     const handleStationChange = async (event: CustomEvent) => {
       const newStation = event.detail.station;
       console.log('[StationPicker] 📡 External change detected:', newStation);
-      
+
       setCurrentStation(newStation);
       await saveStationToBothStorages(newStation);
     };
@@ -154,7 +131,7 @@ export const StationPicker: React.FC<{ cb?: () => void }> = ({ cb }) => {
       if (event.data.type === 'STATION_CHANGE') {
         const newStation = String(event.data.station);
         console.log('[StationPicker] 📨 Station change message received:', newStation);
-        
+
         setCurrentStation(newStation);
         await saveStationToBothStorages(newStation);
       }
@@ -170,17 +147,27 @@ export const StationPicker: React.FC<{ cb?: () => void }> = ({ cb }) => {
   }, []);
 
   const handleStationChange = async (newStation: string) => {
-    console.log('[StationPicker] 👤 User changed station to:', newStation);
+    console.log('[StationPicker] 👤 Changing to station:', newStation);
 
-    // Update state immediately
     setCurrentStation(newStation);
 
-    // 🔧 CRITICAL FIX: Save to BOTH storages
-    await saveStationToBothStorages(newStation);
-    
-    // If in iframe, notify parent
+    // Save to background
+    if (typeof (window as any).chrome?.runtime?.sendMessage === 'function') {
+      (window as any).chrome.runtime.sendMessage({
+        action: 'setStation',
+        station: newStation
+      }, (response: any) => {
+        if (response && response.success) {
+          console.log('[StationPicker] ✓ Background saved');
+        }
+      });
+    }
+
+    // Save to localStorage
+    localStorage.setItem(STATION_STORAGE_KEY, newStation);
+
+    // Notify parent
     if (window.self !== window.top) {
-      console.log('[StationPicker] 📤 Sending STATION_CHANGE to extension...');
       window.parent.postMessage({
         type: 'STATION_CHANGE',
         station: newStation
@@ -190,13 +177,12 @@ export const StationPicker: React.FC<{ cb?: () => void }> = ({ cb }) => {
     // Update URL
     router.push("station", newStation);
 
-    // Dispatch custom event
+    // Dispatch event
     const event = new CustomEvent('stationChanged', {
       detail: { station: newStation }
     });
     window.dispatchEvent(event);
 
-    // Execute callback
     if (cb) cb();
   };
 

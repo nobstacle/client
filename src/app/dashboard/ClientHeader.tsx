@@ -173,66 +173,66 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
 
     const selectedLang = params.get("lang") || companyData?.defaultLangCode || "en";
 
-  useEffect(() => {
-  if (!isInIframe) return;
+    useEffect(() => {
+        if (!isInIframe) return;
 
-  const handleStationChange = (event: MessageEvent) => {
-    if (event.data.type === 'STATION_CHANGE') {
-      const newStation = String(event.data.station);
-      console.log('[ClientHeader] Station change requested:', newStation);
+        const handleStationChange = (event: MessageEvent) => {
+            if (event.data.type === 'STATION_CHANGE') {
+                const newStation = String(event.data.station);
+                console.log('[ClientHeader] Station change requested:', newStation);
 
-      // Save to localStorage FIRST
-      try {
-        localStorage.setItem(STATION_STORAGE_KEY, newStation);
-        console.log('[ClientHeader] ✓ Saved to localStorage:', newStation);
-      } catch (error) {
-        console.error('[ClientHeader] ✗ localStorage error:', error);
-      }
+                // Save to localStorage FIRST
+                try {
+                    localStorage.setItem(STATION_STORAGE_KEY, newStation);
+                    console.log('[ClientHeader] ✓ Saved to localStorage:', newStation);
+                } catch (error) {
+                    console.error('[ClientHeader] ✗ localStorage error:', error);
+                }
 
-      // Save to Chrome storage if available
-      if (typeof (window as any).chrome !== 'undefined' &&
-          typeof (window as any).chrome.storage !== 'undefined') {
-        (window as any).chrome.storage.local.set({
-          [STATION_STORAGE_KEY]: newStation
-        }, () => {
-          if ((window as any).chrome.runtime.lastError) {
-            console.error('[ClientHeader] ✗ Chrome storage error:', (window as any).chrome.runtime.lastError);
-          } else {
-            console.log('[ClientHeader] ✓ Saved to Chrome storage:', newStation);
-            
-            // VERIFY the save
-            (window as any).chrome.storage.local.get([STATION_STORAGE_KEY], (result: any) => {
-              console.log('[ClientHeader] ✓ Verification - Chrome storage now has:', result[STATION_STORAGE_KEY]);
-            });
-          }
-        });
-      }
+                // Save to Chrome storage if available
+                if (typeof (window as any).chrome !== 'undefined' &&
+                    typeof (window as any).chrome.storage !== 'undefined') {
+                    (window as any).chrome.storage.local.set({
+                        [STATION_STORAGE_KEY]: newStation
+                    }, () => {
+                        if ((window as any).chrome.runtime.lastError) {
+                            console.error('[ClientHeader] ✗ Chrome storage error:', (window as any).chrome.runtime.lastError);
+                        } else {
+                            console.log('[ClientHeader] ✓ Saved to Chrome storage:', newStation);
 
-      // Update iframe URL
-      const currentIframe = document.getElementById('nobstacle-header-iframe') as HTMLIFrameElement;
-      if (currentIframe && currentIframe.src.includes('station=')) {
-        const newUrl = currentIframe.src.replace(/station=[^&]*/, `station=${newStation}`);
-        currentIframe.src = newUrl;
-      }
+                            // VERIFY the save
+                            (window as any).chrome.storage.local.get([STATION_STORAGE_KEY], (result: any) => {
+                                console.log('[ClientHeader] ✓ Verification - Chrome storage now has:', result[STATION_STORAGE_KEY]);
+                            });
+                        }
+                    });
+                }
 
-      // Update page URL
-      const currentUrl = new URL(window.location.href);
-      currentUrl.searchParams.set('station', newStation);
-      window.history.pushState({}, '', currentUrl.toString());
+                // Update iframe URL
+                const currentIframe = document.getElementById('nobstacle-header-iframe') as HTMLIFrameElement;
+                if (currentIframe && currentIframe.src.includes('station=')) {
+                    const newUrl = currentIframe.src.replace(/station=[^&]*/, `station=${newStation}`);
+                    currentIframe.src = newUrl;
+                }
 
-      // Dispatch event
-      const stationEvent = new CustomEvent('stationChanged', {
-        detail: { station: newStation }
-      });
-      window.dispatchEvent(stationEvent);
+                // Update page URL
+                const currentUrl = new URL(window.location.href);
+                currentUrl.searchParams.set('station', newStation);
+                window.history.pushState({}, '', currentUrl.toString());
 
-      message.success(`Switched to Station ${newStation}`);
-    }
-  };
+                // Dispatch event
+                const stationEvent = new CustomEvent('stationChanged', {
+                    detail: { station: newStation }
+                });
+                window.dispatchEvent(stationEvent);
 
-  window.addEventListener('message', handleStationChange);
-  return () => window.removeEventListener('message', handleStationChange);
-}, [isInIframe]);
+                message.success(`Switched to Station ${newStation}`);
+            }
+        };
+
+        window.addEventListener('message', handleStationChange);
+        return () => window.removeEventListener('message', handleStationChange);
+    }, [isInIframe]);
 
     const fetchCategories = async () => {
         if (categoriesFetched && categoriesData.length > 0) {
@@ -1276,35 +1276,43 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                 const newStation = String(event.data.station);
                 console.log('[ClientHeader] Station change requested:', newStation);
 
-                // Save to localStorage
-                localStorage.setItem(STATION_STORAGE_KEY, newStation);
-                console.log('[ClientHeader] ✓ Saved to localStorage:', newStation);
+                // Save to background (extension)
+                if (typeof (window as any).chrome?.runtime?.sendMessage === 'function') {
+                    (window as any).chrome.runtime.sendMessage({
+                        action: 'setStation',
+                        station: newStation
+                    }, (response: any) => {
+                        if (response && response.success) {
+                            console.log('[ClientHeader] ✓ Background saved station:', newStation);
 
-                // ✅ CRITICAL FIX: Save to Chrome storage if available
-                if (typeof (window as any).chrome !== 'undefined' &&
-                    typeof (window as any).chrome.storage !== 'undefined') {
-                    (window as any).chrome.storage.local.set({
-                        nobstacle_selected_station: newStation
-                    }, () => {
-                        console.log('[ClientHeader] ✓ Saved to Chrome storage:', newStation);
+                            // Also save to localStorage for quick iframe access
+                            localStorage.setItem(STATION_STORAGE_KEY, newStation);
+
+                            // Update iframe URL
+                            const currentIframe = document.getElementById('nobstacle-header-iframe') as HTMLIFrameElement;
+                            if (currentIframe && currentIframe.src.includes('station=')) {
+                                const newUrl = currentIframe.src.replace(/station=[^&]*/, `station=${newStation}`);
+                                currentIframe.src = newUrl;
+                            }
+
+                            // Update page URL
+                            const currentUrl = new URL(window.location.href);
+                            currentUrl.searchParams.set('station', newStation);
+                            window.history.pushState({}, '', currentUrl.toString());
+
+                            // Dispatch event
+                            const stationEvent = new CustomEvent('stationChanged', {
+                                detail: { station: newStation }
+                            });
+                            window.dispatchEvent(stationEvent);
+
+                            message.success(`Switched to Station ${newStation}`);
+                        } else {
+                            console.error('[ClientHeader] ✗ Failed to save station');
+                            message.error('Failed to save station');
+                        }
                     });
                 }
-
-                // Update URL
-                const currentUrl = new URL(window.location.href);
-                currentUrl.searchParams.set('station', newStation);
-                window.history.pushState({}, '', currentUrl.toString());
-
-                // Trigger events
-                const stationEvent = new CustomEvent('stationChanged', {
-                    detail: { station: newStation }
-                });
-                window.dispatchEvent(stationEvent);
-
-                const popStateEvent = new PopStateEvent('popstate', { state: {} });
-                window.dispatchEvent(popStateEvent);
-
-                message.success(`Switched to Station ${newStation}`);
             }
 
             if (event.data.type === 'TEMPLATE_SELECT') {
