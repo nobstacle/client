@@ -1,53 +1,51 @@
-
 // Background service worker
 let backendAccessToken = null;
 let tokenExpiry = null;
-let currentStation = null; // In-memory station state
+let currentStation = null;
 
 // API base URL
 const API_BASE_URL = 'https://nobstacle-production-d145.up.railway.app';
 const STATION_STORAGE_KEY = 'nobstacle_selected_station';
 
-chrome.storage.local.get([STATION_STORAGE_KEY], (result) => {
-  currentStation = result[STATION_STORAGE_KEY] || "1";
-  console.log('[Background] 🚀 Initial station:', currentStation);
-});
-
-
 // Initialize station on startup
 async function initializeStation() {
-  chrome.storage.local.get([STATION_STORAGE_KEY], (result) => {
-    if (result[STATION_STORAGE_KEY]) {
-      currentStation = String(result[STATION_STORAGE_KEY]);
-      console.log('[Background] 🚀 Station initialized:', currentStation);
-    } else {
-      // Set default
-      currentStation = "1";
-      chrome.storage.local.set({ [STATION_STORAGE_KEY]: "1" });
-      console.log('[Background] 🚀 Station set to default: 1');
-    }
+  return new Promise((resolve) => {
+    chrome.storage.local.get([STATION_STORAGE_KEY], (result) => {
+      if (result[STATION_STORAGE_KEY]) {
+        currentStation = String(result[STATION_STORAGE_KEY]);
+        console.log('[Background] 🚀 Station initialized:', currentStation);
+      } else {
+        // Set default
+        currentStation = "1";
+        chrome.storage.local.set({ [STATION_STORAGE_KEY]: "1" }, () => {
+          console.log('[Background] 🚀 Station set to default: 1');
+        });
+      }
+      resolve(currentStation);
+    });
   });
 }
 
-chrome.runtime.onInstalled.addListener((details) => {
+// Initialize on install
+chrome.runtime.onInstalled.addListener(async (details) => {
   console.log('Nobstacle Header extension installed');
 
   if (details.reason === 'install') {
     console.log('Extension installed for the first time');
-    initializeStation();
+    await initializeStation();
   } else if (details.reason === 'update') {
     console.log('Extension updated');
     restoreTokenFromStorage();
-    initializeStation();
+    await initializeStation();
   }
 
-  // Restore token on startup
   restoreTokenFromStorage();
 });
 
-chrome.runtime.onStartup.addListener(() => {
-  fetchAuthFromNobstacle();
-  initializeStation();
+// Initialize on startup
+chrome.runtime.onStartup.addListener(async () => {
+  await fetchAuthFromNobstacle();
+  await initializeStation();
 });
 
 async function fetchAuthFromNobstacle() {
@@ -106,14 +104,13 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   
   // GET STATION - Returns current station
   if (request.action === 'getStation') {
-    // If currentStation is still null, read from storage
     if (currentStation === null) {
       chrome.storage.local.get([STATION_STORAGE_KEY], (result) => {
         currentStation = result[STATION_STORAGE_KEY] || "1";
         console.log('[Background] 📍 Returning station:', currentStation);
         sendResponse({ success: true, station: currentStation });
       });
-      return true; // Keep channel open for async response
+      return true;
     } else {
       console.log('[Background] 📍 Returning station:', currentStation);
       sendResponse({ success: true, station: currentStation });
@@ -122,7 +119,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 
   // SET STATION - Saves new station
-if (request.action === 'setStation') {
+  if (request.action === 'setStation') {
     const newStation = String(request.station);
     console.log('[Background] 💾 Saving station:', newStation);
     
@@ -132,6 +129,19 @@ if (request.action === 'setStation') {
       [STATION_STORAGE_KEY]: newStation
     }, () => {
       console.log('[Background] ✅ Station saved to storage');
+      
+      // Notify all tabs about the station change
+      chrome.tabs.query({}, (tabs) => {
+        tabs.forEach(tab => {
+          chrome.tabs.sendMessage(tab.id, {
+            action: 'stationChanged',
+            station: newStation
+          }).catch(() => {
+            // Tab might not have content script, ignore
+          });
+        });
+      });
+      
       sendResponse({ success: true, station: newStation });
     });
     
@@ -224,6 +234,15 @@ if (request.action === 'setStation') {
   return true;
 });
 
+// Listen for storage changes and update currentStation
+chrome.storage.onChanged.addListener((changes, areaName) => {
+  if (areaName === 'local' && changes[STATION_STORAGE_KEY]) {
+    const newStation = changes[STATION_STORAGE_KEY].newValue;
+    console.log('[Background] 📡 Storage changed, updating currentStation:', newStation);
+    currentStation = String(newStation);
+  }
+});
+
 setInterval(async () => {
   await fetchAuthFromNobstacle();
 }, 2 * 60 * 1000);
@@ -278,4 +297,3 @@ setInterval(() => {
     chrome.storage.local.remove(['backendToken', 'backendTokenExpiry']);
   }
 }, 60000);
-

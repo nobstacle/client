@@ -28,6 +28,7 @@ export const StationPicker: React.FC<{ cb?: () => void }> = ({ cb }) => {
   const searchParams = useSearchParams();
   const hasInitialized = useRef(false);
   const [currentStation, setCurrentStation] = useState<string>("1");
+  const isUpdatingRef = useRef(false);
 
   // Load station on mount
   useEffect(() => {
@@ -63,13 +64,14 @@ export const StationPicker: React.FC<{ cb?: () => void }> = ({ cb }) => {
       }
     };
 
-    // Small delay to ensure background is ready
     setTimeout(loadStation, 100);
   }, []);
 
   // Listen for station changes from other sources
   useEffect(() => {
     const handleStationChange = (event: CustomEvent) => {
+      if (isUpdatingRef.current) return; // Prevent loops
+      
       const newStation = event.detail.station;
       console.log('[StationPicker] 📡 External change:', newStation);
       setCurrentStation(newStation);
@@ -82,8 +84,32 @@ export const StationPicker: React.FC<{ cb?: () => void }> = ({ cb }) => {
     };
   }, []);
 
+  // Listen for chrome.storage changes (for extension)
+  useEffect(() => {
+    if (!isChromeExtension()) return;
+
+    const handleStorageChange = (changes: any, areaName: string) => {
+      if (areaName === 'local' && changes[STATION_STORAGE_KEY]) {
+        if (isUpdatingRef.current) return;
+        
+        const newStation = String(changes[STATION_STORAGE_KEY].newValue);
+        console.log('[StationPicker] 📡 Chrome storage changed:', newStation);
+        setCurrentStation(newStation);
+      }
+    };
+
+    (window as any).chrome.storage.onChanged.addListener(handleStorageChange);
+
+    return () => {
+      (window as any).chrome.storage.onChanged.removeListener(handleStorageChange);
+    };
+  }, []);
+
   const handleStationChange = (newStation: string) => {
     console.log('[StationPicker] 👤 User selected:', newStation);
+    
+    // Set flag to prevent loops
+    isUpdatingRef.current = true;
     
     // Update UI immediately
     setCurrentStation(newStation);
@@ -95,7 +121,17 @@ export const StationPicker: React.FC<{ cb?: () => void }> = ({ cb }) => {
         station: newStation
       }, (response: any) => {
         console.log('[StationPicker] ✅ Saved to background');
+        
+        // Reset flag after a delay
+        setTimeout(() => {
+          isUpdatingRef.current = false;
+        }, 500);
       });
+    } else {
+      // Reset flag for non-extension
+      setTimeout(() => {
+        isUpdatingRef.current = false;
+      }, 500);
     }
     
     // Save to localStorage

@@ -117,7 +117,7 @@ async function loadSavedStation() {
         resolve("1");
         return;
       }
-
+console.info("111111111111111111111111111111111111111111111111111",response);
       selectedStation = (response && response.station) ? response.station : "1";
       console.log('[Content Script] ✅ Loaded station:', selectedStation);
       
