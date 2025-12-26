@@ -166,8 +166,38 @@ setInterval(async () => {
   await fetchAuthFromNobstacle();
 }, 2 * 60 * 1000);
 
-// Modify headers using declarativeNetRequest API (Manifest V3 way)
-// This intercepts requests and modifies headers
+chrome.storage.onChanged.addListener((changes, areaName) => {
+  if (areaName === 'local' && changes.nobstacle_selected_station) {
+    const { oldValue, newValue } = changes.nobstacle_selected_station;
+    console.log('[Background] Station changed in storage:', {
+      from: oldValue,
+      to: newValue
+    });
+  }
+});
+
+// Add a helper to check storage on demand
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request.action === 'getStation') {
+    chrome.storage.local.get(['nobstacle_selected_station'], (result) => {
+      console.log('[Background] Current station in storage:', result.nobstacle_selected_station);
+      sendResponse({ station: result.nobstacle_selected_station });
+    });
+    return true;
+  }
+  
+  if (request.action === 'setStation') {
+    const station = String(request.station);
+    chrome.storage.local.set({
+      nobstacle_selected_station: station
+    }, () => {
+      console.log('[Background] Station saved to storage:', station);
+      sendResponse({ success: true });
+    });
+    return true;
+  }
+})
+
 chrome.webRequest.onBeforeSendHeaders.addListener(
   (details) => {
     // Only modify requests to your API
