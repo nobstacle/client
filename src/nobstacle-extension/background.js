@@ -1,51 +1,57 @@
 // Background service worker
 let backendAccessToken = null;
 let tokenExpiry = null;
-let currentStation = null;
+let currentStation = "1"; // Always initialize with default
 
 // API base URL
 const API_BASE_URL = 'https://nobstacle-production-d145.up.railway.app';
 const STATION_STORAGE_KEY = 'nobstacle_selected_station';
 
-// Initialize station on startup
-async function initializeStation() {
-  return new Promise((resolve) => {
-    chrome.storage.local.get([STATION_STORAGE_KEY], (result) => {
-      if (result[STATION_STORAGE_KEY]) {
-        currentStation = String(result[STATION_STORAGE_KEY]);
-        console.log('[Background] 🚀 Station initialized:', currentStation);
-      } else {
-        // Set default
-        currentStation = "1";
-        chrome.storage.local.set({ [STATION_STORAGE_KEY]: "1" }, () => {
-          console.log('[Background] 🚀 Station set to default: 1');
-        });
-      }
-      resolve(currentStation);
-    });
-  });
-}
+console.log('[Background] 🚀 Background script starting...');
 
-// Initialize on install
-chrome.runtime.onInstalled.addListener(async (details) => {
-  console.log('Nobstacle Header extension installed');
-
-  if (details.reason === 'install') {
-    console.log('Extension installed for the first time');
-    await initializeStation();
-  } else if (details.reason === 'update') {
-    console.log('Extension updated');
-    restoreTokenFromStorage();
-    await initializeStation();
+// Initialize station immediately
+(async function initStation() {
+  try {
+    const result = await chrome.storage.local.get([STATION_STORAGE_KEY]);
+    if (result[STATION_STORAGE_KEY]) {
+      currentStation = String(result[STATION_STORAGE_KEY]);
+      console.log('[Background] ✅ Initial station loaded:', currentStation);
+    } else {
+      // No station saved, set default
+      await chrome.storage.local.set({ [STATION_STORAGE_KEY]: "1" });
+      currentStation = "1";
+      console.log('[Background] ✅ Set default station: 1');
+    }
+  } catch (error) {
+    console.error('[Background] ❌ Error initializing station:', error);
+    currentStation = "1";
   }
+})();
 
-  restoreTokenFromStorage();
+chrome.runtime.onInstalled.addListener(async (details) => {
+  console.log('[Background] Extension installed/updated');
+  
+  // Ensure station is set
+  const result = await chrome.storage.local.get([STATION_STORAGE_KEY]);
+  if (!result[STATION_STORAGE_KEY]) {
+    await chrome.storage.local.set({ [STATION_STORAGE_KEY]: "1" });
+    currentStation = "1";
+    console.log('[Background] Set default station on install');
+  }
+  
+  await restoreTokenFromStorage();
 });
 
-// Initialize on startup
 chrome.runtime.onStartup.addListener(async () => {
+  console.log('[Background] Browser started');
   await fetchAuthFromNobstacle();
-  await initializeStation();
+  
+  // Reload station from storage
+  const result = await chrome.storage.local.get([STATION_STORAGE_KEY]);
+  if (result[STATION_STORAGE_KEY]) {
+    currentStation = String(result[STATION_STORAGE_KEY]);
+    console.log('[Background] Startup - station loaded:', currentStation);
+  }
 });
 
 async function fetchAuthFromNobstacle() {
@@ -85,7 +91,6 @@ async function restoreTokenFromStorage() {
         backendAccessToken = result.backendToken;
         tokenExpiry = result.backendTokenExpiry;
         console.log('[Background] ✓ Token restored from storage');
-        console.log('[Background] Token expires:', new Date(tokenExpiry).toLocaleString());
       } else {
         console.log('[Background] Stored token expired, clearing');
         await chrome.storage.local.remove(['backendToken', 'backendTokenExpiry']);
@@ -97,66 +102,76 @@ async function restoreTokenFromStorage() {
 }
 
 // ============================================
-// STATION MANAGEMENT MESSAGES
+// MESSAGE HANDLERS
 // ============================================
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  console.log('[Background] 📨 Received message:', request.action, request);
   
-  // GET STATION - Returns current station
+  // GET STATION
   if (request.action === 'getStation') {
-    if (currentStation === null) {
-      chrome.storage.local.get([STATION_STORAGE_KEY], (result) => {
-        currentStation = result[STATION_STORAGE_KEY] || "1";
-        console.log('[Background] 📍 Returning station:', currentStation);
-        sendResponse({ success: true, station: currentStation });
-      });
-      return true;
-    } else {
-      console.log('[Background] 📍 Returning station:', currentStation);
+    // Always get fresh value from storage
+    chrome.storage.local.get([STATION_STORAGE_KEY], (result) => {
+      const station = result[STATION_STORAGE_KEY] || "1";
+      currentStation = String(station);
+      console.log('[Background] 📍 GET STATION - Returning:', currentStation);
       sendResponse({ success: true, station: currentStation });
-    }
-    return true;
+    });
+    return true; // Keep channel open
   }
 
-  // SET STATION - Saves new station
+  // SET STATION
   if (request.action === 'setStation') {
     const newStation = String(request.station);
-    console.log('[Background] 💾 Saving station:', newStation);
+    console.log('[Background] 💾 SET STATION - Saving:', newStation);
     
+    // Update in-memory FIRST
     currentStation = newStation;
     
-    chrome.storage.local.set({
-      [STATION_STORAGE_KEY]: newStation
-    }, () => {
-      console.log('[Background] ✅ Station saved to storage');
-      
-      // Notify all tabs about the station change
-      chrome.tabs.query({}, (tabs) => {
-        tabs.forEach(tab => {
-          chrome.tabs.sendMessage(tab.id, {
-            action: 'stationChanged',
-            station: newStation
-          }).catch(() => {
-            // Tab might not have content script, ignore
+    // Save to storage
+    chrome.storage.local.set(
+      { [STATION_STORAGE_KEY]: newStation },
+      () => {
+        if (chrome.runtime.lastError) {
+          console.error('[Background] ❌ Error saving station:', chrome.runtime.lastError);
+          sendResponse({ success: false, error: chrome.runtime.lastError });
+          return;
+        }
+        
+        console.log('[Background] ✅ Station saved successfully:', newStation);
+        
+        // Verify save by reading back
+        chrome.storage.local.get([STATION_STORAGE_KEY], (result) => {
+          console.log('[Background] 🔍 Verification - Storage now has:', result[STATION_STORAGE_KEY]);
+        });
+        
+        // Notify all content scripts
+        chrome.tabs.query({}, (tabs) => {
+          tabs.forEach(tab => {
+            if (tab.id && tab.url && !tab.url.startsWith('chrome://')) {
+              chrome.tabs.sendMessage(
+                tab.id,
+                { action: 'stationChanged', station: newStation }
+              ).catch(err => {
+                // Ignore errors for tabs without content script
+              });
+            }
           });
         });
-      });
-      
-      sendResponse({ success: true, station: newStation });
-    });
-    
-    return true;
+        
+        sendResponse({ success: true, station: newStation });
+      }
+    );
+    return true; // Keep channel open
   }
 
-  // Existing handlers...
+  // Other handlers
   if (request.type === 'HEADER_READY') {
-    console.log('Header loaded on tab:', sender.tab?.id);
     sendResponse({ success: true });
     return true;
   }
 
   if (request.action === 'toggle') {
-    console.log('Toggle requested for tab:', sender.tab?.id);
     sendResponse({ success: true });
     return true;
   }
@@ -188,15 +203,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     backendAccessToken = request.token;
     tokenExpiry = request.expiresIn;
 
-    console.log('[Background] Storing backend token...');
-    console.log('[Background] Token preview:', request.token.substring(0, 40) + '...');
-    console.log('[Background] Expires:', new Date(request.expiresIn).toLocaleString());
-
     chrome.storage.local.set({
       backendToken: request.token,
       backendTokenExpiry: request.expiresIn
     }, () => {
-      console.log('[Background] ✓ Backend token stored successfully');
+      console.log('[Background] ✓ Backend token stored');
       sendResponse({ success: true });
     });
     return true;
@@ -204,7 +215,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
   if (request.action === 'getBackendToken') {
     if (tokenExpiry && tokenExpiry < Date.now()) {
-      console.log('[Background] Token expired');
       backendAccessToken = null;
       tokenExpiry = null;
       chrome.storage.local.remove(['backendToken', 'backendTokenExpiry']);
@@ -225,7 +235,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     backendAccessToken = null;
     tokenExpiry = null;
     chrome.storage.local.remove(['backendToken', 'backendTokenExpiry'], () => {
-      console.log('[Background] Backend token cleared');
       sendResponse({ success: true });
     });
     return true;
@@ -234,12 +243,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   return true;
 });
 
-// Listen for storage changes and update currentStation
+// Listen for storage changes
 chrome.storage.onChanged.addListener((changes, areaName) => {
   if (areaName === 'local' && changes[STATION_STORAGE_KEY]) {
-    const newStation = changes[STATION_STORAGE_KEY].newValue;
-    console.log('[Background] 📡 Storage changed, updating currentStation:', newStation);
-    currentStation = String(newStation);
+    const newStation = String(changes[STATION_STORAGE_KEY].newValue);
+    console.log('[Background] 📡 Storage changed - updating currentStation to:', newStation);
+    currentStation = newStation;
   }
 });
 
@@ -252,22 +261,15 @@ chrome.webRequest.onBeforeSendHeaders.addListener(
     if (details.url.includes('nobstacle-production-d145.up.railway.app')) {
       if (backendAccessToken && (!tokenExpiry || tokenExpiry > Date.now())) {
         const headers = details.requestHeaders || [];
-
         const authIndex = headers.findIndex(h => h.name.toLowerCase() === 'authorization');
         if (authIndex !== -1) {
           headers.splice(authIndex, 1);
         }
-
         headers.push({
           name: 'Authorization',
           value: `Bearer ${backendAccessToken}`
         });
-
-        console.log('[Background] ✓ Added Authorization header to:', details.url);
-
         return { requestHeaders: headers };
-      } else {
-        console.log('[Background] ⚠ No valid token available for:', details.url);
       }
     }
     return {};
@@ -279,7 +281,6 @@ chrome.webRequest.onBeforeSendHeaders.addListener(
 chrome.webRequest.onHeadersReceived.addListener(
   (details) => {
     if (details.statusCode === 401 && details.url.includes('nobstacle-production-d145.up.railway.app')) {
-      console.log('[Background] 401 detected, clearing token');
       backendAccessToken = null;
       tokenExpiry = null;
       chrome.storage.local.remove(['backendToken', 'backendTokenExpiry']);
@@ -291,7 +292,6 @@ chrome.webRequest.onHeadersReceived.addListener(
 
 setInterval(() => {
   if (tokenExpiry && tokenExpiry < Date.now()) {
-    console.log('[Background] Token expired (periodic check), clearing');
     backendAccessToken = null;
     tokenExpiry = null;
     chrome.storage.local.remove(['backendToken', 'backendTokenExpiry']);

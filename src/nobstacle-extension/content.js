@@ -105,10 +105,38 @@ function hideLoader() {
   }
 }
 
+async function loadStationFromBackground() {
+  return new Promise((resolve) => {
+    console.log('[Content Script] 🔍 Loading station from background...');
+
+    chrome.runtime.sendMessage({ action: 'getStation' }, (response) => {
+      if (chrome.runtime.lastError) {
+        console.error('[Content Script] ❌ Error loading station:', chrome.runtime.lastError);
+        selectedStation = "1";
+        resolve("1");
+        return;
+      }
+
+      if (response && response.success && response.station) {
+        const station = String(response.station);
+        console.log('[Content Script] ✅ Station loaded from background:', station);
+        selectedStation = station;
+        localStorage.setItem(STATION_STORAGE_KEY, station);
+        stationLoadedFromStorage = true;
+        resolve(station);
+      } else {
+        console.log('[Content Script] ⚠️ No station in response, using default');
+        selectedStation = "1";
+        resolve("1");
+      }
+    });
+  });
+}
+
 async function loadSavedStation() {
   return new Promise((resolve) => {
     console.log('[Content Script] 🔍 Loading station...');
-    
+
     // Ask background
     chrome.runtime.sendMessage({ action: 'getStation' }, (response) => {
       if (chrome.runtime.lastError) {
@@ -117,13 +145,13 @@ async function loadSavedStation() {
         resolve("1");
         return;
       }
-console.info("111111111111111111111111111111111111111111111111111",response);
+      console.info("111111111111111111111111111111111111111111111111111", response);
       selectedStation = (response && response.station) ? response.station : "1";
       console.log('[Content Script] ✅ Loaded station:', selectedStation);
-      
+
       // Save to localStorage for iframe
       localStorage.setItem(STATION_STORAGE_KEY, selectedStation);
-      
+
       resolve(selectedStation);
     });
   });
@@ -164,16 +192,15 @@ function getSupportedMimeType() {
   return 'audio/webm';
 }
 
-// In the top-level chrome.storage.local.get callback:
 chrome.storage.local.get(['extensionEnabled'], async (result) => {
   isEnabled = result.extensionEnabled !== false;
 
   if (isEnabled && shouldInject()) {
     console.log('[Content Script] 🚀 Extension enabled, initializing...');
 
-    // ALWAYS load station fresh on init
-    selectedStation = await loadSavedStation();
-    console.log('[Content Script] ✅ Station loaded:', selectedStation);
+    // CRITICAL: Load station BEFORE injecting header
+    selectedStation = await loadStationFromBackground();
+    console.log('[Content Script] ✅ Station ready for injection:', selectedStation);
 
     await injectHeader();
   }
@@ -181,19 +208,28 @@ chrome.storage.local.get(['extensionEnabled'], async (result) => {
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'stationChanged') {
-    const newStation = request.station;
-    console.log('[Content Script] 📡 Station changed by background:', newStation);
-    
+    const newStation = String(request.station);
+    console.log('[Content Script] 📡 Station changed notification:', newStation);
+
+    // Update in-memory variable
     selectedStation = newStation;
     localStorage.setItem(STATION_STORAGE_KEY, newStation);
-    
-    // Update iframe
+
+    // Update iframe if it exists
     const iframe = document.getElementById('nobstacle-header-iframe');
     if (iframe && iframe.src.includes('station=')) {
-      const newUrl = iframe.src.replace(/station=[^&]*/, `station=${newStation}`);
-      iframe.src = newUrl;
+      const currentUrl = new URL(iframe.src);
+      currentUrl.searchParams.set('station', newStation);
+      console.log('[Content Script] 🔄 Reloading iframe with new station');
+      iframe.src = currentUrl.toString();
     }
-    
+
+    // Dispatch event for other listeners
+    const stationEvent = new CustomEvent('stationChanged', {
+      detail: { station: newStation }
+    });
+    window.dispatchEvent(stationEvent);
+
     sendResponse({ success: true });
   }
   return true;
@@ -204,22 +240,35 @@ window.addEventListener('message', (event) => {
 
   if (event.data.type === 'STATION_CHANGE') {
     const newStation = String(event.data.station);
-    console.log('[Content Script] 🔄 Station change:', newStation);
+    console.log('[Content Script] 🔄 Station change from iframe:', newStation);
 
-    // Save to background
+    // Send to background script to save and broadcast
     chrome.runtime.sendMessage({
       action: 'setStation',
       station: newStation
     }, (response) => {
+      if (chrome.runtime.lastError) {
+        console.error('[Content Script] ❌ Error setting station:', chrome.runtime.lastError);
+        return;
+      }
+
       if (response && response.success) {
+        console.log('[Content Script] ✅ Station saved successfully');
+
+        // Update local state
         selectedStation = newStation;
         localStorage.setItem(STATION_STORAGE_KEY, newStation);
-        console.log('[Content Script] ✅ Saved');
 
         // Update URL
         const url = new URL(window.location.href);
         url.searchParams.set('station', newStation);
         window.history.pushState({}, '', url.toString());
+
+        // Dispatch event
+        const stationEvent = new CustomEvent('stationChanged', {
+          detail: { station: newStation }
+        });
+        window.dispatchEvent(stationEvent);
       }
     });
   }
@@ -227,18 +276,43 @@ window.addEventListener('message', (event) => {
 
 
 chrome.runtime.onMessage.addListener((req, sender, respond) => {
-  if (req.action === 'toggle') {
+  if (request.action === 'stationChanged') {
+    const newStation = String(request.station);
+    console.log('[Content Script] 📡 Station changed notification:', newStation);
+
+    // Update in-memory variable
+    selectedStation = newStation;
+    localStorage.setItem(STATION_STORAGE_KEY, newStation);
+
+    // Update iframe if it exists
+    const iframe = document.getElementById('nobstacle-header-iframe');
+    if (iframe && iframe.src.includes('station=')) {
+      const currentUrl = new URL(iframe.src);
+      currentUrl.searchParams.set('station', newStation);
+      console.log('[Content Script] 🔄 Reloading iframe with new station');
+      iframe.src = currentUrl.toString();
+    }
+
+    // Dispatch event for other listeners
+    const stationEvent = new CustomEvent('stationChanged', {
+      detail: { station: newStation }
+    });
+    window.dispatchEvent(stationEvent);
+
+    sendResponse({ success: true });
+  }
+  if (request.action === 'toggle') {
     isEnabled = !isEnabled;
     chrome.storage.local.set({ extensionEnabled: isEnabled });
 
     if (isEnabled && !headerInjected && shouldInject()) {
       injectHeader();
-      respond({ injected: true });
+      sendResponse({ injected: true });
     } else if (!isEnabled && headerInjected) {
       document.getElementById('nobstacle-header-container')?.remove();
       document.body.style.marginTop = `${window.nobstacleOriginalMargin}px`;
       headerInjected = false;
-      respond({ injected: false });
+      sendResponse({ injected: false });
     }
     return true;
   }
@@ -1244,33 +1318,41 @@ async function injectHeader() {
     setupKeyboardListener();
     console.log('[Content Script] ✅ Header iframe created');
 
-    // Send auth IMMEDIATELY when iframe loads
+
     iframe.onload = async () => {
       console.log('[Content Script] 🎉 Iframe loaded!');
 
-      if (cachedAuthData && authDataReady) {
-        // ✅ Send auth
-        iframe.contentWindow.postMessage({
-          type: 'EXTENSION_AUTH',
-          sessionToken: cachedAuthData.sessionToken,
-          cookies: cachedAuthData.cookies
-        }, '*');
+      // Get FRESH station value from background before sending to iframe
+      chrome.runtime.sendMessage({ action: 'getStation' }, (response) => {
+        const freshStation = (response && response.success && response.station)
+          ? String(response.station)
+          : (selectedStation || "1");
 
-        // ✅ Send initial station IMMEDIATELY
-        iframe.contentWindow.postMessage({
-          type: 'INITIAL_STATION',
-          station: selectedStation || "1"
-        }, '*');
+        console.log('[Content Script] 📍 Sending station to iframe:', freshStation);
 
-        console.log('[Content Script] ✅ Auth and station sent to iframe');
-        console.log('[Content Script] 📍 Station sent:', selectedStation || "1");
+        // Send auth to iframe
+        if (cachedAuthData && authDataReady) {
+          iframe.contentWindow.postMessage({
+            type: 'EXTENSION_AUTH',
+            sessionToken: cachedAuthData.sessionToken,
+            cookies: cachedAuthData.cookies
+          }, '*');
 
-        updateDebugAuth(
-          !!cachedAuthData.sessionToken,
-          cachedAuthData.cookies.length,
-          cachedAuthData.sessionToken || ''
-        );
-      }
+          // Send initial station to iframe
+          iframe.contentWindow.postMessage({
+            type: 'INITIAL_STATION',
+            station: freshStation
+          }, '*');
+
+          console.log('[Content Script] ✅ Auth and station sent to iframe');
+
+          updateDebugAuth(
+            !!cachedAuthData.sessionToken,
+            cachedAuthData.cookies.length,
+            cachedAuthData.sessionToken || ''
+          );
+        }
+      });
 
       setTimeout(() => {
         hideLoader();
