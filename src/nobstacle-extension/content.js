@@ -242,20 +242,20 @@ window.addEventListener('message', (event) => {
     const newStation = String(event.data.station);
     console.log('[Content Script] 🔄 Station change from iframe:', newStation);
 
-    // Send to background script to save and broadcast
+    // Send to background script
     chrome.runtime.sendMessage({
       action: 'setStation',
       station: newStation
     }, (response) => {
       if (chrome.runtime.lastError) {
-        console.error('[Content Script] ❌ Error setting station:', chrome.runtime.lastError);
+        console.error('[Content Script] ❌ Error:', chrome.runtime.lastError);
         return;
       }
 
       if (response && response.success) {
-        console.log('[Content Script] ✅ Station saved successfully');
+        console.log('[Content Script] ✅ Saved via background');
 
-        // Update local state
+        // Update local
         selectedStation = newStation;
         localStorage.setItem(STATION_STORAGE_KEY, newStation);
 
@@ -265,10 +265,9 @@ window.addEventListener('message', (event) => {
         window.history.pushState({}, '', url.toString());
 
         // Dispatch event
-        const stationEvent = new CustomEvent('stationChanged', {
+        window.dispatchEvent(new CustomEvent('stationChanged', {
           detail: { station: newStation }
-        });
-        window.dispatchEvent(stationEvent);
+        }));
       }
     });
   }

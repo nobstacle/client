@@ -759,7 +759,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
     useEffect(() => {
         if (isHamburgerMenuOpen && isInIframe) {
             const loadAndSendPicker = async () => {
-                let currentStation = localStorage.getItem(STATION_STORAGE_KEY) || "1";
+                let currentStation = params.get("station") || localStorage.getItem(STATION_STORAGE_KEY) || "1";
 
                 // If in extension, try to read Chrome storage (async)
                 if (typeof (window as any).chrome?.storage?.local) {
@@ -828,8 +828,8 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                         stationPickerHTML
                     }
                 }, '*');
-                loadAndSendPicker();
             }
+            loadAndSendPicker();
         } else if (!isHamburgerMenuOpen && isInIframe) {
             window.parent.postMessage({
                 type: 'HAMBURGER_MENU',
@@ -2060,6 +2060,10 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                             if (isInIframe) {
                                                 // Generate station picker HTML with correct stationCount
                                                 const currentStation = params.get("station") ?? "1";
+                                                const localStation = localStorage.getItem(STATION_STORAGE_KEY);
+                                                if (localStation) {
+                                                    currentStation = localStation;
+                                                }
                                                 const stationCount = companyData?.stationCount || 10;
 
                                                 const stationOptions = Array(stationCount)

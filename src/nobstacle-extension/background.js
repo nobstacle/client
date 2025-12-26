@@ -121,49 +121,47 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 
   // SET STATION
-  if (request.action === 'setStation') {
-    const newStation = String(request.station);
-    console.log('[Background] 💾 SET STATION - Saving:', newStation);
+ // SET STATION
+if (request.action === 'setStation') {
+  const newStation = String(request.station);
+  console.log('[Background] 💾 SET STATION - Saving:', newStation);
+  
+  // Update in-memory FIRST
+  currentStation = newStation;
+  
+  // Save to storage - FIXED: Proper async handling
+  chrome.storage.local.set(
+    { [STATION_STORAGE_KEY]: newStation }
+  ).then(() => {
+    console.log('[Background] ✅ Station saved successfully:', newStation);
     
-    // Update in-memory FIRST
-    currentStation = newStation;
+    // Verify save by reading back
+    chrome.storage.local.get([STATION_STORAGE_KEY]).then((result) => {
+      console.log('[Background] 🔍 Verification - Storage now has:', result[STATION_STORAGE_KEY]);
+    });
     
-    // Save to storage
-    chrome.storage.local.set(
-      { [STATION_STORAGE_KEY]: newStation },
-      () => {
-        if (chrome.runtime.lastError) {
-          console.error('[Background] ❌ Error saving station:', chrome.runtime.lastError);
-          sendResponse({ success: false, error: chrome.runtime.lastError });
-          return;
-        }
-        
-        console.log('[Background] ✅ Station saved successfully:', newStation);
-        
-        // Verify save by reading back
-        chrome.storage.local.get([STATION_STORAGE_KEY], (result) => {
-          console.log('[Background] 🔍 Verification - Storage now has:', result[STATION_STORAGE_KEY]);
-        });
-        
-        // Notify all content scripts
-        chrome.tabs.query({}, (tabs) => {
-          tabs.forEach(tab => {
-            if (tab.id && tab.url && !tab.url.startsWith('chrome://')) {
-              chrome.tabs.sendMessage(
-                tab.id,
-                { action: 'stationChanged', station: newStation }
-              ).catch(err => {
-                // Ignore errors for tabs without content script
-              });
-            }
+    // Notify all content scripts
+    chrome.tabs.query({}).then((tabs) => {
+      tabs.forEach(tab => {
+        if (tab.id && tab.url && !tab.url.startsWith('chrome://')) {
+          chrome.tabs.sendMessage(
+            tab.id,
+            { action: 'stationChanged', station: newStation }
+          ).catch(() => {
+            // Ignore errors for tabs without content script
           });
-        });
-        
-        sendResponse({ success: true, station: newStation });
-      }
-    );
-    return true; // Keep channel open
-  }
+        }
+      });
+    });
+    
+    sendResponse({ success: true, station: newStation });
+  }).catch((error) => {
+    console.error('[Background] ❌ Error saving station:', error);
+    sendResponse({ success: false, error: error.message });
+  });
+  
+  return true; // Keep channel open for async response
+}
 
   // Other handlers
   if (request.type === 'HEADER_READY') {
