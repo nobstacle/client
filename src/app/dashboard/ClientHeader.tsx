@@ -680,44 +680,44 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
     useEffect(() => {
         if (isHamburgerMenuOpen && isInIframe) {
             const loadAndSendPicker = async () => {
-      let currentStation = localStorage.getItem(STATION_STORAGE_KEY) || "1";
+                let currentStation = localStorage.getItem(STATION_STORAGE_KEY) || "1";
 
-      // If in extension, try to read Chrome storage (async)
-      if (typeof (window as any).chrome?.storage?.local) {
-        try {
-          const result = await new Promise<Record<string, any>>((resolve) => {
-            (window as any).chrome.storage.local.get([STATION_STORAGE_KEY], resolve);
-          });
-          if (result[STATION_STORAGE_KEY]) {
-            currentStation = String(result[STATION_STORAGE_KEY]);
-          }
-        } catch (e) {
-          console.warn('Failed to read Chrome storage in iframe');
-        }
-      }
-      const stationCount = companyData?.stationCount || 10;
-      const stationOptions = Array.from({ length: stationCount }, (_, i) => i + 1)
-        .map(num => `
+                // If in extension, try to read Chrome storage (async)
+                if (typeof (window as any).chrome?.storage?.local) {
+                    try {
+                        const result = await new Promise<Record<string, any>>((resolve) => {
+                            (window as any).chrome.storage.local.get([STATION_STORAGE_KEY], resolve);
+                        });
+                        if (result[STATION_STORAGE_KEY]) {
+                            currentStation = String(result[STATION_STORAGE_KEY]);
+                        }
+                    } catch (e) {
+                        console.warn('Failed to read Chrome storage in iframe');
+                    }
+                }
+                const stationCount = companyData?.stationCount || 10;
+                const stationOptions = Array.from({ length: stationCount }, (_, i) => i + 1)
+                    .map(num => `
           <option value="${num}" ${num === Number(currentStation) ? 'selected' : ''}>
             Station ${num}
           </option>
         `).join('');
 
-        //     // Generate fresh station picker HTML with current stationCount
-        //     const currentStation = params.get("station") ?? "1";
-        //     const stationCount = companyData?.stationCount || 10;
+                //     // Generate fresh station picker HTML with current stationCount
+                //     const currentStation = params.get("station") ?? "1";
+                //     const stationCount = companyData?.stationCount || 10;
 
-        //     const stationOptions = Array(stationCount)
-        //         .fill(1)
-        //         .map((x, y) => x + y)
-        //         .map(num => `
-        //     <option value="${num}" ${num == currentStation ? 'selected' : ''}>
-        //         Station ${num}
-        //     </option>
-        // `)
-        //         .join('');
+                //     const stationOptions = Array(stationCount)
+                //         .fill(1)
+                //         .map((x, y) => x + y)
+                //         .map(num => `
+                //     <option value="${num}" ${num == currentStation ? 'selected' : ''}>
+                //         Station ${num}
+                //     </option>
+                // `)
+                //         .join('');
 
-            const stationPickerHTML = `
+                const stationPickerHTML = `
         <div style="position: relative;">
             <select 
                 id="extension-station-select"
@@ -739,18 +739,18 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         </div>
     `;
 
-           window.parent.postMessage({
-        type: 'HAMBURGER_MENU',
-        isOpen: true,
-        content: {
-          station: currentStation,
-          companyName: companyData?.name || 'Company Name',
-          userName: user?.user?.name || user?.user?.email || 'User Name',
-          stationPickerHTML
-        }
-      }, '*');
-      loadAndSendPicker();
-    }
+                window.parent.postMessage({
+                    type: 'HAMBURGER_MENU',
+                    isOpen: true,
+                    content: {
+                        station: currentStation,
+                        companyName: companyData?.name || 'Company Name',
+                        userName: user?.user?.name || user?.user?.email || 'User Name',
+                        stationPickerHTML
+                    }
+                }, '*');
+                loadAndSendPicker();
+            }
         } else if (!isHamburgerMenuOpen && isInIframe) {
             window.parent.postMessage({
                 type: 'HAMBURGER_MENU',
@@ -1157,6 +1157,42 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
             html: messagesHTML
         }, '*');
     }, [isInIframe, messageStore.receivedMessage, params, user, companyData]);
+
+    useEffect(() => {
+        if (!isInIframe) return;
+
+        // Listen for chrome.storage changes
+        if (typeof (window as any).chrome !== 'undefined' &&
+            typeof (window as any).chrome.storage !== 'undefined') {
+
+            const handleStorageChange = (changes: any, areaName: string) => {
+                if (areaName === 'local' && changes[STATION_STORAGE_KEY]) {
+                    const newStation = changes[STATION_STORAGE_KEY].newValue;
+                    console.log('[ClientHeader] 📡 Chrome storage changed:', newStation);
+
+                    // Update localStorage
+                    localStorage.setItem(STATION_STORAGE_KEY, newStation);
+
+                    // Update URL
+                    const currentUrl = new URL(window.location.href);
+                    currentUrl.searchParams.set('station', newStation);
+                    window.history.pushState({}, '', currentUrl.toString());
+
+                    // Trigger re-render
+                    const stationEvent = new CustomEvent('stationChanged', {
+                        detail: { station: newStation }
+                    });
+                    window.dispatchEvent(stationEvent);
+                }
+            };
+
+            (window as any).chrome.storage.onChanged.addListener(handleStorageChange);
+
+            return () => {
+                (window as any).chrome.storage.onChanged.removeListener(handleStorageChange);
+            };
+        }
+    }, [isInIframe]);
 
     // Add this useEffect near the top with other useEffects:
     useEffect(() => {

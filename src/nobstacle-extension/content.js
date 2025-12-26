@@ -100,97 +100,97 @@ async function loadSavedStation() {
   return new Promise((resolve) => {
     console.log('[Content Script] 🔍 Loading saved station...');
 
+    // STEP 1: Read localStorage first (fastest)
     const localStorageStation = localStorage.getItem(STATION_STORAGE_KEY);
     console.log('[Content Script] 📦 localStorage station:', localStorageStation);
 
-    try {
-      chrome.storage.local.get([STATION_STORAGE_KEY], (result) => {
-        // if (chrome.runtime.lastError) {
-        //   console.error('[Content Script] ❌ Chrome storage error:', chrome.runtime.lastError);
-
-        //   if (localStorageStation) {
-        //     selectedStation = localStorageStation;
-        //     stationLoadedFromStorage = true;
-        //     console.log('[Content Script] ✅ Using localStorage fallback:', selectedStation);
-        //     resolve(selectedStation);
-        //   } else {
-        //     selectedStation = "1";
-        //     stationLoadedFromStorage = true;
-        //     console.log('[Content Script] ⚠️ Using default: 1');
-        //     resolve("1");
-        //   }
-        //   return;
-        // }
-
-        const chromeStation = result[STATION_STORAGE_KEY];
-        console.log('[Content Script] 🔐 Chrome storage station:', chromeStation);
-
-        if (localStorageStation && localStorageStation !== chromeStation) {
-          console.log('[Content Script] 🔄 localStorage differs, syncing...');
-          selectedStation = localStorageStation;
-
-          chrome.storage.local.set({
-            [STATION_STORAGE_KEY]: localStorageStation
-          }, () => {
-            if (!chrome.runtime.lastError) {
-              console.log('[Content Script] ✅ Synced to Chrome storage:', localStorageStation);
-            }
-          });
-        } else if (chromeStation) {
-          selectedStation = String(chromeStation);
-
-          localStorage.setItem(STATION_STORAGE_KEY, chromeStation);
-          console.log('[Content Script] ✅ Synced to localStorage:', chromeStation);
-        } else if (localStorageStation) {
-          selectedStation = localStorageStation;
-
-          chrome.storage.local.set({
-            [STATION_STORAGE_KEY]: localStorageStation
-          });
-          console.log('[Content Script] ✅ Using localStorage:', localStorageStation);
-        } else {
-          // Check URL as last resort
-          const currentUrl = new URL(window.location.href);
-          const urlStation = currentUrl.searchParams.get('station');
-
-          if (urlStation) {
-            selectedStation = urlStation;
-
-            // Save to both storages
-            localStorage.setItem(STATION_STORAGE_KEY, urlStation);
-            chrome.storage.local.set({ [STATION_STORAGE_KEY]: urlStation });
-
-            console.log('[Content Script] ✅ Using URL station:', urlStation);
-          } else {
-            selectedStation = "1";
-
-            // Save default to both storages
-            localStorage.setItem(STATION_STORAGE_KEY, "1");
-            chrome.storage.local.set({ [STATION_STORAGE_KEY]: "1" });
-
-            console.log('[Content Script] ⚠️ Using default: 1');
-          }
-        }
-
+    // STEP 2: Read Chrome storage
+    chrome.storage.local.get([STATION_STORAGE_KEY], async (result) => {
+      if (chrome.runtime.lastError) {
+        console.error('[Content Script] ❌ Chrome storage error:', chrome.runtime.lastError);
+        
+        // Fallback to localStorage or URL
+        const urlStation = new URL(window.location.href).searchParams.get('station');
+        const finalStation = localStorageStation || urlStation || "1";
+        
+        selectedStation = finalStation;
         stationLoadedFromStorage = true;
-        console.log('[Content Script] ✅ Final station:', selectedStation);
-        resolve(selectedStation);
-      });
-    } catch (error) {
-      console.error('[Content Script] ❌ Exception:', error);
-
-      // Final fallback to localStorage
-      if (localStorageStation) {
-        selectedStation = localStorageStation;
-      } else {
-        selectedStation = "1";
+        console.log('[Content Script] ✅ Using fallback station:', finalStation);
+        resolve(finalStation);
+        return;
       }
 
+      const chromeStation = result[STATION_STORAGE_KEY];
+      console.log('[Content Script] 🔐 Chrome storage station:', chromeStation);
+
+      let finalStation = "1";
+
+      // PRIORITY ORDER:
+      // 1. Chrome storage (most reliable for extension)
+      // 2. localStorage (might be set by webapp)
+      // 3. URL parameter
+      // 4. Default to "1"
+
+      if (chromeStation) {
+        finalStation = String(chromeStation);
+        console.log('[Content Script] ✅ Using Chrome storage:', finalStation);
+      } else if (localStorageStation) {
+        finalStation = localStorageStation;
+        console.log('[Content Script] ✅ Using localStorage:', finalStation);
+      } else {
+        const urlStation = new URL(window.location.href).searchParams.get('station');
+        if (urlStation) {
+          finalStation = urlStation;
+          console.log('[Content Script] ✅ Using URL station:', finalStation);
+        } else {
+          console.log('[Content Script] ⚠️ Using default: 1');
+        }
+      }
+
+      // CRITICAL: Sync to BOTH storages immediately
+      try {
+        localStorage.setItem(STATION_STORAGE_KEY, finalStation);
+        console.log('[Content Script] ✅ Synced to localStorage:', finalStation);
+
+        await new Promise((resolveSync) => {
+          chrome.storage.local.set({
+            [STATION_STORAGE_KEY]: finalStation
+          }, () => {
+            if (!chrome.runtime.lastError) {
+              console.log('[Content Script] ✅ Synced to Chrome storage:', finalStation);
+            }
+            resolveSync();
+          });
+        });
+      } catch (error) {
+        console.error('[Content Script] ❌ Error syncing station:', error);
+      }
+
+      selectedStation = finalStation;
       stationLoadedFromStorage = true;
+      console.log('[Content Script] ✅ Final station:', selectedStation);
       resolve(selectedStation);
-    }
+    });
   });
 }
+
+chrome.storage.onChanged.addListener((changes, areaName) => {
+  if (areaName === 'local' && changes[STATION_STORAGE_KEY]) {
+    const newStation = changes[STATION_STORAGE_KEY].newValue;
+    console.log('[Content Script] 📡 Station changed in storage:', newStation);
+    
+    selectedStation = String(newStation);
+    localStorage.setItem(STATION_STORAGE_KEY, newStation);
+    
+    // Update iframe if already injected
+    const iframe = document.getElementById('nobstacle-header-iframe');
+    if (iframe && iframe.src.includes('station=')) {
+      const newUrl = iframe.src.replace(/station=[^&]*/, `station=${newStation}`);
+      console.log('[Content Script] 🔄 Reloading iframe with new station');
+      iframe.src = newUrl;
+    }
+  }
+});
 
 function getSupportedMimeType() {
   const types = [
