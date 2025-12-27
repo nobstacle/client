@@ -1,11 +1,9 @@
 import * as React from "react";
 import { SubmitHandler, useForm, Controller } from "react-hook-form";
 import {
-  getTemplateControllerGetImageTemplatesQueryOptions,
   templateControllerGetImageTemplates,
   useCompanyControllerGetCompany,
   useImageTemplateControllerGetImageTags,
-  useTemplateControllerGetImageTemplates,
   useUploadControllerUploadCompanyFile,
 } from "../../../lib/client/api";
 import * as yup from "yup";
@@ -87,12 +85,9 @@ export const CreateImageTemplateForm: React.FC<{
               id: res.sourceId,
             });
 
-            cb(
-              template[0],
-              !!data.tagSelect ||
-              !!imageTags.data?.find(({ tag }) => tag === template[0].tag) ||
-              false,
-            );
+            // Backend now returns isUpdate flag
+            // Use it directly instead of trying to determine it here
+            cb(template[0], res.isUpdate || false);
           }
         },
       },
@@ -112,10 +107,13 @@ export const CreateImageTemplateForm: React.FC<{
     maxCount: 1,
   };
 
-  const tagOptions = imageTags.data?.map((value, index) => ({
-    value: value.tag,
-    label: value.tag,
-  })) || [];
+  // Remove duplicates from tags - use Set to ensure unique values
+  const uniqueTags = [...new Set(imageTags.data?.map(item => item.tag) || [])];
+  
+  const tagOptions = uniqueTags.map((tag) => ({
+    value: tag,
+    label: tag,
+  }));
 
   const languageOptions = languages.map(({ code, name }, index) => ({
     value: code,
