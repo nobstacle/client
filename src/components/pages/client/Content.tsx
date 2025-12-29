@@ -676,6 +676,8 @@ export const Content: React.FC = () => {
     setIsTablet(isTabletDevice);
   }, []);
 
+  console.info("messageStore.receivedTypemessageStore.receivedType",messageStore.receivedType);
+  
   useEffect(() => {
     if (!messageStore.receivedType) {
       if (chatBoxRef.current) {

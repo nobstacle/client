@@ -442,6 +442,8 @@ export const SocketContextProvider = ({
       return;
     }
 
+    console.info("🚀 Emitting send-template with data:", data);
+    
     if (!socketClient.connected) {
       socketClient.connect();
 
