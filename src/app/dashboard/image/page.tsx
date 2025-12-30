@@ -15,7 +15,7 @@ import { useSession } from "next-auth/react";
 import { PlusIcon } from "../../../components/icons/PlusIcon";
 import useTemplateStore from "../../../lib/zustand/store/templateStore";
 import { useHasHydrated } from "../../../hooks/useHydrated";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { GetImageTemplateRes } from "../../../lib/client/model";
 import { UpdateImageTemplateForm } from "../../../components/pages/dashboard/UpdateImageTemplateForm";
 import { SearchTemplateForm } from "../../../components/pages/dashboard/SearchTemplateForm";
@@ -53,11 +53,56 @@ export default function ImageDashboard() {
   const { data: companyData } = useCompanyControllerGetCompany();
   const { data: userData } = useSession();
 
+  // Get current language
+  const currentLang = params.get("lang") || companyData?.defaultLangCode || "en";
+
+  // Filter images to show only one per tag based on current language
+  const filteredImagesByLanguage = useMemo(() => {
+    const imagesSource = searchImages.length > 0 ? searchImages : images;
+    
+    // Group images by tag
+    const groupedByTag = imagesSource.reduce((acc, image) => {
+      if (!acc[image.tag]) {
+        acc[image.tag] = [];
+      }
+      acc[image.tag].push(image);
+      return acc;
+    }, {} as Record<string, GetImageTemplateRes[]>);
+
+    // For each tag, select the appropriate image based on language
+    const filteredImages: GetImageTemplateRes[] = [];
+    
+    Object.values(groupedByTag).forEach((tagImages) => {
+      if (tagImages.length === 1) {
+        // Only one image for this tag, include it
+        filteredImages.push(tagImages[0]);
+      } else {
+        // Multiple images for this tag, find one matching current language
+        const matchingLangImage = tagImages.find(img => 
+          img.langCode.includes(currentLang)
+        );
+        
+        if (matchingLangImage) {
+          filteredImages.push(matchingLangImage);
+        } else {
+          // If no match for current language, use the first one or default language
+          const defaultLangImage = tagImages.find(img =>
+            img.langCode.includes(companyData?.defaultLangCode || "en")
+          );
+          filteredImages.push(defaultLangImage || tagImages[0]);
+        }
+      }
+    });
+
+    // Sort by order to maintain original ordering
+    return filteredImages.sort((a, b) => a.order - b.order);
+  }, [images, searchImages, currentLang, companyData?.defaultLangCode]);
+
   const sendTemplate = (id: number, isAvailable: boolean, ext: string) => {
     emitSendTemplate({
       refId: id,
       langCode: isAvailable
-        ? params.get("lang") || companyData?.defaultLangCode || "en"
+        ? currentLang
         : companyData?.defaultLangCode || "en",
       refType: ChatType.Image,
       station: Number(params.get("station") ?? 1),
@@ -69,7 +114,7 @@ export default function ImageDashboard() {
     emitSendTemplate({
       refId: id,
       langCode: isAvailable
-        ? params.get("lang") || companyData?.defaultLangCode || "en"
+        ? currentLang
         : companyData?.defaultLangCode || "en",
       refType: ChatType.Image,
       station: Number(params.get("station") ?? 1),
@@ -118,14 +163,12 @@ export default function ImageDashboard() {
     setResource(shallow);
   };
 
-  const imagesSource = searchImages.length > 0 ? searchImages : images;
-
   if (isHydrated)
     return (
       <div
         className={`flex h-full w-full flex-col justify-start gap-4 overflow-y-auto ${isMobile ? 'p-2' : 'p-6'}`}>
         <div className="customSearchWrapper">
-          {imagesSource.length > 0 && (
+          {filteredImagesByLanguage.length > 0 && (
             <Card className="w-full customCards">
               <div className="searchInputWidth">
                 <SearchTemplateForm
@@ -165,46 +208,24 @@ export default function ImageDashboard() {
                 }
               }}
             />
-            {/* <CreateImageTemplateForm
-              cb={(image, isUpdate) => {
-                console.info("image created:", image);
-                handleClose();
-                if (!isUpdate) {
-                  images.push(image);
-                  setImages(images);
-                } else {
-                  const shallow = [...images];
-                  const index = shallow.findIndex(({ id }) => id === image.id);
-                  shallow[index]["url"] = image.url;
-                  shallow[index]["langCode"] = image.langCode;
-                  setImages(shallow);
-                }
-              }}
-            /> */}
           </Modal>
         )}
         <div id="card-wrapper" className="flex h-full w-full">
           <div className="flex w-full flex-wrap content-start gap-4">
-            <DraggableCardContainer items={imagesSource} sort={sortImages}>
-              {imagesSource?.map((val) => (
+            <DraggableCardContainer items={filteredImagesByLanguage} sort={sortImages}>
+              {filteredImagesByLanguage?.map((val) => (
                 <DraggableCardItem
                   onUpdate={() => onUpdateCard(val)}
                   isAdmin={userData?.user.Roles?.includes("Admin")}
                   onDelete={() => onDeleteCard(val.id)}
-                  onQrCodeClick={() => handleQrCodeClick(val.id, val.ext, val.tag, val.langCode.includes(params.get("lang") || companyData?.defaultLangCode || ""),)}
+                  onQrCodeClick={() => handleQrCodeClick(val.id, val.ext, val.tag, val.langCode.includes(currentLang))}
                   tag={val.tag}
                   key={val.id}
-                  isAvailable={val.langCode.includes(
-                    params.get("lang") || companyData?.defaultLangCode || "",
-                  )}
+                  isAvailable={val.langCode.includes(currentLang)}
                   sendOnClick={() =>
                     sendTemplate(
                       val.id,
-                      val.langCode.includes(
-                        params.get("lang") ||
-                        companyData?.defaultLangCode ||
-                        "",
-                      ),
+                      val.langCode.includes(currentLang),
                       val.ext,
                     )
                   }
@@ -231,9 +252,7 @@ export default function ImageDashboard() {
                 isOpen={updateIsOpen}
               >
                 <UpdateImageTemplateForm
-                  defaultLangCode={
-                    params.get("lang") || companyData?.defaultLangCode || "en"
-                  }
+                  defaultLangCode={currentLang}
                   sourceId={editTemplate?.id}
                   tag={editTemplate.tag}
                   cb={(image) => {

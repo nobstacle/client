@@ -15,7 +15,7 @@ import { useSession } from "next-auth/react";
 import { PlusIcon } from "../../../components/icons/PlusIcon";
 import useTemplateStore from "../../../lib/zustand/store/templateStore";
 import { useHasHydrated } from "../../../hooks/useHydrated";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { GetVideoTemplateRes } from "../../../lib/client/model";
 import { UpdateVideoTemplateForm } from "../../../components/pages/dashboard/UpdateVideoTemplateForm";
 import { useSearchTemplate } from "../../../hooks/useSearchTemplate";
@@ -61,11 +61,56 @@ export default function VideoDashboard() {
   const { data: companyData } = useCompanyControllerGetCompany();
   const { data: userData } = useSession();
 
+  // Get current language
+  const currentLang = params.get("lang") || companyData?.defaultLangCode || "en";
+
+  // Filter videos to show only one per tag based on current language
+  const filteredVideosByLanguage = useMemo(() => {
+    const videosSource = searchVideos.length > 0 ? searchVideos : videos;
+    
+    // Group videos by tag
+    const groupedByTag = videosSource.reduce((acc, video) => {
+      if (!acc[video.tag]) {
+        acc[video.tag] = [];
+      }
+      acc[video.tag].push(video);
+      return acc;
+    }, {} as Record<string, GetVideoTemplateRes[]>);
+
+    // For each tag, select the appropriate video based on language
+    const filteredVideos: GetVideoTemplateRes[] = [];
+    
+    Object.values(groupedByTag).forEach((tagVideos) => {
+      if (tagVideos.length === 1) {
+        // Only one video for this tag, include it
+        filteredVideos.push(tagVideos[0]);
+      } else {
+        // Multiple videos for this tag, find one matching current language
+        const matchingLangVideo = tagVideos.find(vid => 
+          vid.langCode.includes(currentLang)
+        );
+        
+        if (matchingLangVideo) {
+          filteredVideos.push(matchingLangVideo);
+        } else {
+          // If no match for current language, use the first one or default language
+          const defaultLangVideo = tagVideos.find(vid =>
+            vid.langCode.includes(companyData?.defaultLangCode || "en")
+          );
+          filteredVideos.push(defaultLangVideo || tagVideos[0]);
+        }
+      }
+    });
+
+    // Sort by order to maintain original ordering
+    return filteredVideos.sort((a, b) => a.order - b.order);
+  }, [videos, searchVideos, currentLang, companyData?.defaultLangCode]);
+
   const sendTemplate = (id: number, isAvailable: boolean, ext: string) => {
     emitSendTemplate({
       refId: id,
       langCode: isAvailable
-        ? params.get("lang") || companyData?.defaultLangCode || "en"
+        ? currentLang
         : companyData?.defaultLangCode || "en",
       refType: ChatType.Video,
       station: Number(params.get("station") ?? 1),
@@ -77,7 +122,7 @@ export default function VideoDashboard() {
     emitSendTemplate({
       refId: id,
       langCode: isAvailable
-        ? params.get("lang") || companyData?.defaultLangCode || "en"
+        ? currentLang
         : companyData?.defaultLangCode || "en",
       refType: ChatType.Video,
       station: Number(params.get("station") ?? 1),
@@ -123,13 +168,11 @@ export default function VideoDashboard() {
     setResource(shallow);
   };
 
-  const videosSource = searchVideos.length > 0 ? searchVideos : videos;
-
   if (isHydrated)
     return (
       <div
         className={`flex h-full w-full flex-col justify-start gap-4 overflow-y-auto ${isMobile ? 'p-2' : 'p-6'}`}>
-        {videosSource.length > 0 && (
+        {filteredVideosByLanguage.length > 0 && (
           <Card className="w-full customCards">
             <div className="searchInputWidth">
               <SearchTemplateForm
@@ -165,26 +208,20 @@ export default function VideoDashboard() {
         )}
         <div id="card-wrapper" className="flex h-full w-full">
           <div className="flex w-full flex-wrap content-start gap-4">
-            <DraggableCardContainer items={videosSource} sort={sortVideos}>
-              {videosSource?.map((val) => (
+            <DraggableCardContainer items={filteredVideosByLanguage} sort={sortVideos}>
+              {filteredVideosByLanguage?.map((val) => (
                 <DraggableCardItem
                   onDelete={() => onDeleteCard(val.id)}
                   isAdmin={userData?.user.Roles?.includes("Admin")}
                   onUpdate={() => onUpdateCard(val)}
-                  onQrCodeClick={() => handleQrCodeClick(val.id, val.ext, val.tag, val.langCode.includes(params.get("lang") || companyData?.defaultLangCode || ""),)}
+                  onQrCodeClick={() => handleQrCodeClick(val.id, val.ext, val.tag, val.langCode.includes(currentLang))}
                   key={val.id}
                   tag={val.tag}
-                  isAvailable={val.langCode.includes(
-                    params.get("lang") || companyData?.defaultLangCode || "",
-                  )}
+                  isAvailable={val.langCode.includes(currentLang)}
                   sendOnClick={() =>
                     sendTemplate(
                       val.id,
-                      val.langCode.includes(
-                        params.get("lang") ||
-                        companyData?.defaultLangCode ||
-                        "",
-                      ),
+                      val.langCode.includes(currentLang),
                       val.ext,
                     )
                   }
@@ -218,9 +255,7 @@ export default function VideoDashboard() {
                 isOpen={updateIsOpen}
               >
                 <UpdateVideoTemplateForm
-                  defaultLangCode={
-                    params.get("lang") || companyData?.defaultLangCode || "en"
-                  }
+                  defaultLangCode={currentLang}
                   sourceId={editTemplate?.id}
                   tag={editTemplate.tag}
                   cb={(image) => {
