@@ -55,11 +55,14 @@ export default function MapsDashboard() {
   const { data: companyData } = useCompanyControllerGetCompany();
   const { data: userData } = useSession();
 
+  // Get current selected language
+  const selectedLang = params.get("lang") || companyData?.defaultLangCode || "en";
+
   const sendTemplate = (id: number, isAvailable: boolean) => {
     emitSendTemplate({
       refId: id,
       langCode: isAvailable
-        ? params.get("lang") || companyData?.defaultLangCode || "en"
+        ? selectedLang
         : companyData?.defaultLangCode || "en",
       refType: ChatType.Map,
       station: Number(params.get("station") ?? 1),
@@ -84,14 +87,12 @@ export default function MapsDashboard() {
   };
 
   const sortMaps = (item1: UniqueIdentifier, item2: UniqueIdentifier) => {
-    const setResource = searchMaps.length > 0 ? setSearchMaps : setMaps;
-    const mapsResource = searchMaps.length > 0 ? searchMaps : maps;
+    // Always use the main maps array for sorting, not searchMaps
+    const oldIndex = maps.findIndex((item) => item.id === item1);
+    const newIndex = maps.findIndex((item) => item.id === item2);
 
-    const oldIndex = mapsResource.findIndex((item) => item.id === item1);
-    const newIndex = mapsResource.findIndex((item) => item.id === item2);
-
-    let shallow = [...mapsResource];
-    shallow = arrayMove(mapsResource, oldIndex, newIndex);
+    let shallow = [...maps];
+    shallow = arrayMove(maps, oldIndex, newIndex);
 
     shallow.forEach(({ id }, index) => {
       updateMapTemplateOrder.mutate({
@@ -100,13 +101,13 @@ export default function MapsDashboard() {
       });
     });
 
-    setResource(shallow);
+    setMaps(shallow);
   };
 
   const sendMapTemplateMessage = (origin: string, destination: string) => {
     emitSendTemplate({
       refId: 1,
-      langCode: params.get("lang") || companyData?.defaultLangCode || "en",
+      langCode: selectedLang,
       refType: "MapTemplateMessage",
       station: Number(params.get("station") ?? 1),
       directContent: origin,
@@ -118,7 +119,7 @@ export default function MapsDashboard() {
     emitSendTemplate({
       refId: id,
       langCode: isAvailable
-        ? params.get("lang") || companyData?.defaultLangCode || "en"
+        ? selectedLang
         : companyData?.defaultLangCode || "en",
       refType: 'MapTemplateQr',
       station: Number(params.get("station") ?? 1),
@@ -130,7 +131,7 @@ export default function MapsDashboard() {
   const onsendQr = (origin: string, destination: string) => {
     emitSendTemplate({
       refId: 1,
-      langCode: params.get("lang") || companyData?.defaultLangCode || "en",
+      langCode: selectedLang,
       refType: "MapTemplateQr",
       station: Number(params.get("station") ?? 1),
       directContent: origin,
@@ -138,6 +139,7 @@ export default function MapsDashboard() {
     });
   };
 
+  // Show search results if searching, otherwise show all maps
   const mapsSource = searchMaps.length > 0 ? searchMaps : maps;
 
   if (hasHydrated)
@@ -184,43 +186,37 @@ export default function MapsDashboard() {
         <div id="card-wrapper" className="mt-5 flex h-full w-full   ">
           <div className="flex w-full flex-wrap content-start gap-4">
             <DraggableCardContainer items={mapsSource} sort={sortMaps}>
-              {mapsSource?.map((val) => (
-                <DraggableCardItem
-                  id={val.id}
-                  isAdmin={userData?.user.Roles?.includes("Admin")}
-                  key={val.id}
-                  tag={val.tag}
-                  onUpdate={() => onUpdateCard(val)}
-                  onDelete={() => {
-                    onDeleteCard(val.id);
-                  }}
-                  onQrCodeClick={() => handleQrCodeClick(
-                    val.id,
-                    val.origin,
-                    val.destination,
-                    val.tag,
-                    val.langCode.includes(params.get("lang") || companyData?.defaultLangCode || "")
-                  )}
-                  sendOnClick={() =>
-                    sendTemplate(
+              {mapsSource?.map((val) => {
+                // Check if template is available in selected language
+                const isAvailable = val.langCode.includes(selectedLang);
+                
+                return (
+                  <DraggableCardItem
+                    id={val.id}
+                    isAdmin={userData?.user.Roles?.includes("Admin")}
+                    key={val.id}
+                    tag={val.tag}
+                    onUpdate={() => onUpdateCard(val)}
+                    onDelete={() => {
+                      onDeleteCard(val.id);
+                    }}
+                    onQrCodeClick={() => handleQrCodeClick(
                       val.id,
-                      val.langCode.includes(
-                        params.get("lang") ||
-                        companyData?.defaultLangCode ||
-                        "",
-                      ),
-                    )
-                  }
-                  isAvailable={val.langCode.includes(
-                    params.get("lang") || companyData?.defaultLangCode || "",
-                  )}
-                  isDraggable={searchMaps.length === 0}
-                >
-                  <div className="flex w-full items-center justify-center">
-                    <MapIcon />
-                  </div>
-                </DraggableCardItem>
-              ))}
+                      val.origin,
+                      val.destination,
+                      val.tag,
+                      isAvailable
+                    )}
+                    sendOnClick={() => sendTemplate(val.id, isAvailable)}
+                    isAvailable={isAvailable}
+                    isDraggable={searchMaps.length === 0}
+                  >
+                    <div className="flex w-full items-center justify-center">
+                      <MapIcon />
+                    </div>
+                  </DraggableCardItem>
+                );
+              })}
             </DraggableCardContainer>
 
             {editTemplate && (
@@ -230,9 +226,7 @@ export default function MapsDashboard() {
                 isOpen={updateIsOpen}
               >
                 <UpdateMapTemplateForm
-                  defaultLangCode={
-                    params.get("lang") || companyData?.defaultLangCode || "en"
-                  }
+                  defaultLangCode={selectedLang}
                   sourceId={editTemplate?.id}
                   tag={editTemplate.tag}
                   cb={(template) => {

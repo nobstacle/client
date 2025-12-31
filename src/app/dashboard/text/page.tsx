@@ -54,11 +54,14 @@ export default function Dashboard() {
   const { data: companyData } = useCompanyControllerGetCompany();
   const { data: userData } = useSession();
 
+  // Get current selected language
+  const selectedLang = params.get("lang") || companyData?.defaultLangCode || "en";
+
   const sendTemplate = (id: number, isAvailable: boolean) => {
     emitSendTemplate({
       refId: id,
       langCode: isAvailable
-        ? params.get("lang") || companyData?.defaultLangCode || "en"
+        ? selectedLang
         : companyData?.defaultLangCode || "en",
       refType: ChatType.Text,
       station: Number(params.get("station") ?? 1),
@@ -68,7 +71,7 @@ export default function Dashboard() {
   const sendTextTemplateMessage = (content: string) => {
     emitSendTemplate({
       refId: 1,
-      langCode: params.get("lang") || companyData?.defaultLangCode || "en",
+      langCode: selectedLang,
       refType: "TextTemplateMessage",
       station: Number(params.get("station") ?? 1),
       directContent: content,
@@ -93,14 +96,12 @@ export default function Dashboard() {
   };
 
   const sortTexts = (item1: UniqueIdentifier, item2: UniqueIdentifier) => {
-    const setResource = searchTexts.length > 0 ? setSearchTexts : setTexts;
-    const textsResource = searchTexts.length > 0 ? searchTexts : texts;
+    // Always use the main texts array for sorting, not searchTexts
+    const oldIndex = texts.findIndex((item) => item.id === item1);
+    const newIndex = texts.findIndex((item) => item.id === item2);
 
-    const oldIndex = textsResource.findIndex((item) => item.id === item1);
-    const newIndex = textsResource.findIndex((item) => item.id === item2);
-
-    let shallow = [...textsResource];
-    shallow = arrayMove(textsResource, oldIndex, newIndex);
+    let shallow = [...texts];
+    shallow = arrayMove(texts, oldIndex, newIndex);
 
     shallow.forEach(({ id }, index) => {
       updateTextTemplateOrder.mutate({
@@ -109,9 +110,10 @@ export default function Dashboard() {
       });
     });
 
-    setResource(shallow);
+    setTexts(shallow);
   };
 
+  // Show search results if searching, otherwise show all texts
   const textsSource = searchTexts.length > 0 ? searchTexts : texts;
 
   if (hasHydrated)
@@ -155,35 +157,29 @@ export default function Dashboard() {
           <div id="card-wrapper" className="mt-5 flex h-full w-full   ">
             <div className="flex w-full flex-wrap content-start gap-4">
               <DraggableCardContainer items={textsSource} sort={sortTexts}>
-                {textsSource?.map((val) => (
-                  <DraggableCardItem
-                    id={val.id}
-                    isAdmin={userData?.user.Roles?.includes("Admin")}
-                    key={val.id}
-                    tag={val.tag}
-                    onUpdate={() => onUpdateCard(val)}
-                    onDelete={() => {
-                      onDeleteCard(val.id);
-                    }}
-                    sendOnClick={() =>
-                      sendTemplate(
-                        val.id,
-                        val.langCode.includes(
-                          params.get("lang") ||
-                          companyData?.defaultLangCode ||
-                          "",
-                        ),
-                      )
-                    }
-                    isAvailable={val.langCode.includes(
-                      params.get("lang") || companyData?.defaultLangCode || "",
-                    )}
-                    isDraggable={searchTexts.length === 0}
-                     type="text"
-                  >
-                    <p className="line-clamp-5 text-sm ">{val.content ?? ""}</p>
-                  </DraggableCardItem>
-                ))}
+                {textsSource?.map((val) => {
+                  // Check if template is available in selected language
+                  const isAvailable = val.langCode.includes(selectedLang);
+                  
+                  return (
+                    <DraggableCardItem
+                      id={val.id}
+                      isAdmin={userData?.user.Roles?.includes("Admin")}
+                      key={val.id}
+                      tag={val.tag}
+                      onUpdate={() => onUpdateCard(val)}
+                      onDelete={() => {
+                        onDeleteCard(val.id);
+                      }}
+                      sendOnClick={() => sendTemplate(val.id, isAvailable)}
+                      isAvailable={isAvailable}
+                      isDraggable={searchTexts.length === 0}
+                      type="text"
+                    >
+                      <p className="line-clamp-5 text-sm ">{val.content ?? ""}</p>
+                    </DraggableCardItem>
+                  );
+                })}
               </DraggableCardContainer>
             </div>
 
@@ -194,9 +190,7 @@ export default function Dashboard() {
                 isOpen={updateIsOpen}
               >
                 <UpdateTextTemplateForm
-                  defaultLangCode={
-                    params.get("lang") || companyData?.defaultLangCode || "en"
-                  }
+                  defaultLangCode={selectedLang}
                   sourceId={editTemplate?.id}
                   tag={editTemplate.tag}
                   cb={(template) => {

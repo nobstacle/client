@@ -56,8 +56,9 @@ export default function ImageDashboard() {
   // Get current language
   const currentLang = params.get("lang") || companyData?.defaultLangCode || "en";
 
-  // Filter images to show only one per tag based on current language
-  const filteredImagesByLanguage = useMemo(() => {
+  // Group images by tag and show the default language version
+  // but track availability for the current language
+  const displayedImagesWithAvailability = useMemo(() => {
     const imagesSource = searchImages.length > 0 ? searchImages : images;
     
     // Group images by tag
@@ -69,33 +70,29 @@ export default function ImageDashboard() {
       return acc;
     }, {} as Record<string, GetImageTemplateRes[]>);
 
-    // For each tag, select the appropriate image based on language
-    const filteredImages: GetImageTemplateRes[] = [];
+    // For each tag, always show the default language version
+    // but check if current language is available
+    const displayImages: (GetImageTemplateRes & { isAvailableInCurrentLang: boolean })[] = [];
     
     Object.values(groupedByTag).forEach((tagImages) => {
-      if (tagImages.length === 1) {
-        // Only one image for this tag, include it
-        filteredImages.push(tagImages[0]);
-      } else {
-        // Multiple images for this tag, find one matching current language
-        const matchingLangImage = tagImages.find(img => 
-          img.langCode.includes(currentLang)
-        );
-        
-        if (matchingLangImage) {
-          filteredImages.push(matchingLangImage);
-        } else {
-          // If no match for current language, use the first one or default language
-          const defaultLangImage = tagImages.find(img =>
-            img.langCode.includes(companyData?.defaultLangCode || "en")
-          );
-          filteredImages.push(defaultLangImage || tagImages[0]);
-        }
-      }
+      // Always use default language image for display
+      const defaultLangImage = tagImages.find(img =>
+        img.langCode.includes(companyData?.defaultLangCode || "en")
+      ) || tagImages[0];
+      
+      // Check if current language is available for this tag
+      const isAvailableInCurrentLang = tagImages.some(img => 
+        img.langCode.includes(currentLang)
+      );
+      
+      displayImages.push({
+        ...defaultLangImage,
+        isAvailableInCurrentLang
+      });
     });
 
     // Sort by order to maintain original ordering
-    return filteredImages.sort((a, b) => a.order - b.order);
+    return displayImages.sort((a, b) => a.order - b.order);
   }, [images, searchImages, currentLang, companyData?.defaultLangCode]);
 
   const sendTemplate = (id: number, isAvailable: boolean, ext: string) => {
@@ -144,23 +141,54 @@ export default function ImageDashboard() {
   };
 
   const sortImages = (item1: UniqueIdentifier, item2: UniqueIdentifier) => {
-    const setResource = searchImages.length > 0 ? setSearchImages : setImages;
-    const imagesResource = searchImages.length > 0 ? searchImages : images;
+    // Always work with the full images array (not filtered/displayed array)
+    const oldIndex = images.findIndex((item) => item.id === item1);
+    const newIndex = images.findIndex((item) => item.id === item2);
 
-    const oldIndex = imagesResource.findIndex((item) => item.id === item1);
-    const newIndex = imagesResource.findIndex((item) => item.id === item2);
+    if (oldIndex === -1 || newIndex === -1) {
+      console.error('Could not find items for sorting');
+      return;
+    }
 
-    let shallow = [...imagesResource];
-    shallow = arrayMove(imagesResource, oldIndex, newIndex);
+    // Create a shallow copy and move the item
+    let reorderedImages = arrayMove(images, oldIndex, newIndex);
 
-    shallow.forEach(({ id }, index) => {
+    // Group by tag to update order properly
+    const groupedByTag = reorderedImages.reduce((acc, image) => {
+      if (!acc[image.tag]) {
+        acc[image.tag] = [];
+      }
+      acc[image.tag].push(image);
+      return acc;
+    }, {} as Record<string, GetImageTemplateRes[]>);
+
+    // Get unique tags in the new order
+    const uniqueTags = reorderedImages
+      .map(img => img.tag)
+      .filter((tag, index, self) => self.indexOf(tag) === index);
+
+    // Rebuild the array with all language variants maintaining the new tag order
+    const finalOrderedImages: GetImageTemplateRes[] = [];
+    let orderCounter = 1;
+
+    uniqueTags.forEach(tag => {
+      const tagImages = groupedByTag[tag];
+      tagImages.forEach(img => {
+        finalOrderedImages.push({ ...img, order: orderCounter });
+      });
+      orderCounter++;
+    });
+
+    // Update the order in the backend
+    finalOrderedImages.forEach(({ id, order }) => {
       updateImageTemplateOrder.mutate({
-        data: { order: index + 1 },
+        data: { order },
         id,
       });
     });
 
-    setResource(shallow);
+    // Update the state
+    setImages(finalOrderedImages);
   };
 
   if (isHydrated)
@@ -168,7 +196,7 @@ export default function ImageDashboard() {
       <div
         className={`flex h-full w-full flex-col justify-start gap-4 overflow-y-auto ${isMobile ? 'p-2' : 'p-6'}`}>
         <div className="customSearchWrapper">
-          {filteredImagesByLanguage.length > 0 && (
+          {displayedImagesWithAvailability.length > 0 && (
             <Card className="w-full customCards">
               <div className="searchInputWidth">
                 <SearchTemplateForm
@@ -212,20 +240,20 @@ export default function ImageDashboard() {
         )}
         <div id="card-wrapper" className="flex h-full w-full">
           <div className="flex w-full flex-wrap content-start gap-4">
-            <DraggableCardContainer items={filteredImagesByLanguage} sort={sortImages}>
-              {filteredImagesByLanguage?.map((val) => (
+            <DraggableCardContainer items={displayedImagesWithAvailability} sort={sortImages}>
+              {displayedImagesWithAvailability?.map((val) => (
                 <DraggableCardItem
                   onUpdate={() => onUpdateCard(val)}
                   isAdmin={userData?.user.Roles?.includes("Admin")}
                   onDelete={() => onDeleteCard(val.id)}
-                  onQrCodeClick={() => handleQrCodeClick(val.id, val.ext, val.tag, val.langCode.includes(currentLang))}
+                  onQrCodeClick={() => handleQrCodeClick(val.id, val.ext, val.tag, val.isAvailableInCurrentLang)}
                   tag={val.tag}
                   key={val.id}
-                  isAvailable={val.langCode.includes(currentLang)}
+                  isAvailable={val.isAvailableInCurrentLang}
                   sendOnClick={() =>
                     sendTemplate(
                       val.id,
-                      val.langCode.includes(currentLang),
+                      val.isAvailableInCurrentLang,
                       val.ext,
                     )
                   }

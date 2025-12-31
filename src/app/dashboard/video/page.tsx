@@ -64,8 +64,9 @@ export default function VideoDashboard() {
   // Get current language
   const currentLang = params.get("lang") || companyData?.defaultLangCode || "en";
 
-  // Filter videos to show only one per tag based on current language
-  const filteredVideosByLanguage = useMemo(() => {
+  // Group videos by tag and show the default language version
+  // but track availability for the current language
+  const displayedVideosWithAvailability = useMemo(() => {
     const videosSource = searchVideos.length > 0 ? searchVideos : videos;
     
     // Group videos by tag
@@ -77,33 +78,29 @@ export default function VideoDashboard() {
       return acc;
     }, {} as Record<string, GetVideoTemplateRes[]>);
 
-    // For each tag, select the appropriate video based on language
-    const filteredVideos: GetVideoTemplateRes[] = [];
+    // For each tag, always show the default language version
+    // but check if current language is available
+    const displayVideos: (GetVideoTemplateRes & { isAvailableInCurrentLang: boolean })[] = [];
     
     Object.values(groupedByTag).forEach((tagVideos) => {
-      if (tagVideos.length === 1) {
-        // Only one video for this tag, include it
-        filteredVideos.push(tagVideos[0]);
-      } else {
-        // Multiple videos for this tag, find one matching current language
-        const matchingLangVideo = tagVideos.find(vid => 
-          vid.langCode.includes(currentLang)
-        );
-        
-        if (matchingLangVideo) {
-          filteredVideos.push(matchingLangVideo);
-        } else {
-          // If no match for current language, use the first one or default language
-          const defaultLangVideo = tagVideos.find(vid =>
-            vid.langCode.includes(companyData?.defaultLangCode || "en")
-          );
-          filteredVideos.push(defaultLangVideo || tagVideos[0]);
-        }
-      }
+      // Always use default language video for display
+      const defaultLangVideo = tagVideos.find(vid =>
+        vid.langCode.includes(companyData?.defaultLangCode || "en")
+      ) || tagVideos[0];
+      
+      // Check if current language is available for this tag
+      const isAvailableInCurrentLang = tagVideos.some(vid => 
+        vid.langCode.includes(currentLang)
+      );
+      
+      displayVideos.push({
+        ...defaultLangVideo,
+        isAvailableInCurrentLang
+      });
     });
 
     // Sort by order to maintain original ordering
-    return filteredVideos.sort((a, b) => a.order - b.order);
+    return displayVideos.sort((a, b) => a.order - b.order);
   }, [videos, searchVideos, currentLang, companyData?.defaultLangCode]);
 
   const sendTemplate = (id: number, isAvailable: boolean, ext: string) => {
@@ -143,36 +140,67 @@ export default function VideoDashboard() {
     );
   };
 
-  const onUpdateCard = (image: GetVideoTemplateRes) => {
-    setEditTemplate(image);
+  const onUpdateCard = (video: GetVideoTemplateRes) => {
+    setEditTemplate(video);
     updateHandleOpen();
   };
 
   const sortVideos = (item1: UniqueIdentifier, item2: UniqueIdentifier) => {
-    const setResource = searchVideos.length > 0 ? setSearchVideos : setVideos;
-    const videosResources = searchVideos.length > 0 ? searchVideos : videos;
+    // Always work with the full videos array (not filtered/displayed array)
+    const oldIndex = videos.findIndex((item) => item.id === item1);
+    const newIndex = videos.findIndex((item) => item.id === item2);
 
-    const oldIndex = videosResources.findIndex((item) => item.id === item1);
-    const newIndex = videosResources.findIndex((item) => item.id === item2);
+    if (oldIndex === -1 || newIndex === -1) {
+      console.error('Could not find items for sorting');
+      return;
+    }
 
-    let shallow = [...videosResources];
-    shallow = arrayMove(videosResources, oldIndex, newIndex);
+    // Create a shallow copy and move the item
+    let reorderedVideos = arrayMove(videos, oldIndex, newIndex);
 
-    shallow.forEach(({ id }, index) => {
+    // Group by tag to update order properly
+    const groupedByTag = reorderedVideos.reduce((acc, video) => {
+      if (!acc[video.tag]) {
+        acc[video.tag] = [];
+      }
+      acc[video.tag].push(video);
+      return acc;
+    }, {} as Record<string, GetVideoTemplateRes[]>);
+
+    // Get unique tags in the new order
+    const uniqueTags = reorderedVideos
+      .map(vid => vid.tag)
+      .filter((tag, index, self) => self.indexOf(tag) === index);
+
+    // Rebuild the array with all language variants maintaining the new tag order
+    const finalOrderedVideos: GetVideoTemplateRes[] = [];
+    let orderCounter = 1;
+
+    uniqueTags.forEach(tag => {
+      const tagVideos = groupedByTag[tag];
+      tagVideos.forEach(vid => {
+        finalOrderedVideos.push({ ...vid, order: orderCounter });
+      });
+      orderCounter++;
+    });
+
+    // Update the order in the backend
+    finalOrderedVideos.forEach(({ id, order }) => {
       updateVideoTemplateOrder.mutate({
-        data: { order: index + 1 },
+        data: { order },
         id,
       });
     });
 
-    setResource(shallow);
+    // Update the state
+    setVideos(finalOrderedVideos);
   };
 
   if (isHydrated)
     return (
       <div
         className={`flex h-full w-full flex-col justify-start gap-4 overflow-y-auto ${isMobile ? 'p-2' : 'p-6'}`}>
-        {filteredVideosByLanguage.length > 0 && (
+        {displayedVideosWithAvailability.length > 0 && (
           <Card className="w-full customCards">
             <div className="searchInputWidth">
               <SearchTemplateForm
@@ -208,20 +236,20 @@ export default function VideoDashboard() {
         )}
         <div id="card-wrapper" className="flex h-full w-full">
           <div className="flex w-full flex-wrap content-start gap-4">
-            <DraggableCardContainer items={filteredVideosByLanguage} sort={sortVideos}>
-              {filteredVideosByLanguage?.map((val) => (
+            <DraggableCardContainer items={displayedVideosWithAvailability} sort={sortVideos}>
+              {displayedVideosWithAvailability?.map((val) => (
                 <DraggableCardItem
                   onDelete={() => onDeleteCard(val.id)}
                   isAdmin={userData?.user.Roles?.includes("Admin")}
                   onUpdate={() => onUpdateCard(val)}
-                  onQrCodeClick={() => handleQrCodeClick(val.id, val.ext, val.tag, val.langCode.includes(currentLang))}
+                  onQrCodeClick={() => handleQrCodeClick(val.id, val.ext, val.tag, val.isAvailableInCurrentLang)}
                   key={val.id}
                   tag={val.tag}
-                  isAvailable={val.langCode.includes(currentLang)}
+                  isAvailable={val.isAvailableInCurrentLang}
                   sendOnClick={() =>
                     sendTemplate(
                       val.id,
-                      val.langCode.includes(currentLang),
+                      val.isAvailableInCurrentLang,
                       val.ext,
                     )
                   }
@@ -258,15 +286,15 @@ export default function VideoDashboard() {
                   defaultLangCode={currentLang}
                   sourceId={editTemplate?.id}
                   tag={editTemplate.tag}
-                  cb={(image) => {
+                  cb={(video) => {
                     updateHandleClose();
 
                     const shallow = [...videos];
                     const index = shallow.findIndex(
-                      ({ id }) => id === image.id,
+                      ({ id }) => id === video.id,
                     );
-                    shallow[index]["url"] = image.url;
-                    shallow[index]["langCode"] = image.langCode;
+                    shallow[index]["url"] = video.url;
+                    shallow[index]["langCode"] = video.langCode;
 
                     setVideos(shallow);
                   }}

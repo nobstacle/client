@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useSearchParams } from "next/navigation";
@@ -6,8 +7,8 @@ import { useCompanyControllerGetCompany } from "../../../../lib/client/api";
 import { UseFormRegister } from "react-hook-form";
 import { useRouterWithQueryParams } from "../../../../hooks/useRouterWithQueryParams";
 import { useHasHydrated } from "../../../../hooks/useHydrated";
-// import { Spinner } from "../../../Spinner";
 import { useSocketContext } from "../../../../context/SocketContextProvider";
+import { useShortcuts } from "../../../../app/dashboard/ShortcutProvider";
 
 interface LanguagePickerPropsI {
   onChange?: (e: React.ChangeEvent<HTMLSelectElement>) => void;
@@ -50,9 +51,38 @@ export const HeaderLanguagePicker = ({ checkIframe = true }: { checkIframe?: boo
   const params = useSearchParams();
   const { data } = useCompanyControllerGetCompany();
   const isHydrated = useHasHydrated();
+  const { emitSendLangCode } = useSocketContext();
+  
+  // Get language shortcuts to check if selected language exists
+  const { languageShortcuts, addLanguageShortcut } = useShortcuts();
+  
   const headerLangaugePickerDefault =
     params.get("lang") || data?.defaultLangCode || "en";
-  const { emitSendLangCode } = useSocketContext();
+
+  const handleLanguageChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newLang = e.currentTarget.value;
+    
+    // Update URL and emit socket event
+    router.push("lang", newLang);
+    emitSendLangCode({
+      langCode: newLang,
+      station: Number(params.get("station") ?? 1),
+    });
+
+    // Check if the selected language exists in shortcuts
+    const existsInShortcuts = languageShortcuts.some(
+      shortcut => shortcut.value === newLang
+    );
+
+    // If language doesn't exist in shortcuts, add it
+    if (!existsInShortcuts && addLanguageShortcut) {
+      try {
+        await addLanguageShortcut(newLang);
+      } catch (error) {
+        console.error('[HeaderLanguagePicker] Failed to add language shortcut:', error);
+      }
+    }
+  };
 
   if (!isHydrated) return null;
 
@@ -61,14 +91,7 @@ export const HeaderLanguagePicker = ({ checkIframe = true }: { checkIframe?: boo
       name="header-language-picker"
       checkIframe={checkIframe}
       defaultValue={headerLangaugePickerDefault}
-      onChange={(e) => {
-        router.push("lang", e.currentTarget.value);
-
-        emitSendLangCode({
-          langCode: e.currentTarget.value,
-          station: Number(params.get("station") ?? 1),
-        });
-      }}
+      onChange={handleLanguageChange}
     />
   );
 };

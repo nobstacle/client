@@ -1,7 +1,6 @@
 "use client";
 
 import Image from "next/image";
-// import { Button } from "../../../components/Button";
 import Modal from "../../../components/Modal";
 import { useDisclousure } from "../../../hooks/useDisclosure";
 import {
@@ -19,7 +18,7 @@ import useTemplateStore from "../../../lib/zustand/store/templateStore";
 import { useHasHydrated } from "../../../hooks/useHydrated";
 import { useTemplateContext } from "../../../context/TemplatesProvider";
 import { UpdateSlideshowTemplateForm } from "../../../components/pages/dashboard/UpdateSlideshowTemplateForm";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   GetSlideshowTemplateRes,
 } from "../../../lib/client/model";
@@ -63,11 +62,53 @@ export default function SlideshowDashboard() {
   const { data: companyData } = useCompanyControllerGetCompany();
   const { data: userData } = useSession();
 
+  // Get current language
+  const currentLang = params.get("lang") || companyData?.defaultLangCode || "en";
+
+  // Group slideshows by tag and show the default language version
+  // but track availability for the current language
+  const displayedSlideshowsWithAvailability = useMemo(() => {
+    const slideshowsSource = searchSlideshows.length > 0 ? searchSlideshows : slideshows;
+    
+    // Group slideshows by tag
+    const groupedByTag = slideshowsSource.reduce((acc, slideshow) => {
+      if (!acc[slideshow.tag]) {
+        acc[slideshow.tag] = [];
+      }
+      acc[slideshow.tag].push(slideshow);
+      return acc;
+    }, {} as Record<string, GetSlideshowTemplateRes[]>);
+
+    // For each tag, always show the default language version
+    // but check if current language is available
+    const displaySlideshows: (GetSlideshowTemplateRes & { isAvailableInCurrentLang: boolean })[] = [];
+    
+    Object.values(groupedByTag).forEach((tagSlideshows) => {
+      // Always use default language slideshow for display
+      const defaultLangSlideshow = tagSlideshows.find(slide =>
+        slide.langCode.includes(companyData?.defaultLangCode || "en")
+      ) || tagSlideshows[0];
+      
+      // Check if current language is available for this tag
+      const isAvailableInCurrentLang = tagSlideshows.some(slide => 
+        slide.langCode.includes(currentLang)
+      );
+      
+      displaySlideshows.push({
+        ...defaultLangSlideshow,
+        isAvailableInCurrentLang
+      });
+    });
+
+    // Sort by order to maintain original ordering
+    return displaySlideshows.sort((a, b) => a.order - b.order);
+  }, [slideshows, searchSlideshows, currentLang, companyData?.defaultLangCode]);
+
   const sendTemplate = (id: number, isAvailable: boolean) => {
     emitSendTemplate({
       refId: id,
       langCode: isAvailable
-        ? params.get("lang") || companyData?.defaultLangCode || "en"
+        ? currentLang
         : companyData?.defaultLangCode || "en",
       refType: ChatType.Slideshow,
       station: Number(params.get("station") ?? 1),
@@ -94,34 +135,60 @@ export default function SlideshowDashboard() {
   };
 
   const sortSlideshows = (item1: UniqueIdentifier, item2: UniqueIdentifier) => {
-    const setResource =
-      searchSlideshows.length > 0 ? setSearchSlideshows : setSlideshows;
-    const slideshowsResource =
-      searchSlideshows.length > 0 ? searchSlideshows : slideshows;
+    // Always work with the full slideshows array (not filtered/displayed array)
+    const oldIndex = slideshows.findIndex((item) => item.id === item1);
+    const newIndex = slideshows.findIndex((item) => item.id === item2);
 
-    const oldIndex = slideshowsResource.findIndex((item) => item.id === item1);
-    const newIndex = slideshowsResource.findIndex((item) => item.id === item2);
+    if (oldIndex === -1 || newIndex === -1) {
+      console.error('Could not find items for sorting');
+      return;
+    }
 
-    let shallow = [...slideshowsResource];
-    shallow = arrayMove(slideshowsResource, oldIndex, newIndex);
+    // Create a shallow copy and move the item
+    let reorderedSlideshows = arrayMove(slideshows, oldIndex, newIndex);
 
-    shallow.forEach(({ id }, index) => {
+    // Group by tag to update order properly
+    const groupedByTag = reorderedSlideshows.reduce((acc, slideshow) => {
+      if (!acc[slideshow.tag]) {
+        acc[slideshow.tag] = [];
+      }
+      acc[slideshow.tag].push(slideshow);
+      return acc;
+    }, {} as Record<string, GetSlideshowTemplateRes[]>);
+
+    // Get unique tags in the new order
+    const uniqueTags = reorderedSlideshows
+      .map(slide => slide.tag)
+      .filter((tag, index, self) => self.indexOf(tag) === index);
+
+    // Rebuild the array with all language variants maintaining the new tag order
+    const finalOrderedSlideshows: GetSlideshowTemplateRes[] = [];
+    let orderCounter = 1;
+
+    uniqueTags.forEach(tag => {
+      const tagSlideshows = groupedByTag[tag];
+      tagSlideshows.forEach(slide => {
+        finalOrderedSlideshows.push({ ...slide, order: orderCounter });
+      });
+      orderCounter++;
+    });
+
+    // Update the order in the backend
+    finalOrderedSlideshows.forEach(({ id, order }) => {
       updateSlideshowTemplateOrder.mutate({
-        data: { order: index + 1 },
+        data: { order },
         id,
       });
     });
 
-    setResource(shallow);
+    // Update the state
+    setSlideshows(finalOrderedSlideshows);
   };
-
-  const slideshowsSource =
-    searchSlideshows.length > 0 ? searchSlideshows : slideshows;
 
   if (isHydrated)
     return (
       <div className="flex h-full w-full flex-col justify-start gap-4 overflow-y-auto  p-6">
-        {slideshowsSource.length > 0 && (
+        {displayedSlideshowsWithAvailability.length > 0 && (
           <Card className="w-full customCards">
             <div className="searchInputWidth">
               <SearchTemplateForm
@@ -157,9 +224,7 @@ export default function SlideshowDashboard() {
           >
             <UpdateSlideshowTemplateForm
               tag={editTemplate.tag}
-              langCode={
-                params.get("lang") || companyData?.defaultLangCode || "en"
-              }
+              langCode={currentLang}
               cb={() => {
                 updateHandleClose();
                 refetchSlideshow();
@@ -172,32 +237,26 @@ export default function SlideshowDashboard() {
         <div id="card-wrapper" className="flex h-full w-full">
           <div className="flex w-full flex-wrap content-start gap-4">
             <DraggableCardContainer
-              items={slideshowsSource}
+              items={displayedSlideshowsWithAvailability}
               sort={sortSlideshows}
             >
-              {slideshowsSource?.map((val) => (
+              {displayedSlideshowsWithAvailability?.map((val) => (
                 <DraggableCardItem
                   id={val.id}
                   tag={val.tag}
                   key={val.id}
                   onDelete={() => onDeleteCard(val.id)}
                   isAdmin={userData?.user.Roles?.includes("Admin")}
-                  isAvailable={val.langCode.includes(
-                    params.get("lang") || companyData?.defaultLangCode || "",
-                  )}
+                  isAvailable={val.isAvailableInCurrentLang}
                   onUpdate={() => onUpdateCard(val)}
                   sendOnClick={() =>
                     sendTemplate(
                       val.id,
-                      val.langCode.includes(
-                        params.get("lang") ||
-                        companyData?.defaultLangCode ||
-                        "",
-                      ),
+                      val.isAvailableInCurrentLang,
                     )
                   }
                   isDraggable={searchSlideshows.length === 0}
-                 type="slideshow"
+                  type="slideshow"
                 >
                   <Image
                     alt="template_image"

@@ -58,11 +58,14 @@ export default function Dashboard() {
   const { data: companyData } = useCompanyControllerGetCompany();
   const { data: userData } = useSession();
 
+  // Get current selected language
+  const selectedLang = params.get("lang") || companyData?.defaultLangCode || "en";
+
   const sendTemplate = (id: number, isAvailable: boolean) => {
     emitSendTemplate({
       refId: id,
       langCode: isAvailable
-        ? params.get("lang") || companyData?.defaultLangCode || "en"
+        ? selectedLang
         : companyData?.defaultLangCode || "en",
       refType: ChatType.Website,
       station: Number(params.get("station") ?? 1),
@@ -87,16 +90,12 @@ export default function Dashboard() {
   };
 
   const sortWebsites = (item1: UniqueIdentifier, item2: UniqueIdentifier) => {
-    const setResource =
-      searchWebsites.length > 0 ? setSearchWebsites : setWebsites;
-    const websitesResource =
-      searchWebsites.length > 0 ? searchWebsites : websites;
+    // Always use the main websites array for sorting, not searchWebsites
+    const oldIndex = websites.findIndex((item) => item.id === item1);
+    const newIndex = websites.findIndex((item) => item.id === item2);
 
-    const oldIndex = websitesResource.findIndex((item) => item.id === item1);
-    const newIndex = websitesResource.findIndex((item) => item.id === item2);
-
-    let shallow = [...websitesResource];
-    shallow = arrayMove(websitesResource, oldIndex, newIndex);
+    let shallow = [...websites];
+    shallow = arrayMove(websites, oldIndex, newIndex);
 
     shallow.forEach(({ id }, index) => {
       updateTextTemplateOrder.mutate({
@@ -105,13 +104,13 @@ export default function Dashboard() {
       });
     });
 
-    setResource(shallow);
+    setWebsites(shallow);
   };
 
   const sendWebsiteTemplateMessage = (url: string) => {
     emitSendTemplate({
       refId: 1,
-      langCode: params.get("lang") || companyData?.defaultLangCode || "en",
+      langCode: selectedLang,
       refType: "WebsiteTemplateMessage",
       station: Number(params.get("station") ?? 1),
       directContent: url,
@@ -121,13 +120,14 @@ export default function Dashboard() {
   const sendWebsiteTemplateQR = (url: string) => {
     emitSendTemplate({
       refId: 1,
-      langCode: params.get("lang") || companyData?.defaultLangCode || "en",
+      langCode: selectedLang,
       refType: "WebsiteTemplateQr",
       station: Number(params.get("station") ?? 1),
       directContent: url,
     });
   };
 
+  // Show search results if searching, otherwise show all websites
   const websitesSource = searchWebsites.length > 0 ? searchWebsites : websites;
 
   if (hasHydrated)
@@ -172,70 +172,60 @@ export default function Dashboard() {
         <div id="card-wrapper" className="flex h-full w-full">
           <div className="flex w-full flex-wrap content-start gap-4">
             <DraggableCardContainer items={websitesSource} sort={sortWebsites}>
-              {websitesSource?.map((val) => (
-                <DraggableCardItem
-                  id={val.id}
-                  isAdmin={userData?.user.Roles?.includes("Admin")}
-                  key={val.id}
-                  tag={val.tag}
-                  onUpdate={() => onUpdateCard(val)}
-                  onDelete={() => {
-                    onDeleteCard(val.id);
-                  }}
-                  onQrCodeClick={() => sendWebsiteTemplateQR(val.url || '')}
-                  sendOnClick={() =>
-                    sendTemplate(
-                      val.id,
-                      val.langCode.includes(
-                        params.get("lang") ||
-                        companyData?.defaultLangCode ||
-                        "",
-                      ),
-                    )
-                  }
-                  isAvailable={val.langCode.includes(
-                    params.get("lang") || companyData?.defaultLangCode || "",
-                  )}
-                  icon={
-                    userData?.user.Roles?.includes("Staff") ? (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (val.url) {
-                            window.open(`${val.url}`);
-                          }
-                        }}
-                        className="absolute bottom-0 right-0 text-white"
-                      >
-                        {val.langCode.includes(
-                          params.get("lang") ||
-                          companyData?.defaultLangCode ||
-                          "",
-                        ) ? (
-                          <span
-                            className="absolute bottom-0 right-0 h-0 w-0
-                 border-b-[15px] border-l-[15px]
-                 border-green-500
-                 border-l-transparent"
-                          />
-                        ) : (
-                          <span
-                            className="absolute bottom-0 right-0 h-0 w-0
-                 border-b-[15px] border-l-[15px]
-                 border-red-500
-                 border-l-transparent"
-                          />
-                        )}
-                      </button>
-                    ) : undefined
-                  }
-                  isDraggable={searchWebsites.length === 0}
-                >
-                  <div className="flex w-full items-center justify-center" style={{ height: '100%' }}>
-                    <WebsiteIcon width="70px" height="70px" />
-                  </div>
-                </DraggableCardItem>
-              ))}
+              {websitesSource?.map((val) => {
+                // Check if template is available in selected language
+                const isAvailable = val.langCode.includes(selectedLang);
+                
+                return (
+                  <DraggableCardItem
+                    id={val.id}
+                    isAdmin={userData?.user.Roles?.includes("Admin")}
+                    key={val.id}
+                    tag={val.tag}
+                    onUpdate={() => onUpdateCard(val)}
+                    onDelete={() => {
+                      onDeleteCard(val.id);
+                    }}
+                    onQrCodeClick={() => sendWebsiteTemplateQR(val.url || '')}
+                    sendOnClick={() => sendTemplate(val.id, isAvailable)}
+                    isAvailable={isAvailable}
+                    icon={
+                      userData?.user.Roles?.includes("Staff") ? (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (val.url) {
+                              window.open(`${val.url}`);
+                            }
+                          }}
+                          className="absolute bottom-0 right-0 text-white"
+                        >
+                          {isAvailable ? (
+                            <span
+                              className="absolute bottom-0 right-0 h-0 w-0
+                   border-b-[15px] border-l-[15px]
+                   border-green-500
+                   border-l-transparent"
+                            />
+                          ) : (
+                            <span
+                              className="absolute bottom-0 right-0 h-0 w-0
+                   border-b-[15px] border-l-[15px]
+                   border-red-500
+                   border-l-transparent"
+                            />
+                          )}
+                        </button>
+                      ) : undefined
+                    }
+                    isDraggable={searchWebsites.length === 0}
+                  >
+                    <div className="flex w-full items-center justify-center" style={{ height: '100%' }}>
+                      <WebsiteIcon width="70px" height="70px" />
+                    </div>
+                  </DraggableCardItem>
+                );
+              })}
             </DraggableCardContainer>
 
             {editTemplate && (
@@ -245,9 +235,7 @@ export default function Dashboard() {
                 isOpen={updateIsOpen}
               >
                 <UpdateWebsiteTemplateForm
-                  defaultLangCode={
-                    params.get("lang") || companyData?.defaultLangCode || "en"
-                  }
+                  defaultLangCode={selectedLang}
                   sourceId={editTemplate?.id}
                   tag={editTemplate.tag}
                   cb={(template) => {

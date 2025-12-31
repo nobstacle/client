@@ -7,6 +7,7 @@ import { useSearchParams } from "next/navigation";
 import { useSocketContext } from "../../../../context/SocketContextProvider";
 import { useShortcuts } from "../../../../app/dashboard/ShortcutProvider";
 
+
 export const LanguageShortcutPicker = ({ checkIframe = true }: { checkIframe?: boolean }) => {
   const router = useRouterWithQueryParams();
   const params = useSearchParams();
