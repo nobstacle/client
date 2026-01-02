@@ -106,25 +106,39 @@ async function loadStationFromBackground() {
   return new Promise((resolve) => {
     console.log('[Content Script] 🔍 Loading station from background...');
 
-    chrome.runtime.sendMessage({ action: 'getStation' }, (response) => {
+    // First try chrome storage
+    chrome.storage.local.get([STATION_STORAGE_KEY], (result) => {
       if (chrome.runtime.lastError) {
-        console.error('[Content Script] ❌ Error loading station:', chrome.runtime.lastError);
+        console.error('[Content Script] ❌ Storage error:', chrome.runtime.lastError);
         selectedStation = "1";
         resolve("1");
         return;
       }
 
-      if (response && response.success && response.station) {
-        const station = String(response.station);
-        console.log('[Content Script] ✅ Station loaded from background:', station);
+      if (result[STATION_STORAGE_KEY]) {
+        const station = String(result[STATION_STORAGE_KEY]);
+        console.log('[Content Script] ✅ Station from storage:', station);
         selectedStation = station;
         localStorage.setItem(STATION_STORAGE_KEY, station);
         stationLoadedFromStorage = true;
         resolve(station);
       } else {
-        console.log('[Content Script] ⚠️ No station in response, using default');
-        selectedStation = "1";
-        resolve("1");
+        // Fallback to background message
+        chrome.runtime.sendMessage({ action: 'getStation' }, (response) => {
+          if (chrome.runtime.lastError) {
+            console.error('[Content Script] ❌ Background error:', chrome.runtime.lastError);
+            selectedStation = "1";
+            resolve("1");
+            return;
+          }
+
+          const station = (response && response.station) ? String(response.station) : "1";
+          console.log('[Content Script] ✅ Station from background:', station);
+          selectedStation = station;
+          localStorage.setItem(STATION_STORAGE_KEY, station);
+          stationLoadedFromStorage = true;
+          resolve(station);
+        });
       }
     });
   });
@@ -191,9 +205,13 @@ chrome.storage.local.get(['extensionEnabled'], async (result) => {
   if (isEnabled && shouldInject()) {
     console.log('[Content Script] 🚀 Extension enabled, initializing...');
 
+    // CRITICAL: Load station BEFORE injecting header
     selectedStation = await loadStationFromBackground();
     console.log('[Content Script] ✅ Station ready for injection:', selectedStation);
 
+    // Small delay to ensure storage is synced
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
     await injectHeader();
   }
 });
@@ -1208,9 +1226,9 @@ async function injectHeader() {
     iframe.onload = async () => {
       console.log('[Content Script] 🎉 Iframe loaded!');
 
-      chrome.runtime.sendMessage({ action: 'getStation' }, (response) => {
-        const freshStation = (response && response.success && response.station)
-          ? String(response.station)
+        chrome.storage.local.get([STATION_STORAGE_KEY], (result) => {
+        const freshStation = result[STATION_STORAGE_KEY] 
+          ? String(result[STATION_STORAGE_KEY])
           : (selectedStation || "1");
 
         console.log('[Content Script] 📍 Sending station to iframe:', freshStation);
@@ -1237,7 +1255,7 @@ async function injectHeader() {
         }
       });
 
-      setTimeout(() => {
+   setTimeout(() => {
         hideLoader();
         console.log('[Content Script] ✅ Header fully loaded');
       }, 500);
@@ -1378,49 +1396,57 @@ async function injectHeader() {
       }
 
       // STATION_CHANGE
-      if (event.data.type === 'STATION_CHANGE') {
-        const newStation = String(event.data.station);
+   if (event.data.type === 'STATION_CHANGE') {
+  const newStation = String(event.data.station);
+  console.log('[Content Script] 🔄 Station change requested:', newStation);
 
-        try {
-          localStorage.setItem(STATION_STORAGE_KEY, newStation);
-          console.log('[Content Script] ✅ Saved to localStorage:', newStation);
+  // Update memory immediately
+  selectedStation = newStation;
 
-          await new Promise((resolve, reject) => {
-            chrome.storage.local.set({
-              [STATION_STORAGE_KEY]: newStation
-            }, () => {
-              if (chrome.runtime.lastError) {
-                console.error('[Content Script] ❌ Chrome storage error:', chrome.runtime.lastError);
-                reject(chrome.runtime.lastError);
-              } else {
-                console.log('[Content Script] ✅ Saved to Chrome storage:', newStation);
-                resolve();
-              }
-            });
-          });
-        } catch (error) {
-          console.error('[Content Script] ❌ Error saving station:', error);
-        }
-
-        const currentIframe = document.getElementById('nobstacle-header-iframe');
-        if (currentIframe && currentIframe.src.includes('station=')) {
-          const newUrl = currentIframe.src.replace(/station=[^&]*/, `station=${newStation}`);
-          currentIframe.src = newUrl;
-        }
-
-        selectedStation = newStation;
-        stationLoadedFromStorage = true;
-
-        const url = new URL(window.location.href);
-        url.searchParams.set('station', newStation);
-        window.history.pushState({}, '', url.toString());
-
-        window.dispatchEvent(new CustomEvent('stationChanged', {
-          detail: { station: newStation }
-        }));
-
-        console.log('[Content Script] ✅ Station change complete:', newStation);
+  // Save to both localStorage and chrome storage
+  localStorage.setItem(STATION_STORAGE_KEY, newStation);
+  
+  chrome.storage.local.set(
+    { [STATION_STORAGE_KEY]: newStation },
+    () => {
+      if (chrome.runtime.lastError) {
+        console.error('[Content Script] ❌ Storage error:', chrome.runtime.lastError);
+      } else {
+        console.log('[Content Script] ✅ Station saved to storage:', newStation);
+        
+        // Also notify background script
+        chrome.runtime.sendMessage({
+          action: 'setStation',
+          station: newStation
+        }, (response) => {
+          if (response && response.success) {
+            console.log('[Content Script] ✅ Background confirmed station save');
+          }
+        });
       }
+    }
+  );
+
+  // Reload iframe with new station
+  const currentIframe = document.getElementById('nobstacle-header-iframe');
+  if (currentIframe && currentIframe.src.includes('station=')) {
+    const newUrl = currentIframe.src.replace(/station=[^&]*/, `station=${newStation}`);
+    console.log('[Content Script] 🔄 Reloading iframe with new URL');
+    currentIframe.src = newUrl;
+  }
+
+  // Update page URL
+  const url = new URL(window.location.href);
+  url.searchParams.set('station', newStation);
+  window.history.pushState({}, '', url.toString());
+
+  // Dispatch event for other listeners
+  window.dispatchEvent(new CustomEvent('stationChanged', {
+    detail: { station: newStation }
+  }));
+
+  console.log('[Content Script] ✅ Station change complete:', newStation);
+}
 
       // BACKEND_TOKEN
       if (event.data.type === 'BACKEND_TOKEN') {

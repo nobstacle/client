@@ -1,13 +1,13 @@
-// Background service worker
+// Background service worker - FIXED VERSION
 let backendAccessToken = null;
 let tokenExpiry = null;
-let currentStation = null; // Always initialize with default
+let currentStation = null;
 
 // API base URL
 const API_BASE_URL = 'https://nobstacle-production-d145.up.railway.app';
 const STATION_STORAGE_KEY = 'nobstacle_selected_station';
 
-// Initialize station immediately
+// FIX: Initialize station immediately and more reliably
 async function initStation() {
   try {
     const result = await chrome.storage.local.get([STATION_STORAGE_KEY]);
@@ -15,57 +15,39 @@ async function initStation() {
       currentStation = String(result[STATION_STORAGE_KEY]);
       console.log('[Background] ✅ Initial station loaded:', currentStation);
     } else {
-      // No station saved, set default
-      await chrome.storage.local.set({ [STATION_STORAGE_KEY]: "1" });
+      // No station saved, set default and save it
       currentStation = "1";
-      console.log('[Background] ✅ Set default station: 1');
+      await chrome.storage.local.set({ [STATION_STORAGE_KEY]: "1" });
+      console.log('[Background] ✅ Set and saved default station: 1');
     }
   } catch (error) {
     console.error('[Background] ❌ Error initializing station:', error);
     currentStation = "1";
+    // Try to save default even if there was an error
+    try {
+      await chrome.storage.local.set({ [STATION_STORAGE_KEY]: "1" });
+    } catch (e) {
+      console.error('[Background] ❌ Could not save default station:', e);
+    }
   }
 }
 
-initStation();
-
-
+// Initialize on install/update
 chrome.runtime.onInstalled.addListener(async (details) => {
   console.log('[Background] Extension installed/updated');
   await initStation();
   await restoreTokenFromStorage();
 });
 
+// Initialize on browser startup
 chrome.runtime.onStartup.addListener(async () => {
   console.log('[Background] Browser started');
   await initStation();
   await fetchAuthFromNobstacle();
 });
 
-// chrome.runtime.onInstalled.addListener(async (details) => {
-//   console.log('[Background] Extension installed/updated');
-
-//   // Ensure station is set
-//   const result = await chrome.storage.local.get([STATION_STORAGE_KEY]);
-//   if (!result[STATION_STORAGE_KEY]) {
-//     await chrome.storage.local.set({ [STATION_STORAGE_KEY]: "1" });
-//     currentStation = "1";
-//     console.log('[Background] Set default station on install');
-//   }
-
-//   await restoreTokenFromStorage();
-// });
-
-chrome.runtime.onStartup.addListener(async () => {
-  console.log('[Background] Browser started');
-  await fetchAuthFromNobstacle();
-
-  // Reload station from storage
-  const result = await chrome.storage.local.get([STATION_STORAGE_KEY]);
-  if (result[STATION_STORAGE_KEY]) {
-    currentStation = String(result[STATION_STORAGE_KEY]);
-    console.log('[Background] Startup - station loaded:', currentStation);
-  }
-});
+// Initialize immediately when script loads
+initStation();
 
 async function fetchAuthFromNobstacle() {
   try {
@@ -115,20 +97,31 @@ async function restoreTokenFromStorage() {
 }
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  console.log('[Background] 📨 Received message:', request.action, request);
+  console.log('[Background] 📨 Received message:', request.action);
 
-  // GET STATION
+  // GET STATION - FIX: Always read from storage, then update memory
   if (request.action === 'getStation') {
-    // Always get fresh value from storage
     chrome.storage.local.get([STATION_STORAGE_KEY], (result) => {
-      const station = result[STATION_STORAGE_KEY] || "1";
-      currentStation = String(station);
-      console.log('[Background] 📍 GET STATION - Returning:', currentStation);
-      sendResponse({ success: true, station: currentStation });
+      if (chrome.runtime.lastError) {
+        console.error('[Background] ❌ GET error:', chrome.runtime.lastError);
+        sendResponse({ success: false, station: currentStation || "1" });
+        return;
+      }
+
+      const station = result[STATION_STORAGE_KEY] 
+        ? String(result[STATION_STORAGE_KEY])
+        : "1";
+      
+      // Update memory
+      currentStation = station;
+      
+      console.log('[Background] 📍 GET STATION - Returning:', station);
+      sendResponse({ success: true, station: station });
     });
     return true; // Keep channel open
   }
 
+  // SET STATION - FIX: Better error handling and verification
   if (request.action === 'setStation') {
     const newStation = String(request.station);
     console.log('[Background] 💾 SET STATION:', newStation);
@@ -136,39 +129,51 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     // Update memory immediately
     currentStation = newStation;
 
-    // Save to storage
+    // Save to storage with verification
     chrome.storage.local.set(
-      { [STATION_STORAGE_KEY]: newStation }
-    ).then(() => {
-      console.log('[Background] ✅ Station saved:', newStation);
+      { [STATION_STORAGE_KEY]: newStation },
+      () => {
+        if (chrome.runtime.lastError) {
+          console.error('[Background] ❌ Save error:', chrome.runtime.lastError);
+          sendResponse({ success: false, error: chrome.runtime.lastError.message });
+          return;
+        }
 
-      // Verify the save
-      chrome.storage.local.get([STATION_STORAGE_KEY]).then((result) => {
-        console.log('[Background] 🔍 Verified storage:', result[STATION_STORAGE_KEY]);
-      });
+        console.log('[Background] ✅ Station saved:', newStation);
 
-      // Notify all content scripts
-      chrome.tabs.query({}).then((tabs) => {
-        tabs.forEach(tab => {
-          if (tab.id && tab.url && !tab.url.startsWith('chrome://')) {
-            chrome.tabs.sendMessage(
-              tab.id,
-              { action: 'stationChanged', station: newStation }
-            ).catch(() => { });
+        // Verify the save by reading it back
+        chrome.storage.local.get([STATION_STORAGE_KEY], (result) => {
+          const saved = result[STATION_STORAGE_KEY];
+          console.log('[Background] 🔍 Verified storage:', saved);
+          
+          if (String(saved) === newStation) {
+            console.log('[Background] ✅ Verification successful');
+            
+            // Notify all content scripts
+            chrome.tabs.query({}, (tabs) => {
+              tabs.forEach(tab => {
+                if (tab.id && tab.url && !tab.url.startsWith('chrome://')) {
+                  chrome.tabs.sendMessage(
+                    tab.id,
+                    { action: 'stationChanged', station: newStation }
+                  ).catch(() => { /* Ignore errors for tabs without content script */ });
+                }
+              });
+            });
+
+            sendResponse({ success: true, station: newStation });
+          } else {
+            console.error('[Background] ❌ Verification failed! Expected:', newStation, 'Got:', saved);
+            sendResponse({ success: false, error: 'Verification failed' });
           }
         });
-      });
+      }
+    );
 
-      sendResponse({ success: true, station: newStation });
-    }).catch((error) => {
-      console.error('[Background] ❌ Save error:', error);
-      sendResponse({ success: false, error: error.message });
-    });
-
-    return true;
+    return true; // Keep channel open
   }
 
-  // Other handlers
+  // Other handlers remain the same...
   if (request.type === 'HEADER_READY') {
     sendResponse({ success: true });
     return true;
@@ -246,20 +251,21 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   return true;
 });
 
-// Listen for storage changes
+// Listen for storage changes and update memory
 chrome.storage.onChanged.addListener((changes, areaName) => {
   if (areaName === 'local' && changes[STATION_STORAGE_KEY]) {
     const newStation = String(changes[STATION_STORAGE_KEY].newValue);
-    console.log('[Background] 📡 Storage changed:', newStation);
+    console.log('[Background] 📡 Storage changed externally:', newStation);
     currentStation = newStation;
   }
 });
 
+// Periodically refresh auth
 setInterval(async () => {
   await fetchAuthFromNobstacle();
 }, 2 * 60 * 1000);
 
-
+// Web request interceptors remain the same...
 chrome.webRequest.onBeforeSendHeaders.addListener(
   (details) => {
     if (details.url.includes('nobstacle-production-d145.up.railway.app')) {
@@ -294,6 +300,7 @@ chrome.webRequest.onHeadersReceived.addListener(
   ["responseHeaders"]
 );
 
+// Token expiry check
 setInterval(() => {
   if (tokenExpiry && tokenExpiry < Date.now()) {
     backendAccessToken = null;
