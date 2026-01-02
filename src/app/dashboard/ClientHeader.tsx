@@ -2125,6 +2125,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                             setIsHamburgerMenuOpen(newState);
 
                                             if (isInIframe) {
+                                                // Generate station picker HTML with correct stationCount
                                                 let currentStation = params.get("station") ?? "1";
                                                 const localStation = localStorage.getItem(STATION_STORAGE_KEY);
                                                 if (localStation) {
@@ -2136,33 +2137,33 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                                     .fill(1)
                                                     .map((x, y) => x + y)
                                                     .map(num => `
-        <option value="${num}" ${num == currentStation ? 'selected' : ''}>
-          Station ${num}
-        </option>
-      `)
+                        <option value="${num}" ${num == currentStation ? 'selected' : ''}>
+                            Station ${num}
+                        </option>
+                    `)
                                                     .join('');
 
                                                 const stationPickerHTML = `
-      <div style="position: relative;">
-        <select 
-          id="extension-station-select"
-          style="
-            width: 100%;
-            padding: 6px 12px;
-            border: 1px solid #e5e7eb;
-            border-radius: 6px;
-            font-size: 14px;
-            font-weight: 600;
-            color: #1f2937;
-            background: white;
-            cursor: pointer;
-            outline: none;
-          "
-        >
-          ${stationOptions}
-        </select>
-      </div>
-    `;
+                    <div style="position: relative;">
+                        <select 
+                            id="extension-station-select"
+                            style="
+                                width: 100%;
+                                padding: 6px 12px;
+                                border: 1px solid #e5e7eb;
+                                border-radius: 6px;
+                                font-size: 14px;
+                                font-weight: 600;
+                                color: #1f2937;
+                                background: white;
+                                cursor: pointer;
+                                outline: none;
+                            "
+                        >
+                            ${stationOptions}
+                        </select>
+                    </div>
+                `;
 
                                                 window.parent.postMessage({
                                                     type: 'HAMBURGER_MENU',
@@ -2174,6 +2175,27 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                                         stationPickerHTML: stationPickerHTML
                                                     }
                                                 }, '*');
+                                            }
+                                        }}
+                                        style={{
+                                            cursor: 'pointer',
+                                            padding: '8px 12px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            borderRadius: '8px',
+                                            transition: 'all 0.2s ease',
+                                            backgroundColor: isHamburgerMenuOpen ? 'rgba(255, 255, 255, 0.15)' : 'transparent',
+                                            position: 'relative',
+                                        }}
+                                        onMouseEnter={(e) => {
+                                            if (!isHamburgerMenuOpen) {
+                                                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+                                            }
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            if (!isHamburgerMenuOpen) {
+                                                e.currentTarget.style.backgroundColor = 'transparent';
                                             }
                                         }}
                                     >
@@ -2207,7 +2229,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                         </div>
                                     </div>
 
-                                    {/* Dropdown Menu */}
+                                    {/* Dropdown Menu - Non-iframe version */}
                                     {isHamburgerMenuOpen && !isInIframe && (
                                         <div style={{
                                             position: 'fixed',
@@ -2255,10 +2277,13 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                                             overflow: 'hidden',
                                                             textOverflow: 'ellipsis',
                                                             whiteSpace: 'nowrap'
-                                                        }}> <StationPicker /></div>
+                                                        }}>
+                                                            <StationPicker />
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
+
                                             {/* Company Name */}
                                             <div style={{
                                                 padding: '16px 20px',
