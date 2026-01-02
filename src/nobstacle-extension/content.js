@@ -899,102 +899,199 @@ function createRecordingIndicator(data) {
 }
 
 function createHamburgerDropdown(content) {
-  document.getElementById('nobstacle-hamburger-dropdown')?.remove();
-
-  const iframe = document.getElementById('nobstacle-header-iframe');
-  if (!iframe) return;
-
-  const iframeRect = iframe.getBoundingClientRect();
-
-  const dropdown = document.createElement('div');
-  dropdown.id = 'nobstacle-hamburger-dropdown';
-  dropdown.style.cssText = `
-    position: fixed !important;
-    top: ${iframeRect.bottom + 8}px !important;
-    right: 16px !important;
-    background: white !important;
-    border-radius: 12px !important;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15) !important;
-    min-width: 280px !important;
-    z-index: 2147483647 !important;
-    border: 1px solid #e5e7eb !important;
-    overflow: hidden !important;
-    animation: slideDown 0.2s ease-out !important;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
-  `;
-
-  dropdown.innerHTML = `
-    <div id="station-dropdown-container" style="padding: 16px 20px; border-bottom: 1px solid #f0f0f0; background: #f8fafc;">
-      <div style="display: flex; align-items: center; gap: 12px;">
-        <div style="width: 40px; height: 40px; border-radius: 10px; background: #3b5998; display: flex; align-items: center; justify-content: center;">
-          <svg style="color: white; width: 20px; height: 20px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
-          </svg>
-        </div>
-        <div style="flex: 1; min-width: 0;">
-          <div style="font-size: 11px; color: #6b7280; font-weight: 500; margin-bottom: 2px; text-transform: uppercase;">Station</div>
-          <div id="station-picker-placeholder">${content.stationPickerHTML || '<div style="font-size: 15px; font-weight: 600; color: #1f2937;">Loading...</div>'}</div>
-        </div>
-      </div>
-    </div>
+    console.log('[Content Script] 🎨 createHamburgerDropdown called');
+    console.log('[Content Script] content:', content);
     
-    <div style="padding: 16px 20px; border-bottom: 1px solid #f0f0f0;">
-      <div style="display: flex; align-items: center; gap: 12px;">
-        <div style="width: 40px; height: 40px; border-radius: 10px; background: #e8eef7; display: flex; align-items: center; justify-content: center;">
-          <svg style="color: #3b5998; width: 20px; height: 20px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-          </svg>
-        </div>
-        <div style="flex: 1; min-width: 0;">
-          <div style="font-size: 11px; color: #6b7280; font-weight: 500; margin-bottom: 2px; text-transform: uppercase;">User</div>
-          <div style="font-size: 15px; font-weight: 600; color: #1f2937; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${content.userName || 'User Name'}</div>
-        </div>
-      </div>
-    </div>
-  `;
-
-  document.body.appendChild(dropdown);
-
-  setTimeout(() => {
-    const select = dropdown.querySelector('#extension-station-select');
-    if (select) {
-      select.addEventListener('change', (e) => {
-        const newStation = e.target.value;
-        addDebugLog(`Station changed to: ${newStation}`);
-
-        iframe.contentWindow.postMessage({
-          type: 'STATION_CHANGE',
-          station: newStation
-        }, '*');
-        dropdown.remove();
-      });
-
-      select.addEventListener('mousedown', (e) => {
-        e.stopPropagation();
-      });
-
-      select.addEventListener('click', (e) => {
-        e.stopPropagation();
-      });
+    // Remove existing dropdown
+    const existing = document.getElementById('nobstacle-hamburger-dropdown');
+    if (existing) {
+        console.log('[Content Script] Removing existing dropdown');
+        existing.remove();
     }
-  }, 100);
 
-  setTimeout(() => {
-    const closeHandler = (e) => {
-      const iframeElement = document.getElementById('nobstacle-header-iframe');
-
-      if (dropdown.contains(e.target) || e.target === iframeElement) {
+    const iframe = document.getElementById('nobstacle-header-iframe');
+    if (!iframe) {
+        console.error('[Content Script] ❌ ERROR: Header iframe not found!');
         return;
-      }
+    }
 
-      dropdown.remove();
-      iframe.contentWindow.postMessage({ type: 'HAMBURGER_CLOSED' }, '*');
-      document.removeEventListener('mousedown', closeHandler);
-    };
-    document.addEventListener('mousedown', closeHandler);
-  }, 200);
+    console.log('[Content Script] ✅ Iframe found, creating dropdown...');
 
-  addDebugLog('✓ Hamburger dropdown created');
+    const iframeRect = iframe.getBoundingClientRect();
+
+    const dropdown = document.createElement('div');
+    dropdown.id = 'nobstacle-hamburger-dropdown';
+    dropdown.style.cssText = `
+        position: fixed !important;
+        top: ${iframeRect.bottom + 8}px !important;
+        right: 16px !important;
+        background: white !important;
+        border-radius: 12px !important;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15) !important;
+        min-width: 280px !important;
+        z-index: 2147483647 !important;
+        border: 1px solid #e5e7eb !important;
+        overflow: hidden !important;
+        animation: slideDown 0.2s ease-out !important;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+    `;
+
+    console.log('[Content Script] Dropdown position:', {
+        top: `${iframeRect.bottom + 8}px`,
+        right: '16px'
+    });
+
+    dropdown.innerHTML = `
+        <div id="station-dropdown-container" style="padding: 16px 20px; border-bottom: 1px solid #f0f0f0; background: #f8fafc;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <div style="width: 40px; height: 40px; border-radius: 10px; background: #3b5998; display: flex; align-items: center; justify-content: center;">
+                    <svg style="color: white; width: 20px; height: 20px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                    </svg>
+                </div>
+                <div style="flex: 1; min-width: 0;">
+                    <div style="font-size: 11px; color: #6b7280; font-weight: 500; margin-bottom: 2px; text-transform: uppercase;">Station</div>
+                    <div id="station-picker-placeholder">${content.stationPickerHTML || '<div style="font-size: 15px; font-weight: 600; color: #1f2937;">Loading...</div>'}</div>
+                </div>
+            </div>
+        </div>
+        
+        <div style="padding: 16px 20px; border-bottom: 1px solid #f0f0f0; background: #f8fafc;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <div style="width: 40px; height: 40px; border-radius: 10px; background: #3b5998; display: flex; align-items: center; justify-content: center;">
+                    <svg style="color: white; width: 20px; height: 20px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                    </svg>
+                </div>
+                <div style="flex: 1; min-width: 0;">
+                    <div style="font-size: 11px; color: #6b7280; font-weight: 500; margin-bottom: 2px; text-transform: uppercase;">Company</div>
+                    <div style="font-size: 15px; font-weight: 600; color: #1f2937; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${content.companyName || 'Company Name'}</div>
+                </div>
+            </div>
+        </div>
+        
+        <div style="padding: 16px 20px; border-bottom: 1px solid #f0f0f0;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <div style="width: 40px; height: 40px; border-radius: 10px; background: #e8eef7; display: flex; align-items: center; justify-content: center;">
+                    <svg style="color: #3b5998; width: 20px; height: 20px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                    </svg>
+                </div>
+                <div style="flex: 1; min-width: 0;">
+                    <div style="font-size: 11px; color: #6b7280; font-weight: 500; margin-bottom: 2px; text-transform: uppercase;">User</div>
+                    <div style="font-size: 15px; font-weight: 600; color: #1f2937; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${content.userName || 'User Name'}</div>
+                </div>
+            </div>
+        </div>
+        
+        <div style="padding: 8px;">
+            <button 
+                id="hamburger-logout-btn"
+                style="
+                    width: 100%;
+                    display: flex;
+                    align-items: center;
+                    gap: 12px;
+                    padding: 12px 16px;
+                    background: transparent;
+                    border: none;
+                    border-radius: 8px;
+                    cursor: pointer;
+                    font-size: 14px;
+                    font-weight: 500;
+                    color: #dc2626;
+                    transition: background-color 0.2s;
+                "
+            >
+                <div style="width: 36px; height: 36px; border-radius: 8px; background: #fee2e2; display: flex; align-items: center; justify-content: center;">
+                    <svg style="width: 18px; height: 18px; color: #dc2626;" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 102 0V4a1 1 0 00-1-1zm10.293 9.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L14.586 9H7a1 1 0 100 2h7.586l-1.293 1.293z" clip-rule="evenodd"></path>
+                    </svg>
+                </div>
+                <span>Logout</span>
+            </button>
+        </div>
+    `;
+
+    document.body.appendChild(dropdown);
+    console.log('[Content Script] ✅ Dropdown appended to DOM');
+
+    // Setup event listeners after a short delay
+    setTimeout(() => {
+        console.log('[Content Script] Setting up event listeners...');
+        
+        const select = dropdown.querySelector('#extension-station-select');
+        if (select) {
+            console.log('[Content Script] ✅ Station select found');
+            
+            select.addEventListener('change', (e) => {
+                const newStation = e.target.value;
+                console.log('[Content Script] 🔄 Station changed to:', newStation);
+
+                // Send to iframe
+                iframe.contentWindow.postMessage({
+                    type: 'STATION_CHANGE',
+                    station: newStation
+                }, '*');
+                
+                // Close dropdown
+                dropdown.remove();
+                console.log('[Content Script] ✅ Station change message sent, dropdown closed');
+            });
+
+            // Prevent dropdown from closing when clicking select
+            select.addEventListener('mousedown', (e) => {
+                e.stopPropagation();
+            });
+            
+            select.addEventListener('click', (e) => {
+                e.stopPropagation();
+            });
+        } else {
+            console.error('[Content Script] ❌ Station select NOT found!');
+        }
+
+        // Logout button
+        const logoutBtn = dropdown.querySelector('#hamburger-logout-btn');
+        if (logoutBtn) {
+            console.log('[Content Script] ✅ Logout button found');
+            
+            logoutBtn.addEventListener('click', () => {
+                console.log('[Content Script] Logout clicked');
+                iframe.contentWindow.postMessage({ type: 'LOGOUT' }, '*');
+                dropdown.remove();
+            });
+            
+            logoutBtn.addEventListener('mouseenter', () => {
+                logoutBtn.style.backgroundColor = '#fee2e2';
+            });
+            
+            logoutBtn.addEventListener('mouseleave', () => {
+                logoutBtn.style.backgroundColor = 'transparent';
+            });
+        } else {
+            console.error('[Content Script] ❌ Logout button NOT found!');
+        }
+    }, 100);
+
+    // Close dropdown when clicking outside
+    setTimeout(() => {
+        const closeHandler = (e) => {
+            const iframeElement = document.getElementById('nobstacle-header-iframe');
+
+            if (dropdown.contains(e.target) || e.target === iframeElement) {
+                return;
+            }
+
+            console.log('[Content Script] Closing dropdown (clicked outside)');
+            dropdown.remove();
+            iframe.contentWindow.postMessage({ type: 'HAMBURGER_CLOSED' }, '*');
+            document.removeEventListener('mousedown', closeHandler);
+        };
+        document.addEventListener('mousedown', closeHandler);
+    }, 200);
+
+    console.log('[Content Script] ✓ Hamburger dropdown created successfully');
 }
 
 function createChatPopup(content) {
@@ -1313,13 +1410,20 @@ async function injectHeader() {
       }
 
       // HAMBURGER_MENU
-      if (event.data.type === 'HAMBURGER_MENU') {
-        if (event.data.isOpen) {
-          createHamburgerDropdown(event.data.content);
-        } else {
-          document.getElementById('nobstacle-hamburger-dropdown')?.remove();
-        }
-      }
+ // HAMBURGER_MENU
+if (event.data.type === 'HAMBURGER_MENU') {
+    console.log('[Content Script] 📨 HAMBURGER_MENU received');
+    console.log('[Content Script] isOpen:', event.data.isOpen);
+    console.log('[Content Script] content:', event.data.content);
+    
+    if (event.data.isOpen) {
+        console.log('[Content Script] Creating hamburger dropdown...');
+        createHamburgerDropdown(event.data.content);
+    } else {
+        console.log('[Content Script] Closing hamburger dropdown...');
+        document.getElementById('nobstacle-hamburger-dropdown')?.remove();
+    }
+}
 
       // CHAT_POPUP
       if (event.data.type === 'CHAT_POPUP') {
@@ -1396,56 +1500,59 @@ async function injectHeader() {
       }
 
       // STATION_CHANGE
-   if (event.data.type === 'STATION_CHANGE') {
-  const newStation = String(event.data.station);
-  console.log('[Content Script] 🔄 Station change requested:', newStation);
+// STATION_CHANGE
+if (event.data.type === 'STATION_CHANGE') {
+    const newStation = String(event.data.station);
+    console.log('[Content Script] 🔄 Station change requested:', newStation);
 
-  // Update memory immediately
-  selectedStation = newStation;
+    // Update memory immediately
+    selectedStation = newStation;
 
-  // Save to both localStorage and chrome storage
-  localStorage.setItem(STATION_STORAGE_KEY, newStation);
-  
-  chrome.storage.local.set(
-    { [STATION_STORAGE_KEY]: newStation },
-    () => {
-      if (chrome.runtime.lastError) {
-        console.error('[Content Script] ❌ Storage error:', chrome.runtime.lastError);
-      } else {
-        console.log('[Content Script] ✅ Station saved to storage:', newStation);
-        
-        // Also notify background script
-        chrome.runtime.sendMessage({
-          action: 'setStation',
-          station: newStation
-        }, (response) => {
-          if (response && response.success) {
-            console.log('[Content Script] ✅ Background confirmed station save');
-          }
-        });
-      }
+    // Save to both localStorage and chrome storage
+    localStorage.setItem(STATION_STORAGE_KEY, newStation);
+    
+    chrome.storage.local.set(
+        { [STATION_STORAGE_KEY]: newStation },
+        () => {
+            if (chrome.runtime.lastError) {
+                console.error('[Content Script] ❌ Storage error:', chrome.runtime.lastError);
+            } else {
+                console.log('[Content Script] ✅ Station saved to chrome.storage:', newStation);
+                
+                // Also notify background script
+                chrome.runtime.sendMessage({
+                    action: 'setStation',
+                    station: newStation
+                }, (response) => {
+                    if (chrome.runtime.lastError) {
+                        console.error('[Content Script] ❌ Background error:', chrome.runtime.lastError);
+                    } else if (response && response.success) {
+                        console.log('[Content Script] ✅ Background confirmed station save');
+                    }
+                });
+            }
+        }
+    );
+
+    // Reload iframe with new station
+    const currentIframe = document.getElementById('nobstacle-header-iframe');
+    if (currentIframe && currentIframe.src.includes('station=')) {
+        const newUrl = currentIframe.src.replace(/station=[^&]*/, `station=${newStation}`);
+        console.log('[Content Script] 🔄 Reloading iframe with new URL');
+        currentIframe.src = newUrl;
     }
-  );
 
-  // Reload iframe with new station
-  const currentIframe = document.getElementById('nobstacle-header-iframe');
-  if (currentIframe && currentIframe.src.includes('station=')) {
-    const newUrl = currentIframe.src.replace(/station=[^&]*/, `station=${newStation}`);
-    console.log('[Content Script] 🔄 Reloading iframe with new URL');
-    currentIframe.src = newUrl;
-  }
+    // Update page URL
+    const url = new URL(window.location.href);
+    url.searchParams.set('station', newStation);
+    window.history.pushState({}, '', url.toString());
 
-  // Update page URL
-  const url = new URL(window.location.href);
-  url.searchParams.set('station', newStation);
-  window.history.pushState({}, '', url.toString());
+    // Dispatch event for other listeners
+    window.dispatchEvent(new CustomEvent('stationChanged', {
+        detail: { station: newStation }
+    }));
 
-  // Dispatch event for other listeners
-  window.dispatchEvent(new CustomEvent('stationChanged', {
-    detail: { station: newStation }
-  }));
-
-  console.log('[Content Script] ✅ Station change complete:', newStation);
+    console.log('[Content Script] ✅ Station change complete:', newStation);
 }
 
       // BACKEND_TOKEN

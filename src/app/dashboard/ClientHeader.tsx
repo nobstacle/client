@@ -2117,33 +2117,51 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                 </div>
 
                                 {/* Hamburger Menu */}
-                                <div ref={hamburgerMenuRef} style={{ position: 'relative', marginLeft: '8px' }}>
-                                    <div
-                                        onClick={() => {
-                                            const currentIsOpen = isHamburgerMenuOpen;
-                                            const newState = !currentIsOpen;
-                                            setIsHamburgerMenuOpen(newState);
+<div ref={hamburgerMenuRef} style={{ position: 'relative', marginLeft: '8px' }}>
+    <div
+        onClick={async () => {
+            console.log('[ClientHeader] 🍔 Hamburger clicked!');
+            console.log('[ClientHeader] isInIframe:', isInIframe);
+            console.log('[ClientHeader] current state:', isHamburgerMenuOpen);
+            
+            const newState = !isHamburgerMenuOpen;
+            setIsHamburgerMenuOpen(newState);
 
-                                            if (isInIframe) {
-                                                // Generate station picker HTML with correct stationCount
-                                                let currentStation = params.get("station") ?? "1";
-                                                const localStation = localStorage.getItem(STATION_STORAGE_KEY);
-                                                if (localStation) {
-                                                    currentStation = localStation;
-                                                }
-                                                const stationCount = companyData?.stationCount || 10;
+            if (isInIframe) {
+                // Get FRESH station from multiple sources
+                let currentStation = params.get("station");
+                
+                if (!currentStation) {
+                    currentStation = localStorage.getItem(STATION_STORAGE_KEY);
+                }
+                
+                if (!currentStation) {
+                    // Try chrome storage if available
+                    if (typeof (window as any).chrome?.storage?.local?.get === 'function') {
+                        try {
+                            const result = await new Promise((resolve) => {
+                                (window as any).chrome.storage.local.get([STATION_STORAGE_KEY], resolve);
+                            });
+                            currentStation = result[STATION_STORAGE_KEY] || "1";
+                        } catch (e) {
+                            currentStation = "1";
+                        }
+                    } else {
+                        currentStation = "1";
+                    }
+                }
 
-                                                const stationOptions = Array(stationCount)
-                                                    .fill(1)
-                                                    .map((x, y) => x + y)
-                                                    .map(num => `
-                        <option value="${num}" ${num == currentStation ? 'selected' : ''}>
+                console.log('[ClientHeader] 📍 Final station for hamburger:', currentStation);
+                
+                const stationCount = companyData?.stationCount || 10;
+                const stationOptions = Array.from({ length: stationCount }, (_, i) => i + 1)
+                    .map(num => `
+                        <option value="${num}" ${num === Number(currentStation) ? 'selected' : ''}>
                             Station ${num}
                         </option>
-                    `)
-                                                    .join('');
+                    `).join('');
 
-                                                const stationPickerHTML = `
+                const stationPickerHTML = `
                     <div style="position: relative;">
                         <select 
                             id="extension-station-select"
@@ -2165,277 +2183,281 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                     </div>
                 `;
 
-                                                window.parent.postMessage({
-                                                    type: 'HAMBURGER_MENU',
-                                                    isOpen: newState,
-                                                    content: {
-                                                        station: currentStation,
-                                                        companyName: companyData?.name || 'Company Name',
-                                                        userName: user?.user?.name || user?.user?.email || 'User Name',
-                                                        stationPickerHTML: stationPickerHTML
-                                                    }
-                                                }, '*');
-                                            }
-                                        }}
-                                        style={{
-                                            cursor: 'pointer',
-                                            padding: '8px 12px',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            borderRadius: '8px',
-                                            transition: 'all 0.2s ease',
-                                            backgroundColor: isHamburgerMenuOpen ? 'rgba(255, 255, 255, 0.15)' : 'transparent',
-                                            position: 'relative',
-                                        }}
-                                        onMouseEnter={(e) => {
-                                            if (!isHamburgerMenuOpen) {
-                                                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
-                                            }
-                                        }}
-                                        onMouseLeave={(e) => {
-                                            if (!isHamburgerMenuOpen) {
-                                                e.currentTarget.style.backgroundColor = 'transparent';
-                                            }
-                                        }}
-                                    >
-                                        <GiHamburgerMenu
-                                            style={{
-                                                color: 'white',
-                                                fontSize: '20px',
-                                                transition: 'transform 0.2s ease',
-                                                transform: isHamburgerMenuOpen ? 'rotate(90deg)' : 'rotate(0deg)'
-                                            }}
-                                        />
-                                        <div style={{
-                                            position: 'absolute',
-                                            top: '2px',
-                                            right: '2px',
-                                            backgroundColor: '#ef4444',
-                                            color: 'white',
-                                            fontSize: '10px',
-                                            fontWeight: '600',
-                                            borderRadius: '10px',
-                                            minWidth: '18px',
-                                            height: '18px',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            padding: '0 4px',
-                                            border: '2px solid #3b5998',
-                                            boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-                                        }}>
-                                            {currentStation || displayStation || Number(params.get("station") ?? 1)}
-                                        </div>
-                                    </div>
+                console.log('[ClientHeader] 📤 Sending HAMBURGER_MENU message...');
+                
+                window.parent.postMessage({
+                    type: 'HAMBURGER_MENU',
+                    isOpen: newState,
+                    content: {
+                        station: currentStation,
+                        companyName: companyData?.name || 'Company Name',
+                        userName: user?.user?.name || user?.user?.email || 'User Name',
+                        stationPickerHTML: stationPickerHTML
+                    }
+                }, '*');
+                
+                console.log('[ClientHeader] ✅ Message sent to parent');
+            }
+        }}
+        style={{
+            cursor: 'pointer',
+            padding: '8px 12px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderRadius: '8px',
+            transition: 'all 0.2s ease',
+            backgroundColor: isHamburgerMenuOpen ? 'rgba(255, 255, 255, 0.15)' : 'transparent',
+            position: 'relative',
+        }}
+        onMouseEnter={(e) => {
+            if (!isHamburgerMenuOpen) {
+                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+            }
+        }}
+        onMouseLeave={(e) => {
+            if (!isHamburgerMenuOpen) {
+                e.currentTarget.style.backgroundColor = 'transparent';
+            }
+        }}
+    >
+        <GiHamburgerMenu
+            style={{
+                color: 'white',
+                fontSize: '20px',
+                transition: 'transform 0.2s ease',
+                transform: isHamburgerMenuOpen ? 'rotate(90deg)' : 'rotate(0deg)'
+            }}
+        />
+        <div style={{
+            position: 'absolute',
+            top: '2px',
+            right: '2px',
+            backgroundColor: '#ef4444',
+            color: 'white',
+            fontSize: '10px',
+            fontWeight: '600',
+            borderRadius: '10px',
+            minWidth: '18px',
+            height: '18px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '0 4px',
+            border: '2px solid #3b5998',
+            boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+        }}>
+            {currentStation || displayStation || Number(params.get("station") ?? 1)}
+        </div>
+    </div>
 
-                                    {/* Dropdown Menu - Non-iframe version */}
-                                    {isHamburgerMenuOpen && !isInIframe && (
-                                        <div style={{
-                                            position: 'fixed',
-                                            top: `${hamburgerPosition.top}px`,
-                                            right: `${hamburgerPosition.right}px`,
-                                            backgroundColor: 'white',
-                                            borderRadius: '12px',
-                                            boxShadow: '0 10px 40px rgba(0, 0, 0, 0.15)',
-                                            minWidth: '280px',
-                                            zIndex: 2147483647,
-                                            overflow: 'hidden',
-                                            border: '1px solid #e5e7eb',
-                                            animation: 'slideDown 0.2s ease-out'
-                                        }}>
-                                            {/* Station Number */}
-                                            <div style={{
-                                                padding: '16px 20px',
-                                                borderBottom: '1px solid #f0f0f0',
-                                                backgroundColor: '#f8fafc'
-                                            }}>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                                    <div style={{
-                                                        width: '40px',
-                                                        height: '40px',
-                                                        borderRadius: '10px',
-                                                        backgroundColor: '#3b5998',
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center'
-                                                    }}>
-                                                        <HiOutlineOfficeBuilding style={{ color: 'white', fontSize: '20px' }} />
-                                                    </div>
-                                                    <div style={{ flex: 1, minWidth: 0 }}>
-                                                        <div style={{
-                                                            fontSize: '11px',
-                                                            color: '#6b7280',
-                                                            fontWeight: '500',
-                                                            marginBottom: '2px',
-                                                            textTransform: 'uppercase'
-                                                        }}>Station</div>
-                                                        <div style={{
-                                                            fontSize: '15px',
-                                                            fontWeight: '600',
-                                                            color: '#1f2937',
-                                                            overflow: 'hidden',
-                                                            textOverflow: 'ellipsis',
-                                                            whiteSpace: 'nowrap'
-                                                        }}>
-                                                            <StationPicker />
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
+    {/* Dropdown Menu - Non-iframe version */}
+    {isHamburgerMenuOpen && !isInIframe && (
+        <div style={{
+            position: 'fixed',
+            top: `${hamburgerPosition.top}px`,
+            right: `${hamburgerPosition.right}px`,
+            backgroundColor: 'white',
+            borderRadius: '12px',
+            boxShadow: '0 10px 40px rgba(0, 0, 0, 0.15)',
+            minWidth: '280px',
+            zIndex: 2147483647,
+            overflow: 'hidden',
+            border: '1px solid #e5e7eb',
+            animation: 'slideDown 0.2s ease-out'
+        }}>
+            {/* Station Number */}
+            <div style={{
+                padding: '16px 20px',
+                borderBottom: '1px solid #f0f0f0',
+                backgroundColor: '#f8fafc'
+            }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{
+                        width: '40px',
+                        height: '40px',
+                        borderRadius: '10px',
+                        backgroundColor: '#3b5998',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                    }}>
+                        <HiOutlineOfficeBuilding style={{ color: 'white', fontSize: '20px' }} />
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{
+                            fontSize: '11px',
+                            color: '#6b7280',
+                            fontWeight: '500',
+                            marginBottom: '2px',
+                            textTransform: 'uppercase'
+                        }}>Station</div>
+                        <div style={{
+                            fontSize: '15px',
+                            fontWeight: '600',
+                            color: '#1f2937',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap'
+                        }}>
+                            <StationPicker />
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-                                            {/* Company Name */}
-                                            <div style={{
-                                                padding: '16px 20px',
-                                                borderBottom: '1px solid #f0f0f0',
-                                                backgroundColor: '#f8fafc'
-                                            }}>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                                    <div style={{
-                                                        width: '40px',
-                                                        height: '40px',
-                                                        borderRadius: '10px',
-                                                        backgroundColor: '#3b5998',
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center'
-                                                    }}>
-                                                        <HiOutlineOfficeBuilding style={{ color: 'white', fontSize: '20px' }} />
-                                                    </div>
-                                                    <div style={{ flex: 1, minWidth: 0 }}>
-                                                        <div style={{
-                                                            fontSize: '11px',
-                                                            color: '#6b7280',
-                                                            fontWeight: '500',
-                                                            marginBottom: '2px',
-                                                            textTransform: 'uppercase'
-                                                        }}>Company</div>
-                                                        <div style={{
-                                                            fontSize: '15px',
-                                                            fontWeight: '600',
-                                                            color: '#1f2937',
-                                                            overflow: 'hidden',
-                                                            textOverflow: 'ellipsis',
-                                                            whiteSpace: 'nowrap'
-                                                        }}>{companyData?.name || 'Company Name'}</div>
-                                                    </div>
-                                                </div>
-                                            </div>
+            {/* Company Name */}
+            <div style={{
+                padding: '16px 20px',
+                borderBottom: '1px solid #f0f0f0',
+                backgroundColor: '#f8fafc'
+            }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{
+                        width: '40px',
+                        height: '40px',
+                        borderRadius: '10px',
+                        backgroundColor: '#3b5998',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                    }}>
+                        <HiOutlineOfficeBuilding style={{ color: 'white', fontSize: '20px' }} />
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{
+                            fontSize: '11px',
+                            color: '#6b7280',
+                            fontWeight: '500',
+                            marginBottom: '2px',
+                            textTransform: 'uppercase'
+                        }}>Company</div>
+                        <div style={{
+                            fontSize: '15px',
+                            fontWeight: '600',
+                            color: '#1f2937',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap'
+                        }}>{companyData?.name || 'Company Name'}</div>
+                    </div>
+                </div>
+            </div>
 
-                                            {/* User Name */}
-                                            <div style={{
-                                                padding: '16px 20px',
-                                                borderBottom: '1px solid #f0f0f0'
-                                            }}>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                                    <div style={{
-                                                        width: '40px',
-                                                        height: '40px',
-                                                        borderRadius: '10px',
-                                                        backgroundColor: '#e8eef7',
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center'
-                                                    }}>
-                                                        <HiOutlineUser style={{ color: '#3b5998', fontSize: '20px' }} />
-                                                    </div>
-                                                    <div style={{ flex: 1, minWidth: 0 }}>
-                                                        <div style={{
-                                                            fontSize: '11px',
-                                                            color: '#6b7280',
-                                                            fontWeight: '500',
-                                                            marginBottom: '2px',
-                                                            textTransform: 'uppercase'
-                                                        }}>User</div>
-                                                        <div style={{
-                                                            fontSize: '15px',
-                                                            fontWeight: '600',
-                                                            color: '#1f2937',
-                                                            overflow: 'hidden',
-                                                            textOverflow: 'ellipsis',
-                                                            whiteSpace: 'nowrap'
-                                                        }}>{user?.user?.name || user?.user?.email || 'User Name'}</div>
-                                                    </div>
-                                                </div>
-                                            </div>
+            {/* User Name */}
+            <div style={{
+                padding: '16px 20px',
+                borderBottom: '1px solid #f0f0f0'
+            }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{
+                        width: '40px',
+                        height: '40px',
+                        borderRadius: '10px',
+                        backgroundColor: '#e8eef7',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                    }}>
+                        <HiOutlineUser style={{ color: '#3b5998', fontSize: '20px' }} />
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{
+                            fontSize: '11px',
+                            color: '#6b7280',
+                            fontWeight: '500',
+                            marginBottom: '2px',
+                            textTransform: 'uppercase'
+                        }}>User</div>
+                        <div style={{
+                            fontSize: '15px',
+                            fontWeight: '600',
+                            color: '#1f2937',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap'
+                        }}>{user?.user?.name || user?.user?.email || 'User Name'}</div>
+                    </div>
+                </div>
+            </div>
 
-                                            {/* Buttons */}
-                                            <div style={{ padding: '8px' }}>
-                                                <button
-                                                    onClick={() => {
-                                                        setIsHamburgerMenuOpen(false);
-                                                    }}
-                                                    style={{
-                                                        width: '100%',
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        gap: '12px',
-                                                        padding: '12px 16px',
-                                                        backgroundColor: 'transparent',
-                                                        border: 'none',
-                                                        borderRadius: '8px',
-                                                        cursor: 'pointer',
-                                                        fontSize: '14px',
-                                                        fontWeight: '500',
-                                                        color: '#374151',
-                                                        marginBottom: '4px'
-                                                    }}
-                                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
-                                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                                                >
-                                                    <div style={{
-                                                        width: '36px',
-                                                        height: '36px',
-                                                        borderRadius: '8px',
-                                                        backgroundColor: '#fef3c7',
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center'
-                                                    }}>
-                                                        <RiLockPasswordLine style={{ color: '#d97706', fontSize: '18px' }} />
-                                                    </div>
-                                                    <span>Change Password</span>
-                                                </button>
+            {/* Buttons */}
+            <div style={{ padding: '8px' }}>
+                <button
+                    onClick={() => {
+                        setIsHamburgerMenuOpen(false);
+                    }}
+                    style={{
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px',
+                        padding: '12px 16px',
+                        backgroundColor: 'transparent',
+                        border: 'none',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        fontSize: '14px',
+                        fontWeight: '500',
+                        color: '#374151',
+                        marginBottom: '4px'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                >
+                    <div style={{
+                        width: '36px',
+                        height: '36px',
+                        borderRadius: '8px',
+                        backgroundColor: '#fef3c7',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                    }}>
+                        <RiLockPasswordLine style={{ color: '#d97706', fontSize: '18px' }} />
+                    </div>
+                    <span>Change Password</span>
+                </button>
 
-                                                <button
-                                                    onClick={() => {
-                                                        handleLogout();
-                                                        setIsHamburgerMenuOpen(false);
-                                                    }}
-                                                    style={{
-                                                        width: '100%',
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        gap: '12px',
-                                                        padding: '12px 16px',
-                                                        backgroundColor: 'transparent',
-                                                        border: 'none',
-                                                        borderRadius: '8px',
-                                                        cursor: 'pointer',
-                                                        fontSize: '14px',
-                                                        fontWeight: '500',
-                                                        color: '#dc2626'
-                                                    }}
-                                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#fee2e2'}
-                                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                                                >
-                                                    <div style={{
-                                                        width: '36px',
-                                                        height: '36px',
-                                                        borderRadius: '8px',
-                                                        backgroundColor: '#fee2e2',
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center'
-                                                    }}>
-                                                        <RiLogoutBoxLine style={{ color: '#dc2626', fontSize: '18px' }} />
-                                                    </div>
-                                                    <span>Logout</span>
-                                                </button>
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
+                <button
+                    onClick={() => {
+                        handleLogout();
+                        setIsHamburgerMenuOpen(false);
+                    }}
+                    style={{
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px',
+                        padding: '12px 16px',
+                        backgroundColor: 'transparent',
+                        border: 'none',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        fontSize: '14px',
+                        fontWeight: '500',
+                        color: '#dc2626'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#fee2e2'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                >
+                    <div style={{
+                        width: '36px',
+                        height: '36px',
+                        borderRadius: '8px',
+                        backgroundColor: '#fee2e2',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                    }}>
+                        <RiLogoutBoxLine style={{ color: '#dc2626', fontSize: '18px' }} />
+                    </div>
+                    <span>Logout</span>
+                </button>
+            </div>
+        </div>
+    )}
+</div>
                             </div>
                         )}
                     </div>
