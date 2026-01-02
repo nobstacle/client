@@ -811,65 +811,65 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         }
     }, [isHamburgerMenuOpen]);
 
-    useEffect(() => {
-        if (isHamburgerMenuOpen && isInIframe) {
-            const loadAndSendPicker = async () => {
-                // DON'T try to read Chrome storage in iframe - it will fail!
-                // Instead, use the station from URL params or localStorage
-                let currentStation = params.get("station") || localStorage.getItem(STATION_STORAGE_KEY) || "1";
+    // useEffect(() => {
+    //     if (isHamburgerMenuOpen && isInIframe) {
+    //         const loadAndSendPicker = async () => {
+    //             // DON'T try to read Chrome storage in iframe - it will fail!
+    //             // Instead, use the station from URL params or localStorage
+    //             let currentStation = params.get("station") || localStorage.getItem(STATION_STORAGE_KEY) || "1";
 
-                console.log('[ClientHeader] 📍 Using station for picker:', currentStation);
-                const currentIsOpen = isHamburgerMenuOpen;
-                const newState = !currentIsOpen;
-                const stationCount = companyData?.stationCount || 10;
-                const stationOptions = Array.from({ length: stationCount }, (_, i) => i + 1)
-                    .map(num => `
-                    <option value="${num}" ${num === Number(currentStation) ? 'selected' : ''}>
-                        Station ${num}
-                    </option>
-                `).join('');
+    //             console.log('[ClientHeader] 📍 Using station for picker:', currentStation);
+    //             const currentIsOpen = isHamburgerMenuOpen;
+    //             const newState = !currentIsOpen;
+    //             const stationCount = companyData?.stationCount || 10;
+    //             const stationOptions = Array.from({ length: stationCount }, (_, i) => i + 1)
+    //                 .map(num => `
+    //                 <option value="${num}" ${num === Number(currentStation) ? 'selected' : ''}>
+    //                     Station ${num}
+    //                 </option>
+    //             `).join('');
 
-                const stationPickerHTML = `
-                <div style="position: relative;">
-                    <select 
-                        id="extension-station-select"
-                        style="
-                            width: 100%;
-                            padding: 6px 12px;
-                            border: 1px solid #e5e7eb;
-                            border-radius: 6px;
-                            font-size: 14px;
-                            font-weight: 600;
-                            color: #1f2937;
-                            background: white;
-                            cursor: pointer;
-                            outline: none;
-                        "
-                    >
-                        ${stationOptions}
-                    </select>
-                </div>
-            `;
+    //             const stationPickerHTML = `
+    //             <div style="position: relative;">
+    //                 <select 
+    //                     id="extension-station-select"
+    //                     style="
+    //                         width: 100%;
+    //                         padding: 6px 12px;
+    //                         border: 1px solid #e5e7eb;
+    //                         border-radius: 6px;
+    //                         font-size: 14px;
+    //                         font-weight: 600;
+    //                         color: #1f2937;
+    //                         background: white;
+    //                         cursor: pointer;
+    //                         outline: none;
+    //                     "
+    //                 >
+    //                     ${stationOptions}
+    //                 </select>
+    //             </div>
+    //         `;
 
-                window.parent.postMessage({
-                    type: 'HAMBURGER_MENU',
-                    isOpen: newState,
-                    content: {
-                        station: currentStation, // Use currentStation instead of params.get
-                        companyName: companyData?.name || 'Company Name',
-                        userName: user?.user?.name || user?.user?.email || 'User Name',
-                        stationPickerHTML: stationPickerHTML
-                    }
-                }, '*');
-            }
-            loadAndSendPicker();
-        } else if (!isHamburgerMenuOpen && isInIframe) {
-            window.parent.postMessage({
-                type: 'HAMBURGER_MENU',
-                isOpen: false
-            }, '*');
-        }
-    }, [isHamburgerMenuOpen, params, companyData, user, isInIframe]);
+    //             window.parent.postMessage({
+    //                 type: 'HAMBURGER_MENU',
+    //                 isOpen: newState,
+    //                 content: {
+    //                     station: currentStation, // Use currentStation instead of params.get
+    //                     companyName: companyData?.name || 'Company Name',
+    //                     userName: user?.user?.name || user?.user?.email || 'User Name',
+    //                     stationPickerHTML: stationPickerHTML
+    //                 }
+    //             }, '*');
+    //         }
+    //         loadAndSendPicker();
+    //     } else if (!isHamburgerMenuOpen && isInIframe) {
+    //         window.parent.postMessage({
+    //             type: 'HAMBURGER_MENU',
+    //             isOpen: false
+    //         }, '*');
+    //     }
+    // }, [isHamburgerMenuOpen, params, companyData, user, isInIframe]);
 
     useEffect(() => {
         if (!isInIframe) return;
