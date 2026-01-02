@@ -261,37 +261,63 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                     window.history.replaceState({}, '', currentUrl.toString());
                 }
             }
-
             if (event.data.type === 'STATION_CHANGE') {
                 const newStation = String(event.data.station);
                 console.log('[ClientHeader] 🔄 Station change request:', newStation);
 
-                // Save via chrome message
+                // Update states immediately
+                setCurrentStation(newStation);
+                setDisplayStation(newStation);
+
+                // Save to localStorage (for iframe quick access)
+                localStorage.setItem(STATION_STORAGE_KEY, newStation);
+                console.log('[ClientHeader] ✅ Saved to localStorage:', newStation);
+
+                // CRITICAL: Save to chrome.storage if in extension
                 if (typeof (window as any).chrome?.runtime?.sendMessage === 'function') {
                     (window as any).chrome.runtime.sendMessage({
                         action: 'setStation',
                         station: newStation
                     }, (response: any) => {
-                        if (response && response.success) {
-                            console.log('[ClientHeader] ✅ Saved to background');
-
-                            localStorage.setItem(STATION_STORAGE_KEY, newStation);
-
-                            // Update URL
-                            const currentUrl = new URL(window.location.href);
-                            currentUrl.searchParams.set('station', newStation);
-                            window.history.pushState({}, '', currentUrl.toString());
-
-                            // Dispatch event
-                            const stationEvent = new CustomEvent('stationChanged', {
-                                detail: { station: newStation }
-                            });
-                            window.dispatchEvent(stationEvent);
-
-                            message.success(`Station ${newStation} selected`);
+                        if ((window as any).chrome.runtime.lastError) {
+                            console.error('[ClientHeader] ❌ Chrome storage error:', (window as any).chrome.runtime.lastError);
+                        } else if (response && response.success) {
+                            console.log('[ClientHeader] ✅ Saved to chrome.storage via background:', newStation);
+                        } else {
+                            console.error('[ClientHeader] ❌ Background failed to save station');
                         }
                     });
                 }
+
+                // Also try direct chrome.storage save (fallback)
+                if (typeof (window as any).chrome?.storage?.local?.set === 'function') {
+                    (window as any).chrome.storage.local.set(
+                        { [STATION_STORAGE_KEY]: newStation },
+                        () => {
+                            if ((window as any).chrome.runtime.lastError) {
+                                console.error('[ClientHeader] ❌ Direct storage error:', (window as any).chrome.runtime.lastError);
+                            } else {
+                                console.log('[ClientHeader] ✅ Direct save to chrome.storage:', newStation);
+                            }
+                        }
+                    );
+                }
+
+                // Update URL
+                const currentUrl = new URL(window.location.href);
+                currentUrl.searchParams.set('station', newStation);
+                window.history.pushState({}, '', currentUrl.toString());
+                console.log('[ClientHeader] ✅ Updated URL with station:', newStation);
+
+                // Dispatch event for other listeners
+                const stationEvent = new CustomEvent('stationChanged', {
+                    detail: { station: newStation }
+                });
+                window.dispatchEvent(stationEvent);
+                console.log('[ClientHeader] ✅ Dispatched stationChanged event');
+
+                // Show success message
+                message.success(`Switched to Station ${newStation}`);
             }
         };
 
@@ -305,38 +331,60 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         const handleStationChange = (event: MessageEvent) => {
             if (event.data.type === 'STATION_CHANGE') {
                 const newStation = String(event.data.station);
-                console.log('[ClientHeader] 🔄 Station change from iframe:', newStation);
+                console.log('[ClientHeader] 🔄 Station change request:', newStation);
 
                 // Update states immediately
                 setCurrentStation(newStation);
                 setDisplayStation(newStation);
 
-                // Save to localStorage
+                // Save to localStorage (for iframe quick access)
                 localStorage.setItem(STATION_STORAGE_KEY, newStation);
+                console.log('[ClientHeader] ✅ Saved to localStorage:', newStation);
 
-                // Save via chrome message if in extension
+                // CRITICAL: Save to chrome.storage if in extension
                 if (typeof (window as any).chrome?.runtime?.sendMessage === 'function') {
                     (window as any).chrome.runtime.sendMessage({
                         action: 'setStation',
                         station: newStation
                     }, (response: any) => {
-                        if (response && response.success) {
-                            console.log('[ClientHeader] ✅ Saved to background');
+                        if ((window as any).chrome.runtime.lastError) {
+                            console.error('[ClientHeader] ❌ Chrome storage error:', (window as any).chrome.runtime.lastError);
+                        } else if (response && response.success) {
+                            console.log('[ClientHeader] ✅ Saved to chrome.storage via background:', newStation);
+                        } else {
+                            console.error('[ClientHeader] ❌ Background failed to save station');
                         }
                     });
+                }
+
+                // Also try direct chrome.storage save (fallback)
+                if (typeof (window as any).chrome?.storage?.local?.set === 'function') {
+                    (window as any).chrome.storage.local.set(
+                        { [STATION_STORAGE_KEY]: newStation },
+                        () => {
+                            if ((window as any).chrome.runtime.lastError) {
+                                console.error('[ClientHeader] ❌ Direct storage error:', (window as any).chrome.runtime.lastError);
+                            } else {
+                                console.log('[ClientHeader] ✅ Direct save to chrome.storage:', newStation);
+                            }
+                        }
+                    );
                 }
 
                 // Update URL
                 const currentUrl = new URL(window.location.href);
                 currentUrl.searchParams.set('station', newStation);
                 window.history.pushState({}, '', currentUrl.toString());
+                console.log('[ClientHeader] ✅ Updated URL with station:', newStation);
 
-                // Dispatch event
+                // Dispatch event for other listeners
                 const stationEvent = new CustomEvent('stationChanged', {
                     detail: { station: newStation }
                 });
                 window.dispatchEvent(stationEvent);
+                console.log('[ClientHeader] ✅ Dispatched stationChanged event');
 
+                // Show success message
                 message.success(`Switched to Station ${newStation}`);
             }
 
@@ -1401,45 +1449,61 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
 
             if (event.data.type === 'STATION_CHANGE') {
                 const newStation = String(event.data.station);
-                console.log('[ClientHeader] Station change requested:', newStation);
+                console.log('[ClientHeader] 🔄 Station change request:', newStation);
 
-                // Save to background (extension)
+                // Update states immediately
+                setCurrentStation(newStation);
+                setDisplayStation(newStation);
+
+                // Save to localStorage (for iframe quick access)
+                localStorage.setItem(STATION_STORAGE_KEY, newStation);
+                console.log('[ClientHeader] ✅ Saved to localStorage:', newStation);
+
+                // CRITICAL: Save to chrome.storage if in extension
                 if (typeof (window as any).chrome?.runtime?.sendMessage === 'function') {
                     (window as any).chrome.runtime.sendMessage({
                         action: 'setStation',
                         station: newStation
                     }, (response: any) => {
-                        if (response && response.success) {
-                            console.log('[ClientHeader] ✓ Background saved station:', newStation);
-
-                            // Also save to localStorage for quick iframe access
-                            localStorage.setItem(STATION_STORAGE_KEY, newStation);
-
-                            // Update iframe URL
-                            const currentIframe = document.getElementById('nobstacle-header-iframe') as HTMLIFrameElement;
-                            if (currentIframe && currentIframe.src.includes('station=')) {
-                                const newUrl = currentIframe.src.replace(/station=[^&]*/, `station=${newStation}`);
-                                currentIframe.src = newUrl;
-                            }
-
-                            // Update page URL
-                            const currentUrl = new URL(window.location.href);
-                            currentUrl.searchParams.set('station', newStation);
-                            window.history.pushState({}, '', currentUrl.toString());
-
-                            // Dispatch event
-                            const stationEvent = new CustomEvent('stationChanged', {
-                                detail: { station: newStation }
-                            });
-                            window.dispatchEvent(stationEvent);
-
-                            message.success(`Switched to Station ${newStation}`);
+                        if ((window as any).chrome.runtime.lastError) {
+                            console.error('[ClientHeader] ❌ Chrome storage error:', (window as any).chrome.runtime.lastError);
+                        } else if (response && response.success) {
+                            console.log('[ClientHeader] ✅ Saved to chrome.storage via background:', newStation);
                         } else {
-                            console.error('[ClientHeader] ✗ Failed to save station');
-                            message.error('Failed to save station');
+                            console.error('[ClientHeader] ❌ Background failed to save station');
                         }
                     });
                 }
+
+                // Also try direct chrome.storage save (fallback)
+                if (typeof (window as any).chrome?.storage?.local?.set === 'function') {
+                    (window as any).chrome.storage.local.set(
+                        { [STATION_STORAGE_KEY]: newStation },
+                        () => {
+                            if ((window as any).chrome.runtime.lastError) {
+                                console.error('[ClientHeader] ❌ Direct storage error:', (window as any).chrome.runtime.lastError);
+                            } else {
+                                console.log('[ClientHeader] ✅ Direct save to chrome.storage:', newStation);
+                            }
+                        }
+                    );
+                }
+
+                // Update URL
+                const currentUrl = new URL(window.location.href);
+                currentUrl.searchParams.set('station', newStation);
+                window.history.pushState({}, '', currentUrl.toString());
+                console.log('[ClientHeader] ✅ Updated URL with station:', newStation);
+
+                // Dispatch event for other listeners
+                const stationEvent = new CustomEvent('stationChanged', {
+                    detail: { station: newStation }
+                });
+                window.dispatchEvent(stationEvent);
+                console.log('[ClientHeader] ✅ Dispatched stationChanged event');
+
+                // Show success message
+                message.success(`Switched to Station ${newStation}`);
             }
 
             if (event.data.type === 'TEMPLATE_SELECT') {
@@ -2117,51 +2181,51 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                 </div>
 
                                 {/* Hamburger Menu */}
-<div ref={hamburgerMenuRef} style={{ position: 'relative', marginLeft: '8px' }}>
-    <div
-        onClick={async () => {
-            console.log('[ClientHeader] 🍔 Hamburger clicked!');
-            console.log('[ClientHeader] isInIframe:', isInIframe);
-            console.log('[ClientHeader] current state:', isHamburgerMenuOpen);
-            
-            const newState = !isHamburgerMenuOpen;
-            setIsHamburgerMenuOpen(newState);
+                                <div ref={hamburgerMenuRef} style={{ position: 'relative', marginLeft: '8px' }}>
+                                    <div
+                                        onClick={async () => {
+                                            console.log('[ClientHeader] 🍔 Hamburger clicked!');
+                                            console.log('[ClientHeader] isInIframe:', isInIframe);
+                                            console.log('[ClientHeader] current state:', isHamburgerMenuOpen);
 
-            if (isInIframe) {
-                // Get FRESH station from multiple sources
-                let currentStation = params.get("station");
-                
-                if (!currentStation) {
-                    currentStation = localStorage.getItem(STATION_STORAGE_KEY);
-                }
-                
-                if (!currentStation) {
-                    // Try chrome storage if available
-                    if (typeof (window as any).chrome?.storage?.local?.get === 'function') {
-                        try {
-                            const result = await new Promise((resolve) => {
-                                (window as any).chrome.storage.local.get([STATION_STORAGE_KEY], resolve);
-                            });
-                            currentStation = result[STATION_STORAGE_KEY] || "1";
-                        } catch (e) {
-                            currentStation = "1";
-                        }
-                    } else {
-                        currentStation = "1";
-                    }
-                }
+                                            const newState = !isHamburgerMenuOpen;
+                                            setIsHamburgerMenuOpen(newState);
 
-                console.log('[ClientHeader] 📍 Final station for hamburger:', currentStation);
-                
-                const stationCount = companyData?.stationCount || 10;
-                const stationOptions = Array.from({ length: stationCount }, (_, i) => i + 1)
-                    .map(num => `
+                                            if (isInIframe) {
+                                                // Get FRESH station from multiple sources
+                                                let currentStation = params.get("station");
+
+                                                if (!currentStation) {
+                                                    currentStation = localStorage.getItem(STATION_STORAGE_KEY);
+                                                }
+
+                                                if (!currentStation) {
+                                                    // Try chrome storage if available
+                                                    if (typeof (window as any).chrome?.storage?.local?.get === 'function') {
+                                                        try {
+                                                            const result = await new Promise((resolve) => {
+                                                                (window as any).chrome.storage.local.get([STATION_STORAGE_KEY], resolve);
+                                                            });
+                                                            currentStation = result[STATION_STORAGE_KEY] || "1";
+                                                        } catch (e) {
+                                                            currentStation = "1";
+                                                        }
+                                                    } else {
+                                                        currentStation = "1";
+                                                    }
+                                                }
+
+                                                console.log('[ClientHeader] 📍 Final station for hamburger:', currentStation);
+
+                                                const stationCount = companyData?.stationCount || 10;
+                                                const stationOptions = Array.from({ length: stationCount }, (_, i) => i + 1)
+                                                    .map(num => `
                         <option value="${num}" ${num === Number(currentStation) ? 'selected' : ''}>
                             Station ${num}
                         </option>
                     `).join('');
 
-                const stationPickerHTML = `
+                                                const stationPickerHTML = `
                     <div style="position: relative;">
                         <select 
                             id="extension-station-select"
@@ -2183,281 +2247,281 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                     </div>
                 `;
 
-                console.log('[ClientHeader] 📤 Sending HAMBURGER_MENU message...');
-                
-                window.parent.postMessage({
-                    type: 'HAMBURGER_MENU',
-                    isOpen: newState,
-                    content: {
-                        station: currentStation,
-                        companyName: companyData?.name || 'Company Name',
-                        userName: user?.user?.name || user?.user?.email || 'User Name',
-                        stationPickerHTML: stationPickerHTML
-                    }
-                }, '*');
-                
-                console.log('[ClientHeader] ✅ Message sent to parent');
-            }
-        }}
-        style={{
-            cursor: 'pointer',
-            padding: '8px 12px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            borderRadius: '8px',
-            transition: 'all 0.2s ease',
-            backgroundColor: isHamburgerMenuOpen ? 'rgba(255, 255, 255, 0.15)' : 'transparent',
-            position: 'relative',
-        }}
-        onMouseEnter={(e) => {
-            if (!isHamburgerMenuOpen) {
-                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
-            }
-        }}
-        onMouseLeave={(e) => {
-            if (!isHamburgerMenuOpen) {
-                e.currentTarget.style.backgroundColor = 'transparent';
-            }
-        }}
-    >
-        <GiHamburgerMenu
-            style={{
-                color: 'white',
-                fontSize: '20px',
-                transition: 'transform 0.2s ease',
-                transform: isHamburgerMenuOpen ? 'rotate(90deg)' : 'rotate(0deg)'
-            }}
-        />
-        <div style={{
-            position: 'absolute',
-            top: '2px',
-            right: '2px',
-            backgroundColor: '#ef4444',
-            color: 'white',
-            fontSize: '10px',
-            fontWeight: '600',
-            borderRadius: '10px',
-            minWidth: '18px',
-            height: '18px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '0 4px',
-            border: '2px solid #3b5998',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-        }}>
-            {currentStation || displayStation || Number(params.get("station") ?? 1)}
-        </div>
-    </div>
+                                                console.log('[ClientHeader] 📤 Sending HAMBURGER_MENU message...');
 
-    {/* Dropdown Menu - Non-iframe version */}
-    {isHamburgerMenuOpen && !isInIframe && (
-        <div style={{
-            position: 'fixed',
-            top: `${hamburgerPosition.top}px`,
-            right: `${hamburgerPosition.right}px`,
-            backgroundColor: 'white',
-            borderRadius: '12px',
-            boxShadow: '0 10px 40px rgba(0, 0, 0, 0.15)',
-            minWidth: '280px',
-            zIndex: 2147483647,
-            overflow: 'hidden',
-            border: '1px solid #e5e7eb',
-            animation: 'slideDown 0.2s ease-out'
-        }}>
-            {/* Station Number */}
-            <div style={{
-                padding: '16px 20px',
-                borderBottom: '1px solid #f0f0f0',
-                backgroundColor: '#f8fafc'
-            }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <div style={{
-                        width: '40px',
-                        height: '40px',
-                        borderRadius: '10px',
-                        backgroundColor: '#3b5998',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                    }}>
-                        <HiOutlineOfficeBuilding style={{ color: 'white', fontSize: '20px' }} />
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{
-                            fontSize: '11px',
-                            color: '#6b7280',
-                            fontWeight: '500',
-                            marginBottom: '2px',
-                            textTransform: 'uppercase'
-                        }}>Station</div>
-                        <div style={{
-                            fontSize: '15px',
-                            fontWeight: '600',
-                            color: '#1f2937',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap'
-                        }}>
-                            <StationPicker />
-                        </div>
-                    </div>
-                </div>
-            </div>
+                                                window.parent.postMessage({
+                                                    type: 'HAMBURGER_MENU',
+                                                    isOpen: newState,
+                                                    content: {
+                                                        station: currentStation,
+                                                        companyName: companyData?.name || 'Company Name',
+                                                        userName: user?.user?.name || user?.user?.email || 'User Name',
+                                                        stationPickerHTML: stationPickerHTML
+                                                    }
+                                                }, '*');
 
-            {/* Company Name */}
-            <div style={{
-                padding: '16px 20px',
-                borderBottom: '1px solid #f0f0f0',
-                backgroundColor: '#f8fafc'
-            }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <div style={{
-                        width: '40px',
-                        height: '40px',
-                        borderRadius: '10px',
-                        backgroundColor: '#3b5998',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                    }}>
-                        <HiOutlineOfficeBuilding style={{ color: 'white', fontSize: '20px' }} />
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{
-                            fontSize: '11px',
-                            color: '#6b7280',
-                            fontWeight: '500',
-                            marginBottom: '2px',
-                            textTransform: 'uppercase'
-                        }}>Company</div>
-                        <div style={{
-                            fontSize: '15px',
-                            fontWeight: '600',
-                            color: '#1f2937',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap'
-                        }}>{companyData?.name || 'Company Name'}</div>
-                    </div>
-                </div>
-            </div>
+                                                console.log('[ClientHeader] ✅ Message sent to parent');
+                                            }
+                                        }}
+                                        style={{
+                                            cursor: 'pointer',
+                                            padding: '8px 12px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            borderRadius: '8px',
+                                            transition: 'all 0.2s ease',
+                                            backgroundColor: isHamburgerMenuOpen ? 'rgba(255, 255, 255, 0.15)' : 'transparent',
+                                            position: 'relative',
+                                        }}
+                                        onMouseEnter={(e) => {
+                                            if (!isHamburgerMenuOpen) {
+                                                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+                                            }
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            if (!isHamburgerMenuOpen) {
+                                                e.currentTarget.style.backgroundColor = 'transparent';
+                                            }
+                                        }}
+                                    >
+                                        <GiHamburgerMenu
+                                            style={{
+                                                color: 'white',
+                                                fontSize: '20px',
+                                                transition: 'transform 0.2s ease',
+                                                transform: isHamburgerMenuOpen ? 'rotate(90deg)' : 'rotate(0deg)'
+                                            }}
+                                        />
+                                        <div style={{
+                                            position: 'absolute',
+                                            top: '2px',
+                                            right: '2px',
+                                            backgroundColor: '#ef4444',
+                                            color: 'white',
+                                            fontSize: '10px',
+                                            fontWeight: '600',
+                                            borderRadius: '10px',
+                                            minWidth: '18px',
+                                            height: '18px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            padding: '0 4px',
+                                            border: '2px solid #3b5998',
+                                            boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                                        }}>
+                                            {currentStation || displayStation || Number(params.get("station") ?? 1)}
+                                        </div>
+                                    </div>
 
-            {/* User Name */}
-            <div style={{
-                padding: '16px 20px',
-                borderBottom: '1px solid #f0f0f0'
-            }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <div style={{
-                        width: '40px',
-                        height: '40px',
-                        borderRadius: '10px',
-                        backgroundColor: '#e8eef7',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                    }}>
-                        <HiOutlineUser style={{ color: '#3b5998', fontSize: '20px' }} />
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{
-                            fontSize: '11px',
-                            color: '#6b7280',
-                            fontWeight: '500',
-                            marginBottom: '2px',
-                            textTransform: 'uppercase'
-                        }}>User</div>
-                        <div style={{
-                            fontSize: '15px',
-                            fontWeight: '600',
-                            color: '#1f2937',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap'
-                        }}>{user?.user?.name || user?.user?.email || 'User Name'}</div>
-                    </div>
-                </div>
-            </div>
+                                    {/* Dropdown Menu - Non-iframe version */}
+                                    {isHamburgerMenuOpen && !isInIframe && (
+                                        <div style={{
+                                            position: 'fixed',
+                                            top: `${hamburgerPosition.top}px`,
+                                            right: `${hamburgerPosition.right}px`,
+                                            backgroundColor: 'white',
+                                            borderRadius: '12px',
+                                            boxShadow: '0 10px 40px rgba(0, 0, 0, 0.15)',
+                                            minWidth: '280px',
+                                            zIndex: 2147483647,
+                                            overflow: 'hidden',
+                                            border: '1px solid #e5e7eb',
+                                            animation: 'slideDown 0.2s ease-out'
+                                        }}>
+                                            {/* Station Number */}
+                                            <div style={{
+                                                padding: '16px 20px',
+                                                borderBottom: '1px solid #f0f0f0',
+                                                backgroundColor: '#f8fafc'
+                                            }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                    <div style={{
+                                                        width: '40px',
+                                                        height: '40px',
+                                                        borderRadius: '10px',
+                                                        backgroundColor: '#3b5998',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center'
+                                                    }}>
+                                                        <HiOutlineOfficeBuilding style={{ color: 'white', fontSize: '20px' }} />
+                                                    </div>
+                                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                                        <div style={{
+                                                            fontSize: '11px',
+                                                            color: '#6b7280',
+                                                            fontWeight: '500',
+                                                            marginBottom: '2px',
+                                                            textTransform: 'uppercase'
+                                                        }}>Station</div>
+                                                        <div style={{
+                                                            fontSize: '15px',
+                                                            fontWeight: '600',
+                                                            color: '#1f2937',
+                                                            overflow: 'hidden',
+                                                            textOverflow: 'ellipsis',
+                                                            whiteSpace: 'nowrap'
+                                                        }}>
+                                                            <StationPicker />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
 
-            {/* Buttons */}
-            <div style={{ padding: '8px' }}>
-                <button
-                    onClick={() => {
-                        setIsHamburgerMenuOpen(false);
-                    }}
-                    style={{
-                        width: '100%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '12px',
-                        padding: '12px 16px',
-                        backgroundColor: 'transparent',
-                        border: 'none',
-                        borderRadius: '8px',
-                        cursor: 'pointer',
-                        fontSize: '14px',
-                        fontWeight: '500',
-                        color: '#374151',
-                        marginBottom: '4px'
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
-                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                >
-                    <div style={{
-                        width: '36px',
-                        height: '36px',
-                        borderRadius: '8px',
-                        backgroundColor: '#fef3c7',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                    }}>
-                        <RiLockPasswordLine style={{ color: '#d97706', fontSize: '18px' }} />
-                    </div>
-                    <span>Change Password</span>
-                </button>
+                                            {/* Company Name */}
+                                            <div style={{
+                                                padding: '16px 20px',
+                                                borderBottom: '1px solid #f0f0f0',
+                                                backgroundColor: '#f8fafc'
+                                            }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                    <div style={{
+                                                        width: '40px',
+                                                        height: '40px',
+                                                        borderRadius: '10px',
+                                                        backgroundColor: '#3b5998',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center'
+                                                    }}>
+                                                        <HiOutlineOfficeBuilding style={{ color: 'white', fontSize: '20px' }} />
+                                                    </div>
+                                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                                        <div style={{
+                                                            fontSize: '11px',
+                                                            color: '#6b7280',
+                                                            fontWeight: '500',
+                                                            marginBottom: '2px',
+                                                            textTransform: 'uppercase'
+                                                        }}>Company</div>
+                                                        <div style={{
+                                                            fontSize: '15px',
+                                                            fontWeight: '600',
+                                                            color: '#1f2937',
+                                                            overflow: 'hidden',
+                                                            textOverflow: 'ellipsis',
+                                                            whiteSpace: 'nowrap'
+                                                        }}>{companyData?.name || 'Company Name'}</div>
+                                                    </div>
+                                                </div>
+                                            </div>
 
-                <button
-                    onClick={() => {
-                        handleLogout();
-                        setIsHamburgerMenuOpen(false);
-                    }}
-                    style={{
-                        width: '100%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '12px',
-                        padding: '12px 16px',
-                        backgroundColor: 'transparent',
-                        border: 'none',
-                        borderRadius: '8px',
-                        cursor: 'pointer',
-                        fontSize: '14px',
-                        fontWeight: '500',
-                        color: '#dc2626'
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#fee2e2'}
-                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                >
-                    <div style={{
-                        width: '36px',
-                        height: '36px',
-                        borderRadius: '8px',
-                        backgroundColor: '#fee2e2',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                    }}>
-                        <RiLogoutBoxLine style={{ color: '#dc2626', fontSize: '18px' }} />
-                    </div>
-                    <span>Logout</span>
-                </button>
-            </div>
-        </div>
-    )}
-</div>
+                                            {/* User Name */}
+                                            <div style={{
+                                                padding: '16px 20px',
+                                                borderBottom: '1px solid #f0f0f0'
+                                            }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                    <div style={{
+                                                        width: '40px',
+                                                        height: '40px',
+                                                        borderRadius: '10px',
+                                                        backgroundColor: '#e8eef7',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center'
+                                                    }}>
+                                                        <HiOutlineUser style={{ color: '#3b5998', fontSize: '20px' }} />
+                                                    </div>
+                                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                                        <div style={{
+                                                            fontSize: '11px',
+                                                            color: '#6b7280',
+                                                            fontWeight: '500',
+                                                            marginBottom: '2px',
+                                                            textTransform: 'uppercase'
+                                                        }}>User</div>
+                                                        <div style={{
+                                                            fontSize: '15px',
+                                                            fontWeight: '600',
+                                                            color: '#1f2937',
+                                                            overflow: 'hidden',
+                                                            textOverflow: 'ellipsis',
+                                                            whiteSpace: 'nowrap'
+                                                        }}>{user?.user?.name || user?.user?.email || 'User Name'}</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Buttons */}
+                                            <div style={{ padding: '8px' }}>
+                                                <button
+                                                    onClick={() => {
+                                                        setIsHamburgerMenuOpen(false);
+                                                    }}
+                                                    style={{
+                                                        width: '100%',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        gap: '12px',
+                                                        padding: '12px 16px',
+                                                        backgroundColor: 'transparent',
+                                                        border: 'none',
+                                                        borderRadius: '8px',
+                                                        cursor: 'pointer',
+                                                        fontSize: '14px',
+                                                        fontWeight: '500',
+                                                        color: '#374151',
+                                                        marginBottom: '4px'
+                                                    }}
+                                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
+                                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                                >
+                                                    <div style={{
+                                                        width: '36px',
+                                                        height: '36px',
+                                                        borderRadius: '8px',
+                                                        backgroundColor: '#fef3c7',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center'
+                                                    }}>
+                                                        <RiLockPasswordLine style={{ color: '#d97706', fontSize: '18px' }} />
+                                                    </div>
+                                                    <span>Change Password</span>
+                                                </button>
+
+                                                <button
+                                                    onClick={() => {
+                                                        handleLogout();
+                                                        setIsHamburgerMenuOpen(false);
+                                                    }}
+                                                    style={{
+                                                        width: '100%',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        gap: '12px',
+                                                        padding: '12px 16px',
+                                                        backgroundColor: 'transparent',
+                                                        border: 'none',
+                                                        borderRadius: '8px',
+                                                        cursor: 'pointer',
+                                                        fontSize: '14px',
+                                                        fontWeight: '500',
+                                                        color: '#dc2626'
+                                                    }}
+                                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#fee2e2'}
+                                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                                >
+                                                    <div style={{
+                                                        width: '36px',
+                                                        height: '36px',
+                                                        borderRadius: '8px',
+                                                        backgroundColor: '#fee2e2',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center'
+                                                    }}>
+                                                        <RiLogoutBoxLine style={{ color: '#dc2626', fontSize: '18px' }} />
+                                                    </div>
+                                                    <span>Logout</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         )}
                     </div>

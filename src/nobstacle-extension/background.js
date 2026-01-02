@@ -99,79 +99,77 @@ async function restoreTokenFromStorage() {
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   console.log('[Background] 📨 Received message:', request.action);
 
-  // GET STATION - FIX: Always read from storage, then update memory
   if (request.action === 'getStation') {
-    chrome.storage.local.get([STATION_STORAGE_KEY], (result) => {
-      if (chrome.runtime.lastError) {
-        console.error('[Background] ❌ GET error:', chrome.runtime.lastError);
-        sendResponse({ success: false, station: currentStation || "1" });
-        return;
-      }
-
-      const station = result[STATION_STORAGE_KEY] 
-        ? String(result[STATION_STORAGE_KEY])
-        : "1";
-      
-      // Update memory
-      currentStation = station;
-      
-      console.log('[Background] 📍 GET STATION - Returning:', station);
-      sendResponse({ success: true, station: station });
-    });
-    return true; // Keep channel open
-  }
+        console.log('[Background] 📥 getStation request');
+        
+        chrome.storage.local.get([STATION_STORAGE_KEY], (result) => {
+            const station = result[STATION_STORAGE_KEY] ? String(result[STATION_STORAGE_KEY]) : "1";
+            console.log('[Background] 📤 Returning station:', station);
+            
+            // Update memory
+            currentStation = station;
+            
+            sendResponse({ success: true, station: station });
+        });
+        
+        return true; // Keep channel open for async response
+    }
 
   // SET STATION - FIX: Better error handling and verification
-  if (request.action === 'setStation') {
-    const newStation = String(request.station);
-    console.log('[Background] 💾 SET STATION:', newStation);
-
-    // Update memory immediately
-    currentStation = newStation;
-
-    // Save to storage with verification
-    chrome.storage.local.set(
-      { [STATION_STORAGE_KEY]: newStation },
-      () => {
-        if (chrome.runtime.lastError) {
-          console.error('[Background] ❌ Save error:', chrome.runtime.lastError);
-          sendResponse({ success: false, error: chrome.runtime.lastError.message });
-          return;
-        }
-
-        console.log('[Background] ✅ Station saved:', newStation);
-
-        // Verify the save by reading it back
-        chrome.storage.local.get([STATION_STORAGE_KEY], (result) => {
-          const saved = result[STATION_STORAGE_KEY];
-          console.log('[Background] 🔍 Verified storage:', saved);
-          
-          if (String(saved) === newStation) {
-            console.log('[Background] ✅ Verification successful');
-            
-            // Notify all content scripts
-            chrome.tabs.query({}, (tabs) => {
-              tabs.forEach(tab => {
-                if (tab.id && tab.url && !tab.url.startsWith('chrome://')) {
-                  chrome.tabs.sendMessage(
-                    tab.id,
-                    { action: 'stationChanged', station: newStation }
-                  ).catch(() => { /* Ignore errors for tabs without content script */ });
+ if (request.action === 'setStation') {
+        const newStation = String(request.station);
+        console.log('[Background] 📥 setStation request:', newStation);
+        
+        // Save to chrome.storage
+        chrome.storage.local.set(
+            { [STATION_STORAGE_KEY]: newStation },
+            () => {
+                if (chrome.runtime.lastError) {
+                    console.error('[Background] ❌ Storage error:', chrome.runtime.lastError);
+                    sendResponse({ success: false, error: chrome.runtime.lastError.message });
+                } else {
+                    console.log('[Background] ✅ Station saved:', newStation);
+                    
+                    // Update memory
+                    currentStation = newStation;
+                    
+                    // Verify by reading back
+                    chrome.storage.local.get([STATION_STORAGE_KEY], (result) => {
+                        const saved = String(result[STATION_STORAGE_KEY]);
+                        console.log('[Background] 🔍 Verification read:', saved);
+                        
+                        if (saved === newStation) {
+                            console.log('[Background] ✅ Verification passed');
+                            
+                            // Notify all tabs about the change
+                            chrome.tabs.query({}, (tabs) => {
+                                tabs.forEach((tab) => {
+                                    if (tab.id) {
+                                        chrome.tabs.sendMessage(tab.id, {
+                                            action: 'stationChanged',
+                                            station: newStation
+                                        }).catch(() => {
+                                            // Tab might not have content script, ignore
+                                        });
+                                    }
+                                });
+                            });
+                            
+                            sendResponse({ success: true, station: newStation });
+                        } else {
+                            console.error('[Background] ❌ Verification failed!', {
+                                expected: newStation,
+                                actual: saved
+                            });
+                            sendResponse({ success: false, error: 'Verification failed' });
+                        }
+                    });
                 }
-              });
-            });
-
-            sendResponse({ success: true, station: newStation });
-          } else {
-            console.error('[Background] ❌ Verification failed! Expected:', newStation, 'Got:', saved);
-            sendResponse({ success: false, error: 'Verification failed' });
-          }
-        });
-      }
-    );
-
-    return true; // Keep channel open
-  }
+            }
+        );
+        
+        return true; // Keep channel open for async response
+    }
 
   // Other handlers remain the same...
   if (request.type === 'HEADER_READY') {

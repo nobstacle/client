@@ -1499,7 +1499,6 @@ if (event.data.type === 'HAMBURGER_MENU') {
         }
       }
 
-      // STATION_CHANGE
 // STATION_CHANGE
 if (event.data.type === 'STATION_CHANGE') {
     const newStation = String(event.data.station);
@@ -1507,27 +1506,47 @@ if (event.data.type === 'STATION_CHANGE') {
 
     // Update memory immediately
     selectedStation = newStation;
+    console.log('[Content Script] ✅ Updated memory:', selectedStation);
 
-    // Save to both localStorage and chrome storage
+    // Save to localStorage (for quick iframe access)
     localStorage.setItem(STATION_STORAGE_KEY, newStation);
+    console.log('[Content Script] ✅ Saved to localStorage:', newStation);
     
+    // CRITICAL: Save to chrome.storage
     chrome.storage.local.set(
         { [STATION_STORAGE_KEY]: newStation },
         () => {
             if (chrome.runtime.lastError) {
-                console.error('[Content Script] ❌ Storage error:', chrome.runtime.lastError);
+                console.error('[Content Script] ❌ Chrome storage error:', chrome.runtime.lastError);
             } else {
-                console.log('[Content Script] ✅ Station saved to chrome.storage:', newStation);
+                console.log('[Content Script] ✅ Saved to chrome.storage:', newStation);
                 
-                // Also notify background script
+                // Verify the save
+                chrome.storage.local.get([STATION_STORAGE_KEY], (result) => {
+                    const saved = String(result[STATION_STORAGE_KEY]);
+                    console.log('[Content Script] 🔍 Verification read:', saved);
+                    
+                    if (saved === newStation) {
+                        console.log('[Content Script] ✅ Verification passed!');
+                    } else {
+                        console.error('[Content Script] ❌ Verification failed!', {
+                            expected: newStation,
+                            actual: saved
+                        });
+                    }
+                });
+                
+                // ALSO notify background script (double-save for safety)
                 chrome.runtime.sendMessage({
                     action: 'setStation',
                     station: newStation
                 }, (response) => {
                     if (chrome.runtime.lastError) {
-                        console.error('[Content Script] ❌ Background error:', chrome.runtime.lastError);
+                        console.error('[Content Script] ❌ Background message error:', chrome.runtime.lastError);
                     } else if (response && response.success) {
                         console.log('[Content Script] ✅ Background confirmed station save');
+                    } else {
+                        console.error('[Content Script] ❌ Background failed to save:', response);
                     }
                 });
             }
@@ -1538,7 +1557,7 @@ if (event.data.type === 'STATION_CHANGE') {
     const currentIframe = document.getElementById('nobstacle-header-iframe');
     if (currentIframe && currentIframe.src.includes('station=')) {
         const newUrl = currentIframe.src.replace(/station=[^&]*/, `station=${newStation}`);
-        console.log('[Content Script] 🔄 Reloading iframe with new URL');
+        console.log('[Content Script] 🔄 Reloading iframe with new station');
         currentIframe.src = newUrl;
     }
 
@@ -1546,11 +1565,13 @@ if (event.data.type === 'STATION_CHANGE') {
     const url = new URL(window.location.href);
     url.searchParams.set('station', newStation);
     window.history.pushState({}, '', url.toString());
+    console.log('[Content Script] ✅ Updated page URL');
 
     // Dispatch event for other listeners
     window.dispatchEvent(new CustomEvent('stationChanged', {
         detail: { station: newStation }
     }));
+    console.log('[Content Script] ✅ Dispatched stationChanged event');
 
     console.log('[Content Script] ✅ Station change complete:', newStation);
 }
