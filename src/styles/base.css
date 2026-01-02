@@ -1200,3 +1200,18 @@ button {
 .category-item.selected {
   background-color: #e8eef7 !important;
 }
+
+
+/* Prevent Antd Table fixed columns from overlapping drawers/menus/modals */
+.ant-table-cell-fix-right,
+.ant-table-cell-fix-right-first,
+.ant-table-cell-fix-right-last,
+.ant-table-ping-right {
+  z-index: 0 !important;
+}
+
+/* If you have sticky header enabled on the table */
+.ant-table-sticky-holder,
+.ant-table-header {
+  z-index: 0 !important;
+}

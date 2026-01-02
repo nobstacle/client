@@ -119,7 +119,9 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
     const [displayStation, setDisplayStation] = useState(
         params.get("station") ?? "1"
     );
-    const currentStation = params.get("station") ?? displayStation ?? "1";
+    const [currentStation, setCurrentStation] = useState<string>(
+        params.get("station") || "1"
+    );
 
     useEffect(() => {
         setIsInIframe(window.self !== window.top);
@@ -138,11 +140,30 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
     });
 
     useEffect(() => {
+        const urlStation = params.get("station");
+        if (urlStation && urlStation !== currentStation) {
+            console.log('[ClientHeader] 🔄 URL param changed, syncing:', urlStation);
+            setCurrentStation(urlStation);
+            setDisplayStation(urlStation);
+            localStorage.setItem(STATION_STORAGE_KEY, urlStation);
+        }
+    }, [params]);
+
+    useEffect(() => {
         const handleStationUpdate = (event: CustomEvent) => {
-            const newStation = event.detail.station;
+            const newStation = String(event.detail.station);
+            console.log('[ClientHeader] 📡 Station changed event:', newStation);
+
+            setCurrentStation(newStation);
             setDisplayStation(newStation);
 
-            console.log('[ClientHeader] 🔄 Station changed, queries will refetch:', newStation);
+            // Update localStorage
+            localStorage.setItem(STATION_STORAGE_KEY, newStation);
+
+            // Update URL
+            const currentUrl = new URL(window.location.href);
+            currentUrl.searchParams.set('station', newStation);
+            window.history.pushState({}, '', currentUrl.toString());
         };
 
         window.addEventListener('stationChanged', handleStationUpdate as EventListener);
@@ -156,14 +177,25 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         const urlStation = params.get("station");
         const localStation = localStorage.getItem(STATION_STORAGE_KEY);
 
-        if (urlStation && urlStation !== displayStation) {
-            console.log('[ClientHeader] 📍 URL station differs from display, updating:', urlStation);
-            setDisplayStation(urlStation);
-        } else if (!urlStation && localStation && localStation !== displayStation) {
-            console.log('[ClientHeader] 📍 localStorage station differs, updating:', localStation);
-            setDisplayStation(localStation);
+        // Priority: URL > localStorage > default "1"
+        const stationToUse = urlStation || localStation || "1";
+
+        console.log('[ClientHeader] 🔍 Initial station check:', {
+            urlStation,
+            localStation,
+            stationToUse
+        });
+
+        setCurrentStation(stationToUse);
+        setDisplayStation(stationToUse);
+
+        // If URL doesn't have station but localStorage does, update URL
+        if (!urlStation && localStation) {
+            const currentUrl = new URL(window.location.href);
+            currentUrl.searchParams.set('station', localStation);
+            window.history.replaceState({}, '', currentUrl.toString());
         }
-    }, [params, displayStation]);
+    }, []);
 
     useEffect(() => {
         // Prefetch categories on mount
@@ -211,22 +243,22 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         const handleMessage = (event: MessageEvent) => {
             // When iframe loads, ask extension for station
             if (event.data.type === 'INITIAL_STATION') {
-                const station = event.data.station;
+                const station = String(event.data.station);
                 console.log('[ClientHeader] 📍 Initial station from extension:', station);
 
-                // Update URL if needed
-                const currentUrl = new URL(window.location.href);
-                const urlStation = currentUrl.searchParams.get('station');
+                // Update states
+                setCurrentStation(station);
+                setDisplayStation(station);
 
+                // Update localStorage
+                localStorage.setItem(STATION_STORAGE_KEY, station);
+
+                // Update URL if different
+                const urlStation = params.get("station");
                 if (urlStation !== station) {
+                    const currentUrl = new URL(window.location.href);
                     currentUrl.searchParams.set('station', station);
                     window.history.replaceState({}, '', currentUrl.toString());
-
-                    // Trigger re-render
-                    const event = new CustomEvent('stationChanged', {
-                        detail: { station }
-                    });
-                    window.dispatchEvent(event);
                 }
             }
 
@@ -273,43 +305,28 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         const handleStationChange = (event: MessageEvent) => {
             if (event.data.type === 'STATION_CHANGE') {
                 const newStation = String(event.data.station);
-                console.log('[ClientHeader] Station change requested:', newStation);
+                console.log('[ClientHeader] 🔄 Station change from iframe:', newStation);
 
-                // Save to localStorage FIRST
-                try {
-                    localStorage.setItem(STATION_STORAGE_KEY, newStation);
-                    console.log('[ClientHeader] ✓ Saved to localStorage:', newStation);
-                } catch (error) {
-                    console.error('[ClientHeader] ✗ localStorage error:', error);
-                }
+                // Update states immediately
+                setCurrentStation(newStation);
+                setDisplayStation(newStation);
 
-                // Save to Chrome storage if available
-                if (typeof (window as any).chrome !== 'undefined' &&
-                    typeof (window as any).chrome.storage !== 'undefined') {
-                    (window as any).chrome.storage.local.set({
-                        [STATION_STORAGE_KEY]: newStation
-                    }, () => {
-                        if ((window as any).chrome.runtime.lastError) {
-                            console.error('[ClientHeader] ✗ Chrome storage error:', (window as any).chrome.runtime.lastError);
-                        } else {
-                            console.log('[ClientHeader] ✓ Saved to Chrome storage:', newStation);
+                // Save to localStorage
+                localStorage.setItem(STATION_STORAGE_KEY, newStation);
 
-                            // VERIFY the save
-                            (window as any).chrome.storage.local.get([STATION_STORAGE_KEY], (result: any) => {
-                                console.log('[ClientHeader] ✓ Verification - Chrome storage now has:', result[STATION_STORAGE_KEY]);
-                            });
+                // Save via chrome message if in extension
+                if (typeof (window as any).chrome?.runtime?.sendMessage === 'function') {
+                    (window as any).chrome.runtime.sendMessage({
+                        action: 'setStation',
+                        station: newStation
+                    }, (response: any) => {
+                        if (response && response.success) {
+                            console.log('[ClientHeader] ✅ Saved to background');
                         }
                     });
                 }
 
-                // Update iframe URL
-                const currentIframe = document.getElementById('nobstacle-header-iframe') as HTMLIFrameElement;
-                if (currentIframe && currentIframe.src.includes('station=')) {
-                    const newUrl = currentIframe.src.replace(/station=[^&]*/, `station=${newStation}`);
-                    currentIframe.src = newUrl;
-                }
-
-                // Update page URL
+                // Update URL
                 const currentUrl = new URL(window.location.href);
                 currentUrl.searchParams.set('station', newStation);
                 window.history.pushState({}, '', currentUrl.toString());
@@ -322,6 +339,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
 
                 message.success(`Switched to Station ${newStation}`);
             }
+
         };
 
         window.addEventListener('message', handleStationChange);
@@ -369,17 +387,16 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
             }, '*');
         }
     };
-
     const { data: textTemplates, isLoading: textLoading } = useTemplateControllerGetTextTemplates(
         undefined,
         {
             query: {
-                queryKey: ['textTemplates', currentStation], // Add station to key
+                queryKey: ['textTemplates', currentStation],
                 staleTime: 1000 * 60 * 5,
                 gcTime: 1000 * 60 * 10,
-                refetchOnWindowFocus: true, // Enable refetch on focus
-                refetchOnMount: true, // Enable refetch on mount
-                enabled: !!currentStation, // Only fetch when station is available
+                refetchOnWindowFocus: false,
+                refetchOnMount: true,
+                enabled: !!currentStation,
             }
         }
     );
@@ -391,7 +408,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                 queryKey: ['imageTemplates', currentStation],
                 staleTime: 1000 * 60 * 5,
                 gcTime: 1000 * 60 * 10,
-                refetchOnWindowFocus: true,
+                refetchOnWindowFocus: false,
                 refetchOnMount: true,
                 enabled: !!currentStation,
             }
@@ -405,7 +422,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                 queryKey: ['videoTemplates', currentStation],
                 staleTime: 1000 * 60 * 5,
                 gcTime: 1000 * 60 * 10,
-                refetchOnWindowFocus: true,
+                refetchOnWindowFocus: false,
                 refetchOnMount: true,
                 enabled: !!currentStation,
             }
@@ -419,7 +436,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                 queryKey: ['websiteTemplates', currentStation],
                 staleTime: 1000 * 60 * 5,
                 gcTime: 1000 * 60 * 10,
-                refetchOnWindowFocus: true,
+                refetchOnWindowFocus: false,
                 refetchOnMount: true,
                 enabled: !!currentStation,
             }
@@ -433,7 +450,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                 queryKey: ['slideshowTemplates', currentStation],
                 staleTime: 1000 * 60 * 5,
                 gcTime: 1000 * 60 * 10,
-                refetchOnWindowFocus: true,
+                refetchOnWindowFocus: false,
                 refetchOnMount: true,
                 enabled: !!currentStation,
             }
@@ -446,7 +463,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                 queryKey: ['mapTemplates', currentStation],
                 staleTime: 1000 * 60 * 5,
                 gcTime: 1000 * 60 * 10,
-                refetchOnWindowFocus: true,
+                refetchOnWindowFocus: false,
                 refetchOnMount: true,
                 enabled: !!currentStation,
             }
@@ -460,7 +477,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                 queryKey: ['documentTemplates', currentStation],
                 staleTime: 1000 * 60 * 5,
                 gcTime: 1000 * 60 * 10,
-                refetchOnWindowFocus: true,
+                refetchOnWindowFocus: false,
                 refetchOnMount: true,
                 enabled: !!currentStation,
             }
@@ -835,12 +852,12 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
 
                 window.parent.postMessage({
                     type: 'HAMBURGER_MENU',
-                    isOpen: true,
+                    isOpen: newState,
                     content: {
-                        station: currentStation,
+                        station: currentStation, // Use currentStation instead of params.get
                         companyName: companyData?.name || 'Company Name',
                         userName: user?.user?.name || user?.user?.email || 'User Name',
-                        stationPickerHTML
+                        stationPickerHTML: stationPickerHTML
                     }
                 }, '*');
             }
@@ -859,18 +876,19 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         const handleInitialStation = (event: MessageEvent) => {
             if (event.data.type === 'INITIAL_STATION') {
                 const station = String(event.data.station);
-                console.log('[ClientHeader] 📍 Received initial station:', station);
+                console.log('[ClientHeader] 📍 Initial station from extension:', station);
 
-                // Update display station
+                // Update states
+                setCurrentStation(station);
                 setDisplayStation(station);
 
-                // Update localStorage for future reads
+                // Update localStorage
                 localStorage.setItem(STATION_STORAGE_KEY, station);
 
                 // Update URL if different
-                const currentUrl = new URL(window.location.href);
-                const urlStation = currentUrl.searchParams.get('station');
+                const urlStation = params.get("station");
                 if (urlStation !== station) {
+                    const currentUrl = new URL(window.location.href);
                     currentUrl.searchParams.set('station', station);
                     window.history.replaceState({}, '', currentUrl.toString());
                 }
@@ -1283,14 +1301,17 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
     useEffect(() => {
         if (!isInIframe) return;
 
-        // Listen for chrome.storage changes
         if (typeof (window as any).chrome !== 'undefined' &&
             typeof (window as any).chrome.storage !== 'undefined') {
 
             const handleStorageChange = (changes: any, areaName: string) => {
                 if (areaName === 'local' && changes[STATION_STORAGE_KEY]) {
-                    const newStation = changes[STATION_STORAGE_KEY].newValue;
+                    const newStation = String(changes[STATION_STORAGE_KEY].newValue);
                     console.log('[ClientHeader] 📡 Chrome storage changed:', newStation);
+
+                    // Update states
+                    setCurrentStation(newStation);
+                    setDisplayStation(newStation);
 
                     // Update localStorage
                     localStorage.setItem(STATION_STORAGE_KEY, newStation);
@@ -1428,21 +1449,22 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
             }
 
             if (event.data.type === 'INITIAL_STATION') {
-                const savedStation = String(event.data.station);
-                console.log('[ClientHeader] Received initial station from extension:', savedStation);
+                const station = String(event.data.station);
+                console.log('[ClientHeader] 📍 Initial station from extension:', station);
 
-                // Update URL if needed
-                const currentStation = params.get("station");
-                if (!currentStation || currentStation !== savedStation) {
+                // Update states
+                setCurrentStation(station);
+                setDisplayStation(station);
+
+                // Update localStorage
+                localStorage.setItem(STATION_STORAGE_KEY, station);
+
+                // Update URL if different
+                const urlStation = params.get("station");
+                if (urlStation !== station) {
                     const currentUrl = new URL(window.location.href);
-                    currentUrl.searchParams.set('station', savedStation);
+                    currentUrl.searchParams.set('station', station);
                     window.history.replaceState({}, '', currentUrl.toString());
-
-                    // Trigger re-render
-                    const stationEvent = new CustomEvent('stationChanged', {
-                        detail: { station: savedStation }
-                    });
-                    window.dispatchEvent(stationEvent);
                 }
             }
 
@@ -2146,7 +2168,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                                     type: 'HAMBURGER_MENU',
                                                     isOpen: newState,
                                                     content: {
-                                                        station: params.get("station") ?? 1,
+                                                        station: currentStation, // Use currentStation instead of params.get
                                                         companyName: companyData?.name || 'Company Name',
                                                         userName: user?.user?.name || user?.user?.email || 'User Name',
                                                         stationPickerHTML: stationPickerHTML
@@ -2202,7 +2224,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                             border: '2px solid #3b5998',
                                             boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
                                         }}>
-                                            {displayStation || Number(params.get("station") ?? 1)}
+                                            {currentStation || displayStation || Number(params.get("station") ?? 1)}
                                         </div>
                                     </div>
 
