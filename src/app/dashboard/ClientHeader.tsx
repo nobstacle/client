@@ -116,29 +116,33 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
     const [selectedPackages, setSelectedPackages] = useState([]);
     const [categoriesData, setCategoriesData] = useState([]);
     const [categoriesFetched, setCategoriesFetched] = useState(false);
-    // const [isInitializing, setIsInitializing] = useState(true);
     const [displayStation, setDisplayStation] = useState(
         params.get("station") ?? "1"
     );
+    const currentStation = params.get("station") ?? displayStation ?? "1";
 
     useEffect(() => {
         setIsInIframe(window.self !== window.top);
     }, []);
 
+
     // Get company data with proper caching
     const { data: companyData } = useCompanyControllerGetCompany({
         query: {
-            queryKey: ['company'],
+            queryKey: ['company', currentStation],
             staleTime: 1000 * 60 * 5,
             gcTime: 1000 * 60 * 10,
-            refetchOnWindowFocus: false,
-            refetchOnMount: false,
+            refetchOnWindowFocus: true,
+            refetchOnMount: true,
         }
     });
 
     useEffect(() => {
         const handleStationUpdate = (event: CustomEvent) => {
-            setDisplayStation(event.detail.station);
+            const newStation = event.detail.station;
+            setDisplayStation(newStation);
+
+            console.log('[ClientHeader] 🔄 Station changed, queries will refetch:', newStation);
         };
 
         window.addEventListener('stationChanged', handleStationUpdate as EventListener);
@@ -147,6 +151,19 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
             window.removeEventListener('stationChanged', handleStationUpdate as EventListener);
         };
     }, []);
+
+    useEffect(() => {
+        const urlStation = params.get("station");
+        const localStation = localStorage.getItem(STATION_STORAGE_KEY);
+
+        if (urlStation && urlStation !== displayStation) {
+            console.log('[ClientHeader] 📍 URL station differs from display, updating:', urlStation);
+            setDisplayStation(urlStation);
+        } else if (!urlStation && localStation && localStation !== displayStation) {
+            console.log('[ClientHeader] 📍 localStorage station differs, updating:', localStation);
+            setDisplayStation(localStation);
+        }
+    }, [params, displayStation]);
 
     useEffect(() => {
         // Prefetch categories on mount
@@ -353,16 +370,16 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         }
     };
 
-    // Fetch all template types with proper caching configuration
     const { data: textTemplates, isLoading: textLoading } = useTemplateControllerGetTextTemplates(
         undefined,
         {
             query: {
-                queryKey: ['textTemplates'],
+                queryKey: ['textTemplates', currentStation], // Add station to key
                 staleTime: 1000 * 60 * 5,
                 gcTime: 1000 * 60 * 10,
-                refetchOnWindowFocus: false,
-                refetchOnMount: false,
+                refetchOnWindowFocus: true, // Enable refetch on focus
+                refetchOnMount: true, // Enable refetch on mount
+                enabled: !!currentStation, // Only fetch when station is available
             }
         }
     );
@@ -371,11 +388,12 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         undefined,
         {
             query: {
-                queryKey: ['imageTemplates'],
+                queryKey: ['imageTemplates', currentStation],
                 staleTime: 1000 * 60 * 5,
                 gcTime: 1000 * 60 * 10,
-                refetchOnWindowFocus: false,
-                refetchOnMount: false,
+                refetchOnWindowFocus: true,
+                refetchOnMount: true,
+                enabled: !!currentStation,
             }
         }
     );
@@ -384,11 +402,12 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         undefined,
         {
             query: {
-                queryKey: ['videoTemplates'],
+                queryKey: ['videoTemplates', currentStation],
                 staleTime: 1000 * 60 * 5,
                 gcTime: 1000 * 60 * 10,
-                refetchOnWindowFocus: false,
-                refetchOnMount: false,
+                refetchOnWindowFocus: true,
+                refetchOnMount: true,
+                enabled: !!currentStation,
             }
         }
     );
@@ -397,11 +416,12 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         undefined,
         {
             query: {
-                queryKey: ['websiteTemplates'],
+                queryKey: ['websiteTemplates', currentStation],
                 staleTime: 1000 * 60 * 5,
                 gcTime: 1000 * 60 * 10,
-                refetchOnWindowFocus: false,
-                refetchOnMount: false,
+                refetchOnWindowFocus: true,
+                refetchOnMount: true,
+                enabled: !!currentStation,
             }
         }
     );
@@ -410,11 +430,12 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         undefined,
         {
             query: {
-                queryKey: ['slideshowTemplates'],
+                queryKey: ['slideshowTemplates', currentStation],
                 staleTime: 1000 * 60 * 5,
                 gcTime: 1000 * 60 * 10,
-                refetchOnWindowFocus: false,
-                refetchOnMount: false,
+                refetchOnWindowFocus: true,
+                refetchOnMount: true,
+                enabled: !!currentStation,
             }
         }
     );
@@ -422,11 +443,12 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
     const { data: mapTemplates, isLoading: mapLoading } = useTemplateControllerGetMapTemplates(
         {
             query: {
-                queryKey: ['mapTemplates'],
+                queryKey: ['mapTemplates', currentStation],
                 staleTime: 1000 * 60 * 5,
                 gcTime: 1000 * 60 * 10,
-                refetchOnWindowFocus: false,
-                refetchOnMount: false,
+                refetchOnWindowFocus: true,
+                refetchOnMount: true,
+                enabled: !!currentStation,
             }
         }
     );
@@ -435,11 +457,12 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         undefined,
         {
             query: {
-                queryKey: ['documentTemplates'],
+                queryKey: ['documentTemplates', currentStation],
                 staleTime: 1000 * 60 * 5,
                 gcTime: 1000 * 60 * 10,
-                refetchOnWindowFocus: false,
-                refetchOnMount: false,
+                refetchOnWindowFocus: true,
+                refetchOnMount: true,
+                enabled: !!currentStation,
             }
         }
     );
