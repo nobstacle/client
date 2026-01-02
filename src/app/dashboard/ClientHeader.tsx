@@ -117,6 +117,9 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
     const [categoriesData, setCategoriesData] = useState([]);
     const [categoriesFetched, setCategoriesFetched] = useState(false);
     // const [isInitializing, setIsInitializing] = useState(true);
+    const [displayStation, setDisplayStation] = useState(
+        params.get("station") ?? "1"
+    );
 
     useEffect(() => {
         setIsInIframe(window.self !== window.top);
@@ -132,6 +135,18 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
             refetchOnMount: false,
         }
     });
+
+    useEffect(() => {
+        const handleStationUpdate = (event: CustomEvent) => {
+            setDisplayStation(event.detail.station);
+        };
+
+        window.addEventListener('stationChanged', handleStationUpdate as EventListener);
+
+        return () => {
+            window.removeEventListener('stationChanged', handleStationUpdate as EventListener);
+        };
+    }, []);
 
     useEffect(() => {
         // Prefetch categories on mount
@@ -759,64 +774,41 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
     useEffect(() => {
         if (isHamburgerMenuOpen && isInIframe) {
             const loadAndSendPicker = async () => {
+                // DON'T try to read Chrome storage in iframe - it will fail!
+                // Instead, use the station from URL params or localStorage
                 let currentStation = params.get("station") || localStorage.getItem(STATION_STORAGE_KEY) || "1";
 
-                // If in extension, try to read Chrome storage (async)
-                if (typeof (window as any).chrome?.storage?.local) {
-                    try {
-                        const result = await new Promise<Record<string, any>>((resolve) => {
-                            (window as any).chrome.storage.local.get([STATION_STORAGE_KEY], resolve);
-                        });
-                        if (result[STATION_STORAGE_KEY]) {
-                            currentStation = String(result[STATION_STORAGE_KEY]);
-                        }
-                    } catch (e) {
-                        console.warn('Failed to read Chrome storage in iframe');
-                    }
-                }
+                console.log('[ClientHeader] 📍 Using station for picker:', currentStation);
+
                 const stationCount = companyData?.stationCount || 10;
                 const stationOptions = Array.from({ length: stationCount }, (_, i) => i + 1)
                     .map(num => `
-          <option value="${num}" ${num === Number(currentStation) ? 'selected' : ''}>
-            Station ${num}
-          </option>
-        `).join('');
-
-                //     // Generate fresh station picker HTML with current stationCount
-                //     const currentStation = params.get("station") ?? "1";
-                //     const stationCount = companyData?.stationCount || 10;
-
-                //     const stationOptions = Array(stationCount)
-                //         .fill(1)
-                //         .map((x, y) => x + y)
-                //         .map(num => `
-                //     <option value="${num}" ${num == currentStation ? 'selected' : ''}>
-                //         Station ${num}
-                //     </option>
-                // `)
-                //         .join('');
+                    <option value="${num}" ${num === Number(currentStation) ? 'selected' : ''}>
+                        Station ${num}
+                    </option>
+                `).join('');
 
                 const stationPickerHTML = `
-        <div style="position: relative;">
-            <select 
-                id="extension-station-select"
-                style="
-                    width: 100%;
-                    padding: 6px 12px;
-                    border: 1px solid #e5e7eb;
-                    border-radius: 6px;
-                    font-size: 14px;
-                    font-weight: 600;
-                    color: #1f2937;
-                    background: white;
-                    cursor: pointer;
-                    outline: none;
-                "
-            >
-                ${stationOptions}
-            </select>
-        </div>
-    `;
+                <div style="position: relative;">
+                    <select 
+                        id="extension-station-select"
+                        style="
+                            width: 100%;
+                            padding: 6px 12px;
+                            border: 1px solid #e5e7eb;
+                            border-radius: 6px;
+                            font-size: 14px;
+                            font-weight: 600;
+                            color: #1f2937;
+                            background: white;
+                            cursor: pointer;
+                            outline: none;
+                        "
+                    >
+                        ${stationOptions}
+                    </select>
+                </div>
+            `;
 
                 window.parent.postMessage({
                     type: 'HAMBURGER_MENU',
@@ -837,6 +829,34 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
             }, '*');
         }
     }, [isHamburgerMenuOpen, params, companyData, user, isInIframe]);
+
+    useEffect(() => {
+        if (!isInIframe) return;
+
+        const handleInitialStation = (event: MessageEvent) => {
+            if (event.data.type === 'INITIAL_STATION') {
+                const station = String(event.data.station);
+                console.log('[ClientHeader] 📍 Received initial station:', station);
+
+                // Update display station
+                setDisplayStation(station);
+
+                // Update localStorage for future reads
+                localStorage.setItem(STATION_STORAGE_KEY, station);
+
+                // Update URL if different
+                const currentUrl = new URL(window.location.href);
+                const urlStation = currentUrl.searchParams.get('station');
+                if (urlStation !== station) {
+                    currentUrl.searchParams.set('station', station);
+                    window.history.replaceState({}, '', currentUrl.toString());
+                }
+            }
+        };
+
+        window.addEventListener('message', handleInitialStation);
+        return () => window.removeEventListener('message', handleInitialStation);
+    }, [isInIframe]);
 
     const handleQRCodeClick = useCallback((template) => {
         justSelectedRef.current = true;
@@ -2159,7 +2179,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                             border: '2px solid #3b5998',
                                             boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
                                         }}>
-                                            {Number(params.get("station") ?? 1)}
+                                            {displayStation || Number(params.get("station") ?? 1)}
                                         </div>
                                     </div>
 

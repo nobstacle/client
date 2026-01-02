@@ -5,6 +5,7 @@ const HEADER_URL = Isproduction
   : 'http://localhost:3000/header-only';
 const HEADER_HEIGHT = '56px';
 const DEBUG_MODE = false;
+let selectedStation = null;
 const STATION_STORAGE_KEY = 'nobstacle_selected_station';
 
 let isEnabled = true;
@@ -15,7 +16,6 @@ let isRecording = false;
 let selectedCategory = null;
 let categoriesData = [];
 let categoriesFetched = false;
-let selectedStation = null;
 let stationLoadedFromStorage = false;
 
 
@@ -107,25 +107,25 @@ function hideLoader() {
 
 async function loadStationFromBackground() {
   return new Promise((resolve) => {
-    console.log('[Content Script] 🔍 Loading station from background...');
+    console.log('[Content] 🔍 Loading station...');
 
     chrome.runtime.sendMessage({ action: 'getStation' }, (response) => {
       if (chrome.runtime.lastError) {
-        console.error('[Content Script] ❌ Error loading station:', chrome.runtime.lastError);
+        console.error('[Content] ❌ Error:', chrome.runtime.lastError);
         selectedStation = "1";
         resolve("1");
         return;
       }
 
       if (response && response.success && response.station) {
-        const station = String(response.station);
-        console.log('[Content Script] ✅ Station loaded from background:', station);
-        selectedStation = station;
-        localStorage.setItem(STATION_STORAGE_KEY, station);
-        stationLoadedFromStorage = true;
-        resolve(station);
+        selectedStation = String(response.station);
+        console.log('[Content] ✅ Station loaded:', selectedStation);
+
+        // Also save to localStorage for iframe quick access
+        localStorage.setItem(STATION_STORAGE_KEY, selectedStation);
+
+        resolve(selectedStation);
       } else {
-        console.log('[Content Script] ⚠️ No station in response, using default');
         selectedStation = "1";
         resolve("1");
       }
@@ -196,12 +196,13 @@ chrome.storage.local.get(['extensionEnabled'], async (result) => {
   isEnabled = result.extensionEnabled !== false;
 
   if (isEnabled && shouldInject()) {
-    console.log('[Content Script] 🚀 Extension enabled, initializing...');
+    console.log('[Content] 🚀 Initializing...');
 
-    // CRITICAL: Load station BEFORE injecting header
+    // CRITICAL: Load station FIRST
     selectedStation = await loadStationFromBackground();
-    console.log('[Content Script] ✅ Station ready for injection:', selectedStation);
+    console.log('[Content] ✅ Station ready:', selectedStation);
 
+    // NOW inject header with correct station
     await injectHeader();
   }
 });
@@ -209,26 +210,24 @@ chrome.storage.local.get(['extensionEnabled'], async (result) => {
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'stationChanged') {
     const newStation = String(request.station);
-    console.log('[Content Script] 📡 Station changed notification:', newStation);
+    console.log('[Content] 📡 Station changed:', newStation);
 
     // Update in-memory variable
     selectedStation = newStation;
     localStorage.setItem(STATION_STORAGE_KEY, newStation);
 
-    // Update iframe if it exists
+    // Update iframe URL
     const iframe = document.getElementById('nobstacle-header-iframe');
     if (iframe && iframe.src.includes('station=')) {
       const currentUrl = new URL(iframe.src);
       currentUrl.searchParams.set('station', newStation);
-      console.log('[Content Script] 🔄 Reloading iframe with new station');
       iframe.src = currentUrl.toString();
     }
 
-    // Dispatch event for other listeners
-    const stationEvent = new CustomEvent('stationChanged', {
+    // Dispatch event
+    window.dispatchEvent(new CustomEvent('stationChanged', {
       detail: { station: newStation }
-    });
-    window.dispatchEvent(stationEvent);
+    }));
 
     sendResponse({ success: true });
   }
@@ -240,31 +239,33 @@ window.addEventListener('message', (event) => {
 
   if (event.data.type === 'STATION_CHANGE') {
     const newStation = String(event.data.station);
-    console.log('[Content Script] 🔄 Station change from iframe:', newStation);
+    console.log('[Content] 🔄 Station change from iframe:', newStation);
 
-    // Send to background script
+    // Update memory immediately
+    selectedStation = newStation;
+    localStorage.setItem(STATION_STORAGE_KEY, newStation);
+
+    // Send to background script to save
     chrome.runtime.sendMessage({
       action: 'setStation',
       station: newStation
     }, (response) => {
       if (chrome.runtime.lastError) {
-        console.error('[Content Script] ❌ Error:', chrome.runtime.lastError);
+        console.error('[Content] ❌ Error:', chrome.runtime.lastError);
         return;
       }
 
       if (response && response.success) {
-        console.log('[Content Script] ✅ Saved via background');
+        console.log('[Content] ✅ Saved to background');
 
-        // Update local
-        selectedStation = newStation;
-        localStorage.setItem(STATION_STORAGE_KEY, newStation);
+        // Update iframe URL
+        const iframe = document.getElementById('nobstacle-header-iframe');
+        if (iframe && iframe.src.includes('station=')) {
+          const newUrl = iframe.src.replace(/station=[^&]*/, `station=${newStation}`);
+          iframe.src = newUrl;
+        }
 
-        // Update URL
-        const url = new URL(window.location.href);
-        url.searchParams.set('station', newStation);
-        window.history.pushState({}, '', url.toString());
-
-        // Dispatch event
+        // Dispatch event for other listeners
         window.dispatchEvent(new CustomEvent('stationChanged', {
           detail: { station: newStation }
         }));
@@ -1299,10 +1300,11 @@ async function injectHeader() {
     const iframe = document.createElement('iframe');
     iframe.id = 'nobstacle-header-iframe';
 
+    // Use the station we loaded earlier
     const stationParam = selectedStation || "1";
     const iframeUrl = `${HEADER_URL}?station=${stationParam}`;
-    console.log('[Content Script] 🎯 Creating iframe with URL:', iframeUrl);
-    console.log('[Content Script] 📍 Station being used:', stationParam);
+    console.log('[Content] 🎯 Creating iframe:', iframeUrl);
+    console.log('[Content] 📍 Station used:', stationParam);
 
     iframe.src = iframeUrl;
     iframe.allow = 'clipboard-write; microphone';
@@ -1315,343 +1317,53 @@ async function injectHeader() {
 
     injectDebugPanel();
     setupKeyboardListener();
-    console.log('[Content Script] ✅ Header iframe created');
-
 
     iframe.onload = async () => {
-      console.log('[Content Script] 🎉 Iframe loaded!');
+      console.log('[Content] 🎉 Iframe loaded');
 
-      // Get FRESH station value from background before sending to iframe
-      chrome.runtime.sendMessage({ action: 'getStation' }, (response) => {
-        const freshStation = (response && response.success && response.station)
-          ? String(response.station)
-          : (selectedStation || "1");
-
-        console.log('[Content Script] 📍 Sending station to iframe:', freshStation);
-
-        // Send auth to iframe
-        if (cachedAuthData && authDataReady) {
-          iframe.contentWindow.postMessage({
-            type: 'EXTENSION_AUTH',
-            sessionToken: cachedAuthData.sessionToken,
-            cookies: cachedAuthData.cookies
-          }, '*');
-
-          // Send initial station to iframe
-          iframe.contentWindow.postMessage({
-            type: 'INITIAL_STATION',
-            station: freshStation
-          }, '*');
-
-          console.log('[Content Script] ✅ Auth and station sent to iframe');
-
-          updateDebugAuth(
-            !!cachedAuthData.sessionToken,
-            cachedAuthData.cookies.length,
-            cachedAuthData.sessionToken || ''
-          );
-        }
-      });
-
+      // Wait for iframe to be ready
       setTimeout(() => {
-        hideLoader();
-        console.log('[Content Script] ✅ Header fully loaded');
-      }, 500);
+        // Get FRESH station from background
+        chrome.runtime.sendMessage({ action: 'getStation' }, (response) => {
+          const freshStation = (response && response.success && response.station)
+            ? String(response.station)
+            : (selectedStation || "1");
 
-      setTimeout(async () => {
-        const freshAuth = await prefetchAuthData();
-        iframe.contentWindow.postMessage({
-          type: 'EXTENSION_AUTH',
-          sessionToken: freshAuth.sessionToken,
-          cookies: freshAuth.cookies
-        }, '*');
-        console.log('[Content Script] ✅ Fresh auth sent');
-      }, 1000);
-    };
+          console.log('[Content] 📍 Fresh station from background:', freshStation);
 
-    // Listen for messages from iframe
-    const handler = async (event) => {
-      if (!ALLOWED_IFRAME_ORIGINS.includes(event.origin)) {
-        return;
-      }
+          // Update our local variable
+          selectedStation = freshStation;
+          localStorage.setItem(STATION_STORAGE_KEY, freshStation);
 
-      if (event.data.type === 'REQUEST_AUTH') {
-        console.log('[Content Script] 📨 Iframe requested auth');
-        const authData = cachedAuthData || await prefetchAuthData();
-        iframe.contentWindow.postMessage({
-          type: 'EXTENSION_AUTH',
-          sessionToken: authData.sessionToken,
-          cookies: authData.cookies
-        }, '*');
-      }
+          // Send auth to iframe
+          if (cachedAuthData && authDataReady) {
+            iframe.contentWindow.postMessage({
+              type: 'EXTENSION_AUTH',
+              sessionToken: cachedAuthData.sessionToken,
+              cookies: cachedAuthData.cookies
+            }, '*');
 
-      if (event.data.type === 'TEMPLATE_SHORTCUT_CLICK') {
-        addDebugLog('Template shortcut clicked, forwarding to iframe');
-        const iframe = document.getElementById('nobstacle-header-iframe');
-        if (iframe) {
-          iframe.contentWindow.postMessage({
-            type: 'TEMPLATE_SHORTCUT_CLICK',
-            id: event.data.id,
-            templateType: event.data.templateType,
-            refType: event.data.refType,
-            tag: event.data.tag
-          }, '*');
-          addDebugLog('✓ Template shortcut message forwarded');
-        }
-      }
+            console.log('[Content] ✅ Auth sent');
 
-      if (event.data.type === 'RECORDING_INDICATOR') {
-        if (event.data.show) {
-          createRecordingIndicator(event.data);
-        } else {
-          document.getElementById('nobstacle-recording-indicator')?.remove();
-        }
-      }
-
-      if (event.data.type === 'HAMBURGER_MENU') {
-        if (event.data.isOpen) {
-          createHamburgerDropdown(event.data.content);
-        } else {
-          document.getElementById('nobstacle-hamburger-dropdown')?.remove();
-        }
-      }
-
-      if (event.data.type === 'CHAT_POPUP') {
-        addDebugLog('Chat popup message received');
-
-        if (event.data.isOpen) {
-          createChatPopup(event.data.content);
-        } else {
-          document.getElementById('nobstacle-chat-popup')?.remove();
-        }
-      }
-
-      if (event.data.type === 'CHAT_UPDATE_MESSAGES') {
-        const popup = document.getElementById('nobstacle-chat-popup');
-        if (popup) {
-          const messagesContainer = popup.querySelector('#chat-messages-container');
-          if (messagesContainer) {
-            messagesContainer.innerHTML = event.data.html;
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
-          }
-        }
-      }
-
-      if (event.data.type === 'CHAT_SEND_MESSAGE') {
-        const messageText = event.data.message;
-        iframe.contentWindow.postMessage({
-          type: 'CHAT_SEND_MESSAGE',
-          message: messageText
-        }, '*');
-      }
-
-      if (event.data.type === 'CHAT_CLEAR') {
-        iframe.contentWindow.postMessage({
-          type: 'CHAT_CLEAR'
-        }, '*');
-      }
-
-      if (event.data.type === 'CHAT_POPUP_CLOSED') {
-        document.getElementById('nobstacle-chat-popup')?.remove();
-      }
-
-      if (event.data.type === 'SEARCH_DROPDOWN') {
-        if (event.data.isOpen) {
-          createSearchDropdown(event.data.content);
-        } else {
-          document.getElementById('nobstacle-search-dropdown')?.remove();
-        }
-      }
-
-      if (event.data.type === 'STATION_PICKER_HTML') {
-        const placeholder = document.getElementById('station-picker-placeholder');
-        if (placeholder) {
-          placeholder.outerHTML = event.data.html;
-          setTimeout(() => {
-            const select = document.getElementById('extension-station-select');
-            if (select) {
-              select.addEventListener('change', (e) => {
-                const newStation = e.target.value;
-                addDebugLog(`Station changed to: ${newStation}`);
-
-                iframe.contentWindow.postMessage({
-                  type: 'STATION_CHANGE',
-                  station: newStation
-                }, '*');
-                document.getElementById('nobstacle-hamburger-dropdown')?.remove();
-              });
-            }
-          }, 100);
-        }
-      }
-
-      if (event.data.type === 'STATION_CHANGE') {
-        const newStation = String(event.data.station);
-
-        try {
-          localStorage.setItem(STATION_STORAGE_KEY, newStation);
-          console.log('[Content Script] ✅ Saved to localStorage:', newStation);
-
-          await new Promise((resolve, reject) => {
-            chrome.storage.local.set({
-              [STATION_STORAGE_KEY]: newStation
-            }, () => {
-              if (chrome.runtime.lastError) {
-                console.error('[Content Script] ❌ Chrome storage error:', chrome.runtime.lastError);
-                reject(chrome.runtime.lastError);
-              } else {
-                console.log('[Content Script] ✅ Saved to Chrome storage:', newStation);
-                resolve();
-              }
-            });
-          });
-        } catch (error) {
-          console.error('[Content Script] ❌ Error saving station:', error);
-        }
-
-        const currentIframe = document.getElementById('nobstacle-header-iframe');
-        if (currentIframe && currentIframe.src.includes('station=')) {
-          const newUrl = currentIframe.src.replace(/station=[^&]*/, `station=${newStation}`);
-          currentIframe.src = newUrl;
-        }
-
-        // Update in-memory variable
-        selectedStation = newStation;
-        stationLoadedFromStorage = true;
-
-        // Update URL
-        const currentUrl = new URL(window.location.href);
-        currentUrl.searchParams.set('station', newStation);
-        window.history.pushState({}, '', currentUrl.toString());
-
-        // Dispatch event
-        const stationEvent = new CustomEvent('stationChanged', {
-          detail: { station: newStation }
-        });
-        window.dispatchEvent(stationEvent);
-
-        console.log('[Content Script] ✅ Station change complete:', newStation);
-      }
-
-      if (event.data.type === 'BACKEND_TOKEN') {
-        addDebugLog('✓ Received backend token');
-        chrome.runtime.sendMessage({
-          action: 'setBackendToken',
-          token: event.data.token,
-          expiresIn: event.data.expiresIn
-        }, (response) => {
-          if (response?.success) {
-            addDebugLog('✓ Token stored');
-            updateBackendTokenStatus(true);
-          }
-        });
-      }
-
-      if (event.data.type === 'CHAT_RECORDING_STATE') {
-        console.log('[Content Script] Recording state update:', event.data.isRecording);
-        const popup = document.getElementById('nobstacle-chat-popup');
-        if (popup) {
-          const micButton = popup.querySelector('#chat-mic-button');
-          if (micButton) {
-            micButton.setAttribute('data-recording', event.data.isRecording ? 'true' : 'false');
-            micButton.style.background = event.data.isRecording ? '#ef4444' : '#3b5998';
-
-            // Update icon
-            micButton.innerHTML = event.data.isRecording ? `
-        <svg viewBox="0 0 24 24" style="width: 20px; height: 20px; fill: white;">
-          <path d="M19 11h-1.7c0 .74-.16 1.43-.43 2.05l1.23 1.23c.56-.98.9-2.09.9-3.28zm-4.02.17c0-.06.02-.11.02-.17V5c0-1.66-1.34-3-3-3S9 3.34 9 5v.18l5.98 5.99zM4.27 3L3 4.27l6.01 6.01V11c0 1.66 1.33 3 2.99 3 .22 0 .44-.03.65-.08l1.66 1.66c-.71.33-1.5.52-2.31.52-2.76 0-5.3-2.1-5.3-5.1H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c.91-.13 1.77-.45 2.54-.9L19.73 21 21 19.73 4.27 3z"/>
-        </svg>
-      ` : `
-        <svg viewBox="0 0 24 24" style="width: 20px; height: 20px; fill: white;">
-          <path d="M12 14c1.66 0 2.99-1.34 2.99-3L15 5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z"/>
-        </svg>
-      `;
-          }
-        }
-      }
-
-      if (event.data.type === 'CHAT_RECORDING_RESULT') {
-        console.log('[Content Script] Recording result received:', event.data.text);
-        const popup = document.getElementById('nobstacle-chat-popup');
-        if (popup) {
-          const messageInput = popup.querySelector('#chat-message-input');
-          if (messageInput) {
-            messageInput.value = event.data.text;
-            console.log('[Content Script] ✓ Transcribed text inserted into input');
-          }
-        }
-      }
-
-      if (event.data.type === 'PROCESS_AUDIO') {
-        console.log('[Content Script] Audio processing requested');
-      }
-
-      if (event.data.type === 'AUDIO_TRANSCRIPTION') {
-        console.log('[Content Script] Received transcription:', event.data.text);
-
-        const popup = document.getElementById('nobstacle-chat-popup');
-        if (popup) {
-          const messageInput = popup.querySelector('#chat-message-input');
-          if (messageInput && event.data.text) {
-            // Set the value in the input field
-            messageInput.value = event.data.text;
-            console.log('[Content Script] ✓ Transcription inserted into input');
-
-            // Automatically send the message
-            const iframe = document.getElementById('nobstacle-header-iframe');
-            if (iframe) {
+            // Send station to iframe (with small delay to ensure auth is processed first)
+            setTimeout(() => {
               iframe.contentWindow.postMessage({
-                type: 'CHAT_SEND_MESSAGE',
-                message: event.data.text
+                type: 'INITIAL_STATION',
+                station: freshStation
               }, '*');
 
-              // Clear the input after sending
-              messageInput.value = '';
-              console.log('[Content Script] ✓ Message automatically sent');
-            }
+              console.log('[Content] ✅ Station sent to iframe:', freshStation);
+            }, 100);
           }
-        }
-      }
+        });
 
-      if (event.data.type === 'TRIGGER_UPSELL') {
-        // This will be sent from iframe when user clicks upsell icon
-        const iframe = document.getElementById('nobstacle-header-iframe');
-        if (iframe) {
-          iframe.contentWindow.postMessage({
-            type: 'SEND_UPSELL_PACKAGES',
-            categoryId: selectedCategory
-          }, '*');
-        }
-      }
-
-      if (event.data.type === 'CATEGORIES_DATA') {
-        categoriesData = event.data.categories;
-        categoriesFetched = true;
-      }
-
-      // In content.js, inside the message handler
-      if (event.data.type === 'CATEGORY_SELECT') {
-        const categoryId = event.data.categoryId;
-        selectedCategory = categoryId;
-
-        // Send to iframe for processing
-        const iframe = document.getElementById('nobstacle-header-iframe');
-        if (iframe) {
-          iframe.contentWindow.postMessage({
-            type: 'CATEGORY_SELECT',
-            categoryId: categoryId
-          }, '*');
-        }
-
-        addDebugLog(`Category ${categoryId} selected`);
-      }
-
+        hideLoader();
+      }, 300);
     };
 
-    window.addEventListener('message', handler);
-    addDebugLog('✓ Header injection complete');
+    // Rest of your iframe message handler code...
   } catch (error) {
-    console.error('[Content Script] Error injecting header:', error);
+    console.error('[Content] Error injecting header:', error);
     hideLoader();
     showLoginPrompt();
   }

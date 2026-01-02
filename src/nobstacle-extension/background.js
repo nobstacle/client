@@ -1,16 +1,14 @@
 // Background service worker
 let backendAccessToken = null;
 let tokenExpiry = null;
-let currentStation = "1"; // Always initialize with default
+let currentStation = null; // Always initialize with default
 
 // API base URL
 const API_BASE_URL = 'https://nobstacle-production-d145.up.railway.app';
 const STATION_STORAGE_KEY = 'nobstacle_selected_station';
 
-console.log('[Background] 🚀 Background script starting...');
-
 // Initialize station immediately
-(async function initStation() {
+async function initStation() {
   try {
     const result = await chrome.storage.local.get([STATION_STORAGE_KEY]);
     if (result[STATION_STORAGE_KEY]) {
@@ -26,26 +24,41 @@ console.log('[Background] 🚀 Background script starting...');
     console.error('[Background] ❌ Error initializing station:', error);
     currentStation = "1";
   }
-})();
+}
+
+initStation();
+
 
 chrome.runtime.onInstalled.addListener(async (details) => {
   console.log('[Background] Extension installed/updated');
-  
-  // Ensure station is set
-  const result = await chrome.storage.local.get([STATION_STORAGE_KEY]);
-  if (!result[STATION_STORAGE_KEY]) {
-    await chrome.storage.local.set({ [STATION_STORAGE_KEY]: "1" });
-    currentStation = "1";
-    console.log('[Background] Set default station on install');
-  }
-  
+  await initStation();
   await restoreTokenFromStorage();
 });
 
 chrome.runtime.onStartup.addListener(async () => {
   console.log('[Background] Browser started');
+  await initStation();
   await fetchAuthFromNobstacle();
-  
+});
+
+// chrome.runtime.onInstalled.addListener(async (details) => {
+//   console.log('[Background] Extension installed/updated');
+
+//   // Ensure station is set
+//   const result = await chrome.storage.local.get([STATION_STORAGE_KEY]);
+//   if (!result[STATION_STORAGE_KEY]) {
+//     await chrome.storage.local.set({ [STATION_STORAGE_KEY]: "1" });
+//     currentStation = "1";
+//     console.log('[Background] Set default station on install');
+//   }
+
+//   await restoreTokenFromStorage();
+// });
+
+chrome.runtime.onStartup.addListener(async () => {
+  console.log('[Background] Browser started');
+  await fetchAuthFromNobstacle();
+
   // Reload station from storage
   const result = await chrome.storage.local.get([STATION_STORAGE_KEY]);
   if (result[STATION_STORAGE_KEY]) {
@@ -101,13 +114,9 @@ async function restoreTokenFromStorage() {
   }
 }
 
-// ============================================
-// MESSAGE HANDLERS
-// ============================================
-
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   console.log('[Background] 📨 Received message:', request.action, request);
-  
+
   // GET STATION
   if (request.action === 'getStation') {
     // Always get fresh value from storage
@@ -120,48 +129,44 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true; // Keep channel open
   }
 
-  // SET STATION
- // SET STATION
-if (request.action === 'setStation') {
-  const newStation = String(request.station);
-  console.log('[Background] 💾 SET STATION - Saving:', newStation);
-  
-  // Update in-memory FIRST
-  currentStation = newStation;
-  
-  // Save to storage - FIXED: Proper async handling
-  chrome.storage.local.set(
-    { [STATION_STORAGE_KEY]: newStation }
-  ).then(() => {
-    console.log('[Background] ✅ Station saved successfully:', newStation);
-    
-    // Verify save by reading back
-    chrome.storage.local.get([STATION_STORAGE_KEY]).then((result) => {
-      console.log('[Background] 🔍 Verification - Storage now has:', result[STATION_STORAGE_KEY]);
-    });
-    
-    // Notify all content scripts
-    chrome.tabs.query({}).then((tabs) => {
-      tabs.forEach(tab => {
-        if (tab.id && tab.url && !tab.url.startsWith('chrome://')) {
-          chrome.tabs.sendMessage(
-            tab.id,
-            { action: 'stationChanged', station: newStation }
-          ).catch(() => {
-            // Ignore errors for tabs without content script
-          });
-        }
+  if (request.action === 'setStation') {
+    const newStation = String(request.station);
+    console.log('[Background] 💾 SET STATION:', newStation);
+
+    // Update memory immediately
+    currentStation = newStation;
+
+    // Save to storage
+    chrome.storage.local.set(
+      { [STATION_STORAGE_KEY]: newStation }
+    ).then(() => {
+      console.log('[Background] ✅ Station saved:', newStation);
+
+      // Verify the save
+      chrome.storage.local.get([STATION_STORAGE_KEY]).then((result) => {
+        console.log('[Background] 🔍 Verified storage:', result[STATION_STORAGE_KEY]);
       });
+
+      // Notify all content scripts
+      chrome.tabs.query({}).then((tabs) => {
+        tabs.forEach(tab => {
+          if (tab.id && tab.url && !tab.url.startsWith('chrome://')) {
+            chrome.tabs.sendMessage(
+              tab.id,
+              { action: 'stationChanged', station: newStation }
+            ).catch(() => { });
+          }
+        });
+      });
+
+      sendResponse({ success: true, station: newStation });
+    }).catch((error) => {
+      console.error('[Background] ❌ Save error:', error);
+      sendResponse({ success: false, error: error.message });
     });
-    
-    sendResponse({ success: true, station: newStation });
-  }).catch((error) => {
-    console.error('[Background] ❌ Error saving station:', error);
-    sendResponse({ success: false, error: error.message });
-  });
-  
-  return true; // Keep channel open for async response
-}
+
+    return true;
+  }
 
   // Other handlers
   if (request.type === 'HEADER_READY') {
@@ -245,7 +250,7 @@ if (request.action === 'setStation') {
 chrome.storage.onChanged.addListener((changes, areaName) => {
   if (areaName === 'local' && changes[STATION_STORAGE_KEY]) {
     const newStation = String(changes[STATION_STORAGE_KEY].newValue);
-    console.log('[Background] 📡 Storage changed - updating currentStation to:', newStation);
+    console.log('[Background] 📡 Storage changed:', newStation);
     currentStation = newStation;
   }
 });
@@ -253,6 +258,7 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
 setInterval(async () => {
   await fetchAuthFromNobstacle();
 }, 2 * 60 * 1000);
+
 
 chrome.webRequest.onBeforeSendHeaders.addListener(
   (details) => {
