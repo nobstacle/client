@@ -819,7 +819,8 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                 let currentStation = params.get("station") || localStorage.getItem(STATION_STORAGE_KEY) || "1";
 
                 console.log('[ClientHeader] 📍 Using station for picker:', currentStation);
-
+                const currentIsOpen = isHamburgerMenuOpen;
+                const newState = !currentIsOpen;
                 const stationCount = companyData?.stationCount || 10;
                 const stationOptions = Array.from({ length: stationCount }, (_, i) => i + 1)
                     .map(num => `
