@@ -261,6 +261,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                     window.history.replaceState({}, '', currentUrl.toString());
                 }
             }
+
             if (event.data.type === 'STATION_CHANGE') {
                 const newStation = String(event.data.station);
                 console.log('[ClientHeader] 🔄 Station change request:', newStation);
@@ -269,39 +270,9 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                 setCurrentStation(newStation);
                 setDisplayStation(newStation);
 
-                // Save to localStorage (for iframe quick access)
+                // Save to localStorage (iframe CAN do this)
                 localStorage.setItem(STATION_STORAGE_KEY, newStation);
                 console.log('[ClientHeader] ✅ Saved to localStorage:', newStation);
-
-                // CRITICAL: Save to chrome.storage if in extension
-                if (typeof (window as any).chrome?.runtime?.sendMessage === 'function') {
-                    (window as any).chrome.runtime.sendMessage({
-                        action: 'setStation',
-                        station: newStation
-                    }, (response: any) => {
-                        if ((window as any).chrome.runtime.lastError) {
-                            console.error('[ClientHeader] ❌ Chrome storage error:', (window as any).chrome.runtime.lastError);
-                        } else if (response && response.success) {
-                            console.log('[ClientHeader] ✅ Saved to chrome.storage via background:', newStation);
-                        } else {
-                            console.error('[ClientHeader] ❌ Background failed to save station');
-                        }
-                    });
-                }
-
-                // Also try direct chrome.storage save (fallback)
-                if (typeof (window as any).chrome?.storage?.local?.set === 'function') {
-                    (window as any).chrome.storage.local.set(
-                        { [STATION_STORAGE_KEY]: newStation },
-                        () => {
-                            if ((window as any).chrome.runtime.lastError) {
-                                console.error('[ClientHeader] ❌ Direct storage error:', (window as any).chrome.runtime.lastError);
-                            } else {
-                                console.log('[ClientHeader] ✅ Direct save to chrome.storage:', newStation);
-                            }
-                        }
-                    );
-                }
 
                 // Update URL
                 const currentUrl = new URL(window.location.href);
@@ -316,9 +287,21 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                 window.dispatchEvent(stationEvent);
                 console.log('[ClientHeader] ✅ Dispatched stationChanged event');
 
+                // CRITICAL: Send message back to parent (content script) to save to chrome.storage
+                // The iframe CANNOT access chrome.storage, but the content script CAN
+                if (isInIframe) {
+                    console.log('[ClientHeader] 📤 Sending SAVE_STATION_TO_STORAGE to parent...');
+                    window.parent.postMessage({
+                        type: 'SAVE_STATION_TO_STORAGE',
+                        station: newStation
+                    }, '*');
+                    console.log('[ClientHeader] ✅ Message sent to parent for chrome.storage save');
+                }
+
                 // Show success message
                 message.success(`Switched to Station ${newStation}`);
             }
+
         };
 
         window.addEventListener('message', handleMessage);
@@ -329,6 +312,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         if (!isInIframe) return;
 
         const handleStationChange = (event: MessageEvent) => {
+
             if (event.data.type === 'STATION_CHANGE') {
                 const newStation = String(event.data.station);
                 console.log('[ClientHeader] 🔄 Station change request:', newStation);
@@ -337,39 +321,9 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                 setCurrentStation(newStation);
                 setDisplayStation(newStation);
 
-                // Save to localStorage (for iframe quick access)
+                // Save to localStorage (iframe CAN do this)
                 localStorage.setItem(STATION_STORAGE_KEY, newStation);
                 console.log('[ClientHeader] ✅ Saved to localStorage:', newStation);
-
-                // CRITICAL: Save to chrome.storage if in extension
-                if (typeof (window as any).chrome?.runtime?.sendMessage === 'function') {
-                    (window as any).chrome.runtime.sendMessage({
-                        action: 'setStation',
-                        station: newStation
-                    }, (response: any) => {
-                        if ((window as any).chrome.runtime.lastError) {
-                            console.error('[ClientHeader] ❌ Chrome storage error:', (window as any).chrome.runtime.lastError);
-                        } else if (response && response.success) {
-                            console.log('[ClientHeader] ✅ Saved to chrome.storage via background:', newStation);
-                        } else {
-                            console.error('[ClientHeader] ❌ Background failed to save station');
-                        }
-                    });
-                }
-
-                // Also try direct chrome.storage save (fallback)
-                if (typeof (window as any).chrome?.storage?.local?.set === 'function') {
-                    (window as any).chrome.storage.local.set(
-                        { [STATION_STORAGE_KEY]: newStation },
-                        () => {
-                            if ((window as any).chrome.runtime.lastError) {
-                                console.error('[ClientHeader] ❌ Direct storage error:', (window as any).chrome.runtime.lastError);
-                            } else {
-                                console.log('[ClientHeader] ✅ Direct save to chrome.storage:', newStation);
-                            }
-                        }
-                    );
-                }
 
                 // Update URL
                 const currentUrl = new URL(window.location.href);
@@ -383,6 +337,17 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                 });
                 window.dispatchEvent(stationEvent);
                 console.log('[ClientHeader] ✅ Dispatched stationChanged event');
+
+                // CRITICAL: Send message back to parent (content script) to save to chrome.storage
+                // The iframe CANNOT access chrome.storage, but the content script CAN
+                if (isInIframe) {
+                    console.log('[ClientHeader] 📤 Sending SAVE_STATION_TO_STORAGE to parent...');
+                    window.parent.postMessage({
+                        type: 'SAVE_STATION_TO_STORAGE',
+                        station: newStation
+                    }, '*');
+                    console.log('[ClientHeader] ✅ Message sent to parent for chrome.storage save');
+                }
 
                 // Show success message
                 message.success(`Switched to Station ${newStation}`);
@@ -1455,39 +1420,9 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                 setCurrentStation(newStation);
                 setDisplayStation(newStation);
 
-                // Save to localStorage (for iframe quick access)
+                // Save to localStorage (iframe CAN do this)
                 localStorage.setItem(STATION_STORAGE_KEY, newStation);
                 console.log('[ClientHeader] ✅ Saved to localStorage:', newStation);
-
-                // CRITICAL: Save to chrome.storage if in extension
-                if (typeof (window as any).chrome?.runtime?.sendMessage === 'function') {
-                    (window as any).chrome.runtime.sendMessage({
-                        action: 'setStation',
-                        station: newStation
-                    }, (response: any) => {
-                        if ((window as any).chrome.runtime.lastError) {
-                            console.error('[ClientHeader] ❌ Chrome storage error:', (window as any).chrome.runtime.lastError);
-                        } else if (response && response.success) {
-                            console.log('[ClientHeader] ✅ Saved to chrome.storage via background:', newStation);
-                        } else {
-                            console.error('[ClientHeader] ❌ Background failed to save station');
-                        }
-                    });
-                }
-
-                // Also try direct chrome.storage save (fallback)
-                if (typeof (window as any).chrome?.storage?.local?.set === 'function') {
-                    (window as any).chrome.storage.local.set(
-                        { [STATION_STORAGE_KEY]: newStation },
-                        () => {
-                            if ((window as any).chrome.runtime.lastError) {
-                                console.error('[ClientHeader] ❌ Direct storage error:', (window as any).chrome.runtime.lastError);
-                            } else {
-                                console.log('[ClientHeader] ✅ Direct save to chrome.storage:', newStation);
-                            }
-                        }
-                    );
-                }
 
                 // Update URL
                 const currentUrl = new URL(window.location.href);
@@ -1501,6 +1436,17 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                 });
                 window.dispatchEvent(stationEvent);
                 console.log('[ClientHeader] ✅ Dispatched stationChanged event');
+
+                // CRITICAL: Send message back to parent (content script) to save to chrome.storage
+                // The iframe CANNOT access chrome.storage, but the content script CAN
+                if (isInIframe) {
+                    console.log('[ClientHeader] 📤 Sending SAVE_STATION_TO_STORAGE to parent...');
+                    window.parent.postMessage({
+                        type: 'SAVE_STATION_TO_STORAGE',
+                        station: newStation
+                    }, '*');
+                    console.log('[ClientHeader] ✅ Message sent to parent for chrome.storage save');
+                }
 
                 // Show success message
                 message.success(`Switched to Station ${newStation}`);

@@ -211,7 +211,7 @@ chrome.storage.local.get(['extensionEnabled'], async (result) => {
 
     // Small delay to ensure storage is synced
     await new Promise(resolve => setTimeout(resolve, 100));
-    
+
     await injectHeader();
   }
 });
@@ -899,29 +899,29 @@ function createRecordingIndicator(data) {
 }
 
 function createHamburgerDropdown(content) {
-    console.log('[Content Script] 🎨 createHamburgerDropdown called');
-    console.log('[Content Script] content:', content);
-    
-    // Remove existing dropdown
-    const existing = document.getElementById('nobstacle-hamburger-dropdown');
-    if (existing) {
-        console.log('[Content Script] Removing existing dropdown');
-        existing.remove();
-    }
+  console.log('[Content Script] 🎨 createHamburgerDropdown called');
+  console.log('[Content Script] content:', content);
 
-    const iframe = document.getElementById('nobstacle-header-iframe');
-    if (!iframe) {
-        console.error('[Content Script] ❌ ERROR: Header iframe not found!');
-        return;
-    }
+  // Remove existing dropdown
+  const existing = document.getElementById('nobstacle-hamburger-dropdown');
+  if (existing) {
+    console.log('[Content Script] Removing existing dropdown');
+    existing.remove();
+  }
 
-    console.log('[Content Script] ✅ Iframe found, creating dropdown...');
+  const iframe = document.getElementById('nobstacle-header-iframe');
+  if (!iframe) {
+    console.error('[Content Script] ❌ ERROR: Header iframe not found!');
+    return;
+  }
 
-    const iframeRect = iframe.getBoundingClientRect();
+  console.log('[Content Script] ✅ Iframe found, creating dropdown...');
 
-    const dropdown = document.createElement('div');
-    dropdown.id = 'nobstacle-hamburger-dropdown';
-    dropdown.style.cssText = `
+  const iframeRect = iframe.getBoundingClientRect();
+
+  const dropdown = document.createElement('div');
+  dropdown.id = 'nobstacle-hamburger-dropdown';
+  dropdown.style.cssText = `
         position: fixed !important;
         top: ${iframeRect.bottom + 8}px !important;
         right: 16px !important;
@@ -936,12 +936,12 @@ function createHamburgerDropdown(content) {
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
     `;
 
-    console.log('[Content Script] Dropdown position:', {
-        top: `${iframeRect.bottom + 8}px`,
-        right: '16px'
-    });
+  console.log('[Content Script] Dropdown position:', {
+    top: `${iframeRect.bottom + 8}px`,
+    right: '16px'
+  });
 
-    dropdown.innerHTML = `
+  dropdown.innerHTML = `
         <div id="station-dropdown-container" style="padding: 16px 20px; border-bottom: 1px solid #f0f0f0; background: #f8fafc;">
             <div style="display: flex; align-items: center; gap: 12px;">
                 <div style="width: 40px; height: 40px; border-radius: 10px; background: #3b5998; display: flex; align-items: center; justify-content: center;">
@@ -1013,85 +1013,90 @@ function createHamburgerDropdown(content) {
         </div>
     `;
 
-    document.body.appendChild(dropdown);
-    console.log('[Content Script] ✅ Dropdown appended to DOM');
+  document.body.appendChild(dropdown);
+  console.log('[Content Script] ✅ Dropdown appended to DOM');
 
-    // Setup event listeners after a short delay
-    setTimeout(() => {
-        console.log('[Content Script] Setting up event listeners...');
-        
-        const select = dropdown.querySelector('#extension-station-select');
-        if (select) {
-            console.log('[Content Script] ✅ Station select found');
-            
-            select.addEventListener('change', (e) => {
-                const newStation = e.target.value;
-                console.log('[Content Script] 🔄 Station changed to:', newStation);
+  // Setup event listeners after a short delay
+  setTimeout(() => {
+    console.log('[Content Script] Setting up event listeners...');
 
-                // Send to iframe
-                iframe.contentWindow.postMessage({
-                    type: 'STATION_CHANGE',
-                    station: newStation
-                }, '*');
-                
-                // Close dropdown
-                dropdown.remove();
-                console.log('[Content Script] ✅ Station change message sent, dropdown closed');
-            });
+    const select = dropdown.querySelector('#extension-station-select');
+    if (select) {
+      console.log('[Content Script] ✅ Station select found');
 
-            // Prevent dropdown from closing when clicking select
-            select.addEventListener('mousedown', (e) => {
-                e.stopPropagation();
-            });
-            
-            select.addEventListener('click', (e) => {
-                e.stopPropagation();
-            });
-        } else {
-            console.error('[Content Script] ❌ Station select NOT found!');
-        }
+      // In content.js, when select changes:
+      select.addEventListener('change', (e) => {
+        const newStation = e.target.value;
+        console.log('[Content Script] 🔄 Station changed to:', newStation);
 
-        // Logout button
-        const logoutBtn = dropdown.querySelector('#hamburger-logout-btn');
-        if (logoutBtn) {
-            console.log('[Content Script] ✅ Logout button found');
-            
-            logoutBtn.addEventListener('click', () => {
-                console.log('[Content Script] Logout clicked');
-                iframe.contentWindow.postMessage({ type: 'LOGOUT' }, '*');
-                dropdown.remove();
-            });
-            
-            logoutBtn.addEventListener('mouseenter', () => {
-                logoutBtn.style.backgroundColor = '#fee2e2';
-            });
-            
-            logoutBtn.addEventListener('mouseleave', () => {
-                logoutBtn.style.backgroundColor = 'transparent';
-            });
-        } else {
-            console.error('[Content Script] ❌ Logout button NOT found!');
-        }
-    }, 100);
+        selectedStation = newStation;
+        localStorage.setItem(STATION_STORAGE_KEY, newStation);
 
-    // Close dropdown when clicking outside
-    setTimeout(() => {
-        const closeHandler = (e) => {
-            const iframeElement = document.getElementById('nobstacle-header-iframe');
+        chrome.storage.local.set({ [STATION_STORAGE_KEY]: newStation }, () => {
+          console.log('[Content Script] ✅ Saved to chrome.storage:', newStation);
 
-            if (dropdown.contains(e.target) || e.target === iframeElement) {
-                return;
-            }
+          iframe.contentWindow.postMessage({
+            type: 'STATION_CHANGE',
+            station: newStation
+          }, '*');
 
-            console.log('[Content Script] Closing dropdown (clicked outside)');
-            dropdown.remove();
-            iframe.contentWindow.postMessage({ type: 'HAMBURGER_CLOSED' }, '*');
-            document.removeEventListener('mousedown', closeHandler);
-        };
-        document.addEventListener('mousedown', closeHandler);
-    }, 200);
+          dropdown.remove();
+        });
+      });
 
-    console.log('[Content Script] ✓ Hamburger dropdown created successfully');
+      // Prevent dropdown from closing when clicking select
+      select.addEventListener('mousedown', (e) => {
+        e.stopPropagation();
+      });
+
+      select.addEventListener('click', (e) => {
+        e.stopPropagation();
+      });
+    } else {
+      console.error('[Content Script] ❌ Station select NOT found!');
+    }
+
+    // Logout button
+    const logoutBtn = dropdown.querySelector('#hamburger-logout-btn');
+    if (logoutBtn) {
+      console.log('[Content Script] ✅ Logout button found');
+
+      logoutBtn.addEventListener('click', () => {
+        console.log('[Content Script] Logout clicked');
+        iframe.contentWindow.postMessage({ type: 'LOGOUT' }, '*');
+        dropdown.remove();
+      });
+
+      logoutBtn.addEventListener('mouseenter', () => {
+        logoutBtn.style.backgroundColor = '#fee2e2';
+      });
+
+      logoutBtn.addEventListener('mouseleave', () => {
+        logoutBtn.style.backgroundColor = 'transparent';
+      });
+    } else {
+      console.error('[Content Script] ❌ Logout button NOT found!');
+    }
+  }, 100);
+
+  // Close dropdown when clicking outside
+  setTimeout(() => {
+    const closeHandler = (e) => {
+      const iframeElement = document.getElementById('nobstacle-header-iframe');
+
+      if (dropdown.contains(e.target) || e.target === iframeElement) {
+        return;
+      }
+
+      console.log('[Content Script] Closing dropdown (clicked outside)');
+      dropdown.remove();
+      iframe.contentWindow.postMessage({ type: 'HAMBURGER_CLOSED' }, '*');
+      document.removeEventListener('mousedown', closeHandler);
+    };
+    document.addEventListener('mousedown', closeHandler);
+  }, 200);
+
+  console.log('[Content Script] ✓ Hamburger dropdown created successfully');
 }
 
 function createChatPopup(content) {
@@ -1323,8 +1328,8 @@ async function injectHeader() {
     iframe.onload = async () => {
       console.log('[Content Script] 🎉 Iframe loaded!');
 
-        chrome.storage.local.get([STATION_STORAGE_KEY], (result) => {
-        const freshStation = result[STATION_STORAGE_KEY] 
+      chrome.storage.local.get([STATION_STORAGE_KEY], (result) => {
+        const freshStation = result[STATION_STORAGE_KEY]
           ? String(result[STATION_STORAGE_KEY])
           : (selectedStation || "1");
 
@@ -1352,7 +1357,7 @@ async function injectHeader() {
         }
       });
 
-   setTimeout(() => {
+      setTimeout(() => {
         hideLoader();
         console.log('[Content Script] ✅ Header fully loaded');
       }, 500);
@@ -1410,20 +1415,20 @@ async function injectHeader() {
       }
 
       // HAMBURGER_MENU
- // HAMBURGER_MENU
-if (event.data.type === 'HAMBURGER_MENU') {
-    console.log('[Content Script] 📨 HAMBURGER_MENU received');
-    console.log('[Content Script] isOpen:', event.data.isOpen);
-    console.log('[Content Script] content:', event.data.content);
-    
-    if (event.data.isOpen) {
-        console.log('[Content Script] Creating hamburger dropdown...');
-        createHamburgerDropdown(event.data.content);
-    } else {
-        console.log('[Content Script] Closing hamburger dropdown...');
-        document.getElementById('nobstacle-hamburger-dropdown')?.remove();
-    }
-}
+      // HAMBURGER_MENU
+      if (event.data.type === 'HAMBURGER_MENU') {
+        console.log('[Content Script] 📨 HAMBURGER_MENU received');
+        console.log('[Content Script] isOpen:', event.data.isOpen);
+        console.log('[Content Script] content:', event.data.content);
+
+        if (event.data.isOpen) {
+          console.log('[Content Script] Creating hamburger dropdown...');
+          createHamburgerDropdown(event.data.content);
+        } else {
+          console.log('[Content Script] Closing hamburger dropdown...');
+          document.getElementById('nobstacle-hamburger-dropdown')?.remove();
+        }
+      }
 
       // CHAT_POPUP
       if (event.data.type === 'CHAT_POPUP') {
@@ -1499,82 +1504,145 @@ if (event.data.type === 'HAMBURGER_MENU') {
         }
       }
 
-// STATION_CHANGE
-if (event.data.type === 'STATION_CHANGE') {
-    const newStation = String(event.data.station);
-    console.log('[Content Script] 🔄 Station change requested:', newStation);
+      // SAVE_STATION_TO_STORAGE (new handler)
+      if (event.data.type === 'SAVE_STATION_TO_STORAGE') {
+        const newStation = String(event.data.station);
+        console.log('[Content Script] 📥 SAVE_STATION_TO_STORAGE received:', newStation);
 
-    // Update memory immediately
-    selectedStation = newStation;
-    console.log('[Content Script] ✅ Updated memory:', selectedStation);
+        // Update memory
+        selectedStation = newStation;
+        console.log('[Content Script] ✅ Updated memory:', selectedStation);
 
-    // Save to localStorage (for quick iframe access)
-    localStorage.setItem(STATION_STORAGE_KEY, newStation);
-    console.log('[Content Script] ✅ Saved to localStorage:', newStation);
-    
-    // CRITICAL: Save to chrome.storage
-    chrome.storage.local.set(
-        { [STATION_STORAGE_KEY]: newStation },
-        () => {
+        // Save to localStorage (for quick access)
+        localStorage.setItem(STATION_STORAGE_KEY, newStation);
+        console.log('[Content Script] ✅ Saved to localStorage:', newStation);
+
+        // CRITICAL: Save to chrome.storage
+        chrome.storage.local.set(
+          { [STATION_STORAGE_KEY]: newStation },
+          () => {
             if (chrome.runtime.lastError) {
-                console.error('[Content Script] ❌ Chrome storage error:', chrome.runtime.lastError);
+              console.error('[Content Script] ❌ Chrome storage error:', chrome.runtime.lastError);
             } else {
-                console.log('[Content Script] ✅ Saved to chrome.storage:', newStation);
-                
-                // Verify the save
-                chrome.storage.local.get([STATION_STORAGE_KEY], (result) => {
-                    const saved = String(result[STATION_STORAGE_KEY]);
-                    console.log('[Content Script] 🔍 Verification read:', saved);
-                    
-                    if (saved === newStation) {
-                        console.log('[Content Script] ✅ Verification passed!');
-                    } else {
-                        console.error('[Content Script] ❌ Verification failed!', {
-                            expected: newStation,
-                            actual: saved
-                        });
-                    }
-                });
-                
-                // ALSO notify background script (double-save for safety)
-                chrome.runtime.sendMessage({
-                    action: 'setStation',
-                    station: newStation
-                }, (response) => {
-                    if (chrome.runtime.lastError) {
-                        console.error('[Content Script] ❌ Background message error:', chrome.runtime.lastError);
-                    } else if (response && response.success) {
-                        console.log('[Content Script] ✅ Background confirmed station save');
-                    } else {
-                        console.error('[Content Script] ❌ Background failed to save:', response);
-                    }
-                });
+              console.log('[Content Script] ✅ Saved to chrome.storage:', newStation);
+
+              // Verify the save
+              chrome.storage.local.get([STATION_STORAGE_KEY], (result) => {
+                const saved = String(result[STATION_STORAGE_KEY]);
+                console.log('[Content Script] 🔍 Verification read:', saved);
+
+                if (saved === newStation) {
+                  console.log('[Content Script] ✅ Verification passed!');
+                } else {
+                  console.error('[Content Script] ❌ Verification failed!', {
+                    expected: newStation,
+                    actual: saved
+                  });
+                }
+              });
+
+              // Also notify background script
+              chrome.runtime.sendMessage({
+                action: 'setStation',
+                station: newStation
+              }, (response) => {
+                if (chrome.runtime.lastError) {
+                  console.error('[Content Script] ❌ Background error:', chrome.runtime.lastError);
+                } else if (response && response.success) {
+                  console.log('[Content Script] ✅ Background confirmed save');
+                }
+              });
             }
+          }
+        );
+
+        // Reload iframe with new station
+        const currentIframe = document.getElementById('nobstacle-header-iframe');
+        if (currentIframe && currentIframe.src.includes('station=')) {
+          const newUrl = currentIframe.src.replace(/station=[^&]*/, `station=${newStation}`);
+          console.log('[Content Script] 🔄 Reloading iframe with new station');
+          currentIframe.src = newUrl;
         }
-    );
 
-    // Reload iframe with new station
-    const currentIframe = document.getElementById('nobstacle-header-iframe');
-    if (currentIframe && currentIframe.src.includes('station=')) {
-        const newUrl = currentIframe.src.replace(/station=[^&]*/, `station=${newStation}`);
-        console.log('[Content Script] 🔄 Reloading iframe with new station');
-        currentIframe.src = newUrl;
-    }
+        console.log('[Content Script] ✅ Station save complete');
+      }
 
-    // Update page URL
-    const url = new URL(window.location.href);
-    url.searchParams.set('station', newStation);
-    window.history.pushState({}, '', url.toString());
-    console.log('[Content Script] ✅ Updated page URL');
+      // STATION_CHANGE
+      if (event.data.type === 'STATION_CHANGE') {
+        const newStation = String(event.data.station);
+        console.log('[Content Script] 🔄 Station change requested:', newStation);
 
-    // Dispatch event for other listeners
-    window.dispatchEvent(new CustomEvent('stationChanged', {
-        detail: { station: newStation }
-    }));
-    console.log('[Content Script] ✅ Dispatched stationChanged event');
+        // Update memory immediately
+        selectedStation = newStation;
+        console.log('[Content Script] ✅ Updated memory:', selectedStation);
 
-    console.log('[Content Script] ✅ Station change complete:', newStation);
-}
+        // Save to localStorage (for quick iframe access)
+        localStorage.setItem(STATION_STORAGE_KEY, newStation);
+        console.log('[Content Script] ✅ Saved to localStorage:', newStation);
+
+        // CRITICAL: Save to chrome.storage
+        chrome.storage.local.set(
+          { [STATION_STORAGE_KEY]: newStation },
+          () => {
+            if (chrome.runtime.lastError) {
+              console.error('[Content Script] ❌ Chrome storage error:', chrome.runtime.lastError);
+            } else {
+              console.log('[Content Script] ✅ Saved to chrome.storage:', newStation);
+
+              // Verify the save
+              chrome.storage.local.get([STATION_STORAGE_KEY], (result) => {
+                const saved = String(result[STATION_STORAGE_KEY]);
+                console.log('[Content Script] 🔍 Verification read:', saved);
+
+                if (saved === newStation) {
+                  console.log('[Content Script] ✅ Verification passed!');
+                } else {
+                  console.error('[Content Script] ❌ Verification failed!', {
+                    expected: newStation,
+                    actual: saved
+                  });
+                }
+              });
+
+              // ALSO notify background script (double-save for safety)
+              chrome.runtime.sendMessage({
+                action: 'setStation',
+                station: newStation
+              }, (response) => {
+                if (chrome.runtime.lastError) {
+                  console.error('[Content Script] ❌ Background message error:', chrome.runtime.lastError);
+                } else if (response && response.success) {
+                  console.log('[Content Script] ✅ Background confirmed station save');
+                } else {
+                  console.error('[Content Script] ❌ Background failed to save:', response);
+                }
+              });
+            }
+          }
+        );
+
+        // Reload iframe with new station
+        const currentIframe = document.getElementById('nobstacle-header-iframe');
+        if (currentIframe && currentIframe.src.includes('station=')) {
+          const newUrl = currentIframe.src.replace(/station=[^&]*/, `station=${newStation}`);
+          console.log('[Content Script] 🔄 Reloading iframe with new station');
+          currentIframe.src = newUrl;
+        }
+
+        // Update page URL
+        const url = new URL(window.location.href);
+        url.searchParams.set('station', newStation);
+        window.history.pushState({}, '', url.toString());
+        console.log('[Content Script] ✅ Updated page URL');
+
+        // Dispatch event for other listeners
+        window.dispatchEvent(new CustomEvent('stationChanged', {
+          detail: { station: newStation }
+        }));
+        console.log('[Content Script] ✅ Dispatched stationChanged event');
+
+        console.log('[Content Script] ✅ Station change complete:', newStation);
+      }
 
       // BACKEND_TOKEN
       if (event.data.type === 'BACKEND_TOKEN') {
