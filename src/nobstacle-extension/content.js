@@ -5,7 +5,6 @@ const HEADER_URL = Isproduction
   : 'http://localhost:3000/header-only';
 const HEADER_HEIGHT = '56px';
 const DEBUG_MODE = false;
-let selectedStation = null;
 const STATION_STORAGE_KEY = 'nobstacle_selected_station';
 
 let isEnabled = true;
@@ -16,8 +15,8 @@ let isRecording = false;
 let selectedCategory = null;
 let categoriesData = [];
 let categoriesFetched = false;
+let selectedStation = null;
 let stationLoadedFromStorage = false;
-
 
 function debugStorage() {
   console.log('[Content Script] 🔍 Storage Debug:');
@@ -32,7 +31,6 @@ function debugStorage() {
 const ALLOWED_IFRAME_ORIGINS = Isproduction
   ? ['https://nobstacle.com', 'https://www.nobstacle.com']
   : ['http://localhost:3000', 'http://localhost:3001'];
-
 
 if (typeof window.nobstacleOriginalMargin === 'undefined') {
   window.nobstacleOriginalMargin = parseInt(getComputedStyle(document.body).marginTop) || 0;
@@ -51,7 +49,6 @@ function shouldInject() {
 }
 
 function showLoader() {
-  // Remove any existing loader or login prompt
   document.getElementById('nobstacle-loader')?.remove();
   document.getElementById('nobstacle-login-prompt')?.remove();
 
@@ -107,25 +104,25 @@ function hideLoader() {
 
 async function loadStationFromBackground() {
   return new Promise((resolve) => {
-    console.log('[Content] 🔍 Loading station...');
+    console.log('[Content Script] 🔍 Loading station from background...');
 
     chrome.runtime.sendMessage({ action: 'getStation' }, (response) => {
       if (chrome.runtime.lastError) {
-        console.error('[Content] ❌ Error:', chrome.runtime.lastError);
+        console.error('[Content Script] ❌ Error loading station:', chrome.runtime.lastError);
         selectedStation = "1";
         resolve("1");
         return;
       }
 
       if (response && response.success && response.station) {
-        selectedStation = String(response.station);
-        console.log('[Content] ✅ Station loaded:', selectedStation);
-
-        // Also save to localStorage for iframe quick access
-        localStorage.setItem(STATION_STORAGE_KEY, selectedStation);
-
-        resolve(selectedStation);
+        const station = String(response.station);
+        console.log('[Content Script] ✅ Station loaded from background:', station);
+        selectedStation = station;
+        localStorage.setItem(STATION_STORAGE_KEY, station);
+        stationLoadedFromStorage = true;
+        resolve(station);
       } else {
+        console.log('[Content Script] ⚠️ No station in response, using default');
         selectedStation = "1";
         resolve("1");
       }
@@ -137,7 +134,6 @@ async function loadSavedStation() {
   return new Promise((resolve) => {
     console.log('[Content Script] 🔍 Loading station...');
 
-    // Ask background
     chrome.runtime.sendMessage({ action: 'getStation' }, (response) => {
       if (chrome.runtime.lastError) {
         console.error('[Content Script] ❌ Error:', chrome.runtime.lastError);
@@ -145,13 +141,11 @@ async function loadSavedStation() {
         resolve("1");
         return;
       }
-      console.info("111111111111111111111111111111111111111111111111111", response);
+
       selectedStation = (response && response.station) ? response.station : "1";
       console.log('[Content Script] ✅ Loaded station:', selectedStation);
 
-      // Save to localStorage for iframe
       localStorage.setItem(STATION_STORAGE_KEY, selectedStation);
-
       resolve(selectedStation);
     });
   });
@@ -165,7 +159,6 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
     selectedStation = String(newStation);
     localStorage.setItem(STATION_STORAGE_KEY, newStation);
 
-    // Update iframe if already injected
     const iframe = document.getElementById('nobstacle-header-iframe');
     if (iframe && iframe.src.includes('station=')) {
       const newUrl = iframe.src.replace(/station=[^&]*/, `station=${newStation}`);
@@ -196,13 +189,11 @@ chrome.storage.local.get(['extensionEnabled'], async (result) => {
   isEnabled = result.extensionEnabled !== false;
 
   if (isEnabled && shouldInject()) {
-    console.log('[Content] 🚀 Initializing...');
+    console.log('[Content Script] 🚀 Extension enabled, initializing...');
 
-    // CRITICAL: Load station FIRST
     selectedStation = await loadStationFromBackground();
-    console.log('[Content] ✅ Station ready:', selectedStation);
+    console.log('[Content Script] ✅ Station ready for injection:', selectedStation);
 
-    // NOW inject header with correct station
     await injectHeader();
   }
 });
@@ -210,81 +201,11 @@ chrome.storage.local.get(['extensionEnabled'], async (result) => {
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'stationChanged') {
     const newStation = String(request.station);
-    console.log('[Content] 📡 Station changed:', newStation);
-
-    // Update in-memory variable
-    selectedStation = newStation;
-    localStorage.setItem(STATION_STORAGE_KEY, newStation);
-
-    // Update iframe URL
-    const iframe = document.getElementById('nobstacle-header-iframe');
-    if (iframe && iframe.src.includes('station=')) {
-      const currentUrl = new URL(iframe.src);
-      currentUrl.searchParams.set('station', newStation);
-      iframe.src = currentUrl.toString();
-    }
-
-    // Dispatch event
-    window.dispatchEvent(new CustomEvent('stationChanged', {
-      detail: { station: newStation }
-    }));
-
-    sendResponse({ success: true });
-  }
-  return true;
-});
-
-window.addEventListener('message', (event) => {
-  if (!ALLOWED_IFRAME_ORIGINS.includes(event.origin)) return;
-
-  if (event.data.type === 'STATION_CHANGE') {
-    const newStation = String(event.data.station);
-    console.log('[Content] 🔄 Station change from iframe:', newStation);
-
-    // Update memory immediately
-    selectedStation = newStation;
-    localStorage.setItem(STATION_STORAGE_KEY, newStation);
-
-    // Send to background script to save
-    chrome.runtime.sendMessage({
-      action: 'setStation',
-      station: newStation
-    }, (response) => {
-      if (chrome.runtime.lastError) {
-        console.error('[Content] ❌ Error:', chrome.runtime.lastError);
-        return;
-      }
-
-      if (response && response.success) {
-        console.log('[Content] ✅ Saved to background');
-
-        // Update iframe URL
-        const iframe = document.getElementById('nobstacle-header-iframe');
-        if (iframe && iframe.src.includes('station=')) {
-          const newUrl = iframe.src.replace(/station=[^&]*/, `station=${newStation}`);
-          iframe.src = newUrl;
-        }
-
-        // Dispatch event for other listeners
-        window.dispatchEvent(new CustomEvent('stationChanged', {
-          detail: { station: newStation }
-        }));
-      }
-    });
-  }
-});
-
-
-chrome.runtime.onMessage.addListener((req, sender, respond) => {
-  if (request.action === 'stationChanged') {
-    const newStation = String(request.station);
     console.log('[Content Script] 📡 Station changed notification:', newStation);
 
-    // Update in-memory variable
     selectedStation = newStation;
     localStorage.setItem(STATION_STORAGE_KEY, newStation);
 
-    // Update iframe if it exists
     const iframe = document.getElementById('nobstacle-header-iframe');
     if (iframe && iframe.src.includes('station=')) {
       const currentUrl = new URL(iframe.src);
@@ -293,7 +214,6 @@ chrome.runtime.onMessage.addListener((req, sender, respond) => {
       iframe.src = currentUrl.toString();
     }
 
-    // Dispatch event for other listeners
     const stationEvent = new CustomEvent('stationChanged', {
       detail: { station: newStation }
     });
@@ -301,6 +221,7 @@ chrome.runtime.onMessage.addListener((req, sender, respond) => {
 
     sendResponse({ success: true });
   }
+
   if (request.action === 'toggle') {
     isEnabled = !isEnabled;
     chrome.storage.local.set({ extensionEnabled: isEnabled });
@@ -317,7 +238,7 @@ chrome.runtime.onMessage.addListener((req, sender, respond) => {
     return true;
   }
 
-  if (req.action === 'triggerUpsell') {
+  if (request.action === 'triggerUpsell') {
     const iframe = document.getElementById('nobstacle-header-iframe');
     if (iframe) {
       iframe.contentWindow.postMessage({
@@ -328,11 +249,11 @@ chrome.runtime.onMessage.addListener((req, sender, respond) => {
       console.error('[Content Script] ERROR: Header iframe not found!');
     }
 
-    respond({ success: true, category: selectedCategory });
+    sendResponse({ success: true, category: selectedCategory });
     return true;
   }
 
-  if (req.action === 'showCategories') {
+  if (request.action === 'showCategories') {
     if (categoriesData.length === 0 && !categoriesFetched) {
       fetchCategories().then(categories => {
         if (categories.length > 0) {
@@ -343,9 +264,11 @@ chrome.runtime.onMessage.addListener((req, sender, respond) => {
       createCategoryDropdown(categoriesData);
     }
 
-    respond({ success: true });
+    sendResponse({ success: true });
     return true;
   }
+
+  return true;
 });
 
 function isInputFocused() {
@@ -370,7 +293,6 @@ function setupKeyboardListener() {
       }
     }
   });
-
 }
 
 function injectStyles() {
@@ -427,7 +349,6 @@ function injectStyles() {
 }
 
 function createCategoryDropdown(categories) {
-  // Remove existing dropdown
   document.getElementById('nobstacle-category-dropdown')?.remove();
 
   const iframe = document.getElementById('nobstacle-header-iframe');
@@ -458,12 +379,10 @@ function createCategoryDropdown(categories) {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
   `;
 
-  // Sort categories by priceLevel
   const sortedCategories = [...categories].sort((a, b) =>
     (a.priceLevel || 0) - (b.priceLevel || 0)
   );
 
-  // ✅ IMPROVED: Better visual feedback for selected category
   const categoriesHTML = sortedCategories.map(category => {
     const isSelected = selectedCategory === category.id;
     return `
@@ -544,7 +463,6 @@ function createCategoryDropdown(categories) {
 
         const iframe = document.getElementById('nobstacle-header-iframe');
         if (iframe) {
-          // Send category selection to iframe
           iframe.contentWindow.postMessage({
             type: 'CATEGORY_SELECT',
             categoryId: categoryId
@@ -558,7 +476,6 @@ function createCategoryDropdown(categories) {
         }, 300);
       });
 
-      // Hover effect
       item.addEventListener('mouseenter', () => {
         if (selectedCategory !== parseInt(item.getAttribute('data-category-id'))) {
           item.style.background = '#f3f4f6';
@@ -588,7 +505,6 @@ function createCategoryDropdown(categories) {
       });
     }
 
-    // ✅ NEW: Send packages button
     const sendBtn = dropdown.querySelector('#send-upsell-btn');
     if (sendBtn) {
       sendBtn.addEventListener('click', () => {
@@ -604,7 +520,6 @@ function createCategoryDropdown(categories) {
       });
     }
 
-    // Close on outside click
     const closeHandler = (e) => {
       if (!dropdown.contains(e.target)) {
         dropdown.remove();
@@ -613,7 +528,6 @@ function createCategoryDropdown(categories) {
     };
     document.addEventListener('mousedown', closeHandler);
 
-    // ✅ NEW: Close on Escape key
     const escapeHandler = (e) => {
       if (e.key === 'Escape') {
         dropdown.remove();
@@ -625,7 +539,6 @@ function createCategoryDropdown(categories) {
 
   addDebugLog('✓ Category dropdown created');
 }
-
 
 async function fetchCategories() {
   if (categoriesFetched && categoriesData.length > 0) {
@@ -678,18 +591,13 @@ async function startAudioRecording() {
       const audioBlob = new Blob(audioChunks, { type: mimeType });
       await sendAudioToBackend(audioBlob);
 
-      // Stop all tracks
       stream.getTracks().forEach(track => track.stop());
     };
 
     mediaRecorder.start();
     isRecording = true;
 
-
-    // Show recording indicator
     createRecordingIndicator({ text: 'Recording... Speak now' });
-
-    // Update mic button in popup
     updateMicButtonState(true);
 
     return true;
@@ -713,10 +621,7 @@ function stopAudioRecording() {
     mediaRecorder.stop();
     isRecording = false;
 
-    // Remove recording indicator
     document.getElementById('nobstacle-recording-indicator')?.remove();
-
-    // Update mic button in popup
     updateMicButtonState(false);
 
     return true;
@@ -732,12 +637,10 @@ async function sendAudioToBackend(audioBlob) {
       return;
     }
 
-    // Convert blob to base64
     const reader = new FileReader();
     reader.onloadend = () => {
       const base64Audio = reader.result.split(',')[1];
 
-      // Send to iframe for processing
       iframe.contentWindow.postMessage({
         type: 'PROCESS_AUDIO',
         audioData: base64Audio,
@@ -1034,7 +937,6 @@ function createHamburgerDropdown(content) {
 
   document.body.appendChild(dropdown);
 
-  // Attach event listener to the station select if it exists
   setTimeout(() => {
     const select = dropdown.querySelector('#extension-station-select');
     if (select) {
@@ -1049,7 +951,6 @@ function createHamburgerDropdown(content) {
         dropdown.remove();
       });
 
-      // Prevent clicks on the select from closing the dropdown
       select.addEventListener('mousedown', (e) => {
         e.stopPropagation();
       });
@@ -1064,7 +965,6 @@ function createHamburgerDropdown(content) {
     const closeHandler = (e) => {
       const iframeElement = document.getElementById('nobstacle-header-iframe');
 
-      // Don't close if clicking inside the dropdown or on the iframe
       if (dropdown.contains(e.target) || e.target === iframeElement) {
         return;
       }
@@ -1074,7 +974,7 @@ function createHamburgerDropdown(content) {
       document.removeEventListener('mousedown', closeHandler);
     };
     document.addEventListener('mousedown', closeHandler);
-  }, 200);  // Increased delay to ensure select listeners are attached first
+  }, 200);
 
   addDebugLog('✓ Hamburger dropdown created');
 }
@@ -1139,24 +1039,16 @@ function createChatPopup(content) {
       });
     }
 
-    // Microphone button handler
     if (micButton) {
       micButton.addEventListener('click', async () => {
         if (!isRecording) {
-          // Start recording
-          const started = await startAudioRecording();
-          if (started) {
-          }
+          await startAudioRecording();
         } else {
-          // Stop recording
-          const stopped = stopAudioRecording();
-          if (stopped) {
-            console.log('Recording stopped');
-          }
+          stopAudioRecording();
         }
       });
     }
-    // Clear button handler
+
     if (clearButton) {
       clearButton.addEventListener('click', () => {
         iframe.contentWindow.postMessage({
@@ -1165,7 +1057,6 @@ function createChatPopup(content) {
       });
     }
 
-    // End Session button handler
     if (endSessionButton) {
       endSessionButton.addEventListener('click', () => {
         iframe.contentWindow.postMessage({
@@ -1183,7 +1074,6 @@ function createChatPopup(content) {
     }
   }, 100);
 
-  // Close on click outside
   setTimeout(() => {
     const closeHandler = (e) => {
       const iframeElement = document.getElementById('nobstacle-header-iframe');
@@ -1241,6 +1131,7 @@ function createSearchDropdown(content) {
         dropdown.remove();
       });
     });
+
     const categoryItems = dropdown.querySelectorAll('.category-item');
     categoryItems.forEach(item => {
       item.addEventListener('mousedown', (e) => {
@@ -1273,10 +1164,6 @@ function createSearchDropdown(content) {
   addDebugLog('✓ Search dropdown created');
 }
 
-if (typeof window.nobstacleOriginalMargin === 'undefined') {
-  window.nobstacleOriginalMargin = parseInt(getComputedStyle(document.body).marginTop) || 0;
-}
-
 async function injectHeader() {
   if (document.getElementById('nobstacle-header-container')) return;
 
@@ -1300,11 +1187,10 @@ async function injectHeader() {
     const iframe = document.createElement('iframe');
     iframe.id = 'nobstacle-header-iframe';
 
-    // Use the station we loaded earlier
     const stationParam = selectedStation || "1";
     const iframeUrl = `${HEADER_URL}?station=${stationParam}`;
-    console.log('[Content] 🎯 Creating iframe:', iframeUrl);
-    console.log('[Content] 📍 Station used:', stationParam);
+    console.log('[Content Script] 🎯 Creating iframe with URL:', iframeUrl);
+    console.log('[Content Script] 📍 Station being used:', stationParam);
 
     iframe.src = iframeUrl;
     iframe.allow = 'clipboard-write; microphone';
@@ -1317,53 +1203,341 @@ async function injectHeader() {
 
     injectDebugPanel();
     setupKeyboardListener();
+    console.log('[Content Script] ✅ Header iframe created');
 
     iframe.onload = async () => {
-      console.log('[Content] 🎉 Iframe loaded');
+      console.log('[Content Script] 🎉 Iframe loaded!');
 
-      // Wait for iframe to be ready
+      chrome.runtime.sendMessage({ action: 'getStation' }, (response) => {
+        const freshStation = (response && response.success && response.station)
+          ? String(response.station)
+          : (selectedStation || "1");
+
+        console.log('[Content Script] 📍 Sending station to iframe:', freshStation);
+
+        if (cachedAuthData && authDataReady) {
+          iframe.contentWindow.postMessage({
+            type: 'EXTENSION_AUTH',
+            sessionToken: cachedAuthData.sessionToken,
+            cookies: cachedAuthData.cookies
+          }, '*');
+
+          iframe.contentWindow.postMessage({
+            type: 'INITIAL_STATION',
+            station: freshStation
+          }, '*');
+
+          console.log('[Content Script] ✅ Auth and station sent to iframe');
+
+          updateDebugAuth(
+            !!cachedAuthData.sessionToken,
+            cachedAuthData.cookies.length,
+            cachedAuthData.sessionToken || ''
+          );
+        }
+      });
+
       setTimeout(() => {
-        // Get FRESH station from background
-        chrome.runtime.sendMessage({ action: 'getStation' }, (response) => {
-          const freshStation = (response && response.success && response.station)
-            ? String(response.station)
-            : (selectedStation || "1");
-
-          console.log('[Content] 📍 Fresh station from background:', freshStation);
-
-          // Update our local variable
-          selectedStation = freshStation;
-          localStorage.setItem(STATION_STORAGE_KEY, freshStation);
-
-          // Send auth to iframe
-          if (cachedAuthData && authDataReady) {
-            iframe.contentWindow.postMessage({
-              type: 'EXTENSION_AUTH',
-              sessionToken: cachedAuthData.sessionToken,
-              cookies: cachedAuthData.cookies
-            }, '*');
-
-            console.log('[Content] ✅ Auth sent');
-
-            // Send station to iframe (with small delay to ensure auth is processed first)
-            setTimeout(() => {
-              iframe.contentWindow.postMessage({
-                type: 'INITIAL_STATION',
-                station: freshStation
-              }, '*');
-
-              console.log('[Content] ✅ Station sent to iframe:', freshStation);
-            }, 100);
-          }
-        });
-
         hideLoader();
-      }, 300);
+        console.log('[Content Script] ✅ Header fully loaded');
+      }, 500);
+
+      setTimeout(async () => {
+        const freshAuth = await prefetchAuthData();
+        iframe.contentWindow.postMessage({
+          type: 'EXTENSION_AUTH',
+          sessionToken: freshAuth.sessionToken,
+          cookies: freshAuth.cookies
+        }, '*');
+        console.log('[Content Script] ✅ Fresh auth sent');
+      }, 1000);
     };
 
-    // Rest of your iframe message handler code...
+    // ALL MESSAGE EVENT HANDLERS
+    const handler = async (event) => {
+      if (!ALLOWED_IFRAME_ORIGINS.includes(event.origin)) {
+        return;
+      }
+
+      // REQUEST_AUTH
+      if (event.data.type === 'REQUEST_AUTH') {
+        console.log('[Content Script] 📨 Iframe requested auth');
+        const authData = cachedAuthData || await prefetchAuthData();
+        iframe.contentWindow.postMessage({
+          type: 'EXTENSION_AUTH',
+          sessionToken: authData.sessionToken,
+          cookies: authData.cookies
+        }, '*');
+      }
+
+      // TEMPLATE_SHORTCUT_CLICK
+      if (event.data.type === 'TEMPLATE_SHORTCUT_CLICK') {
+        addDebugLog('Template shortcut clicked, forwarding to iframe');
+        if (iframe) {
+          iframe.contentWindow.postMessage({
+            type: 'TEMPLATE_SHORTCUT_CLICK',
+            id: event.data.id,
+            templateType: event.data.templateType,
+            refType: event.data.refType,
+            tag: event.data.tag
+          }, '*');
+          addDebugLog('✓ Template shortcut message forwarded');
+        }
+      }
+
+      // RECORDING_INDICATOR
+      if (event.data.type === 'RECORDING_INDICATOR') {
+        if (event.data.show) {
+          createRecordingIndicator(event.data);
+        } else {
+          document.getElementById('nobstacle-recording-indicator')?.remove();
+        }
+      }
+
+      // HAMBURGER_MENU
+      if (event.data.type === 'HAMBURGER_MENU') {
+        if (event.data.isOpen) {
+          createHamburgerDropdown(event.data.content);
+        } else {
+          document.getElementById('nobstacle-hamburger-dropdown')?.remove();
+        }
+      }
+
+      // CHAT_POPUP
+      if (event.data.type === 'CHAT_POPUP') {
+        addDebugLog('Chat popup message received');
+        if (event.data.isOpen) {
+          createChatPopup(event.data.content);
+        } else {
+          document.getElementById('nobstacle-chat-popup')?.remove();
+        }
+      }
+
+      // CHAT_UPDATE_MESSAGES
+      if (event.data.type === 'CHAT_UPDATE_MESSAGES') {
+        const popup = document.getElementById('nobstacle-chat-popup');
+        if (popup) {
+          const messagesContainer = popup.querySelector('#chat-messages-container');
+          if (messagesContainer) {
+            messagesContainer.innerHTML = event.data.html;
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+          }
+        }
+      }
+
+      // CHAT_SEND_MESSAGE
+      if (event.data.type === 'CHAT_SEND_MESSAGE') {
+        iframe.contentWindow.postMessage({
+          type: 'CHAT_SEND_MESSAGE',
+          message: event.data.message
+        }, '*');
+      }
+
+      // CHAT_CLEAR
+      if (event.data.type === 'CHAT_CLEAR') {
+        iframe.contentWindow.postMessage({
+          type: 'CHAT_CLEAR'
+        }, '*');
+      }
+
+      // CHAT_POPUP_CLOSED
+      if (event.data.type === 'CHAT_POPUP_CLOSED') {
+        document.getElementById('nobstacle-chat-popup')?.remove();
+      }
+
+      // SEARCH_DROPDOWN
+      if (event.data.type === 'SEARCH_DROPDOWN') {
+        if (event.data.isOpen) {
+          createSearchDropdown(event.data.content);
+        } else {
+          document.getElementById('nobstacle-search-dropdown')?.remove();
+        }
+      }
+
+      // STATION_PICKER_HTML
+      if (event.data.type === 'STATION_PICKER_HTML') {
+        const placeholder = document.getElementById('station-picker-placeholder');
+        if (placeholder) {
+          placeholder.outerHTML = event.data.html;
+          setTimeout(() => {
+            const select = document.getElementById('extension-station-select');
+            if (select) {
+              select.addEventListener('change', (e) => {
+                const newStation = e.target.value;
+                addDebugLog(`Station changed to: ${newStation}`);
+
+                iframe.contentWindow.postMessage({
+                  type: 'STATION_CHANGE',
+                  station: newStation
+                }, '*');
+                document.getElementById('nobstacle-hamburger-dropdown')?.remove();
+              });
+            }
+          }, 100);
+        }
+      }
+
+      // STATION_CHANGE
+      if (event.data.type === 'STATION_CHANGE') {
+        const newStation = String(event.data.station);
+
+        try {
+          localStorage.setItem(STATION_STORAGE_KEY, newStation);
+          console.log('[Content Script] ✅ Saved to localStorage:', newStation);
+
+          await new Promise((resolve, reject) => {
+            chrome.storage.local.set({
+              [STATION_STORAGE_KEY]: newStation
+            }, () => {
+              if (chrome.runtime.lastError) {
+                console.error('[Content Script] ❌ Chrome storage error:', chrome.runtime.lastError);
+                reject(chrome.runtime.lastError);
+              } else {
+                console.log('[Content Script] ✅ Saved to Chrome storage:', newStation);
+                resolve();
+              }
+            });
+          });
+        } catch (error) {
+          console.error('[Content Script] ❌ Error saving station:', error);
+        }
+
+        const currentIframe = document.getElementById('nobstacle-header-iframe');
+        if (currentIframe && currentIframe.src.includes('station=')) {
+          const newUrl = currentIframe.src.replace(/station=[^&]*/, `station=${newStation}`);
+          currentIframe.src = newUrl;
+        }
+
+        selectedStation = newStation;
+        stationLoadedFromStorage = true;
+
+        const url = new URL(window.location.href);
+        url.searchParams.set('station', newStation);
+        window.history.pushState({}, '', url.toString());
+
+        window.dispatchEvent(new CustomEvent('stationChanged', {
+          detail: { station: newStation }
+        }));
+
+        console.log('[Content Script] ✅ Station change complete:', newStation);
+      }
+
+      // BACKEND_TOKEN
+      if (event.data.type === 'BACKEND_TOKEN') {
+        addDebugLog('✓ Received backend token');
+        chrome.runtime.sendMessage({
+          action: 'setBackendToken',
+          token: event.data.token,
+          expiresIn: event.data.expiresIn
+        }, (response) => {
+          if (response?.success) {
+            addDebugLog('✓ Token stored');
+            updateBackendTokenStatus(true);
+          }
+        });
+      }
+
+      // CHAT_RECORDING_STATE
+      if (event.data.type === 'CHAT_RECORDING_STATE') {
+        console.log('[Content Script] Recording state update:', event.data.isRecording);
+        const popup = document.getElementById('nobstacle-chat-popup');
+        if (popup) {
+          const micButton = popup.querySelector('#chat-mic-button');
+          if (micButton) {
+            micButton.setAttribute('data-recording', event.data.isRecording ? 'true' : 'false');
+            micButton.style.background = event.data.isRecording ? '#ef4444' : '#3b5998';
+
+            micButton.innerHTML = event.data.isRecording ? `
+              <svg viewBox="0 0 24 24" style="width: 20px; height: 20px; fill: white;">
+                <path d="M19 11h-1.7c0 .74-.16 1.43-.43 2.05l1.23 1.23c.56-.98.9-2.09.9-3.28zm-4.02.17c0-.06.02-.11.02-.17V5c0-1.66-1.34-3-3-3S9 3.34 9 5v.18l5.98 5.99zM4.27 3L3 4.27l6.01 6.01V11c0 1.66 1.33 3 2.99 3 .22 0 .44-.03.65-.08l1.66 1.66c-.71.33-1.5.52-2.31.52-2.76 0-5.3-2.1-5.3-5.1H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c.91-.13 1.77-.45 2.54-.9L19.73 21 21 19.73 4.27 3z"/>
+              </svg>
+            ` : `
+              <svg viewBox="0 0 24 24" style="width: 20px; height: 20px; fill: white;">
+                <path d="M12 14c1.66 0 2.99-1.34 2.99-3L15 5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z"/>
+              </svg>
+            `;
+          }
+        }
+      }
+
+      // CHAT_RECORDING_RESULT
+      if (event.data.type === 'CHAT_RECORDING_RESULT') {
+        console.log('[Content Script] Recording result received:', event.data.text);
+        const popup = document.getElementById('nobstacle-chat-popup');
+        if (popup) {
+          const messageInput = popup.querySelector('#chat-message-input');
+          if (messageInput) {
+            messageInput.value = event.data.text;
+            console.log('[Content Script] ✓ Transcribed text inserted into input');
+          }
+        }
+      }
+
+      // PROCESS_AUDIO
+      if (event.data.type === 'PROCESS_AUDIO') {
+        console.log('[Content Script] Audio processing requested');
+      }
+
+      // AUDIO_TRANSCRIPTION
+      if (event.data.type === 'AUDIO_TRANSCRIPTION') {
+        console.log('[Content Script] Received transcription:', event.data.text);
+
+        const popup = document.getElementById('nobstacle-chat-popup');
+        if (popup) {
+          const messageInput = popup.querySelector('#chat-message-input');
+          if (messageInput && event.data.text) {
+            messageInput.value = event.data.text;
+            console.log('[Content Script] ✓ Transcription inserted into input');
+
+            if (iframe) {
+              iframe.contentWindow.postMessage({
+                type: 'CHAT_SEND_MESSAGE',
+                message: event.data.text
+              }, '*');
+
+              messageInput.value = '';
+              console.log('[Content Script] ✓ Message automatically sent');
+            }
+          }
+        }
+      }
+
+      // TRIGGER_UPSELL
+      if (event.data.type === 'TRIGGER_UPSELL') {
+        if (iframe) {
+          iframe.contentWindow.postMessage({
+            type: 'SEND_UPSELL_PACKAGES',
+            categoryId: selectedCategory
+          }, '*');
+        }
+      }
+
+      // CATEGORIES_DATA
+      if (event.data.type === 'CATEGORIES_DATA') {
+        categoriesData = event.data.categories;
+        categoriesFetched = true;
+      }
+
+      // CATEGORY_SELECT
+      if (event.data.type === 'CATEGORY_SELECT') {
+        const categoryId = event.data.categoryId;
+        selectedCategory = categoryId;
+
+        if (iframe) {
+          iframe.contentWindow.postMessage({
+            type: 'CATEGORY_SELECT',
+            categoryId: categoryId
+          }, '*');
+        }
+
+        addDebugLog(`Category ${categoryId} selected`);
+      }
+    };
+
+    window.addEventListener('message', handler);
+    addDebugLog('✓ Header injection complete');
   } catch (error) {
-    console.error('[Content] Error injecting header:', error);
+    console.error('[Content Script] Error injecting header:', error);
     hideLoader();
     showLoginPrompt();
   }
