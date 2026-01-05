@@ -34,7 +34,7 @@ export default function Contact() {
               style={{
                 minWidth: '100%',
                 maxWidth: '100%',
-                height: '539px',
+                height: '100%',
                 border: 'none',
               }}
               scrolling="no"

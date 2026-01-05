@@ -28,10 +28,13 @@ const ClientStationPicker = () => {
   const searchParams = useSearchParams();
   const { isOpen, handleOpen, handleClose } = useDisclousure();
 
-  const handleLogout = async () => {
-    localStorage.clear();
-    await signOut();
-  };
+    const handleLogout = async () => {
+        localStorage.clear();
+        await signOut({
+            redirect: true,
+            callbackUrl: "/"
+        });
+    };
 
   return (
     <>

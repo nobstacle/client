@@ -1,56 +1,3 @@
-// 'use client';
-// import { useEffect } from "react";
-// import { useSession } from "next-auth/react";
-// import { useRouter } from "next/navigation";
-// import {
-//   getTemplateControllerGetTextTemplatesQueryKey,
-//   useTemplateControllerGetTextTemplates,
-// } from "../lib/client/api";
-
-// export default function Home() {
-//   const { data: session, status } = useSession();
-//   const router = useRouter();
-
-//   useEffect(() => {
-//     if (status === "unauthenticated") {
-//       router.replace("/home");
-//     }
-//   }, [status, router]);
-
-//   const res = useTemplateControllerGetTextTemplates(
-//     {},
-//     {
-//       query: {
-//         queryKey: getTemplateControllerGetTextTemplatesQueryKey(),
-//         enabled: status === "authenticated" && !!session?.user?.backendTokens?.at && !!session?.user?.companyId,
-//         retry: 2,
-//       },
-//       request: {
-//         headers: { Authorization: `Bearer ${session?.user?.backendTokens?.at}` },
-//       },
-//     }
-//   );
-
-//   if (status === "loading") {
-//     return (
-//       <main className="min-h-screen flex flex-col items-center justify-center">
-//         <p>Loading...</p>
-//       </main>
-//     );
-//   }
-
-//   if (status === "unauthenticated") {
-//     return null;
-//   }
-
-//   return (
-//     <main className="min-h-screen flex flex-col items-center justify-between p-24">
-//       <p>Test</p>
-//       <div>{JSON.stringify(res.data)}</div>
-//     </main>
-//   );
-// }
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -66,6 +13,8 @@ import FAQ from '@/components/home/Faq';
 import Contact from '@/components/home/Contact';
 import Footer from '@/components/home/Footer';
 import Modal from '@/components/home/Modal';
+import Extension from '@/components/home/Extension';
+import ScrollToTop from '@/components/home/ScrollToTop';
 import "@/styles/home.css";
 
 export default function Home() {
@@ -94,6 +43,7 @@ export default function Home() {
     <main>
       <Header />
       <Hero />
+      <Extension />
       <ProductTour />
       <Industries />
       <FeaturesSummary />
@@ -102,11 +52,11 @@ export default function Home() {
       <Pricing />
       <FAQ />
       <Contact />
-      <Footer 
+      <Footer
         onPrivacyClick={() => setPrivacyModalOpen(true)}
         onTermsClick={() => setTermsModalOpen(true)}
       />
-      
+
       <Modal
         isOpen={privacyModalOpen}
         onClose={() => setPrivacyModalOpen(false)}
@@ -122,6 +72,7 @@ export default function Home() {
       >
         <p>Content...</p>
       </Modal>
+      <ScrollToTop />
     </main>
   );
 }

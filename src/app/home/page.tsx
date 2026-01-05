@@ -13,6 +13,7 @@ import FAQ from '@/components/home/Faq';
 import Contact from '@/components/home/Contact';
 import Footer from '@/components/home/Footer';
 import Modal from '@/components/home/Modal';
+import Extension from '@/components/home/Extension';
 import "@/styles/home.css";
 
 export default function Home() {
@@ -51,6 +52,7 @@ export default function Home() {
     <main>
       <Header />
       <Hero />
+      <Extension />
       <ProductTour />
       <Industries />
       <FeaturesSummary />
