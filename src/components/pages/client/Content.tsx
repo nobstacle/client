@@ -676,8 +676,40 @@ export const Content: React.FC = () => {
     setIsTablet(isTabletDevice);
   }, []);
 
-  console.info("messageStore.receivedTypemessageStore.receivedType",messageStore.receivedType);
-  
+  useEffect(() => {
+    if (contentToDisplay === null && defaultSlideshowContent.data) {
+      setContentToDisplay({
+        type: "Slideshow",
+        content: defaultSlideshowContent.data,
+      });
+    }
+  }, [defaultSlideshowContent.data, contentToDisplay]);
+
+  useEffect(() => {
+    if (messageStore.receivedType === "Recording") {
+      const lastContent = localStorage.getItem('lastDisplayedContent');
+      if (lastContent) {
+        try {
+          const parsed = JSON.parse(lastContent);
+          setContentToDisplay(parsed);
+          message.info("This conversation is recorded for quality and training purposes");
+        } catch (error) {
+          console.error("Failed to parse last content:", error);
+          setContentToDisplay(null);
+        }
+      }
+    } else if (messageStore.receivedType) {
+      setContentToDisplay({
+        type: messageStore.receivedType,
+        content: messageStore.receivedContent,
+        survey: messageStore.receivedSurvey,
+        messages: messageStore.receivedMessage
+      });
+    } else {
+      setContentToDisplay(null);
+    }
+  }, [messageStore.receivedType, messageStore.receivedContent, messageStore.receivedSurvey, messageStore.receivedMessage]);
+
   useEffect(() => {
     if (!messageStore.receivedType) {
       if (chatBoxRef.current) {
@@ -1212,8 +1244,6 @@ export const Content: React.FC = () => {
             return combinedImages;
           };
 
-          console.warn("parseData",parseData);
-          
           const processedPackages = parseData.map(pkg => ({
             ...pkg,
             signedImageUrls: pkg.to_category_id ?
@@ -1769,7 +1799,9 @@ export const Content: React.FC = () => {
               />
             </Card>
           ) : (
-            <Slideshow contents={messageStore.receivedContent?.contents ?? []} />
+            <>
+              <Slideshow contents={messageStore.receivedContent?.contents ?? contentToDisplay?.contents ?? defaultSlideshowContent.data?.contents ?? []} />
+            </>
           )
         )}
 
@@ -1798,7 +1830,6 @@ export const Content: React.FC = () => {
               )}
             </div>
           )}
-
 
         {contentToDisplay?.type === "Survey" && messageStore.receivedSurvey && (
           <SurveyAnswer
@@ -1984,10 +2015,11 @@ export const Content: React.FC = () => {
       </>
     );
   }
+
   if (isFirstTimeOpen && defaultSlideshowContent.data)
     return (
       <>
-        <Slideshow contents={defaultSlideshowContent.data?.contents ?? []} />
+        <Slideshow contents={defaultSlideshowContent.data?.contents ?? contentToDisplay?.contents ?? []} />
       </>
     );
 
