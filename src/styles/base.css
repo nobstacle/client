@@ -17,8 +17,7 @@
       font-style: normal;
     }
 
-    td {
-      width: 100%;
+    td {width: 100%;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -1214,4 +1213,10 @@ button {
 .ant-table-sticky-holder,
 .ant-table-header {
   z-index: 0 !important;
+}
+
+
+body.nobstacle-active {
+  padding-top: 56px !important;
+  box-sizing: border-box !important;
 }

@@ -32,9 +32,9 @@ const ALLOWED_IFRAME_ORIGINS = Isproduction
   ? ['https://nobstacle.com', 'https://www.nobstacle.com']
   : ['http://localhost:3000', 'http://localhost:3001'];
 
-if (typeof window.nobstacleOriginalMargin === 'undefined') {
-  window.nobstacleOriginalMargin = parseInt(getComputedStyle(document.body).marginTop) || 0;
-}
+// if (typeof window.nobstacleOriginalMargin === 'undefined') {
+//   window.nobstacleOriginalMargin = parseInt(getComputedStyle(document.body).marginTop) || 0;
+// }
 
 let originalMarginTop = 0;
 let isDropdownOpen = false;
@@ -66,6 +66,9 @@ function showLoader() {
     justify-content: center !important;
     z-index: 2147483647 !important;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
   `;
 
   loader.innerHTML = `
@@ -89,8 +92,12 @@ function showLoader() {
     </style>
   `;
 
-  document.body.insertBefore(loader, document.body.firstChild);
-  document.body.style.marginTop = '56px';
+  // document.body.insertBefore(loader, document.body.firstChild);
+  if (document.body.firstChild) {
+    document.body.insertBefore(loader, document.body.firstChild);
+  } else {
+    document.body.appendChild(loader);
+  }
 }
 
 function hideLoader() {
@@ -249,7 +256,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       sendResponse({ injected: true });
     } else if (!isEnabled && headerInjected) {
       document.getElementById('nobstacle-header-container')?.remove();
-      document.body.style.marginTop = `${window.nobstacleOriginalMargin}px`;
+      document.body.classList.remove('nobstacle-active');
       headerInjected = false;
       sendResponse({ injected: false });
     }
@@ -319,6 +326,7 @@ function injectStyles() {
   const style = document.createElement('style');
   style.id = 'nobstacle-header-styles';
   style.textContent = `
+    /* Fixed header at top */
     #nobstacle-header-container {
       position: fixed !important;
       top: 0 !important;
@@ -330,7 +338,10 @@ function injectStyles() {
       background: white !important;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
       overflow: visible !important;
+      margin: 0 !important;
+      padding: 0 !important;
     }
+    
     #nobstacle-header-iframe {
       display: block !important;
       width: 100% !important;
@@ -341,6 +352,18 @@ function injectStyles() {
       overflow: visible !important;
       pointer-events: auto !important;
     }
+    
+    /* Push ALL body content down */
+    body.nobstacle-active {
+      padding-top: ${HEADER_HEIGHT} !important;
+      box-sizing: border-box !important;
+    }
+    
+    /* Override common conflicting styles */
+    body.nobstacle-active > *:not(#nobstacle-header-container):not(#nobstacle-loader):not(#nobstacle-login-prompt):not(#nobstacle-debug-panel):not(#nobstacle-category-dropdown):not(#nobstacle-hamburger-dropdown):not(#nobstacle-chat-popup):not(#nobstacle-recording-indicator):not(#nobstacle-search-dropdown) {
+      position: relative !important;
+    }
+    
     @keyframes slideDown {
       from {
         opacity: 0;
@@ -1309,21 +1332,19 @@ async function injectHeader() {
 
     const stationParam = selectedStation || "1";
     const iframeUrl = `${HEADER_URL}?station=${stationParam}`;
-    console.log('[Content Script] 🎯 Creating iframe with URL:', iframeUrl);
-    console.log('[Content Script] 📍 Station being used:', stationParam);
 
     iframe.src = iframeUrl;
     iframe.allow = 'clipboard-write; microphone';
 
     container.appendChild(iframe);
-    document.body.insertBefore(container, document.body.firstChild);
+    document.body.appendChild(container);
+    document.body.classList.add('nobstacle-active');
 
-    const baseMargin = window.nobstacleOriginalMargin + parseInt(HEADER_HEIGHT);
-    document.body.style.marginTop = `${baseMargin}px`;
+    // const baseMargin = window.nobstacleOriginalMargin + parseInt(HEADER_HEIGHT);
+    // document.body.style.marginTop = `${baseMargin}px`;
 
     injectDebugPanel();
     setupKeyboardListener();
-    console.log('[Content Script] ✅ Header iframe created');
 
     iframe.onload = async () => {
       console.log('[Content Script] 🎉 Iframe loaded!');
@@ -1332,8 +1353,6 @@ async function injectHeader() {
         const freshStation = result[STATION_STORAGE_KEY]
           ? String(result[STATION_STORAGE_KEY])
           : (selectedStation || "1");
-
-        console.log('[Content Script] 📍 Sending station to iframe:', freshStation);
 
         if (cachedAuthData && authDataReady) {
           iframe.contentWindow.postMessage({
@@ -1761,6 +1780,7 @@ async function injectHeader() {
   } catch (error) {
     console.error('[Content Script] Error injecting header:', error);
     hideLoader();
+    document.body.classList.remove('nobstacle-active');
     showLoginPrompt();
   }
 }
