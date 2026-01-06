@@ -6,40 +6,34 @@ const NobstacleExtensionsAndVideo = () => {
       {/* Browser Extensions Section */}
       <section className="py-16 px-4 bg-gradient-to-b from-blue-50 to-white">
         <div className="max-w-5xl mx-auto text-center">
-          {/* Icon */}
-          <div className="flex justify-center mb-6">
-            <div className="w-14 h-14 bg-blue-600 rounded-xl flex items-center justify-center">
-              <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
-              </svg>
-            </div>
-          </div>
 
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3">
+          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">
             Add Nobstacle to your browser
           </h2>
-          <p className="text-gray-600 mb-10 max-w-2xl mx-auto">
-            Enhance your browsing experience with our powerful extension available for Chrome and Edge
-          </p>
           
           {/* Extension Cards */}
-          <div className="flex flex-col sm:flex-row justify-center items-center gap-6 max-w-3xl mx-auto">
+          <div className="flex flex-col sm:flex-row justify-center items-stretch gap-8 max-w-4xl mx-auto">
             {/* Chrome Card */}
             <a 
               href="https://chromewebstore.google.com/detail/magic-box-by-nobstacle/hkefcbmmedhekjdnmpkpmdbnhnhmhlld"
               target="_blank"
               rel="noopener noreferrer"
-              className="w-full sm:w-72 bg-white rounded-2xl p-6 border-2 border-gray-100 hover:border-orange-200 hover:shadow-lg transition-all duration-200 group"
+              className="flex-1 bg-white rounded-2xl p-8 border-2 border-gray-200 hover:border-orange-400 hover:shadow-2xl transition-all duration-300 group"
             >
-              <div className="w-16 h-16 bg-gradient-to-br from-yellow-400 via-orange-400 to-red-500 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-105 transition-transform">
-                <svg className="w-9 h-9 text-white" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 0C5.37 0 0 5.37 0 12s5.37 12 12 12 12-5.37 12-12S18.63 0 12 0zm5.99 17.99l-3.99-3.99-3.99 3.99-2.12-2.12 3.99-3.99-3.99-3.99L9.01 6.01l3.99 3.99 3.99-3.99 2.12 2.12-3.99 3.99 3.99 3.99-2.12 2.12z" />
-                </svg>
+              <div className="flex items-center justify-center mx-auto mb-6 group-hover:scale-60 transition-transform">
+                <img 
+                  src="/chrome-web-store.png" 
+                  alt="Chrome Web Store" 
+                  className="w-full h-full object-contain"
+                />
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Chrome Web Store</h3>
-              <p className="text-sm text-gray-600 mb-4">For Chrome & Chromium browsers</p>
-              <span className="text-blue-600 text-sm font-medium group-hover:underline">
-                Add to Chrome →
+              <h3 className="text-xl font-bold text-gray-900 mb-2">Chrome Web Store</h3>
+              <p className="text-gray-600 mb-6">For Chrome & Chromium browsers</p>
+              <span className="inline-flex items-center text-blue-600 text-sm font-semibold group-hover:text-orange-500 transition-colors">
+                Add to Chrome
+                <svg className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
               </span>
             </a>
 
@@ -48,17 +42,22 @@ const NobstacleExtensionsAndVideo = () => {
               href="https://microsoftedge.microsoft.com/addons/detail/magic-box-by-nobstacle/dkkpgjdkihifanfknfmojjgeancegnhi"
               target="_blank"
               rel="noopener noreferrer"
-              className="w-full sm:w-72 bg-white rounded-2xl p-6 border-2 border-gray-100 hover:border-blue-200 hover:shadow-lg transition-all duration-200 group"
+              className="flex-1 bg-white rounded-2xl p-8 border-2 border-gray-200 hover:border-blue-400 hover:shadow-2xl transition-all duration-300 group"
             >
-              <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-105 transition-transform">
-                <svg className="w-9 h-9 text-white" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 2L2 7v10l10 5 10-5V7L12 2zm0 2.18L19.82 8 12 11.82 4.18 8 12 4.18zM4 9.48l7 3.5v7.84l-7-3.5V9.48zm9 11.34v-7.84l7-3.5v7.84l-7 3.5z" />
-                </svg>
+              <div className="flex items-center justify-center mx-auto mb-6 group-hover:scale-60 transition-transform">
+                <img 
+                  src="/microsoft-store.png" 
+                  alt="Microsoft Edge Store" 
+                  className="w-full h-full object-contain"
+                />
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Microsoft Edge Store</h3>
-              <p className="text-sm text-gray-600 mb-4">For Microsoft Edge browser</p>
-              <span className="text-blue-600 text-sm font-medium group-hover:underline">
-                Add to Edge →
+              <h3 className="text-xl font-bold text-gray-900 mb-2">Microsoft Edge Store</h3>
+              <p className="text-gray-600 mb-6">For Microsoft Edge browser</p>
+              <span className="inline-flex items-center text-blue-600 text-sm font-semibold group-hover:text-blue-700 transition-colors">
+                Add to Edge
+                <svg className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
               </span>
             </a>
           </div>
@@ -68,21 +67,10 @@ const NobstacleExtensionsAndVideo = () => {
       {/* Video Section */}
       <section className="py-16 px-4 bg-white">
         <div className="max-w-5xl mx-auto text-center">
-          {/* Icon */}
-          <div className="flex justify-center mb-6">
-            <div className="w-14 h-14 bg-red-600 rounded-xl flex items-center justify-center">
-              <svg className="w-7 h-7 text-white" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M10 16.5l6-4.5-6-4.5v9zM12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" />
-              </svg>
-            </div>
-          </div>
 
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3">
+          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
             What is Nobstacle?
           </h2>
-          <p className="text-gray-600 mb-10 max-w-2xl mx-auto">
-            Watch our introduction video to learn how Nobstacle can transform your customer experience
-          </p>
           
           {/* Video Container */}
           <div className="max-w-4xl mx-auto">
