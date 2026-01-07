@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import useTemplateStore from "../../../lib/zustand/store/templateStore";
 import { useHasHydrated } from "../../../hooks/useHydrated";
 import { useSession } from "next-auth/react";
@@ -7,7 +7,7 @@ import {
   useRecordingControllerDelete,
   useRecordingControllerGetAll
 } from "../../../lib/client/api";
-import { Table, Card, Pagination, Button, Spin, Tag } from "antd";
+import { Table, Card, Pagination, Button, Tag } from "antd";
 import "../../../styles/base.css";
 import { FaTrash, FaPlay, FaPause } from "react-icons/fa";
 import Swal from "sweetalert2";
@@ -29,11 +29,7 @@ function Page() {
 }
 
 function RecordingsListWithSearch() {
-  const {
-    recordings,
-    setRecordings,
-  } = useTemplateStore();
-
+  const { setRecordings } = useTemplateStore();
   const { receivedRecording } = useMessageStore();
   const { data: userData } = useSession();
   const deleteRecording = useRecordingControllerDelete();
@@ -43,51 +39,74 @@ function RecordingsListWithSearch() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [mediaElement, setMediaElement] = useState<HTMLAudioElement | HTMLVideoElement | null>(null);
 
-  // Fetch recordings from API with search parameter
+  const prevReceivedRecording = useRef(receivedRecording);
+  const searchTimeoutRef = useRef<NodeJS.Timeout>();
+
+  // Debounce search term
+  useEffect(() => {
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    searchTimeoutRef.current = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+      setCurrentPage(1); // Reset to first page when search changes
+    }, 500); // 500ms debounce
+
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, [searchTerm]);
+
+  // Fetch recordings from API
   const {
     data: recordingsData,
     isLoading,
-    refetch
+    refetch,
+    isFetching
   } = useRecordingControllerGetAll(
     {
       page: currentPage,
       limit: pageSize,
-      search: searchTerm, // Add search parameter
+      search: debouncedSearch || undefined, // Only send search if it has value
     },
     {
       query: {
         enabled: true,
         refetchOnWindowFocus: false,
+        keepPreviousData: true, // Keep previous data while fetching new data
+        staleTime: 5000, // Consider data fresh for 5 seconds
       }
     }
   );
 
   // Handle search from SendRecordingTrigger
-  const handleSearch = (value: string) => {
+  const handleSearch = useCallback((value: string) => {
     setSearchTerm(value);
-    setCurrentPage(1); // Reset to first page when searching
-  };
+  }, []);
 
-  // Refetch when search term changes
+  // Only refetch when new recording is received
   useEffect(() => {
-    refetch();
-  }, [searchTerm, refetch]);
-
-  useEffect(() => {
-    if (receivedRecording) {
+    if (receivedRecording && receivedRecording !== prevReceivedRecording.current) {
+      prevReceivedRecording.current = receivedRecording;
+      setCurrentPage(1);
       refetch();
     }
   }, [receivedRecording, refetch]);
 
+  // Update recordings in store when data changes
   useEffect(() => {
     if (recordingsData?.items) {
-      setRecordings(recordingsData?.items);
+      setRecordings(recordingsData.items);
     }
-  }, [recordingsData, setRecordings]);
+  }, [recordingsData?.items, setRecordings]);
 
-  const handlePlayRecording = (id: number, recordingUrl: string, type: string) => {
+  const handlePlayRecording = useCallback((id: number, recordingUrl: string, type: string) => {
     if (playingId === id && mediaElement) {
       mediaElement.pause();
       setPlayingId(null);
@@ -98,17 +117,17 @@ function RecordingsListWithSearch() {
       mediaElement.pause();
     }
 
-      const audio = new Audio(recordingUrl);
-      audio.play();
-      setMediaElement(audio);
-      setPlayingId(id);
+    const audio = new Audio(recordingUrl);
+    audio.play();
+    setMediaElement(audio);
+    setPlayingId(id);
 
-      audio.onended = () => {
-        setPlayingId(null);
-      };
-  };
+    audio.onended = () => {
+      setPlayingId(null);
+    };
+  }, [playingId, mediaElement]);
 
-  const handleDeleteRecording = (id: number) => {
+  const handleDeleteRecording = useCallback((id: number) => {
     Swal.fire({
       title: "Are you sure?",
       text: "This will permanently delete the recording.",
@@ -124,7 +143,6 @@ function RecordingsListWithSearch() {
           { id },
           {
             onSuccess: () => {
-              setRecordings(recordings.filter((val) => val.id !== id));
               Swal.fire("Deleted!", "Recording deleted.", "success");
               setDeletingId(null);
 
@@ -133,6 +151,7 @@ function RecordingsListWithSearch() {
                 setPlayingId(null);
               }
 
+              // Refetch current page
               refetch();
             },
             onError: (error: any) => {
@@ -144,7 +163,7 @@ function RecordingsListWithSearch() {
         );
       }
     });
-  };
+  }, [deleteRecording, playingId, mediaElement, refetch]);
 
   const columns = [
     {
@@ -195,7 +214,7 @@ function RecordingsListWithSearch() {
     {
       title: "Date",
       key: "createdAt",
-      width: 150,
+      width: 180,
       render: (_, record) => (
         <span>{new Date(record.createdAt).toLocaleString("en-US", {
           year: 'numeric',
@@ -252,24 +271,17 @@ function RecordingsListWithSearch() {
     },
   ];
 
-  const handlePageChange = (page: number, pageSize?: number) => {
-    setCurrentPage(page);
-    if (pageSize) {
-      setPageSize(pageSize);
+  const handlePageChange = useCallback((page: number, newPageSize?: number) => {
+    if (newPageSize && newPageSize !== pageSize) {
+      setPageSize(newPageSize);
+      setCurrentPage(1);
+    } else {
+      setCurrentPage(page);
     }
-  };
-
-  // if (isLoading) {
-  //   return (
-  //     <div className="flex items-center justify-center p-8">
-  //       <Spin size="large" />
-  //     </div>
-  //   );
-  // }
+  }, [pageSize]);
 
   return (
     <div className="flex w-full flex-col gap-4">
-      {/* Pass search handler to SendRecordingTrigger */}
       <SendRecordingTrigger onSearch={handleSearch} />
 
       <div className="p-4 shadow-md rounded-lg customTableWrapper bg-white">
@@ -278,12 +290,14 @@ function RecordingsListWithSearch() {
             <h2 className="text-lg font-semibold">Recordings</h2>
             <p className="text-sm text-gray-500">
               Total: {recordingsData?.total || 0} recordings
-              {searchTerm && ` (filtered by: "${searchTerm}")`}
+              {debouncedSearch && ` (filtered by: "${debouncedSearch}")`}
+              {isFetching && <span className="ml-2 text-blue-500">Loading...</span>}
             </p>
           </div>
           <Button
             type="primary"
             onClick={() => refetch()}
+            loading={isFetching}
           >
             Refresh
           </Button>
@@ -292,7 +306,7 @@ function RecordingsListWithSearch() {
         <Table
           rowKey="id"
           columns={columns}
-          dataSource={recordingsData?.items || recordingsData}
+          dataSource={recordingsData?.items || []}
           pagination={false}
           className="jotFormTable"
           loading={isLoading}
@@ -307,6 +321,7 @@ function RecordingsListWithSearch() {
             showSizeChanger
             pageSizeOptions={['10', '20', '50', '100']}
             showTotal={(total, range) => `${range[0]}-${range[1]} of ${total} items`}
+            disabled={isFetching}
           />
         </div>
       </div>
