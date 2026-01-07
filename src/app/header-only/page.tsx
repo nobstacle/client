@@ -26,36 +26,28 @@ export default function HeaderOnlyPage() {
     const handler = async (event: MessageEvent) => {
       if (event.data?.type !== 'EXTENSION_AUTH') return;
 
-      // Clear timeout since we received auth
       if (authTimeoutRef.current) {
         clearTimeout(authTimeoutRef.current);
         authTimeoutRef.current = null;
       }
 
-      const token = event.data.sessionToken;
-      if (!token) {
-        console.log('[HeaderOnly] No token from extension');
-        setLoading(false);
-        return;
-      }
-
-      console.log('[HeaderOnly] Got token, fetching user...');
-
+      console.log('[HeaderOnly] Extension auth received');
+      
+      // Use NextAuth session endpoint instead of broken token validation
       try {
-        // Get user data from our API
-        const response = await fetch('/api/auth/get-user-from-token', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ sessionToken: token }),
-        });
-
+        const response = await fetch('/api/auth/session');
+        
         if (response.ok) {
-          const data = await response.json();
-          console.log('[HeaderOnly] ✓ User loaded:', data.user.email);
-          console.log('[HeaderOnly] Has backendTokens:', !!data.user.backendTokens);
-          setUser(data.user);
+          const sessionData = await response.json();
+          
+          if (sessionData?.user) {
+            console.log('[HeaderOnly] ✓ User loaded:', sessionData.user.email);
+            setUser(sessionData.user);
+          } else {
+            console.log('[HeaderOnly] No active session');
+          }
         } else {
-          console.log('[HeaderOnly] Failed to get user');
+          console.log('[HeaderOnly] Session check failed');
         }
       } catch (err) {
         console.error('[HeaderOnly] Error:', err);
@@ -66,16 +58,25 @@ export default function HeaderOnlyPage() {
 
     window.addEventListener('message', handler);
 
-    // Request auth from extension
     const req = () => window.parent.postMessage({ type: 'REQUEST_AUTH' }, '*');
     req();
     setTimeout(req, 400);
     setTimeout(req, 1000);
 
-    // Set timeout: if no auth received after 3 seconds, stop loading
     authTimeoutRef.current = setTimeout(() => {
-      console.log('[HeaderOnly] Auth timeout - no response from extension');
-      setLoading(false);
+      console.log('[HeaderOnly] Auth timeout - checking session anyway');
+      
+      // Check session even on timeout
+      fetch('/api/auth/session')
+        .then(res => res.json())
+        .then(sessionData => {
+          if (sessionData?.user) {
+            console.log('[HeaderOnly] ✓ User found via session');
+            setUser(sessionData.user);
+          }
+        })
+        .catch(err => console.error('[HeaderOnly] Session check failed:', err))
+        .finally(() => setLoading(false));
     }, 3000);
 
     return () => {
@@ -87,11 +88,10 @@ export default function HeaderOnlyPage() {
   }, [isInIframe]);
 
   if (!mounted) {
-    return null; // Don't show anything during mount
+    return null;
   }
 
   if (loading) {
-    // Show minimal loading state that matches header height
     return (
       <div style={{ 
         height: '70px',
@@ -148,7 +148,6 @@ export default function HeaderOnlyPage() {
     );
   }
 
-  // Create a mock session object for ClientHeader (matching NextAuth session structure)
   const mockSession = {
     user: {
       ...user,
