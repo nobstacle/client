@@ -68,7 +68,7 @@ export default function VideoDashboard() {
   // but track availability for the current language
   const displayedVideosWithAvailability = useMemo(() => {
     const videosSource = searchVideos.length > 0 ? searchVideos : videos;
-    
+
     // Group videos by tag
     const groupedByTag = videosSource.reduce((acc, video) => {
       if (!acc[video.tag]) {
@@ -81,18 +81,18 @@ export default function VideoDashboard() {
     // For each tag, always show the default language version
     // but check if current language is available
     const displayVideos: (GetVideoTemplateRes & { isAvailableInCurrentLang: boolean })[] = [];
-    
+
     Object.values(groupedByTag).forEach((tagVideos) => {
       // Always use default language video for display
       const defaultLangVideo = tagVideos.find(vid =>
         vid.langCode.includes(companyData?.defaultLangCode || "en")
       ) || tagVideos[0];
-      
+
       // Check if current language is available for this tag
-      const isAvailableInCurrentLang = tagVideos.some(vid => 
+      const isAvailableInCurrentLang = tagVideos.some(vid =>
         vid.langCode.includes(currentLang)
       );
-      
+
       displayVideos.push({
         ...defaultLangVideo,
         isAvailableInCurrentLang
@@ -218,17 +218,24 @@ export default function VideoDashboard() {
             isOpen={isOpen}
           >
             <CreateVideoTemplateForm
-              cb={(video, isUpdate) => {
+              cb={(video, isUpdate = false) => {
+                console.info("video created/updated:", video);
                 handleClose();
 
                 if (!isUpdate) {
-                  videos.push(video);
-                  setVideos(videos);
+                  setVideos([...videos, video]);
                 } else {
-                  const shallow = [...videos];
-                  const index = shallow.findIndex(({ id }) => id === video.id);
-                  shallow[index]["langCode"] = video.langCode;
-                  setVideos(shallow);
+                  const updatedVideos = videos.map((item) =>
+                    item.id === video.id
+                      ? { ...item, url: video.url, langCode: video.langCode }
+                      : item
+                  );
+
+                  if (!videos.some((item) => item.id === video.id)) {
+                    updatedVideos.push(video);
+                  }
+
+                  setVideos(updatedVideos);
                 }
               }}
             />
