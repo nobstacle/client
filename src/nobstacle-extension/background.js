@@ -6,8 +6,9 @@ let currentStation = null;
 // API base URL
 const API_BASE_URL = 'https://nobstacle-production-d145.up.railway.app';
 const STATION_STORAGE_KEY = 'nobstacle_selected_station';
+const AUTH_CACHE_KEY = 'nobstacle_auth_cache';
+const AUTH_CACHE_DURATION = 5 * 60 * 1000; 
 
-// FIX: Initialize station immediately and more reliably
 async function initStation() {
   try {
     const result = await chrome.storage.local.get([STATION_STORAGE_KEY]);
@@ -37,6 +38,7 @@ chrome.runtime.onInstalled.addListener(async (details) => {
   console.log('[Background] Extension installed/updated');
   await initStation();
   await restoreTokenFromStorage();
+  await fetchAndCacheAuth();
 });
 
 // Initialize on browser startup
@@ -44,16 +46,22 @@ chrome.runtime.onStartup.addListener(async () => {
   console.log('[Background] Browser started');
   await initStation();
   await fetchAuthFromNobstacle();
+  await fetchAndCacheAuth();
 });
 
 // Initialize immediately when script loads
 initStation();
+restoreTokenFromStorage();
 
-async function fetchAuthFromNobstacle() {
+async function fetchAndCacheAuth() {
   try {
+    console.log('[Background] 🔍 Fetching auth from nobstacle.com...');
+    
     const cookies = await chrome.cookies.getAll({
       domain: 'nobstacle.com'
     });
+
+    console.log('[Background] 📦 Found cookies:', cookies.length);
 
     const sessionCookie = cookies.find(c =>
       c.name === '__Secure-next-auth.session-token' ||
@@ -61,22 +69,80 @@ async function fetchAuthFromNobstacle() {
     );
 
     if (sessionCookie) {
-      await chrome.storage.local.set({
+      const authData = {
         authSessionToken: sessionCookie.value,
         authCookies: cookies,
+        authTimestamp: Date.now(),
+        isAuthenticated: true
+      };
+      
+      await chrome.storage.local.set(authData);
+      
+      console.log('[Background] ✅ Auth cached successfully');
+      console.log('[Background] 🔑 Session token:', sessionCookie.value.substring(0, 20) + '...');
+      
+      return { 
+        sessionToken: sessionCookie.value, 
+        cookies,
+        isAuthenticated: true 
+      };
+    } else {
+      console.log('[Background] ⚠️ No session cookie found');
+      
+      // Mark as not authenticated
+      await chrome.storage.local.set({
+        isAuthenticated: false,
         authTimestamp: Date.now()
       });
-
-      console.log('[Background] ✓ Auth data stored from nobstacle.com');
-      return { sessionToken: sessionCookie.value, cookies };
+      
+      return { 
+        sessionToken: null, 
+        cookies: [],
+        isAuthenticated: false 
+      };
     }
-
-    return null;
   } catch (error) {
-    console.error('[Background] Error fetching auth:', error);
-    return null;
+    console.error('[Background] ❌ Error fetching auth:', error);
+    return { 
+      sessionToken: null, 
+      cookies: [],
+      isAuthenticated: false 
+    };
   }
 }
+
+async function fetchAuthFromNobstacle() {
+  return await fetchAndCacheAuth();
+}
+
+// async function fetchAuthFromNobstacle() {
+//   try {
+//     const cookies = await chrome.cookies.getAll({
+//       domain: 'nobstacle.com'
+//     });
+
+//     const sessionCookie = cookies.find(c =>
+//       c.name === '__Secure-next-auth.session-token' ||
+//       c.name === 'next-auth.session-token'
+//     );
+
+//     if (sessionCookie) {
+//       await chrome.storage.local.set({
+//         authSessionToken: sessionCookie.value,
+//         authCookies: cookies,
+//         authTimestamp: Date.now()
+//       });
+
+//       console.log('[Background] ✓ Auth data stored from nobstacle.com');
+//       return { sessionToken: sessionCookie.value, cookies };
+//     }
+
+//     return null;
+//   } catch (error) {
+//     console.error('[Background] Error fetching auth:', error);
+//     return null;
+//   }
+// }
 
 async function restoreTokenFromStorage() {
   try {
@@ -106,13 +172,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             const station = result[STATION_STORAGE_KEY] ? String(result[STATION_STORAGE_KEY]) : "1";
             console.log('[Background] 📤 Returning station:', station);
             
-            // Update memory
             currentStation = station;
-            
             sendResponse({ success: true, station: station });
         });
         
-        return true; // Keep channel open for async response
+        return true; 
     }
 
   // SET STATION - FIX: Better error handling and verification
@@ -182,19 +246,76 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true;
   }
 
-  if (request.action === 'getAuthData') {
-    chrome.storage.local.get(['authSessionToken', 'authCookies', 'authTimestamp'], async (result) => {
-      if (result.authSessionToken && result.authTimestamp &&
-        (Date.now() - result.authTimestamp < 5 * 60 * 1000)) {
+    if (request.action === 'getAuthData') {
+    console.log('[Background] 📥 getAuthData request');
+    
+    chrome.storage.local.get([
+      'authSessionToken', 
+      'authCookies', 
+      'authTimestamp',
+      'isAuthenticated'
+    ], async (result) => {
+      const now = Date.now();
+      const isExpired = !result.authTimestamp || (now - result.authTimestamp > AUTH_CACHE_DURATION);
+      
+      console.log('[Background] 📊 Auth cache status:', {
+        hasToken: !!result.authSessionToken,
+        isExpired: isExpired,
+        isAuthenticated: result.isAuthenticated,
+        age: result.authTimestamp ? Math.round((now - result.authTimestamp) / 1000) + 's' : 'never'
+      });
+
+      // If cache is valid and we have auth data, return it
+      if (!isExpired && result.authSessionToken && result.isAuthenticated !== false) {
+        console.log('[Background] ✅ Returning cached auth data');
         sendResponse({
           sessionToken: result.authSessionToken,
-          cookies: result.authCookies
+          cookies: result.authCookies || [],
+          isAuthenticated: true
         });
       } else {
-        const authData = await fetchAuthFromNobstacle();
-        sendResponse(authData || { sessionToken: null, cookies: [] });
+        // Cache is expired or empty, fetch fresh data
+        console.log('[Background] 🔄 Fetching fresh auth data...');
+        const authData = await fetchAndCacheAuth();
+        
+        console.log('[Background] 📤 Returning fresh auth data:', {
+          hasToken: !!authData.sessionToken,
+          isAuthenticated: authData.isAuthenticated
+        });
+        
+        sendResponse(authData || { 
+          sessionToken: null, 
+          cookies: [],
+          isAuthenticated: false 
+        });
       }
     });
+    
+    return true;
+  }
+  // if (request.action === 'getAuthData') {
+  //   chrome.storage.local.get(['authSessionToken', 'authCookies', 'authTimestamp'], async (result) => {
+  //     if (result.authSessionToken && result.authTimestamp &&
+  //       (Date.now() - result.authTimestamp < 5 * 60 * 1000)) {
+  //       sendResponse({
+  //         sessionToken: result.authSessionToken,
+  //         cookies: result.authCookies
+  //       });
+  //     } else {
+  //       const authData = await fetchAuthFromNobstacle();
+  //       sendResponse(authData || { sessionToken: null, cookies: [] });
+  //     }
+  //   });
+  //   return true;
+  // }
+
+    if (request.action === 'refreshAuth') {
+    console.log('[Background] 🔄 Force refresh auth requested');
+    
+    fetchAndCacheAuth().then(authData => {
+      sendResponse(authData);
+    });
+    
     return true;
   }
 
@@ -260,8 +381,29 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
 
 // Periodically refresh auth
 setInterval(async () => {
-  await fetchAuthFromNobstacle();
+  console.log('[Background] ⏰ Periodic auth refresh...');
+  await fetchAndCacheAuth();
 }, 2 * 60 * 1000);
+
+chrome.cookies.onChanged.addListener((changeInfo) => {
+  if (changeInfo.cookie.domain.includes('nobstacle.com')) {
+    const isSessionCookie = changeInfo.cookie.name === '__Secure-next-auth.session-token' || 
+                           changeInfo.cookie.name === 'next-auth.session-token';
+    
+    if (isSessionCookie) {
+      if (changeInfo.removed) {
+        console.log('[Background] 🔴 Session cookie removed - user logged out');
+        chrome.storage.local.set({
+          isAuthenticated: false,
+          authTimestamp: Date.now()
+        });
+      } else {
+        console.log('[Background] 🟢 Session cookie changed - refreshing auth');
+        fetchAndCacheAuth();
+      }
+    }
+  }
+});
 
 // Web request interceptors remain the same...
 chrome.webRequest.onBeforeSendHeaders.addListener(

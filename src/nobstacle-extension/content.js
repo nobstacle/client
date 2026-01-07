@@ -874,20 +874,69 @@ function showLoginPrompt() {
 
 async function prefetchAuthData() {
   return new Promise((resolve) => {
+    console.log('[Content Script] 🔍 Prefetching auth data...');
+
+    // Add timeout to prevent hanging
+    const timeout = setTimeout(() => {
+      console.error('[Content Script] ⏱️ Auth fetch timeout');
+      resolve({
+        sessionToken: null,
+        cookies: [],
+        isAuthenticated: false
+      });
+    }, 5000); // 5 second timeout
+
     chrome.runtime.sendMessage({
       action: 'getAuthData'
     }, (response) => {
+      clearTimeout(timeout);
+
+      if (chrome.runtime.lastError) {
+        console.error('[Content Script] ❌ Error getting auth:', chrome.runtime.lastError);
+        cachedAuthData = {
+          sessionToken: null,
+          cookies: [],
+          isAuthenticated: false
+        };
+        authDataReady = true;
+        resolve(cachedAuthData);
+        return;
+      }
+
+      console.log('[Content Script] 📦 Auth response received:', {
+        hasToken: !!response?.sessionToken,
+        cookieCount: response?.cookies?.length || 0,
+        isAuthenticated: response?.isAuthenticated
+      });
+
       cachedAuthData = {
         sessionToken: response?.sessionToken || null,
-        cookies: response?.cookies || []
+        cookies: response?.cookies || [],
+        isAuthenticated: response?.isAuthenticated !== false && !!response?.sessionToken
       };
 
       authDataReady = true;
-      console.log('[Content Script] ✅ Auth data ready');
+      console.log('[Content Script] ✅ Auth data ready:', cachedAuthData.isAuthenticated);
       resolve(cachedAuthData);
     });
   });
 }
+// async function prefetchAuthData() {
+//   return new Promise((resolve) => {
+//     chrome.runtime.sendMessage({
+//       action: 'getAuthData'
+//     }, (response) => {
+//       cachedAuthData = {
+//         sessionToken: response?.sessionToken || null,
+//         cookies: response?.cookies || []
+//       };
+
+//       authDataReady = true;
+//       console.log('[Content Script] ✅ Auth data ready');
+//       resolve(cachedAuthData);
+//     });
+//   });
+// }
 
 function createRecordingIndicator(data) {
   document.getElementById('nobstacle-recording-indicator')?.remove();
@@ -1313,9 +1362,39 @@ async function injectHeader() {
   showLoader();
 
   try {
-    await prefetchAuthData();
+    let authAttempts = 0;
+    const maxAttempts = 3;
 
-    if (!cachedAuthData?.sessionToken) {
+    while (authAttempts < maxAttempts) {
+      await prefetchAuthData();
+
+      if (cachedAuthData?.isAuthenticated && cachedAuthData?.sessionToken) {
+        console.log('[Content Script] ✅ Auth verified on attempt', authAttempts + 1);
+        break;
+      }
+
+      authAttempts++;
+      console.log(`[Content Script] ⚠️ Auth not found, attempt ${authAttempts}/${maxAttempts}`);
+
+      if (authAttempts < maxAttempts) {
+        // Wait 500ms before retrying
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        // Force refresh auth from background
+        await new Promise((resolve) => {
+          chrome.runtime.sendMessage({ action: 'refreshAuth' }, (response) => {
+            console.log('[Content Script] 🔄 Forced auth refresh result:', {
+              hasToken: !!response?.sessionToken,
+              isAuthenticated: response?.isAuthenticated
+            });
+            resolve();
+          });
+        });
+      }
+    }
+
+    if (!cachedAuthData?.sessionToken || !cachedAuthData?.isAuthenticated) {
+      console.log('[Content Script] ❌ No valid auth after', maxAttempts, 'attempts');
       hideLoader();
       showLoginPrompt();
       return;
@@ -1340,9 +1419,6 @@ async function injectHeader() {
     document.body.appendChild(container);
     document.body.classList.add('nobstacle-active');
 
-    // const baseMargin = window.nobstacleOriginalMargin + parseInt(HEADER_HEIGHT);
-    // document.body.style.marginTop = `${baseMargin}px`;
-
     injectDebugPanel();
     setupKeyboardListener();
 
@@ -1354,7 +1430,7 @@ async function injectHeader() {
           ? String(result[STATION_STORAGE_KEY])
           : (selectedStation || "1");
 
-        if (cachedAuthData && authDataReady) {
+        if (cachedAuthData && authDataReady && cachedAuthData.isAuthenticated) {
           iframe.contentWindow.postMessage({
             type: 'EXTENSION_AUTH',
             sessionToken: cachedAuthData.sessionToken,
@@ -1373,6 +1449,8 @@ async function injectHeader() {
             cachedAuthData.cookies.length,
             cachedAuthData.sessionToken || ''
           );
+        } else {
+          console.error('[Content Script] ❌ Auth data not ready or invalid');
         }
       });
 
@@ -1383,12 +1461,14 @@ async function injectHeader() {
 
       setTimeout(async () => {
         const freshAuth = await prefetchAuthData();
-        iframe.contentWindow.postMessage({
-          type: 'EXTENSION_AUTH',
-          sessionToken: freshAuth.sessionToken,
-          cookies: freshAuth.cookies
-        }, '*');
-        console.log('[Content Script] ✅ Fresh auth sent');
+        if (freshAuth.isAuthenticated) {
+          iframe.contentWindow.postMessage({
+            type: 'EXTENSION_AUTH',
+            sessionToken: freshAuth.sessionToken,
+            cookies: freshAuth.cookies
+          }, '*');
+          console.log('[Content Script] ✅ Fresh auth sent');
+        }
       }, 1000);
     };
 
@@ -1402,11 +1482,18 @@ async function injectHeader() {
       if (event.data.type === 'REQUEST_AUTH') {
         console.log('[Content Script] 📨 Iframe requested auth');
         const authData = cachedAuthData || await prefetchAuthData();
-        iframe.contentWindow.postMessage({
-          type: 'EXTENSION_AUTH',
-          sessionToken: authData.sessionToken,
-          cookies: authData.cookies
-        }, '*');
+
+        if (authData.isAuthenticated) {
+          iframe.contentWindow.postMessage({
+            type: 'EXTENSION_AUTH',
+            sessionToken: authData.sessionToken,
+            cookies: authData.cookies
+          }, '*');
+        } else {
+          console.error('[Content Script] ❌ Cannot provide auth - user not logged in');
+          hideLoader();
+          showLoginPrompt();
+        }
       }
 
       // TEMPLATE_SHORTCUT_CLICK
@@ -1434,12 +1521,7 @@ async function injectHeader() {
       }
 
       // HAMBURGER_MENU
-      // HAMBURGER_MENU
       if (event.data.type === 'HAMBURGER_MENU') {
-        console.log('[Content Script] 📨 HAMBURGER_MENU received');
-        console.log('[Content Script] isOpen:', event.data.isOpen);
-        console.log('[Content Script] content:', event.data.content);
-
         if (event.data.isOpen) {
           console.log('[Content Script] Creating hamburger dropdown...');
           createHamburgerDropdown(event.data.content);
