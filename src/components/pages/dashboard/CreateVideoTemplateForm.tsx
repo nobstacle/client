@@ -201,8 +201,15 @@ export const CreateVideoTemplateForm: React.FC<{
             render={({ field }) => (
               <Select
                 {...field}
-                placeholder="Select language..."
+                placeholder="Search or select language..."
                 style={{ width: "100%" }}
+                showSearch
+                filterOption={(input, option) =>
+                  (option?.children as string)
+                    ?.toLowerCase()
+                    .includes(input.toLowerCase())
+                }
+                optionFilterProp="children"
               >
                 {languages.map(({ code, name }, index) => (
                   <Select.Option value={code} key={index}>

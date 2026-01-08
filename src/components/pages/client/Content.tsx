@@ -617,6 +617,7 @@ const PackageCard = ({ packageData, handleClick, loadingButton, langCode = 'en' 
   );
 };
 
+
 export const Content: React.FC = () => {
   const isFirstTimeOpen = useRef(true);
   const videoElement = React.useRef<HTMLVideoElement | null>(null);
@@ -645,7 +646,9 @@ export const Content: React.FC = () => {
   const [isMuted, setIsMuted] = useState(true);
   const [showUnmutePrompt, setShowUnmutePrompt] = useState(true);
   const [contentToDisplay, setContentToDisplay] = useState(null);
-  const [recordingMessageKey, setRecordingMessageKey] = useState(null);
+  const [pdfKey, setPdfKey] = useState(0);
+  const [retryCount, setRetryCount] = useState(0);
+  const pdfLoadTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   let Url = process.env.NEXT_PUBLIC_BACKEND_URL;
 
@@ -661,6 +664,33 @@ export const Content: React.FC = () => {
     });
 
   const chatBoxRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (contentToDisplay?.type?.includes("Document") ||
+      contentToDisplay?.type?.includes("Pdf")) {
+      setIsLoading(true);
+      setLoadError(false);
+      setPdfKey(prev => prev + 1);
+      setRetryCount(0);
+
+      // Clear any existing timeout
+      if (pdfLoadTimeoutRef.current) {
+        clearTimeout(pdfLoadTimeoutRef.current);
+      }
+
+      // Set a longer timeout for mobile devices
+      const timeout = isMobile || isTablet ? 12000 : 8000;
+      pdfLoadTimeoutRef.current = setTimeout(() => {
+        setIsLoading(false);
+      }, timeout);
+    }
+
+    return () => {
+      if (pdfLoadTimeoutRef.current) {
+        clearTimeout(pdfLoadTimeoutRef.current);
+      }
+    };
+  }, [messageStore.receivedContent?.content, contentToDisplay?.type]);
 
   useEffect(() => {
     const userAgent = navigator.userAgent;
@@ -972,6 +1002,199 @@ export const Content: React.FC = () => {
       };
     }
   }, [messageStore.receivedType, messageStore.receivedContent?.extraContent]);
+
+  const renderMobilePDF = (documentUrl: string) => {
+    const handleRetry = () => {
+      setRetryCount(prev => prev + 1);
+      setPdfKey(prev => prev + 1);
+      setIsLoading(true);
+      setLoadError(false);
+    };
+
+    const handleLoadSuccess = () => {
+      setIsLoading(false);
+      setLoadError(false);
+      if (pdfLoadTimeoutRef.current) {
+        clearTimeout(pdfLoadTimeoutRef.current);
+      }
+    };
+
+    const handleLoadFailure = () => {
+      setIsLoading(false);
+      setLoadError(true);
+      if (pdfLoadTimeoutRef.current) {
+        clearTimeout(pdfLoadTimeoutRef.current);
+      }
+    };
+
+    // Strategy selection based on retry count and device type
+    const getViewerStrategy = () => {
+      if (isIOS) {
+        // iOS strategies in order of preference
+        switch (retryCount % 3) {
+          case 0:
+            return `https://docs.google.com/viewer?url=${encodeURIComponent(documentUrl)}&embedded=true`;
+          case 1:
+            return documentUrl + '#toolbar=0&navpanes=0&scrollbar=0';
+          case 2:
+            return `https://mozilla.github.io/pdf.js/web/viewer.html?file=${encodeURIComponent(documentUrl)}`;
+          default:
+            return documentUrl;
+        }
+      } else {
+        // Android strategies
+        switch (retryCount % 3) {
+          case 0:
+            return documentUrl;
+          case 1:
+            return `https://docs.google.com/viewer?url=${encodeURIComponent(documentUrl)}&embedded=true`;
+          case 2:
+            return `https://mozilla.github.io/pdf.js/web/viewer.html?file=${encodeURIComponent(documentUrl)}`;
+          default:
+            return documentUrl;
+        }
+      }
+    };
+
+    const viewerUrl = getViewerStrategy();
+
+    return (
+      <div className="w-full h-screen flex flex-col overflow-hidden" key={pdfKey}>
+        {isLoading && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-50 z-10">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mb-4"></div>
+            <p className="text-gray-600 text-sm">Loading PDF...</p>
+          </div>
+        )}
+
+        {loadError && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-white p-4 space-y-4 z-20">
+            <svg className="h-16 w-16 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-1.964-1.333-2.732 0L3.732 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <p className="text-gray-700 text-center font-medium">Unable to load PDF</p>
+            <div className="flex flex-col space-y-2 w-full max-w-xs">
+              <button
+                onClick={handleRetry}
+                className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition"
+              >
+                Try Again {retryCount > 0 ? `(Attempt ${retryCount + 1})` : ''}
+              </button>
+              <a
+                href={documentUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-6 py-3 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition text-center"
+              >
+                Open in New Tab
+              </a>
+            </div>
+          </div>
+        )}
+
+        <div className="flex-1 w-full relative">
+          {isAndroid && retryCount === 0 ? (
+            // Android: Try native object tag first
+            <object
+              key={`pdf-object-${pdfKey}`}
+              data={documentUrl}
+              type="application/pdf"
+              className="w-full h-full"
+              style={{ width: '100%', height: '100%' }}
+              onLoad={handleLoadSuccess}
+            >
+              <iframe
+                key={`pdf-fallback-iframe-${pdfKey}`}
+                src={viewerUrl}
+                className="w-full h-full border-0"
+                title="PDF Document"
+                style={{ width: '100%', height: '100%', border: 'none' }}
+                onLoad={handleLoadSuccess}
+                onError={handleLoadFailure}
+              />
+            </object>
+          ) : (
+            // iOS and Android fallbacks: Use iframe
+            <iframe
+              key={`pdf-iframe-${pdfKey}-${retryCount}`}
+              src={viewerUrl}
+              className="w-full h-full border-0"
+              title="PDF Document"
+              style={{ width: '100%', height: '100%', border: 'none' }}
+              sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
+              onLoad={handleLoadSuccess}
+              onError={handleLoadFailure}
+            />
+          )}
+        </div>
+
+        {/* Helper text at bottom */}
+        {!isLoading && !loadError && (
+          <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black/70 text-white px-4 py-2 rounded-full text-sm">
+            Swipe to scroll PDF
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // Improved tablet PDF viewer
+  const renderTabletPDF = (documentUrl: string) => {
+    const pdfViewerUrl = `https://mozilla.github.io/pdf.js/web/viewer.html?file=${encodeURIComponent(documentUrl)}`;
+
+    const handleLoadSuccess = () => {
+      setIsLoading(false);
+      setLoadError(false);
+      if (pdfLoadTimeoutRef.current) {
+        clearTimeout(pdfLoadTimeoutRef.current);
+      }
+    };
+
+    const handleLoadFailure = () => {
+      setIsLoading(false);
+      setLoadError(true);
+    };
+
+    return (
+      <div className="w-full h-screen flex flex-col overflow-hidden" key={pdfKey}>
+        {isLoading && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-50 z-10">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mb-4"></div>
+            <p className="text-gray-600 text-sm">Loading PDF viewer...</p>
+          </div>
+        )}
+
+        <div className="flex-1 w-full relative">
+          <iframe
+            key={`tablet-pdf-${pdfKey}`}
+            src={pdfViewerUrl}
+            className="w-full h-full border-0"
+            title="PDF Document"
+            style={{ width: '100%', height: '100%', border: 'none' }}
+            onLoad={handleLoadSuccess}
+            onError={handleLoadFailure}
+          />
+        </div>
+
+        {loadError && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-white p-4 space-y-4">
+            <svg className="h-16 w-16 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-1.964-1.333-2.732 0L3.732 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <p className="text-gray-700 text-center font-medium">Failed to load PDF viewer</p>
+            <a
+              href={documentUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition"
+            >
+              Open PDF Directly
+            </a>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   const getFormData = async (url: string): Promise<{ url: string, prefillData: Record<string, string> } | null> => {
     try {
@@ -1383,131 +1606,11 @@ export const Content: React.FC = () => {
 
                 case 'pdf':
                   if (isMobile) {
-                    return (
-                      <div className="w-full h-screen flex flex-col overflow-hidden">
-                        {isLoading && (
-                          <div className="absolute inset-0 flex items-center justify-center bg-gray-50 z-10">
-                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-                          </div>
-                        )}
-
-                        {isIOS ? (
-                          <div className="flex-1 w-full relative">
-                            <iframe
-                              src={`https://docs.google.com/viewer?url=${encodeURIComponent(documentUrl)}&embedded=true`}
-                              className="w-full h-full border-0"
-                              title="PDF Document"
-                              style={{
-                                width: '100%',
-                                height: '100%',
-                                border: 'none',
-                                overflow: 'hidden'
-                              }}
-                              scrolling="no"
-                              onLoad={handleIframeLoad}
-                              onError={() => {
-                                setLoadError(false);
-                                const iframe = document.querySelector('iframe[title="PDF Document"]') as HTMLIFrameElement;
-                                if (iframe) {
-                                  iframe.src = documentUrl + '#toolbar=0&navpanes=0&scrollbar=0';
-                                }
-                              }}
-                            />
-                          </div>
-                        ) : (
-                          <div className="flex-1 w-full relative">
-                            <object
-                              data={documentUrl}
-                              type="application/pdf"
-                              className="w-full h-full"
-                              style={{ width: '100%', height: '100%' }}
-                              onLoad={() => {
-                                setIsLoading(false);
-                                setLoadError(false);
-                              }}
-                              onError={() => {
-                                // Fallback 1: Try Google Docs viewer
-                                const container = document.querySelector('.flex-1.w-full.relative');
-                                if (container) {
-                                  container.innerHTML = `
-                    <iframe
-                      src="https://docs.google.com/viewer?url=${encodeURIComponent(documentUrl)}&embedded=true"
-                      style="width: 100%; height: 100%; border: none;"
-                      title="PDF Document"
-                    ></iframe>
-                  `;
-                                }
-                                setTimeout(() => setIsLoading(false), 3000);
-                              }}
-                            >
-                              {/* Fallback for object tag */}
-                              <iframe
-                                src={`https://drive.google.com/viewerng/viewer?embedded=true&url=${encodeURIComponent(documentUrl)}`}
-                                className="w-full h-full border-0"
-                                title="PDF Document"
-                                style={{ width: '100%', height: '100%', border: 'none' }}
-                                onLoad={() => {
-                                  setIsLoading(false);
-                                  setLoadError(false);
-                                }}
-                                onError={() => {
-                                  // Final fallback: Direct link in new tab
-                                  window.open(documentUrl, '_blank');
-                                  setIsLoading(false);
-                                }}
-                              />
-                            </object>
-                          </div>
-                        )}
-
-                      </div>
-                    );
+                    return renderMobilePDF(documentUrl);
                   } else if (isTablet) {
-                    const pdfViewerUrl = `https://mozilla.github.io/pdf.js/web/viewer.html?file=${encodeURIComponent(documentUrl)}`;
-
-                    return (
-                      <div className="w-full h-screen flex flex-col overflow-hidden">
-                        {isLoading && (
-                          <div className="absolute inset-0 flex items-center justify-center bg-gray-50 z-10">
-                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-                          </div>
-                        )}
-
-                        <div className="flex-1 w-full relative">
-                          <iframe
-                            src={pdfViewerUrl}
-                            className="w-full h-full border-0"
-                            title="PDF Document"
-                            style={{ width: '100%', height: '100%', border: 'none', overflow: 'hidden' }}
-                            onLoad={() => {
-                              setIsLoading(false);
-                              setLoadError(false);
-                            }}
-                            onError={() => {
-                              setLoadError(true);
-                              window.open(documentUrl, '_blank');
-                            }}
-                          />
-
-                          {loadError && (
-                            <div className="absolute inset-0 flex flex-col items-center justify-center bg-white p-4 space-y-2">
-                              <p className="text-gray-700">Failed to load PDF viewer.</p>
-                              <a
-                                href={documentUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="px-4 py-2 bg-blue-500 text-white rounded"
-                              >
-                                Open directly
-                              </a>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  }
-                  else {
-                    // Desktop PDF viewer
+                    return renderTabletPDF(documentUrl);
+                  } else {
+                    // Desktop remains the same
                     return (
                       <div className="w-full h-screen border rounded-lg overflow-hidden relative">
                         {isLoading && (
@@ -1526,7 +1629,6 @@ export const Content: React.FC = () => {
                       </div>
                     );
                   }
-
                 case 'doc':
                 case 'docx':
                   if (isMobile || isTablet) {

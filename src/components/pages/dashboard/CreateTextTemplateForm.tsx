@@ -1,3 +1,5 @@
+// Updated CreateTextTemplateForm with matching design to CreateImageTemplateForm
+
 import * as React from "react";
 import { Controller, SubmitHandler, useForm } from "react-hook-form";
 import {
@@ -7,7 +9,7 @@ import {
 } from "../../../lib/client/api";
 import * as yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
-import { Button, Input, Select, Form, Typography, Space } from "antd";
+import { Button, Input, Select, Alert, Typography } from "antd";
 import { languages } from "../../../constant/languages";
 import { GetTextTemplateRes } from "../../../lib/client/model";
 
@@ -95,13 +97,27 @@ export const CreateTextTemplateForm: React.FC<{
   const onSubmit: SubmitHandler<CreateTextTemplateFormFieldValues> = (data) =>
     handleCreateTextTemplate(data);
 
-  return (
-    <form onSubmit={handleSubmit(onSubmit)}>
-      <Space direction="vertical" size="middle" style={{ width: '100%', marginTop: 12 }}>
+  // Remove duplicates from tags
+  const uniqueTags = [...new Set(textTags.data?.map(item => item.tag) || [])];
 
+  const tagOptions = uniqueTags.map((tag) => ({
+    value: tag,
+    label: tag,
+  }));
+
+  const languageOptions = languages.map(({ code, name }, index) => ({
+    value: code,
+    label: name,
+    key: `lang-${code}-${index}`,
+  }));
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)} className="create-template-form">
+      <hr />
+      <div className="mt-3 flex flex-col gap-4">
         {/* Content Field */}
-        <div>
-          <Text style={{ color: '#6b7280', fontSize: '14px' }}>Content</Text>
+        <div className="flex flex-col gap-2">
+          <Text>Content</Text>
           <Controller
             name="content"
             control={control}
@@ -109,17 +125,16 @@ export const CreateTextTemplateForm: React.FC<{
               <TextArea
                 {...field}
                 placeholder="Type content here..."
-                status={errors.content ? 'error' : ''}
-                style={{ marginTop: 8 }}
+                rows={4}
               />
             )}
           />
         </div>
 
         {/* Tag Fields */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-          <div style={{ width: '100%' }}>
-            <Text style={{ color: '#6b7280', fontSize: '14px' }}>Tag create or select</Text>
+        <div className="flex flex-col items-start">
+          <div className="flex w-full flex-col gap-2">
+            <Text>Create a tag</Text>
             <Controller
               name="tagCreate"
               control={control}
@@ -127,99 +142,100 @@ export const CreateTextTemplateForm: React.FC<{
                 <Input
                   {...field}
                   placeholder="Type tag name here..."
-                  status={errors.tagCreate ? 'error' : ''}
-                  style={{ marginTop: 8 }}
+                  size="middle"
                 />
               )}
             />
           </div>
-
-          <div style={{ marginTop: 16 }}>
+          <div className="mt-4" style={{ width: "100%" }}>
+            <Text>Or select an existing tag</Text>
             <Controller
               name="tagSelect"
               control={control}
               render={({ field }) => (
                 <Select
                   {...field}
-                  placeholder="Select tag..."
-                  style={{ minWidth: 200 }}
-                  status={errors.tagSelect ? 'error' : ''}
+                  placeholder="Search or select tag..."
+                  style={{ width: '100%' }}
+                  options={tagOptions}
                   allowClear
-                >
-                  {textTags.data?.map((value, index) => (
-                    <Select.Option value={value.tag} key={`${value.tag}-${index}`}>
-                      {value.tag}
-                    </Select.Option>
-                  ))}
-                </Select>
+                  showSearch
+                  filterOption={(input, option) =>
+                    (option?.label as string)
+                      ?.toLowerCase()
+                      .includes(input.toLowerCase())
+                  }
+                />
               )}
             />
           </div>
         </div>
 
         {/* Language Field */}
-        <div>
-          <Text style={{ color: '#6b7280', fontSize: '14px' }}>Language</Text>
+        <div className="flex flex-col">
+          <Text>Language</Text>
           <Controller
             name="langCode"
             control={control}
             render={({ field }) => (
               <Select
                 {...field}
-                placeholder="Select language..."
-                style={{ width: '100%', marginTop: 8 }}
-                status={errors.langCode ? 'error' : ''}
-              >
-                {languages.map(({ code, name }, index) => (
-                  <Select.Option value={code} key={index}>
-                    {name}
-                  </Select.Option>
-                ))}
-              </Select>
+                placeholder="Search or select language..."
+                style={{ width: "100%" }}
+                options={languageOptions}
+                showSearch
+                filterOption={(input, option) =>
+                  (option?.label as string)
+                    ?.toLowerCase()
+                    .includes(input.toLowerCase())
+                }
+              />
             )}
           />
         </div>
 
         {/* Error Messages */}
-        <div style={{ textAlign: 'center' }}>
+        <div className="text-center">
           {errors.content && (
-            <Text type="danger" style={{ fontSize: '12px', display: 'block' }}>
-              {errors.content.message}
-            </Text>
+            <Alert message={errors.content.message} type="error" showIcon className="mb-2" />
           )}
           {errors.tagSelect && (
-            <Text type="danger" style={{ fontSize: '12px', display: 'block' }}>
-              {errors.tagCreate?.message || errors.tagSelect?.message}
-            </Text>
+            <Alert message="Tag is required" type="error" showIcon className="mb-2" />
           )}
           {errors.tagCreate && (
-            <Text type="danger" style={{ fontSize: '12px', display: 'block' }}>
-              {errors.tagCreate?.message}
-            </Text>
+            <Alert
+              message={errors.tagCreate?.message}
+              type="error"
+              showIcon
+              className="mb-2"
+            />
           )}
           {errors.langCode && (
-            <Text type="danger" style={{ fontSize: '12px', display: 'block' }}>
-              {errors.langCode.message}
-            </Text>
+            <Alert message="Language is required" type="error" showIcon className="mb-2" />
           )}
+
           {createTextTemplate.error?.message && (
-            <Text type="danger" style={{ fontSize: '12px', display: 'block' }}>
-              {createTextTemplate.error.response?.data.message}
-            </Text>
+            <Alert
+              message={createTextTemplate.error.response?.data.message}
+              type="error"
+              showIcon
+              className="mb-2"
+            />
           )}
         </div>
 
         {/* Submit Button */}
         <Button
           type="primary"
-          htmlType="submit"
           loading={createTextTemplate.status === "pending"}
           disabled={createTextTemplate.status === "pending"}
-          style={{ width: '100%' }}
+          htmlType="submit"
+          style={{ width: "100%" }}
+          className="create-template-button"
         >
           Create Template
         </Button>
-      </Space>
+      </div>
     </form>
   );
 };

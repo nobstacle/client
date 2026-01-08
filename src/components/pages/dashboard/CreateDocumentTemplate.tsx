@@ -343,9 +343,16 @@ export const UploadDocumentTemplateForm: React.FC<{
                     render={({ field }) => (
                         <Select
                             {...field}
-                            placeholder="Select language..."
+                            placeholder="Search or select language..."
                             status={errors.langCode ? "error" : ""}
                             className="w-full"
+                            showSearch
+                            filterOption={(input, option) =>
+                                (option?.children as string)
+                                    ?.toLowerCase()
+                                    .includes(input.toLowerCase())
+                            }
+                            optionFilterProp="children"
                         >
                             {languages.map(({ code, name }, index) => (
                                 <Select.Option value={code} key={index}>

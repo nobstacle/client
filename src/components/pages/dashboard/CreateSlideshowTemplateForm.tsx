@@ -205,10 +205,17 @@ export const CreateSlideshowTemplateForm: React.FC<{
         <div>
           <Text>Language</Text>
           <Select
-            placeholder="Select language..."
+            placeholder="Search or select language..."
             style={{ width: "100%" }}
             {...register("langCode")}
             onChange={(value) => setValue("langCode", value)}
+                   showSearch
+                            filterOption={(input, option) =>
+                                (option?.children as string)
+                                    ?.toLowerCase()
+                                    .includes(input.toLowerCase())
+                            }
+                            optionFilterProp="children"
           >
             <Option value="">Select language...</Option>
             {languages.map(({ code, name }, index) => (

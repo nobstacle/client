@@ -109,7 +109,7 @@ export const CreateImageTemplateForm: React.FC<{
 
   // Remove duplicates from tags - use Set to ensure unique values
   const uniqueTags = [...new Set(imageTags.data?.map(item => item.tag) || [])];
-  
+
   const tagOptions = uniqueTags.map((tag) => ({
     value: tag,
     label: tag,
@@ -179,9 +179,15 @@ export const CreateImageTemplateForm: React.FC<{
             render={({ field }) => (
               <Select
                 {...field}
-                placeholder="Select language..."
+                placeholder="Search or select language..."
                 style={{ width: "100%" }}
                 options={languageOptions}
+                showSearch
+                filterOption={(input, option) =>
+                  (option?.label as string)
+                    ?.toLowerCase()
+                    .includes(input.toLowerCase())
+                }
               />
             )}
           />
