@@ -1171,37 +1171,41 @@ export const Content: React.FC = () => {
         }
         setIsLoading(false);
         setLoadError(true);
-      }, 3000);
+      }, 4000);
     };
 
-    // iPad viewer strategies with better compatibility
+    // CORS-FREE iPad viewer strategies - NO PDF.js!
     const getIPadViewerStrategy = () => {
-      switch (retryCount % 6) {
+      switch (retryCount % 4) {
         case 0:
-          // Native Safari PDF viewer - best for iPad
+          // Safari Native - Direct PDF, no CORS issues
           return documentUrl;
         case 1:
-          // PDF.js viewer
-          return `https://mozilla.github.io/pdf.js/web/viewer.html?file=${encodeURIComponent(documentUrl)}`;
-        case 2:
-          // Google Docs viewer with gview (more reliable)
-          return `https://docs.google.com/gview?url=${encodeURIComponent(documentUrl)}&embedded=true`;
-        case 3:
-          // Native with specific parameters
-          return `${documentUrl}#view=FitH&pagemode=none&scrollbar=1&toolbar=1&navpanes=1`;
-        case 4:
-          // Office viewer as fallback
-          return `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(documentUrl)}`;
-        case 5:
-          // Google Docs viewer alternative format
+          // Google Docs - Acts as proxy, handles CORS
           return `https://docs.google.com/viewer?url=${encodeURIComponent(documentUrl)}&embedded=true`;
+        case 2:
+          // Office Online - Also acts as proxy
+          return `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(documentUrl)}`;
+        case 3:
+          // Safari with enhanced parameters
+          return `${documentUrl}#view=FitH&pagemode=bookmarks&scrollbar=1&toolbar=1&navpanes=1`;
         default:
           return documentUrl;
       }
     };
 
     const viewerUrl = getIPadViewerStrategy();
-    const isNativeViewer = retryCount % 6 === 0 || retryCount % 6 === 3;
+    const isNativeViewer = retryCount % 4 === 0 || retryCount % 4 === 3;
+
+    const getViewerName = () => {
+      switch (retryCount % 4) {
+        case 0: return 'Safari Native';
+        case 1: return 'Google Docs';
+        case 2: return 'Office Online';
+        case 3: return 'Safari Enhanced';
+        default: return 'Safari';
+      }
+    };
 
     return (
       <>
@@ -1213,86 +1217,79 @@ export const Content: React.FC = () => {
           width: 100vw;
           height: 100vh;
           overflow: hidden;
-          background: #f5f5f5;
-          display: flex;
-          flex-direction: column;
+          background: white;
         }
 
-        .ipad-pdf-scroll-wrapper {
+        .ipad-pdf-wrapper {
           width: 100%;
           height: 100%;
-          overflow-y: auto;
-          overflow-x: hidden;
+          overflow: auto;
           -webkit-overflow-scrolling: touch;
           position: relative;
-          background: white;
         }
 
+        .ipad-pdf-object,
         .ipad-pdf-iframe {
           width: 100%;
-          min-height: 100vh;
           height: 100%;
+          min-height: 100vh;
           border: none;
           display: block;
           background: white;
         }
 
-        .ipad-pdf-object {
-          width: 100%;
-          height: 100vh;
-          border: none;
-          display: block;
-        }
-
-        /* Force scrolling behavior on iPad */
         @supports (-webkit-touch-callout: none) {
-          .ipad-pdf-scroll-wrapper {
-            overflow-y: auto !important;
+          .ipad-pdf-wrapper {
+            overflow: auto !important;
             -webkit-overflow-scrolling: touch !important;
           }
         }
 
-        .viewer-info {
-          position: absolute;
-          top: 10px;
-          left: 10px;
-          background: rgba(0, 0, 0, 0.7);
+        .viewer-badge {
+          position: fixed;
+          top: 12px;
+          left: 12px;
+          background: rgba(0, 0, 0, 0.75);
           color: white;
-          padding: 8px 12px;
-          border-radius: 6px;
+          padding: 8px 14px;
+          border-radius: 20px;
           font-size: 12px;
+          font-weight: 600;
           z-index: 100;
-          max-width: 200px;
+          backdrop-filter: blur(10px);
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
         }
       `}</style>
 
         <div className="ipad-pdf-container" key={`ipad-pdf-${pdfKey}`}>
+          {/* Loading overlay */}
           {isLoading && (
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-white z-50">
               <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-500 mb-4"></div>
               <p className="text-gray-700 text-lg font-medium">Loading PDF...</p>
-              <p className="text-gray-500 text-sm mt-2">
-                {retryCount === 0 ? 'Using Safari viewer' : `Trying viewer ${retryCount + 1}/6`}
-              </p>
+              <p className="text-gray-500 text-sm mt-2">{getViewerName()}</p>
+              <p className="text-gray-400 text-xs mt-3">Please wait...</p>
             </div>
           )}
 
+          {/* Error overlay */}
           {loadError && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-white p-6 space-y-4 z-50">
-              <svg className="h-20 w-20 text-red-500 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-white p-6 z-50">
+              <svg className="h-20 w-20 text-red-500 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-1.964-1.333-2.732 0L3.732 16c-.77 1.333.192 3 1.732 3z" />
               </svg>
-              <p className="text-gray-800 text-center font-semibold text-lg">Unable to load PDF</p>
-              <p className="text-gray-600 text-center text-sm">
-                Tried {retryCount + 1} viewer{retryCount !== 0 ? 's' : ''}
-              </p>
+              <p className="text-gray-800 text-center font-semibold text-xl mb-1">Unable to load PDF</p>
+              <p className="text-gray-600 text-center text-sm mb-4">{getViewerName()} failed</p>
+
               <div className="flex flex-col space-y-3 w-full max-w-md">
-                <button
-                  onClick={handleRetry}
-                  className="px-8 py-4 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition text-lg font-medium shadow-md active:scale-95"
-                >
-                  Try Different Viewer ({retryCount + 1}/6)
-                </button>
+                {retryCount < 3 && (
+                  <button
+                    onClick={handleRetry}
+                    className="px-8 py-4 bg-blue-500 text-white rounded-lg hover:bg-blue-600 active:bg-blue-700 transition text-lg font-medium shadow-md active:scale-95"
+                  >
+                    Try Next Viewer ({retryCount + 1}/4)
+                  </button>
+                )}
                 <a
                   href={documentUrl}
                   target="_blank"
@@ -1309,78 +1306,93 @@ export const Content: React.FC = () => {
                   📥 Download PDF
                 </a>
               </div>
-              <p className="text-xs text-gray-400 mt-4 text-center px-4">
-                💡 Tip: "Open in Safari" usually works best for complex PDFs
-              </p>
+
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-6 max-w-md">
+                <p className="text-xs text-blue-800 text-center">
+                  💡 <strong>Tip:</strong> Opening in Safari usually provides the best PDF viewing experience
+                </p>
+              </div>
             </div>
           )}
 
-          {/* Main viewer container */}
-          <div className="ipad-pdf-scroll-wrapper">
+          {/* PDF Viewer */}
+          <div className="ipad-pdf-wrapper">
             {isNativeViewer ? (
-              // For native Safari viewer, use object tag with iframe fallback
+              // Native Safari viewer - use object tag
               <object
                 key={`ipad-object-${pdfKey}-${retryCount}`}
                 data={viewerUrl}
                 type="application/pdf"
                 className="ipad-pdf-object"
                 onLoad={handleLoadSuccess}
-                onError={handleLoadFailure}
               >
-                <iframe
-                  key={`ipad-iframe-fallback-${pdfKey}-${retryCount}`}
-                  src={viewerUrl}
-                  className="ipad-pdf-iframe"
-                  title="PDF Document"
-                  sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-modals allow-top-navigation"
-                  allow="fullscreen"
-                  loading="eager"
-                  scrolling="yes"
-                  onLoad={handleLoadSuccess}
-                  onError={handleLoadFailure}
-                />
+                {/* Fallback if object fails */}
+                <div className="flex items-center justify-center h-screen p-6">
+                  <div className="text-center">
+                    <p className="text-gray-600 mb-4 text-lg">Unable to display PDF</p>
+                    <a
+                      href={documentUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-6 py-3 bg-blue-500 text-white rounded-lg inline-block hover:bg-blue-600"
+                    >
+                      Open in New Tab
+                    </a>
+                  </div>
+                </div>
               </object>
             ) : (
-              // For web viewers, use iframe
+              // Web viewers (Google Docs, Office)
               <iframe
                 key={`ipad-iframe-${pdfKey}-${retryCount}`}
                 src={viewerUrl}
                 className="ipad-pdf-iframe"
                 title="PDF Document"
-                sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-modals allow-top-navigation allow-downloads"
+                sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-modals allow-top-navigation"
                 allow="fullscreen"
                 loading="eager"
-                scrolling="yes"
                 onLoad={handleLoadSuccess}
                 onError={handleLoadFailure}
               />
             )}
           </div>
 
-          {/* Viewer info badge - for debugging */}
+          {/* Viewer badge */}
           {!isLoading && !loadError && (
-            <div className="viewer-info">
-              Viewer {retryCount + 1}/6
-              {isNativeViewer ? ' (Safari)' : ' (Web)'}
+            <div className="viewer-badge">
+              {getViewerName()}
             </div>
           )}
 
-          {/* Scroll hint */}
+          {/* Scroll instruction */}
           {!isLoading && !loadError && retryCount === 0 && (
             <div
-              className="absolute bottom-6 left-1/2 transform -translate-x-1/2 bg-black/80 text-white px-6 py-3 rounded-full text-sm shadow-lg z-10 backdrop-blur-sm pointer-events-none"
               style={{
-                animation: 'fadeOutHint 5s forwards',
+                position: 'fixed',
+                bottom: '24px',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                background: 'rgba(0, 0, 0, 0.85)',
+                color: 'white',
+                padding: '14px 28px',
+                borderRadius: '30px',
+                fontSize: '15px',
+                fontWeight: '500',
+                zIndex: 10,
+                backdropFilter: 'blur(10px)',
+                animation: 'fadeOut 6s forwards',
+                pointerEvents: 'none',
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
               }}
             >
-              👆 Swipe to scroll through pages
+              👆 Swipe to view all pages
             </div>
           )}
 
           <style jsx>{`
-          @keyframes fadeOutHint {
-            0%, 60% { opacity: 1; }
-            100% { opacity: 0; }
+          @keyframes fadeOut {
+            0%, 70% { opacity: 1; }
+            100% { opacity: 0; visibility: hidden; }
           }
         `}</style>
         </div>
