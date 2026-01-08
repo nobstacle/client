@@ -1148,257 +1148,113 @@ export const Content: React.FC = () => {
     );
   };
 
-  const renderIPadPDF = (documentUrl: string) => {
-    const handleRetry = () => {
-      setRetryCount(prev => prev + 1);
-      setPdfKey(prev => prev + 1);
-      setIsLoading(true);
-      setLoadError(false);
-    };
 
-    const handleLoadSuccess = () => {
-      setIsLoading(false);
-      setLoadError(false);
-      if (pdfLoadTimeoutRef.current) {
-        clearTimeout(pdfLoadTimeoutRef.current);
-      }
-    };
-
-    const handleLoadFailure = () => {
-      setTimeout(() => {
-        if (pdfLoadTimeoutRef.current) {
-          clearTimeout(pdfLoadTimeoutRef.current);
-        }
-        setIsLoading(false);
-        setLoadError(true);
-      }, 4000);
-    };
-
-    // CORS-FREE iPad viewer strategies - NO PDF.js!
-    const getIPadViewerStrategy = () => {
-      switch (retryCount % 4) {
-        case 0:
-          // Safari Native - Direct PDF, no CORS issues
-          return documentUrl;
-        case 1:
-          // Google Docs - Acts as proxy, handles CORS
-          return `https://docs.google.com/viewer?url=${encodeURIComponent(documentUrl)}&embedded=true`;
-        case 2:
-          // Office Online - Also acts as proxy
-          return `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(documentUrl)}`;
-        case 3:
-          // Safari with enhanced parameters
-          return `${documentUrl}#view=FitH&pagemode=bookmarks&scrollbar=1&toolbar=1&navpanes=1`;
-        default:
-          return documentUrl;
-      }
-    };
-
-    const viewerUrl = getIPadViewerStrategy();
-    const isNativeViewer = retryCount % 4 === 0 || retryCount % 4 === 3;
-
-    const getViewerName = () => {
-      switch (retryCount % 4) {
-        case 0: return 'Safari Native';
-        case 1: return 'Google Docs';
-        case 2: return 'Office Online';
-        case 3: return 'Safari Enhanced';
-        default: return 'Safari';
-      }
-    };
-
-    return (
-      <>
-        <style jsx>{`
-        .ipad-pdf-container {
-          position: fixed;
-          top: 0;
-          left: 0;
-          width: 100vw;
-          height: 100vh;
-          overflow: hidden;
-          background: white;
-        }
-
-        .ipad-pdf-wrapper {
-          width: 100%;
-          height: 100%;
-          overflow: auto;
-          -webkit-overflow-scrolling: touch;
-          position: relative;
-        }
-
-        .ipad-pdf-object,
-        .ipad-pdf-iframe {
-          width: 100%;
-          height: 100%;
-          min-height: 100vh;
-          border: none;
-          display: block;
-          background: white;
-        }
-
-        @supports (-webkit-touch-callout: none) {
-          .ipad-pdf-wrapper {
-            overflow: auto !important;
-            -webkit-overflow-scrolling: touch !important;
-          }
-        }
-
-        .viewer-badge {
-          position: fixed;
-          top: 12px;
-          left: 12px;
-          background: rgba(0, 0, 0, 0.75);
-          color: white;
-          padding: 8px 14px;
-          border-radius: 20px;
-          font-size: 12px;
-          font-weight: 600;
-          z-index: 100;
-          backdrop-filter: blur(10px);
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-        }
-      `}</style>
-
-        <div className="ipad-pdf-container" key={`ipad-pdf-${pdfKey}`}>
-          {/* Loading overlay */}
-          {isLoading && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-white z-50">
-              <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-500 mb-4"></div>
-              <p className="text-gray-700 text-lg font-medium">Loading PDF...</p>
-              <p className="text-gray-500 text-sm mt-2">{getViewerName()}</p>
-              <p className="text-gray-400 text-xs mt-3">Please wait...</p>
-            </div>
-          )}
-
-          {/* Error overlay */}
-          {loadError && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-white p-6 z-50">
-              <svg className="h-20 w-20 text-red-500 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-1.964-1.333-2.732 0L3.732 16c-.77 1.333.192 3 1.732 3z" />
-              </svg>
-              <p className="text-gray-800 text-center font-semibold text-xl mb-1">Unable to load PDF</p>
-              <p className="text-gray-600 text-center text-sm mb-4">{getViewerName()} failed</p>
-
-              <div className="flex flex-col space-y-3 w-full max-w-md">
-                {retryCount < 3 && (
-                  <button
-                    onClick={handleRetry}
-                    className="px-8 py-4 bg-blue-500 text-white rounded-lg hover:bg-blue-600 active:bg-blue-700 transition text-lg font-medium shadow-md active:scale-95"
-                  >
-                    Try Next Viewer ({retryCount + 1}/4)
-                  </button>
-                )}
-                <a
-                  href={documentUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-8 py-4 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition text-center text-lg font-medium shadow-md active:scale-95"
-                >
-                  🌐 Open in Safari
-                </a>
-                <a
-                  href={documentUrl}
-                  download
-                  className="px-8 py-4 bg-green-500 text-white rounded-lg hover:bg-green-600 transition text-center text-lg font-medium shadow-md active:scale-95"
-                >
-                  📥 Download PDF
-                </a>
-              </div>
-
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-6 max-w-md">
-                <p className="text-xs text-blue-800 text-center">
-                  💡 <strong>Tip:</strong> Opening in Safari usually provides the best PDF viewing experience
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* PDF Viewer */}
-          <div className="ipad-pdf-wrapper">
-            {isNativeViewer ? (
-              // Native Safari viewer - use object tag
-              <object
-                key={`ipad-object-${pdfKey}-${retryCount}`}
-                data={viewerUrl}
-                type="application/pdf"
-                className="ipad-pdf-object"
-                onLoad={handleLoadSuccess}
-              >
-                {/* Fallback if object fails */}
-                <div className="flex items-center justify-center h-screen p-6">
-                  <div className="text-center">
-                    <p className="text-gray-600 mb-4 text-lg">Unable to display PDF</p>
-                    <a
-                      href={documentUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="px-6 py-3 bg-blue-500 text-white rounded-lg inline-block hover:bg-blue-600"
-                    >
-                      Open in New Tab
-                    </a>
-                  </div>
-                </div>
-              </object>
-            ) : (
-              // Web viewers (Google Docs, Office)
-              <iframe
-                key={`ipad-iframe-${pdfKey}-${retryCount}`}
-                src={viewerUrl}
-                className="ipad-pdf-iframe"
-                title="PDF Document"
-                sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-modals allow-top-navigation"
-                allow="fullscreen"
-                loading="eager"
-                onLoad={handleLoadSuccess}
-                onError={handleLoadFailure}
-              />
-            )}
-          </div>
-
-          {/* Viewer badge */}
-          {!isLoading && !loadError && (
-            <div className="viewer-badge">
-              {getViewerName()}
-            </div>
-          )}
-
-          {/* Scroll instruction */}
-          {!isLoading && !loadError && retryCount === 0 && (
-            <div
-              style={{
-                position: 'fixed',
-                bottom: '24px',
-                left: '50%',
-                transform: 'translateX(-50%)',
-                background: 'rgba(0, 0, 0, 0.85)',
-                color: 'white',
-                padding: '14px 28px',
-                borderRadius: '30px',
-                fontSize: '15px',
-                fontWeight: '500',
-                zIndex: 10,
-                backdropFilter: 'blur(10px)',
-                animation: 'fadeOut 6s forwards',
-                pointerEvents: 'none',
-                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
-              }}
-            >
-              👆 Swipe to view all pages
-            </div>
-          )}
-
-          <style jsx>{`
-          @keyframes fadeOut {
-            0%, 70% { opacity: 1; }
-            100% { opacity: 0; visibility: hidden; }
-          }
-        `}</style>
-        </div>
-      </>
-    );
+const renderIPadPDF = (documentUrl: string) => {
+  const handleRetry = () => {
+    setRetryCount(prev => prev + 1);
+    setPdfKey(prev => prev + 1);
+    setIsLoading(true);
+    setLoadError(false);
   };
+
+  const handleLoadSuccess = () => {
+    setIsLoading(false);
+    setLoadError(false);
+    if (pdfLoadTimeoutRef.current) {
+      clearTimeout(pdfLoadTimeoutRef.current);
+    }
+  };
+
+  const handleLoadFailure = () => {
+    setIsLoading(false);
+    setLoadError(true);
+    if (pdfLoadTimeoutRef.current) {
+      clearTimeout(pdfLoadTimeoutRef.current);
+    }
+  };
+
+  // Simple strategy - same as mobile iOS
+  const getViewerStrategy = () => {
+    switch (retryCount % 3) {
+      case 0:
+        // Google Docs viewer first - works great on iPad
+        return `https://docs.google.com/viewer?url=${encodeURIComponent(documentUrl)}&embedded=true`;
+      case 1:
+        // Native Safari viewer
+        return documentUrl;
+      case 2:
+        // Office viewer as last resort
+        return `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(documentUrl)}`;
+      default:
+        return documentUrl;
+    }
+  };
+
+  const viewerUrl = getViewerStrategy();
+
+  return (
+    <div className="w-full h-screen flex flex-col overflow-hidden" key={`ipad-pdf-${pdfKey}`}>
+      {isLoading && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-50 z-10">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mb-4"></div>
+          <p className="text-gray-600 text-sm">Loading PDF...</p>
+        </div>
+      )}
+
+      {loadError && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-white p-4 space-y-4 z-20">
+          <svg className="h-16 w-16 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-1.964-1.333-2.732 0L3.732 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+          <p className="text-gray-700 text-center font-medium">Unable to load PDF</p>
+          <div className="flex flex-col space-y-2 w-full max-w-xs">
+            <button
+              onClick={handleRetry}
+              className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition"
+            >
+              Try Again {retryCount > 0 ? `(Attempt ${retryCount + 1}/3)` : ''}
+            </button>
+            <a
+              href={documentUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-6 py-3 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition text-center"
+            >
+              Open in Safari
+            </a>
+            <a
+              href={documentUrl}
+              download
+              className="px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition text-center"
+            >
+              Download PDF
+            </a>
+          </div>
+        </div>
+      )}
+
+      <div className="flex-1 w-full relative">
+        <iframe
+          key={`ipad-iframe-${pdfKey}-${retryCount}`}
+          src={viewerUrl}
+          className="w-full h-full border-0"
+          title="PDF Document"
+          style={{ width: '100%', height: '100%', border: 'none' }}
+          sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
+          onLoad={handleLoadSuccess}
+          onError={handleLoadFailure}
+        />
+      </div>
+
+      {/* Helper text at bottom */}
+      {!isLoading && !loadError && (
+        <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black/70 text-white px-4 py-2 rounded-full text-sm">
+          Swipe to scroll PDF
+        </div>
+      )}
+    </div>
+  );
+};
 
   // 4. Keep your renderTabletPDF for Android tablets ONLY
   const renderAndroidTabletPDF = (documentUrl: string) => {
