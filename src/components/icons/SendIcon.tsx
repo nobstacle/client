@@ -5,7 +5,9 @@ interface SendIconProps {
 }
 
 export const SendIcon: React.FC<SendIconProps> = ({ size = 20 }) => {
-  const finalSize = typeof size === "number" ? `${size}px` : size;
+  // Ensure whole pixel values
+  const finalSize = typeof size === "number" ? Math.round(size) : size;
+  const sizeInPx = typeof finalSize === "number" ? `${finalSize}px` : finalSize;
 
   return (
     <svg
@@ -14,19 +16,21 @@ export const SendIcon: React.FC<SendIconProps> = ({ size = 20 }) => {
       xmlnsXlink="http://www.w3.org/1999/xlink"
       viewBox="0 0 512 512"
       style={{
-        width: finalSize,
-        height: finalSize,
-        // margin: "0 auto",
+        width: sizeInPx,
+        height: sizeInPx,
+        display: "block",
+        transform: "translate3d(0, 0, 0)",
       }}
       xmlSpace="preserve"
+      shapeRendering="geometricPrecision"
     >
       <polygon
         style={{ fill: "rgb(46, 68, 113)" }}
-        points="97.478,235.728 147.096,478.242 512,33.758 "
+        points="97.478,235.728 147.096,478.242 512,33.758"
       />
       <polygon
         style={{ fill: "#ccc" }}
-        points="251.837,373.231 147.096,478.242 164.932,325.531 231.773,327.36 "
+        points="251.837,373.231 147.096,478.242 164.932,325.531 231.773,327.36"
       />
       <g>
         <polygon
