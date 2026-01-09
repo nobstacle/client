@@ -128,7 +128,7 @@ export const ChatBox = React.forwardRef<HTMLDivElement, ChatBoxProps>(
               >
                 <SendIcon />
               </Button>
-              <AudioRecorder />
+              <AudioRecorder mode="client" />
             </div>
           </div>
         </div>

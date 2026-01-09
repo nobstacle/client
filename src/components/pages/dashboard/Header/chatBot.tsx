@@ -291,18 +291,18 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
             <div style="font-size: 14px; line-height: 1.5;">
               ${displayMessage}
             </div>
-            ${messageObj.originalMessage && messageObj.originalMessage !== displayMessage ? `
-              <div style="
-                font-size: 12px;
-                opacity: 0.7;
-                font-style: italic;
-                border-top: ${isRight ? '1px solid rgba(255,255,255,0.2)' : '1px solid rgba(0,0,0,0.1)'};
-                padding-top: 6px;
-                margin-top: 6px;
-              ">
-                Original: ${messageObj.originalMessage}
-              </div>
-            ` : ''}
+            // ${messageObj.originalMessage && messageObj.originalMessage !== displayMessage ? `
+            //   <div style="
+            //     font-size: 12px;
+            //     opacity: 0.7;
+            //     font-style: italic;
+            //     border-top: ${isRight ? '1px solid rgba(255,255,255,0.2)' : '1px solid rgba(0,0,0,0.1)'};
+            //     padding-top: 6px;
+            //     margin-top: 6px;
+            //   ">
+            //     Original: ${messageObj.originalMessage}
+            //   </div>
+            // ` : ''}
           </div>
         </div>
       `;
@@ -340,18 +340,18 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
             <div style="font-size: 14px; line-height: 1.5;">
               ${displayMessage}
             </div>
-            ${messageObj.originalMessage && messageObj.originalMessage !== displayMessage ? `
-              <div style="
-                font-size: 12px;
-                opacity: 0.7;
-                font-style: italic;
-                border-top: ${isRight ? '1px solid rgba(255,255,255,0.2)' : '1px solid rgba(0,0,0,0.1)'};
-                padding-top: 6px;
-                margin-top: 6px;
-              ">
-                Original: ${messageObj.originalMessage}
-              </div>
-            ` : ''}
+            // ${messageObj.originalMessage && messageObj.originalMessage !== displayMessage ? `
+            //   <div style="
+            //     font-size: 12px;
+            //     opacity: 0.7;
+            //     font-style: italic;
+            //     border-top: ${isRight ? '1px solid rgba(255,255,255,0.2)' : '1px solid rgba(0,0,0,0.1)'};
+            //     padding-top: 6px;
+            //     margin-top: 6px;
+            //   ">
+            //     Original: ${messageObj.originalMessage}
+            //   </div>
+            // ` : ''}
           </div>
         </div>
       `;
@@ -541,7 +541,7 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
             {displayMessage}
           </div>
 
-          {messageObj.originalMessage && messageObj.originalMessage !== displayMessage && (
+          {/* {messageObj.originalMessage && messageObj.originalMessage !== displayMessage && (
             <div style={{
               fontSize: '12px',
               opacity: 0.7,
@@ -551,7 +551,7 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
             }}>
               Original: {messageObj.originalMessage}
             </div>
-          )}
+          )} */}
         </div>
       </div>
     );
@@ -690,7 +690,7 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
                     </svg>
                   </button>
 
-                  <AudioRecorder />
+                  <AudioRecorder mode="header" />
                 </div>
 
                 <button

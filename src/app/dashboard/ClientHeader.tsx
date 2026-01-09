@@ -1710,6 +1710,8 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                     // ALWAYS use English for speech recognition
                     const recognitionLangCode = "en";
 
+                    console.info("Calling the translator", recognitionLangCode);
+                    
                     // Call the speech-to-text API with English
                     speechToTextMutation.mutate(
                         {

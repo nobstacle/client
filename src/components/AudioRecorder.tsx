@@ -11,7 +11,7 @@ import { Button } from "./Button";
 import { useSession } from "next-auth/react";
 import { useMessageStore } from "../lib/zustand/store/messageStore";
 
-const AudioRecorder: React.FC = () => {
+const AudioRecorder: React.FC = ({ mode }) => {
   const [recording, setRecording] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunks = useRef<Blob[]>([]);
@@ -64,7 +64,7 @@ const AudioRecorder: React.FC = () => {
   };
 
   const sendAudioToBackend = async (audioBlob: Blob) => {
-    const recognitionLangCode = "en";
+    const recognitionLangCode = mode === 'client' ? localStorage?.getItem("lang-code") : "en";
 
     try {
       speechToTextFileMutation.mutate(
