@@ -46,6 +46,8 @@ export const HeaderRecordingShortcut: React.FC<HeaderRecordingShortcutProps> = (
         }
     }, []);
 
+    console.info("*******$$$$$$$$********",confirmationNumber);
+
     // Listen for permission responses from content script (extension only)
     useEffect(() => {
         if (!isInIframe) return;
