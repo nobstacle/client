@@ -1413,7 +1413,7 @@ async function injectHeader() {
     const iframeUrl = `${HEADER_URL}?station=${stationParam}`;
 
     iframe.src = iframeUrl;
-    iframe.allow = 'clipboard-write; microphone';
+    iframe.allow = 'clipboard-write; microphone *;';
 
     container.appendChild(iframe);
     document.body.appendChild(container);
@@ -1508,6 +1508,105 @@ async function injectHeader() {
             tag: event.data.tag
           }, '*');
           addDebugLog('✓ Template shortcut message forwarded');
+        }
+      }
+
+      if (event.data.type === 'REQUEST_MICROPHONE_PERMISSION') {
+        console.log('[Content Script] 🎤 Iframe requested microphone permission');
+
+        // Content script CAN request microphone (iframe cannot)
+        navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            sampleRate: 44100,
+            channelCount: 2
+          }
+        })
+          .then(stream => {
+            console.log('[Content Script] ✅ Microphone permission granted');
+
+            // Send success back to iframe
+            iframe.contentWindow.postMessage({
+              type: 'MICROPHONE_PERMISSION_GRANTED',
+              success: true
+            }, '*');
+
+            // Store stream for later use
+            window.nobstacleAudioStream = stream;
+          })
+          .catch(error => {
+            console.error('[Content Script] ❌ Microphone permission denied:', error);
+
+            // Send error back to iframe
+            iframe.contentWindow.postMessage({
+              type: 'MICROPHONE_PERMISSION_DENIED',
+              error: error.name,
+              message: error.message
+            }, '*');
+          });
+      }
+
+      if (event.data.type === 'START_RECORDING') {
+        console.log('[Content Script] 🔴 Starting recording...');
+
+        if (!window.nobstacleAudioStream) {
+          // Request permission first
+          iframe.contentWindow.postMessage({
+            type: 'RECORDING_ERROR',
+            error: 'No microphone permission'
+          }, '*');
+          return;
+        }
+
+        const mimeType = getSupportedMimeType();
+        const mediaRecorder = new MediaRecorder(window.nobstacleAudioStream, {
+          mimeType: mimeType,
+          audioBitsPerSecond: 128000
+        });
+
+        const audioChunks = [];
+
+        mediaRecorder.ondataavailable = (event) => {
+          if (event.data && event.data.size > 0) {
+            audioChunks.push(event.data);
+          }
+        };
+
+        mediaRecorder.onstop = async () => {
+          console.log('[Content Script] ⏹️ Recording stopped');
+
+          const audioBlob = new Blob(audioChunks, { type: mimeType });
+
+          // Convert to base64 to send to iframe
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            const base64Audio = reader.result.split(',')[1];
+
+            iframe.contentWindow.postMessage({
+              type: 'RECORDING_COMPLETE',
+              audioData: base64Audio,
+              mimeType: mimeType
+            }, '*');
+          };
+          reader.readAsDataURL(audioBlob);
+        };
+
+        mediaRecorder.start(100);
+        window.nobstacleMediaRecorder = mediaRecorder;
+
+        // Notify iframe recording started
+        iframe.contentWindow.postMessage({
+          type: 'RECORDING_STARTED'
+        }, '*');
+      }
+
+      // Handle stop recording
+      if (event.data.type === 'STOP_RECORDING') {
+        console.log('[Content Script] ⏹️ Stopping recording...');
+
+        if (window.nobstacleMediaRecorder && window.nobstacleMediaRecorder.state !== 'inactive') {
+          window.nobstacleMediaRecorder.stop();
         }
       }
 

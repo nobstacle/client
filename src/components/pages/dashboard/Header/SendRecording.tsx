@@ -1,7 +1,6 @@
 import * as React from "react";
 import { useState, useRef, useEffect } from "react";
 import { Button, Tooltip, message } from "antd";
-import { IoRecordingSharp } from "react-icons/io5";
 import { useSocketContext } from "../../../../context/SocketContextProvider";
 import { useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -22,6 +21,7 @@ export const HeaderRecordingShortcut: React.FC<HeaderRecordingShortcutProps> = (
     const [recordingTime, setRecordingTime] = useState(0);
     const [isUploading, setIsUploading] = useState(false);
     const [isInIframe, setIsInIframe] = useState(false);
+    const [hasMicPermission, setHasMicPermission] = useState(false);
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const chunksRef = useRef<Blob[]>([]);
     const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -34,8 +34,115 @@ export const HeaderRecordingShortcut: React.FC<HeaderRecordingShortcutProps> = (
     let Url = process.env.NEXT_PUBLIC_BACKEND_URL;
 
     useEffect(() => {
-        setIsInIframe(window.self !== window.top);
+        const inIframe = window.self !== window.top;
+        setIsInIframe(inIframe);
+
+        // If in iframe, request permission immediately on mount
+        if (inIframe) {
+            console.log('[HeaderRecording] 📍 In iframe, requesting microphone permission...');
+            window.parent.postMessage({
+                type: 'REQUEST_MICROPHONE_PERMISSION'
+            }, '*');
+        }
     }, []);
+
+    // Listen for permission responses from content script (extension only)
+    useEffect(() => {
+        if (!isInIframe) return;
+
+        const handler = (event: MessageEvent) => {
+            if (event.data.type === 'MICROPHONE_PERMISSION_GRANTED') {
+                console.log('[HeaderRecording] ✅ Microphone permission granted by extension!');
+                setHasMicPermission(true);
+                message.success('Microphone access granted');
+            }
+
+            if (event.data.type === 'MICROPHONE_PERMISSION_DENIED') {
+                console.error('[HeaderRecording] ❌ Microphone permission denied:', event.data.error);
+                setHasMicPermission(false);
+
+                let errorMsg = 'Microphone permission denied.';
+                if (event.data.error === 'NotAllowedError' || event.data.error === 'PermissionDeniedError') {
+                    errorMsg = 'Please allow microphone access in your browser settings and reload the page.';
+                } else if (event.data.error === 'NotFoundError') {
+                    errorMsg = 'No microphone found. Please connect a microphone.';
+                }
+
+                message.error(errorMsg);
+            }
+
+            if (event.data.type === 'RECORDING_STARTED') {
+                console.log('[HeaderRecording] 🔴 Recording started by content script');
+                setIsRecording(true);
+                setRecordingTime(0);
+
+                // Start timer
+                timerRef.current = setInterval(() => {
+                    setRecordingTime(prev => {
+                        const newTime = prev + 1;
+                        if (newTime >= MAX_RECORDING_TIME) {
+                            stopRecording();
+                            message.warning('Maximum recording time reached (5 minutes)');
+                        }
+                        return newTime;
+                    });
+                }, 1000);
+            }
+
+            if (event.data.type === 'RECORDING_COMPLETE') {
+                console.log('[HeaderRecording] ✅ Recording complete from extension, uploading...');
+
+                if (timerRef.current) {
+                    clearInterval(timerRef.current);
+                    timerRef.current = null;
+                }
+
+                setIsRecording(false);
+                setIsUploading(true);
+
+                // Convert base64 back to blob and upload
+                const base64Audio = event.data.audioData;
+                const mimeType = event.data.mimeType;
+
+                const binaryString = atob(base64Audio);
+                const bytes = new Uint8Array(binaryString.length);
+                for (let i = 0; i < binaryString.length; i++) {
+                    bytes[i] = binaryString.charCodeAt(i);
+                }
+
+                const audioBlob = new Blob([bytes], { type: mimeType });
+
+                // Determine extension
+                let extension = 'webm';
+                if (mimeType.includes('mp4')) extension = 'mp4';
+                else if (mimeType.includes('ogg')) extension = 'ogg';
+
+                uploadRecording(audioBlob, extension)
+                    .then(() => {
+                        message.success('Recording saved successfully!');
+                        clearConfirmationNumber();
+                    })
+                    .catch((error) => {
+                        console.error('[HeaderRecording] Upload error:', error);
+                        message.error('Failed to save recording');
+                    })
+                    .finally(() => {
+                        setIsUploading(false);
+                        setRecordingTime(0);
+                    });
+            }
+
+            if (event.data.type === 'RECORDING_ERROR') {
+                console.error('[HeaderRecording] ❌ Recording error:', event.data.error);
+                message.error(event.data.error);
+                setIsRecording(false);
+                setIsUploading(false);
+            }
+        };
+
+        window.addEventListener('message', handler);
+        return () => window.removeEventListener('message', handler);
+    }, [isInIframe, clearConfirmationNumber]);
 
     // Update recording indicator in extension
     useEffect(() => {
@@ -91,7 +198,6 @@ export const HeaderRecordingShortcut: React.FC<HeaderRecordingShortcutProps> = (
         try {
             console.log('[Recording] Requesting microphone access...');
 
-            // Request microphone permission
             const stream = await navigator.mediaDevices.getUserMedia({
                 audio: {
                     echoCancellation: true,
@@ -106,10 +212,8 @@ export const HeaderRecordingShortcut: React.FC<HeaderRecordingShortcutProps> = (
         } catch (error: any) {
             console.error('[Recording] Microphone permission error:', error);
 
-            // Provide specific error messages based on the error type
             if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
                 if (isInIframe) {
-                    // For iframe/extension context
                     message.error({
                         content: 'Microphone permission denied. This might be because the site needs microphone access. Please check your browser settings.',
                         duration: 5
@@ -129,14 +233,15 @@ export const HeaderRecordingShortcut: React.FC<HeaderRecordingShortcutProps> = (
         }
     };
 
-    const startRecording = async () => {
+    const startRecordingWeb = async () => {
+        // WEB APP FLOW - Direct recording
         try {
             if (!confirmationNumber.trim()) {
                 message.warning('Please enter an identifier or text first');
                 return;
             }
 
-            console.log('[Recording] Starting recording process...');
+            console.log('[Recording] Starting web app recording process...');
 
             // Request microphone permission
             const stream = await requestMicrophonePermission();
@@ -192,7 +297,7 @@ export const HeaderRecordingShortcut: React.FC<HeaderRecordingShortcutProps> = (
                 setIsRecording(false);
             };
 
-            mediaRecorder.start(100); // Collect data every 100ms
+            mediaRecorder.start(100);
             setIsRecording(true);
             setRecordingTime(0);
 
@@ -224,18 +329,86 @@ export const HeaderRecordingShortcut: React.FC<HeaderRecordingShortcutProps> = (
         }
     };
 
+    const startRecordingExtension = async () => {
+        // EXTENSION FLOW - Ask content script to handle recording
+        if (!confirmationNumber.trim()) {
+            message.warning('Please enter an identifier or text first');
+            return;
+        }
+
+        console.log('[Recording] 📤 Requesting extension content script to start recording...');
+
+        if (!hasMicPermission) {
+            message.warning('Requesting microphone permission...');
+            window.parent.postMessage({
+                type: 'REQUEST_MICROPHONE_PERMISSION'
+            }, '*');
+
+            // Wait a bit for permission, then try to start
+            setTimeout(() => {
+                if (hasMicPermission) {
+                    window.parent.postMessage({
+                        type: 'START_RECORDING'
+                    }, '*');
+
+                    emitSendRecording({
+                        tag: confirmationNumber.trim() || `REC-${Date.now()}`,
+                        station: params.get("station") ? Number(params.get("station")) : 1,
+                        langCode: params.get("lang") || "en",
+                    });
+                }
+            }, 1000);
+        } else {
+            window.parent.postMessage({
+                type: 'START_RECORDING'
+            }, '*');
+
+            emitSendRecording({
+                tag: confirmationNumber.trim() || `REC-${Date.now()}`,
+                station: params.get("station") ? Number(params.get("station")) : 1,
+                langCode: params.get("lang") || "en",
+            });
+        }
+    };
+
+    const startRecording = async () => {
+        if (isInIframe) {
+            // Extension flow
+            await startRecordingExtension();
+        } else {
+            // Web app flow
+            await startRecordingWeb();
+        }
+    };
+
     const stopRecording = () => {
-        if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-            console.log('[Recording] Stopping recording...');
-            mediaRecorderRef.current.stop();
-        }
+        if (isInIframe) {
+            // Extension flow
+            console.log('[Recording] Stopping extension recording...');
+            window.parent.postMessage({
+                type: 'STOP_RECORDING'
+            }, '*');
 
-        if (timerRef.current) {
-            clearInterval(timerRef.current);
-            timerRef.current = null;
-        }
+            if (timerRef.current) {
+                clearInterval(timerRef.current);
+                timerRef.current = null;
+            }
 
-        setIsRecording(false);
+            setIsRecording(false);
+        } else {
+            // Web app flow
+            if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+                console.log('[Recording] Stopping web app recording...');
+                mediaRecorderRef.current.stop();
+            }
+
+            if (timerRef.current) {
+                clearInterval(timerRef.current);
+                timerRef.current = null;
+            }
+
+            setIsRecording(false);
+        }
     };
 
     const handleRecordingComplete = async () => {
@@ -353,7 +526,7 @@ export const HeaderRecordingShortcut: React.FC<HeaderRecordingShortcutProps> = (
                         type="primary"
                         icon={isRecording ? <FaMicrophone style={{ fontSize: "18px", color: 'red' }} /> : <FaMicrophone style={{ fontSize: "18px" }} />}
                         onClick={handleToggleRecording}
-                        disabled={isUploading}
+                        disabled={isUploading || (isInIframe && !hasMicPermission)}
                         className={`flex items-center justify-center customHeaderButton ${isRecording ? 'recording-pulse' : ''}`}
                         style={{
                             backgroundColor: "#3b5998",
@@ -368,7 +541,7 @@ export const HeaderRecordingShortcut: React.FC<HeaderRecordingShortcutProps> = (
                     type="primary"
                     icon={isRecording ? <FaMicrophone style={{ fontSize: "18px", color: 'red' }} /> : <FaMicrophone style={{ fontSize: "18px" }} />}
                     onClick={handleToggleRecording}
-                    disabled={isUploading}
+                    disabled={isUploading || (isInIframe && !hasMicPermission)}
                     className={`flex items-center justify-center customHeaderButton ${isRecording ? 'recording-pulse' : ''}`}
                     style={{
                         backgroundColor: "#3b5998",

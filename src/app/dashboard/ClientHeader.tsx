@@ -2020,13 +2020,13 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
 
                             {!isSAdmin && (
                                 <div className={isInIframe ? "flex items-center gap-1" : "flex items-center gap-1 lg:gap-4"}>
-                                    <div className={isInIframe ? "px-2 py-1text-xs lg:text-xs" : "bg-white/10 backdrop-blur-sm rounded-lg px-2 py-1 lg:px-4 text-xs lg:text-xs"}>
+                                    <div className={isInIframe ? "px-1 py-1text-xs lg:text-xs" : "bg-white/10 backdrop-blur-sm rounded-lg px-2 py-1 lg:px-4 text-xs lg:text-xs"}>
                                         <LanguageShortcutPicker checkIframe={isInIframe} />
                                     </div>
-                                    <div className={isInIframe ? "px-2 py-1 lg:py-2 text-xs lg:text-sm" : "bg-white/10 backdrop-blur-sm rounded-lg px-2 py-1 lg:px-4 lg:py-2 text-xs lg:text-sm"}>
+                                    <div className={isInIframe ? "py-1 lg:py-2 text-xs lg:text-sm" : "bg-white/10 backdrop-blur-sm rounded-lg px-2 py-1 lg:px-4 lg:py-2 text-xs lg:text-sm"}>
                                         <HeaderLanguagePicker checkIframe={isInIframe} />
                                     </div>
-                                    <div className={isInIframe ? "px-2 py-1 lg:py-2 text-xs lg:text-sm" : "bg-white/10 backdrop-blur-sm rounded-lg px-2 py-1 lg:px-4 lg:py-2 text-xs lg:text-sm"}>
+                                    <div className={isInIframe ? "px-1 py-1 lg:py-2 text-xs lg:text-sm" : "bg-white/10 backdrop-blur-sm rounded-lg px-2 py-1 lg:px-4 lg:py-2 text-xs lg:text-sm"}>
                                         <TemplateShortcutPicker checkIframe={isInIframe} />
                                     </div>
                                 </div>
