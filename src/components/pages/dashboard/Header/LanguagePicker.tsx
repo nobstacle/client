@@ -52,16 +52,16 @@ export const HeaderLanguagePicker = ({ checkIframe = true }: { checkIframe?: boo
   const { data } = useCompanyControllerGetCompany();
   const isHydrated = useHasHydrated();
   const { emitSendLangCode } = useSocketContext();
-  
+
   // Get language shortcuts to check if selected language exists
   const { languageShortcuts, addLanguageShortcut } = useShortcuts();
-  
+
   const headerLangaugePickerDefault =
     params.get("lang") || data?.defaultLangCode || "en";
 
   const handleLanguageChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newLang = e.currentTarget.value;
-    
+
     // Update URL and emit socket event
     router.push("lang", newLang);
     emitSendLangCode({
