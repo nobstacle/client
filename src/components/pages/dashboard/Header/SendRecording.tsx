@@ -474,18 +474,13 @@ export const HeaderRecordingShortcut: React.FC<HeaderRecordingShortcutProps> = (
     };
 
     const uploadRecording = async (blob: Blob, extension: string = 'webm') => {
-
-        console.warn("cccccccccccccccccccc", confirmationNumber);
-        console.warn("dddddddddddddddddddd", confirmationNumberRef, confirmationNumberRef.current);
-
+        let confirmationNumberVal = confirmationNumber ? confirmationNumber : confirmationNumberRef.current ? confirmationNumberRef.current : `REC-${Date.now()}`;
         const formData = new FormData();
         const fileName = `recording_${Date.now()}.${extension}`;
         formData.append('file', blob, fileName);
         formData.append('type', 'audio');
         formData.append('station', params.get("station") ?? "1");
-        formData.append('confirmationNumber', confirmationNumber.trim() || `REC-${Date.now()}`);
-
-        console.log('[Recording] Uploading recording:', fileName, 'Size:', blob.size);
+        formData.append('confirmationNumber', confirmationNumberVal);
 
         const response = await fetch(`${Url}/api/v1/recordings/upload`, {
             method: 'POST',
