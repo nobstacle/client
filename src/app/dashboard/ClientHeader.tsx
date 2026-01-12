@@ -2037,8 +2037,6 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                             <div className="flex items-center gap-0.5 lg:gap-1">
                                 {/* Recording - First (leftmost) */}
                                 <div className="scale-75 lg:scale-100">
-                                        {console.info("11111^^^^^^^",searchValue)}
-                                        {console.info("666666******",confirmationNumber)}
                                     <HeaderRecordingShortcut
                                         confirmationNumber={searchValue !== "" ? searchValue : confirmationNumber}
                                         clearConfirmationNumber={clearConfirmationNumber}

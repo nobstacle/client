@@ -46,8 +46,6 @@ export const HeaderRecordingShortcut: React.FC<HeaderRecordingShortcutProps> = (
         }
     }, []);
 
-    console.info("*******$$$$$$$$********",confirmationNumber);
-
     // Listen for permission responses from content script (extension only)
     useEffect(() => {
         if (!isInIframe) return;
@@ -461,6 +459,9 @@ export const HeaderRecordingShortcut: React.FC<HeaderRecordingShortcutProps> = (
     };
 
     const uploadRecording = async (blob: Blob, extension: string = 'webm') => {
+        
+        console.warn("-----------------------------",confirmationNumber);
+
         const formData = new FormData();
         const fileName = `recording_${Date.now()}.${extension}`;
         formData.append('file', blob, fileName);
