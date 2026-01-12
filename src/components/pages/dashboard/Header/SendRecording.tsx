@@ -474,6 +474,10 @@ export const HeaderRecordingShortcut: React.FC<HeaderRecordingShortcutProps> = (
     };
 
     const uploadRecording = async (blob: Blob, extension: string = 'webm') => {
+
+        console.warn("cccccccccccccccccccc", confirmationNumber);
+        console.warn("dddddddddddddddddddd", confirmationNumberRef, confirmationNumberRef.current);
+
         const formData = new FormData();
         const fileName = `recording_${Date.now()}.${extension}`;
         formData.append('file', blob, fileName);
