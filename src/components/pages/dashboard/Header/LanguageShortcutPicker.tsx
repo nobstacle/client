@@ -78,7 +78,7 @@ export const LanguageShortcutPicker = ({ checkIframe = true }: { checkIframe?: b
       </div>
 
       {/* Desktop: Radio Buttons */}
-      <div className={`hidden md:flex items-center ${checkIframe ? 'gap-2' : 'gap-4'}`}>
+      <div className={`hidden md:flex items-center ${checkIframe ? '' : 'gap-4'}`}>
         {sorted.map((shortcut) => {
           const isActive = currentLang === shortcut.value || checked === shortcut.value;
 

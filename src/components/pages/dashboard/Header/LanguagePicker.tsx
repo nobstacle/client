@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useSearchParams } from "next/navigation";
@@ -30,15 +29,29 @@ export const LanguagePicker: React.FC<LanguagePickerPropsI> = ({
 
   return (
     <select
-      className={isMobile ? 'w-full rounded-md' : "rounded-md"}
+      className={isMobile ? 'w-full rounded-md' : "rounded-md truncate"}
       onChange={onChange}
       defaultValue={defaultValue}
       name={name}
-      style={{ maxWidth: isMobile ? '' : '145px' }}
+      style={{ 
+        maxWidth: isMobile ? '' : checkIframe ? '120px' : '145px',
+        textOverflow: 'ellipsis',
+        overflow: 'hidden',
+        whiteSpace: 'nowrap'
+      }}
       {...registerActive}
     >
       {languages.map(({ code, name }) => (
-        <option selected={code === defaultValue} value={code} key={code}>
+        <option 
+          selected={code === defaultValue} 
+          value={code} 
+          key={code}
+          style={{
+            textOverflow: 'ellipsis',
+            overflow: 'hidden',
+            whiteSpace: 'nowrap'
+          }}
+        >
           {name}
         </option>
       ))}
