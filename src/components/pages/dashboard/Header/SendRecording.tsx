@@ -37,7 +37,7 @@ export const HeaderRecordingShortcut: React.FC<HeaderRecordingShortcutProps> = (
     useEffect(() => {
         const inIframe = window.self !== window.top;
         setIsInIframe(inIframe);
-        
+
         // If in iframe, request permission immediately on mount
         if (inIframe) {
             console.log('[HeaderRecording] 📍 In iframe, requesting microphone permission...');
@@ -66,14 +66,14 @@ export const HeaderRecordingShortcut: React.FC<HeaderRecordingShortcutProps> = (
             if (event.data.type === 'MICROPHONE_PERMISSION_DENIED') {
                 console.error('[HeaderRecording] ❌ Microphone permission denied:', event.data.error);
                 setHasMicPermission(false);
-                
+
                 let errorMsg = 'Microphone permission denied.';
                 if (event.data.error === 'NotAllowedError' || event.data.error === 'PermissionDeniedError') {
                     errorMsg = 'Please allow microphone access in your browser settings and reload the page.';
                 } else if (event.data.error === 'NotFoundError') {
                     errorMsg = 'No microphone found. Please connect a microphone.';
                 }
-                
+
                 message.error(errorMsg);
             }
 
@@ -81,7 +81,7 @@ export const HeaderRecordingShortcut: React.FC<HeaderRecordingShortcutProps> = (
                 console.log('[HeaderRecording] 🔴 Recording started by content script');
                 setIsRecording(true);
                 setRecordingTime(0);
-                
+
                 // Start timer
                 timerRef.current = setInterval(() => {
                     setRecordingTime(prev => {
@@ -97,32 +97,32 @@ export const HeaderRecordingShortcut: React.FC<HeaderRecordingShortcutProps> = (
 
             if (event.data.type === 'RECORDING_COMPLETE') {
                 console.log('[HeaderRecording] ✅ Recording complete from extension, uploading...');
-                
+
                 if (timerRef.current) {
                     clearInterval(timerRef.current);
                     timerRef.current = null;
                 }
-                
+
                 setIsRecording(false);
                 setIsUploading(true);
-                
+
                 // Convert base64 back to blob and upload
                 const base64Audio = event.data.audioData;
                 const mimeType = event.data.mimeType;
-                
+
                 const binaryString = atob(base64Audio);
                 const bytes = new Uint8Array(binaryString.length);
                 for (let i = 0; i < binaryString.length; i++) {
                     bytes[i] = binaryString.charCodeAt(i);
                 }
-                
+
                 const audioBlob = new Blob([bytes], { type: mimeType });
-                
+
                 // Determine extension
                 let extension = 'webm';
                 if (mimeType.includes('mp4')) extension = 'mp4';
                 else if (mimeType.includes('ogg')) extension = 'ogg';
-                
+
                 uploadRecording(audioBlob, extension)
                     .then(() => {
                         message.success('Recording saved successfully!');
@@ -307,6 +307,8 @@ export const HeaderRecordingShortcut: React.FC<HeaderRecordingShortcutProps> = (
             setIsRecording(true);
             setRecordingTime(0);
 
+            console.warn("111111111111111111", confirmationNumber);
+            console.warn("222222222222222222", confirmationNumberRef);
             // Emit socket event to notify recording started
             emitSendRecording({
                 tag: confirmationNumber.trim() || `REC-${Date.now()}`,
@@ -357,6 +359,10 @@ export const HeaderRecordingShortcut: React.FC<HeaderRecordingShortcutProps> = (
                         type: 'START_RECORDING'
                     }, '*');
 
+
+                    console.warn("33333333333333333333", confirmationNumber);
+                    console.warn("444444444444444444", confirmationNumberRef);
+
                     emitSendRecording({
                         tag: confirmationNumber.trim() || `REC-${Date.now()}`,
                         station: params.get("station") ? Number(params.get("station")) : 1,
@@ -368,6 +374,9 @@ export const HeaderRecordingShortcut: React.FC<HeaderRecordingShortcutProps> = (
             window.parent.postMessage({
                 type: 'START_RECORDING'
             }, '*');
+
+            console.warn("666666666666666666666", confirmationNumber);
+            console.warn("77777777777777777777", confirmationNumberRef);
 
             emitSendRecording({
                 tag: confirmationNumber.trim() || `REC-${Date.now()}`,
