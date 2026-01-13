@@ -101,6 +101,14 @@ function SurveyAnswers() {
       dataIndex: "stationNo",
     },
     {
+      title: "User",
+      key: "userId",
+      render: (_, record) => (
+        <span>
+          {record.User ? record.User.firstName + " " + record.User.lastName : "NA"}</span>
+      ),
+    },
+    {
       title: "Date",
       key: "createdAt",
       render: (_, record) => (

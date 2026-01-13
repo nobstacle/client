@@ -46,7 +46,7 @@ interface NonMultilingualFields {
   taxPercentage?: number;
   active: boolean;
   roomUpgrade: boolean;
-  from_category_id?: number;
+  from_category_ids?: number[];
   to_category_id?: number;
   incentivePercentage?: number;
   companyId?: number;
@@ -103,9 +103,9 @@ const nonMultilingualSchema = yup.object().shape({
   taxPercentage: yup.number().min(0).max(100, "Tax percentage must be between 0-100"),
   active: yup.boolean().required(),
   roomUpgrade: yup.boolean().required(),
-  from_category_id: yup.number().when('roomUpgrade', {
+  from_category_ids: yup.array().of(yup.number()).when('roomUpgrade', {
     is: true,
-    then: (schema) => schema.required("From category is required when room upgrade is enabled"),
+    then: (schema) => schema.min(1, "At least one from category is required when room upgrade is enabled").required("From categories are required when room upgrade is enabled"),
     otherwise: (schema) => schema.notRequired().nullable()
   }),
   to_category_id: yup.number().when('roomUpgrade', {
@@ -371,7 +371,7 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
         taxPercentage: initialData.taxPercentage || undefined,
         active: initialData.active || false,
         roomUpgrade: initialData.roomUpgrade || false,
-        from_category_id: initialData.from_category_id || undefined,
+        from_category_ids: initialData.from_category_ids || [],
         to_category_id: initialData.to_category_id || undefined,
         incentivePercentage: initialData.incentivePercentage || undefined,
         companyId: initialData.companyId || company.data?.id,
@@ -390,7 +390,7 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
         taxPercentage: undefined,
         active: false,
         roomUpgrade: false,
-        from_category_id: undefined,
+        from_category_ids: [],
         to_category_id: undefined,
         incentivePercentage: undefined,
         companyId: company.data?.id,
@@ -419,7 +419,7 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
 
   const watchedLanguageCards = watch("languageCards");
   const watchedRoomUpgrade = watch("roomUpgrade");
-  const watchedFromCategory = watch("from_category_id");
+  const watchedFromCategories = watch("from_category_ids");
   const watchedToCategory = watch("to_category_id");
 
   const transformCategoryToOptions = (categories) => {
@@ -438,7 +438,7 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
 
   const getAvailableToOptions = () => {
     const options = transformCategoryToOptions(categoryData);
-    return options.filter(option => option.value !== watchedFromCategory);
+    return options.filter(option => !watchedFromCategories?.includes(option.value));
   };
 
   const getAvailableLanguages = (currentLangCode?: string) => {
@@ -685,12 +685,14 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
     formData.append('roomUpgrade', data.roomUpgrade.toString());
     formData.append('calculationMethod', data.calculationMethod);
 
-    if (data.from_category_id) {
-      formData.append('from_category_id', data.from_category_id.toString());
+    if (data.from_category_ids && data.from_category_ids.length > 0) {
+      formData.append('from_category_ids', JSON.stringify(data.from_category_ids));
     }
+
     if (data.to_category_id) {
       formData.append('to_category_id', data.to_category_id.toString());
     }
+
     if (data.incentivePercentage) {
       const cleanIncentivePercentage = cleanNumber(data.incentivePercentage);
       if (cleanIncentivePercentage) formData.append('incentivePercentage', cleanIncentivePercentage);
@@ -1069,18 +1071,19 @@ const CreatePackageForm: React.FC<CreatePackageFormProps> = ({
               <Row gutter={16}>
                 <Col span={12}>
                   <Form.Item
-                    label="From Category"
-                    validateStatus={errors.from_category_id ? 'error' : ''}
-                    help={errors.from_category_id?.message}
+                    label="From Categories"
+                    validateStatus={errors.from_category_ids ? 'error' : ''}
+                    help={errors.from_category_ids?.message}
                   >
                     <Controller
-                      name="from_category_id"
+                      name="from_category_ids"
                       control={control}
                       render={({ field }) => (
                         <Select
                           {...field}
-                          placeholder="Select from category"
-                          status={errors.from_category_id ? 'error' : ''}
+                          mode="multiple"
+                          placeholder="Select from categories"
+                          status={errors.from_category_ids ? 'error' : ''}
                           allowClear
                           options={getAvailableFromOptions()}
                           disabled={isLoading}

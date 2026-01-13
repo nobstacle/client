@@ -285,7 +285,7 @@ function RecordingsListWithSearch() {
       <SendRecordingTrigger onSearch={handleSearch} />
 
       <div className="p-4 shadow-md rounded-lg customTableWrapper bg-white">
-        <div className="mb-4 flex justify-between items-center">
+        {/* <div className="mb-4 flex justify-between items-center">
           <div>
             <h2 className="text-lg font-semibold">Recordings</h2>
             <p className="text-sm text-gray-500">
@@ -294,14 +294,7 @@ function RecordingsListWithSearch() {
               {isFetching && <span className="ml-2 text-blue-500">Loading...</span>}
             </p>
           </div>
-          <Button
-            type="primary"
-            onClick={() => refetch()}
-            loading={isFetching}
-          >
-            Refresh
-          </Button>
-        </div>
+        </div> */}
 
         <Table
           rowKey="id"

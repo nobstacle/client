@@ -78,6 +78,7 @@ export interface SendSurveyMessagePayloadType {
   tag: string;
   value: number;
   station: number;
+  userId: number
 }
 
 export interface SendSurveyPayloadType {

@@ -596,6 +596,7 @@ export const SocketContextProvider = ({
   };
 
   const emitSendSurveyAnswer = (data: SendSurveyMessagePayloadType) => {
+    console.info("***************************************", data)
     if (!socketClient || !socketClient.connected) {
       console.error("❌ Socket is not connected!");
       return;

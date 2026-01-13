@@ -2106,6 +2106,7 @@ const renderIPadPDF = (documentUrl: string) => {
             tag={messageStore.receivedSurvey.tag}
             survey={messageStore.receivedSurvey}
             handleComplete={() => messageStore.reset()}
+            data={data?.user}
           />
         )}
 
