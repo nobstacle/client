@@ -1773,8 +1773,9 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                     filteredPackages = filteredPackages.filter(pkg => {
                         // For room upgrades, check from_category_id
                         if (pkg.roomUpgrade === true) {
-                            const matches = pkg.from_category_id === categoryId;
-                            return matches;
+                              return pkg.from_category_ids?.includes(categoryId);
+                            // const matches = pkg.from_category_id === categoryId;
+                            // return matches;
                         }
                         return true;
                     });
@@ -1910,7 +1911,8 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         if (categoryId && categoryId !== null) {
             filteredPackages = filteredPackages.filter(pkg => {
                 if (pkg.roomUpgrade === true) {
-                    return pkg.from_category_id === categoryId;
+                      return pkg.from_category_ids?.includes(categoryId);
+                    // return pkg.from_category_id === categoryId;
                 }
                 return true;
             });

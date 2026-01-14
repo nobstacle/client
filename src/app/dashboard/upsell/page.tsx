@@ -975,7 +975,8 @@ export default function Upsell() {
         if (categoryId && categoryId !== null) {
             filteredPackages = filteredPackages.filter(pkg => {
                 if (pkg.roomUpgrade === true) {
-                    return pkg.from_category_id === categoryId;
+
+                return pkg.from_category_ids?.includes(categoryId);
                 }
                 return true;
             });

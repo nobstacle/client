@@ -157,8 +157,8 @@ const PackageCard = ({ packageData, handleClick, loadingButton, langCode = 'en' 
   const [currentSlide, setCurrentSlide] = useState(0);
   const [expanded, setExpanded] = useState(false);
   const [isModalOpen, setisIsModalOpen] = useState(false);
-  const [isVideoModalOpen, setIsVideoModalOpen] = useState(false); // ADD THIS
-  const [selectedVideo, setSelectedVideo] = useState(null); // ADD THIS
+  const [isVideoModalOpen, setIsVideoModalOpen] = useState(false); 
+  const [selectedVideo, setSelectedVideo] = useState(null); 
 
   const formatCurrency = (price, currency = 'AED') => {
     return `${currency} ${price}`;
