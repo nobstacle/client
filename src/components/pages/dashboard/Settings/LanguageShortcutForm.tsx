@@ -1,7 +1,6 @@
 import * as React from "react";
 import {
   Form,
-  Input,
   Button,
   Space,
   Tag,
@@ -9,11 +8,10 @@ import {
   Alert,
   Spin,
   Card,
-  Row,
-  Col,
   Divider,
+  Tooltip
 } from "antd";
-import { PlusOutlined, DeleteOutlined } from "@ant-design/icons";
+import { PlusOutlined, DeleteOutlined, InfoCircleOutlined } from "@ant-design/icons";
 import { languages } from "../../../../constant/languages";
 import { useShortcutControllerCreateShortcutMany } from "../../../../lib/client/api";
 import { PostShortcutReq } from "../../../../lib/client/model";
@@ -129,7 +127,23 @@ export const LanguageShortcutForm: React.FC = () => {
   return (
     <Card
       className="w-full"
-      title={<span className="text-lg font-bold">Language Shortcuts</span>}
+      title={
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+          <span className="text-lg font-bold">Language Shortcuts</span>
+          <Tooltip
+            title="Configure up to 7 language shortcuts in the header menu for quick access to frequently used languages."
+            placement="topRight"
+          >
+            <InfoCircleOutlined
+              style={{
+                fontSize: 16,
+                color: '#1890ff',
+                cursor: 'pointer'
+              }}
+            />
+          </Tooltip>
+        </div>
+      }
       bordered={false}
       style={{ boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)" }}
     >

@@ -6,16 +6,17 @@ import {
     Card,
     message,
     Spin,
-    Divider,
     Space,
     Tag,
     Table,
     Popconfirm,
+    Tooltip
 } from "antd";
 import {
     SaveOutlined,
     DeleteOutlined,
     EditOutlined,
+    InfoCircleOutlined
 } from "@ant-design/icons";
 import useTemplateStore from "../../../../lib/zustand/store/templateStore";
 import {
@@ -241,7 +242,7 @@ export const SurveyEmoticonForm: React.FC = () => {
                         size="small"
                         icon={<EditOutlined />}
                         onClick={() => handleEdit(record)}
-                        style={{color:'#3b5998', fontWeight:'bold'}}
+                        style={{ color: '#3b5998', fontWeight: 'bold' }}
                     >
                         Edit
                     </Button>
@@ -251,7 +252,7 @@ export const SurveyEmoticonForm: React.FC = () => {
                         okText="Yes"
                         cancelText="No"
                     >
-                        <Button type="link" size="small" danger icon={<DeleteOutlined />} style={{ fontWeight:'bold'}}>
+                        <Button type="link" size="small" danger icon={<DeleteOutlined />} style={{ fontWeight: 'bold' }}>
                             Delete
                         </Button>
                     </Popconfirm>
@@ -263,7 +264,23 @@ export const SurveyEmoticonForm: React.FC = () => {
     return (
         <div style={{ padding: "8px" }}>
             <Card
-                title="Survey Emoticon Template Settings"
+                title={
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                        <span className="text-lg font-bold">Survey Emoticon Template Settings</span>
+                        <Tooltip
+                            title="Assign templates to emoticon ratings to enable instant feedback responses. When users select an emoticon, the linked template will be automatically sent to client screens."
+                            placement="topRight"
+                        >
+                            <InfoCircleOutlined
+                                style={{
+                                    fontSize: 16,
+                                    color: '#1890ff',
+                                    cursor: 'pointer'
+                                }}
+                            />
+                        </Tooltip>
+                    </div>
+                }
                 bordered={false}
                 size="small"
                 style={{ marginBottom: "16px" }}

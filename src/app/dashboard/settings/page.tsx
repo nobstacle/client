@@ -6,6 +6,7 @@ import { LanguageShortcutForm } from "../../../components/pages/dashboard/Settin
 import { UpdateCompanyUsers } from "../../../components/pages/dashboard/Settings/UpdateCompanyUsers";
 import { TemplateMergerForm } from "../../../components/pages/dashboard/Settings/SurveyHeaderText";
 import { SurveyEmoticonForm } from "../../../components/pages/dashboard/Settings/SurveyEmoticonForm";
+import { DefaultFormShortcut } from "../../../components/pages/dashboard/Settings/DefaultForm";
 import { useHasHydrated } from "../../../hooks/useHydrated";
 
 export default function SettingsPage() {
@@ -136,6 +137,18 @@ export default function SettingsPage() {
                 }}
               >
                 <SurveyEmoticonForm />
+              </Card>
+            </Col>
+
+            <Col xs={24}>
+              <Card
+                bordered
+                style={{
+                  borderRadius: "8px",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+                }}
+              >
+                <DefaultFormShortcut />
               </Card>
             </Col>
           </Row>

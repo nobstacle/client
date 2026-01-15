@@ -10,13 +10,14 @@ import {
 import useShortcutStore from "../../../../lib/zustand/store/shortcutStore";
 import {
   Card,
-  Form,
+  Tooltip,
   Select,
   Button,
   Alert,
   Spin,
   Space,
 } from "antd";
+import { InfoCircleOutlined } from "@ant-design/icons";
 
 const schema = yup
   .object()
@@ -101,17 +102,28 @@ export const DefaultSlideshowShortcutForm: React.FC = () => {
     slideshowTags.isPending;
 
   return (
-    <Card className="shadow-sm w-full">
+    <Card
+      className="shadow-sm w-full"
+      title={
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+          <span className="text-lg font-bold"> Default Slideshow Shortcut</span>
+          <Tooltip
+            title="Configure a default slideshow template for quick access in the header menu. Users can instantly send the selected slideshow to client screens."
+            placement="topRight"
+          >
+            <InfoCircleOutlined
+              style={{
+                fontSize: 16,
+                color: '#1890ff',
+                cursor: 'pointer'
+              }}
+            />
+          </Tooltip>
+        </div>
+      }
+    >
       <Spin spinning={isLoading} tip="Saving...">
         <Space direction="vertical" style={{ width: "100%" }} size="large">
-          <div>
-            <h3 className="text-lg font-bold text-gray-900 mb-1">
-              Default Slideshow Shortcut
-            </h3>
-            <p className="text-sm text-gray-500">
-              Select a default slideshow tag for quick access
-            </p>
-          </div>
 
           <div style={{ width: "100%" }}>
             <div className="mb-4">
@@ -153,7 +165,7 @@ export const DefaultSlideshowShortcutForm: React.FC = () => {
                 description={
                   typeof shortcutCreate.error.response.data.message === "string"
                     ? shortcutCreate.error.response.data.message.charAt(0).toUpperCase() +
-                      shortcutCreate.error.response.data.message.slice(1)
+                    shortcutCreate.error.response.data.message.slice(1)
                     : JSON.stringify(shortcutCreate.error.response.data.message)
                 }
                 type="error"
@@ -169,7 +181,7 @@ export const DefaultSlideshowShortcutForm: React.FC = () => {
                 description={
                   typeof shortcutPatch.error.response.data.message === "string"
                     ? shortcutPatch.error.response.data.message.charAt(0).toUpperCase() +
-                      shortcutPatch.error.response.data.message.slice(1)
+                    shortcutPatch.error.response.data.message.slice(1)
                     : JSON.stringify(shortcutPatch.error.response.data.message)
                 }
                 type="error"

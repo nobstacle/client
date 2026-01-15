@@ -8,9 +8,11 @@ import {
     Spin,
     Divider,
     Alert,
+    Tooltip
 } from "antd";
 import {
     SaveOutlined,
+    InfoCircleOutlined
 } from "@ant-design/icons";
 import useTemplateStore from "../../../../lib/zustand/store/templateStore";
 import {
@@ -107,9 +109,21 @@ export const TemplateMergerForm: React.FC = () => {
             <Card
                 className="w-full"
                 title={
-                    <span style={{ fontSize: "18px", fontWeight: "bold" }}>
-                        Survey Header Template Settings
-                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                        <span className="text-lg font-bold">Survey Header Template Settings</span>
+                        <Tooltip
+                            title="Configure the header template displayed on all survey screens. The content will automatically adapt to the user's selected language in the client app."
+                            placement="topRight"
+                        >
+                            <InfoCircleOutlined
+                                style={{
+                                    fontSize: 16,
+                                    color: '#1890ff',
+                                    cursor: 'pointer'
+                                }}
+                            />
+                        </Tooltip>
+                    </div>
                 }
                 bordered={false}
                 style={{ boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)" }}

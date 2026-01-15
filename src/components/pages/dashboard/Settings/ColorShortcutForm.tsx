@@ -1,6 +1,6 @@
 import * as React from "react";
-import { Button, Select, Input, Tag, Row, Col, Card, Space, Popover, Alert } from "antd";
-import { PlusOutlined, DeleteOutlined, SearchOutlined } from "@ant-design/icons";
+import { Button, Select, Input, Tag, Row, Col, Card, Space, Popover, Alert, Tooltip } from "antd";
+import { PlusOutlined, DeleteOutlined, SearchOutlined, InfoCircleOutlined } from "@ant-design/icons";
 import * as Io5Icons from "react-icons/io5";
 import {
   useImageTemplateControllerGetImageTags,
@@ -250,20 +250,28 @@ export const ColorShortcutForm: React.FC = () => {
   );
 
   return (
-    <Card style={{ width: '100%' }}>
+    <Card
+      style={{ width: '100%' }}
+      title={
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+          <span className="text-lg font-bold">Template Shortcuts</span>
+          <Tooltip
+            title="Create customizable shortcut buttons in the header menu to instantly send templates to client screens. Assign icons and colors to up to 7 templates for quick access."
+            placement="topRight"
+          >
+            <InfoCircleOutlined
+              style={{
+                fontSize: 16,
+                color: '#1890ff',
+                cursor: 'pointer'
+              }}
+            />
+          </Tooltip>
+        </div>
+      }
+    >
       <Space direction="vertical" size="large" style={{ width: "100%" }}>
         <div>
-          <div
-            style={{
-              fontWeight: 700,
-              color: "#9ca3af",
-              marginBottom: 16,
-              fontSize: 16,
-            }}
-          >
-            Template Shortcuts
-          </div>
-
           <Row gutter={[16, 16]}>
             <Col xs={24} sm={12} md={6} lg={6}>
               <Popover
