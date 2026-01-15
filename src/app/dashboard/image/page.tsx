@@ -216,7 +216,6 @@ export default function ImageDashboard() {
           >
             <CreateImageTemplateForm
               cb={(image, isUpdate = false) => {
-                console.info("image created/updated:", image);
                 handleClose();
 
                 if (!isUpdate) {

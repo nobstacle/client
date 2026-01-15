@@ -61,7 +61,7 @@ const EMOTICON_MAP = {
   5: 'VERY_HAPPY'
 };
 
-const SurveyAnswer: React.FC<{ tag: string; survey?: any; handleComplete: any }> = ({ tag, survey, handleComplete, data }) => {
+const SurveyAnswer: React.FC<{ tag: string; survey?: any; handleComplete: any }> = ({ tag, survey, handleComplete }) => {
   const [emptyDefaultSlideshow, setEmptySlideshow] = React.useState(false);
   const [selectedVal, setSelectedVal] = React.useState<number>();
   const [showEmoticonContent, setShowEmoticonContent] = React.useState(false);
@@ -110,6 +110,7 @@ const SurveyAnswer: React.FC<{ tag: string; survey?: any; handleComplete: any }>
     // Check if there's an emoticon template for this value
     const emoticonKey = EMOTICON_MAP[value];
     const emoticonTemplate = survey?.emoticonTemplates?.[emoticonKey];
+    let sentByUser = JSON.parse(survey?.sentBy);
 
     if (emoticonTemplate && emoticonTemplate.templateData) {
       // Show the emoticon template content
@@ -121,7 +122,7 @@ const SurveyAnswer: React.FC<{ tag: string; survey?: any; handleComplete: any }>
         tag,
         station: Number(params.get("station") ?? 1),
         value,
-        userId: data?.id
+        userId: sentByUser?.id
       });
 
       return;
@@ -132,7 +133,7 @@ const SurveyAnswer: React.FC<{ tag: string; survey?: any; handleComplete: any }>
       tag,
       station: Number(params.get("station") ?? 1),
       value,
-      userId: data?.id
+      userId: sentByUser?.id
     });
 
     if (defaultSlideshowShortcut.data && slideshowTemplates.data) {

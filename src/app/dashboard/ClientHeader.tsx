@@ -1710,9 +1710,6 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                     // ALWAYS use English for speech recognition
                     const recognitionLangCode = "en";
 
-                    console.info("Calling the translator", recognitionLangCode);
-
-                    // Call the speech-to-text API with English
                     speechToTextMutation.mutate(
                         {
                             data: {
@@ -1722,8 +1719,6 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                         },
                         {
                             onSuccess: (response) => {
-                                // Send English transcription back
-                                // Backend will handle translation based on selected language
                                 window.parent.postMessage({
                                     type: 'AUDIO_TRANSCRIPTION',
                                     text: response.transcription

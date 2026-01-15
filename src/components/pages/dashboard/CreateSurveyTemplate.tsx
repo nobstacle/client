@@ -12,6 +12,7 @@ import useTemplateStore from "../../../lib/zustand/store/templateStore";
 import { surveyAnswerValToColor } from "../../../utils";
 import { Card } from 'antd';
 import { Input as AntdInput } from "antd";
+import { useSession } from "next-auth/react";
 
 interface SendMapTemplateFormFieldValues {
   identifier: string;
@@ -25,6 +26,7 @@ export const CreateSurveyTemplate: React.FC = () => {
   const { surveysAnswer, setSearchSurveysAnswers, searchSurveysAnswers } =
     useTemplateStore();
   const { search } = useSearchTemplate(surveysAnswer, setSearchSurveysAnswers);
+  const { data } = useSession();
   const {
     register,
     handleSubmit,
@@ -32,7 +34,7 @@ export const CreateSurveyTemplate: React.FC = () => {
     reset,
     control,
     setValue,
-    watch
+    watch 
   } = useForm<SendMapTemplateFormFieldValues>({
     resolver: yupResolver(schema),
     defaultValues: {
@@ -42,11 +44,12 @@ export const CreateSurveyTemplate: React.FC = () => {
   const params = useSearchParams();
   const { emitSendSurvey } = useSocketContext();
 
-  const handleSendSurvey = (data: SendMapTemplateFormFieldValues) => {
+  const handleSendSurvey = (val: SendMapTemplateFormFieldValues) => {
     emitSendSurvey({
-      tag: data.identifier,
+      tag: val.identifier,
       station: params.get("station") ? Number(params.get("station")) : 1,
-      langCode: params.get("lang") || "en"
+      langCode: params.get("lang") || "en",
+      sentBy: JSON.stringify(data.user),
     });
     reset();
     setSearchSurveysAnswers([]);

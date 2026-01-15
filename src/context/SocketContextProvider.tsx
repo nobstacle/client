@@ -132,7 +132,6 @@ export const SocketContextProvider = ({
 
       // Listen for connection
       socketC.on("connect", () => {
-        console.log("✅ Socket connected");
         setSocketConnected(true);
       });
     }
@@ -261,6 +260,7 @@ export const SocketContextProvider = ({
   };
 
   const onReceivedSurveyAnswer = (data: any) => {
+
     try {
       const parsedData = JSON.parse(data).data as {
         id: number;
@@ -269,6 +269,13 @@ export const SocketContextProvider = ({
         stationNo: number;
         value: number;
         tag: string;
+        userId: number;
+        User: {
+          id: number;
+          firstName: string | null;
+          lastName: string | null;
+          email: string;
+        } | null;
       };
 
       addSurveyAnswer(parsedData);
@@ -368,10 +375,7 @@ export const SocketContextProvider = ({
   const onSubmittedRecordings = (data: any) => {
     try {
 
-      // Parse if it's a string, otherwise use as-is
       const parsedData = typeof data === 'string' ? JSON.parse(data) : data;
-
-      console.log("📊 Recording submitted (parsed):", parsedData);
 
       setReceivedRecording(parsedData);
     } catch (error) {
@@ -442,14 +446,11 @@ export const SocketContextProvider = ({
       return;
     }
 
-    console.info("🚀 Emitting send-template with data:", data);
-    
     if (!socketClient.connected) {
       socketClient.connect();
 
       // Wait for connection before emitting
       socketClient.once("connect", () => {
-        console.log("✅ Socket reconnected, now emitting template");
         socketClient.emit("send-template", data);
       });
       return;
@@ -495,13 +496,9 @@ export const SocketContextProvider = ({
       return;
     }
 
-    console.log("🚀 Emitting send-document with data:", data);
-
     if (callback) {
-      console.log("🚀 Call back case", data);
       socketClient.emit("send-document", data, callback);
     } else {
-      console.log("🚀 Without Call back case:", data);
       socketClient.emit("send-document", data);
     }
   };
@@ -512,13 +509,9 @@ export const SocketContextProvider = ({
       return;
     }
 
-    console.log("🚀 Emitting send-team-document with data:", data);
-
     if (callback) {
-      console.log("🚀 Call back case", data);
       socketClient.emit("send-team-document", data, callback);
     } else {
-      console.log("🚀 Without Call back case:", data);
       socketClient.emit("send-team-document", data);
     }
   };
@@ -529,9 +522,7 @@ export const SocketContextProvider = ({
       return;
     }
 
-    console.log("Emitting send-jotForm event with data:", data);
     socketClient.emit("send-jotForm", data, (response: any) => {
-      console.log("Received response from server for send-jotForm:", response);
       if (callback) callback(response);
     });
   };
@@ -544,8 +535,6 @@ export const SocketContextProvider = ({
       console.error("❌ Socket is not connected!");
       return;
     }
-
-    console.log("📦 Emitting send-packages with data:", data);
 
     if (callback) {
       socketClient.emit("send-packages", data, callback);
@@ -560,8 +549,6 @@ export const SocketContextProvider = ({
       console.error("❌ Socket is not connected!");
       return;
     }
-
-    console.log("🚀 Emitting update-information with data:", data);
 
     if (callback) {
       socketClient.emit("update-information", data, callback);
@@ -596,7 +583,7 @@ export const SocketContextProvider = ({
   };
 
   const emitSendSurveyAnswer = (data: SendSurveyMessagePayloadType) => {
-    console.info("***************************************", data)
+
     if (!socketClient || !socketClient.connected) {
       console.error("❌ Socket is not connected!");
       return;

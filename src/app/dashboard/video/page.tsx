@@ -219,7 +219,6 @@ export default function VideoDashboard() {
           >
             <CreateVideoTemplateForm
               cb={(video, isUpdate = false) => {
-                console.info("video created/updated:", video);
                 handleClose();
 
                 if (!isUpdate) {
