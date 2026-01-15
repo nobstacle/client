@@ -516,45 +516,44 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         const combined = [];
         const templateMap = new Map();
 
-        const addTemplate = (template, type, extraData = {}) => {
-            const tag = template.tag;
-
-            if (!templateMap.has(tag)) {
-                // First time seeing this tag
-                templateMap.set(tag, {
-                    id: template.id,
-                    tag: template.tag,
-                    type: type,
-                    langCode: template.langCode,
-                    order: template.order,
-                    templateData: template,
-                    availableInSelectedLang: template.langCode?.includes(selectedLang),
-                    defaultLangData: template, // Store default language version
-                    ...extraData
-                });
-            } else {
-                // Tag exists, check if this version has the selected language
-                const existing = templateMap.get(tag);
-                if (template.langCode?.includes(selectedLang) && !existing.availableInSelectedLang) {
-                    // Update with selected language version
-                    templateMap.set(tag, {
-                        ...existing,
-                        id: template.id,
-                        langCode: template.langCode,
-                        templateData: template,
-                        availableInSelectedLang: true,
-                        ...extraData
-                    });
-                } else if (!existing.availableInSelectedLang && template.langCode?.includes(companyData?.defaultLangCode)) {
-                    // Store default language version as fallback
-                    templateMap.set(tag, {
-                        ...existing,
-                        defaultLangData: template
-                    });
-                }
-            }
-        };
-
+       const addTemplate = (template, type, extraData = {}) => {
+           const tag = template.tag;
+           // Create unique key by combining tag and type to prevent overwriting
+           const mapKey = `${tag}__${type}`;
+        
+           if (!templateMap.has(mapKey)) {
+               // First time seeing this tag+type combination
+               templateMap.set(mapKey, {
+                   id: template.id,
+                   tag: template.tag,
+                   type: type,
+                   langCode: template.langCode,
+                   order: template.order,
+                   templateData: template,
+                   availableInSelectedLang: template.langCode?.includes(selectedLang),
+                   defaultLangData: template,
+                   ...extraData
+               });
+           } else {
+               // Tag+type exists, check if this version has the selected language
+               const existing = templateMap.get(mapKey);
+               if (template.langCode?.includes(selectedLang) && !existing.availableInSelectedLang) {
+                   templateMap.set(mapKey, {
+                       ...existing,
+                       id: template.id,
+                       langCode: template.langCode,
+                       templateData: template,
+                       availableInSelectedLang: true,
+                       ...extraData
+                   });
+               } else if (!existing.availableInSelectedLang && template.langCode?.includes(companyData?.defaultLangCode)) {
+                   templateMap.set(mapKey, {
+                       ...existing,
+                       defaultLangData: template
+                   });
+               }
+           }
+       };
         if (textTemplates) {
             textTemplates.forEach(template => {
                 addTemplate(template, 'text', { content: template.content });
@@ -631,12 +630,13 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
             return;
         }
 
+        console.info("fffff",allTemplates);
         debounceTimerRef.current = setTimeout(() => {
             const searchLower = searchValue.toLowerCase().trim();
             const filtered = allTemplates.filter(template =>
                 template.tag.toLowerCase().includes(searchLower)
             );
-
+      console.info("filtered",filtered);
             setFilteredTemplates(filtered);
             setIsDropdownVisible(filtered.length > 0);
         }, 300);
