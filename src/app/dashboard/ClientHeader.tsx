@@ -111,11 +111,14 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
     const [allPackages, setAllPackages] = useState([]);
     let Url = process.env.NEXT_PUBLIC_BACKEND_URL;
     const { data } = useSession();
-    const [selectedCategoryForUpsell, setSelectedCategoryForUpsell] = useState<number | null>(null);
     const [selectedCategories, setSelectedCategories] = useState(null);
     const [selectedPackages, setSelectedPackages] = useState([]);
     const [categoriesData, setCategoriesData] = useState([]);
     const [categoriesFetched, setCategoriesFetched] = useState(false);
+    const [assignedForms, setAssignedForms] = useState<any[]>([]);
+    const [defaultFormId, setDefaultFormId] = useState<string | null>(null);
+    const [isFormModalOpen, setIsFormModalOpen] = useState(false);
+    const [selectedFormForPrefill, setSelectedFormForPrefill] = useState<any>(null);
     const [displayStation, setDisplayStation] = useState(
         params.get("station") ?? "1"
     );
@@ -359,6 +362,56 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         return () => window.removeEventListener('message', handleStationChange);
     }, [isInIframe]);
 
+    const getAssignedForms = async () => {
+        const Url = process.env.NEXT_PUBLIC_BACKEND_URL;
+        const companyId = user?.user?.companyId;
+
+        if (!companyId) return;
+
+        try {
+            const response = await fetch(`${Url}/api/assigned-form/${companyId}`);
+            if (response.ok) {
+                const forms = await response.json();
+                setAssignedForms(forms);
+
+                // Get default form
+                const defaultForm = await getDefaultCompanyForm();
+                setDefaultFormId(defaultForm);
+            }
+        } catch (error) {
+            console.error('Error fetching assigned forms:', error);
+        }
+    };
+
+    const getDefaultCompanyForm = async () => {
+        const Url = process.env.NEXT_PUBLIC_BACKEND_URL;
+        const API_URL = `${Url}/api/v1/shortcut/default-company-form`;
+
+        try {
+            const response = await fetch(API_URL, {
+                method: 'GET',
+                headers: {
+                    Authorization: `Bearer ${data?.user?.backendTokens?.at}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                return data?.formId || null;
+            }
+        } catch (error) {
+            console.error('Error fetching default form:', error);
+        }
+        return null;
+    };
+
+    useEffect(() => {
+        if (user?.user?.companyId && data?.user?.backendTokens?.at) {
+            getAssignedForms();
+        }
+    }, [user?.user?.companyId, data?.user?.backendTokens?.at]);
+
     const fetchCategories = async () => {
         if (categoriesFetched && categoriesData.length > 0) {
             return categoriesData;
@@ -516,44 +569,44 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         const combined = [];
         const templateMap = new Map();
 
-       const addTemplate = (template, type, extraData = {}) => {
-           const tag = template.tag;
-           // Create unique key by combining tag and type to prevent overwriting
-           const mapKey = `${tag}__${type}`;
-        
-           if (!templateMap.has(mapKey)) {
-               // First time seeing this tag+type combination
-               templateMap.set(mapKey, {
-                   id: template.id,
-                   tag: template.tag,
-                   type: type,
-                   langCode: template.langCode,
-                   order: template.order,
-                   templateData: template,
-                   availableInSelectedLang: template.langCode?.includes(selectedLang),
-                   defaultLangData: template,
-                   ...extraData
-               });
-           } else {
-               // Tag+type exists, check if this version has the selected language
-               const existing = templateMap.get(mapKey);
-               if (template.langCode?.includes(selectedLang) && !existing.availableInSelectedLang) {
-                   templateMap.set(mapKey, {
-                       ...existing,
-                       id: template.id,
-                       langCode: template.langCode,
-                       templateData: template,
-                       availableInSelectedLang: true,
-                       ...extraData
-                   });
-               } else if (!existing.availableInSelectedLang && template.langCode?.includes(companyData?.defaultLangCode)) {
-                   templateMap.set(mapKey, {
-                       ...existing,
-                       defaultLangData: template
-                   });
-               }
-           }
-       };
+        const addTemplate = (template, type, extraData = {}) => {
+            const tag = template.tag;
+            // Create unique key by combining tag and type to prevent overwriting
+            const mapKey = `${tag}__${type}`;
+
+            if (!templateMap.has(mapKey)) {
+                // First time seeing this tag+type combination
+                templateMap.set(mapKey, {
+                    id: template.id,
+                    tag: template.tag,
+                    type: type,
+                    langCode: template.langCode,
+                    order: template.order,
+                    templateData: template,
+                    availableInSelectedLang: template.langCode?.includes(selectedLang),
+                    defaultLangData: template,
+                    ...extraData
+                });
+            } else {
+                // Tag+type exists, check if this version has the selected language
+                const existing = templateMap.get(mapKey);
+                if (template.langCode?.includes(selectedLang) && !existing.availableInSelectedLang) {
+                    templateMap.set(mapKey, {
+                        ...existing,
+                        id: template.id,
+                        langCode: template.langCode,
+                        templateData: template,
+                        availableInSelectedLang: true,
+                        ...extraData
+                    });
+                } else if (!existing.availableInSelectedLang && template.langCode?.includes(companyData?.defaultLangCode)) {
+                    templateMap.set(mapKey, {
+                        ...existing,
+                        defaultLangData: template
+                    });
+                }
+            }
+        };
         if (textTemplates) {
             textTemplates.forEach(template => {
                 addTemplate(template, 'text', { content: template.content });
@@ -625,18 +678,17 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
             return;
         }
 
-        if (searchValue === '/') {
+        if (searchValue === '/' || searchValue === '*') {
             setIsDropdownVisible(true);
             return;
         }
 
-        console.info("fffff",allTemplates);
         debounceTimerRef.current = setTimeout(() => {
             const searchLower = searchValue.toLowerCase().trim();
             const filtered = allTemplates.filter(template =>
                 template.tag.toLowerCase().includes(searchLower)
             );
-      console.info("filtered",filtered);
+            console.info("filtered", filtered);
             setFilteredTemplates(filtered);
             setIsDropdownVisible(filtered.length > 0);
         }, 300);
@@ -809,8 +861,19 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                     categories: categoriesData
                 }, '*');
             }
+        } else if (value === '*') {
+            setFilteredTemplates([]);
+            setIsDropdownVisible(true);
+
+            if (isInIframe) {
+                window.parent.postMessage({
+                    type: 'FORMS_DATA',
+                    forms: assignedForms,
+                    defaultFormId: defaultFormId
+                }, '*');
+            }
         }
-    }, [categoriesData, categoriesFetched, fetchCategories]);
+    }, [categoriesData, categoriesFetched, fetchCategories, assignedForms, defaultFormId, isInIframe]);
 
     useEffect(() => {
         if (isHamburgerMenuOpen && hamburgerMenuRef.current) {
@@ -824,65 +887,114 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         }
     }, [isHamburgerMenuOpen]);
 
-    // useEffect(() => {
-    //     if (isHamburgerMenuOpen && isInIframe) {
-    //         const loadAndSendPicker = async () => {
-    //             // DON'T try to read Chrome storage in iframe - it will fail!
-    //             // Instead, use the station from URL params or localStorage
-    //             let currentStation = params.get("station") || localStorage.getItem(STATION_STORAGE_KEY) || "1";
+    const generateFormsDropdownHTML = useCallback((forms, defaultFormId) => {
+        if (!forms || forms.length === 0) {
+            return `
+            <div style="padding: 20px; text-align: center; color: #999;">
+                <div style="font-size: 14px; color: #666;">No forms found</div>
+            </div>
+        `;
+        }
 
-    //             console.log('[ClientHeader] 📍 Using station for picker:', currentStation);
-    //             const currentIsOpen = isHamburgerMenuOpen;
-    //             const newState = !currentIsOpen;
-    //             const stationCount = companyData?.stationCount || 10;
-    //             const stationOptions = Array.from({ length: stationCount }, (_, i) => i + 1)
-    //                 .map(num => `
-    //                 <option value="${num}" ${num === Number(currentStation) ? 'selected' : ''}>
-    //                     Station ${num}
-    //                 </option>
-    //             `).join('');
+        // Sort forms - default form first, then alphabetically
+        const sortedForms = [...forms].sort((a, b) => {
+            if (a.form_id === defaultFormId) return -1;
+            if (b.form_id === defaultFormId) return 1;
+            return a.form_name.localeCompare(b.form_name);
+        });
 
-    //             const stationPickerHTML = `
-    //             <div style="position: relative;">
-    //                 <select 
-    //                     id="extension-station-select"
-    //                     style="
-    //                         width: 100%;
-    //                         padding: 6px 12px;
-    //                         border: 1px solid #e5e7eb;
-    //                         border-radius: 6px;
-    //                         font-size: 14px;
-    //                         font-weight: 600;
-    //                         color: #1f2937;
-    //                         background: white;
-    //                         cursor: pointer;
-    //                         outline: none;
-    //                     "
-    //                 >
-    //                     ${stationOptions}
-    //                 </select>
-    //             </div>
-    //         `;
-
-    //             window.parent.postMessage({
-    //                 type: 'HAMBURGER_MENU',
-    //                 isOpen: newState,
-    //                 content: {
-    //                     station: currentStation, // Use currentStation instead of params.get
-    //                     companyName: companyData?.name || 'Company Name',
-    //                     userName: user?.user?.name || user?.user?.email || 'User Name',
-    //                     stationPickerHTML: stationPickerHTML
-    //                 }
-    //             }, '*');
-    //         }
-    //         loadAndSendPicker();
-    //     } else if (!isHamburgerMenuOpen && isInIframe) {
-    //         window.parent.postMessage({
-    //             type: 'HAMBURGER_MENU',
-    //             isOpen: false
-    //         }, '*');
-    //     }
-    // }, [isHamburgerMenuOpen, params, companyData, user, isInIframe]);
+        return `
+        <div style="padding: 12px 16px; border-bottom: 2px solid #3b5998; background: #f8fafc; position: sticky; top: 0; z-index: 1;">
+            <div style="font-weight: 600; font-size: 14px; color: #1f2937; padding-left: 5px">
+                Select Form
+            </div>
+            <div style="font-size: 11px; color: #6b7280; margin-top: 2px;">
+                Send blank or prefilled form
+            </div>
+        </div>
+        ${sortedForms.map(form => `
+            <div style="
+                padding: 12px 16px;
+                border-bottom: 1px solid #f0f0f0;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+            ">
+                <div style="flex: 1;">
+                    <div style="font-weight: 500; font-size: 14px; color: #1f2937; display: flex; align-items: center; gap: 8px;">
+                        ${form.form_name}
+                        ${form.form_id === defaultFormId ? `
+                            <span style="
+                                display: inline-block;
+                                background: #3b5998;
+                                color: white;
+                                font-size: 10px;
+                                padding: 2px 6px;
+                                border-radius: 4px;
+                            ">DEFAULT</span>
+                        ` : ''}
+                    </div>
+                    <div style="font-size: 12px; color: #6b7280; margin-top: 2px;">
+                        Form ID: ${form.form_id}
+                    </div>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <!-- Send Blank Form Button -->
+                    <div 
+                        data-form-id="${form.form_id}"
+                        data-action="send-blank"
+                        style="
+                            cursor: pointer;
+                            padding: 8px 12px;
+                            background: #3b5998;
+                            color: white;
+                            border-radius: 6px;
+                            transition: all 0.2s;
+                            display: flex;
+                            align-items: center;
+                            gap: 6px;
+                            font-size: 12px;
+                            font-weight: 500;
+                        "
+                        onmouseover="this.style.backgroundColor='#2d4373'"
+                        onmouseout="this.style.backgroundColor='#3b5998'"
+                    >
+                        <svg style="width: 16px; height: 16px;" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z"/>
+                        </svg>
+                        Send
+                    </div>
+                    
+                    <!-- Prefill Form Button -->
+                    <div 
+                        data-form-id="${form.form_id}"
+                        data-action="prefill"
+                        style="
+                            cursor: pointer;
+                            padding: 8px 12px;
+                            background: #10b981;
+                            color: white;
+                            border-radius: 6px;
+                            transition: all 0.2s;
+                            display: flex;
+                            align-items: center;
+                            gap: 6px;
+                            font-size: 12px;
+                            font-weight: 500;
+                        "
+                        onmouseover="this.style.backgroundColor='#059669'"
+                        onmouseout="this.style.backgroundColor='#10b981'"
+                    >
+                        <svg style="width: 16px; height: 16px;" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/>
+                        </svg>
+                        Prefill
+                    </div>
+                </div>
+            </div>
+        `).join('')}
+    `;
+    }, []);
 
     useEffect(() => {
         if (!isInIframe) return;
@@ -1192,7 +1304,15 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         if (isDropdownVisible && isInIframe) {
             const rect = searchRef.current?.getBoundingClientRect();
             if (rect) {
-                const html = generateSearchDropdownHTML(filteredTemplates, categoriesData, isLoading, searchValue);
+                let html;
+
+                if (searchValue === '*' && assignedForms.length > 0) {
+                    html = generateFormsDropdownHTML(assignedForms, defaultFormId);
+                } else if (searchValue === '/' && categoriesData.length > 0) {
+                    html = generateSearchDropdownHTML([], categoriesData, isLoading, searchValue);
+                } else {
+                    html = generateSearchDropdownHTML(filteredTemplates, categoriesData, isLoading, searchValue);
+                }
 
                 window.parent.postMessage({
                     type: 'SEARCH_DROPDOWN',
@@ -1214,7 +1334,6 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
             }, '*');
         }
 
-        // Update local dropdown position for non-iframe
         if (isDropdownVisible && !isInIframe && searchRef.current) {
             const rect = searchRef.current.getBoundingClientRect();
             setDropdownPosition({
@@ -1223,7 +1342,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                 width: Math.max(300, rect.width)
             });
         }
-    }, [isDropdownVisible, filteredTemplates, isLoading, isInIframe, generateSearchDropdownHTML]);
+    }, [isDropdownVisible, filteredTemplates, isLoading, isInIframe, generateSearchDropdownHTML, generateFormsDropdownHTML, searchValue, assignedForms, defaultFormId, categoriesData]);
 
     const updateChatPopupMessages = useCallback(() => {
         if (!isInIframe) return;
@@ -1768,7 +1887,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                     filteredPackages = filteredPackages.filter(pkg => {
                         // For room upgrades, check from_category_id
                         if (pkg.roomUpgrade === true) {
-                              return pkg.from_category_ids?.includes(categoryId);
+                            return pkg.from_category_ids?.includes(categoryId);
                             // const matches = pkg.from_category_id === categoryId;
                             // return matches;
                         }
@@ -1858,6 +1977,34 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                 }
             }
 
+            if (event.data.type === 'FORM_SEND_BLANK') {
+                const formId = event.data.formId;
+                const form = assignedForms.find(f => f.form_id === formId);
+
+                if (form) {
+                    // Create blank form URL and send
+                    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.nobstacle.com';
+                    const url = `${baseUrl}/forms/${formId}`;
+
+                    // Use your existing socket emit logic to send the form
+                    // You'll need to adapt this to your actual send logic
+                    message.success(`Sending blank form: ${form.form_name}`);
+                    setSearchValue('');
+                    setIsDropdownVisible(false);
+                }
+            }
+
+            if (event.data.type === 'FORM_PREFILL') {
+                const formId = event.data.formId;
+                const form = assignedForms.find(f => f.form_id === formId);
+
+                if (form) {
+                    setSelectedFormForPrefill(form);
+                    setIsFormModalOpen(true);
+                    setSearchValue('');
+                    setIsDropdownVisible(false);
+                }
+            }
         };
 
         window.addEventListener('message', handler);
@@ -1886,7 +2033,6 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         allPackages,
         selectedPackages,
         selectedCategories,
-        selectedCategoryForUpsell,
     ]);
 
     const handleSendPackage = (categoryId: any) => {
@@ -1906,7 +2052,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         if (categoryId && categoryId !== null) {
             filteredPackages = filteredPackages.filter(pkg => {
                 if (pkg.roomUpgrade === true) {
-                      return pkg.from_category_ids?.includes(categoryId);
+                    return pkg.from_category_ids?.includes(categoryId);
                     // return pkg.from_category_id === categoryId;
                 }
                 return true;
@@ -2491,6 +2637,69 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                             <div style={{ padding: '20px', textAlign: 'center' }}>
                                 <Spin />
                             </div>
+                        ) : searchValue === '*' && assignedForms.length > 0 ? (
+                            // Render forms list
+                            <List
+                                header={
+                                    <div style={{ fontWeight: 600, fontSize: '14px', padding: '8px 0' }}>
+                                        Select Form
+                                    </div>
+                                }
+                                dataSource={assignedForms.sort((a, b) => {
+                                    if (a.form_id === defaultFormId) return -1;
+                                    if (b.form_id === defaultFormId) return 1;
+                                    return a.form_name.localeCompare(b.form_name);
+                                })}
+                                renderItem={(form: any) => (
+                                    <List.Item
+                                        style={{
+                                            padding: '12px 16px',
+                                            borderBottom: '1px solid #f0f0f0',
+                                        }}
+                                    >
+                                        <div style={{ flex: 1 }}>
+                                            <div style={{ fontWeight: 500, fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                {form.form_name}
+                                                {form.form_id === defaultFormId && (
+                                                    <Tag color="#3b5998" style={{ fontSize: '10px' }}>DEFAULT</Tag>
+                                                )}
+                                            </div>
+                                            <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '2px' }}>
+                                                Form ID: {form.form_id}
+                                            </div>
+                                        </div>
+                                        <div style={{ display: 'flex', gap: '8px' }}>
+                                            <Button
+                                                size="small"
+                                                type="primary"
+                                                onClick={() => {
+                                                    // Handle send blank form
+                                                    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.nobstacle.com';
+                                                    const url = `${baseUrl}/forms/${form.form_id}`;
+                                                    message.success(`Sending blank form: ${form.form_name}`);
+                                                    setSearchValue('');
+                                                    setIsDropdownVisible(false);
+                                                }}
+                                                style={{ backgroundColor: '#3b5998', borderColor: '#3b5998' }}
+                                            >
+                                                Send
+                                            </Button>
+                                            <Button
+                                                size="small"
+                                                style={{ backgroundColor: '#10b981', borderColor: '#10b981', color: 'white' }}
+                                                onClick={() => {
+                                                    setSelectedFormForPrefill(form);
+                                                    setIsFormModalOpen(true);
+                                                    setSearchValue('');
+                                                    setIsDropdownVisible(false);
+                                                }}
+                                            >
+                                                Prefill
+                                            </Button>
+                                        </div>
+                                    </List.Item>
+                                )}
+                            />
                         ) : searchValue === '/' && categoriesData.length > 0 ? (
                             <List
                                 dataSource={categoriesData}
