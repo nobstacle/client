@@ -31,18 +31,13 @@ export const DefaultFormShortcut: React.FC = () => {
 
     const [assignedForms, setAssignedForms] = React.useState<AssignedForm[]>([]);
     const [selectedFormId, setSelectedFormId] = React.useState<number | null>(null);
-    const [selectedIcon, setSelectedIcon] = React.useState<string>("IoDocumentText");
-    const [showIconPicker, setShowIconPicker] = React.useState<boolean>(false);
     const [loadingForms, setLoadingForms] = React.useState<boolean>(false);
     const [saving, setSaving] = React.useState<boolean>(false);
+    const [deleting, setDeleting] = React.useState<boolean>(false);
     const [error, setError] = React.useState<string>("");
     const [success, setSuccess] = React.useState<string>("");
     const [existingShortcut, setExistingShortcut] = React.useState<DefaultFormShortcut | null>(null);
     const { data } = useSession();
-
-    const iconKeys = Object.keys(Io5Icons).filter(
-        (name) => !name.includes("Outline") && !name.includes("Sharp")
-    );
 
     const getAssignedFormByID = React.useCallback(async (company_id: number) => {
         const Url = getBackendUrl();
@@ -66,12 +61,13 @@ export const DefaultFormShortcut: React.FC = () => {
         }
     }, []);
 
-    const getExistingShortcut = React.useCallback(async () => {
+    const getExistingShortcut = React.useCallback(async (data) => {
         const Url = getBackendUrl();
-        const API_URL = `${Url}/api/v1/default-form-shortcut`;
+        const API_URL = `${Url}/api/v1/shortcut/default-company-form`;
 
         try {
             const response = await fetch(API_URL, {
+                method: 'GET',
                 headers: {
                     Authorization: `Bearer ${data?.user?.backendTokens?.at}`,
                     'Content-Type': 'application/json',
@@ -81,9 +77,8 @@ export const DefaultFormShortcut: React.FC = () => {
             if (response.ok) {
                 const data = await response.json();
                 if (data) {
-                    setExistingShortcut(data);
-                    setSelectedFormId(data.formId);
-                    setSelectedIcon(data.icon || "IoDocumentText");
+                    setExistingShortcut(data?.data || null);
+                    setSelectedFormId(data?.data?.formId);
                 }
             }
         } catch (error) {
@@ -92,46 +87,36 @@ export const DefaultFormShortcut: React.FC = () => {
     }, []);
 
     React.useEffect(() => {
-        if (company?.id) {
+        if (company?.id && data !== undefined) {
             getAssignedFormByID(company.id);
-            getExistingShortcut();
+            getExistingShortcut(data);
         }
-    }, [company?.id, getAssignedFormByID, getExistingShortcut]);
+    }, [company?.id, data, getAssignedFormByID, getExistingShortcut]);
 
-    const validateForm = () => {
-        if (!selectedIcon) {
-            setError("Please select an icon");
-            return false;
-        }
-
-        return true;
-    };
 
     const handleSubmit = async () => {
-        if (!validateForm()) return;
-
         setSaving(true);
         setError("");
         setSuccess("");
 
         try {
             const Url = getBackendUrl();
-            const API_URL = `${Url}/api/v1/default-form-shortcut`;
+            const API_URL = `${Url}/api/v1/shortcut/default-form-shortcut`;
 
             const response = await fetch(API_URL, {
-                method: 'POST', 
+                method: 'POST',
                 headers: {
-                Authorization: `Bearer ${data?.user?.backendTokens?.at}`,
+                    Authorization: `Bearer ${data?.user?.backendTokens?.at}`,
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    formId: selectedFormId,
+                    formId: selectedFormId?.toString(),
                 })
             });
 
             if (response.ok) {
-                const data = await response.json();
-                setExistingShortcut(data);
+                const responseData = await response.json();
+                setExistingShortcut(responseData);
                 setSuccess(existingShortcut
                     ? "Default form shortcut updated successfully"
                     : "Default form shortcut created successfully"
@@ -148,8 +133,47 @@ export const DefaultFormShortcut: React.FC = () => {
         }
     };
 
+    const handleDeleteShortcut = async () => {
+        setDeleting(true);
+        setError("");
+        setSuccess("");
+
+        try {
+            const Url = getBackendUrl();
+            const API_URL = `${Url}/api/v1/shortcut/default-form-shortcut`;
+
+            const response = await fetch(API_URL, {
+                method: 'DELETE',
+                headers: {
+                    Authorization: `Bearer ${data?.user?.backendTokens?.at}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            if (response.ok) {
+                setExistingShortcut(null);
+                setSelectedFormId(null);
+                setSuccess("Default form shortcut deleted successfully");
+            } else {
+                const errorData = await response.json();
+                setError(errorData.message || 'Failed to delete default form shortcut');
+            }
+        } catch (error) {
+            console.error('Error deleting default form shortcut:', error);
+            setError('Failed to delete default form shortcut');
+        } finally {
+            setDeleting(false);
+        }
+    };
+
     const handleClearForm = () => {
-        setSelectedFormId(null);
+        if (existingShortcut) {
+            // If there's an existing shortcut, delete it
+            handleDeleteShortcut();
+        } else {
+            // If no existing shortcut, just clear the selection
+            setSelectedFormId(null);
+        }
     };
 
     const getFormOptions = () => {
@@ -164,7 +188,7 @@ export const DefaultFormShortcut: React.FC = () => {
             style={{ width: '100%' }}
             title={
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-                    <span className="text-lg font-bold">Default Form Shortcut</span>
+                    <span className="text-lg font-bold">Default Form</span>
                     <Tooltip
                         title="Configure a quick-access button in the header to instantly send a form to client screens. You can leave the form empty to create a shortcut without a form."
                         placement="topRight"
@@ -185,16 +209,18 @@ export const DefaultFormShortcut: React.FC = () => {
                     <div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                             <Text strong>
-                                Select Form (Optional)
+                                Select Form
                             </Text>
-                            {selectedFormId && (
+                            {(selectedFormId || existingShortcut) && (
                                 <Button
                                     size="small"
                                     type="link"
                                     onClick={handleClearForm}
                                     danger
+                                    loading={deleting}
+                                    disabled={deleting}
                                 >
-                                    Clear Selection
+                                    {existingShortcut ? 'Delete Shortcut' : 'Clear Selection'}
                                 </Button>
                             )}
                         </div>
@@ -207,7 +233,7 @@ export const DefaultFormShortcut: React.FC = () => {
                             onChange={(value) => setSelectedFormId(value)}
                             value={selectedFormId || undefined}
                             options={getFormOptions()}
-                            disabled={loadingForms}
+                            disabled={loadingForms || deleting}
                             allowClear
                             onClear={() => setSelectedFormId(null)}
                         />
@@ -244,7 +270,7 @@ export const DefaultFormShortcut: React.FC = () => {
                     size="large"
                     block
                     loading={saving}
-                    disabled={saving || loadingForms}
+                    disabled={saving || loadingForms || deleting}
                     onClick={handleSubmit}
                     icon={<SaveOutlined />}
                     style={{ height: 44, fontWeight: 500 }}

@@ -1032,8 +1032,22 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 			const response = await axios.get(API_URL);
 			if (response.status === 200) {
 				setAssignedForms(response?.data);
+
+				const defaultFormId = await getDefaultCompanyForm();
+
+				const sortedForms = [...response?.data].sort((a, b) =>
+					a.form_name.localeCompare(b.form_name)
+				);
+
+				const defaultFormExists = defaultFormId &&
+					response?.data.some(form => form.form_id === defaultFormId);
+
 				if (selectedForm === null) {
-					setSelectedForm(response?.data[0]?.form_id || null);
+					const formToSelect = defaultFormExists
+						? defaultFormId
+						: sortedForms[0]?.form_id || null;
+
+					setSelectedForm(formToSelect);
 					setLoader(false);
 				}
 				setLoader(false);
@@ -1083,14 +1097,12 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 			if (!forceRefresh) {
 				const cachedFields = sessionStorage.getItem(`form_fields_${form_id}`);
 				if (cachedFields) {
-					console.log('Loading form fields from session cache for form:', form_id);
 					const parsedFields = JSON.parse(cachedFields);
 					setSelectedFormFields(parsedFields);
 					return parsedFields;
 				}
 			}
 
-			console.log('Fetching form fields from JotForm API for form:', form_id);
 			const API_KEY = process.env.NEXT_PUBLIC_JOTFORM_API_KEY;
 			const response = await fetch(
 				`https://api.jotform.com/form/${form_id}/questions?apiKey=${API_KEY}`
@@ -1214,8 +1226,6 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 		// Check if search is active
 		const hasSearch = search && (typeof search === 'string' ? search.trim() !== "" : search.length > 0);
 
-		console.log('API Call Debug:', { page, limit, hasSearch, search, filter });
-
 		// When search changes, always start from page 1
 		let actualPage = page;
 		if (hasSearch && search !== currentSearchTerm) {
@@ -1262,8 +1272,6 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 			if (response.status === 200) {
 				const { items, allFieldNames, totalPages, totalItems, isSearchActive: apiSearchActive } = response.data;
 
-				console.log('Response Debug:', response.data);
-
 				setTotalPages(totalPages || 1);
 				setTotalItems(totalItems || 0);
 
@@ -1300,7 +1308,6 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 			}
 		} catch (error: any) {
 			if (axios.isCancel(error)) {
-				console.log('Request canceled:', error.message);
 				return;
 			}
 			setTableResponse({ data: [], sortColumns: [] });
@@ -1561,7 +1568,6 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 		getTableResponse(selectedForm, 1, 10, "", selectedFilter);
 	};
 
-
 	const handleSampleCSVDownload = () => {
 		if (
 			selectedFormFields?.content &&
@@ -1787,6 +1793,29 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 			}
 		}
 	}
+
+	const getDefaultCompanyForm = async () => {
+		const Url = getBackendUrl();
+		const API_URL = `${Url}/api/v1/shortcut/default-company-form`;
+
+		try {
+			const response = await fetch(API_URL, {
+				method: 'GET',
+				headers: {
+					Authorization: `Bearer ${userData?.user?.backendTokens?.at}`,
+					'Content-Type': 'application/json',
+				},
+			});
+
+			if (response.ok) {
+				const data = await response.json();
+				return data?.data?.formId || null;
+			}
+		} catch (error) {
+			console.error('Error fetching default form:', error);
+		}
+		return null;
+	};
 
 	const parseOptions = (optionsString) => {
 		if (!optionsString) return [];

@@ -56,44 +56,16 @@ export default function ImageDashboard() {
   // Get current language
   const currentLang = params.get("lang") || companyData?.defaultLangCode || "en";
 
-  // Group images by tag and show the default language version
-  // but track availability for the current language
+  // Since records are now merged with langCode arrays, we can work with them directly
   const displayedImagesWithAvailability = useMemo(() => {
     const imagesSource = searchImages.length > 0 ? searchImages : images;
     
-    // Group images by tag
-    const groupedByTag = imagesSource.reduce((acc, image) => {
-      if (!acc[image.tag]) {
-        acc[image.tag] = [];
-      }
-      acc[image.tag].push(image);
-      return acc;
-    }, {} as Record<string, GetImageTemplateRes[]>);
-
-    // For each tag, always show the default language version
-    // but check if current language is available
-    const displayImages: (GetImageTemplateRes & { isAvailableInCurrentLang: boolean })[] = [];
-    
-    Object.values(groupedByTag).forEach((tagImages) => {
-      // Always use default language image for display
-      const defaultLangImage = tagImages.find(img =>
-        img.langCode.includes(companyData?.defaultLangCode || "en")
-      ) || tagImages[0];
-      
-      // Check if current language is available for this tag
-      const isAvailableInCurrentLang = tagImages.some(img => 
-        img.langCode.includes(currentLang)
-      );
-      
-      displayImages.push({
-        ...defaultLangImage,
-        isAvailableInCurrentLang
-      });
-    });
-
-    // Sort by order to maintain original ordering
-    return displayImages.sort((a, b) => a.order - b.order);
-  }, [images, searchImages, currentLang, companyData?.defaultLangCode]);
+    // Each image now has a langCode array with all available languages
+    return imagesSource.map(image => ({
+      ...image,
+      isAvailableInCurrentLang: image.langCode.includes(currentLang)
+    })).sort((a, b) => a.order - b.order);
+  }, [images, searchImages, currentLang]);
 
   const sendTemplate = (id: number, isAvailable: boolean, ext: string) => {
     emitSendTemplate({
@@ -141,7 +113,6 @@ export default function ImageDashboard() {
   };
 
   const sortImages = (item1: UniqueIdentifier, item2: UniqueIdentifier) => {
-    // Always work with the full images array (not filtered/displayed array)
     const oldIndex = images.findIndex((item) => item.id === item1);
     const newIndex = images.findIndex((item) => item.id === item2);
 
@@ -150,34 +121,14 @@ export default function ImageDashboard() {
       return;
     }
 
-    // Create a shallow copy and move the item
+    // Create reordered array
     let reorderedImages = arrayMove(images, oldIndex, newIndex);
 
-    // Group by tag to update order properly
-    const groupedByTag = reorderedImages.reduce((acc, image) => {
-      if (!acc[image.tag]) {
-        acc[image.tag] = [];
-      }
-      acc[image.tag].push(image);
-      return acc;
-    }, {} as Record<string, GetImageTemplateRes[]>);
-
-    // Get unique tags in the new order
-    const uniqueTags = reorderedImages
-      .map(img => img.tag)
-      .filter((tag, index, self) => self.indexOf(tag) === index);
-
-    // Rebuild the array with all language variants maintaining the new tag order
-    const finalOrderedImages: GetImageTemplateRes[] = [];
-    let orderCounter = 1;
-
-    uniqueTags.forEach(tag => {
-      const tagImages = groupedByTag[tag];
-      tagImages.forEach(img => {
-        finalOrderedImages.push({ ...img, order: orderCounter });
-      });
-      orderCounter++;
-    });
+    // Update order values
+    const finalOrderedImages = reorderedImages.map((img, index) => ({
+      ...img,
+      order: index + 1
+    }));
 
     // Update the order in the backend
     finalOrderedImages.forEach(({ id, order }) => {
@@ -223,7 +174,7 @@ export default function ImageDashboard() {
                 } else {
                   const updatedImages = images.map((item) =>
                     item.id === image.id
-                      ? { ...item, url: image.url, langCode: image.langCode }
+                      ? { ...item, ...image }
                       : item
                   );
 
@@ -285,14 +236,13 @@ export default function ImageDashboard() {
                   cb={(image) => {
                     updateHandleClose();
 
-                    const shallow = [...images];
-                    const index = shallow.findIndex(
-                      ({ id }) => id === image.id,
+                    const updatedImages = images.map((item) =>
+                      item.id === image.id
+                        ? { ...item, ...image }
+                        : item
                     );
-                    shallow[index]["url"] = image.url;
-                    shallow[index]["langCode"] = image.langCode;
 
-                    setImages(shallow);
+                    setImages(updatedImages);
                   }}
                 />
               </Modal>
