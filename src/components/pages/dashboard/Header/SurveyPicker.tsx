@@ -26,12 +26,13 @@ export const HeaderSurveyShortcut: React.FC<HeaderSurveyShortcutProps> = ({
   const handleConfirmSend = async () => {
     if (confirmationNumber !== "") {
       setIsLoading(true);
+
       try {
         emitSendSurvey({
           tag: confirmationNumber.trim(),
           station: params.get("station") ? Number(params.get("station")) : 1,
           langCode: params.get("lang") || "en",
-           sentBy: JSON.stringify(user),
+          sentBy: JSON.stringify(user),
         });
 
         if (!checkTooltip) {

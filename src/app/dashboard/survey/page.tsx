@@ -105,7 +105,7 @@ function SurveyAnswers() {
       key: "userId",
       render: (_, record) => (
         <span>
-          {record.User && record.User.firstName !== "" && record.User.firstName !== null ? record.User.firstName + " " + record.User.lastName : record.User ? record.User.email : "NA"}</span>
+          {record.User && record.User.email ? record.User.email : "NA"}</span>
       ),
     },
     {

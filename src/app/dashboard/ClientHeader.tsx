@@ -2780,12 +2780,14 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                                     setIsDropdownVisible(false);
                                                 }}
                                                 style={{ backgroundColor: '#3b5998', borderColor: '#3b5998' }}
+                                                className="headerHover"
                                             >
-                                               <SendIcon size={16} />
+                                                <SendIcon size={16} />
                                             </Button>
                                             <Button
                                                 size="small"
-                                                style={{ backgroundColor: '#10b981', borderColor: '#10b981', color: 'white' }}
+                                                style={{ backgroundColor: '#3b5998', borderColor: '#3b5998' }}
+                                                className="headerHover"
                                                 onMouseDown={() => {
                                                     setSelectedFormForPrefill(form);
                                                     setIsFormModalOpen(true);
@@ -2793,7 +2795,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                                     setIsDropdownVisible(false);
                                                 }}
                                             >
-                                                <BsFillSendPlusFill size={20} color="#fff" />
+                                                <BsFillSendPlusFill size={16} color="#fff" />
                                             </Button>
                                         </div>
                                     </List.Item>
@@ -3270,6 +3272,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                 confirmationNumber={confirmationNumber}
                                 clearConfirmationNumber={clearConfirmationNumber}
                                 checkTooltip={isInIframe}
+                                user={user}
                             />
                             <HeaderRecordingShortcut confirmationNumber={confirmationNumber} clearConfirmationNumber={clearConfirmationNumber} checkTooltip={isInIframe} />
                             <ChatBot />
