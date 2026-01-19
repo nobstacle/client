@@ -9,13 +9,15 @@ import { IoSpeedometer } from 'react-icons/io5';
 interface HeaderSurveyShortcutProps {
   confirmationNumber: string;
   clearConfirmationNumber: () => void;
-  checkTooltip: boolean
+  checkTooltip: boolean,
+  user:string
 }
 
 export const HeaderSurveyShortcut: React.FC<HeaderSurveyShortcutProps> = ({
   confirmationNumber,
   clearConfirmationNumber,
-  checkTooltip
+  checkTooltip,
+  user
 }) => {
   const [isLoading, setIsLoading] = useState(false);
   const params = useSearchParams();
@@ -29,6 +31,7 @@ export const HeaderSurveyShortcut: React.FC<HeaderSurveyShortcutProps> = ({
           tag: confirmationNumber.trim(),
           station: params.get("station") ? Number(params.get("station")) : 1,
           langCode: params.get("lang") || "en",
+           sentBy: JSON.stringify(user),
         });
 
         if (!checkTooltip) {

@@ -203,7 +203,7 @@ function RecordingsListWithSearch() {
       title: "Username",
       dataIndex: "userFullName",
       key: "userFullName",
-      render: (_, record: any) => record.userFullName || record?.userEmail || 'NA',
+      render: (_, record: any) => record?.userEmail || 'NA',
     },
     {
       title: "Station",

@@ -62,6 +62,9 @@ import { useUploadControllerUploadSpeechToTextFile } from '../../lib/client/api'
 import { IoChatbubbleEllipses } from "react-icons/io5";
 import { SendPackagePayloadType } from "../../constant/types";
 import { useSession } from "next-auth/react";
+import JotFormPrefillModal from "../../components/pages/dashboard/Header/FormSelect";
+import { SendIcon } from "@/components/icons/SendIcon";
+import { BsFillSendPlusFill } from "react-icons/bs";
 
 interface ClientHeaderProps {
     user: Session | null;
@@ -119,6 +122,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
     const [defaultFormId, setDefaultFormId] = useState<string | null>(null);
     const [isFormModalOpen, setIsFormModalOpen] = useState(false);
     const [selectedFormForPrefill, setSelectedFormForPrefill] = useState<any>(null);
+    const { emitSendJotForm } = useSocketContext();
     const [displayStation, setDisplayStation] = useState(
         params.get("station") ?? "1"
     );
@@ -290,8 +294,6 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                 window.dispatchEvent(stationEvent);
                 console.log('[ClientHeader] ✅ Dispatched stationChanged event');
 
-                // CRITICAL: Send message back to parent (content script) to save to chrome.storage
-                // The iframe CANNOT access chrome.storage, but the content script CAN
                 if (isInIframe) {
                     console.log('[ClientHeader] 📤 Sending SAVE_STATION_TO_STORAGE to parent...');
                     window.parent.postMessage({
@@ -341,8 +343,6 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                 window.dispatchEvent(stationEvent);
                 console.log('[ClientHeader] ✅ Dispatched stationChanged event');
 
-                // CRITICAL: Send message back to parent (content script) to save to chrome.storage
-                // The iframe CANNOT access chrome.storage, but the content script CAN
                 if (isInIframe) {
                     console.log('[ClientHeader] 📤 Sending SAVE_STATION_TO_STORAGE to parent...');
                     window.parent.postMessage({
@@ -439,20 +439,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         }
     };
 
-    const showCategoryDropdown = () => {
 
-        if (isInIframe) {
-            window.parent.postMessage({
-                type: 'CATEGORIES_DATA',
-                categories: categoriesData
-            }, '*');
-        } else {
-            window.parent.postMessage({
-                type: 'CATEGORIES_DATA',
-                categories: categoriesData
-            }, '*');
-        }
-    };
     const { data: textTemplates, isLoading: textLoading } = useTemplateControllerGetTextTemplates(
         undefined,
         {
@@ -688,7 +675,6 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
             const filtered = allTemplates.filter(template =>
                 template.tag.toLowerCase().includes(searchLower)
             );
-            console.info("filtered", filtered);
             setFilteredTemplates(filtered);
             setIsDropdownVisible(filtered.length > 0);
         }, 300);
@@ -875,6 +861,53 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         }
     }, [categoriesData, categoriesFetched, fetchCategories, assignedForms, defaultFormId, isInIframe]);
 
+    const handleSendBlankForm = async (formId) => {
+        try {
+            const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+            const uploadURL = `${backendUrl}/api/jotform/upload-blank-record/${formId}`;
+
+            const response = await fetch(uploadURL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({})
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to create blank record');
+            }
+
+            const data = await response.json();
+            const uuid = data?.data?.uuid;
+
+            if (!uuid) {
+                throw new Error('No UUID returned from server');
+            }
+
+            const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.nobstacle.com';
+            const url = `${baseUrl}/forms/${uuid}`;
+
+            const params = new URLSearchParams(window.location.search);
+            const langCode = params.get("lang") || companyData?.defaultLangCode || "en";
+
+            emitSendJotForm({
+                refId: 1,
+                langCode: langCode,
+                refType: "TextTemplateMessage",
+                station: Number(params.get("station") ?? 1),
+                directContent: url,
+                uuid: uuid,
+            },
+                (response: any) => {
+                    alert(response?.success ? "Form Sent!" : "Failed to send Form.");
+                });
+        } catch (error) {
+            console.error('Error sending blank form:', error);
+            message.error('Failed to send blank form');
+        }
+    };
+
     useEffect(() => {
         if (isHamburgerMenuOpen && hamburgerMenuRef.current) {
             const rect = hamburgerMenuRef.current.getBoundingClientRect();
@@ -896,7 +929,6 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         `;
         }
 
-        // Sort forms - default form first, then alphabetically
         const sortedForms = [...forms].sort((a, b) => {
             if (a.form_id === defaultFormId) return -1;
             if (b.form_id === defaultFormId) return 1;
@@ -934,15 +966,13 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                             ">DEFAULT</span>
                         ` : ''}
                     </div>
-                    <div style="font-size: 12px; color: #6b7280; margin-top: 2px;">
-                        Form ID: ${form.form_id}
-                    </div>
                 </div>
                 <div style="display: flex; gap: 8px;">
                     <!-- Send Blank Form Button -->
                     <div 
                         data-form-id="${form.form_id}"
                         data-action="send-blank"
+                        class="form-action-btn"
                         style="
                             cursor: pointer;
                             padding: 8px 12px;
@@ -956,8 +986,6 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                             font-size: 12px;
                             font-weight: 500;
                         "
-                        onmouseover="this.style.backgroundColor='#2d4373'"
-                        onmouseout="this.style.backgroundColor='#3b5998'"
                     >
                         <svg style="width: 16px; height: 16px;" fill="currentColor" viewBox="0 0 20 20">
                             <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z"/>
@@ -969,6 +997,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                     <div 
                         data-form-id="${form.form_id}"
                         data-action="prefill"
+                        class="form-action-btn"
                         style="
                             cursor: pointer;
                             padding: 8px 12px;
@@ -982,8 +1011,6 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                             font-size: 12px;
                             font-weight: 500;
                         "
-                        onmouseover="this.style.backgroundColor='#059669'"
-                        onmouseout="this.style.backgroundColor='#10b981'"
                     >
                         <svg style="width: 16px; height: 16px;" fill="currentColor" viewBox="0 0 20 20">
                             <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/>
@@ -993,6 +1020,15 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                 </div>
             </div>
         `).join('')}
+        <style>
+            .form-action-btn:hover {
+                opacity: 0.9;
+                transform: translateY(-1px);
+            }
+            .form-action-btn:active {
+                transform: translateY(0);
+            }
+        </style>
     `;
     }, []);
 
@@ -1085,6 +1121,45 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
 
         setIsDropdownVisible(false);
     }, [socketConnected, emitSendTemplate, params, companyData, selectedLang]);
+
+    useEffect(() => {
+        if (!isInIframe && isDropdownVisible) {
+            const handleFormButtonClick = (e) => {
+                const button = e.target.closest('.form-action-btn');
+                if (button) {
+                    e.preventDefault();
+                    e.stopPropagation();
+
+                    const formId = button.getAttribute('data-form-id');
+                    const action = button.getAttribute('data-action');
+
+                    if (action === 'send-blank') {
+                        const form = assignedForms.find(f => f.form_id === formId);
+                        if (form) {
+                            handleSendBlankForm(formId);
+                            setSearchValue('');
+                            setIsDropdownVisible(false);
+                        }
+                    } else if (action === 'prefill') {
+                        const form = assignedForms.find(f => f.form_id === formId);
+                        if (form) {
+                            setSelectedFormForPrefill(form);
+                            setIsFormModalOpen(true);
+                            setSearchValue('');
+                            setIsDropdownVisible(false);
+                        }
+                    }
+                }
+            };
+
+            // Use capture phase to ensure we get the event
+            document.addEventListener('click', handleFormButtonClick, true);
+
+            return () => {
+                document.removeEventListener('click', handleFormButtonClick, true);
+            };
+        }
+    }, [isInIframe, isDropdownVisible, assignedForms, handleSendBlankForm]);
 
     const handleLogout = async () => {
         localStorage.clear();
@@ -1308,6 +1383,42 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
 
                 if (searchValue === '*' && assignedForms.length > 0) {
                     html = generateFormsDropdownHTML(assignedForms, defaultFormId);
+
+                    // Add click handler script
+                    html += `
+                    <script>
+                        (function() {
+                            // Remove any existing listeners
+                            const existingListener = window.__formButtonListener;
+                            if (existingListener) {
+                                document.removeEventListener('click', existingListener);
+                            }
+                            
+                            // Create new listener
+                            const listener = function(e) {
+                                const button = e.target.closest('.form-action-btn');
+                                if (button) {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    
+                                    const formId = button.getAttribute('data-form-id');
+                                    const action = button.getAttribute('data-action');
+                                    
+                                    // Send message to parent (extension content script)
+                                    window.parent.postMessage({
+                                        type: action === 'send-blank' ? 'FORM_SEND_BLANK' : 'FORM_PREFILL',
+                                        formId: formId,
+                                        source: 'forms-dropdown'
+                                    }, '*');
+                                }
+                            };
+                            
+                            // Store reference and add listener
+                            window.__formButtonListener = listener;
+                            document.addEventListener('click', listener, true);
+                        })();
+                    </script>
+                `;
                 } else if (searchValue === '/' && categoriesData.length > 0) {
                     html = generateSearchDropdownHTML([], categoriesData, isLoading, searchValue);
                 } else {
@@ -1556,8 +1667,6 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                 window.dispatchEvent(stationEvent);
                 console.log('[ClientHeader] ✅ Dispatched stationChanged event');
 
-                // CRITICAL: Send message back to parent (content script) to save to chrome.storage
-                // The iframe CANNOT access chrome.storage, but the content script CAN
                 if (isInIframe) {
                     console.log('[ClientHeader] 📤 Sending SAVE_STATION_TO_STORAGE to parent...');
                     window.parent.postMessage({
@@ -1982,13 +2091,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                 const form = assignedForms.find(f => f.form_id === formId);
 
                 if (form) {
-                    // Create blank form URL and send
-                    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.nobstacle.com';
-                    const url = `${baseUrl}/forms/${formId}`;
-
-                    // Use your existing socket emit logic to send the form
-                    // You'll need to adapt this to your actual send logic
-                    message.success(`Sending blank form: ${form.form_name}`);
+                    handleSendBlankForm(formId);
                     setSearchValue('');
                     setIsDropdownVisible(false);
                 }
@@ -2033,6 +2136,10 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         allPackages,
         selectedPackages,
         selectedCategories,
+        assignedForms,
+        defaultFormId,
+        emitSendJotForm,
+        handleSendBlankForm
     ]);
 
     const handleSendPackage = (categoryId: any) => {
@@ -2202,6 +2309,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                         confirmationNumber={searchValue !== "" ? searchValue : confirmationNumber}
                                         clearConfirmationNumber={clearConfirmationNumber}
                                         checkTooltip={isInIframe}
+                                        user={user}
                                     />
                                 </div>
 
@@ -2617,6 +2725,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                         )}
                     </div>
                 </nav>
+
                 {isDropdownVisible && !isInIframe && (
                     <div
                         style={{
@@ -2640,11 +2749,6 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                         ) : searchValue === '*' && assignedForms.length > 0 ? (
                             // Render forms list
                             <List
-                                header={
-                                    <div style={{ fontWeight: 600, fontSize: '14px', padding: '8px 0' }}>
-                                        Select Form
-                                    </div>
-                                }
                                 dataSource={assignedForms.sort((a, b) => {
                                     if (a.form_id === defaultFormId) return -1;
                                     if (b.form_id === defaultFormId) return 1;
@@ -2664,37 +2768,32 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                                     <Tag color="#3b5998" style={{ fontSize: '10px' }}>DEFAULT</Tag>
                                                 )}
                                             </div>
-                                            <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '2px' }}>
-                                                Form ID: {form.form_id}
-                                            </div>
                                         </div>
                                         <div style={{ display: 'flex', gap: '8px' }}>
                                             <Button
                                                 size="small"
                                                 type="primary"
-                                                onClick={() => {
-                                                    // Handle send blank form
-                                                    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.nobstacle.com';
-                                                    const url = `${baseUrl}/forms/${form.form_id}`;
-                                                    message.success(`Sending blank form: ${form.form_name}`);
+                                                onMouseDown={() => {
+                                                    handleSendBlankForm(form.form_id);
+                                                    message.success(`Form sent!`);
                                                     setSearchValue('');
                                                     setIsDropdownVisible(false);
                                                 }}
                                                 style={{ backgroundColor: '#3b5998', borderColor: '#3b5998' }}
                                             >
-                                                Send
+                                               <SendIcon size={16} />
                                             </Button>
                                             <Button
                                                 size="small"
                                                 style={{ backgroundColor: '#10b981', borderColor: '#10b981', color: 'white' }}
-                                                onClick={() => {
+                                                onMouseDown={() => {
                                                     setSelectedFormForPrefill(form);
                                                     setIsFormModalOpen(true);
                                                     setSearchValue('');
                                                     setIsDropdownVisible(false);
                                                 }}
                                             >
-                                                Prefill
+                                                <BsFillSendPlusFill size={20} color="#fff" />
                                             </Button>
                                         </div>
                                     </List.Item>
@@ -2855,6 +2954,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                         )}
                     </div>
                 )}
+
             </div>
 
             {/* Drawers remain the same */}
@@ -3195,6 +3295,38 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                     </div>
                 </div>
             </Drawer>
+
+            {/* JotForm Prefill Modal */}
+            <JotFormPrefillModal
+                isOpen={isFormModalOpen}
+                onClose={() => {
+                    setIsFormModalOpen(false);
+                    setSelectedFormForPrefill(null);
+                }}
+                selectedForm={selectedFormForPrefill}
+                onSendForm={async (url, uuid) => {
+                    const langCode = params.get("lang") || companyData?.defaultLangCode || "en";
+
+                    emitSendJotForm(
+                        {
+                            refId: 1,
+                            langCode: langCode,
+                            refType: "TextTemplateMessage",
+                            station: Number(params.get("station") ?? 1),
+                            directContent: url,
+                            uuid: uuid,
+                        },
+                        (response) => {
+                            if (response?.success) {
+                                message.success("JotForm sent successfully!");
+                            } else {
+                                message.error("Failed to send JotForm");
+                            }
+                        }
+                    );
+                }}
+                socketConnected={socketConnected}
+            />
         </>
     );
 };
