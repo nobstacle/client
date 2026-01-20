@@ -972,22 +972,22 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         }
     }, [isHamburgerMenuOpen]);
 
-    const generateFormsDropdownHTML = useCallback((forms, defaultFormId) => {
-        if (!forms || forms.length === 0) {
-            return `
+const generateFormsDropdownHTML = useCallback((forms, defaultFormId) => {
+    if (!forms || forms.length === 0) {
+        return `
             <div style="padding: 20px; text-align: center; color: #999;">
                 <div style="font-size: 14px; color: #666;">No forms found</div>
             </div>
         `;
-        }
+    }
 
-        const sortedForms = [...forms].sort((a, b) => {
-            if (a.form_id === defaultFormId) return -1;
-            if (b.form_id === defaultFormId) return 1;
-            return a.form_name.localeCompare(b.form_name);
-        });
+    const sortedForms = [...forms].sort((a, b) => {
+        if (a.form_id === defaultFormId) return -1;
+        if (b.form_id === defaultFormId) return 1;
+        return a.form_name.localeCompare(b.form_name);
+    });
 
-        return `
+    return `
         ${sortedForms.map(form => `
             <div style="
                 padding: 12px 16px;
@@ -1019,51 +1019,50 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                         class="form-action-btn"
                         style="
                             cursor: pointer;
-                            padding: 8px 12px;
+                            padding: 8px;
                             background: #3b5998;
                             color: white;
                             border-radius: 6px;
                             transition: all 0.2s;
                             display: flex;
                             align-items: center;
-                            gap: 6px;
-                            font-size: 12px;
-                            font-weight: 500;
+                            justify-content: center;
+                            min-width: 32px;
+                            min-height: 32px;
                         "
                     >
-                         <svg
-      version="1.1"
-      xmlns="http://www.w3.org/2000/svg"
-      xmlnsXlink="http://www.w3.org/1999/xlink"
-      viewBox="0 0 512 512"
-      style={{
-        width: sizeInPx,
-        height: sizeInPx,
-        display: "block",
-        transform: "translate3d(0, 0, 0)",
-      }}
-      xmlSpace="preserve"
-      shapeRendering="geometricPrecision"
-    >
-      <polygon
-        style={{ fill: "rgb(46, 68, 113)" }}
-        points="97.478,235.728 147.096,478.242 512,33.758"
-      />
-      <polygon
-        style={{ fill: "#ccc" }}
-        points="251.837,373.231 147.096,478.242 164.932,325.531 231.773,327.36"
-      />
-      <g>
-        <polygon
-          style={{ fill: "#F4F4F5" }}
-          points="512,33.758 109.455,294.271 0,232.606"
-        />
-        <polygon
-          style={{ fill: "#F4F4F5" }}
-          points="512,33.758 511.471,35.232 300.246,399.799 164.932,325.531"
-        />
-      </g>
-    </svg>
+                        <svg
+                            version="1.1"
+                            xmlns="http://www.w3.org/2000/svg"
+                            xmlns:xlink="http://www.w3.org/1999/xlink"
+                            viewBox="0 0 512 512"
+                            style="
+                                width: 16px;
+                                height: 16px;
+                                display: block;
+                            "
+                            xml:space="preserve"
+                            shape-rendering="geometricPrecision"
+                        >
+                            <polygon
+                                style="fill: rgb(255, 255, 255);"
+                                points="97.478,235.728 147.096,478.242 512,33.758"
+                            />
+                            <polygon
+                                style="fill: rgb(200, 200, 200);"
+                                points="251.837,373.231 147.096,478.242 164.932,325.531 231.773,327.36"
+                            />
+                            <g>
+                                <polygon
+                                    style="fill: rgb(244, 244, 245);"
+                                    points="512,33.758 109.455,294.271 0,232.606"
+                                />
+                                <polygon
+                                    style="fill: rgb(244, 244, 245);"
+                                    points="512,33.758 511.471,35.232 300.246,399.799 164.932,325.531"
+                                />
+                            </g>
+                        </svg>
                     </div>
                     
                     <!-- Prefill Form Button -->
@@ -1073,23 +1072,22 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                         class="form-action-btn"
                         style="
                             cursor: pointer;
-                            padding: 8px 12px;
-                            background: #10b981;
+                            padding: 8px;
+                            background: #3b5998;
                             color: white;
                             border-radius: 6px;
                             transition: all 0.2s;
                             display: flex;
                             align-items: center;
-                            gap: 6px;
-                            font-size: 12px;
-                            font-weight: 500;
+                            justify-content: center;
+                            min-width: 32px;
+                            min-height: 32px;
                         "
                     >
-<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-send-plus-fill" viewBox="0 0 16 16">
-  <path d="M15.964.686a.5.5 0 0 0-.65-.65L.767 5.855H.766l-.452.18a.5.5 0 0 0-.082.887l.41.26.001.002 4.995 3.178 1.59 2.498C8 14 8 13 8 12.5a4.5 4.5 0 0 1 5.026-4.47zm-1.833 1.89L6.637 10.07l-.215-.338a.5.5 0 0 0-.154-.154l-.338-.215 7.494-7.494 1.178-.471z"/>
-  <path d="M16 12.5a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0m-3.5-2a.5.5 0 0 0-.5.5v1h-1a.5.5 0 0 0 0 1h1v1a.5.5 0 0 0 1 0v-1h1a.5.5 0 0 0 0-1h-1v-1a.5.5 0 0 0-.5-.5"/>
-</svg>
-
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M15.964.686a.5.5 0 0 0-.65-.65L.767 5.855H.766l-.452.18a.5.5 0 0 0-.082.887l.41.26.001.002 4.995 3.178 1.59 2.498C8 14 8 13 8 12.5a4.5 4.5 0 0 1 5.026-4.47zm-1.833 1.89L6.637 10.07l-.215-.338a.5.5 0 0 0-.154-.154l-.338-.215 7.494-7.494 1.178-.471z"/>
+                            <path d="M16 12.5a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0m-3.5-2a.5.5 0 0 0-.5.5v1h-1a.5.5 0 0 0 0 1h1v1a.5.5 0 0 0 1 0v-1h1a.5.5 0 0 0 0-1h-1v-1a.5.5 0 0 0-.5-.5"/>
+                        </svg>
                     </div>
                 </div>
             </div>
@@ -1104,7 +1102,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
             }
         </style>
     `;
-    }, []);
+}, []);
 
     useEffect(() => {
         if (!isInIframe) return;
