@@ -1740,7 +1740,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
 							id="field_${item.name}"
 							class="form-input"
 							${isRequired ? 'required' : ''}
-							style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px;"
+							style="width: -webkit-fill-available; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; background-color: #f8fafc; color: black;"
 						/>
 					`;
             }
@@ -1753,7 +1753,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
 							id="field_${item.name}"
 							class="form-input"
 							${isRequired ? 'required' : ''}
-							style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px;"
+							style="width: -webkit-fill-available; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; background-color: #f8fafc; color: black;"
 						>
 							<option value="">Select ${item.text}</option>
 							${options.map(opt => `<option value="${opt}">${opt}</option>`).join('')}
@@ -1772,7 +1772,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
 							class="form-input"
 							placeholder="${item?.subLabel || 'Enter email'}"
 							${isRequired ? 'required' : ''}
-							style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px;"
+							style="width: -webkit-fill-available; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; background-color: #f8fafc; color: black;"
 						/>
 					`;
             }
@@ -1789,7 +1789,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
 							class="form-input"
 							placeholder="${item?.subLabel || item.text}"
 							${isRequired ? 'required' : ''}
-							style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px;"
+							style="width: -webkit-fill-available; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; background-color: #f8fafc; color: black;"
 						/>
 					`;
             }
@@ -1803,14 +1803,14 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
 							class="form-input"
 							placeholder="${item?.subLabel || item.text}"
 							${isRequired ? 'required' : ''}
-							style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px;"
+							style="width: -webkit-fill-available; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; background-color: #f8fafc; color: black;"
 						/>
 					`;
             }
 
             return `
 					<div style="margin-bottom: 16px;">
-						<label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 8px;">
+						<label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 8px; background-color: #f8fafc; color: black;">
 							${item.text}
 							${isRequired ? '<span style="color: #ef4444; margin-left: 4px;">*</span>' : ''}
 						</label>
@@ -1820,7 +1820,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         }).join('');
 
         return `
-				<form id="prefill-form" style="padding: 24px; max-height: 60vh; overflow-y: auto;">
+				<form id="prefill-form" style="padding: 24px; overflow-y: auto;">
 					<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px;">
 						${fieldsHTML}
 					</div>
@@ -2545,10 +2545,8 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                 };
 
                 processSubmission();
-            };
+            }
 
-            window.addEventListener('message', handler);
-            return () => window.removeEventListener('message', handler);
         };
 
         window.addEventListener('message', handler);
