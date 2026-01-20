@@ -1123,6 +1123,8 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
     }, [socketConnected, emitSendTemplate, params, companyData, selectedLang]);
 
     useEffect(() => {
+        // Only attach handlers for web app (non-iframe)
+        // Extension handles its own button clicks
         if (!isInIframe && isDropdownVisible) {
             const handleFormButtonClick = (e) => {
                 const button = e.target.closest('.form-action-btn');
@@ -1152,7 +1154,6 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                 }
             };
 
-            // Use capture phase to ensure we get the event
             document.addEventListener('click', handleFormButtonClick, true);
 
             return () => {
@@ -1160,6 +1161,46 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
             };
         }
     }, [isInIframe, isDropdownVisible, assignedForms, handleSendBlankForm]);
+
+
+    // useEffect(() => {
+    //     if (!isInIframe && isDropdownVisible) {
+    //         const handleFormButtonClick = (e) => {
+    //             const button = e.target.closest('.form-action-btn');
+    //             if (button) {
+    //                 e.preventDefault();
+    //                 e.stopPropagation();
+
+    //                 const formId = button.getAttribute('data-form-id');
+    //                 const action = button.getAttribute('data-action');
+
+    //                 if (action === 'send-blank') {
+    //                     const form = assignedForms.find(f => f.form_id === formId);
+    //                     if (form) {
+    //                         handleSendBlankForm(formId);
+    //                         setSearchValue('');
+    //                         setIsDropdownVisible(false);
+    //                     }
+    //                 } else if (action === 'prefill') {
+    //                     const form = assignedForms.find(f => f.form_id === formId);
+    //                     if (form) {
+    //                         setSelectedFormForPrefill(form);
+    //                         setIsFormModalOpen(true);
+    //                         setSearchValue('');
+    //                         setIsDropdownVisible(false);
+    //                     }
+    //                 }
+    //             }
+    //         };
+
+    //         // Use capture phase to ensure we get the event
+    //         document.addEventListener('click', handleFormButtonClick, true);
+
+    //         return () => {
+    //             document.removeEventListener('click', handleFormButtonClick, true);
+    //         };
+    //     }
+    // }, [isInIframe, isDropdownVisible, assignedForms, handleSendBlankForm]);
 
     const handleLogout = async () => {
         localStorage.clear();
@@ -1581,7 +1622,6 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         }
     }, [isInIframe]);
 
-    // Add this useEffect near the top with other useEffects:
     useEffect(() => {
         if (!isInIframe) return;
 
@@ -2091,6 +2131,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                 const form = assignedForms.find(f => f.form_id === formId);
 
                 if (form) {
+                    console.log('[ClientHeader] 📤 Sending blank form:', formId);
                     handleSendBlankForm(formId);
                     setSearchValue('');
                     setIsDropdownVisible(false);
@@ -2102,6 +2143,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                 const form = assignedForms.find(f => f.form_id === formId);
 
                 if (form) {
+                    console.log('[ClientHeader] 📝 Opening prefill modal for form:', formId);
                     setSelectedFormForPrefill(form);
                     setIsFormModalOpen(true);
                     setSearchValue('');

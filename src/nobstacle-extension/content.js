@@ -1309,6 +1309,7 @@ function createSearchDropdown(content) {
   document.body.appendChild(dropdown);
 
   setTimeout(() => {
+    // Template items handlers
     const templateItems = dropdown.querySelectorAll('[data-template-id]');
     templateItems.forEach(item => {
       const templateId = item.getAttribute('data-template-id');
@@ -1324,6 +1325,7 @@ function createSearchDropdown(content) {
       });
     });
 
+    // Category items handlers
     const categoryItems = dropdown.querySelectorAll('.category-item');
     categoryItems.forEach(item => {
       item.addEventListener('mousedown', (e) => {
@@ -1339,8 +1341,49 @@ function createSearchDropdown(content) {
         addDebugLog(`✓ Category ${categoryId} selected and sent to iframe`);
       });
     });
+
+    // ADD THIS: Form action buttons handlers
+    const formActionButtons = dropdown.querySelectorAll('.form-action-btn');
+    formActionButtons.forEach(button => {
+      button.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const formId = button.getAttribute('data-form-id');
+        const action = button.getAttribute('data-action');
+
+        console.log('[Content Script] 📋 Form button clicked:', { formId, action });
+
+        if (action === 'send-blank') {
+          iframe.contentWindow.postMessage({
+            type: 'FORM_SEND_BLANK',
+            formId: formId
+          }, '*');
+        } else if (action === 'prefill') {
+          iframe.contentWindow.postMessage({
+            type: 'FORM_PREFILL',
+            formId: formId
+          }, '*');
+        }
+
+        dropdown.remove();
+        addDebugLog(`✓ Form action ${action} triggered for form ${formId}`);
+      });
+
+      // Add hover effects
+      button.addEventListener('mouseenter', () => {
+        button.style.opacity = '0.9';
+        button.style.transform = 'translateY(-1px)';
+      });
+
+      button.addEventListener('mouseleave', () => {
+        button.style.opacity = '1';
+        button.style.transform = 'translateY(0)';
+      });
+    });
   }, 100);
 
+  // Close handler
   setTimeout(() => {
     const closeHandler = (e) => {
       const iframeElement = document.getElementById('nobstacle-header-iframe');
@@ -2035,19 +2078,19 @@ async function injectHeader() {
 
       // Handle microphone release request
       if (event.data.type === 'RELEASE_MICROPHONE') {
-          console.log('[Content Script] 🔇 Releasing microphone...');
-          
-          if (window.nobstacleAudioStream) {
-              window.nobstacleAudioStream.getTracks().forEach(track => {
-                  track.stop();
-                  console.log('[Content Script] ✅ Microphone track stopped');
-              });
-              window.nobstacleAudioStream = null;
-          }
-          
-          if (window.nobstacleMediaRecorder) {
-              window.nobstacleMediaRecorder = null;
-          }
+        console.log('[Content Script] 🔇 Releasing microphone...');
+
+        if (window.nobstacleAudioStream) {
+          window.nobstacleAudioStream.getTracks().forEach(track => {
+            track.stop();
+            console.log('[Content Script] ✅ Microphone track stopped');
+          });
+          window.nobstacleAudioStream = null;
+        }
+
+        if (window.nobstacleMediaRecorder) {
+          window.nobstacleMediaRecorder = null;
+        }
       }
     };
 
