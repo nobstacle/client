@@ -988,14 +988,6 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         });
 
         return `
-        <div style="padding: 12px 16px; border-bottom: 2px solid #3b5998; background: #f8fafc; position: sticky; top: 0; z-index: 1;">
-            <div style="font-weight: 600; font-size: 14px; color: #1f2937; padding-left: 5px">
-                Select Form
-            </div>
-            <div style="font-size: 11px; color: #6b7280; margin-top: 2px;">
-                Send blank or prefilled form
-            </div>
-        </div>
         ${sortedForms.map(form => `
             <div style="
                 padding: 12px 16px;
@@ -1039,10 +1031,39 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                             font-weight: 500;
                         "
                     >
-                        <svg style="width: 16px; height: 16px;" fill="currentColor" viewBox="0 0 20 20">
-                            <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z"/>
-                        </svg>
-                        Send
+                         <svg
+      version="1.1"
+      xmlns="http://www.w3.org/2000/svg"
+      xmlnsXlink="http://www.w3.org/1999/xlink"
+      viewBox="0 0 512 512"
+      style={{
+        width: sizeInPx,
+        height: sizeInPx,
+        display: "block",
+        transform: "translate3d(0, 0, 0)",
+      }}
+      xmlSpace="preserve"
+      shapeRendering="geometricPrecision"
+    >
+      <polygon
+        style={{ fill: "rgb(46, 68, 113)" }}
+        points="97.478,235.728 147.096,478.242 512,33.758"
+      />
+      <polygon
+        style={{ fill: "#ccc" }}
+        points="251.837,373.231 147.096,478.242 164.932,325.531 231.773,327.36"
+      />
+      <g>
+        <polygon
+          style={{ fill: "#F4F4F5" }}
+          points="512,33.758 109.455,294.271 0,232.606"
+        />
+        <polygon
+          style={{ fill: "#F4F4F5" }}
+          points="512,33.758 511.471,35.232 300.246,399.799 164.932,325.531"
+        />
+      </g>
+    </svg>
                     </div>
                     
                     <!-- Prefill Form Button -->
@@ -1064,10 +1085,11 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                             font-weight: 500;
                         "
                     >
-                        <svg style="width: 16px; height: 16px;" fill="currentColor" viewBox="0 0 20 20">
-                            <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/>
-                        </svg>
-                        Prefill
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-send-plus-fill" viewBox="0 0 16 16">
+  <path d="M15.964.686a.5.5 0 0 0-.65-.65L.767 5.855H.766l-.452.18a.5.5 0 0 0-.082.887l.41.26.001.002 4.995 3.178 1.59 2.498C8 14 8 13 8 12.5a4.5 4.5 0 0 1 5.026-4.47zm-1.833 1.89L6.637 10.07l-.215-.338a.5.5 0 0 0-.154-.154l-.338-.215 7.494-7.494 1.178-.471z"/>
+  <path d="M16 12.5a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0m-3.5-2a.5.5 0 0 0-.5.5v1h-1a.5.5 0 0 0 0 1h1v1a.5.5 0 0 0 1 0v-1h1a.5.5 0 0 0 0-1h-1v-1a.5.5 0 0 0-.5-.5"/>
+</svg>
+
                     </div>
                 </div>
             </div>

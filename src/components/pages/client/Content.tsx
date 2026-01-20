@@ -588,6 +588,7 @@ const PackageCard = ({ packageData, handleClick, loadingButton, langCode = 'en' 
           )}
         </>
       </Modal>
+      
       <Modal
         open={isVideoModalOpen}
         onCancel={closeVideoModal}
