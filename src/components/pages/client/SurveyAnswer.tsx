@@ -133,7 +133,7 @@ const SurveyAnswer: React.FC<{ tag: string; survey?: any; handleComplete: any }>
       tag,
       station: Number(params.get("station") ?? 1),
       value,
-      userId: sentByUser?.id
+        userId: sentByUser?.user?.id || sentByUser?.id
     });
 
     if (defaultSlideshowShortcut.data && slideshowTemplates.data) {

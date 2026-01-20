@@ -21,7 +21,7 @@ export const HeaderRecordingShortcut: React.FC<HeaderRecordingShortcutProps> = (
     const [recordingTime, setRecordingTime] = useState(0);
     const [isUploading, setIsUploading] = useState(false);
     const [isInIframe, setIsInIframe] = useState(false);
-    const [hasMicPermission, setHasMicPermission] = useState(false);
+    // const [hasMicPermission, setHasMicPermission] = useState(false);
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const chunksRef = useRef<Blob[]>([]);
     const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -39,12 +39,12 @@ export const HeaderRecordingShortcut: React.FC<HeaderRecordingShortcutProps> = (
         setIsInIframe(inIframe);
 
         // If in iframe, request permission immediately on mount
-        if (inIframe) {
-            console.log('[HeaderRecording] 📍 In iframe, requesting microphone permission...');
-            window.parent.postMessage({
-                type: 'REQUEST_MICROPHONE_PERMISSION'
-            }, '*');
-        }
+        // if (inIframe) {
+        //     console.log('[HeaderRecording] 📍 In iframe, requesting microphone permission...');
+        //     window.parent.postMessage({
+        //         type: 'REQUEST_MICROPHONE_PERMISSION'
+        //     }, '*');
+        // }
     }, []);
 
     // Update ref whenever confirmationNumber prop changes
@@ -57,25 +57,25 @@ export const HeaderRecordingShortcut: React.FC<HeaderRecordingShortcutProps> = (
         if (!isInIframe) return;
 
         const handler = (event: MessageEvent) => {
-            if (event.data.type === 'MICROPHONE_PERMISSION_GRANTED') {
-                console.log('[HeaderRecording] ✅ Microphone permission granted by extension!');
-                setHasMicPermission(true);
-                message.success('Microphone access granted');
-            }
+            // if (event.data.type === 'MICROPHONE_PERMISSION_GRANTED') {
+            //     console.log('[HeaderRecording] ✅ Microphone permission granted by extension!');
+            //     setHasMicPermission(true);
+            //     message.success('Microphone access granted');
+            // }
 
-            if (event.data.type === 'MICROPHONE_PERMISSION_DENIED') {
-                console.error('[HeaderRecording] ❌ Microphone permission denied:', event.data.error);
-                setHasMicPermission(false);
+            // if (event.data.type === 'MICROPHONE_PERMISSION_DENIED') {
+            //     console.error('[HeaderRecording] ❌ Microphone permission denied:', event.data.error);
+            //     setHasMicPermission(false);
 
-                let errorMsg = 'Microphone permission denied.';
-                if (event.data.error === 'NotAllowedError' || event.data.error === 'PermissionDeniedError') {
-                    errorMsg = 'Please allow microphone access in your browser settings and reload the page.';
-                } else if (event.data.error === 'NotFoundError') {
-                    errorMsg = 'No microphone found. Please connect a microphone.';
-                }
+            //     let errorMsg = 'Microphone permission denied.';
+            //     if (event.data.error === 'NotAllowedError' || event.data.error === 'PermissionDeniedError') {
+            //         errorMsg = 'Please allow microphone access in your browser settings and reload the page.';
+            //     } else if (event.data.error === 'NotFoundError') {
+            //         errorMsg = 'No microphone found. Please connect a microphone.';
+            //     }
 
-                message.error(errorMsg);
-            }
+            //     message.error(errorMsg);
+            // }
 
             if (event.data.type === 'RECORDING_STARTED') {
                 console.log('[HeaderRecording] 🔴 Recording started by content script');
@@ -135,6 +135,11 @@ export const HeaderRecordingShortcut: React.FC<HeaderRecordingShortcutProps> = (
                     .finally(() => {
                         setIsUploading(false);
                         setRecordingTime(0);
+                        if (isInIframe) {
+                            window.parent.postMessage({
+                                type: 'RELEASE_MICROPHONE'
+                            }, '*');
+                        }
                     });
             }
 
@@ -338,53 +343,64 @@ export const HeaderRecordingShortcut: React.FC<HeaderRecordingShortcutProps> = (
     };
 
     const startRecordingExtension = async () => {
-        // EXTENSION FLOW - Ask content script to handle recording
         if (!confirmationNumber.trim()) {
             message.warning('Please enter an identifier or text first');
             return;
         }
 
-        console.log('[Recording] 📤 Requesting extension content script to start recording...');
+        window.parent.postMessage({
+            type: 'REQUEST_MICROPHONE_AND_START_RECORDING'
+        }, '*');
 
-        if (!hasMicPermission) {
-            message.warning('Requesting microphone permission...');
-            window.parent.postMessage({
-                type: 'REQUEST_MICROPHONE_PERMISSION'
-            }, '*');
-
-            // Wait a bit for permission, then try to start
-            setTimeout(() => {
-                if (hasMicPermission) {
-                    window.parent.postMessage({
-                        type: 'START_RECORDING'
-                    }, '*');
-
-
-                    console.warn("33333333333333333333", confirmationNumber);
-                    console.warn("444444444444444444", confirmationNumberRef);
-
-                    emitSendRecording({
-                        tag: confirmationNumber.trim() || `REC-${Date.now()}`,
-                        station: params.get("station") ? Number(params.get("station")) : 1,
-                        langCode: params.get("lang") || "en",
-                    });
-                }
-            }, 1000);
-        } else {
-            window.parent.postMessage({
-                type: 'START_RECORDING'
-            }, '*');
-
-            console.warn("666666666666666666666", confirmationNumber);
-            console.warn("77777777777777777777", confirmationNumberRef);
-
-            emitSendRecording({
-                tag: confirmationNumber.trim() || `REC-${Date.now()}`,
-                station: params.get("station") ? Number(params.get("station")) : 1,
-                langCode: params.get("lang") || "en",
-            });
-        }
+        // Emit socket event
+        emitSendRecording({
+            tag: confirmationNumber.trim() || `REC-${Date.now()}`,
+            station: params.get("station") ? Number(params.get("station")) : 1,
+            langCode: params.get("lang") || "en",
+        });
     };
+
+    // const startRecordingExtension = async () => {
+    //     // EXTENSION FLOW - Ask content script to handle recording
+    //     if (!confirmationNumber.trim()) {
+    //         message.warning('Please enter an identifier or text first');
+    //         return;
+    //     }
+
+    //     console.log('[Recording] 📤 Requesting extension content script to start recording...');
+
+    //     if (!hasMicPermission) {
+    //         message.warning('Requesting microphone permission...');
+    //         window.parent.postMessage({
+    //             type: 'REQUEST_MICROPHONE_PERMISSION'
+    //         }, '*');
+
+    //         // Wait a bit for permission, then try to start
+    //         setTimeout(() => {
+    //             if (hasMicPermission) {
+    //                 window.parent.postMessage({
+    //                     type: 'START_RECORDING'
+    //                 }, '*');
+
+    //                 emitSendRecording({
+    //                     tag: confirmationNumber.trim() || `REC-${Date.now()}`,
+    //                     station: params.get("station") ? Number(params.get("station")) : 1,
+    //                     langCode: params.get("lang") || "en",
+    //                 });
+    //             }
+    //         }, 1000);
+    //     } else {
+    //         window.parent.postMessage({
+    //             type: 'START_RECORDING'
+    //         }, '*');
+
+    //         emitSendRecording({
+    //             tag: confirmationNumber.trim() || `REC-${Date.now()}`,
+    //             station: params.get("station") ? Number(params.get("station")) : 1,
+    //             langCode: params.get("lang") || "en",
+    //         });
+    //     }
+    // };
 
     const startRecording = async () => {
         if (isInIframe) {
@@ -540,7 +556,8 @@ export const HeaderRecordingShortcut: React.FC<HeaderRecordingShortcutProps> = (
                         type="primary"
                         icon={isRecording ? <FaMicrophone style={{ fontSize: "18px", color: 'red' }} /> : <FaMicrophone style={{ fontSize: "18px" }} />}
                         onClick={handleToggleRecording}
-                        disabled={isUploading || (isInIframe && !hasMicPermission)}
+                        disabled={isUploading}
+                        // disabled={isUploading || (isInIframe && !hasMicPermission)}
                         className={`flex items-center justify-center customHeaderButton ${isRecording ? 'recording-pulse' : ''}`}
                         style={{
                             backgroundColor: "#3b5998",
@@ -555,7 +572,8 @@ export const HeaderRecordingShortcut: React.FC<HeaderRecordingShortcutProps> = (
                     type="primary"
                     icon={isRecording ? <FaMicrophone style={{ fontSize: "18px", color: 'red' }} /> : <FaMicrophone style={{ fontSize: "18px" }} />}
                     onClick={handleToggleRecording}
-                    disabled={isUploading || (isInIframe && !hasMicPermission)}
+                    disabled={isUploading}
+                    // disabled={isUploading || (isInIframe && !hasMicPermission)}
                     className={`flex items-center justify-center customHeaderButton ${isRecording ? 'recording-pulse' : ''}`}
                     style={{
                         backgroundColor: "#3b5998",
