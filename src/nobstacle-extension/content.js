@@ -1399,6 +1399,176 @@ function createSearchDropdown(content) {
   addDebugLog('✓ Search dropdown created');
 }
 
+function createFormPrefillModal(formData) {
+  console.log('[Content Script] 📝 Creating form prefill modal:', formData);
+
+  // Remove existing modal if any
+  document.getElementById('nobstacle-form-prefill-modal')?.remove();
+
+  const iframe = document.getElementById('nobstacle-header-iframe');
+  if (!iframe) {
+    console.error('[Content Script] ❌ Header iframe not found!');
+    return;
+  }
+
+  // Create modal overlay
+  const modalOverlay = document.createElement('div');
+  modalOverlay.id = 'nobstacle-form-prefill-modal';
+  modalOverlay.style.cssText = `
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    background: rgba(0, 0, 0, 0.5) !important;
+    z-index: 2147483647 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    animation: fadeIn 0.2s ease-out !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+  `;
+
+  // Create modal content container
+  const modalContent = document.createElement('div');
+  modalContent.style.cssText = `
+    background: white !important;
+    border-radius: 12px !important;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3) !important;
+    width: 90% !important;
+    max-width: 600px !important;
+    max-height: 80vh !important;
+    overflow: hidden !important;
+    display: flex !important;
+    flex-direction: column !important;
+    animation: slideDown 0.3s ease-out !important;
+  `;
+
+  modalContent.innerHTML = `
+    <div style="
+      padding: 20px 24px;
+      border-bottom: 2px solid #3b5998;
+      background: #f8fafc;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    ">
+      <div>
+        <h3 style="margin: 0; font-size: 18px; font-weight: 600; color: #1f2937;">
+          Prefill Form: ${formData.form_name}
+        </h3>
+        <p style="margin: 4px 0 0 0; font-size: 12px; color: #6b7280;">
+          Fill in the details below to send a prefilled form
+        </p>
+      </div>
+      <button 
+        id="close-prefill-modal"
+        style="
+          background: transparent;
+          border: none;
+          color: #6b7280;
+          cursor: pointer;
+          padding: 8px;
+          border-radius: 6px;
+          transition: all 0.2s;
+          font-size: 20px;
+          line-height: 1;
+          width: 32px;
+          height: 32px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        "
+      >
+        ✕
+      </button>
+    </div>
+    
+    <div id="modal-iframe-container" style="
+      flex: 1;
+      overflow: hidden;
+      background: white;
+    ">
+      <div style="
+        padding: 40px;
+        text-align: center;
+        color: #666;
+      ">
+        <div style="
+          width: 40px;
+          height: 40px;
+          border: 3px solid rgba(59, 89, 152, 0.3);
+          border-top-color: #3b5998;
+          border-radius: 50%;
+          animation: spin 0.8s linear infinite;
+          margin: 0 auto 16px;
+        "></div>
+        <p>Loading form...</p>
+      </div>
+    </div>
+    
+    <style>
+      @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+      }
+      @keyframes slideDown {
+        from {
+          opacity: 0;
+          transform: translateY(-20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+    </style>
+  `;
+
+  modalOverlay.appendChild(modalContent);
+  document.body.appendChild(modalOverlay);
+
+  // Setup close button
+  const closeBtn = modalContent.querySelector('#close-prefill-modal');
+  if (closeBtn) {
+    closeBtn.addEventListener('mouseenter', (e) => {
+      e.target.style.backgroundColor = '#f3f4f6';
+    });
+    closeBtn.addEventListener('mouseleave', (e) => {
+      e.target.style.backgroundColor = 'transparent';
+    });
+    closeBtn.addEventListener('click', () => {
+      modalOverlay.remove();
+      iframe.contentWindow.postMessage({
+        type: 'FORM_PREFILL_MODAL_CLOSED'
+      }, '*');
+    });
+  }
+
+  // Close on overlay click
+  modalOverlay.addEventListener('click', (e) => {
+    if (e.target === modalOverlay) {
+      modalOverlay.remove();
+      iframe.contentWindow.postMessage({
+        type: 'FORM_PREFILL_MODAL_CLOSED'
+      }, '*');
+    }
+  });
+
+  // Notify iframe to load the form content
+  setTimeout(() => {
+    iframe.contentWindow.postMessage({
+      type: 'LOAD_FORM_PREFILL_CONTENT',
+      formData: formData
+    }, '*');
+  }, 100);
+
+  addDebugLog('✓ Form prefill modal created');
+}
+
 async function injectHeader() {
   if (document.getElementById('nobstacle-header-container')) return;
 
@@ -2091,6 +2261,45 @@ async function injectHeader() {
         if (window.nobstacleMediaRecorder) {
           window.nobstacleMediaRecorder = null;
         }
+      }
+
+      // Handle form prefill modal request
+      if (event.data.type === 'OPEN_FORM_PREFILL_MODAL') {
+        console.log('[Content Script] 📝 Opening form prefill modal');
+        createFormPrefillModal(event.data.formData);
+      }
+
+      // Handle modal content update from iframe
+      if (event.data.type === 'UPDATE_FORM_PREFILL_MODAL_CONTENT') {
+        const modalContainer = document.getElementById('modal-iframe-container');
+        if (modalContainer) {
+          modalContainer.innerHTML = event.data.html;
+          addDebugLog('✓ Form modal content updated');
+        }
+      }
+
+      // Handle form submission
+      if (event.data.type === 'SUBMIT_PREFILL_FORM') {
+        console.log('[Content Script] 📤 Submitting prefilled form:', event.data);
+
+        // Forward to iframe to handle the actual submission
+        iframe.contentWindow.postMessage({
+          type: 'PROCESS_PREFILL_FORM_SUBMISSION',
+          formId: event.data.formId,
+          confirmationNumber: event.data.confirmationNumber
+        }, '*');
+
+        // Close modal
+        document.getElementById('nobstacle-form-prefill-modal')?.remove();
+      }
+
+      // Handle modal close request
+      if (event.data.type === 'CLOSE_PREFILL_MODAL') {
+        document.getElementById('nobstacle-form-prefill-modal')?.remove();
+
+        iframe.contentWindow.postMessage({
+          type: 'FORM_PREFILL_MODAL_CLOSED'
+        }, '*');
       }
     };
 

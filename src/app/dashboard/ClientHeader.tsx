@@ -65,6 +65,7 @@ import { useSession } from "next-auth/react";
 import JotFormPrefillModal from "../../components/pages/dashboard/Header/FormSelect";
 import { SendIcon } from "@/components/icons/SendIcon";
 import { BsFillSendPlusFill } from "react-icons/bs";
+import axios from 'axios';
 
 interface ClientHeaderProps {
     user: Session | null;
@@ -87,6 +88,56 @@ interface Category {
         totalPackages: number;
     };
 }
+interface FormFields {
+    content: any[];
+}
+
+const getBackendUrl = () => {
+    return typeof window !== 'undefined'
+        ? process.env.NEXT_PUBLIC_BACKEND_URL
+        : process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
+};
+
+const buildUrlFromFormData = (
+    formId: string,
+    formData: Record<string, any>,
+    uuid?: string,
+    listableFields?: any[],
+    type?: string
+): string => {
+    let baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.nobstacle.com';
+
+    if (uuid) {
+        baseUrl = `${baseUrl}/forms/${uuid}`;
+    }
+
+    if (type === "blank") {
+        return baseUrl;
+    }
+    const params = new URLSearchParams();
+
+
+    if (listableFields && listableFields.length > 0) {
+        listableFields.forEach((field: any) => {
+            const label = field.text;
+            const key = field.name;
+            const value = formData[label] || formData[key];
+
+            if (value !== undefined && value !== null && value !== '') {
+                params.append(key, String(value));
+            }
+        });
+    } else {
+        for (const [key, value] of Object.entries(formData)) {
+            if (value !== undefined && value !== null && value !== '') {
+                params.append(key, String(value));
+            }
+        }
+    }
+
+    const queryString = params.toString();
+    return queryString ? `${baseUrl}/forms/${formId}?${queryString}` : `${baseUrl}/forms/${formId}`;
+};
 
 const ClientHeader = ({ user }: ClientHeaderProps) => {
     const [drawerOpen, setDrawerOpen] = useState(false);
@@ -121,8 +172,10 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
     const [assignedForms, setAssignedForms] = useState<any[]>([]);
     const [defaultFormId, setDefaultFormId] = useState<string | null>(null);
     const [isFormModalOpen, setIsFormModalOpen] = useState(false);
+    const [selectedFormFields, setSelectedFormFields] = useState<FormFields | null>(null);
     const [selectedFormForPrefill, setSelectedFormForPrefill] = useState<any>(null);
     const { emitSendJotForm } = useSocketContext();
+    const [selectedForm, setSelectedForm] = useState<any>(null);
     const [displayStation, setDisplayStation] = useState(
         params.get("station") ?? "1"
     );
@@ -438,7 +491,6 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
             return [];
         }
     };
-
 
     const { data: textTemplates, isLoading: textLoading } = useTemplateControllerGetTextTemplates(
         undefined,
@@ -1622,6 +1674,252 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         }
     }, [isInIframe]);
 
+    const fetchFormQuestions = async (form_id: string | null, forceRefresh: boolean = false) => {
+        if (!form_id) return;
+
+        try {
+            if (!forceRefresh) {
+                const cachedFields = sessionStorage.getItem(`form_fields_${form_id}`);
+                if (cachedFields) {
+                    const parsedFields = JSON.parse(cachedFields);
+                    setSelectedFormFields(parsedFields);
+                    return parsedFields;
+                }
+            }
+
+            const API_KEY = process.env.NEXT_PUBLIC_JOTFORM_API_KEY;
+            const response = await fetch(
+                `https://api.jotform.com/form/${form_id}/questions?apiKey=${API_KEY}`
+            );
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            sessionStorage.setItem(`form_fields_${form_id}`, JSON.stringify(data));
+            setSelectedFormFields(data || { content: [] });
+            return data || { content: [] };
+        } catch (error: any) {
+            console.error('Error fetching form fields:', error);
+            setSelectedFormFields({ content: [] });
+            return { content: [] };
+        }
+    };
+
+    const getUrlParams = () => {
+        if (typeof window !== 'undefined') {
+            return new URLSearchParams(window.location.search);
+        }
+        return new URLSearchParams();
+    };
+
+    const generateFormPrefillModalHTML = useCallback((formData) => {
+        if (!formData || !selectedFormFields?.content) {
+            return '<div style="padding: 20px; text-align: center;">Loading form fields...</div>';
+        }
+
+        const prefillableFields = Object.values(selectedFormFields.content)
+            .filter((item: any) => item?.name?.includes('prefillable'))
+            .sort((a: any, b: any) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
+
+        const fieldsHTML = prefillableFields.map((item: any) => {
+            const isRequired = item.required === 'Yes';
+
+            // Generate input HTML based on field type
+            let inputHTML = '';
+
+            // Date fields
+            if (item?.type === 'control_widget' ||
+                item?.name?.toLowerCase().includes('date') ||
+                item?.text?.toLowerCase().includes('date')) {
+                inputHTML = `
+						<input 
+							type="date"
+							name="${item.name}"
+							id="field_${item.name}"
+							class="form-input"
+							${isRequired ? 'required' : ''}
+							style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px;"
+						/>
+					`;
+            }
+            // Fields with options
+            else if (item?.options && item.options.trim().length > 0) {
+                const options = item.options.split('|').map(opt => opt.trim());
+                inputHTML = `
+						<select 
+							name="${item.name}"
+							id="field_${item.name}"
+							class="form-input"
+							${isRequired ? 'required' : ''}
+							style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px;"
+						>
+							<option value="">Select ${item.text}</option>
+							${options.map(opt => `<option value="${opt}">${opt}</option>`).join('')}
+						</select>
+					`;
+            }
+            // Email fields
+            else if (item?.validation === 'Email' ||
+                item?.type === 'control_email' ||
+                item?.name?.toLowerCase().includes('email')) {
+                inputHTML = `
+						<input 
+							type="email"
+							name="${item.name}"
+							id="field_${item.name}"
+							class="form-input"
+							placeholder="${item?.subLabel || 'Enter email'}"
+							${isRequired ? 'required' : ''}
+							style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px;"
+						/>
+					`;
+            }
+            // Numeric fields
+            else if (item?.validation === 'Numeric' ||
+                item?.type === 'control_number' ||
+                item?.name?.toLowerCase().includes('mobile') ||
+                item?.name?.toLowerCase().includes('phone')) {
+                inputHTML = `
+						<input 
+							type="tel"
+							name="${item.name}"
+							id="field_${item.name}"
+							class="form-input"
+							placeholder="${item?.subLabel || item.text}"
+							${isRequired ? 'required' : ''}
+							style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px;"
+						/>
+					`;
+            }
+            // Default text input
+            else {
+                inputHTML = `
+						<input 
+							type="text"
+							name="${item.name}"
+							id="field_${item.name}"
+							class="form-input"
+							placeholder="${item?.subLabel || item.text}"
+							${isRequired ? 'required' : ''}
+							style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px;"
+						/>
+					`;
+            }
+
+            return `
+					<div style="margin-bottom: 16px;">
+						<label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 8px;">
+							${item.text}
+							${isRequired ? '<span style="color: #ef4444; margin-left: 4px;">*</span>' : ''}
+						</label>
+						${inputHTML}
+					</div>
+				`;
+        }).join('');
+
+        return `
+				<form id="prefill-form" style="padding: 24px; max-height: 60vh; overflow-y: auto;">
+					<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px;">
+						${fieldsHTML}
+					</div>
+				</form>
+				
+				<div style="padding: 16px 24px; border-top: 1px solid #e5e7eb; display: flex; gap: 12px; justify-content: flex-end;">
+					<button 
+						id="cancel-prefill-btn"
+						type="button"
+						style="padding: 10px 20px; background: #f3f4f6; color: #374151; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer;"
+					>
+						Cancel
+					</button>
+					<button 
+						id="send-prefill-btn"
+						type="submit"
+						data-form-id="${formData.form_id}"
+						style="padding: 10px 20px; background: #3b5998; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer;"
+					>
+						Send Prefilled Form
+					</button>
+				</div>
+				
+				<script>
+					(function() {
+						const form = document.getElementById('prefill-form');
+						const sendBtn = document.getElementById('send-prefill-btn');
+						const cancelBtn = document.getElementById('cancel-prefill-btn');
+						
+						sendBtn.addEventListener('click', function(e) {
+							e.preventDefault();
+							
+							// Collect form data
+							const formData = {};
+							const inputs = form.querySelectorAll('.form-input');
+							
+							inputs.forEach(input => {
+								if (input.value) {
+									formData[input.name] = input.value;
+								}
+							});
+							
+							window.parent.postMessage({
+								type: 'SUBMIT_PREFILL_FORM',
+								formId: this.getAttribute('data-form-id'),
+								formData: formData
+							}, '*');
+						});
+						
+						cancelBtn.addEventListener('click', function() {
+							window.parent.postMessage({
+								type: 'CLOSE_PREFILL_MODAL'
+							}, '*');
+						});
+						
+						// Hover effects
+						sendBtn.addEventListener('mouseenter', function() {
+							this.style.backgroundColor = '#2d4373';
+						});
+						sendBtn.addEventListener('mouseleave', function() {
+							this.style.backgroundColor = '#3b5998';
+						});
+						
+						cancelBtn.addEventListener('mouseenter', function() {
+							this.style.backgroundColor = '#e5e7eb';
+						});
+						cancelBtn.addEventListener('mouseleave', function() {
+							this.style.backgroundColor = '#f3f4f6';
+						});
+					})();
+				</script>
+			`;
+    }, [selectedFormFields]);
+
+    const sendJotFormMessage = (content: string, uuid: string) => {
+        const params = getUrlParams();
+        emitSendJotForm(
+            {
+                refId: 1,
+                langCode: params.get("lang") || companyData?.defaultLangCode || "en",
+                refType: "TextTemplateMessage",
+                station: Number(params.get("station") ?? 1),
+                directContent: content,
+                uuid: uuid,
+            },
+            (response: any) => {
+                alert(response?.success ? "JotForm message sent!" : "Failed to send JotForm message.");
+            }
+        );
+    };
+
+    const listableFields = useMemo(() => {
+        if (!selectedFormFields?.content || !selectedForm) return [];
+
+        return Object.values(selectedFormFields.content)
+            .filter((field: any) => field.name.includes('listable'))
+            .sort((a: any, b: any) => a.name.localeCompare(b.name));
+    }, [selectedFormFields?.content, selectedForm]);
+
     useEffect(() => {
         if (!isInIframe) return;
 
@@ -2143,13 +2441,114 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                 const form = assignedForms.find(f => f.form_id === formId);
 
                 if (form) {
-                    console.log('[ClientHeader] 📝 Opening prefill modal for form:', formId);
-                    setSelectedFormForPrefill(form);
-                    setIsFormModalOpen(true);
+                    console.log('[ClientHeader] 📝 Preparing prefill for form:', formId);
+
+                    setSelectedForm(form);
+
+                    fetchFormQuestions(formId).then((fields) => {
+                        if (isInIframe) {
+                            window.parent.postMessage({
+                                type: 'OPEN_FORM_PREFILL_MODAL',
+                                formData: form,
+                                formId: formId
+                            }, '*');
+                        } else {
+                            setSelectedFormForPrefill(form);
+                            setIsFormModalOpen(true);
+                        }
+                    });
+
                     setSearchValue('');
                     setIsDropdownVisible(false);
                 }
             }
+
+            if (event.data.type === 'LOAD_FORM_PREFILL_CONTENT') {
+                const formData = event.data.formData;
+
+                console.log('[ClientHeader] 📝 Loading prefill content for:', formData.form_name);
+
+                setSelectedForm(formData);
+                fetchFormQuestions(formData.form_id).then(() => {
+                    setTimeout(() => {
+                        const modalHTML = generateFormPrefillModalHTML(formData);
+
+                        window.parent.postMessage({
+                            type: 'UPDATE_FORM_PREFILL_MODAL_CONTENT',
+                            html: modalHTML
+                        }, '*');
+                    }, 100);
+                });
+            }
+
+            if (event.data.type === 'FORM_PREFILL_MODAL_CLOSED') {
+                console.log('[ClientHeader] Modal closed');
+                setSelectedFormForPrefill(null);
+            }
+
+            if (event.data.type === 'SUBMIT_PREFILL_FORM') {
+                const { formId, formData } = event.data;
+
+                console.log('[ClientHeader] Processing prefill submission:', { formId, formData });
+
+                // Get the form and its fields
+                const form = assignedForms.find(f => f.form_id === formId);
+
+                if (!form) {
+                    console.error('[ClientHeader] Form not found:', formId);
+                    message.error('Form not found');
+                    return;
+                }
+
+                // Ensure we have the form fields loaded
+                const processSubmission = async () => {
+                    try {
+                        // Make sure fields are loaded
+                        let fields = selectedFormFields;
+                        if (!fields || !fields.content) {
+                            fields = await fetchFormQuestions(formId);
+                        }
+
+                        // Get listable fields
+                        const listable = Object.values(fields.content || {})
+                            .filter((field: any) => field.name.includes('listable'))
+                            .sort((a: any, b: any) => a.name.localeCompare(b.name));
+
+                        const Url = getBackendUrl();
+                        const uploadURL = `${Url}/api/jotform/upload-single-record/${formId}`;
+
+                        const response = await axios.post(uploadURL, {
+                            formId: formId,
+                            data: formData
+                        }, {
+                            headers: { 'Content-Type': 'application/json' }
+                        });
+
+                        if (response.status === 201) {
+                            const uuid = response?.data?.data?.uuid;
+
+                            // Build URL with listable fields
+                            const dynamicUrl = buildUrlFromFormData(formId, formData, uuid, listable);
+                            sendJotFormMessage(dynamicUrl, uuid);
+
+                            // Close modal
+                            window.parent.postMessage({
+                                type: 'CLOSE_PREFILL_MODAL'
+                            }, '*');
+
+                            message.success('Form sent successfully!');
+                        }
+                    } catch (error) {
+                        console.error('Upload error:', error);
+                        message.error('Failed to send form');
+                    }
+                };
+
+                processSubmission();
+            };
+
+            window.addEventListener('message', handler);
+            return () => window.removeEventListener('message', handler);
         };
 
         window.addEventListener('message', handler);
@@ -2181,7 +2580,13 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         assignedForms,
         defaultFormId,
         emitSendJotForm,
-        handleSendBlankForm
+        handleSendBlankForm,
+        selectedFormFields,
+        selectedForm,
+        fetchFormQuestions,
+        generateFormPrefillModalHTML,
+        sendJotFormMessage,
+        buildUrlFromFormData
     ]);
 
     const handleSendPackage = (categoryId: any) => {
