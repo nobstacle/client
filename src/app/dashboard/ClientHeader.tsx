@@ -972,22 +972,22 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         }
     }, [isHamburgerMenuOpen]);
 
-const generateFormsDropdownHTML = useCallback((forms, defaultFormId) => {
-    if (!forms || forms.length === 0) {
-        return `
+    const generateFormsDropdownHTML = useCallback((forms, defaultFormId) => {
+        if (!forms || forms.length === 0) {
+            return `
             <div style="padding: 20px; text-align: center; color: #999;">
                 <div style="font-size: 14px; color: #666;">No forms found</div>
             </div>
         `;
-    }
+        }
 
-    const sortedForms = [...forms].sort((a, b) => {
-        if (a.form_id === defaultFormId) return -1;
-        if (b.form_id === defaultFormId) return 1;
-        return a.form_name.localeCompare(b.form_name);
-    });
+        const sortedForms = [...forms].sort((a, b) => {
+            if (a.form_id === defaultFormId) return -1;
+            if (b.form_id === defaultFormId) return 1;
+            return a.form_name.localeCompare(b.form_name);
+        });
 
-    return `
+        return `
         ${sortedForms.map(form => `
             <div style="
                 padding: 12px 16px;
@@ -1102,7 +1102,7 @@ const generateFormsDropdownHTML = useCallback((forms, defaultFormId) => {
             }
         </style>
     `;
-}, []);
+    }, []);
 
     useEffect(() => {
         if (!isInIframe) return;
@@ -1734,186 +1734,214 @@ const generateFormsDropdownHTML = useCallback((forms, defaultFormId) => {
         return new URLSearchParams();
     };
 
-    const generateFormPrefillModalHTML = useCallback((formData) => {
-        if (!formData || !selectedFormFields?.content) {
-            return '<div style="padding: 20px; text-align: center;">Loading form fields...</div>';
+const generateFormPrefillModalHTML = useCallback((formData) => {
+    if (!formData || !selectedFormFields?.content) {
+        return '<div style="padding: 20px; text-align: center;">Loading form fields...</div>';
+    }
+
+    const prefillableFields = Object.values(selectedFormFields.content)
+        .filter((item: any) => item?.name?.includes('prefillable'))
+        .sort((a: any, b: any) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
+
+    const fieldsHTML = prefillableFields.map((item: any) => {
+        const isRequired = item.required === 'Yes';
+        let inputHTML = '';
+
+        // Date fields
+        if (item?.type === 'control_widget' ||
+            item?.name?.toLowerCase().includes('date') ||
+            item?.text?.toLowerCase().includes('date')) {
+            inputHTML = `
+                <input 
+                    type="date"
+                    name="${item.name}"
+                    id="field_${item.name}"
+                    class="form-input"
+                    ${isRequired ? 'required' : ''}
+                    style="width: -webkit-fill-available; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; background-color: #f8fafc; color: black;"
+                />
+            `;
+        }
+        // Fields with options
+        else if (item?.options && item.options.trim().length > 0) {
+            const options = item.options.split('|').map(opt => opt.trim());
+            inputHTML = `
+                <select 
+                    name="${item.name}"
+                    id="field_${item.name}"
+                    class="form-input"
+                    ${isRequired ? 'required' : ''}
+                    style="width: -webkit-fill-available; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; background-color: #f8fafc; color: black;"
+                >
+                    <option value="">Select ${item.text}</option>
+                    ${options.map(opt => `<option value="${opt}">${opt}</option>`).join('')}
+                </select>
+            `;
+        }
+        // Email fields
+        else if (item?.validation === 'Email' ||
+            item?.type === 'control_email' ||
+            item?.name?.toLowerCase().includes('email')) {
+            inputHTML = `
+                <input 
+                    type="email"
+                    name="${item.name}"
+                    id="field_${item.name}"
+                    class="form-input"
+                    placeholder="${item?.subLabel || 'Enter email'}"
+                    ${isRequired ? 'required' : ''}
+                    style="width: -webkit-fill-available; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; background-color: #f8fafc; color: black;"
+                />
+            `;
+        }
+        // Numeric fields
+        else if (item?.validation === 'Numeric' ||
+            item?.type === 'control_number' ||
+            item?.name?.toLowerCase().includes('mobile') ||
+            item?.name?.toLowerCase().includes('phone')) {
+            inputHTML = `
+                <input 
+                    type="tel"
+                    name="${item.name}"
+                    id="field_${item.name}"
+                    class="form-input"
+                    placeholder="${item?.subLabel || item.text}"
+                    ${isRequired ? 'required' : ''}
+                    style="width: -webkit-fill-available; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; background-color: #f8fafc; color: black;"
+                />
+            `;
+        }
+        // Default text input
+        else {
+            inputHTML = `
+                <input 
+                    type="text"
+                    name="${item.name}"
+                    id="field_${item.name}"
+                    class="form-input"
+                    placeholder="${item?.subLabel || item.text}"
+                    ${isRequired ? 'required' : ''}
+                    style="width: -webkit-fill-available; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; background-color: #f8fafc; color: black;"
+                />
+            `;
         }
 
-        const prefillableFields = Object.values(selectedFormFields.content)
-            .filter((item: any) => item?.name?.includes('prefillable'))
-            .sort((a: any, b: any) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
-
-        const fieldsHTML = prefillableFields.map((item: any) => {
-            const isRequired = item.required === 'Yes';
-
-            // Generate input HTML based on field type
-            let inputHTML = '';
-
-            // Date fields
-            if (item?.type === 'control_widget' ||
-                item?.name?.toLowerCase().includes('date') ||
-                item?.text?.toLowerCase().includes('date')) {
-                inputHTML = `
-						<input 
-							type="date"
-							name="${item.name}"
-							id="field_${item.name}"
-							class="form-input"
-							${isRequired ? 'required' : ''}
-							style="width: -webkit-fill-available; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; background-color: #f8fafc; color: black;"
-						/>
-					`;
-            }
-            // Fields with options
-            else if (item?.options && item.options.trim().length > 0) {
-                const options = item.options.split('|').map(opt => opt.trim());
-                inputHTML = `
-						<select 
-							name="${item.name}"
-							id="field_${item.name}"
-							class="form-input"
-							${isRequired ? 'required' : ''}
-							style="width: -webkit-fill-available; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; background-color: #f8fafc; color: black;"
-						>
-							<option value="">Select ${item.text}</option>
-							${options.map(opt => `<option value="${opt}">${opt}</option>`).join('')}
-						</select>
-					`;
-            }
-            // Email fields
-            else if (item?.validation === 'Email' ||
-                item?.type === 'control_email' ||
-                item?.name?.toLowerCase().includes('email')) {
-                inputHTML = `
-						<input 
-							type="email"
-							name="${item.name}"
-							id="field_${item.name}"
-							class="form-input"
-							placeholder="${item?.subLabel || 'Enter email'}"
-							${isRequired ? 'required' : ''}
-							style="width: -webkit-fill-available; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; background-color: #f8fafc; color: black;"
-						/>
-					`;
-            }
-            // Numeric fields
-            else if (item?.validation === 'Numeric' ||
-                item?.type === 'control_number' ||
-                item?.name?.toLowerCase().includes('mobile') ||
-                item?.name?.toLowerCase().includes('phone')) {
-                inputHTML = `
-						<input 
-							type="tel"
-							name="${item.name}"
-							id="field_${item.name}"
-							class="form-input"
-							placeholder="${item?.subLabel || item.text}"
-							${isRequired ? 'required' : ''}
-							style="width: -webkit-fill-available; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; background-color: #f8fafc; color: black;"
-						/>
-					`;
-            }
-            // Default text input
-            else {
-                inputHTML = `
-						<input 
-							type="text"
-							name="${item.name}"
-							id="field_${item.name}"
-							class="form-input"
-							placeholder="${item?.subLabel || item.text}"
-							${isRequired ? 'required' : ''}
-							style="width: -webkit-fill-available; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; background-color: #f8fafc; color: black;"
-						/>
-					`;
-            }
-
-            return `
-					<div style="margin-bottom: 16px;">
-						<label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 8px; background-color: #f8fafc; color: black;">
-							${item.text}
-							${isRequired ? '<span style="color: #ef4444; margin-left: 4px;">*</span>' : ''}
-						</label>
-						${inputHTML}
-					</div>
-				`;
-        }).join('');
-
         return `
-				<form id="prefill-form" style="padding: 24px; overflow-y: auto;">
-					<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px;">
-						${fieldsHTML}
-					</div>
-				</form>
-				
-				<div style="padding: 16px 24px; border-top: 1px solid #e5e7eb; display: flex; gap: 12px; justify-content: flex-end;">
-					<button 
-						id="cancel-prefill-btn"
-						type="button"
-						style="padding: 10px 20px; background: #f3f4f6; color: #374151; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer;"
-					>
-						Cancel
-					</button>
-					<button 
-						id="send-prefill-btn"
-						type="submit"
-						data-form-id="${formData.form_id}"
-						style="padding: 10px 20px; background: #3b5998; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer;"
-					>
-						Send Prefilled Form
-					</button>
-				</div>
-				
-				<script>
-					(function() {
-						const form = document.getElementById('prefill-form');
-						const sendBtn = document.getElementById('send-prefill-btn');
-						const cancelBtn = document.getElementById('cancel-prefill-btn');
-						
-						sendBtn.addEventListener('click', function(e) {
-							e.preventDefault();
-							
-							// Collect form data
-							const formData = {};
-							const inputs = form.querySelectorAll('.form-input');
-							
-							inputs.forEach(input => {
-								if (input.value) {
-									formData[input.name] = input.value;
-								}
-							});
-							
-							window.parent.postMessage({
-								type: 'SUBMIT_PREFILL_FORM',
-								formId: this.getAttribute('data-form-id'),
-								formData: formData
-							}, '*');
-						});
-						
-						cancelBtn.addEventListener('click', function() {
-							window.parent.postMessage({
-								type: 'CLOSE_PREFILL_MODAL'
-							}, '*');
-						});
-						
-						// Hover effects
-						sendBtn.addEventListener('mouseenter', function() {
-							this.style.backgroundColor = '#2d4373';
-						});
-						sendBtn.addEventListener('mouseleave', function() {
-							this.style.backgroundColor = '#3b5998';
-						});
-						
-						cancelBtn.addEventListener('mouseenter', function() {
-							this.style.backgroundColor = '#e5e7eb';
-						});
-						cancelBtn.addEventListener('mouseleave', function() {
-							this.style.backgroundColor = '#f3f4f6';
-						});
-					})();
-				</script>
-			`;
-    }, [selectedFormFields]);
+            <div style="margin-bottom: 16px;">
+                <label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 8px;">
+                    ${item.text}
+                    ${isRequired ? '<span style="color: #ef4444; margin-left: 4px;">*</span>' : ''}
+                </label>
+                ${inputHTML}
+            </div>
+        `;
+    }).join('');
+
+    return `
+        <form id="prefill-form" style="padding: 24px; overflow-y: auto; max-height: 60vh;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px;">
+                ${fieldsHTML}
+            </div>
+        </form>
+        
+        <div style="padding: 16px 24px; border-top: 1px solid #e5e7eb; display: flex; gap: 12px; justify-content: flex-end;">
+            <button 
+                id="cancel-prefill-btn"
+                type="button"
+                style="padding: 10px 20px; background: #f3f4f6; color: #374151; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; transition: background-color 0.2s;"
+            >
+                Cancel
+            </button>
+            <button 
+                id="send-prefill-btn"
+                type="button"
+                data-form-id="${formData.form_id}"
+                style="padding: 10px 20px; background: #3b5998; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; transition: background-color 0.2s;"
+            >
+                Send Prefilled Form
+            </button>
+        </div>
+        
+        <script>
+            (function() {
+                console.log('[Modal Script] Initializing button handlers...');
+                
+                const form = document.getElementById('prefill-form');
+                const sendBtn = document.getElementById('send-prefill-btn');
+                const cancelBtn = document.getElementById('cancel-prefill-btn');
+                
+                if (!form || !sendBtn || !cancelBtn) {
+                    console.error('[Modal Script] Missing elements:', { form: !!form, sendBtn: !!sendBtn, cancelBtn: !!cancelBtn });
+                    return;
+                }
+                
+                console.log('[Modal Script] All elements found!');
+                
+                // Send button handler
+                sendBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    console.log('[Modal Script] Send button clicked!');
+                    
+                    // Collect form data
+                    const formData = {};
+                    const inputs = form.querySelectorAll('.form-input');
+                    
+                    console.log('[Modal Script] Found', inputs.length, 'inputs');
+                    
+                    inputs.forEach(input => {
+                        if (input.value) {
+                            formData[input.name] = input.value;
+                            console.log('[Modal Script] Field:', input.name, '=', input.value);
+                        }
+                    });
+                    
+                    console.log('[Modal Script] Collected form data:', formData);
+                    console.log('[Modal Script] Sending message to parent...');
+                    
+                    // Send to parent (content script)
+                    window.parent.postMessage({
+                        type: 'SUBMIT_PREFILL_FORM',
+                        formId: this.getAttribute('data-form-id'),
+                        formData: formData
+                    }, '*');
+                    
+                    console.log('[Modal Script] Message sent!');
+                });
+                
+                // Cancel button handler
+                cancelBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    console.log('[Modal Script] Cancel button clicked!');
+                    
+                    window.parent.postMessage({
+                        type: 'CLOSE_PREFILL_MODAL'
+                    }, '*');
+                });
+                
+                // Hover effects
+                sendBtn.addEventListener('mouseenter', function() {
+                    this.style.backgroundColor = '#2d4373';
+                });
+                sendBtn.addEventListener('mouseleave', function() {
+                    this.style.backgroundColor = '#3b5998';
+                });
+                
+                cancelBtn.addEventListener('mouseenter', function() {
+                    this.style.backgroundColor = '#e5e7eb';
+                });
+                cancelBtn.addEventListener('mouseleave', function() {
+                    this.style.backgroundColor = '#f3f4f6';
+                });
+                
+                console.log('[Modal Script] Button handlers initialized successfully!');
+            })();
+        </script>
+    `;
+}, [selectedFormFields]);
 
     const sendJotFormMessage = (content: string, uuid: string) => {
         const params = getUrlParams();
@@ -2552,6 +2580,67 @@ const generateFormsDropdownHTML = useCallback((forms, defaultFormId) => {
                             sendJotFormMessage(dynamicUrl, uuid);
 
                             // Close modal
+                            window.parent.postMessage({
+                                type: 'CLOSE_PREFILL_MODAL'
+                            }, '*');
+
+                            message.success('Form sent successfully!');
+                        }
+                    } catch (error) {
+                        console.error('Upload error:', error);
+                        message.error('Failed to send form');
+                    }
+                };
+
+                processSubmission();
+            }
+
+            if (event.data.type === 'PROCESS_PREFILL_FORM_SUBMISSION') {
+                const { formId, formData } = event.data;
+
+                console.log('[ClientHeader] Processing prefill submission:', { formId, formData });
+
+                // Get the form and its fields
+                const form = assignedForms.find(f => f.form_id === formId);
+
+                if (!form) {
+                    console.error('[ClientHeader] Form not found:', formId);
+                    message.error('Form not found');
+                    return;
+                }
+
+                // Process the submission
+                const processSubmission = async () => {
+                    try {
+                        // Make sure fields are loaded
+                        let fields = selectedFormFields;
+                        if (!fields || !fields.content) {
+                            fields = await fetchFormQuestions(formId);
+                        }
+
+                        // Get listable fields
+                        const listable = Object.values(fields.content || {})
+                            .filter((field: any) => field.name.includes('listable'))
+                            .sort((a: any, b: any) => a.name.localeCompare(b.name));
+
+                        const Url = getBackendUrl();
+                        const uploadURL = `${Url}/api/jotform/upload-single-record/${formId}`;
+
+                        const response = await axios.post(uploadURL, {
+                            formId: formId,
+                            data: formData
+                        }, {
+                            headers: { 'Content-Type': 'application/json' }
+                        });
+
+                        if (response.status === 201) {
+                            const uuid = response?.data?.data?.uuid;
+
+                            // Build URL with listable fields
+                            const dynamicUrl = buildUrlFromFormData(formId, formData, uuid, listable);
+                            sendJotFormMessage(dynamicUrl, uuid);
+
+                            // Notify parent to close modal
                             window.parent.postMessage({
                                 type: 'CLOSE_PREFILL_MODAL'
                             }, '*');

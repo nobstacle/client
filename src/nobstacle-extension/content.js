@@ -2279,19 +2279,31 @@ async function injectHeader() {
       }
 
       // Handle form submission
-      if (event.data.type === 'SUBMIT_PREFILL_FORM') {
-        console.log('[Content Script] 📤 Submitting prefilled form:', event.data);
+// In content.js, update the SUBMIT_PREFILL_FORM handler
+if (event.data.type === 'SUBMIT_PREFILL_FORM') {
+    const { formId, formData } = event.data;
 
-        // Forward to iframe to handle the actual submission
-        iframe.contentWindow.postMessage({
-          type: 'PROCESS_PREFILL_FORM_SUBMISSION',
-          formId: event.data.formId,
-          confirmationNumber: event.data.confirmationNumber
-        }, '*');
+    console.log('[Content Script] Processing prefill submission:', { formId, formData });
 
-        // Close modal
-        document.getElementById('nobstacle-form-prefill-modal')?.remove();
-      }
+    // Get the form
+    const form = assignedForms.find(f => f.form_id === formId);
+
+    if (!form) {
+        console.error('[Content Script] Form not found:', formId);
+        alert('Form not found');
+        return;
+    }
+
+    // Forward to iframe to handle the actual submission
+    iframe.contentWindow.postMessage({
+        type: 'PROCESS_PREFILL_FORM_SUBMISSION',
+        formId: formId,
+        formData: formData
+    }, '*');
+
+    // Close modal
+    document.getElementById('nobstacle-form-prefill-modal')?.remove();
+}
 
       // Handle modal close request
       if (event.data.type === 'CLOSE_PREFILL_MODAL') {
