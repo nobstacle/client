@@ -1821,7 +1821,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                     class="form-input"
                     placeholder="${item?.subLabel || item.text}"
                     ${isRequired ? 'required' : ''}
-                    style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; background-color: #f8fafc; color: black;"
+                    style="width: -webkit-fill-available; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; background-color: #f8fafc; color: black;"
                 />
             `;
             }
