@@ -1821,14 +1821,14 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                     class="form-input"
                     placeholder="${item?.subLabel || item.text}"
                     ${isRequired ? 'required' : ''}
-                    style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; color: black;"
+                    style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; background-color: #f8fafc; color: black;"
                 />
             `;
             }
 
             return `
             <div style="margin-bottom: 16px;">
-						<label style="display: block; font-size: 14px; font-weight: 500;  margin-bottom: 8px; background-color: #f8fafc; color: black;"
+						<label style="display: block; font-size: 14px; font-weight: 500;  margin-bottom: 8px; color: black;"
                     ${item.text}
                     ${isRequired ? '<span style="color: #ef4444; margin-left: 4px;">*</span>' : ''}
                 </label>
