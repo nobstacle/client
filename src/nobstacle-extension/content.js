@@ -2275,35 +2275,136 @@ async function injectHeader() {
         if (modalContainer) {
           modalContainer.innerHTML = event.data.html;
           addDebugLog('✓ Form modal content updated');
+
+          // IMPORTANT: Attach event listeners AFTER HTML is inserted
+          setTimeout(() => {
+            console.log('[Content Script] 🔧 Attaching button handlers...');
+
+            const sendBtn = document.getElementById('send-prefill-btn');
+            const cancelBtn = document.getElementById('cancel-prefill-btn');
+            const form = document.getElementById('prefill-form');
+
+            console.log('[Content Script] Elements found:', {
+              sendBtn: !!sendBtn,
+              cancelBtn: !!cancelBtn,
+              form: !!form
+            });
+
+            if (sendBtn) {
+              sendBtn.addEventListener('click', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+
+                console.log('[Content Script] 📤 Send button clicked!');
+
+                // Collect form data
+                const formData = {};
+                const inputs = form.querySelectorAll('.form-input');
+
+                console.log('[Content Script] Found', inputs.length, 'inputs');
+
+                inputs.forEach(input => {
+                  if (input.value) {
+                    formData[input.name] = input.value;
+                    console.log('[Content Script] Field:', input.name, '=', input.value);
+                  }
+                });
+
+                console.log('[Content Script] Collected form data:', formData);
+
+                const formId = this.getAttribute('data-form-id');
+                console.log('[Content Script] Form ID:', formId);
+
+                // Send to iframe
+                const iframe = document.getElementById('nobstacle-header-iframe');
+                if (iframe) {
+                  console.log('[Content Script] Sending to iframe...');
+                  iframe.contentWindow.postMessage({
+                    type: 'PROCESS_PREFILL_FORM_SUBMISSION',
+                    formId: formId,
+                    formData: formData
+                  }, '*');
+                } else {
+                  console.error('[Content Script] ❌ Iframe not found!');
+                }
+              });
+
+              // Hover effect
+              sendBtn.addEventListener('mouseenter', function () {
+                this.style.backgroundColor = '#2d4373';
+              });
+              sendBtn.addEventListener('mouseleave', function () {
+                this.style.backgroundColor = '#3b5998';
+              });
+
+              console.log('[Content Script] ✅ Send button handler attached');
+            } else {
+              console.error('[Content Script] ❌ Send button not found!');
+            }
+
+            if (cancelBtn) {
+              cancelBtn.addEventListener('click', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+
+                console.log('[Content Script] ❌ Cancel button clicked!');
+
+                const modal = document.getElementById('nobstacle-form-prefill-modal');
+                if (modal) {
+                  modal.remove();
+                }
+
+                // Notify iframe
+                const iframe = document.getElementById('nobstacle-header-iframe');
+                if (iframe) {
+                  iframe.contentWindow.postMessage({
+                    type: 'FORM_PREFILL_MODAL_CLOSED'
+                  }, '*');
+                }
+              });
+
+              // Hover effect
+              cancelBtn.addEventListener('mouseenter', function () {
+                this.style.backgroundColor = '#e5e7eb';
+              });
+              cancelBtn.addEventListener('mouseleave', function () {
+                this.style.backgroundColor = '#f3f4f6';
+              });
+
+              console.log('[Content Script] ✅ Cancel button handler attached');
+            } else {
+              console.error('[Content Script] ❌ Cancel button not found!');
+            }
+          }, 100);
         }
       }
 
       // Handle form submission
-// In content.js, update the SUBMIT_PREFILL_FORM handler
-if (event.data.type === 'SUBMIT_PREFILL_FORM') {
-    const { formId, formData } = event.data;
+      // In content.js, update the SUBMIT_PREFILL_FORM handler
+      if (event.data.type === 'SUBMIT_PREFILL_FORM') {
+        const { formId, formData } = event.data;
 
-    console.log('[Content Script] Processing prefill submission:', { formId, formData });
+        console.log('[Content Script] Processing prefill submission:', { formId, formData });
 
-    // Get the form
-    const form = assignedForms.find(f => f.form_id === formId);
+        // Get the form
+        const form = assignedForms.find(f => f.form_id === formId);
 
-    if (!form) {
-        console.error('[Content Script] Form not found:', formId);
-        alert('Form not found');
-        return;
-    }
+        if (!form) {
+          console.error('[Content Script] Form not found:', formId);
+          alert('Form not found');
+          return;
+        }
 
-    // Forward to iframe to handle the actual submission
-    iframe.contentWindow.postMessage({
-        type: 'PROCESS_PREFILL_FORM_SUBMISSION',
-        formId: formId,
-        formData: formData
-    }, '*');
+        // Forward to iframe to handle the actual submission
+        iframe.contentWindow.postMessage({
+          type: 'PROCESS_PREFILL_FORM_SUBMISSION',
+          formId: formId,
+          formData: formData
+        }, '*');
 
-    // Close modal
-    document.getElementById('nobstacle-form-prefill-modal')?.remove();
-}
+        // Close modal
+        document.getElementById('nobstacle-form-prefill-modal')?.remove();
+      }
 
       // Handle modal close request
       if (event.data.type === 'CLOSE_PREFILL_MODAL') {

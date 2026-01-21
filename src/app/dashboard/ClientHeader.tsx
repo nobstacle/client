@@ -1758,7 +1758,7 @@ const generateFormPrefillModalHTML = useCallback((formData) => {
                     id="field_${item.name}"
                     class="form-input"
                     ${isRequired ? 'required' : ''}
-                    style="width: -webkit-fill-available; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; background-color: #f8fafc; color: black;"
+                    style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; color: black;"
                 />
             `;
         }
@@ -1771,7 +1771,7 @@ const generateFormPrefillModalHTML = useCallback((formData) => {
                     id="field_${item.name}"
                     class="form-input"
                     ${isRequired ? 'required' : ''}
-                    style="width: -webkit-fill-available; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; background-color: #f8fafc; color: black;"
+                    style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; color: black;"
                 >
                     <option value="">Select ${item.text}</option>
                     ${options.map(opt => `<option value="${opt}">${opt}</option>`).join('')}
@@ -1790,7 +1790,7 @@ const generateFormPrefillModalHTML = useCallback((formData) => {
                     class="form-input"
                     placeholder="${item?.subLabel || 'Enter email'}"
                     ${isRequired ? 'required' : ''}
-                    style="width: -webkit-fill-available; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; background-color: #f8fafc; color: black;"
+                    style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; color: black;"
                 />
             `;
         }
@@ -1807,7 +1807,7 @@ const generateFormPrefillModalHTML = useCallback((formData) => {
                     class="form-input"
                     placeholder="${item?.subLabel || item.text}"
                     ${isRequired ? 'required' : ''}
-                    style="width: -webkit-fill-available; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; background-color: #f8fafc; color: black;"
+                    style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; color: black;"
                 />
             `;
         }
@@ -1821,7 +1821,7 @@ const generateFormPrefillModalHTML = useCallback((formData) => {
                     class="form-input"
                     placeholder="${item?.subLabel || item.text}"
                     ${isRequired ? 'required' : ''}
-                    style="width: -webkit-fill-available; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; background-color: #f8fafc; color: black;"
+                    style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; color: black;"
                 />
             `;
         }
@@ -1861,85 +1861,6 @@ const generateFormPrefillModalHTML = useCallback((formData) => {
                 Send Prefilled Form
             </button>
         </div>
-        
-        <script>
-            (function() {
-                console.log('[Modal Script] Initializing button handlers...');
-                
-                const form = document.getElementById('prefill-form');
-                const sendBtn = document.getElementById('send-prefill-btn');
-                const cancelBtn = document.getElementById('cancel-prefill-btn');
-                
-                if (!form || !sendBtn || !cancelBtn) {
-                    console.error('[Modal Script] Missing elements:', { form: !!form, sendBtn: !!sendBtn, cancelBtn: !!cancelBtn });
-                    return;
-                }
-                
-                console.log('[Modal Script] All elements found!');
-                
-                // Send button handler
-                sendBtn.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    
-                    console.log('[Modal Script] Send button clicked!');
-                    
-                    // Collect form data
-                    const formData = {};
-                    const inputs = form.querySelectorAll('.form-input');
-                    
-                    console.log('[Modal Script] Found', inputs.length, 'inputs');
-                    
-                    inputs.forEach(input => {
-                        if (input.value) {
-                            formData[input.name] = input.value;
-                            console.log('[Modal Script] Field:', input.name, '=', input.value);
-                        }
-                    });
-                    
-                    console.log('[Modal Script] Collected form data:', formData);
-                    console.log('[Modal Script] Sending message to parent...');
-                    
-                    // Send to parent (content script)
-                    window.parent.postMessage({
-                        type: 'SUBMIT_PREFILL_FORM',
-                        formId: this.getAttribute('data-form-id'),
-                        formData: formData
-                    }, '*');
-                    
-                    console.log('[Modal Script] Message sent!');
-                });
-                
-                // Cancel button handler
-                cancelBtn.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    
-                    console.log('[Modal Script] Cancel button clicked!');
-                    
-                    window.parent.postMessage({
-                        type: 'CLOSE_PREFILL_MODAL'
-                    }, '*');
-                });
-                
-                // Hover effects
-                sendBtn.addEventListener('mouseenter', function() {
-                    this.style.backgroundColor = '#2d4373';
-                });
-                sendBtn.addEventListener('mouseleave', function() {
-                    this.style.backgroundColor = '#3b5998';
-                });
-                
-                cancelBtn.addEventListener('mouseenter', function() {
-                    this.style.backgroundColor = '#e5e7eb';
-                });
-                cancelBtn.addEventListener('mouseleave', function() {
-                    this.style.backgroundColor = '#f3f4f6';
-                });
-                
-                console.log('[Modal Script] Button handlers initialized successfully!');
-            })();
-        </script>
     `;
 }, [selectedFormFields]);
 
