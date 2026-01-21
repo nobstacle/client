@@ -1734,55 +1734,55 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         return new URLSearchParams();
     };
 
-const generateFormPrefillModalHTML = useCallback((formData) => {
-    if (!formData || !selectedFormFields?.content) {
-        return '<div style="padding: 20px; text-align: center;">Loading form fields...</div>';
-    }
+    const generateFormPrefillModalHTML = useCallback((formData) => {
+        if (!formData || !selectedFormFields?.content) {
+            return '<div style="padding: 20px; text-align: center;">Loading form fields...</div>';
+        }
 
-    const prefillableFields = Object.values(selectedFormFields.content)
-        .filter((item: any) => item?.name?.includes('prefillable'))
-        .sort((a: any, b: any) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
+        const prefillableFields = Object.values(selectedFormFields.content)
+            .filter((item: any) => item?.name?.includes('prefillable'))
+            .sort((a: any, b: any) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
 
-    const fieldsHTML = prefillableFields.map((item: any) => {
-        const isRequired = item.required === 'Yes';
-        let inputHTML = '';
+        const fieldsHTML = prefillableFields.map((item: any) => {
+            const isRequired = item.required === 'Yes';
+            let inputHTML = '';
 
-        // Date fields
-        if (item?.type === 'control_widget' ||
-            item?.name?.toLowerCase().includes('date') ||
-            item?.text?.toLowerCase().includes('date')) {
-            inputHTML = `
+            // Date fields
+            if (item?.type === 'control_widget' ||
+                item?.name?.toLowerCase().includes('date') ||
+                item?.text?.toLowerCase().includes('date')) {
+                inputHTML = `
                 <input 
                     type="date"
                     name="${item.name}"
                     id="field_${item.name}"
                     class="form-input"
                     ${isRequired ? 'required' : ''}
-                    style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; color: black;"
+                    							style="width: -webkit-fill-available; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; background-color: #f8fafc; color: black;"
                 />
             `;
-        }
-        // Fields with options
-        else if (item?.options && item.options.trim().length > 0) {
-            const options = item.options.split('|').map(opt => opt.trim());
-            inputHTML = `
+            }
+            // Fields with options
+            else if (item?.options && item.options.trim().length > 0) {
+                const options = item.options.split('|').map(opt => opt.trim());
+                inputHTML = `
                 <select 
                     name="${item.name}"
                     id="field_${item.name}"
                     class="form-input"
                     ${isRequired ? 'required' : ''}
-                    style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; color: black;"
+                    							style="width: -webkit-fill-available; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; background-color: #f8fafc; color: black;"
                 >
                     <option value="">Select ${item.text}</option>
                     ${options.map(opt => `<option value="${opt}">${opt}</option>`).join('')}
                 </select>
             `;
-        }
-        // Email fields
-        else if (item?.validation === 'Email' ||
-            item?.type === 'control_email' ||
-            item?.name?.toLowerCase().includes('email')) {
-            inputHTML = `
+            }
+            // Email fields
+            else if (item?.validation === 'Email' ||
+                item?.type === 'control_email' ||
+                item?.name?.toLowerCase().includes('email')) {
+                inputHTML = `
                 <input 
                     type="email"
                     name="${item.name}"
@@ -1790,16 +1790,16 @@ const generateFormPrefillModalHTML = useCallback((formData) => {
                     class="form-input"
                     placeholder="${item?.subLabel || 'Enter email'}"
                     ${isRequired ? 'required' : ''}
-                    style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; color: black;"
+                    style="width: -webkit-fill-available; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; background-color: #f8fafc; color: black;"
                 />
             `;
-        }
-        // Numeric fields
-        else if (item?.validation === 'Numeric' ||
-            item?.type === 'control_number' ||
-            item?.name?.toLowerCase().includes('mobile') ||
-            item?.name?.toLowerCase().includes('phone')) {
-            inputHTML = `
+            }
+            // Numeric fields
+            else if (item?.validation === 'Numeric' ||
+                item?.type === 'control_number' ||
+                item?.name?.toLowerCase().includes('mobile') ||
+                item?.name?.toLowerCase().includes('phone')) {
+                inputHTML = `
                 <input 
                     type="tel"
                     name="${item.name}"
@@ -1807,13 +1807,13 @@ const generateFormPrefillModalHTML = useCallback((formData) => {
                     class="form-input"
                     placeholder="${item?.subLabel || item.text}"
                     ${isRequired ? 'required' : ''}
-                    style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; color: black;"
+                    style="width: -webkit-fill-available; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; background-color: #f8fafc; color: black;"
                 />
             `;
-        }
-        // Default text input
-        else {
-            inputHTML = `
+            }
+            // Default text input
+            else {
+                inputHTML = `
                 <input 
                     type="text"
                     name="${item.name}"
@@ -1824,20 +1824,20 @@ const generateFormPrefillModalHTML = useCallback((formData) => {
                     style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; color: black;"
                 />
             `;
-        }
+            }
 
-        return `
+            return `
             <div style="margin-bottom: 16px;">
-                <label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 8px;">
+						<label style="display: block; font-size: 14px; font-weight: 500;  margin-bottom: 8px; background-color: #f8fafc; color: black;"
                     ${item.text}
                     ${isRequired ? '<span style="color: #ef4444; margin-left: 4px;">*</span>' : ''}
                 </label>
                 ${inputHTML}
             </div>
         `;
-    }).join('');
+        }).join('');
 
-    return `
+        return `
         <form id="prefill-form" style="padding: 24px; overflow-y: auto; max-height: 60vh;">
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px;">
                 ${fieldsHTML}
@@ -1862,7 +1862,7 @@ const generateFormPrefillModalHTML = useCallback((formData) => {
             </button>
         </div>
     `;
-}, [selectedFormFields]);
+    }, [selectedFormFields]);
 
     const sendJotFormMessage = (content: string, uuid: string) => {
         const params = getUrlParams();
