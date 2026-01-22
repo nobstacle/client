@@ -149,7 +149,7 @@ const checkSession = async () => {
   if (loading) {
     return (
       <div style={{ 
-        height: '70px',
+        height: '56px',
         background: '#3b5998',
         display: 'flex',
         alignItems: 'center',
@@ -169,7 +169,7 @@ const checkSession = async () => {
   if (!user) {
     return (
       <div style={{ 
-        height: '70px',
+        height: '56px',
         padding: '0 24px',
         background: '#3b5998',
         display: 'flex',
