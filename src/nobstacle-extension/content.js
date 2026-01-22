@@ -1035,7 +1035,6 @@ async function prefetchAuthData() {
   return new Promise((resolve) => {
     console.log('[Content Script] 🔍 Prefetching auth data...');
 
-    // Add timeout to prevent hanging
     const timeout = setTimeout(() => {
       console.error('[Content Script] ⏱️ Auth fetch timeout');
       resolve({
@@ -1043,7 +1042,7 @@ async function prefetchAuthData() {
         cookies: [],
         isAuthenticated: false
       });
-    }, 5000); // 5 second timeout
+    }, 5000);
 
     chrome.runtime.sendMessage({
       action: 'getAuthData'
@@ -1062,7 +1061,7 @@ async function prefetchAuthData() {
         return;
       }
 
-      console.log('[Content Script] 📦 Auth response received:', {
+      console.log('[Content Script] 📦 Auth response:', {
         hasToken: !!response?.sessionToken,
         cookieCount: response?.cookies?.length || 0,
         isAuthenticated: response?.isAuthenticated
@@ -1071,31 +1070,14 @@ async function prefetchAuthData() {
       cachedAuthData = {
         sessionToken: response?.sessionToken || null,
         cookies: response?.cookies || [],
-        isAuthenticated: response?.isAuthenticated !== false && !!response?.sessionToken
+        isAuthenticated: response?.isAuthenticated === true && !!response?.sessionToken
       };
 
       authDataReady = true;
-      console.log('[Content Script] ✅ Auth data ready:', cachedAuthData.isAuthenticated);
       resolve(cachedAuthData);
     });
   });
 }
-// async function prefetchAuthData() {
-//   return new Promise((resolve) => {
-//     chrome.runtime.sendMessage({
-//       action: 'getAuthData'
-//     }, (response) => {
-//       cachedAuthData = {
-//         sessionToken: response?.sessionToken || null,
-//         cookies: response?.cookies || []
-//       };
-
-//       authDataReady = true;
-//       console.log('[Content Script] ✅ Auth data ready');
-//       resolve(cachedAuthData);
-//     });
-//   });
-// }
 
 function createRecordingIndicator(data) {
   document.getElementById('nobstacle-recording-indicator')?.remove();
