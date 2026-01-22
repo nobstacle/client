@@ -7,7 +7,7 @@ let currentStation = null;
 const API_BASE_URL = 'https://nobstacle-production-d145.up.railway.app';
 const STATION_STORAGE_KEY = 'nobstacle_selected_station';
 const AUTH_CACHE_KEY = 'nobstacle_auth_cache';
-const AUTH_CACHE_DURATION = 5 * 60 * 1000; 
+const AUTH_CACHE_DURATION = 5 * 60 * 1000;
 
 async function initStation() {
   try {
@@ -56,7 +56,7 @@ restoreTokenFromStorage();
 async function fetchAndCacheAuth() {
   try {
     console.log('[Background] 🔍 Fetching auth from nobstacle.com...');
-    
+
     const cookies = await chrome.cookies.getAll({
       domain: 'nobstacle.com'
     });
@@ -75,38 +75,38 @@ async function fetchAndCacheAuth() {
         authTimestamp: Date.now(),
         isAuthenticated: true
       };
-      
+
       await chrome.storage.local.set(authData);
-      
+
       console.log('[Background] ✅ Auth cached successfully');
       console.log('[Background] 🔑 Session token:', sessionCookie.value.substring(0, 20) + '...');
-      
-      return { 
-        sessionToken: sessionCookie.value, 
+
+      return {
+        sessionToken: sessionCookie.value,
         cookies,
-        isAuthenticated: true 
+        isAuthenticated: true
       };
     } else {
       console.log('[Background] ⚠️ No session cookie found');
-      
+
       // Mark as not authenticated
       await chrome.storage.local.set({
         isAuthenticated: false,
         authTimestamp: Date.now()
       });
-      
-      return { 
-        sessionToken: null, 
+
+      return {
+        sessionToken: null,
         cookies: [],
-        isAuthenticated: false 
+        isAuthenticated: false
       };
     }
   } catch (error) {
     console.error('[Background] ❌ Error fetching auth:', error);
-    return { 
-      sessionToken: null, 
+    return {
+      sessionToken: null,
       cookies: [],
-      isAuthenticated: false 
+      isAuthenticated: false
     };
   }
 }
@@ -114,35 +114,6 @@ async function fetchAndCacheAuth() {
 async function fetchAuthFromNobstacle() {
   return await fetchAndCacheAuth();
 }
-
-// async function fetchAuthFromNobstacle() {
-//   try {
-//     const cookies = await chrome.cookies.getAll({
-//       domain: 'nobstacle.com'
-//     });
-
-//     const sessionCookie = cookies.find(c =>
-//       c.name === '__Secure-next-auth.session-token' ||
-//       c.name === 'next-auth.session-token'
-//     );
-
-//     if (sessionCookie) {
-//       await chrome.storage.local.set({
-//         authSessionToken: sessionCookie.value,
-//         authCookies: cookies,
-//         authTimestamp: Date.now()
-//       });
-
-//       console.log('[Background] ✓ Auth data stored from nobstacle.com');
-//       return { sessionToken: sessionCookie.value, cookies };
-//     }
-
-//     return null;
-//   } catch (error) {
-//     console.error('[Background] Error fetching auth:', error);
-//     return null;
-//   }
-// }
 
 async function restoreTokenFromStorage() {
   try {
@@ -166,74 +137,74 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   console.log('[Background] 📨 Received message:', request.action);
 
   if (request.action === 'getStation') {
-        console.log('[Background] 📥 getStation request');
-        
-        chrome.storage.local.get([STATION_STORAGE_KEY], (result) => {
-            const station = result[STATION_STORAGE_KEY] ? String(result[STATION_STORAGE_KEY]) : "1";
-            console.log('[Background] 📤 Returning station:', station);
-            
-            currentStation = station;
-            sendResponse({ success: true, station: station });
-        });
-        
-        return true; 
-    }
+    console.log('[Background] 📥 getStation request');
+
+    chrome.storage.local.get([STATION_STORAGE_KEY], (result) => {
+      const station = result[STATION_STORAGE_KEY] ? String(result[STATION_STORAGE_KEY]) : "1";
+      console.log('[Background] 📤 Returning station:', station);
+
+      currentStation = station;
+      sendResponse({ success: true, station: station });
+    });
+
+    return true;
+  }
 
   // SET STATION - FIX: Better error handling and verification
- if (request.action === 'setStation') {
-        const newStation = String(request.station);
-        console.log('[Background] 📥 setStation request:', newStation);
-        
-        // Save to chrome.storage
-        chrome.storage.local.set(
-            { [STATION_STORAGE_KEY]: newStation },
-            () => {
-                if (chrome.runtime.lastError) {
-                    console.error('[Background] ❌ Storage error:', chrome.runtime.lastError);
-                    sendResponse({ success: false, error: chrome.runtime.lastError.message });
-                } else {
-                    console.log('[Background] ✅ Station saved:', newStation);
-                    
-                    // Update memory
-                    currentStation = newStation;
-                    
-                    // Verify by reading back
-                    chrome.storage.local.get([STATION_STORAGE_KEY], (result) => {
-                        const saved = String(result[STATION_STORAGE_KEY]);
-                        console.log('[Background] 🔍 Verification read:', saved);
-                        
-                        if (saved === newStation) {
-                            console.log('[Background] ✅ Verification passed');
-                            
-                            // Notify all tabs about the change
-                            chrome.tabs.query({}, (tabs) => {
-                                tabs.forEach((tab) => {
-                                    if (tab.id) {
-                                        chrome.tabs.sendMessage(tab.id, {
-                                            action: 'stationChanged',
-                                            station: newStation
-                                        }).catch(() => {
-                                            // Tab might not have content script, ignore
-                                        });
-                                    }
-                                });
-                            });
-                            
-                            sendResponse({ success: true, station: newStation });
-                        } else {
-                            console.error('[Background] ❌ Verification failed!', {
-                                expected: newStation,
-                                actual: saved
-                            });
-                            sendResponse({ success: false, error: 'Verification failed' });
-                        }
+  if (request.action === 'setStation') {
+    const newStation = String(request.station);
+    console.log('[Background] 📥 setStation request:', newStation);
+
+    // Save to chrome.storage
+    chrome.storage.local.set(
+      { [STATION_STORAGE_KEY]: newStation },
+      () => {
+        if (chrome.runtime.lastError) {
+          console.error('[Background] ❌ Storage error:', chrome.runtime.lastError);
+          sendResponse({ success: false, error: chrome.runtime.lastError.message });
+        } else {
+          console.log('[Background] ✅ Station saved:', newStation);
+
+          // Update memory
+          currentStation = newStation;
+
+          // Verify by reading back
+          chrome.storage.local.get([STATION_STORAGE_KEY], (result) => {
+            const saved = String(result[STATION_STORAGE_KEY]);
+            console.log('[Background] 🔍 Verification read:', saved);
+
+            if (saved === newStation) {
+              console.log('[Background] ✅ Verification passed');
+
+              // Notify all tabs about the change
+              chrome.tabs.query({}, (tabs) => {
+                tabs.forEach((tab) => {
+                  if (tab.id) {
+                    chrome.tabs.sendMessage(tab.id, {
+                      action: 'stationChanged',
+                      station: newStation
+                    }).catch(() => {
+                      // Tab might not have content script, ignore
                     });
-                }
+                  }
+                });
+              });
+
+              sendResponse({ success: true, station: newStation });
+            } else {
+              console.error('[Background] ❌ Verification failed!', {
+                expected: newStation,
+                actual: saved
+              });
+              sendResponse({ success: false, error: 'Verification failed' });
             }
-        );
-        
-        return true; // Keep channel open for async response
-    }
+          });
+        }
+      }
+    );
+
+    return true; // Keep channel open for async response
+  }
 
   // Other handlers remain the same...
   if (request.type === 'HEADER_READY') {
@@ -246,18 +217,18 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true;
   }
 
-    if (request.action === 'getAuthData') {
+  if (request.action === 'getAuthData') {
     console.log('[Background] 📥 getAuthData request');
-    
+
     chrome.storage.local.get([
-      'authSessionToken', 
-      'authCookies', 
+      'authSessionToken',
+      'authCookies',
       'authTimestamp',
       'isAuthenticated'
     ], async (result) => {
       const now = Date.now();
       const isExpired = !result.authTimestamp || (now - result.authTimestamp > AUTH_CACHE_DURATION);
-      
+
       console.log('[Background] 📊 Auth cache status:', {
         hasToken: !!result.authSessionToken,
         isExpired: isExpired,
@@ -277,45 +248,30 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         // Cache is expired or empty, fetch fresh data
         console.log('[Background] 🔄 Fetching fresh auth data...');
         const authData = await fetchAndCacheAuth();
-        
+
         console.log('[Background] 📤 Returning fresh auth data:', {
           hasToken: !!authData.sessionToken,
           isAuthenticated: authData.isAuthenticated
         });
-        
-        sendResponse(authData || { 
-          sessionToken: null, 
+
+        sendResponse(authData || {
+          sessionToken: null,
           cookies: [],
-          isAuthenticated: false 
+          isAuthenticated: false
         });
       }
     });
-    
+
     return true;
   }
-  // if (request.action === 'getAuthData') {
-  //   chrome.storage.local.get(['authSessionToken', 'authCookies', 'authTimestamp'], async (result) => {
-  //     if (result.authSessionToken && result.authTimestamp &&
-  //       (Date.now() - result.authTimestamp < 5 * 60 * 1000)) {
-  //       sendResponse({
-  //         sessionToken: result.authSessionToken,
-  //         cookies: result.authCookies
-  //       });
-  //     } else {
-  //       const authData = await fetchAuthFromNobstacle();
-  //       sendResponse(authData || { sessionToken: null, cookies: [] });
-  //     }
-  //   });
-  //   return true;
-  // }
 
-    if (request.action === 'refreshAuth') {
+  if (request.action === 'refreshAuth') {
     console.log('[Background] 🔄 Force refresh auth requested');
-    
+
     fetchAndCacheAuth().then(authData => {
       sendResponse(authData);
     });
-    
+
     return true;
   }
 
@@ -385,11 +341,12 @@ setInterval(async () => {
   await fetchAndCacheAuth();
 }, 2 * 60 * 1000);
 
+// FIXED: Listen for cookie changes and notify content scripts
 chrome.cookies.onChanged.addListener((changeInfo) => {
   if (changeInfo.cookie.domain.includes('nobstacle.com')) {
-    const isSessionCookie = changeInfo.cookie.name === '__Secure-next-auth.session-token' || 
-                           changeInfo.cookie.name === 'next-auth.session-token';
-    
+    const isSessionCookie = changeInfo.cookie.name === '__Secure-next-auth.session-token' ||
+      changeInfo.cookie.name === 'next-auth.session-token';
+
     if (isSessionCookie) {
       if (changeInfo.removed) {
         console.log('[Background] 🔴 Session cookie removed - user logged out');
@@ -397,9 +354,30 @@ chrome.cookies.onChanged.addListener((changeInfo) => {
           isAuthenticated: false,
           authTimestamp: Date.now()
         });
+
+        // Notify all content scripts
+        chrome.tabs.query({}, (tabs) => {
+          tabs.forEach((tab) => {
+            chrome.tabs.sendMessage(tab.id, {
+              action: 'authStatusChanged',
+              isAuthenticated: false
+            }).catch(() => { });
+          });
+        });
       } else {
-        console.log('[Background] 🟢 Session cookie changed - refreshing auth');
-        fetchAndCacheAuth();
+        console.log('[Background] 🟢 Session cookie changed - user logged in or session refreshed');
+        fetchAndCacheAuth().then((authData) => {
+          // Notify all content scripts about new auth
+          chrome.tabs.query({}, (tabs) => {
+            tabs.forEach((tab) => {
+              chrome.tabs.sendMessage(tab.id, {
+                action: 'authStatusChanged',
+                isAuthenticated: authData.isAuthenticated,
+                sessionToken: authData.sessionToken
+              }).catch(() => { });
+            });
+          });
+        });
       }
     }
   }

@@ -10,11 +10,42 @@ export default function HeaderOnlyPage() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const authTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const authCheckAttempts = useRef(0);
 
   useEffect(() => {
     setMounted(true);
     setIsInIframe(window.self !== window.top);
   }, []);
+
+  // Function to check session
+  const checkSession = async () => {
+    try {
+      console.log('[HeaderOnly] Checking session...');
+      const response = await fetch('/api/auth/session', {
+        credentials: 'include', // IMPORTANT: Include cookies
+        cache: 'no-store' // Don't cache the response
+      });
+      
+      if (response.ok) {
+        const sessionData = await response.json();
+        
+        if (sessionData?.user) {
+          console.log('[HeaderOnly] ✓ User loaded:', sessionData.user.email);
+          setUser(sessionData.user);
+          setLoading(false);
+          return true;
+        } else {
+          console.log('[HeaderOnly] No active session');
+        }
+      } else {
+        console.log('[HeaderOnly] Session check failed:', response.status);
+      }
+    } catch (err) {
+      console.error('[HeaderOnly] Error checking session:', err);
+    }
+    
+    return false;
+  };
 
   // Get user from extension
   useEffect(() => {
@@ -24,59 +55,56 @@ export default function HeaderOnlyPage() {
     }
 
     const handler = async (event: MessageEvent) => {
-      if (event.data?.type !== 'EXTENSION_AUTH') return;
-
-      if (authTimeoutRef.current) {
-        clearTimeout(authTimeoutRef.current);
-        authTimeoutRef.current = null;
-      }
-
-      console.log('[HeaderOnly] Extension auth received');
-      
-      // Use NextAuth session endpoint instead of broken token validation
-      try {
-        const response = await fetch('/api/auth/session');
-        
-        if (response.ok) {
-          const sessionData = await response.json();
-          
-          if (sessionData?.user) {
-            console.log('[HeaderOnly] ✓ User loaded:', sessionData.user.email);
-            setUser(sessionData.user);
-          } else {
-            console.log('[HeaderOnly] No active session');
-          }
-        } else {
-          console.log('[HeaderOnly] Session check failed');
+      // Handle extension auth
+      if (event.data?.type === 'EXTENSION_AUTH') {
+        if (authTimeoutRef.current) {
+          clearTimeout(authTimeoutRef.current);
+          authTimeoutRef.current = null;
         }
-      } catch (err) {
-        console.error('[HeaderOnly] Error:', err);
-      } finally {
-        setLoading(false);
+
+        console.log('[HeaderOnly] 🔑 Extension auth received');
+        
+        // Extension sent auth - check session immediately
+        const success = await checkSession();
+        
+        if (!success) {
+          // If session check failed, try again after a short delay
+          // (cookies might still be syncing)
+          console.log('[HeaderOnly] 🔄 Retrying session check...');
+          setTimeout(async () => {
+            const retrySuccess = await checkSession();
+            if (!retrySuccess) {
+              console.log('[HeaderOnly] ❌ Session check failed after retry');
+              setLoading(false);
+            }
+          }, 500);
+        }
+      }
+      
+      // NEW: Handle auth refresh request
+      if (event.data?.type === 'REFRESH_AUTH') {
+        console.log('[HeaderOnly] 🔄 Auth refresh requested');
+        await checkSession();
       }
     };
 
     window.addEventListener('message', handler);
 
-    const req = () => window.parent.postMessage({ type: 'REQUEST_AUTH' }, '*');
-    req();
-    setTimeout(req, 400);
-    setTimeout(req, 1000);
+    // Request auth from extension
+    const requestAuth = () => {
+      console.log('[HeaderOnly] 📨 Requesting auth from extension...');
+      window.parent.postMessage({ type: 'REQUEST_AUTH' }, '*');
+    };
+    
+    requestAuth();
+    setTimeout(requestAuth, 400);
+    setTimeout(requestAuth, 1000);
 
-    authTimeoutRef.current = setTimeout(() => {
-      console.log('[HeaderOnly] Auth timeout - checking session anyway');
-      
-      // Check session even on timeout
-      fetch('/api/auth/session')
-        .then(res => res.json())
-        .then(sessionData => {
-          if (sessionData?.user) {
-            console.log('[HeaderOnly] ✓ User found via session');
-            setUser(sessionData.user);
-          }
-        })
-        .catch(err => console.error('[HeaderOnly] Session check failed:', err))
-        .finally(() => setLoading(false));
+    // Timeout fallback - check session anyway
+    authTimeoutRef.current = setTimeout(async () => {
+      console.log('[HeaderOnly] ⏱️ Auth timeout - checking session anyway');
+      await checkSession();
+      setLoading(false);
     }, 3000);
 
     return () => {
@@ -85,6 +113,19 @@ export default function HeaderOnlyPage() {
         clearTimeout(authTimeoutRef.current);
       }
     };
+  }, [isInIframe]);
+
+  // NEW: Periodic session check (every 30 seconds)
+  // This helps detect login changes
+  useEffect(() => {
+    if (!isInIframe) return;
+
+    const interval = setInterval(() => {
+      console.log('[HeaderOnly] 🔄 Periodic session check');
+      checkSession();
+    }, 30000); // Every 30 seconds
+
+    return () => clearInterval(interval);
   }, [isInIframe]);
 
   if (!mounted) {

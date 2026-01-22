@@ -296,6 +296,81 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   return true;
 });
 
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request.action === 'authStatusChanged') {
+    console.log('[Content Script] 🔔 Auth status changed:', request.isAuthenticated);
+    
+    if (request.isAuthenticated && request.sessionToken) {
+      // User just logged in!
+      console.log('[Content Script] ✅ User logged in - updating auth cache');
+      
+      // Update cached auth data
+      cachedAuthData = {
+        sessionToken: request.sessionToken,
+        cookies: [],
+        isAuthenticated: true
+      };
+      authDataReady = true;
+      
+      // Hide login prompt if showing
+      document.getElementById('nobstacle-login-prompt')?.remove();
+      document.getElementById('nobstacle-loader')?.remove();
+      
+      // If header not injected yet, inject it now
+      if (!headerInjected && shouldInject()) {
+        console.log('[Content Script] 🚀 Injecting header after login');
+        injectHeader();
+      } else if (headerInjected) {
+        // Header already exists, update the iframe with new auth
+        const iframe = document.getElementById('nobstacle-header-iframe');
+        if (iframe) {
+          // Send auth to iframe
+          iframe.contentWindow.postMessage({
+            type: 'EXTENSION_AUTH',
+            sessionToken: request.sessionToken,
+            cookies: []
+          }, '*');
+          
+          // CRITICAL: Tell iframe to refresh its session check
+          // Wait a bit for cookies to sync
+          setTimeout(() => {
+            iframe.contentWindow.postMessage({
+              type: 'REFRESH_AUTH'
+            }, '*');
+            console.log('[Content Script] ✅ Told iframe to refresh auth');
+          }, 500);
+          
+          console.log('[Content Script] ✅ Updated iframe with new auth');
+        }
+      }
+    } else {
+      // User logged out
+      console.log('[Content Script] ❌ User logged out');
+      
+      // Update cached auth data
+      cachedAuthData = {
+        sessionToken: null,
+        cookies: [],
+        isAuthenticated: false
+      };
+      authDataReady = true;
+      
+      // Remove header
+      document.getElementById('nobstacle-header-container')?.remove();
+      document.body.classList.remove('nobstacle-active');
+      headerInjected = false;
+      
+      // Show login prompt
+      showLoginPrompt();
+    }
+    
+    sendResponse({ success: true });
+    return true;
+  }
+  
+  return false; // Let other handlers process the message
+});
+
 function isInputFocused() {
   const activeElement = document.activeElement;
   const inputs = ['input', 'textarea', 'select'];
@@ -861,9 +936,98 @@ function showLoginPrompt() {
   document.body.appendChild(prompt);
 
   document.getElementById('nobstacle-login-btn').addEventListener('click', () => {
+    // Open login page
     chrome.runtime.sendMessage({
       action: 'openTab',
       url: 'https://nobstacle.com/'
+    });
+    
+    // Change prompt to show "waiting" state
+    prompt.innerHTML = `
+      <h2 style="margin: 0 0 15px 0; color: #333; font-size: 20px;">⏳ Please Log In</h2>
+      <p style="margin: 0 0 20px 0; color: #666; font-size: 14px;">
+        After logging in, come back to this tab and click the button below.
+      </p>
+      <button 
+        id="nobstacle-check-login-btn"
+        style="
+          padding: 12px 24px;
+          background: #3b5998;
+          color: white;
+          border: none;
+          border-radius: 6px;
+          cursor: pointer;
+          font-size: 14px;
+          font-weight: 600;
+        "
+      >
+        I've Logged In - Check Again
+      </button>
+      <button 
+        id="nobstacle-cancel-btn"
+        style="
+          padding: 12px 24px;
+          background: #f0f0f0;
+          color: #666;
+          border: none;
+          border-radius: 6px;
+          cursor: pointer;
+          font-size: 14px;
+          font-weight: 600;
+          margin-left: 10px;
+        "
+      >
+        Cancel
+      </button>
+    `;
+    
+    // Add event listener for check button
+    document.getElementById('nobstacle-check-login-btn').addEventListener('click', async () => {
+      // Show loading state
+      const checkBtn = document.getElementById('nobstacle-check-login-btn');
+      checkBtn.textContent = 'Checking...';
+      checkBtn.disabled = true;
+      checkBtn.style.opacity = '0.6';
+      
+      // Force refresh auth from background
+      chrome.runtime.sendMessage({ action: 'refreshAuth' }, async (authData) => {
+        if (authData && authData.isAuthenticated && authData.sessionToken) {
+          // Success! Update cache and inject header
+          console.log('[Content Script] ✅ Login verified!');
+          
+          cachedAuthData = {
+            sessionToken: authData.sessionToken,
+            cookies: authData.cookies || [],
+            isAuthenticated: true
+          };
+          authDataReady = true;
+          
+          // Remove prompt
+          prompt.remove();
+          
+          // Inject header if not already injected
+          if (!headerInjected && shouldInject()) {
+            await injectHeader();
+          }
+        } else {
+          // Still not logged in
+          console.log('[Content Script] ❌ Still not logged in');
+          checkBtn.textContent = 'Not Logged In Yet';
+          checkBtn.style.background = '#dc2626';
+          
+          setTimeout(() => {
+            checkBtn.textContent = 'I\'ve Logged In - Check Again';
+            checkBtn.style.background = '#3b5998';
+            checkBtn.disabled = false;
+            checkBtn.style.opacity = '1';
+          }, 2000);
+        }
+      });
+    });
+    
+    // Add event listener for cancel button
+    document.getElementById('nobstacle-cancel-btn').addEventListener('click', () => {
+      prompt.remove();
     });
   });
 
@@ -1437,7 +1601,6 @@ function createFormPrefillModal(formData) {
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3) !important;
     width: 90% !important;
     max-width: 600px !important;
-    max-height: 80vh !important;
     overflow: hidden !important;
     display: flex !important;
     flex-direction: column !important;
