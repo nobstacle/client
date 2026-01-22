@@ -18,108 +18,110 @@ export default function HeaderOnlyPage() {
   }, []);
 
   // Function to check session
-const checkSession = async () => {
-  try {
-    console.log('[HeaderOnly] Checking session...');
-    const response = await fetch('/api/auth/session', {
-      credentials: 'include',
-      cache: 'no-store',
-      headers: {
-        'Cache-Control': 'no-cache',
-        'Pragma': 'no-cache'
-      }
-    });
-    
-    if (response.ok) {
-      const sessionData = await response.json();
-      
-      if (sessionData?.user) {
-        console.log('[HeaderOnly] ✓ User loaded:', sessionData.user.email);
-        setUser(sessionData.user);
-        setLoading(false);
-        
-        window.parent.postMessage({
-          type: 'AUTH_STATUS_UPDATE',
-          isAuthenticated: true,
-          user: sessionData.user
-        }, '*');
-        
-        return true;
+  const checkSession = async () => {
+    try {
+      console.log('[HeaderOnly] Checking session...');
+      const response = await fetch('/api/auth/session', {
+        credentials: 'include',
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      });
+
+      if (response.ok) {
+        const sessionData = await response.json();
+
+        if (sessionData?.user) {
+          console.log('[HeaderOnly] ✓ User loaded:', sessionData.user.email);
+          setUser(sessionData.user);
+          setLoading(false);
+
+          window.parent.postMessage({
+            type: 'AUTH_STATUS_UPDATE',
+            isAuthenticated: true,
+            user: sessionData.user
+          }, '*');
+
+          return true;
+        } else {
+          console.log('[HeaderOnly] No active session');
+          setLoading(false);
+        }
       } else {
-        console.log('[HeaderOnly] No active session');
+        console.log('[HeaderOnly] Session check failed:', response.status);
         setLoading(false);
       }
-    } else {
-      console.log('[HeaderOnly] Session check failed:', response.status);
+    } catch (err) {
+      console.error('[HeaderOnly] Error checking session:', err);
       setLoading(false);
     }
-  } catch (err) {
-    console.error('[HeaderOnly] Error checking session:', err);
-    setLoading(false);
-  }
-  
-  return false;
-};
 
-  // Get user from extension
+    return false;
+  };
+
   useEffect(() => {
     if (!isInIframe) {
       setLoading(false);
       return;
     }
 
+    let authReceived = false;
+
     const handler = async (event: MessageEvent) => {
-      // Handle extension auth
       if (event.data?.type === 'EXTENSION_AUTH') {
+        if (authReceived) return; // Prevent duplicate processing
+        authReceived = true;
+
         if (authTimeoutRef.current) {
           clearTimeout(authTimeoutRef.current);
           authTimeoutRef.current = null;
         }
 
         console.log('[HeaderOnly] 🔑 Extension auth received');
-        
-        // Extension sent auth - check session immediately
+
+        // Wait a bit for cookies to be fully available
+        await new Promise(resolve => setTimeout(resolve, 800));
+
+        // Now check session
         const success = await checkSession();
-        
+
         if (!success) {
-          // If session check failed, try again after a short delay
-          // (cookies might still be syncing)
+          // Retry once after another delay
           console.log('[HeaderOnly] 🔄 Retrying session check...');
-          setTimeout(async () => {
-            const retrySuccess = await checkSession();
-            if (!retrySuccess) {
-              console.log('[HeaderOnly] ❌ Session check failed after retry');
-              setLoading(false);
-            }
-          }, 500);
+          await new Promise(resolve => setTimeout(resolve, 1200));
+          await checkSession();
         }
       }
-      
-      // NEW: Handle auth refresh request
+
       if (event.data?.type === 'REFRESH_AUTH') {
         console.log('[HeaderOnly] 🔄 Auth refresh requested');
+        await new Promise(resolve => setTimeout(resolve, 500));
         await checkSession();
       }
     };
 
     window.addEventListener('message', handler);
 
-    // Request auth from extension
+    // Request auth from extension (multiple times for reliability)
     const requestAuth = () => {
       console.log('[HeaderOnly] 📨 Requesting auth from extension...');
       window.parent.postMessage({ type: 'REQUEST_AUTH' }, '*');
     };
-    
-    requestAuth();
-    setTimeout(requestAuth, 400);
-    setTimeout(requestAuth, 1000);
 
-    // Timeout fallback - check session anyway
+    requestAuth();
+    setTimeout(requestAuth, 500);
+    setTimeout(requestAuth, 1000);
+    setTimeout(requestAuth, 2000);
+
+    // Fallback timeout
     authTimeoutRef.current = setTimeout(async () => {
-      console.log('[HeaderOnly] ⏱️ Auth timeout - checking session anyway');
-      await checkSession();
-      setLoading(false);
-    }, 3000);
+      if (!authReceived) {
+        console.log('[HeaderOnly] ⏱️ Auth timeout - checking session anyway');
+        await checkSession();
+      }
+    }, 4000);
 
     return () => {
       window.removeEventListener('message', handler);
@@ -129,8 +131,6 @@ const checkSession = async () => {
     };
   }, [isInIframe]);
 
-  // NEW: Periodic session check (every 30 seconds)
-  // This helps detect login changes
   useEffect(() => {
     if (!isInIframe) return;
 
@@ -148,14 +148,14 @@ const checkSession = async () => {
 
   if (loading) {
     return (
-      <div style={{ 
+      <div style={{
         height: '56px',
         background: '#3b5998',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center'
       }}>
-        <div style={{ 
+        <div style={{
           color: 'white',
           fontSize: '14px',
           opacity: 0.8
@@ -168,7 +168,7 @@ const checkSession = async () => {
 
   if (!user) {
     return (
-      <div style={{ 
+      <div style={{
         height: '56px',
         padding: '0 24px',
         background: '#3b5998',
@@ -177,14 +177,14 @@ const checkSession = async () => {
         alignItems: 'center',
         boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
       }}>
-        <div style={{ 
+        <div style={{
           fontWeight: '500',
           color: 'white',
           fontSize: '14px'
         }}>
           Not logged in
         </div>
-        <button 
+        <button
           onClick={() => window.open('https://nobstacle.com', '_blank')}
           style={{
             padding: '8px 16px',

@@ -19,6 +19,7 @@ let selectedStation = null;
 let stationLoadedFromStorage = false;
 let loginPromptShown = false;
 let loginCheckInProgress = false;
+let loginWindowOpened = false;
 
 function debugStorage() {
   console.log('[Content Script] 🔍 Storage Debug:');
@@ -301,65 +302,91 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'authStatusChanged') {
     console.log('[Content Script] 🔔 Auth status changed:', request.isAuthenticated);
-
-    // Prevent duplicate handling
-    if (loginCheckInProgress) {
-      console.log('[Content Script] ⚠️ Auth check already in progress, skipping');
-      sendResponse({ success: true });
-      return true;
-    }
-
-    loginCheckInProgress = true;
-
+    
     if (request.isAuthenticated && request.sessionToken) {
-      console.log('[Content Script] ✅ User logged in');
-
-      loginPromptShown = false; // Reset flag
-
+      console.log('[Content Script] ✅ User logged in - updating auth cache');
+      
+      loginWindowOpened = false; // Reset flag
+      
+      // Update cached auth data
       cachedAuthData = {
         sessionToken: request.sessionToken,
-        cookies: [],
+        cookies: request.cookies || [],
         isAuthenticated: true
       };
       authDataReady = true;
-
-      document.getElementById('nobstacle-login-prompt')?.remove();
+      
+      // Remove login prompt
+      const loginPrompt = document.getElementById('nobstacle-login-prompt');
+      if (loginPrompt) {
+        // Show success message briefly before removing
+        loginPrompt.innerHTML = `
+          <div style="margin-bottom: 20px;">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+              <polyline points="22 4 12 14.01 9 11.01"></polyline>
+            </svg>
+          </div>
+          <h2 style="margin: 0 0 10px 0; color: #10b981; font-size: 20px; font-weight: 600;">Login Successful!</h2>
+          <p style="margin: 0; color: #666; font-size: 14px;">Loading extension...</p>
+        `;
+        
+        setTimeout(() => {
+          loginPrompt.remove();
+        }, 1500);
+      }
+      
+      // Remove loader
       document.getElementById('nobstacle-loader')?.remove();
-
+      
+      // Inject header if not already injected
       if (!headerInjected && shouldInject()) {
-        injectHeader().finally(() => {
-          loginCheckInProgress = false;
-        });
-      } else {
-        loginCheckInProgress = false;
+        console.log('[Content Script] 🚀 Injecting header after login');
+        setTimeout(() => {
+          injectHeader();
+        }, 1500); // Wait for success message
+      } else if (headerInjected) {
+        // Header already exists, refresh it
+        const iframe = document.getElementById('nobstacle-header-iframe');
+        if (iframe) {
+          iframe.contentWindow.postMessage({
+            type: 'EXTENSION_AUTH',
+            sessionToken: request.sessionToken,
+            cookies: request.cookies || []
+          }, '*');
+          
+          setTimeout(() => {
+            iframe.contentWindow.postMessage({
+              type: 'REFRESH_AUTH'
+            }, '*');
+          }, 500);
+        }
       }
     } else {
       console.log('[Content Script] ❌ User logged out');
-
+      
       cachedAuthData = {
         sessionToken: null,
         cookies: [],
         isAuthenticated: false
       };
       authDataReady = true;
-
+      
+      // Remove header
       document.getElementById('nobstacle-header-container')?.remove();
       document.body.classList.remove('nobstacle-active');
       headerInjected = false;
-
-      // Only show prompt once
-      if (!loginPromptShown) {
-        loginPromptShown = true;
+      
+      // Show login prompt (only if not already showing)
+      if (!document.getElementById('nobstacle-login-prompt')) {
         showLoginPrompt();
       }
-
-      loginCheckInProgress = false;
     }
-
+    
     sendResponse({ success: true });
     return true;
   }
-
+  
   return false;
 });
 
@@ -870,7 +897,7 @@ async function getAuthCookies() {
 function showLoginPrompt() {
   const existingPrompt = document.getElementById('nobstacle-login-prompt');
   if (existingPrompt) {
-    console.log('[Content Script] Login prompt already showing');
+    console.log('[Content Script] Login prompt already exists');
     return;
   }
 
@@ -893,25 +920,35 @@ function showLoginPrompt() {
   `;
 
   prompt.innerHTML = `
-    <h2 style="margin: 0 0 15px 0; color: #333; font-size: 20px;">🔐 Login Required</h2>
-    <p style="margin: 0 0 20px 0; color: #666; font-size: 14px;">
-      Please log in to Nobstacle to use the extension.
+    <div style="margin-bottom: 20px;">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#3b5998" stroke-width="2">
+        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+        <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+      </svg>
+    </div>
+    <h2 style="margin: 0 0 10px 0; color: #333; font-size: 20px; font-weight: 600;">Login Required</h2>
+    <p style="margin: 0 0 25px 0; color: #666; font-size: 14px; line-height: 1.5;">
+      Please log in to Nobstacle to use this extension.<br/>
+      <span style="font-size: 12px; color: #999;">We'll automatically detect when you're logged in.</span>
     </p>
     <button 
       id="nobstacle-login-btn"
       style="
-        padding: 12px 24px;
+        padding: 12px 32px;
         background: #3b5998;
         color: white;
         border: none;
-        border-radius: 6px;
+        border-radius: 8px;
         cursor: pointer;
         font-size: 14px;
         font-weight: 600;
         margin-right: 10px;
+        transition: all 0.2s;
       "
+      onmouseover="this.style.background='#2d4373'"
+      onmouseout="this.style.background='#3b5998'"
     >
-      Login to Nobstacle
+      Open Nobstacle Login
     </button>
     <button 
       id="nobstacle-close-prompt"
@@ -920,11 +957,14 @@ function showLoginPrompt() {
         background: #f0f0f0;
         color: #666;
         border: none;
-        border-radius: 6px;
+        border-radius: 8px;
         cursor: pointer;
         font-size: 14px;
         font-weight: 600;
+        transition: all 0.2s;
       "
+      onmouseover="this.style.background='#e0e0e0'"
+      onmouseout="this.style.background='#f0f0f0'"
     >
       Close
     </button>
@@ -932,100 +972,76 @@ function showLoginPrompt() {
 
   document.body.appendChild(prompt);
 
-  // Login button - opens nobstacle.com and sets up listener
   document.getElementById('nobstacle-login-btn').addEventListener('click', () => {
-    console.log('[Content Script] 🔑 Opening login page...');
-
-    // Open login in new tab
+    if (loginWindowOpened) {
+      console.log('[Content Script] Login window already opened');
+      return;
+    }
+    
+    loginWindowOpened = true;
+    console.log('[Content Script] 🔑 Opening Nobstacle login page...');
+    
+    // Start monitoring for login in background script
+    chrome.runtime.sendMessage({
+      action: 'startLoginMonitoring'
+    });
+    
+    // Open login page
     chrome.runtime.sendMessage({
       action: 'openTab',
-      url: 'https://nobstacle.com/'
+      url: 'https://nobstacle.com/auth/signin'
     });
-
-    // Update prompt to show waiting state
+    
+    // Update prompt to waiting state
     prompt.innerHTML = `
-      <h2 style="margin: 0 0 15px 0; color: #333; font-size: 20px;">⏳ Waiting for Login</h2>
-      <p style="margin: 0 0 20px 0; color: #666; font-size: 14px;">
-        Log in to Nobstacle in the new tab, then this page will automatically detect your login.
+      <div style="margin-bottom: 20px;">
+        <div style="
+          width: 48px;
+          height: 48px;
+          border: 4px solid #e5e7eb;
+          border-top-color: #3b5998;
+          border-radius: 50%;
+          animation: spin 1s linear infinite;
+          margin: 0 auto;
+        "></div>
+        <style>
+          @keyframes spin {
+            to { transform: rotate(360deg); }
+          }
+        </style>
+      </div>
+      <h2 style="margin: 0 0 10px 0; color: #333; font-size: 20px; font-weight: 600;">Waiting for Login...</h2>
+      <p style="margin: 0 0 25px 0; color: #666; font-size: 14px; line-height: 1.5;">
+        Log in to Nobstacle in the new tab.<br/>
+        <span style="font-size: 12px; color: #999;">This will automatically close once you're logged in.</span>
       </p>
-      <p style="margin: 0 0 20px 0; color: #999; font-size: 12px;">
-        You can also click "Refresh" if you've already logged in.
-      </p>
-      <button 
-        id="nobstacle-refresh-btn"
-        style="
-          padding: 12px 24px;
-          background: #3b5998;
-          color: white;
-          border: none;
-          border-radius: 6px;
-          cursor: pointer;
-          font-size: 14px;
-          font-weight: 600;
-          margin-right: 10px;
-        "
-      >
-        Refresh Auth
-      </button>
       <button 
         id="nobstacle-cancel-btn"
         style="
-          padding: 12px 24px;
+          padding: 10px 24px;
           background: #f0f0f0;
           color: #666;
           border: none;
-          border-radius: 6px;
+          border-radius: 8px;
           cursor: pointer;
-          font-size: 14px;
-          font-weight: 600;
+          font-size: 13px;
+          font-weight: 500;
+          transition: all 0.2s;
         "
+        onmouseover="this.style.background='#e0e0e0'"
+        onmouseout="this.style.background='#f0f0f0'"
       >
         Cancel
       </button>
     `;
-
-    // Refresh button
-    document.getElementById('nobstacle-refresh-btn').addEventListener('click', async () => {
-      const btn = document.getElementById('nobstacle-refresh-btn');
-      btn.textContent = 'Checking...';
-      btn.disabled = true;
-      btn.style.opacity = '0.6';
-
-      // Force refresh auth
-      chrome.runtime.sendMessage({ action: 'refreshAuth' }, async (authData) => {
-        if (authData?.isAuthenticated && authData?.sessionToken) {
-          console.log('[Content Script] ✅ Login verified!');
-
-          cachedAuthData = authData;
-          authDataReady = true;
-
-          prompt.remove();
-
-          // Inject header
-          if (!headerInjected && shouldInject()) {
-            await injectHeader();
-          }
-        } else {
-          btn.textContent = 'Not Logged In Yet';
-          btn.style.background = '#dc2626';
-
-          setTimeout(() => {
-            btn.textContent = 'Refresh Auth';
-            btn.style.background = '#3b5998';
-            btn.disabled = false;
-            btn.style.opacity = '1';
-          }, 2000);
-        }
-      });
-    });
-
-    // Cancel button
+    
     document.getElementById('nobstacle-cancel-btn').addEventListener('click', () => {
+      loginWindowOpened = false;
+      chrome.runtime.sendMessage({ action: 'stopLoginMonitoring' });
       prompt.remove();
     });
   });
 
-  // Close button
   document.getElementById('nobstacle-close-prompt').addEventListener('click', () => {
     prompt.remove();
   });
