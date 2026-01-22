@@ -151,6 +151,8 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 	const lastFetchParams = useRef({ page: 0, size: 0, form: '', search: '', filter: '' });
 	const hasFetchedOnMount = useRef(false);
 	const hasLoadedUserData = useRef(false);
+	const fetchControllerRef = useRef<AbortController | null>(null);
+	const currentFormIdRef = useRef<string | null>(null);
 
 	useEffect(() => {
 		const handleResize = () => {
@@ -244,6 +246,8 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 
 	useEffect(() => {
 		if (!selectedForm) return;
+
+		currentFormIdRef.current = selectedForm;
 
 		const currentParams = {
 			page: currentPage,
@@ -1093,19 +1097,29 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 	const fetchFormQuestions = async (form_id: string | null, forceRefresh: boolean = false) => {
 		if (!form_id) return;
 
+		if (form_id !== currentFormIdRef.current) {
+			console.log('Ignoring stale form fields request');
+			return;
+		}
+
 		try {
 			if (!forceRefresh) {
 				const cachedFields = sessionStorage.getItem(`form_fields_${form_id}`);
 				if (cachedFields) {
 					const parsedFields = JSON.parse(cachedFields);
-					setSelectedFormFields(parsedFields);
+
+					// Validate before setting state
+					if (form_id === currentFormIdRef.current) {
+						setSelectedFormFields(parsedFields);
+					}
 					return parsedFields;
 				}
 			}
 
 			const API_KEY = process.env.NEXT_PUBLIC_JOTFORM_API_KEY;
 			const response = await fetch(
-				`https://api.jotform.com/form/${form_id}/questions?apiKey=${API_KEY}`
+				`https://api.jotform.com/form/${form_id}/questions?apiKey=${API_KEY}`,
+				{ signal: fetchControllerRef.current?.signal }
 			);
 
 			if (!response.ok) {
@@ -1114,13 +1128,25 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 
 			const data = await response.json();
 
-			sessionStorage.setItem(`form_fields_${form_id}`, JSON.stringify(data));
+			// Validate before caching and setting state
+			if (form_id === currentFormIdRef.current) {
+				sessionStorage.setItem(`form_fields_${form_id}`, JSON.stringify(data));
+				setSelectedFormFields(data || { content: [] });
+			}
 
-			setSelectedFormFields(data || { content: [] });
 			return data || { content: [] };
 		} catch (error: any) {
+			if (error.name === 'AbortError') {
+				console.log('Form fields request cancelled');
+				return;
+			}
+
 			console.error('Error fetching form fields:', error);
-			setSelectedFormFields({ content: [] });
+
+			// Only clear if still current form
+			if (form_id === currentFormIdRef.current) {
+				setSelectedFormFields({ content: [] });
+			}
 			return { content: [] };
 		}
 	};
@@ -1190,25 +1216,25 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 		);
 	};
 
-	const buildUrl = (formId: string, inputValues: any, UUID?: string) => {
-		const params = new URLSearchParams();
-		for (const [key, value] of Object.entries(inputValues)) {
-			if (typeof value === 'string') {
-				params.append(key, value);
-			}
-		}
+	// const buildUrl = (formId: string, inputValues: any, UUID?: string) => {
+	// 	const params = new URLSearchParams();
+	// 	for (const [key, value] of Object.entries(inputValues)) {
+	// 		if (typeof value === 'string') {
+	// 			params.append(key, value);
+	// 		}
+	// 	}
 
-		const baseUrl = 'https://www.nobstacle.com';
-		let url = '';
+	// 	const baseUrl = 'https://www.nobstacle.com';
+	// 	let url = '';
 
-		if (UUID) {
-			params.append("uuid", UUID);
-			url = `${baseUrl}/forms/${UUID}?${params.toString()}`;
-		} else {
-			url = `${baseUrl}/forms/${formId}?${params.toString()}`;
-		}
-		return url;
-	};
+	// 	if (UUID) {
+	// 		params.append("uuid", UUID);
+	// 		url = `${baseUrl}/forms/${UUID}?${params.toString()}`;
+	// 	} else {
+	// 		url = `${baseUrl}/forms/${formId}?${params.toString()}`;
+	// 	}
+	// 	return url;
+	// };
 
 	const getTableResponse = async (
 		form_id: string | null,
@@ -1217,45 +1243,44 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 		search: any = "",
 		filter: string
 	) => {
+		if (form_id !== currentFormIdRef.current) {
+			console.log('Ignoring stale request for form:', form_id);
+			return;
+		}
+
 		if (abortControllerRef.current) {
 			abortControllerRef.current.abort();
 		}
 		abortControllerRef.current = new AbortController();
-		const Url = getBackendUrl();
 
-		// Check if search is active
+		const Url = getBackendUrl();
 		const hasSearch = search && (typeof search === 'string' ? search.trim() !== "" : search.length > 0);
 
-		// When search changes, always start from page 1
 		let actualPage = page;
 		if (hasSearch && search !== currentSearchTerm) {
 			actualPage = 1;
 			setCurrentPage(1);
 			setCurrentSearchTerm(search);
 			setIsSearchActive(true);
-			setPageSize(10); // RESET page size for search
+			setPageSize(10);
 		} else if (!hasSearch && isSearchActive) {
 			actualPage = 1;
 			setCurrentPage(1);
 			setIsSearchActive(false);
 			setCurrentSearchTerm("");
-			setPageSize(10); // RESET page size when clearing search
+			setPageSize(10);
 		}
 
-		// Use actual page for API call
 		const apiPage = actualPage;
-
 		let API_URL = `${Url}/api/jotform/responses/${form_id}?page=${apiPage}&limit=${limit}`;
 
 		if (hasSearch) {
 			let searchArray = search;
-
 			if (typeof search === 'string') {
 				searchArray = [{ label: "", value: search }];
 			} else if (!Array.isArray(search) && typeof search === 'object') {
 				searchArray = [search];
 			}
-
 			const encodedSearch = encodeURIComponent(JSON.stringify(searchArray));
 			API_URL += `&search=${encodedSearch}`;
 		}
@@ -1269,19 +1294,20 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 				signal: abortControllerRef.current.signal
 			});
 
+			if (form_id !== currentFormIdRef.current) {
+				console.log('Discarding response for old form:', form_id);
+				return;
+			}
+
 			if (response.status === 200) {
-				const { items, allFieldNames, totalPages, totalItems, isSearchActive: apiSearchActive } = response.data;
+				const { items, allFieldNames, totalPages, totalItems } = response.data;
 
 				setTotalPages(totalPages || 1);
 				setTotalItems(totalItems || 0);
 
 				if (items && items.length > 0) {
-					// Transform the new response format to match your table structure
 					const tableData = items.map((item: any) => {
-						// Start with the formData object
 						const prettyData: Record<string, any> = { ...item.formData };
-
-						// Add metadata
 						prettyData.formData = {
 							submission_id: item.submissionId,
 							form_id: item.formId,
@@ -1290,11 +1316,9 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 							created_at: item.createdAt,
 							updated_at: item.updatedAt
 						};
-
 						return prettyData;
 					});
 
-					// Sort column names alphabetically
 					let sortColumns = allFieldNames?.sort((a: string, b: string) => {
 						return a.localeCompare(b);
 					}) || [];
@@ -1307,31 +1331,66 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 				}
 			}
 		} catch (error: any) {
-			if (axios.isCancel(error)) {
+			if (axios.isCancel(error) || error.name === 'AbortError') {
+				console.log('Request cancelled');
 				return;
 			}
-			setTableResponse({ data: [], sortColumns: [] });
-			setLoader(false);
+
+			if (form_id === currentFormIdRef.current) {
+				setTableResponse({ data: [], sortColumns: [] });
+				setLoader(false);
+			}
 			console.error('Error fetching form data:', error);
 		}
 	};
+
+	useEffect(() => {
+		return () => {
+			if (fetchControllerRef.current) {
+				fetchControllerRef.current.abort();
+			}
+			if (abortControllerRef.current) {
+				abortControllerRef.current.abort();
+			}
+		};
+	}, []);
+
 	const handleFormChange = async (value: string) => {
+		if (fetchControllerRef.current) {
+			fetchControllerRef.current.abort();
+		}
+		if (abortControllerRef.current) {
+			abortControllerRef.current.abort();
+		}
+
+		fetchControllerRef.current = new AbortController();
+		currentFormIdRef.current = value;
+
 		setLoader(true);
 		setValue("url", value);
 
-		// Clear the current form fields immediately to prevent showing wrong columns
 		setSelectedFormFields(null);
-
+		setTableResponse(null);
 		setSelectedForm(value);
 		setCurrentPage(1);
 		setPageSize(10);
 		setLastSearchedValue("");
 		setCurrentSearchTerm("");
 		setIsSearchActive(false);
+		form.resetFields();
 
-		// Fetch new form fields first, then get table data
-		await fetchFormQuestions(value, false);
-		getTableResponse(value || null, 1, 10, "", selectedFilter);
+		try {
+			await fetchFormQuestions(value, false);
+
+			if (currentFormIdRef.current === value) {
+				await getTableResponse(value, 1, 10, "", selectedFilter);
+			}
+		} catch (error) {
+			if (error.name !== 'AbortError') {
+				console.error('Error changing form:', error);
+				setLoader(false);
+			}
+		}
 	};
 
 	async function onSubmit(event: React.MouseEvent<HTMLButtonElement, MouseEvent>) {
@@ -1604,7 +1663,9 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 	};
 
 	const handleFilterChange = (value: string) => {
-		setLoader(true);
+		if (!selectedForm || form_id !== currentFormIdRef.current) {
+			return;
+		}
 		let filterData = [];
 
 		if (value === 'completed') {
@@ -1615,11 +1676,12 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 			filterData = tableResponse.data || [];
 		}
 
+		setLoader(true);
 		setSelectedFilter(value);
 		setCurrentPage(1);
 		setPageSize(10);
 		setTableKey((prev) => prev + 1);
-		getTableResponse(selectedForm || null, 1, 10, currentSearchTerm, value);
+		getTableResponse(selectedForm, 1, 10, currentSearchTerm, value);
 	};
 
 	const handleFileClick = () => {

@@ -1744,10 +1744,8 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
             .sort((a: any, b: any) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
 
         const fieldsHTML = prefillableFields.map((item: any) => {
-            const isRequired = item.required === 'Yes';
             let inputHTML = '';
 
-            // Date fields
             if (item?.type === 'control_widget' ||
                 item?.name?.toLowerCase().includes('date') ||
                 item?.text?.toLowerCase().includes('date')) {
@@ -1757,8 +1755,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                     name="${item.name}"
                     id="field_${item.name}"
                     class="form-input"
-                    ${isRequired ? 'required' : ''}
-                    							style="width: -webkit-fill-available; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; background-color: #f8fafc; color: black;"
+                    style="width: -webkit-fill-available; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; background-color: #f8fafc; color: black;"
                 />
             `;
             }
@@ -1770,8 +1767,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                     name="${item.name}"
                     id="field_${item.name}"
                     class="form-input"
-                    ${isRequired ? 'required' : ''}
-                    							style="width: -webkit-fill-available; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; background-color: #f8fafc; color: black;"
+                    style="width: -webkit-fill-available; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; background-color: #f8fafc; color: black;"
                 >
                     <option value="">Select ${item.text}</option>
                     ${options.map(opt => `<option value="${opt}">${opt}</option>`).join('')}
@@ -1789,7 +1785,6 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                     id="field_${item.name}"
                     class="form-input"
                     placeholder="${item?.subLabel || 'Enter email'}"
-                    ${isRequired ? 'required' : ''}
                     style="width: -webkit-fill-available; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; background-color: #f8fafc; color: black;"
                 />
             `;
@@ -1806,7 +1801,6 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                     id="field_${item.name}"
                     class="form-input"
                     placeholder="${item?.subLabel || item.text}"
-                    ${isRequired ? 'required' : ''}
                     style="width: -webkit-fill-available; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; background-color: #f8fafc; color: black;"
                 />
             `;
@@ -1820,17 +1814,24 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                     id="field_${item.name}"
                     class="form-input"
                     placeholder="${item?.subLabel || item.text}"
-                    ${isRequired ? 'required' : ''}
                     style="width: -webkit-fill-available; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; background-color: #f8fafc; color: black;"
                 />
             `;
             }
-
             return `
             <div style="margin-bottom: 16px;">
-						<label style="display: block; font-size: 14px; font-weight: 500;  margin-bottom: 8px; color: black;"
+                <label 
+                    for="field_${item.name}"
+                    style="
+                        display: block; 
+                        font-size: 14px; 
+                        font-weight: 500; 
+                        margin-bottom: 8px; 
+                        color: #1f2937;
+                        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+                    "
+                >
                     ${item.text}
-                    ${isRequired ? '<span style="color: #ef4444; margin-left: 4px;">*</span>' : ''}
                 </label>
                 ${inputHTML}
             </div>
@@ -1844,7 +1845,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
             </div>
         </form>
         
-        <div style="padding: 16px 24px; border-top: 1px solid #e5e7eb; display: flex; gap: 12px; justify-content: flex-end;">
+        <div style="padding: 16px 24px; border-top: 1px solid #e5e7eb; background: #f8fafc; display: flex; gap: 12px; justify-content: flex-end;">
             <button 
                 id="cancel-prefill-btn"
                 type="button"
