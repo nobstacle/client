@@ -18,34 +18,48 @@ export default function HeaderOnlyPage() {
   }, []);
 
   // Function to check session
-  const checkSession = async () => {
-    try {
-      console.log('[HeaderOnly] Checking session...');
-      const response = await fetch('/api/auth/session', {
-        credentials: 'include', // IMPORTANT: Include cookies
-        cache: 'no-store' // Don't cache the response
-      });
-      
-      if (response.ok) {
-        const sessionData = await response.json();
-        
-        if (sessionData?.user) {
-          console.log('[HeaderOnly] ✓ User loaded:', sessionData.user.email);
-          setUser(sessionData.user);
-          setLoading(false);
-          return true;
-        } else {
-          console.log('[HeaderOnly] No active session');
-        }
-      } else {
-        console.log('[HeaderOnly] Session check failed:', response.status);
+const checkSession = async () => {
+  try {
+    console.log('[HeaderOnly] Checking session...');
+    const response = await fetch('/api/auth/session', {
+      credentials: 'include',
+      cache: 'no-store',
+      headers: {
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache'
       }
-    } catch (err) {
-      console.error('[HeaderOnly] Error checking session:', err);
-    }
+    });
     
-    return false;
-  };
+    if (response.ok) {
+      const sessionData = await response.json();
+      
+      if (sessionData?.user) {
+        console.log('[HeaderOnly] ✓ User loaded:', sessionData.user.email);
+        setUser(sessionData.user);
+        setLoading(false);
+        
+        window.parent.postMessage({
+          type: 'AUTH_STATUS_UPDATE',
+          isAuthenticated: true,
+          user: sessionData.user
+        }, '*');
+        
+        return true;
+      } else {
+        console.log('[HeaderOnly] No active session');
+        setLoading(false);
+      }
+    } else {
+      console.log('[HeaderOnly] Session check failed:', response.status);
+      setLoading(false);
+    }
+  } catch (err) {
+    console.error('[HeaderOnly] Error checking session:', err);
+    setLoading(false);
+  }
+  
+  return false;
+};
 
   // Get user from extension
   useEffect(() => {

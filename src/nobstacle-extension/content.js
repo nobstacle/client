@@ -17,6 +17,8 @@ let categoriesData = [];
 let categoriesFetched = false;
 let selectedStation = null;
 let stationLoadedFromStorage = false;
+let loginPromptShown = false;
+let loginCheckInProgress = false;
 
 function debugStorage() {
   console.log('[Content Script] 🔍 Storage Debug:');
@@ -299,76 +301,66 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'authStatusChanged') {
     console.log('[Content Script] 🔔 Auth status changed:', request.isAuthenticated);
-    
+
+    // Prevent duplicate handling
+    if (loginCheckInProgress) {
+      console.log('[Content Script] ⚠️ Auth check already in progress, skipping');
+      sendResponse({ success: true });
+      return true;
+    }
+
+    loginCheckInProgress = true;
+
     if (request.isAuthenticated && request.sessionToken) {
-      // User just logged in!
-      console.log('[Content Script] ✅ User logged in - updating auth cache');
-      
-      // Update cached auth data
+      console.log('[Content Script] ✅ User logged in');
+
+      loginPromptShown = false; // Reset flag
+
       cachedAuthData = {
         sessionToken: request.sessionToken,
         cookies: [],
         isAuthenticated: true
       };
       authDataReady = true;
-      
-      // Hide login prompt if showing
+
       document.getElementById('nobstacle-login-prompt')?.remove();
       document.getElementById('nobstacle-loader')?.remove();
-      
-      // If header not injected yet, inject it now
+
       if (!headerInjected && shouldInject()) {
-        console.log('[Content Script] 🚀 Injecting header after login');
-        injectHeader();
-      } else if (headerInjected) {
-        // Header already exists, update the iframe with new auth
-        const iframe = document.getElementById('nobstacle-header-iframe');
-        if (iframe) {
-          // Send auth to iframe
-          iframe.contentWindow.postMessage({
-            type: 'EXTENSION_AUTH',
-            sessionToken: request.sessionToken,
-            cookies: []
-          }, '*');
-          
-          // CRITICAL: Tell iframe to refresh its session check
-          // Wait a bit for cookies to sync
-          setTimeout(() => {
-            iframe.contentWindow.postMessage({
-              type: 'REFRESH_AUTH'
-            }, '*');
-            console.log('[Content Script] ✅ Told iframe to refresh auth');
-          }, 500);
-          
-          console.log('[Content Script] ✅ Updated iframe with new auth');
-        }
+        injectHeader().finally(() => {
+          loginCheckInProgress = false;
+        });
+      } else {
+        loginCheckInProgress = false;
       }
     } else {
-      // User logged out
       console.log('[Content Script] ❌ User logged out');
-      
-      // Update cached auth data
+
       cachedAuthData = {
         sessionToken: null,
         cookies: [],
         isAuthenticated: false
       };
       authDataReady = true;
-      
-      // Remove header
+
       document.getElementById('nobstacle-header-container')?.remove();
       document.body.classList.remove('nobstacle-active');
       headerInjected = false;
-      
-      // Show login prompt
-      showLoginPrompt();
+
+      // Only show prompt once
+      if (!loginPromptShown) {
+        loginPromptShown = true;
+        showLoginPrompt();
+      }
+
+      loginCheckInProgress = false;
     }
-    
+
     sendResponse({ success: true });
     return true;
   }
-  
-  return false; // Let other handlers process the message
+
+  return false;
 });
 
 function isInputFocused() {
@@ -877,7 +869,12 @@ async function getAuthCookies() {
 
 function showLoginPrompt() {
   const existingPrompt = document.getElementById('nobstacle-login-prompt');
-  if (existingPrompt) return;
+  if (existingPrompt) {
+    console.log('[Content Script] Login prompt already showing');
+    return;
+  }
+
+  console.log('[Content Script] 🔐 Showing login prompt');
 
   const prompt = document.createElement('div');
   prompt.id = 'nobstacle-login-prompt';
@@ -898,7 +895,7 @@ function showLoginPrompt() {
   prompt.innerHTML = `
     <h2 style="margin: 0 0 15px 0; color: #333; font-size: 20px;">🔐 Login Required</h2>
     <p style="margin: 0 0 20px 0; color: #666; font-size: 14px;">
-      Please log in to Nobstacle to use the header extension.
+      Please log in to Nobstacle to use the extension.
     </p>
     <button 
       id="nobstacle-login-btn"
@@ -911,6 +908,7 @@ function showLoginPrompt() {
         cursor: pointer;
         font-size: 14px;
         font-weight: 600;
+        margin-right: 10px;
       "
     >
       Login to Nobstacle
@@ -926,7 +924,6 @@ function showLoginPrompt() {
         cursor: pointer;
         font-size: 14px;
         font-weight: 600;
-        margin-left: 10px;
       "
     >
       Close
@@ -935,21 +932,27 @@ function showLoginPrompt() {
 
   document.body.appendChild(prompt);
 
+  // Login button - opens nobstacle.com and sets up listener
   document.getElementById('nobstacle-login-btn').addEventListener('click', () => {
-    // Open login page
+    console.log('[Content Script] 🔑 Opening login page...');
+
+    // Open login in new tab
     chrome.runtime.sendMessage({
       action: 'openTab',
       url: 'https://nobstacle.com/'
     });
-    
-    // Change prompt to show "waiting" state
+
+    // Update prompt to show waiting state
     prompt.innerHTML = `
-      <h2 style="margin: 0 0 15px 0; color: #333; font-size: 20px;">⏳ Please Log In</h2>
+      <h2 style="margin: 0 0 15px 0; color: #333; font-size: 20px;">⏳ Waiting for Login</h2>
       <p style="margin: 0 0 20px 0; color: #666; font-size: 14px;">
-        After logging in, come back to this tab and click the button below.
+        Log in to Nobstacle in the new tab, then this page will automatically detect your login.
+      </p>
+      <p style="margin: 0 0 20px 0; color: #999; font-size: 12px;">
+        You can also click "Refresh" if you've already logged in.
       </p>
       <button 
-        id="nobstacle-check-login-btn"
+        id="nobstacle-refresh-btn"
         style="
           padding: 12px 24px;
           background: #3b5998;
@@ -959,9 +962,10 @@ function showLoginPrompt() {
           cursor: pointer;
           font-size: 14px;
           font-weight: 600;
+          margin-right: 10px;
         "
       >
-        I've Logged In - Check Again
+        Refresh Auth
       </button>
       <button 
         id="nobstacle-cancel-btn"
@@ -974,63 +978,54 @@ function showLoginPrompt() {
           cursor: pointer;
           font-size: 14px;
           font-weight: 600;
-          margin-left: 10px;
         "
       >
         Cancel
       </button>
     `;
-    
-    // Add event listener for check button
-    document.getElementById('nobstacle-check-login-btn').addEventListener('click', async () => {
-      // Show loading state
-      const checkBtn = document.getElementById('nobstacle-check-login-btn');
-      checkBtn.textContent = 'Checking...';
-      checkBtn.disabled = true;
-      checkBtn.style.opacity = '0.6';
-      
-      // Force refresh auth from background
+
+    // Refresh button
+    document.getElementById('nobstacle-refresh-btn').addEventListener('click', async () => {
+      const btn = document.getElementById('nobstacle-refresh-btn');
+      btn.textContent = 'Checking...';
+      btn.disabled = true;
+      btn.style.opacity = '0.6';
+
+      // Force refresh auth
       chrome.runtime.sendMessage({ action: 'refreshAuth' }, async (authData) => {
-        if (authData && authData.isAuthenticated && authData.sessionToken) {
-          // Success! Update cache and inject header
+        if (authData?.isAuthenticated && authData?.sessionToken) {
           console.log('[Content Script] ✅ Login verified!');
-          
-          cachedAuthData = {
-            sessionToken: authData.sessionToken,
-            cookies: authData.cookies || [],
-            isAuthenticated: true
-          };
+
+          cachedAuthData = authData;
           authDataReady = true;
-          
-          // Remove prompt
+
           prompt.remove();
-          
-          // Inject header if not already injected
+
+          // Inject header
           if (!headerInjected && shouldInject()) {
             await injectHeader();
           }
         } else {
-          // Still not logged in
-          console.log('[Content Script] ❌ Still not logged in');
-          checkBtn.textContent = 'Not Logged In Yet';
-          checkBtn.style.background = '#dc2626';
-          
+          btn.textContent = 'Not Logged In Yet';
+          btn.style.background = '#dc2626';
+
           setTimeout(() => {
-            checkBtn.textContent = 'I\'ve Logged In - Check Again';
-            checkBtn.style.background = '#3b5998';
-            checkBtn.disabled = false;
-            checkBtn.style.opacity = '1';
+            btn.textContent = 'Refresh Auth';
+            btn.style.background = '#3b5998';
+            btn.disabled = false;
+            btn.style.opacity = '1';
           }, 2000);
         }
       });
     });
-    
-    // Add event listener for cancel button
+
+    // Cancel button
     document.getElementById('nobstacle-cancel-btn').addEventListener('click', () => {
       prompt.remove();
     });
   });
 
+  // Close button
   document.getElementById('nobstacle-close-prompt').addEventListener('click', () => {
     prompt.remove();
   });
