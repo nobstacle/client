@@ -112,6 +112,111 @@ function hideLoader() {
   }
 }
 
+chrome.storage.onChanged.addListener((changes, areaName) => {
+  if (areaName === 'local') {
+    // Listen for station changes
+    if (changes[STATION_STORAGE_KEY]) {
+      const newStation = changes[STATION_STORAGE_KEY].newValue;
+      console.log('[Content Script] 📡 Station changed in storage:', newStation);
+
+      selectedStation = String(newStation);
+      localStorage.setItem(STATION_STORAGE_KEY, newStation);
+
+      const iframe = document.getElementById('nobstacle-header-iframe');
+      if (iframe && iframe.src.includes('station=')) {
+        const newUrl = iframe.src.replace(/station=[^&]*/, `station=${newStation}`);
+        console.log('[Content Script] 🔄 Reloading iframe with new station');
+        iframe.src = newUrl;
+      }
+    }
+
+    // ⭐ CRITICAL: Listen for auth status changes
+    if (changes.isAuthenticated) {
+      const newAuthStatus = changes.isAuthenticated.newValue;
+      console.log('[Content Script] 🔔 Auth status changed in storage:', newAuthStatus);
+
+      if (newAuthStatus === true && changes.authSessionToken) {
+        const newToken = changes.authSessionToken.newValue;
+        const newCookies = changes.authCookies?.newValue || [];
+
+        console.log('[Content Script] ✅ User authenticated - updating cache');
+
+        // Update cached auth data
+        cachedAuthData = {
+          sessionToken: newToken,
+          cookies: newCookies,
+          isAuthenticated: true
+        };
+        authDataReady = true;
+
+        // Remove login prompt if showing
+        const loginPrompt = document.getElementById('nobstacle-login-prompt');
+        if (loginPrompt) {
+          loginPrompt.innerHTML = `
+            <div style="margin-bottom: 20px;">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                <polyline points="22 4 12 14.01 9 11.01"></polyline>
+              </svg>
+            </div>
+            <h2 style="margin: 0 0 10px 0; color: #10b981; font-size: 20px; font-weight: 600;">Login Successful!</h2>
+            <p style="margin: 0; color: #666; font-size: 14px;">Loading extension...</p>
+          `;
+
+          setTimeout(() => {
+            loginPrompt.remove();
+          }, 1500);
+        }
+
+        // Remove loader
+        document.getElementById('nobstacle-loader')?.remove();
+
+        // Inject or refresh header
+        if (!headerInjected && shouldInject()) {
+          console.log('[Content Script] 🚀 Injecting header after auth detected');
+          setTimeout(() => {
+            injectHeader();
+          }, 1500);
+        } else if (headerInjected) {
+          const iframe = document.getElementById('nobstacle-header-iframe');
+          if (iframe) {
+            iframe.contentWindow.postMessage({
+              type: 'EXTENSION_AUTH',
+              sessionToken: newToken,
+              cookies: newCookies
+            }, '*');
+
+            setTimeout(() => {
+              iframe.contentWindow.postMessage({
+                type: 'REFRESH_AUTH'
+              }, '*');
+            }, 500);
+          }
+        }
+      } else if (newAuthStatus === false) {
+        console.log('[Content Script] ❌ User logged out');
+
+        cachedAuthData = {
+          sessionToken: null,
+          cookies: [],
+          isAuthenticated: false
+        };
+        authDataReady = true;
+
+        // Remove header
+        document.getElementById('nobstacle-header-container')?.remove();
+        document.body.classList.remove('nobstacle-active');
+        headerInjected = false;
+
+        // Show login prompt
+        if (!document.getElementById('nobstacle-login-prompt')) {
+          showLoginPrompt();
+        }
+      }
+    }
+  }
+});
+
 async function loadStationFromBackground() {
   return new Promise((resolve) => {
     console.log('[Content Script] 🔍 Loading station from background...');
@@ -302,12 +407,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'authStatusChanged') {
     console.log('[Content Script] 🔔 Auth status changed:', request.isAuthenticated);
-    
+
     if (request.isAuthenticated && request.sessionToken) {
       console.log('[Content Script] ✅ User logged in - updating auth cache');
-      
+
       loginWindowOpened = false; // Reset flag
-      
+
       // Update cached auth data
       cachedAuthData = {
         sessionToken: request.sessionToken,
@@ -315,7 +420,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         isAuthenticated: true
       };
       authDataReady = true;
-      
+
       // Remove login prompt
       const loginPrompt = document.getElementById('nobstacle-login-prompt');
       if (loginPrompt) {
@@ -330,15 +435,15 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           <h2 style="margin: 0 0 10px 0; color: #10b981; font-size: 20px; font-weight: 600;">Login Successful!</h2>
           <p style="margin: 0; color: #666; font-size: 14px;">Loading extension...</p>
         `;
-        
+
         setTimeout(() => {
           loginPrompt.remove();
         }, 1500);
       }
-      
+
       // Remove loader
       document.getElementById('nobstacle-loader')?.remove();
-      
+
       // Inject header if not already injected
       if (!headerInjected && shouldInject()) {
         console.log('[Content Script] 🚀 Injecting header after login');
@@ -354,7 +459,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             sessionToken: request.sessionToken,
             cookies: request.cookies || []
           }, '*');
-          
+
           setTimeout(() => {
             iframe.contentWindow.postMessage({
               type: 'REFRESH_AUTH'
@@ -364,29 +469,29 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       }
     } else {
       console.log('[Content Script] ❌ User logged out');
-      
+
       cachedAuthData = {
         sessionToken: null,
         cookies: [],
         isAuthenticated: false
       };
       authDataReady = true;
-      
+
       // Remove header
       document.getElementById('nobstacle-header-container')?.remove();
       document.body.classList.remove('nobstacle-active');
       headerInjected = false;
-      
+
       // Show login prompt (only if not already showing)
       if (!document.getElementById('nobstacle-login-prompt')) {
         showLoginPrompt();
       }
     }
-    
+
     sendResponse({ success: true });
     return true;
   }
-  
+
   return false;
 });
 
@@ -977,21 +1082,21 @@ function showLoginPrompt() {
       console.log('[Content Script] Login window already opened');
       return;
     }
-    
+
     loginWindowOpened = true;
     console.log('[Content Script] 🔑 Opening Nobstacle login page...');
-    
+
     // Start monitoring for login in background script
     chrome.runtime.sendMessage({
       action: 'startLoginMonitoring'
     });
-    
+
     // Open login page
     chrome.runtime.sendMessage({
       action: 'openTab',
       url: 'https://nobstacle.com/auth/signin'
     });
-    
+
     // Update prompt to waiting state
     prompt.innerHTML = `
       <div style="margin-bottom: 20px;">
@@ -1034,7 +1139,7 @@ function showLoginPrompt() {
         Cancel
       </button>
     `;
-    
+
     document.getElementById('nobstacle-cancel-btn').addEventListener('click', () => {
       loginWindowOpened = false;
       chrome.runtime.sendMessage({ action: 'stopLoginMonitoring' });
@@ -1058,39 +1163,95 @@ async function prefetchAuthData() {
         cookies: [],
         isAuthenticated: false
       });
-    }, 5000);
+    }, 8000); // Increased timeout to 8 seconds
 
-    chrome.runtime.sendMessage({
-      action: 'getAuthData'
-    }, (response) => {
-      clearTimeout(timeout);
+    // IMPROVED: First check if we already have valid cached data
+    if (cachedAuthData && cachedAuthData.isAuthenticated && cachedAuthData.sessionToken) {
+      const age = authDataReady ? 0 : Infinity;
+      if (age < 30000) { // If cached data is less than 30 seconds old
+        console.log('[Content Script] ✅ Using valid cached auth data');
+        clearTimeout(timeout);
+        resolve(cachedAuthData);
+        return;
+      }
+    }
 
+    // IMPROVED: Try chrome.storage first (more reliable than message passing)
+    chrome.storage.local.get([
+      'authSessionToken',
+      'authCookies',
+      'isAuthenticated',
+      'authTimestamp'
+    ], async (storageResult) => {
       if (chrome.runtime.lastError) {
-        console.error('[Content Script] ❌ Error getting auth:', chrome.runtime.lastError);
-        cachedAuthData = {
+        console.error('[Content Script] ❌ Storage error:', chrome.runtime.lastError);
+        clearTimeout(timeout);
+        resolve({
           sessionToken: null,
           cookies: [],
           isAuthenticated: false
+        });
+        return;
+      }
+
+      console.log('[Content Script] 📦 Storage result:', {
+        hasToken: !!storageResult.authSessionToken,
+        isAuthenticated: storageResult.isAuthenticated,
+        age: storageResult.authTimestamp
+          ? Math.round((Date.now() - storageResult.authTimestamp) / 1000) + 's'
+          : 'unknown'
+      });
+
+      // If storage has valid auth, use it immediately
+      if (storageResult.isAuthenticated && storageResult.authSessionToken) {
+        cachedAuthData = {
+          sessionToken: storageResult.authSessionToken,
+          cookies: storageResult.authCookies || [],
+          isAuthenticated: true
         };
         authDataReady = true;
+
+        console.log('[Content Script] ✅ Auth loaded from storage');
+        clearTimeout(timeout);
         resolve(cachedAuthData);
         return;
       }
 
-      console.log('[Content Script] 📦 Auth response:', {
-        hasToken: !!response?.sessionToken,
-        cookieCount: response?.cookies?.length || 0,
-        isAuthenticated: response?.isAuthenticated
+      // Storage doesn't have auth - try background script
+      console.log('[Content Script] 📨 Requesting auth from background...');
+
+      chrome.runtime.sendMessage({
+        action: 'getAuthData'
+      }, (response) => {
+        clearTimeout(timeout);
+
+        if (chrome.runtime.lastError) {
+          console.error('[Content Script] ❌ Error getting auth from background:', chrome.runtime.lastError);
+          cachedAuthData = {
+            sessionToken: null,
+            cookies: [],
+            isAuthenticated: false
+          };
+          authDataReady = true;
+          resolve(cachedAuthData);
+          return;
+        }
+
+        console.log('[Content Script] 📦 Background response:', {
+          hasToken: !!response?.sessionToken,
+          cookieCount: response?.cookies?.length || 0,
+          isAuthenticated: response?.isAuthenticated
+        });
+
+        cachedAuthData = {
+          sessionToken: response?.sessionToken || null,
+          cookies: response?.cookies || [],
+          isAuthenticated: response?.isAuthenticated === true && !!response?.sessionToken
+        };
+
+        authDataReady = true;
+        resolve(cachedAuthData);
       });
-
-      cachedAuthData = {
-        sessionToken: response?.sessionToken || null,
-        cookies: response?.cookies || [],
-        isAuthenticated: response?.isAuthenticated === true && !!response?.sessionToken
-      };
-
-      authDataReady = true;
-      resolve(cachedAuthData);
     });
   });
 }
@@ -1726,18 +1887,27 @@ function createFormPrefillModal(formData) {
 }
 
 async function injectHeader() {
-  if (document.getElementById('nobstacle-header-container')) return;
+  if (document.getElementById('nobstacle-header-container')) {
+    console.log('[Content Script] ⚠️ Header already injected');
+    return;
+  }
 
   showLoader();
 
   try {
+    console.log('[Content Script] 🚀 Starting header injection...');
+
+    // IMPROVED: Try to get auth data with multiple attempts
     let authAttempts = 0;
-    const maxAttempts = 3;
+    const maxAttempts = 5; // Increased from 3 to 5
+    let authData = null;
 
     while (authAttempts < maxAttempts) {
-      await prefetchAuthData();
+      console.log(`[Content Script] 🔍 Auth attempt ${authAttempts + 1}/${maxAttempts}`);
 
-      if (cachedAuthData?.isAuthenticated && cachedAuthData?.sessionToken) {
+      authData = await prefetchAuthData();
+
+      if (authData?.isAuthenticated && authData?.sessionToken) {
         console.log('[Content Script] ✅ Auth verified on attempt', authAttempts + 1);
         break;
       }
@@ -1746,8 +1916,10 @@ async function injectHeader() {
       console.log(`[Content Script] ⚠️ Auth not found, attempt ${authAttempts}/${maxAttempts}`);
 
       if (authAttempts < maxAttempts) {
-        // Wait 500ms before retrying
-        await new Promise(resolve => setTimeout(resolve, 500));
+        // Progressive delays: 500ms, 1000ms, 1500ms, 2000ms
+        const delay = authAttempts * 500;
+        console.log(`[Content Script] ⏳ Waiting ${delay}ms before retry...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
 
         // Force refresh auth from background
         await new Promise((resolve) => {
@@ -1759,13 +1931,46 @@ async function injectHeader() {
             resolve();
           });
         });
+
+        // Also directly check storage
+        const storageResult = await new Promise((resolve) => {
+          chrome.storage.local.get([
+            'authSessionToken',
+            'authCookies',
+            'isAuthenticated'
+          ], (result) => {
+            resolve(result);
+          });
+        });
+
+        console.log('[Content Script] 📦 Storage check:', {
+          hasToken: !!storageResult.authSessionToken,
+          isAuthenticated: storageResult.isAuthenticated
+        });
+
+        // Update cached data if storage has it
+        if (storageResult.isAuthenticated && storageResult.authSessionToken) {
+          cachedAuthData = {
+            sessionToken: storageResult.authSessionToken,
+            cookies: storageResult.authCookies || [],
+            isAuthenticated: true
+          };
+          authDataReady = true;
+          console.log('[Content Script] ✅ Auth found in storage!');
+          authData = cachedAuthData;
+          break;
+        }
       }
     }
 
-    if (!cachedAuthData?.sessionToken || !cachedAuthData?.isAuthenticated) {
+    if (!authData?.sessionToken || !authData?.isAuthenticated) {
       console.log('[Content Script] ❌ No valid auth after', maxAttempts, 'attempts');
       hideLoader();
-      showLoginPrompt();
+
+      // Don't show login prompt if we're already monitoring for login
+      if (!loginWindowOpened) {
+        showLoginPrompt();
+      }
       return;
     }
 
@@ -1800,12 +2005,14 @@ async function injectHeader() {
           : (selectedStation || "1");
 
         if (cachedAuthData && authDataReady && cachedAuthData.isAuthenticated) {
+          // Send auth to iframe
           iframe.contentWindow.postMessage({
             type: 'EXTENSION_AUTH',
             sessionToken: cachedAuthData.sessionToken,
             cookies: cachedAuthData.cookies
           }, '*');
 
+          // Send station
           iframe.contentWindow.postMessage({
             type: 'INITIAL_STATION',
             station: freshStation
@@ -1850,7 +2057,13 @@ async function injectHeader() {
       // REQUEST_AUTH
       if (event.data.type === 'REQUEST_AUTH') {
         console.log('[Content Script] 📨 Iframe requested auth');
-        const authData = cachedAuthData || await prefetchAuthData();
+
+        let authData = cachedAuthData;
+
+        // If no cached auth, fetch fresh
+        if (!authData || !authData.isAuthenticated) {
+          authData = await prefetchAuthData();
+        }
 
         if (authData.isAuthenticated) {
           iframe.contentWindow.postMessage({
@@ -1858,10 +2071,28 @@ async function injectHeader() {
             sessionToken: authData.sessionToken,
             cookies: authData.cookies
           }, '*');
+          console.log('[Content Script] ✅ Auth sent to iframe');
         } else {
           console.error('[Content Script] ❌ Cannot provide auth - user not logged in');
-          hideLoader();
-          showLoginPrompt();
+
+          // If not authenticated, try one more time after delay
+          setTimeout(async () => {
+            const retryAuth = await prefetchAuthData();
+            if (retryAuth.isAuthenticated) {
+              iframe.contentWindow.postMessage({
+                type: 'EXTENSION_AUTH',
+                sessionToken: retryAuth.sessionToken,
+                cookies: retryAuth.cookies
+              }, '*');
+              console.log('[Content Script] ✅ Auth sent after retry');
+            } else {
+              // Still no auth - show login
+              hideLoader();
+              if (!loginWindowOpened) {
+                showLoginPrompt();
+              }
+            }
+          }, 1000);
         }
       }
 

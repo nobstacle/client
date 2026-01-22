@@ -1,4 +1,4 @@
-// Background service worker - FIXED VERSION
+// Background service worker - FIXED VERSION WITH IMPROVED AUTH DETECTION
 let backendAccessToken = null;
 let tokenExpiry = null;
 let currentStation = null;
@@ -18,7 +18,6 @@ async function initStation() {
       currentStation = String(result[STATION_STORAGE_KEY]);
       console.log('[Background] ✅ Initial station loaded:', currentStation);
     } else {
-      // No station saved, set default and save it
       currentStation = "1";
       await chrome.storage.local.set({ [STATION_STORAGE_KEY]: "1" });
       console.log('[Background] ✅ Set and saved default station: 1');
@@ -26,7 +25,6 @@ async function initStation() {
   } catch (error) {
     console.error('[Background] ❌ Error initializing station:', error);
     currentStation = "1";
-    // Try to save default even if there was an error
     try {
       await chrome.storage.local.set({ [STATION_STORAGE_KEY]: "1" });
     } catch (e) {
@@ -40,28 +38,64 @@ chrome.runtime.onInstalled.addListener(async (details) => {
   console.log('[Background] Extension installed/updated');
   await initStation();
   await restoreTokenFromStorage();
-  await fetchAndCacheAuth();
+  
+  // Wait a bit before checking auth to let cookies settle
+  setTimeout(async () => {
+    await fetchAndCacheAuth();
+  }, 1000);
 });
 
 // Initialize on browser startup
 chrome.runtime.onStartup.addListener(async () => {
   console.log('[Background] Browser started');
   await initStation();
-  await fetchAuthFromNobstacle();
-  await fetchAndCacheAuth();
+  
+  // Wait for browser to fully load cookies
+  setTimeout(async () => {
+    await fetchAuthFromNobstacle();
+    await fetchAndCacheAuth();
+  }, 2000);
 });
 
 // Initialize immediately when script loads
 initStation();
 restoreTokenFromStorage();
 
+// Check auth immediately on script load (with delay for cookies)
+setTimeout(async () => {
+  await fetchAndCacheAuth();
+}, 1500);
+
 async function fetchAndCacheAuth() {
   try {
     console.log('[Background] 🔍 Fetching auth from nobstacle.com...');
 
-    const cookies = await chrome.cookies.getAll({
-      domain: 'nobstacle.com'
-    });
+    // Try to get cookies with multiple attempts
+    let cookies = [];
+    let attempts = 0;
+    const maxAttempts = 3;
+
+    while (attempts < maxAttempts) {
+      cookies = await chrome.cookies.getAll({
+        domain: 'nobstacle.com'
+      });
+
+      const sessionCookie = cookies.find(c =>
+        c.name === '__Secure-next-auth.session-token' ||
+        c.name === 'next-auth.session-token'
+      );
+
+      if (sessionCookie) {
+        console.log('[Background] ✅ Session cookie found on attempt', attempts + 1);
+        break;
+      }
+
+      attempts++;
+      if (attempts < maxAttempts) {
+        console.log('[Background] ⏳ Cookie not found, retrying...', attempts);
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+    }
 
     console.log('[Background] 📦 Found cookies:', cookies.length);
 
@@ -83,6 +117,9 @@ async function fetchAndCacheAuth() {
       console.log('[Background] ✅ Auth cached successfully');
       console.log('[Background] 🔑 Session token:', sessionCookie.value.substring(0, 20) + '...');
 
+      // Notify all tabs immediately
+      notifyAllTabsAuthChanged(true, sessionCookie.value, cookies);
+
       return {
         sessionToken: sessionCookie.value,
         cookies,
@@ -91,10 +128,11 @@ async function fetchAndCacheAuth() {
     } else {
       console.log('[Background] ⚠️ No session cookie found');
 
-      // Mark as not authenticated
       await chrome.storage.local.set({
         isAuthenticated: false,
-        authTimestamp: Date.now()
+        authTimestamp: Date.now(),
+        authSessionToken: null,
+        authCookies: []
       });
 
       return {
@@ -111,6 +149,24 @@ async function fetchAndCacheAuth() {
       isAuthenticated: false
     };
   }
+}
+
+// Helper function to notify all tabs about auth changes
+function notifyAllTabsAuthChanged(isAuthenticated, sessionToken = null, cookies = []) {
+  chrome.tabs.query({}, (tabs) => {
+    tabs.forEach((tab) => {
+      if (tab.id) {
+        chrome.tabs.sendMessage(tab.id, {
+          action: 'authStatusChanged',
+          isAuthenticated: isAuthenticated,
+          sessionToken: sessionToken,
+          cookies: cookies || []
+        }).catch(() => {
+          // Tab might not have content script, ignore
+        });
+      }
+    });
+  });
 }
 
 async function fetchAuthFromNobstacle() {
@@ -136,12 +192,15 @@ async function restoreTokenFromStorage() {
 }
 
 function startLoginMonitoring() {
-  if (isWaitingForLogin) return;
+  if (isWaitingForLogin) {
+    console.log('[Background] ⚠️ Already monitoring for login');
+    return;
+  }
   
   isWaitingForLogin = true;
   console.log('[Background] 👀 Started monitoring for login...');
   
-  // Check every 2 seconds for new session cookie
+  // Check every 1 second for new session cookie (more frequent)
   loginCheckInterval = setInterval(async () => {
     const authData = await fetchAndCacheAuth();
     
@@ -149,24 +208,15 @@ function startLoginMonitoring() {
       console.log('[Background] ✅ Login detected via polling!');
       
       // Notify all tabs
-      chrome.tabs.query({}, (tabs) => {
-        tabs.forEach((tab) => {
-          chrome.tabs.sendMessage(tab.id, {
-            action: 'authStatusChanged',
-            isAuthenticated: true,
-            sessionToken: authData.sessionToken,
-            cookies: authData.cookies
-          }).catch(() => {});
-        });
-      });
+      notifyAllTabsAuthChanged(true, authData.sessionToken, authData.cookies);
       
       isWaitingForLogin = false;
       clearInterval(loginCheckInterval);
       loginCheckInterval = null;
     }
-  }, 2000);
+  }, 1000); // Check every second
   
-  // Stop monitoring after 5 minutes
+  // Stop monitoring after 10 minutes (increased timeout)
   setTimeout(() => {
     if (loginCheckInterval) {
       clearInterval(loginCheckInterval);
@@ -174,7 +224,7 @@ function startLoginMonitoring() {
       isWaitingForLogin = false;
       console.log('[Background] ⏰ Login monitoring timeout');
     }
-  }, 5 * 60 * 1000);
+  }, 10 * 60 * 1000);
 }
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
@@ -194,12 +244,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true;
   }
 
-  // SET STATION - FIX: Better error handling and verification
   if (request.action === 'setStation') {
     const newStation = String(request.station);
     console.log('[Background] 📥 setStation request:', newStation);
 
-    // Save to chrome.storage
     chrome.storage.local.set(
       { [STATION_STORAGE_KEY]: newStation },
       () => {
@@ -209,10 +257,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         } else {
           console.log('[Background] ✅ Station saved:', newStation);
 
-          // Update memory
           currentStation = newStation;
 
-          // Verify by reading back
           chrome.storage.local.get([STATION_STORAGE_KEY], (result) => {
             const saved = String(result[STATION_STORAGE_KEY]);
             console.log('[Background] 🔍 Verification read:', saved);
@@ -220,16 +266,13 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             if (saved === newStation) {
               console.log('[Background] ✅ Verification passed');
 
-              // Notify all tabs about the change
               chrome.tabs.query({}, (tabs) => {
                 tabs.forEach((tab) => {
                   if (tab.id) {
                     chrome.tabs.sendMessage(tab.id, {
                       action: 'stationChanged',
                       station: newStation
-                    }).catch(() => {
-                      // Tab might not have content script, ignore
-                    });
+                    }).catch(() => {});
                   }
                 });
               });
@@ -247,10 +290,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       }
     );
 
-    return true; // Keep channel open for async response
+    return true;
   }
 
-  // Other handlers remain the same...
   if (request.type === 'HEADER_READY') {
     sendResponse({ success: true });
     return true;
@@ -280,16 +322,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         age: result.authTimestamp ? Math.round((now - result.authTimestamp) / 1000) + 's' : 'never'
       });
 
-      // If cache is valid and we have auth data, return it
-      if (!isExpired && result.authSessionToken && result.isAuthenticated !== false) {
-        console.log('[Background] ✅ Returning cached auth data');
-        sendResponse({
-          sessionToken: result.authSessionToken,
-          cookies: result.authCookies || [],
-          isAuthenticated: true
-        });
-      } else {
-        // Cache is expired or empty, fetch fresh data
+      // Always try to get fresh auth if cache is expired or missing
+      if (isExpired || !result.authSessionToken || result.isAuthenticated !== true) {
         console.log('[Background] 🔄 Fetching fresh auth data...');
         const authData = await fetchAndCacheAuth();
 
@@ -303,12 +337,19 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           cookies: [],
           isAuthenticated: false
         });
+      } else {
+        // Cache is valid, return it
+        console.log('[Background] ✅ Returning cached auth data');
+        sendResponse({
+          sessionToken: result.authSessionToken,
+          cookies: result.authCookies || [],
+          isAuthenticated: true
+        });
       }
     });
 
     return true;
   }
-
 
   if (request.action === 'refreshAuth') {
     console.log('[Background] 🔄 Force refresh auth requested');
@@ -368,7 +409,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true;
   }
 
-    if (request.action === 'startLoginMonitoring') {
+  if (request.action === 'startLoginMonitoring') {
     console.log('[Background] 📨 Starting login monitoring');
     startLoginMonitoring();
     sendResponse({ success: true });
@@ -396,13 +437,26 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
     console.log('[Background] 📡 Storage changed externally:', newStation);
     currentStation = newStation;
   }
+  
+  // IMPORTANT: Listen for auth changes in storage
+  if (areaName === 'local' && changes.isAuthenticated) {
+    console.log('[Background] 🔔 Auth status changed in storage:', changes.isAuthenticated.newValue);
+    
+    if (changes.isAuthenticated.newValue === true && changes.authSessionToken) {
+      const newToken = changes.authSessionToken.newValue;
+      const newCookies = changes.authCookies?.newValue || [];
+      
+      // Notify all tabs
+      notifyAllTabsAuthChanged(true, newToken, newCookies);
+    }
+  }
 });
 
-// Periodically refresh auth
+// Periodically refresh auth (more frequently)
 setInterval(async () => {
   console.log('[Background] ⏰ Periodic auth refresh...');
   await fetchAndCacheAuth();
-}, 2 * 60 * 1000);
+}, 60 * 1000); // Every 1 minute instead of 2
 
 chrome.cookies.onChanged.addListener(async (changeInfo) => {
   if (changeInfo.cookie.domain.includes('nobstacle.com')) {
@@ -413,7 +467,6 @@ chrome.cookies.onChanged.addListener(async (changeInfo) => {
       if (changeInfo.removed) {
         console.log('[Background] 🔴 Session cookie removed - user logged out');
         
-        // Clear auth cache
         await chrome.storage.local.set({
           authSessionToken: null,
           authCookies: [],
@@ -422,53 +475,37 @@ chrome.cookies.onChanged.addListener(async (changeInfo) => {
         });
         
         // Notify all tabs
-        chrome.tabs.query({}, (tabs) => {
-          tabs.forEach((tab) => {
-            chrome.tabs.sendMessage(tab.id, {
-              action: 'authStatusChanged',
-              isAuthenticated: false,
-              sessionToken: null
-            }).catch(() => {});
-          });
-        });
+        notifyAllTabsAuthChanged(false, null, []);
       } else {
         console.log('[Background] 🟢 Session cookie changed - user logged in!');
         
-        // Wait a bit for all cookies to sync
+        // Wait for cookies to fully sync, then check multiple times
         setTimeout(async () => {
           const authData = await fetchAndCacheAuth();
           
           if (authData.isAuthenticated && authData.sessionToken) {
             console.log('[Background] ✅ Login confirmed! Broadcasting to all tabs...');
-            
-            // Notify ALL tabs about successful login
-            chrome.tabs.query({}, (tabs) => {
-              tabs.forEach((tab) => {
-                if (tab.id) {
-                  chrome.tabs.sendMessage(tab.id, {
-                    action: 'authStatusChanged',
-                    isAuthenticated: true,
-                    sessionToken: authData.sessionToken,
-                    cookies: authData.cookies
-                  }).catch(() => {
-                    // Tab might not have content script
-                  });
-                }
-              });
-            });
+            notifyAllTabsAuthChanged(true, authData.sessionToken, authData.cookies);
             
             isWaitingForLogin = false;
             if (loginCheckInterval) {
               clearInterval(loginCheckInterval);
               loginCheckInterval = null;
             }
+          } else {
+            // Retry after another delay
+            setTimeout(async () => {
+              const retryAuthData = await fetchAndCacheAuth();
+              if (retryAuthData.isAuthenticated) {
+                notifyAllTabsAuthChanged(true, retryAuthData.sessionToken, retryAuthData.cookies);
+              }
+            }, 1000);
           }
-        }, 1500); // Wait 1.5 seconds for cookies to fully sync
+        }, 1500);
       }
     }
   }
 });
-
 
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   if (changeInfo.status === 'complete' &&
@@ -477,32 +514,27 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
 
     console.log('[Background] 🔍 Nobstacle page loaded, checking for login...');
 
-    // Wait a bit for cookies to settle, then check
+    // Wait for cookies to settle, then check multiple times
     setTimeout(async () => {
       const authData = await fetchAndCacheAuth();
 
-      // If we found auth, notify all content scripts
       if (authData.isAuthenticated && authData.sessionToken) {
         console.log('[Background] ✅ Login detected! Notifying content scripts...');
-
-        // Broadcast to all tabs
-        chrome.tabs.query({}, (tabs) => {
-          tabs.forEach((t) => {
-            chrome.tabs.sendMessage(t.id, {
-              action: 'authStatusChanged',
-              isAuthenticated: true,
-              sessionToken: authData.sessionToken
-            }).catch(() => {
-              // Tab might not have content script
-            });
-          });
-        });
+        notifyAllTabsAuthChanged(true, authData.sessionToken, authData.cookies);
+      } else {
+        // Retry after delay
+        setTimeout(async () => {
+          const retryAuthData = await fetchAndCacheAuth();
+          if (retryAuthData.isAuthenticated) {
+            notifyAllTabsAuthChanged(true, retryAuthData.sessionToken, retryAuthData.cookies);
+          }
+        }, 1500);
       }
-    }, 1000); // Wait 1 second for cookies to sync
+    }, 1000);
   }
 });
 
-// Web request interceptors remain the same...
+// Web request interceptors
 chrome.webRequest.onBeforeSendHeaders.addListener(
   (details) => {
     if (details.url.includes('nobstacle-production-d145.up.railway.app')) {
