@@ -110,18 +110,34 @@ export default function HeaderOnlyPage() {
       window.parent.postMessage({ type: 'REQUEST_AUTH' }, '*');
     };
 
+    // More aggressive auth requests
     requestAuth();
-    setTimeout(requestAuth, 500);
+    setTimeout(requestAuth, 300);
+    setTimeout(requestAuth, 600);
     setTimeout(requestAuth, 1000);
+    setTimeout(requestAuth, 1500);
     setTimeout(requestAuth, 2000);
+    setTimeout(requestAuth, 3000);
 
     // Fallback timeout
+    // Fallback timeout with retries
     authTimeoutRef.current = setTimeout(async () => {
       if (!authReceived) {
-        console.log('[HeaderOnly] ⏱️ Auth timeout - checking session anyway');
-        await checkSession();
+        console.log('[HeaderOnly] ⏱️ Auth timeout - checking session with retries');
+
+        // Try multiple times
+        for (let i = 0; i < 5; i++) {
+          const success = await checkSession();
+          if (success) {
+            console.log('[HeaderOnly] ✅ Session found on retry', i + 1);
+            break;
+          }
+          if (i < 4) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+        }
       }
-    }, 4000);
+    }, 6000); // Increased from 4s to 6s
 
     return () => {
       window.removeEventListener('message', handler);

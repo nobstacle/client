@@ -1227,3 +1227,50 @@ body.nobstacle-active {
 .headerHover:hover {
   background-color: #2d4373 !important;
 }
+
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Responsive adjustments for mobile dropdown menu */
+@media (max-width: 640px) {
+    /* Row 2: Stack language settings vertically on very small screens */
+    .dropdown-row-2 {
+        grid-template-columns: 1fr !important;
+    }
+    
+    .dropdown-lang-settings {
+        grid-template-columns: 1fr !important;
+    }
+    
+    /* Row 4: Stack buttons vertically */
+    .dropdown-row-4 {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+@media (min-width: 641px) and (max-width: 768px) {
+    /* Tablet: Keep 2fr 1fr but adjust magic box buttons */
+    .dropdown-magic-buttons {
+        flex-direction: row;
+    }
+}
+
+@media (min-width: 769px) {
+    /* Desktop: Optimize for larger screens */
+    .dropdown-container {
+        padding: 16px 24px !important;
+    }
+    
+    .dropdown-lang-settings {
+        grid-template-columns: 1fr 1fr 1fr;
+    }
+}

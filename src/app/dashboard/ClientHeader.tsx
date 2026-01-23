@@ -141,7 +141,8 @@ const buildUrlFromFormData = (
 
 const ClientHeader = ({ user }: ClientHeaderProps) => {
     const [drawerOpen, setDrawerOpen] = useState(false);
-    const [shortcutMenuOpen, setShortcutMenuOpen] = useState(false);
+    const [dropdownMenuOpen, setDropdownMenuOpen] = useState(false);
+    const dropdownMenuRef = useRef(null);
     const [confirmationNumber, setConfirmationNumber] = useState("");
     const [searchValue, setSearchValue] = useState('');
     const [isDropdownVisible, setIsDropdownVisible] = useState(false);
@@ -208,6 +209,22 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
             localStorage.setItem(STATION_STORAGE_KEY, urlStation);
         }
     }, [params]);
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (dropdownMenuRef.current && !dropdownMenuRef.current.contains(event.target)) {
+                setDropdownMenuOpen(false);
+            }
+        };
+
+        if (dropdownMenuOpen) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [dropdownMenuOpen]);
 
     useEffect(() => {
         const handleStationUpdate = (event: CustomEvent) => {
@@ -774,12 +791,6 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
 
     const showDrawer = () => setDrawerOpen(true);
     const closeDrawer = () => setDrawerOpen(false);
-
-    const openQuickActions = () => {
-        setShortcutMenuOpen(true);
-    }
-
-    const closeQuickActions = () => setShortcutMenuOpen(false);
 
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -2692,16 +2703,308 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                     <LogoutIcon />
                                     <Logout />
                                 </div>
-                                <Button
-                                    type="text"
-                                    icon={<MoreOutlined className="text-white text-xl" />}
-                                    onClick={openQuickActions}
-                                    className="border-none shadow-none hover:bg-white/20 transition-colors duration-200 rounded-lg p-3"
-                                    style={{
-                                        background: 'transparent',
-                                        border: 'none'
-                                    }}
-                                />
+                                <div ref={dropdownMenuRef} style={{ position: 'relative' }}>
+                                    <Button
+                                        type="text"
+                                        icon={<MoreOutlined className="text-white text-xl" />}
+                                        onClick={() => setDropdownMenuOpen(!dropdownMenuOpen)}
+                                        className="border-none shadow-none hover:bg-white/20 transition-colors duration-200 rounded-lg p-3"
+                                        style={{
+                                            background: dropdownMenuOpen ? 'rgba(255, 255, 255, 0.15)' : 'transparent',
+                                            border: 'none'
+                                        }}
+                                    />
+
+                                    {/* Dropdown Menu */}
+                                    {dropdownMenuOpen && (
+                                        <div style={{
+                                            position: 'fixed',
+                                            top: '3.5rem', // Height of mobile header
+                                            left: 0,
+                                            right: 0,
+                                            backgroundColor: 'white',
+                                            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                                            zIndex: 1000,
+                                            animation: 'slideDown 0.3s ease-out',
+                                            borderBottom: '2px solid #3b5998'
+                                        }}>
+                                            <div style={{
+                                                padding: '12px 16px',
+                                                maxWidth: '1200px',
+                                                margin: '0 auto'
+                                            }}
+                                                className="dropdown-container">
+                                                {/* Row 1: Quick Action Shortcuts */}
+                                                <div style={{
+                                                    display: 'flex',
+                                                    gap: '8px',
+                                                    marginBottom: '12px',
+                                                    flexWrap: 'wrap',
+                                                    justifyContent: 'center'
+                                                }}>
+                                                    <HeaderSurveyShortcut
+                                                        confirmationNumber={confirmationNumber}
+                                                        clearConfirmationNumber={clearConfirmationNumber}
+                                                        checkTooltip={isInIframe}
+                                                        user={user}
+                                                    />
+                                                    <HeaderRecordingShortcut
+                                                        confirmationNumber={confirmationNumber}
+                                                        clearConfirmationNumber={clearConfirmationNumber}
+                                                        checkTooltip={isInIframe}
+                                                    />
+                                                    <ChatBot checkTooltip={isInIframe} />
+                                                    <WebsiteShortcut
+                                                        confirmationNumber={confirmationNumber}
+                                                        clearConfirmationNumber={clearConfirmationNumber}
+                                                        checkTooltip={isInIframe}
+                                                    />
+                                                    <TextSurveyShortcut
+                                                        confirmationNumber={confirmationNumber}
+                                                        clearConfirmationNumber={clearConfirmationNumber}
+                                                        checkTooltip={isInIframe}
+                                                    />
+                                                </div>
+
+                                                {/* Row 2: Language Settings (col-8) & Station (col-4) */}
+                                                <div
+                                                    className="dropdown-row-2"
+                                                    style={{
+                                                        display: 'grid',
+                                                        gridTemplateColumns: '2fr 1fr',
+                                                        gap: '8px',
+                                                        marginBottom: '12px'
+                                                    }}>
+                                                    {/* Left: Language Settings */}
+                                                    <div
+                                                        className="dropdown-lang-settings"
+                                                        style={{
+                                                            display: 'grid',
+                                                            gridTemplateColumns: '1fr 1fr 1fr',
+                                                            gap: '8px',
+                                                            backgroundColor: '#f8fafc',
+                                                            padding: '8px',
+                                                            borderRadius: '8px',
+                                                            border: '1px solid #e5e7eb'
+                                                        }}>
+                                                        <div>
+                                                            <label style={{
+                                                                fontSize: '10px',
+                                                                fontWeight: '600',
+                                                                color: '#6b7280',
+                                                                display: 'block',
+                                                                marginBottom: '4px',
+                                                                textTransform: 'uppercase'
+                                                            }}>
+                                                                Lang Short
+                                                            </label>
+                                                            <LanguageShortcutPicker />
+                                                        </div>
+                                                        <div>
+                                                            <label style={{
+                                                                fontSize: '10px',
+                                                                fontWeight: '600',
+                                                                color: '#6b7280',
+                                                                display: 'block',
+                                                                marginBottom: '4px',
+                                                                textTransform: 'uppercase'
+                                                            }}>
+                                                                Language
+                                                            </label>
+                                                            <HeaderLanguagePicker />
+                                                        </div>
+                                                        <div>
+                                                            <label style={{
+                                                                fontSize: '10px',
+                                                                fontWeight: '600',
+                                                                color: '#6b7280',
+                                                                display: 'block',
+                                                                marginBottom: '4px',
+                                                                textTransform: 'uppercase'
+                                                            }}>
+                                                                Template
+                                                            </label>
+                                                            <TemplateShortcutPicker />
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Right: Station */}
+                                                    <div style={{
+                                                        backgroundColor: '#f8fafc',
+                                                        padding: '8px',
+                                                        borderRadius: '8px',
+                                                        border: '1px solid #e5e7eb'
+                                                    }}>
+                                                        <label style={{
+                                                            fontSize: '10px',
+                                                            fontWeight: '600',
+                                                            color: '#6b7280',
+                                                            display: 'block',
+                                                            marginBottom: '4px',
+                                                            textTransform: 'uppercase'
+                                                        }}>
+                                                            Station
+                                                        </label>
+                                                        <StationPicker />
+                                                    </div>
+                                                </div>
+
+                                                {/* Row 3: Magic Input Box */}
+                                                <div style={{ marginBottom: '12px' }}>
+                                                    <div style={{ position: 'relative' }}>
+                                                        <input
+                                                            ref={inputRef}
+                                                            autoComplete="off"
+                                                            type="text"
+                                                            placeholder="🔮 Magic Box - ID# or Search Template"
+                                                            value={searchValue}
+                                                            onChange={handleSearchChange}
+                                                            onFocus={() => {
+                                                                if (justSelectedRef.current) return;
+                                                                if (searchValue.trim() && filteredTemplates.length > 0) {
+                                                                    setIsDropdownVisible(true);
+                                                                }
+                                                            }}
+                                                            style={{
+                                                                width: '100%',
+                                                                padding: '10px 36px 10px 12px',
+                                                                border: '2px solid #3b5998',
+                                                                borderRadius: '8px',
+                                                                fontSize: '14px',
+                                                                outline: 'none',
+                                                                backgroundColor: 'white',
+                                                                fontWeight: '500'
+                                                            }}
+                                                        />
+                                                        {searchValue && (
+                                                            <CloseOutlined
+                                                                onMouseDown={(e) => {
+                                                                    e.preventDefault();
+                                                                    handleClear();
+                                                                }}
+                                                                style={{
+                                                                    position: 'absolute',
+                                                                    right: '12px',
+                                                                    top: '50%',
+                                                                    transform: 'translateY(-50%)',
+                                                                    color: '#3b5998',
+                                                                    cursor: 'pointer',
+                                                                    fontSize: '14px',
+                                                                    fontWeight: 'bold'
+                                                                }}
+                                                            />
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                {/* Row 4: Magic Box Buttons (col-8) & Toggle (col-4) */}
+                                                <div
+                                                    className="dropdown-row-4"
+                                                    style={{
+                                                        display: 'grid',
+                                                        gridTemplateColumns: '2fr 1fr',
+                                                        gap: '8px'
+                                                    }}>
+                                                    {/* Left: Magic Box Action Buttons */}
+                                                    <div
+                                                        className="dropdown-magic-buttons"
+                                                        style={{
+                                                            display: 'flex',
+                                                            gap: '6px',
+                                                            flexWrap: 'wrap'
+                                                        }}>
+                                                        <button
+                                                            onClick={() => {
+                                                                setSearchValue('/');
+                                                                handleSearchChange({ target: { value: '/' } });
+                                                            }}
+                                                            style={{
+                                                                flex: '1',
+                                                                minWidth: '80px',
+                                                                padding: '8px 12px',
+                                                                backgroundColor: '#f0f4ff',
+                                                                border: '1px solid #3b5998',
+                                                                borderRadius: '6px',
+                                                                color: '#3b5998',
+                                                                fontSize: '12px',
+                                                                fontWeight: '600',
+                                                                cursor: 'pointer',
+                                                                transition: 'all 0.2s'
+                                                            }}
+                                                            onMouseEnter={(e) => {
+                                                                e.currentTarget.style.backgroundColor = '#3b5998';
+                                                                e.currentTarget.style.color = 'white';
+                                                            }}
+                                                            onMouseLeave={(e) => {
+                                                                e.currentTarget.style.backgroundColor = '#f0f4ff';
+                                                                e.currentTarget.style.color = '#3b5998';
+                                                            }}
+                                                        >
+                                                            / Categories
+                                                        </button>
+                                                        <button
+                                                            onClick={() => {
+                                                                setSearchValue('*');
+                                                                handleSearchChange({ target: { value: '*' } });
+                                                            }}
+                                                            style={{
+                                                                flex: '1',
+                                                                minWidth: '80px',
+                                                                padding: '8px 12px',
+                                                                backgroundColor: '#f0f4ff',
+                                                                border: '1px solid #3b5998',
+                                                                borderRadius: '6px',
+                                                                color: '#3b5998',
+                                                                fontSize: '12px',
+                                                                fontWeight: '600',
+                                                                cursor: 'pointer',
+                                                                transition: 'all 0.2s'
+                                                            }}
+                                                            onMouseEnter={(e) => {
+                                                                e.currentTarget.style.backgroundColor = '#3b5998';
+                                                                e.currentTarget.style.color = 'white';
+                                                            }}
+                                                            onMouseLeave={(e) => {
+                                                                e.currentTarget.style.backgroundColor = '#f0f4ff';
+                                                                e.currentTarget.style.color = '#3b5998';
+                                                            }}
+                                                        >
+                                                            * Forms
+                                                        </button>
+                                                    </div>
+
+                                                    {/* Right: Collapse Button */}
+                                                    <button
+                                                        onClick={() => setDropdownMenuOpen(false)}
+                                                        style={{
+                                                            padding: '8px 12px',
+                                                            backgroundColor: '#3b5998',
+                                                            border: 'none',
+                                                            borderRadius: '6px',
+                                                            color: 'white',
+                                                            fontSize: '12px',
+                                                            fontWeight: '600',
+                                                            cursor: 'pointer',
+                                                            transition: 'all 0.2s',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            gap: '4px'
+                                                        }}
+                                                        onMouseEnter={(e) => {
+                                                            e.currentTarget.style.backgroundColor = '#2d4373';
+                                                        }}
+                                                        onMouseLeave={(e) => {
+                                                            e.currentTarget.style.backgroundColor = '#3b5998';
+                                                        }}
+                                                    >
+                                                        ▲ Collapse
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     </nav>
@@ -3546,7 +3849,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
             </Drawer>
 
             {/* Shortcut Menu Drawer - Mobile */}
-            <Drawer
+            {/* <Drawer
                 title={
                     <div className="flex items-center justify-between py-2">
                         <div className="flex items-center gap-3">
@@ -3565,7 +3868,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                 placement="right"
                 closable={false}
                 onClose={closeQuickActions}
-                open={shortcutMenuOpen}
+                open={dropdownMenuOpen}
                 width={300}
                 className="block lg:hidden"
                 bodyStyle={{
@@ -3773,7 +4076,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                         <StationPicker />
                     </div>
                 </div>
-            </Drawer>
+            </Drawer> */}
 
             {/* JotForm Prefill Modal */}
             <JotFormPrefillModal

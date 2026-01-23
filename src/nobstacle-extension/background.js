@@ -1,4 +1,4 @@
-// Background service worker - FIXED VERSION WITH IMPROVED AUTH DETECTION
+// Background service worker - FIXED VERSION WITH ONCLICK AUTH DETECTION
 let backendAccessToken = null;
 let tokenExpiry = null;
 let currentStation = null;
@@ -65,6 +65,34 @@ restoreTokenFromStorage();
 setTimeout(async () => {
   await fetchAndCacheAuth();
 }, 1500);
+
+// ⭐ NEW: Listen for extension icon clicks (popup opens)
+// This ensures auth is checked when user manually opens the extension
+chrome.action.onClicked.addListener(async (tab) => {
+  console.log('[Background] 🖱️ Extension icon clicked - forcing auth check');
+  
+  // Force fresh auth check with multiple attempts
+  let attempts = 0;
+  const maxAttempts = 5;
+  
+  while (attempts < maxAttempts) {
+    console.log(`[Background] 🔍 Auth check attempt ${attempts + 1}/${maxAttempts}`);
+    
+    const authData = await fetchAndCacheAuth();
+    
+    if (authData.isAuthenticated && authData.sessionToken) {
+      console.log('[Background] ✅ Auth verified on click!');
+      // Notify all tabs immediately
+      notifyAllTabsAuthChanged(true, authData.sessionToken, authData.cookies);
+      break;
+    }
+    
+    attempts++;
+    if (attempts < maxAttempts) {
+      await new Promise(resolve => setTimeout(resolve, 500 * attempts));
+    }
+  }
+});
 
 async function fetchAndCacheAuth() {
   try {
@@ -229,6 +257,38 @@ function startLoginMonitoring() {
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   console.log('[Background] 📨 Received message:', request.action);
+
+  // ⭐ NEW: Force auth check handler
+  if (request.action === 'forceAuthCheck') {
+    console.log('[Background] 🔄 Forcing auth check...');
+    
+    (async () => {
+      let attempts = 0;
+      const maxAttempts = 5;
+      
+      while (attempts < maxAttempts) {
+        const authData = await fetchAndCacheAuth();
+        
+        if (authData.isAuthenticated && authData.sessionToken) {
+          sendResponse(authData);
+          return;
+        }
+        
+        attempts++;
+        if (attempts < maxAttempts) {
+          await new Promise(resolve => setTimeout(resolve, 500 * attempts));
+        }
+      }
+      
+      sendResponse({
+        sessionToken: null,
+        cookies: [],
+        isAuthenticated: false
+      });
+    })();
+    
+    return true; // Keep channel open for async response
+  }
 
   if (request.action === 'getStation') {
     console.log('[Background] 📥 getStation request');

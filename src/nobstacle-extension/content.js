@@ -314,22 +314,47 @@ function getSupportedMimeType() {
   return 'audio/webm';
 }
 
-chrome.storage.local.get(['extensionEnabled'], async (result) => {
-  isEnabled = result.extensionEnabled !== false;
-
-  if (isEnabled && shouldInject()) {
-    console.log('[Content Script] 🚀 Extension enabled, initializing...');
-
-    // CRITICAL: Load station BEFORE injecting header
-    selectedStation = await loadStationFromBackground();
-    console.log('[Content Script] ✅ Station ready for injection:', selectedStation);
-
-    // Small delay to ensure storage is synced
-    await new Promise(resolve => setTimeout(resolve, 100));
-
-    await injectHeader();
+// ⭐ NEW: Aggressively check auth when content script loads
+(async function initContentScript() {
+  console.log('[Content Script] 🚀 Initializing...');
+  
+  // Force background to check auth immediately
+  try {
+    const authResponse = await new Promise((resolve) => {
+      chrome.runtime.sendMessage({ action: 'forceAuthCheck' }, (response) => {
+        if (chrome.runtime.lastError) {
+          console.error('[Content Script] Auth check error:', chrome.runtime.lastError);
+          resolve(null);
+        } else {
+          resolve(response);
+        }
+      });
+    });
+    
+    if (authResponse?.isAuthenticated) {
+      console.log('[Content Script] ✅ Auth confirmed on init');
+      cachedAuthData = authResponse;
+      authDataReady = true;
+    } else {
+      console.log('[Content Script] ⚠️ No auth on init');
+    }
+  } catch (error) {
+    console.error('[Content Script] Error checking auth:', error);
   }
-});
+  
+  // Continue with normal initialization
+  chrome.storage.local.get(['extensionEnabled'], async (result) => {
+    isEnabled = result.extensionEnabled !== false;
+
+    if (isEnabled && shouldInject()) {
+      console.log('[Content Script] 🚀 Extension enabled, initializing...');
+      selectedStation = await loadStationFromBackground();
+      console.log('[Content Script] ✅ Station ready for injection:', selectedStation);
+      await new Promise(resolve => setTimeout(resolve, 100));
+      await injectHeader();
+    }
+  });
+})();
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'stationChanged') {
@@ -1094,7 +1119,7 @@ function showLoginPrompt() {
     // Open login page
     chrome.runtime.sendMessage({
       action: 'openTab',
-      url: 'https://nobstacle.com/auth/signin'
+      url: 'https://nobstacle.com/'
     });
 
     // Update prompt to waiting state
@@ -1156,14 +1181,14 @@ async function prefetchAuthData() {
   return new Promise((resolve) => {
     console.log('[Content Script] 🔍 Prefetching auth data...');
 
-    const timeout = setTimeout(() => {
+const timeout = setTimeout(() => {
       console.error('[Content Script] ⏱️ Auth fetch timeout');
       resolve({
         sessionToken: null,
         cookies: [],
         isAuthenticated: false
       });
-    }, 8000); // Increased timeout to 8 seconds
+    }, 15000); 
 
     // IMPROVED: First check if we already have valid cached data
     if (cachedAuthData && cachedAuthData.isAuthenticated && cachedAuthData.sessionToken) {
