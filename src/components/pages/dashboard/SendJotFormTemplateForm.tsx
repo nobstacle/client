@@ -1663,25 +1663,15 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 	};
 
 	const handleFilterChange = (value: string) => {
-		if (!selectedForm || form_id !== currentFormIdRef.current) {
-			return;
-		}
-		let filterData = [];
-
-		if (value === 'completed') {
-			filterData = tableResponse.data?.filter(item => item.formData["submission_id"] !== null);
-		} else if (value === 'pending') {
-			filterData = tableResponse.data?.filter(item => item.formData["submission_id"] === null);
-		} else {
-			filterData = tableResponse.data || [];
-		}
+		if (!selectedForm) return;
 
 		setLoader(true);
 		setSelectedFilter(value);
 		setCurrentPage(1);
 		setPageSize(10);
-		setTableKey((prev) => prev + 1);
-		getTableResponse(selectedForm, 1, 10, currentSearchTerm, value);
+
+		// Force refresh from backend with new filter
+		getTableResponse(selectedForm, 1, 10, lastSearchedValue || currentSearchTerm || "", value);
 	};
 
 	const handleFileClick = () => {
@@ -2600,26 +2590,16 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 
 			<div className="card mt-5 bg-white rounded" style={{ position: 'relative' }}>
 				<div className="flex flex-wrap items-center gap-4 tableDataWrapper" style={{ padding: '0.5rem 1rem 0 1rem' }}>
-					<div className="formFilters">
-						{["all", "completed", "pending"].map((status) => (
-							<label
-								key={status}
-								htmlFor={status}
-								className="inline-flex items-center space-x-2 py-2 bg-gray-100 rounded-md cursor-pointer hover:bg-gray-200 transition"
-							>
-								<input
-									id={status}
-									name="status"
-									type="checkbox"
-									value={status}
-									className="form-checkbox text-blue-600 focus:ring-0"
-									onChange={(e) => handleFilterChange(status, e.target.checked)}
-									checked={selectedFilter === status}
-									disabled={!selectedFormFields?.content}
-								/>
-								<span className="capitalize text-gray-700 font-medium">{status}</span>
-							</label>
-						))}
+					<div className="formFilter flex items-center gap-4 flex-wrap">
+						<Radio.Group
+							value={selectedFilter}
+							onChange={(e) => handleFilterChange(e.target.value)}
+							buttonStyle="solid"
+						>
+							<Radio.Button value="all">All</Radio.Button>
+							<Radio.Button value="completed">Completed</Radio.Button>
+							<Radio.Button value="pending">Pending</Radio.Button>
+						</Radio.Group>
 					</div>
 					<Tooltip title="Export to Excel">
 						<Button

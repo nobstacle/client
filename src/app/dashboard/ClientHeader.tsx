@@ -2717,164 +2717,71 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
 
                                     {/* Dropdown Menu */}
                                     {dropdownMenuOpen && (
-                                        <div style={{
-                                            position: 'fixed',
-                                            top: '3.5rem', // Height of mobile header
-                                            left: 0,
-                                            right: 0,
-                                            backgroundColor: 'white',
-                                            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                                            zIndex: 1000,
-                                            animation: 'slideDown 0.3s ease-out',
-                                            borderBottom: '2px solid #3b5998'
-                                        }}>
-                                            <div style={{
-                                                padding: '12px 16px',
-                                                maxWidth: '1200px',
-                                                margin: '0 auto'
+                                        <div
+                                            style={{
+                                                position: 'fixed',
+                                                top: '3.5rem',
+                                                left: 0,
+                                                right: 0,
+                                                backgroundColor: '#ffffff',
+                                                boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)',
+                                                zIndex: 1000,
+                                                maxHeight: 'calc(100vh - 3.5rem)',
+                                                overflowY: 'auto',
+                                                borderBottom: '4px solid #3b5998',
                                             }}
-                                                className="dropdown-container">
-                                                {/* Row 1: Quick Action Shortcuts */}
-                                                <div style={{
-                                                    display: 'flex',
-                                                    gap: '8px',
-                                                    marginBottom: '12px',
-                                                    flexWrap: 'wrap',
-                                                    justifyContent: 'center'
-                                                }}>
-                                                    <HeaderSurveyShortcut
-                                                        confirmationNumber={confirmationNumber}
-                                                        clearConfirmationNumber={clearConfirmationNumber}
-                                                        checkTooltip={isInIframe}
-                                                        user={user}
-                                                    />
-                                                    <HeaderRecordingShortcut
-                                                        confirmationNumber={confirmationNumber}
-                                                        clearConfirmationNumber={clearConfirmationNumber}
-                                                        checkTooltip={isInIframe}
-                                                    />
-                                                    <ChatBot checkTooltip={isInIframe} />
-                                                    <WebsiteShortcut
-                                                        confirmationNumber={confirmationNumber}
-                                                        clearConfirmationNumber={clearConfirmationNumber}
-                                                        checkTooltip={isInIframe}
-                                                    />
-                                                    <TextSurveyShortcut
-                                                        confirmationNumber={confirmationNumber}
-                                                        clearConfirmationNumber={clearConfirmationNumber}
-                                                        checkTooltip={isInIframe}
-                                                    />
-                                                </div>
+                                        >
+                                            <div className="p-5 space-y-6 max-w-screen-sm mx-auto">
 
-                                                {/* Row 2: Language Settings (col-8) & Station (col-4) */}
-                                                <div
-                                                    className="dropdown-row-2"
-                                                    style={{
-                                                        display: 'grid',
-                                                        gridTemplateColumns: '2fr 1fr',
-                                                        gap: '8px',
-                                                        marginBottom: '12px'
-                                                    }}>
-                                                    {/* Left: Language Settings */}
-                                                    <div
-                                                        className="dropdown-lang-settings"
-                                                        style={{
-                                                            display: 'grid',
-                                                            gridTemplateColumns: '1fr 1fr 1fr',
-                                                            gap: '8px',
-                                                            backgroundColor: '#f8fafc',
-                                                            padding: '8px',
-                                                            borderRadius: '8px',
-                                                            border: '1px solid #e5e7eb'
-                                                        }}>
+                                                {/* 2. Language settings – grouped card */}
+                                                <div className="bg-gray-50/80 border border-gray-200 rounded-xl p-4 space-y-4 shadow-sm">
+                                                    <h3 className="text-sm font-semibold text-gray-700">Language & Template</h3>
+                                                    <div className="grid grid-cols-2 gap-2">
                                                         <div>
-                                                            <label style={{
-                                                                fontSize: '10px',
-                                                                fontWeight: '600',
-                                                                color: '#6b7280',
-                                                                display: 'block',
-                                                                marginBottom: '4px',
-                                                                textTransform: 'uppercase'
-                                                            }}>
-                                                                Lang Short
-                                                            </label>
-                                                            <LanguageShortcutPicker />
+                                                            <label className="block text-xs font-medium text-gray-600 mb-1.5">Lang Short</label>
+                                                            <div className="bg-white rounded-lg shadow-sm">
+                                                                <LanguageShortcutPicker />
+                                                            </div>
                                                         </div>
                                                         <div>
-                                                            <label style={{
-                                                                fontSize: '10px',
-                                                                fontWeight: '600',
-                                                                color: '#6b7280',
-                                                                display: 'block',
-                                                                marginBottom: '4px',
-                                                                textTransform: 'uppercase'
-                                                            }}>
-                                                                Language
-                                                            </label>
-                                                            <HeaderLanguagePicker />
-                                                        </div>
-                                                        <div>
-                                                            <label style={{
-                                                                fontSize: '10px',
-                                                                fontWeight: '600',
-                                                                color: '#6b7280',
-                                                                display: 'block',
-                                                                marginBottom: '4px',
-                                                                textTransform: 'uppercase'
-                                                            }}>
-                                                                Template
-                                                            </label>
-                                                            <TemplateShortcutPicker />
+                                                            <label className="block text-xs font-medium text-gray-600 mb-1.5">Template</label>
+                                                            <div className="bg-white rounded-lg shadow-sm">
+                                                                <TemplateShortcutPicker />
+                                                            </div>
                                                         </div>
                                                     </div>
+                                                </div>
 
-                                                    {/* Right: Station */}
-                                                    <div style={{
-                                                        backgroundColor: '#f8fafc',
-                                                        padding: '8px',
-                                                        borderRadius: '8px',
-                                                        border: '1px solid #e5e7eb'
-                                                    }}>
-                                                        <label style={{
-                                                            fontSize: '10px',
-                                                            fontWeight: '600',
-                                                            color: '#6b7280',
-                                                            display: 'block',
-                                                            marginBottom: '4px',
-                                                            textTransform: 'uppercase'
-                                                        }}>
-                                                            Station
-                                                        </label>
+                                            {/* 3. Language – separate card */}
+                                                <div className="bg-gray-50/80 border border-gray-200 rounded-xl p-4 shadow-sm">
+                                                    <label className="block text-xs font-medium text-gray-600 mb-1.5">Language Picker</label>
+                                                    <div className="bg-white rounded-lg shadow-sm">
+                                                        <HeaderLanguagePicker />
+                                                    </div>
+                                                </div>
+
+                                                {/* 3. Station – separate card */}
+                                                <div className="bg-gray-50/80 border border-gray-200 rounded-xl p-4 shadow-sm">
+                                                    <label className="block text-xs font-medium text-gray-600 mb-1.5">Station</label>
+                                                    <div className="bg-white rounded-lg shadow-sm">
                                                         <StationPicker />
                                                     </div>
                                                 </div>
 
-                                                {/* Row 3: Magic Input Box */}
-                                                <div style={{ marginBottom: '12px' }}>
-                                                    <div style={{ position: 'relative' }}>
+                                                {/* 1. Magic Box – most important → top & prominent */}
+                                                <div className="space-y-3">
+                                                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                                                        Magic Box – ID# or Template
+                                                    </label>
+                                                    <div className="relative">
                                                         <input
                                                             ref={inputRef}
                                                             autoComplete="off"
                                                             type="text"
-                                                            placeholder="🔮 Magic Box - ID# or Search Template"
+                                                            placeholder="Search template or enter ID#"
                                                             value={searchValue}
                                                             onChange={handleSearchChange}
-                                                            onFocus={() => {
-                                                                if (justSelectedRef.current) return;
-                                                                if (searchValue.trim() && filteredTemplates.length > 0) {
-                                                                    setIsDropdownVisible(true);
-                                                                }
-                                                            }}
-                                                            style={{
-                                                                width: '100%',
-                                                                padding: '10px 36px 10px 12px',
-                                                                border: '2px solid #3b5998',
-                                                                borderRadius: '8px',
-                                                                fontSize: '14px',
-                                                                outline: 'none',
-                                                                backgroundColor: 'white',
-                                                                fontWeight: '500'
-                                                            }}
+                                                            className="w-full px-4 py-3.5 pr-10 border-2 border-blue-700 rounded-xl text-base font-medium focus:outline-none focus:border-blue-800 focus:ring-1 focus:ring-blue-800 transition"
                                                         />
                                                         {searchValue && (
                                                             <CloseOutlined
@@ -2882,125 +2789,71 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                                                     e.preventDefault();
                                                                     handleClear();
                                                                 }}
-                                                                style={{
-                                                                    position: 'absolute',
-                                                                    right: '12px',
-                                                                    top: '50%',
-                                                                    transform: 'translateY(-50%)',
-                                                                    color: '#3b5998',
-                                                                    cursor: 'pointer',
-                                                                    fontSize: '14px',
-                                                                    fontWeight: 'bold'
-                                                                }}
+                                                                className="absolute right-3 top-1/2 -translate-y-1/2 text-blue-700 text-xl cursor-pointer hover:text-blue-900 transition"
                                                             />
                                                         )}
                                                     </div>
                                                 </div>
-
-                                                {/* Row 4: Magic Box Buttons (col-8) & Toggle (col-4) */}
-                                                <div
-                                                    className="dropdown-row-4"
-                                                    style={{
-                                                        display: 'grid',
-                                                        gridTemplateColumns: '2fr 1fr',
-                                                        gap: '8px'
-                                                    }}>
-                                                    {/* Left: Magic Box Action Buttons */}
-                                                    <div
-                                                        className="dropdown-magic-buttons"
-                                                        style={{
-                                                            display: 'flex',
-                                                            gap: '6px',
-                                                            flexWrap: 'wrap'
-                                                        }}>
-                                                        <button
-                                                            onClick={() => {
-                                                                setSearchValue('/');
-                                                                handleSearchChange({ target: { value: '/' } });
-                                                            }}
-                                                            style={{
-                                                                flex: '1',
-                                                                minWidth: '80px',
-                                                                padding: '8px 12px',
-                                                                backgroundColor: '#f0f4ff',
-                                                                border: '1px solid #3b5998',
-                                                                borderRadius: '6px',
-                                                                color: '#3b5998',
-                                                                fontSize: '12px',
-                                                                fontWeight: '600',
-                                                                cursor: 'pointer',
-                                                                transition: 'all 0.2s'
-                                                            }}
-                                                            onMouseEnter={(e) => {
-                                                                e.currentTarget.style.backgroundColor = '#3b5998';
-                                                                e.currentTarget.style.color = 'white';
-                                                            }}
-                                                            onMouseLeave={(e) => {
-                                                                e.currentTarget.style.backgroundColor = '#f0f4ff';
-                                                                e.currentTarget.style.color = '#3b5998';
-                                                            }}
-                                                        >
-                                                            / Categories
-                                                        </button>
-                                                        <button
-                                                            onClick={() => {
-                                                                setSearchValue('*');
-                                                                handleSearchChange({ target: { value: '*' } });
-                                                            }}
-                                                            style={{
-                                                                flex: '1',
-                                                                minWidth: '80px',
-                                                                padding: '8px 12px',
-                                                                backgroundColor: '#f0f4ff',
-                                                                border: '1px solid #3b5998',
-                                                                borderRadius: '6px',
-                                                                color: '#3b5998',
-                                                                fontSize: '12px',
-                                                                fontWeight: '600',
-                                                                cursor: 'pointer',
-                                                                transition: 'all 0.2s'
-                                                            }}
-                                                            onMouseEnter={(e) => {
-                                                                e.currentTarget.style.backgroundColor = '#3b5998';
-                                                                e.currentTarget.style.color = 'white';
-                                                            }}
-                                                            onMouseLeave={(e) => {
-                                                                e.currentTarget.style.backgroundColor = '#f0f4ff';
-                                                                e.currentTarget.style.color = '#3b5998';
-                                                            }}
-                                                        >
-                                                            * Forms
-                                                        </button>
+                                                {/* 4. Quick action icons – centered */}
+                                                <div className="text-center">
+                                                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
+                                                        Quick Actions
+                                                    </p>
+                                                    <div className="flex flex-wrap justify-center gap-3">
+                                                        <HeaderSurveyShortcut
+                                                            confirmationNumber={confirmationNumber}
+                                                            clearConfirmationNumber={clearConfirmationNumber}
+                                                            checkTooltip={isInIframe}
+                                                            user={user}
+                                                        />
+                                                        <HeaderRecordingShortcut
+                                                            confirmationNumber={confirmationNumber}
+                                                            clearConfirmationNumber={clearConfirmationNumber}
+                                                            checkTooltip={isInIframe}
+                                                        />
+                                                        <ChatBot checkTooltip={isInIframe} />
+                                                        <WebsiteShortcut
+                                                            confirmationNumber={confirmationNumber}
+                                                            clearConfirmationNumber={clearConfirmationNumber}
+                                                            checkTooltip={isInIframe}
+                                                        />
+                                                        <TextSurveyShortcut
+                                                            confirmationNumber={confirmationNumber}
+                                                            clearConfirmationNumber={clearConfirmationNumber}
+                                                            checkTooltip={isInIframe}
+                                                        />
                                                     </div>
+                                                </div>
 
-                                                    {/* Right: Collapse Button */}
+                                                {/* 5. Categories & Forms buttons */}
+                                                <div className="grid grid-cols-2 gap-3">
                                                     <button
-                                                        onClick={() => setDropdownMenuOpen(false)}
-                                                        style={{
-                                                            padding: '8px 12px',
-                                                            backgroundColor: '#3b5998',
-                                                            border: 'none',
-                                                            borderRadius: '6px',
-                                                            color: 'white',
-                                                            fontSize: '12px',
-                                                            fontWeight: '600',
-                                                            cursor: 'pointer',
-                                                            transition: 'all 0.2s',
-                                                            display: 'flex',
-                                                            alignItems: 'center',
-                                                            justifyContent: 'center',
-                                                            gap: '4px'
+                                                        onClick={() => {
+                                                            setSearchValue('/');
+                                                            handleSearchChange({ target: { value: '/' } });
                                                         }}
-                                                        onMouseEnter={(e) => {
-                                                            e.currentTarget.style.backgroundColor = '#2d4373';
-                                                        }}
-                                                        onMouseLeave={(e) => {
-                                                            e.currentTarget.style.backgroundColor = '#3b5998';
-                                                        }}
+                                                        className="py-3 px-5 bg-blue-50 hover:bg-blue-100 active:bg-blue-200 border border-blue-600 text-blue-700 font-semibold rounded-xl transition text-sm"
                                                     >
-                                                        ▲ Collapse
+                                                        / Categories
+                                                    </button>
+                                                    <button
+                                                        onClick={() => {
+                                                            setSearchValue('*');
+                                                            handleSearchChange({ target: { value: '*' } });
+                                                        }}
+                                                        className="py-3 px-5 bg-blue-50 hover:bg-blue-100 active:bg-blue-200 border border-blue-600 text-blue-700 font-semibold rounded-xl transition text-sm"
+                                                    >
+                                                        * Forms
                                                     </button>
                                                 </div>
+
+                                                {/* 6. Collapse – full width, strong contrast */}
+                                                <button
+                                                    onClick={() => setDropdownMenuOpen(false)}
+                                                    className="w-full py-3.5 bg-gradient-to-r from-blue-700 to-blue-800 hover:from-blue-800 hover:to-blue-900 text-white font-semibold rounded-xl shadow-md transition flex items-center justify-center gap-2 text-base"
+                                                >
+                                                    <span>▲</span> Collapse Menu
+                                                </button>
                                             </div>
                                         </div>
                                     )}
