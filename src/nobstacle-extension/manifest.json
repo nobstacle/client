@@ -14,7 +14,7 @@
     "https://www.nobstacle.com/*",
     "https://nobstacle-production-d145.up.railway.app/*",
     "http://localhost:3000/*",
-    "https://*/*",
+    "https://*/*",  
     "http://*/*",
     "*://*/*"
   ],

@@ -21,6 +21,65 @@ let loginPromptShown = false;
 let loginCheckInProgress = false;
 let loginWindowOpened = false;
 
+// Special handler for nobstacle.com - allows background to fetch cookies via this tab
+if (window.location.hostname.includes('nobstacle.com')) {
+  console.log('[Nobstacle Content] 🌐 Running on nobstacle.com - enabling cookie fetching');
+  
+  // Listen for requests from background to fetch cookies
+  chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    if (request.action === 'fetchAuthCookies') {
+      console.log('[Nobstacle Content] 📨 Background requested cookies');
+      
+      // Get all cookies for this domain (we CAN do this because we're ON nobstacle.com)
+      chrome.cookies.getAll({ domain: 'nobstacle.com' }, (cookies) => {
+        console.log('[Nobstacle Content] 📦 Found cookies:', cookies.length);
+        
+        const sessionCookie = cookies.find(c =>
+          c.name === '__Secure-next-auth.session-token' ||
+          c.name === 'next-auth.session-token'
+        );
+        
+        if (sessionCookie) {
+          console.log('[Nobstacle Content] ✅ Session cookie found!');
+          
+          // Send cookies to background via message
+          chrome.runtime.sendMessage({
+            action: 'authCookiesFromNobstacle',
+            cookies: cookies
+          });
+          
+          sendResponse({ success: true, cookies: cookies });
+        } else {
+          console.log('[Nobstacle Content] ⚠️ No session cookie found');
+          sendResponse({ success: false, cookies: [] });
+        }
+      });
+      
+      return true; // Keep channel open for async response
+    }
+    
+    return false;
+  });
+  
+  // Also proactively send cookies on page load
+  setTimeout(() => {
+    chrome.cookies.getAll({ domain: 'nobstacle.com' }, (cookies) => {
+      const sessionCookie = cookies.find(c =>
+        c.name === '__Secure-next-auth.session-token' ||
+        c.name === 'next-auth.session-token'
+      );
+      
+      if (sessionCookie) {
+        console.log('[Nobstacle Content] 🚀 Proactively sending auth to background');
+        chrome.runtime.sendMessage({
+          action: 'authCookiesFromNobstacle',
+          cookies: cookies
+        });
+      }
+    });
+  }, 1000);
+}
+
 function debugStorage() {
   console.log('[Content Script] 🔍 Storage Debug:');
   console.log('  localStorage:', localStorage.getItem(STATION_STORAGE_KEY));
@@ -130,67 +189,71 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
       }
     }
 
-    // ⭐ CRITICAL: Listen for auth status changes
+    // IMPROVED: Listen for auth status changes
     if (changes.isAuthenticated) {
       const newAuthStatus = changes.isAuthenticated.newValue;
       console.log('[Content Script] 🔔 Auth status changed in storage:', newAuthStatus);
 
-      if (newAuthStatus === true && changes.authSessionToken) {
-        const newToken = changes.authSessionToken.newValue;
+      if (newAuthStatus === true) {
+        const newToken = changes.authSessionToken?.newValue;
         const newCookies = changes.authCookies?.newValue || [];
 
-        console.log('[Content Script] ✅ User authenticated - updating cache');
+        if (newToken) {
+          console.log('[Content Script] ✅ User authenticated - updating cache');
 
-        // Update cached auth data
-        cachedAuthData = {
-          sessionToken: newToken,
-          cookies: newCookies,
-          isAuthenticated: true
-        };
-        authDataReady = true;
+          // Update cached auth data
+          cachedAuthData = {
+            sessionToken: newToken,
+            cookies: newCookies,
+            isAuthenticated: true
+          };
+          authDataReady = true;
 
-        // Remove login prompt if showing
-        const loginPrompt = document.getElementById('nobstacle-login-prompt');
-        if (loginPrompt) {
-          loginPrompt.innerHTML = `
-            <div style="margin-bottom: 20px;">
-              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2">
-                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-                <polyline points="22 4 12 14.01 9 11.01"></polyline>
-              </svg>
-            </div>
-            <h2 style="margin: 0 0 10px 0; color: #10b981; font-size: 20px; font-weight: 600;">Login Successful!</h2>
-            <p style="margin: 0; color: #666; font-size: 14px;">Loading extension...</p>
-          `;
-
-          setTimeout(() => {
-            loginPrompt.remove();
-          }, 1500);
-        }
-
-        // Remove loader
-        document.getElementById('nobstacle-loader')?.remove();
-
-        // Inject or refresh header
-        if (!headerInjected && shouldInject()) {
-          console.log('[Content Script] 🚀 Injecting header after auth detected');
-          setTimeout(() => {
-            injectHeader();
-          }, 1500);
-        } else if (headerInjected) {
-          const iframe = document.getElementById('nobstacle-header-iframe');
-          if (iframe) {
-            iframe.contentWindow.postMessage({
-              type: 'EXTENSION_AUTH',
-              sessionToken: newToken,
-              cookies: newCookies
-            }, '*');
+          // Remove login prompt if showing
+          const loginPrompt = document.getElementById('nobstacle-login-prompt');
+          if (loginPrompt) {
+            loginWindowOpened = false; // Reset flag
+            
+            loginPrompt.innerHTML = `
+              <div style="margin-bottom: 20px;">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2">
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                  <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                </svg>
+              </div>
+              <h2 style="margin: 0 0 10px 0; color: #10b981; font-size: 20px; font-weight: 600;">Login Successful!</h2>
+              <p style="margin: 0; color: #666; font-size: 14px;">Loading extension...</p>
+            `;
 
             setTimeout(() => {
+              loginPrompt.remove();
+            }, 1500);
+          }
+
+          // Remove loader
+          document.getElementById('nobstacle-loader')?.remove();
+
+          // Inject or refresh header
+          if (!headerInjected && shouldInject()) {
+            console.log('[Content Script] 🚀 Injecting header after auth detected');
+            setTimeout(() => {
+              injectHeader();
+            }, 1500);
+          } else if (headerInjected) {
+            const iframe = document.getElementById('nobstacle-header-iframe');
+            if (iframe) {
               iframe.contentWindow.postMessage({
-                type: 'REFRESH_AUTH'
+                type: 'EXTENSION_AUTH',
+                sessionToken: newToken,
+                cookies: newCookies
               }, '*');
-            }, 500);
+
+              setTimeout(() => {
+                iframe.contentWindow.postMessage({
+                  type: 'REFRESH_AUTH'
+                }, '*');
+              }, 500);
+            }
           }
         }
       } else if (newAuthStatus === false) {
@@ -1024,14 +1087,13 @@ async function getAuthCookies() {
   });
 }
 
+
 function showLoginPrompt() {
   const existingPrompt = document.getElementById('nobstacle-login-prompt');
   if (existingPrompt) {
     console.log('[Content Script] Login prompt already exists');
     return;
   }
-
-  console.log('[Content Script] 🔐 Showing login prompt');
 
   const prompt = document.createElement('div');
   prompt.id = 'nobstacle-login-prompt';
@@ -1111,15 +1173,19 @@ function showLoginPrompt() {
     loginWindowOpened = true;
     console.log('[Content Script] 🔑 Opening Nobstacle login page...');
 
-    // Start monitoring for login in background script
-    chrome.runtime.sendMessage({
-      action: 'startLoginMonitoring'
-    });
-
-    // Open login page
+    // Open login page and get tab ID
     chrome.runtime.sendMessage({
       action: 'openTab',
       url: 'https://nobstacle.com/'
+    }, (response) => {
+      if (response?.tabId) {
+        console.log('[Content Script] Login tab opened:', response.tabId);
+      }
+    });
+
+    // Start monitoring for login
+    chrome.runtime.sendMessage({
+      action: 'startLoginMonitoring'
     });
 
     // Update prompt to waiting state
@@ -1144,6 +1210,9 @@ function showLoginPrompt() {
       <p style="margin: 0 0 25px 0; color: #666; font-size: 14px; line-height: 1.5;">
         Log in to Nobstacle in the new tab.<br/>
         <span style="font-size: 12px; color: #999;">This will automatically close once you're logged in.</span>
+      </p>
+      <p style="margin: 0 0 15px 0; color: #999; font-size: 12px;">
+        After logging in, please wait a few seconds...
       </p>
       <button 
         id="nobstacle-cancel-btn"
@@ -1170,6 +1239,111 @@ function showLoginPrompt() {
       chrome.runtime.sendMessage({ action: 'stopLoginMonitoring' });
       prompt.remove();
     });
+
+    // IMPROVED: Poll for auth status while waiting
+    let pollAttempts = 0;
+    const maxPollAttempts = 60; // 60 seconds max
+    
+    const pollInterval = setInterval(async () => {
+      pollAttempts++;
+      console.log(`[Content Script] Polling for auth... (${pollAttempts}/${maxPollAttempts})`);
+
+      // Check auth status
+      chrome.runtime.sendMessage({ action: 'forceAuthCheck' }, (response) => {
+        if (response?.isAuthenticated && response?.sessionToken) {
+          console.log('[Content Script] ✅ Auth detected during polling!');
+          clearInterval(pollInterval);
+          loginWindowOpened = false;
+          
+          // Update cached auth
+          cachedAuthData = response;
+          authDataReady = true;
+
+          // Show success
+          prompt.innerHTML = `
+            <div style="margin-bottom: 20px;">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                <polyline points="22 4 12 14.01 9 11.01"></polyline>
+              </svg>
+            </div>
+            <h2 style="margin: 0 0 10px 0; color: #10b981; font-size: 20px; font-weight: 600;">Login Successful!</h2>
+            <p style="margin: 0; color: #666; font-size: 14px;">Loading extension...</p>
+          `;
+
+          setTimeout(() => {
+            prompt.remove();
+            // Inject header if not already injected
+            if (!headerInjected && shouldInject()) {
+              injectHeader();
+            }
+          }, 1500);
+        }
+      });
+
+      // Stop after max attempts
+      if (pollAttempts >= maxPollAttempts) {
+        clearInterval(pollInterval);
+        console.log('[Content Script] ⏱️ Polling timeout');
+        
+        prompt.innerHTML = `
+          <div style="margin-bottom: 20px;">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="8" x2="12" y2="12"></line>
+              <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+          </div>
+          <h2 style="margin: 0 0 10px 0; color: #ef4444; font-size: 20px; font-weight: 600;">Login Timeout</h2>
+          <p style="margin: 0 0 25px 0; color: #666; font-size: 14px; line-height: 1.5;">
+            We couldn't detect your login. Please try again.<br/>
+            <span style="font-size: 12px; color: #999;">Make sure you're logging in at nobstacle.com</span>
+          </p>
+          <button 
+            id="retry-login-btn"
+            style="
+              padding: 12px 24px;
+              background: #3b5998;
+              color: white;
+              border: none;
+              border-radius: 8px;
+              cursor: pointer;
+              font-size: 14px;
+              font-weight: 600;
+              margin-right: 10px;
+            "
+          >
+            Try Again
+          </button>
+          <button 
+            id="close-timeout-btn"
+            style="
+              padding: 12px 24px;
+              background: #f0f0f0;
+              color: #666;
+              border: none;
+              border-radius: 8px;
+              cursor: pointer;
+              font-size: 14px;
+              font-weight: 600;
+            "
+          >
+            Close
+          </button>
+        `;
+
+        document.getElementById('retry-login-btn').addEventListener('click', () => {
+          loginWindowOpened = false;
+          prompt.remove();
+          setTimeout(() => showLoginPrompt(), 100);
+        });
+
+        document.getElementById('close-timeout-btn').addEventListener('click', () => {
+          loginWindowOpened = false;
+          prompt.remove();
+        });
+      }
+    }, 1000); // Poll every second
   });
 
   document.getElementById('nobstacle-close-prompt').addEventListener('click', () => {
