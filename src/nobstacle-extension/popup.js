@@ -12,7 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Open Dashboard button
   if (openDashboardBtn) {
     openDashboardBtn.addEventListener('click', () => {
-      chrome.tabs.create({ url: 'https://nobstacle.com/dashboard' });
+      chrome.tabs.create({ url: 'https://nobstacle.com/' });
     });
   }
 

@@ -2751,14 +2751,17 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                             style={{
                                                 position: 'fixed',
                                                 top: '3.5rem',
-                                                left: 0,
-                                                right: 0,
-                                                backgroundColor: '#ffffff',
-                                                boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)',
+                                                left: '3%',
+                                                right: '3%',
+                                                backgroundColor: 'rgba(255, 255, 255, 0.7)',
+                                                backdropFilter: 'blur(10px)',
+                                                WebkitBackdropFilter: 'blur(10px)',
+                                                boxShadow: '0 10px 25px -5px rgba(0,0,0,0.2), 0 10px 10px -5px rgba(0,0,0,0.1)',
                                                 zIndex: 1000,
-                                                maxHeight: 'calc(100vh - 3.5rem)',
+                                                maxHeight: 'calc(100vh - 3.5rem - 6%)',
                                                 overflowY: 'auto',
-                                                borderBottom: '4px solid #3b5998',
+                                                borderRadius: '12px',
+                                                border: '1px solid rgba(59, 89, 152, 0.3)',
                                                 animation: 'slideDown 0.3s ease-out',
                                             }}
                                         >
@@ -2781,9 +2784,6 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                                             <label className="block text-xs font-medium text-gray-600 mb-1.5">
                                                                 Language
                                                             </label>
-                                                            {/* <div className="bg-white rounded-lg shadow-sm">
-                                                                <TemplateShortcutPicker />
-                                                            </div> */}
                                                             <div className="bg-white rounded-lg shadow-sm">
                                                                 <HeaderLanguagePicker />
                                                             </div>
@@ -2801,13 +2801,9 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                                     </div>
                                                 </div>
 
-                                                {/* 2. Language Picker - Full Width with Selected Language Display */}
                                                 <div className="bg-gray-50/80 border border-gray-200 rounded-xl p-4 shadow-sm">
-                                                    <label className="block text-xs font-medium text-gray-600 mb-1.5">
-                                                        Template Shortcuts
-                                                    </label>
                                                     <div className="">
-                                                        <TemplateShortcutPicker />
+                                                        <TemplateShortcutPicker isMobile={isMobile} />
                                                     </div>
                                                 </div>
 
@@ -2839,7 +2835,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                                     <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
                                                         Quick Actions
                                                     </p>
-                                                    <div className="flex justify-between items-center gap-2">
+                                                    <div className="flex justify-center items-center gap-5">
                                                         {/* Survey Shortcut */}
                                                         <div style={{ transform: 'scale(1.2)' }}>
                                                             <HeaderSurveyShortcut

@@ -19,8 +19,9 @@ import {
   GetWebsiteTemplateRes,
 } from "../../../../lib/client/model";
 
-export const TemplateShortcutPicker: React.FC<{ checkIframe?: boolean }> = ({
-  checkIframe = true
+export const TemplateShortcutPicker: React.FC<{ checkIframe?: boolean; isMobile?: boolean }> = ({
+  checkIframe = true,
+  isMobile
 }) => {
   const { emitSendTemplate } = useSocketContext();
   const { company } = useCompanyStore();
@@ -228,7 +229,7 @@ export const TemplateShortcutPicker: React.FC<{ checkIframe?: boolean }> = ({
   }
 
   return (
-    <div className={`flex cursor-pointer ${isInIframe ? 'gap-1' : 'gap-2'}`}>
+    <div className={`flex cursor-pointer ${isMobile ? 'justify-center align-items-center gap-4': ''} ${isInIframe ? 'gap-1' : 'gap-2'}`}>
       {sortedShortcuts.map((res) => (
         <span
           key={res.id}
