@@ -12,12 +12,14 @@ import { IoChatbubbleEllipses } from "react-icons/io5";
 interface HeaderTextShortcutProps {
     confirmationNumber: string;
     clearConfirmationNumber: () => void;
-    checkTooltip: boolean
+    checkTooltip: boolean;
+    isMobile: boolean
 }
 export const TextSurveyShortcut: React.FC<HeaderTextShortcutProps> = ({
     confirmationNumber,
     clearConfirmationNumber,
-    checkTooltip
+    checkTooltip,
+    isMobile
 }) => {
     const [isLoading, setIsLoading] = useState(false);
     const { emitSendTemplate } = useSocketContext();
@@ -70,7 +72,7 @@ export const TextSurveyShortcut: React.FC<HeaderTextShortcutProps> = ({
                         type="primary"
                         icon={<IoChatbubbleEllipses style={{ fontSize: "20px" }} />}
                         onClick={handleConfirmSend}
-                        className="flex items-center justify-center customHeaderButton"
+                        className={isMobile ? "flex items-center justify-center customHeaderButtonMobile" : "flex items-center justify-center customHeaderButton"}
                         style={{
                             backgroundColor: "#3b5998",
                             border: "none",
@@ -83,7 +85,7 @@ export const TextSurveyShortcut: React.FC<HeaderTextShortcutProps> = ({
                     type="primary"
                     icon={<IoChatbubbleEllipses style={{ fontSize: "20px" }} />}
                     onClick={handleConfirmSend}
-                    className="flex items-center justify-center customHeaderButton"
+                    className={isMobile ? "flex items-center justify-center customHeaderButtonMobile" : "flex items-center justify-center customHeaderButton"}
                     style={{
                         backgroundColor: "#3b5998",
                         border: "none",

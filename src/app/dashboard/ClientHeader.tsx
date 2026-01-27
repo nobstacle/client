@@ -177,6 +177,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
     const [selectedFormForPrefill, setSelectedFormForPrefill] = useState<any>(null);
     const { emitSendJotForm } = useSocketContext();
     const [selectedForm, setSelectedForm] = useState<any>(null);
+    const [isMobile, setIsMobile] = useState(false);
     const [displayStation, setDisplayStation] = useState(
         params.get("station") ?? "1"
     );
@@ -188,6 +189,14 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         setIsInIframe(window.self !== window.top);
     }, []);
 
+    useEffect(() => {
+        const mql = window.matchMedia("(max-width: 767px)");
+        setIsMobile(mql.matches);
+
+        const listener = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+        mql.addEventListener("change", listener);
+        return () => mql.removeEventListener("change", listener);
+    }, []);
 
     // Get company data with proper caching
     const { data: companyData } = useCompanyControllerGetCompany({
@@ -2679,6 +2688,27 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                 html, body {
                     background: transparent !important;
                 }
+                  @keyframes slideDown {
+                    from {
+                        opacity: 0;
+                        transform: translateY(-20px);
+                    }
+                    to {
+                        opacity: 1;
+                        transform: translateY(0);
+                    }
+                }
+
+                @keyframes slideUp {
+                    from {
+                        opacity: 1;
+                        transform: translateY(0);
+                    }
+                    to {
+                        opacity: 0;
+                        transform: translateY(-20px);
+                    }
+                }
                 `}</style>
             <div style={{
                 width: '100%',
@@ -2729,50 +2759,59 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                                 maxHeight: 'calc(100vh - 3.5rem)',
                                                 overflowY: 'auto',
                                                 borderBottom: '4px solid #3b5998',
+                                                animation: 'slideDown 0.3s ease-out',
                                             }}
                                         >
                                             <div className="p-5 space-y-6 max-w-screen-sm mx-auto">
-
-                                                {/* 2. Language settings – grouped card */}
-                                                <div className="bg-gray-50/80 border border-gray-200 rounded-xl p-4 space-y-4 shadow-sm">
-                                                    <h3 className="text-sm font-semibold text-gray-700">Language & Template</h3>
-                                                    <div className="grid grid-cols-2 gap-2">
+                                                {/* 1, 3, 4 Combined: Language Short, Template, Station - Single Row */}
+                                                <div className="bg-gray-50/80 border border-gray-200 rounded-xl p-4 shadow-sm">
+                                                    <div className="grid grid-cols-3 gap-3">
+                                                        {/* Language Shortcut */}
                                                         <div>
-                                                            <label className="block text-xs font-medium text-gray-600 mb-1.5">Lang Short</label>
+                                                            <label className="block text-xs font-medium text-gray-600 mb-1.5">
+                                                                Lang
+                                                            </label>
                                                             <div className="bg-white rounded-lg shadow-sm">
                                                                 <LanguageShortcutPicker />
                                                             </div>
                                                         </div>
+
+                                                        {/* Template Shortcut */}
                                                         <div>
-                                                            <label className="block text-xs font-medium text-gray-600 mb-1.5">Template</label>
-                                                            <div className="bg-white rounded-lg shadow-sm">
+                                                            <label className="block text-xs font-medium text-gray-600 mb-1.5">
+                                                                Language
+                                                            </label>
+                                                            {/* <div className="bg-white rounded-lg shadow-sm">
                                                                 <TemplateShortcutPicker />
+                                                            </div> */}
+                                                            <div className="bg-white rounded-lg shadow-sm">
+                                                                <HeaderLanguagePicker />
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Station */}
+                                                        <div>
+                                                            <label className="block text-xs font-medium text-gray-600 mb-1.5">
+                                                                Station
+                                                            </label>
+                                                            <div className="bg-white rounded-lg shadow-sm">
+                                                                <StationPicker />
                                                             </div>
                                                         </div>
                                                     </div>
                                                 </div>
 
-                                            {/* 3. Language – separate card */}
+                                                {/* 2. Language Picker - Full Width with Selected Language Display */}
                                                 <div className="bg-gray-50/80 border border-gray-200 rounded-xl p-4 shadow-sm">
-                                                    <label className="block text-xs font-medium text-gray-600 mb-1.5">Language Picker</label>
-                                                    <div className="bg-white rounded-lg shadow-sm">
-                                                        <HeaderLanguagePicker />
-                                                    </div>
-                                                </div>
-
-                                                {/* 3. Station – separate card */}
-                                                <div className="bg-gray-50/80 border border-gray-200 rounded-xl p-4 shadow-sm">
-                                                    <label className="block text-xs font-medium text-gray-600 mb-1.5">Station</label>
-                                                    <div className="bg-white rounded-lg shadow-sm">
-                                                        <StationPicker />
-                                                    </div>
-                                                </div>
-
-                                                {/* 1. Magic Box – most important → top & prominent */}
-                                                <div className="space-y-3">
-                                                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                                                        Magic Box – ID# or Template
+                                                    <label className="block text-xs font-medium text-gray-600 mb-1.5">
+                                                        Template Shortcuts
                                                     </label>
+                                                    <div className="">
+                                                        <TemplateShortcutPicker />
+                                                    </div>
+                                                </div>
+
+                                                <div className="bg-gray-50/80 border border-gray-200 rounded-xl p-4 shadow-sm">
                                                     <div className="relative">
                                                         <input
                                                             ref={inputRef}
@@ -2794,63 +2833,74 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                                         )}
                                                     </div>
                                                 </div>
-                                                {/* 4. Quick action icons – centered */}
+
+                                                {/* 6. Quick Actions - Larger Icons, Full Width, No White Background */}
                                                 <div className="text-center">
                                                     <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
                                                         Quick Actions
                                                     </p>
-                                                    <div className="flex flex-wrap justify-center gap-3">
-                                                        <HeaderSurveyShortcut
-                                                            confirmationNumber={confirmationNumber}
-                                                            clearConfirmationNumber={clearConfirmationNumber}
-                                                            checkTooltip={isInIframe}
-                                                            user={user}
-                                                        />
-                                                        <HeaderRecordingShortcut
-                                                            confirmationNumber={confirmationNumber}
-                                                            clearConfirmationNumber={clearConfirmationNumber}
-                                                            checkTooltip={isInIframe}
-                                                        />
-                                                        <ChatBot checkTooltip={isInIframe} />
-                                                        <WebsiteShortcut
-                                                            confirmationNumber={confirmationNumber}
-                                                            clearConfirmationNumber={clearConfirmationNumber}
-                                                            checkTooltip={isInIframe}
-                                                        />
-                                                        <TextSurveyShortcut
-                                                            confirmationNumber={confirmationNumber}
-                                                            clearConfirmationNumber={clearConfirmationNumber}
-                                                            checkTooltip={isInIframe}
-                                                        />
+                                                    <div className="flex justify-between items-center gap-2">
+                                                        {/* Survey Shortcut */}
+                                                        <div style={{ transform: 'scale(1.2)' }}>
+                                                            <HeaderSurveyShortcut
+                                                                confirmationNumber={confirmationNumber}
+                                                                clearConfirmationNumber={clearConfirmationNumber}
+                                                                checkTooltip={isInIframe}
+                                                                user={user}
+                                                                isMobile={isMobile}
+                                                            />
+                                                        </div>
+
+                                                        {/* Recording Shortcut */}
+                                                        <div style={{ transform: 'scale(1.2)' }}>
+                                                            <HeaderRecordingShortcut
+                                                                confirmationNumber={confirmationNumber}
+                                                                clearConfirmationNumber={clearConfirmationNumber}
+                                                                checkTooltip={isInIframe}
+                                                                isMobile={isMobile}
+                                                            />
+                                                        </div>
+
+                                                        {/* ChatBot */}
+                                                        <div style={{ transform: 'scale(1.2)' }}>
+                                                            <ChatBot checkTooltip={isInIframe} isMobile={isMobile} />
+                                                        </div>
+
+                                                        {/* Website Shortcut */}
+                                                        <div style={{ transform: 'scale(1.2)' }}>
+                                                            <WebsiteShortcut
+                                                                confirmationNumber={confirmationNumber}
+                                                                clearConfirmationNumber={clearConfirmationNumber}
+                                                                checkTooltip={isInIframe}
+                                                                isMobile={isMobile}
+                                                            />
+                                                        </div>
+
+                                                        {/* Text Survey Shortcut */}
+                                                        <div style={{ transform: 'scale(1.2)' }}>
+                                                            <TextSurveyShortcut
+                                                                confirmationNumber={confirmationNumber}
+                                                                clearConfirmationNumber={clearConfirmationNumber}
+                                                                checkTooltip={isInIframe}
+                                                                isMobile={isMobile}
+                                                            />
+                                                        </div>
                                                     </div>
                                                 </div>
 
-                                                {/* 5. Categories & Forms buttons */}
-                                                <div className="grid grid-cols-2 gap-3">
-                                                    <button
-                                                        onClick={() => {
-                                                            setSearchValue('/');
-                                                            handleSearchChange({ target: { value: '/' } });
-                                                        }}
-                                                        className="py-3 px-5 bg-blue-50 hover:bg-blue-100 active:bg-blue-200 border border-blue-600 text-blue-700 font-semibold rounded-xl transition text-sm"
-                                                    >
-                                                        / Categories
-                                                    </button>
-                                                    <button
-                                                        onClick={() => {
-                                                            setSearchValue('*');
-                                                            handleSearchChange({ target: { value: '*' } });
-                                                        }}
-                                                        className="py-3 px-5 bg-blue-50 hover:bg-blue-100 active:bg-blue-200 border border-blue-600 text-blue-700 font-semibold rounded-xl transition text-sm"
-                                                    >
-                                                        * Forms
-                                                    </button>
-                                                </div>
-
-                                                {/* 6. Collapse – full width, strong contrast */}
+                                                {/* 8. Collapse - Full width, company color (#3b5998) */}
                                                 <button
                                                     onClick={() => setDropdownMenuOpen(false)}
-                                                    className="w-full py-3.5 bg-gradient-to-r from-blue-700 to-blue-800 hover:from-blue-800 hover:to-blue-900 text-white font-semibold rounded-xl shadow-md transition flex items-center justify-center gap-2 text-base"
+                                                    className="w-full py-3.5 text-white font-semibold rounded-xl shadow-md transition flex items-center justify-center gap-2 text-base"
+                                                    style={{
+                                                        background: 'linear-gradient(to right, #3b5998, #2d4373)',
+                                                    }}
+                                                    onMouseEnter={(e) => {
+                                                        e.currentTarget.style.background = 'linear-gradient(to right, #2d4373, #1e2d4f)';
+                                                    }}
+                                                    onMouseLeave={(e) => {
+                                                        e.currentTarget.style.background = 'linear-gradient(to right, #3b5998, #2d4373)';
+                                                    }}
                                                 >
                                                     <span>▲</span> Collapse Menu
                                                 </button>
@@ -3700,236 +3750,6 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                     </div>
                 </div>
             </Drawer>
-
-            {/* Shortcut Menu Drawer - Mobile */}
-            {/* <Drawer
-                title={
-                    <div className="flex items-center justify-between py-2">
-                        <div className="flex items-center gap-3">
-                            <MoreOutlined className="text-white text-lg" />
-                            <span className="text-lg font-semibold text-white">Quick Actions</span>
-                        </div>
-                        <Button
-                            type="text"
-                            icon={<CloseOutlined className="text-white" />}
-                            onClick={closeQuickActions}
-                            className="border-none shadow-none hover:bg-white/20 rounded-lg"
-                            style={{ background: 'transparent' }}
-                        />
-                    </div>
-                }
-                placement="right"
-                closable={false}
-                onClose={closeQuickActions}
-                open={dropdownMenuOpen}
-                width={300}
-                className="block lg:hidden"
-                bodyStyle={{
-                    padding: '24px',
-                    backgroundColor: '#f8fafc'
-                }}
-                headerStyle={{
-                    backgroundColor: '#3b5998',
-                    color: 'white',
-                    borderBottom: 'none',
-                    padding: '16px 24px'
-                }}
-            >
-                <div className="space-y-4">
-                    <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-                        <h3 className="text-base font-semibold text-gray-800 mb-3">Template Search</h3>
-                        <div ref={searchRef} style={{ position: 'relative' }}>
-                            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                                <input
-                                    ref={inputRef}
-                                    autoComplete="off"
-                                    autoCorrect="off"
-                                    autoCapitalize="off"
-                                    type="text"
-                                    placeholder="ID# or Search Template"
-                                    value={searchValue}
-                                    onChange={handleSearchChange}
-                                    onFocus={() => {
-                                        if (justSelectedRef.current) return;
-                                        if (searchValue.trim() && filteredTemplates.length > 0) {
-                                            setIsDropdownVisible(true);
-                                        }
-                                    }}
-                                    style={{
-                                        width: '100%',
-                                        padding: '8px 32px 8px 12px',
-                                        border: '1px solid #e5e7eb',
-                                        borderRadius: '8px',
-                                        fontSize: '14px',
-                                        outline: 'none',
-                                    }}
-                                    className="focus:border-blue-500"
-                                />
-                                {searchValue && (
-                                    <CloseOutlined
-                                        onMouseDown={(e) => {
-                                            e.preventDefault();
-                                            handleClear();
-                                        }}
-                                        style={{
-                                            position: 'absolute',
-                                            right: '12px',
-                                            color: 'rgba(0, 0, 0, 0.45)',
-                                            cursor: 'pointer',
-                                            fontSize: '12px',
-                                            padding: '4px'
-                                        }}
-                                    />
-                                )}
-                            </div>
-
-                            {isDropdownVisible && (
-                                <div
-                                    style={{
-                                        position: 'fixed', // Always fixed
-                                        top: `${dropdownPosition.top}px`,
-                                        right: `${hamburgerPosition.right}px`,
-                                        left: 'auto',
-                                        backgroundColor: 'white',
-                                        borderRadius: '12px',
-                                        boxShadow: '0 10px 40px rgba(0, 0, 0, 0.15)',
-                                        minWidth: '280px',
-                                        maxHeight: '400px',
-                                        overflowY: 'auto',
-                                        zIndex: 2147483647,
-                                        border: '1px solid #e5e7eb',
-                                        animation: 'slideDown 0.2s ease-out'
-                                    }}
-                                >
-                                    {isLoading ? (
-                                        <div style={{ padding: '20px', textAlign: 'center' }}>
-                                            <Spin />
-                                        </div>
-                                    ) : filteredTemplates.length > 0 ? (
-                                        <List
-                                            dataSource={filteredTemplates}
-                                            renderItem={(template) => {
-                                                const config = templateConfig[template.type];
-                                                return (
-                                                    <List.Item
-                                                        style={{
-                                                            cursor: 'pointer',
-                                                            padding: '12px 16px',
-                                                            borderBottom: '1px solid #f0f0f0',
-                                                            transition: 'background-color 0.2s'
-                                                        }}
-                                                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f5f5f5'}
-                                                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
-                                                    >
-                                                        <div
-                                                            style={{ flex: 1, display: 'flex', alignItems: 'center' }}
-                                                            onMouseDown={(e) => {
-                                                                e.preventDefault();
-                                                                handleTemplateSelect(template);
-                                                            }}
-                                                        >
-                                                            <List.Item.Meta
-                                                                avatar={
-                                                                    <div style={{
-                                                                        fontSize: '24px',
-                                                                        color: config.color,
-                                                                        display: 'flex',
-                                                                        alignItems: 'center'
-                                                                    }}>
-                                                                        {config.icon}
-                                                                    </div>
-                                                                }
-                                                                title={
-                                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                                        <span>{template.tag}</span>
-                                                                        {!template.availableInSelectedLang && (
-                                                                            <Tag color="orange" style={{ fontSize: '10px', padding: '0 4px', margin: 0 }}>
-                                                                                {companyData?.defaultLangCode?.toUpperCase() || 'EN'}
-                                                                            </Tag>
-                                                                        )}
-                                                                    </div>
-                                                                }
-                                                            />
-                                                        </div>
-                                                        {template.type !== "slideshow" && template.type !== "texts" && (
-                                                            <div
-                                                                onMouseDown={(e) => {
-                                                                    e.preventDefault();
-                                                                    handleQRCodeClick(template);
-                                                                }}
-                                                                style={{
-                                                                    fontSize: '20px',
-                                                                    color: '#3b5998',
-                                                                    cursor: 'pointer',
-                                                                    padding: '8px',
-                                                                    borderRadius: '6px',
-                                                                    transition: 'all 0.2s',
-                                                                    display: 'flex',
-                                                                    alignItems: 'center',
-                                                                    justifyContent: 'center',
-                                                                    flexShrink: 0
-                                                                }}
-                                                                onMouseEnter={(e) => {
-                                                                    e.currentTarget.style.backgroundColor = '#e8eef7';
-                                                                    e.currentTarget.style.transform = 'scale(1.1)';
-                                                                }}
-                                                                onMouseLeave={(e) => {
-                                                                    e.currentTarget.style.backgroundColor = 'transparent';
-                                                                    e.currentTarget.style.transform = 'scale(1)';
-                                                                }}
-                                                            >
-                                                                <IoQrCode />
-                                                            </div>
-                                                        )}
-                                                    </List.Item>
-                                                );
-                                            }}
-                                        />
-                                    ) : (
-                                        <Empty
-                                            image={Empty.PRESENTED_IMAGE_SIMPLE}
-                                            description="No templates found"
-                                            style={{ padding: '20px' }}
-                                        />
-                                    )}
-                                </div>
-                            )}
-                        </div>
-                    </div>
-
-                    <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-                        <h3 className="text-base font-semibold text-gray-800 mb-3">Quick Actions</h3>
-                        <div className="flex gap-2">
-                            <HeaderSurveyShortcut
-                                confirmationNumber={confirmationNumber}
-                                clearConfirmationNumber={clearConfirmationNumber}
-                                checkTooltip={isInIframe}
-                                user={user}
-                            />
-                            <HeaderRecordingShortcut confirmationNumber={confirmationNumber} clearConfirmationNumber={clearConfirmationNumber} checkTooltip={isInIframe} />
-                            <ChatBot />
-                        </div>
-                    </div>
-
-                    <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-                        <h3 className="text-base font-semibold text-gray-800 mb-3">Language Shortcut Picker</h3>
-                        <LanguageShortcutPicker />
-                    </div>
-                    <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-                        <h3 className="text-base font-semibold text-gray-800 mb-3">Language</h3>
-                        <HeaderLanguagePicker />
-                    </div>
-
-                    <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-                        <h3 className="text-base font-semibold text-gray-800 mb-3">Template Shortcut</h3>
-                        <TemplateShortcutPicker />
-                    </div>
-                    <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-                        <h3 className="text-base font-semibold text-gray-800 mb-3">Station Picker</h3>
-                        <StationPicker />
-                    </div>
-                </div>
-            </Drawer> */}
 
             {/* JotForm Prefill Modal */}
             <JotFormPrefillModal

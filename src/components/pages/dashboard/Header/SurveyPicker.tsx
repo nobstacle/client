@@ -10,14 +10,16 @@ interface HeaderSurveyShortcutProps {
   confirmationNumber: string;
   clearConfirmationNumber: () => void;
   checkTooltip: boolean,
-  user:string
+  user: string,
+  isMobile: boolean
 }
 
 export const HeaderSurveyShortcut: React.FC<HeaderSurveyShortcutProps> = ({
   confirmationNumber,
   clearConfirmationNumber,
   checkTooltip,
-  user
+  user,
+  isMobile
 }) => {
   const [isLoading, setIsLoading] = useState(false);
   const params = useSearchParams();
@@ -70,7 +72,7 @@ export const HeaderSurveyShortcut: React.FC<HeaderSurveyShortcutProps> = ({
             icon={<IoSpeedometer style={{ fontSize: "20px" }} />}
             onClick={handleConfirmSend}
             disabled={isLoading}
-            className="flex items-center justify-center customHeaderButton"
+            className={isMobile ? "flex items-center justify-center customHeaderButtonMobile " : "ml-2 flex items-center justify-center customHeaderButton"}
             style={{
               backgroundColor: "#3b5998",
               border: "none",
@@ -84,7 +86,7 @@ export const HeaderSurveyShortcut: React.FC<HeaderSurveyShortcutProps> = ({
           icon={<IoSpeedometer style={{ fontSize: "20px" }} />}
           onClick={handleConfirmSend}
           disabled={isLoading}
-          className="flex items-center justify-center customHeaderButton"
+            className={isMobile ? "flex items-center justify-center customHeaderButtonMobile " : "ml-2 flex items-center justify-center customHeaderButton"}
           style={{
             backgroundColor: "#3b5998",
             border: "none",

@@ -13,9 +13,10 @@ import AudioRecorder from "../../../../components/AudioRecorder";
 interface ChatBotProps {
   cb?: () => void;
   checkTooltip?: boolean;
+  isMobile: boolean
 }
 
-export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => {
+export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true, isMobile }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isInIframe, setIsInIframe] = useState(false);
   const [inputValue, setInputValue] = useState("");
@@ -24,6 +25,7 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
   const buttonRef = useRef<HTMLButtonElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const recognitionRef = useRef<any>(null);
+
 
   const { emitSendMessage, emitClearMessage, emitLeaveChat, socketConnected } = useSocketContext();
   const params = useSearchParams();
@@ -540,18 +542,6 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
           }}>
             {displayMessage}
           </div>
-
-          {/* {messageObj.originalMessage && messageObj.originalMessage !== displayMessage && (
-            <div style={{
-              fontSize: '12px',
-              opacity: 0.7,
-              fontStyle: 'italic',
-              borderTop: isRight ? '1px solid rgba(255,255,255,0.2)' : '1px solid rgba(0,0,0,0.1)',
-              paddingTop: '6px'
-            }}>
-              Original: {messageObj.originalMessage}
-            </div>
-          )} */}
         </div>
       </div>
     );
@@ -563,11 +553,14 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true }) => 
       type="text"
       icon={<IoChatbubbles className="text-white text-xl" />}
       onClick={showModal}
-      className="border-none shadow-none hover:bg-white/20 transition-colors duration-200"
+      className={isMobile ? "flex items-center justify-center customHeaderButtonMobile " : "flex items-center justify-center customHeaderButton"}
       style={{
-        background: "transparent",
+        background: isMobile ? "#3b5998" : "transparent",
         border: "none",
         color: "white",
+        height: isMobile ? "40px" : "auto",
+        width: isMobile ? "40px" : "auto",
+        ...(isMobile && { boxShadow: "0 4px 12px rgba(0,0,0,0.15)" }), 
       }}
     />
   );

@@ -67,7 +67,7 @@ export const LanguageShortcutPicker = ({ checkIframe = true }: { checkIframe?: b
         <select
           value={currentLang}
           onChange={(e) => handleLanguageChange(e.target.value)}
-          className={`w-full ${checkIframe ? 'px-2 py-1 text-xs' : 'px-3 py-2 text-sm'} rounded bg-white/10 text-white border border-white/20`}
+          className={`w-full ${checkIframe ? 'px-2 py-1 text-xs' : 'px-3 py-2 text-sm'} rounded bg-white/10 border border-white/20`}
         >
           {sorted.map((s) => (
             <option key={s.id} value={s.value} style={{ color: 'black' }}>
