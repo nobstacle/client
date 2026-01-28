@@ -190,6 +190,76 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
     }, []);
 
     useEffect(() => {
+        const isOnNobstacle = window.location.hostname === 'nobstacle.com' ||
+            window.location.hostname === 'www.nobstacle.com' ||
+            window.location.hostname.endsWith('.nobstacle.com');
+
+        if (!isOnNobstacle || !data?.user) return;
+
+        console.log('[ClientHeader] 🚀 Auto-sending auth to extension...');
+        console.log('[ClientHeader] User:', data.user.email);
+
+        // Function to send auth
+        const sendAuthToExtension = async () => {
+            try {
+                // Fetch session data
+                const response = await fetch('/api/auth/session', {
+                    credentials: 'include',
+                    cache: 'no-store',
+                    headers: {
+                        'Cache-Control': 'no-cache'
+                    }
+                });
+
+                if (response.ok) {
+                    const sessionData = await response.json();
+
+                    if (sessionData && sessionData.user) {
+                        console.log('[ClientHeader] ✅ Session verified, sending to extension...');
+
+                        // Check if chrome extension API is available
+                        if (typeof (window as any).chrome !== 'undefined' && (window as any).chrome.runtime && (window as any).chrome.runtime.sendMessage) {
+                            (window as any).chrome.runtime.sendMessage({
+                                action: 'authCookiesFromNobstacle',
+                                cookies: [],
+                                sessionData: sessionData,
+                                user: sessionData.user,
+                                timestamp: Date.now()
+                            }, (response) => {
+                                if ((window as any).chrome.runtime.lastError) {
+                                    console.log('[ClientHeader] Extension not available:', (window as any).chrome.runtime.lastError.message);
+                                } else {
+                                    console.log('[ClientHeader] ✅ Auth sent to extension successfully!');
+                                }
+                            });
+                        } else {
+                            console.log('[ClientHeader] Extension API not available (normal on web)');
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('[ClientHeader] Error sending auth:', error);
+            }
+        };
+
+        // Send immediately on mount
+        sendAuthToExtension();
+
+        // Send again after 2 seconds (in case extension wasn't ready)
+        setTimeout(() => {
+            console.log('[ClientHeader] 🔄 Sending delayed auth...');
+            sendAuthToExtension();
+        }, 2000);
+
+        // Send again after 5 seconds (final attempt)
+        setTimeout(() => {
+            console.log('[ClientHeader] 🔄 Sending final auth...');
+            sendAuthToExtension();
+        }, 5000);
+
+    }, [data?.user]);
+
+    useEffect(() => {
         const mql = window.matchMedia("(max-width: 767px)");
         setIsMobile(mql.matches);
 
@@ -2685,31 +2755,31 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
     return (
         <>
             <style jsx global>{`
-                html, body {
-                    background: transparent !important;
-                }
-                  @keyframes slideDown {
-                    from {
-                        opacity: 0;
-                        transform: translateY(-20px);
-                    }
-                    to {
-                        opacity: 1;
-                        transform: translateY(0);
-                    }
-                }
+    html, body {
+        background: transparent !important;
+    }
+    @keyframes slideDown {
+        from {
+            opacity: 0;
+            transform: translateY(-20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
 
-                @keyframes slideUp {
-                    from {
-                        opacity: 1;
-                        transform: translateY(0);
-                    }
-                    to {
-                        opacity: 0;
-                        transform: translateY(-20px);
-                    }
-                }
-                `}</style>
+    @keyframes slideUp {
+        from {
+            opacity: 0;
+            transform: translateY(100%);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+`}</style>
             <div style={{
                 width: '100%',
                 position: 'relative',
@@ -2903,6 +2973,251 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                             </div>
                                         </div>
                                     )}
+
+                                    {isDropdownVisible && dropdownMenuOpen && (
+                                        <div
+                                            style={{
+                                                position: 'fixed',
+                                                top: '21.5rem',
+                                                left: '8vw',
+                                                right: '8vw',
+                                                backgroundColor: 'white',
+                                                borderTopLeftRadius: '16px',
+                                                borderTopRightRadius: '16px',
+                                                boxShadow: '0 -4px 12px rgba(0,0,0,0.15)',
+                                                maxHeight: '50vh',
+                                                overflowY: 'auto',
+                                                zIndex: 2147483647,
+                                                border: '1px solid #e5e7eb',
+                                                animation: 'slideUp 0.3s ease-out',
+                                                width: '-webkit-fill-available'
+                                            }}
+                                        >
+                                            {isLoading ? (
+                                                <div style={{ padding: '20px', textAlign: 'center' }}>
+                                                    <Spin />
+                                                </div>
+                                            ) : searchValue === '*' && assignedForms.length > 0 ? (
+                                                <List
+                                                    dataSource={assignedForms.sort((a, b) => {
+                                                        if (a.form_id === defaultFormId) return -1;
+                                                        if (b.form_id === defaultFormId) return 1;
+                                                        return a.form_name.localeCompare(b.form_name);
+                                                    })}
+                                                    renderItem={(form: any) => (
+                                                        <List.Item
+                                                            style={{
+                                                                padding: '16px',
+                                                                borderBottom: '1px solid #f0f0f0',
+                                                            }}
+                                                        >
+                                                            <div style={{ flex: 1 }}>
+                                                                <div style={{ fontWeight: 500, fontSize: '15px', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                                                                    {form.form_name}
+                                                                    {form.form_id === defaultFormId && (
+                                                                        <Tag color="#3b5998" style={{ fontSize: '10px' }}>DEFAULT</Tag>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                            <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                                                                <Button
+                                                                    size="middle"
+                                                                    type="primary"
+                                                                    onMouseDown={() => {
+                                                                        handleSendBlankForm(form.form_id);
+                                                                        message.success(`Form sent!`);
+                                                                        setSearchValue('');
+                                                                        setIsDropdownVisible(false);
+                                                                    }}
+                                                                    style={{
+                                                                        backgroundColor: '#3b5998',
+                                                                        borderColor: '#3b5998',
+                                                                        flex: 1
+                                                                    }}
+                                                                >
+                                                                    Send
+                                                                </Button>
+                                                                <Button
+                                                                    size="middle"
+                                                                    type="primary"
+                                                                    style={{
+                                                                        backgroundColor: '#3b5998',
+                                                                        borderColor: '#3b5998',
+                                                                        flex: 1
+                                                                    }}
+                                                                    onMouseDown={() => {
+                                                                        setSelectedFormForPrefill(form);
+                                                                        setIsFormModalOpen(true);
+                                                                        setSearchValue('');
+                                                                        setIsDropdownVisible(false);
+                                                                    }}
+                                                                >
+                                                                    Prefill
+                                                                </Button>
+                                                            </div>
+                                                        </List.Item>
+                                                    )}
+                                                />
+                                            ) : searchValue === '/' && categoriesData.length > 0 ? (
+                                                <>
+                                                    <div style={{
+                                                        padding: '16px',
+                                                        borderBottom: '2px solid #3b5998',
+                                                        backgroundColor: '#f8fafc',
+                                                        position: 'sticky',
+                                                        top: 0,
+                                                        zIndex: 1
+                                                    }}>
+                                                        <div style={{ fontWeight: 600, fontSize: '15px', color: '#1f2937' }}>
+                                                            Select Category for Upsell
+                                                        </div>
+                                                        <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>
+                                                            Tap to send room upgrade packages
+                                                        </div>
+                                                    </div>
+                                                    <List
+                                                        dataSource={categoriesData}
+                                                        renderItem={(category: Category) => (
+                                                            <List.Item
+                                                                style={{
+                                                                    cursor: 'pointer',
+                                                                    padding: '16px',
+                                                                    borderBottom: '1px solid #f0f0f0',
+                                                                }}
+                                                                onTouchEnd={(e) => {
+                                                                    e.preventDefault();
+                                                                    setSelectedCategories(category.id);
+                                                                    setSearchValue('');
+                                                                    setIsDropdownVisible(false);
+                                                                    setDropdownMenuOpen(false);
+                                                                    handleSendPackage(category.id);
+                                                                    message.success(`Category "${category.name}" selected for upsell`);
+                                                                }}
+                                                            >
+                                                                <List.Item.Meta
+                                                                    avatar={
+                                                                        category.signedImages?.[0]?.signedUrl ? (
+                                                                            <img
+                                                                                src={category.signedImages[0].signedUrl}
+                                                                                alt={category.name}
+                                                                                style={{
+                                                                                    width: '48px',
+                                                                                    height: '48px',
+                                                                                    borderRadius: '8px',
+                                                                                    objectFit: 'cover'
+                                                                                }}
+                                                                            />
+                                                                        ) : (
+                                                                            <div style={{
+                                                                                width: '48px',
+                                                                                height: '48px',
+                                                                                borderRadius: '8px',
+                                                                                backgroundColor: '#3b5998',
+                                                                                display: 'flex',
+                                                                                alignItems: 'center',
+                                                                                justifyContent: 'center',
+                                                                                color: 'white',
+                                                                                fontSize: '20px',
+                                                                                fontWeight: 'bold'
+                                                                            }}>
+                                                                                {category.name.charAt(0).toUpperCase()}
+                                                                            </div>
+                                                                        )
+                                                                    }
+                                                                    title={
+                                                                        <div style={{ fontSize: '15px', fontWeight: 500 }}>
+                                                                            {category.name}
+                                                                        </div>
+                                                                    }
+                                                                    description={
+                                                                        <div style={{ fontSize: '13px', color: '#6b7280', marginTop: '4px' }}>
+                                                                            Level {category.priceLevel} • {category.packageCounts.totalPackages} packages
+                                                                        </div>
+                                                                    }
+                                                                />
+                                                            </List.Item>
+                                                        )}
+                                                    />
+                                                </>
+                                            ) : filteredTemplates.length > 0 ? (
+                                                <List
+                                                    dataSource={filteredTemplates}
+                                                    renderItem={(template) => {
+                                                        const config = templateConfig[template.type];
+                                                        return (
+                                                            <List.Item
+                                                                style={{
+                                                                    cursor: 'pointer',
+                                                                    padding: '16px',
+                                                                    borderBottom: '1px solid #f0f0f0',
+                                                                }}
+                                                            >
+                                                                <div
+                                                                    style={{ flex: 1, display: 'flex', alignItems: 'center' }}
+                                                                    onTouchEnd={(e) => {
+                                                                        e.preventDefault();
+                                                                        handleTemplateSelect(template);
+                                                                        setDropdownMenuOpen(false);
+                                                                    }}
+                                                                >
+                                                                    <List.Item.Meta
+                                                                        avatar={
+                                                                            <div style={{
+                                                                                fontSize: '28px',
+                                                                                color: config.color,
+                                                                                display: 'flex',
+                                                                                alignItems: 'center'
+                                                                            }}>
+                                                                                {config.icon}
+                                                                            </div>
+                                                                        }
+                                                                        title={
+                                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '15px' }}>
+                                                                                <span>{template.tag}</span>
+                                                                                {!template.availableInSelectedLang && (
+                                                                                    <Tag color="orange" style={{ fontSize: '10px' }}>
+                                                                                        {companyData?.defaultLangCode?.toUpperCase() || 'EN'}
+                                                                                    </Tag>
+                                                                                )}
+                                                                            </div>
+                                                                        }
+                                                                    />
+                                                                </div>
+                                                                {template.type !== "slideshow" && template.type !== "text" && (
+                                                                    <div
+                                                                        onTouchEnd={(e) => {
+                                                                            e.preventDefault();
+                                                                            handleQRCodeClick(template);
+                                                                            setDropdownMenuOpen(false);
+                                                                        }}
+                                                                        style={{
+                                                                            fontSize: '24px',
+                                                                            color: '#3b5998',
+                                                                            cursor: 'pointer',
+                                                                            padding: '12px',
+                                                                            borderRadius: '8px',
+                                                                            backgroundColor: '#e8eef7',
+                                                                            display: 'flex',
+                                                                            alignItems: 'center',
+                                                                            justifyContent: 'center',
+                                                                        }}
+                                                                    >
+                                                                        <IoQrCode />
+                                                                    </div>
+                                                                )}
+                                                            </List.Item>
+                                                        );
+                                                    }}
+                                                />
+                                            ) : (
+                                                <Empty
+                                                    image={Empty.PRESENTED_IMAGE_SIMPLE}
+                                                    description="No templates found"
+                                                    style={{ padding: '40px 20px' }}
+                                                />
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -2969,6 +3284,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                         confirmationNumber={searchValue !== "" ? searchValue : confirmationNumber}
                                         clearConfirmationNumber={clearConfirmationNumber}
                                         checkTooltip={isInIframe}
+                                        isMobile={isMobile}
                                     />
                                 </div>
 
@@ -2978,6 +3294,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                         confirmationNumber={searchValue !== "" ? searchValue : confirmationNumber}
                                         clearConfirmationNumber={clearConfirmationNumber}
                                         checkTooltip={isInIframe}
+                                        isMobile={isMobile}
                                     />
                                 </div>
 
@@ -2988,6 +3305,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                         clearConfirmationNumber={clearConfirmationNumber}
                                         checkTooltip={isInIframe}
                                         user={user}
+                                        isMobile={isMobile}
                                     />
                                 </div>
 
@@ -2997,12 +3315,13 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                         confirmationNumber={searchValue !== "" ? searchValue : confirmationNumber}
                                         clearConfirmationNumber={clearConfirmationNumber}
                                         checkTooltip={isInIframe}
+                                        isMobile={isMobile}
                                     />
                                 </div>
 
                                 {/* ChatBot - Last (closest to input box) */}
                                 <div className="scale-75 lg:scale-100">
-                                    <ChatBot checkTooltip={isInIframe} />
+                                    <ChatBot checkTooltip={isInIframe} isMobile={isMobile} />
                                 </div>
 
                                 {/* Template Search Input */}
