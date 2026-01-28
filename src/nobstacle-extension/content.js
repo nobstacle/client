@@ -29,12 +29,12 @@ const isNobstacleWebsite = window.location.hostname === 'nobstacle.com' ||
 if (isNobstacleWebsite) {
   console.log('[Nobstacle Content] 🌐 Running on nobstacle.com');
   console.log('[Nobstacle Content]   Hostname:', window.location.hostname);
-  
+
   // Function to send auth to background
   const sendAuthToBackground = async () => {
     try {
       console.log('[Nobstacle Content] 🔍 Checking authentication...');
-      
+
       const response = await fetch('/api/auth/session', {
         credentials: 'include',
         cache: 'no-store',
@@ -42,16 +42,16 @@ if (isNobstacleWebsite) {
           'Cache-Control': 'no-cache'
         }
       });
-      
+
       console.log('[Nobstacle Content] Session response status:', response.status);
-      
+
       if (response.ok) {
         const sessionData = await response.json();
         console.log('[Nobstacle Content] Session data:', sessionData);
-        
+
         if (sessionData && sessionData.user) {
           console.log('[Nobstacle Content] ✅ User logged in:', sessionData.user.email);
-          
+
           chrome.runtime.sendMessage({
             action: 'authCookiesFromNobstacle',
             cookies: [],
@@ -65,7 +65,7 @@ if (isNobstacleWebsite) {
               console.log('[Nobstacle Content] ✅ Auth data sent to background');
             }
           });
-          
+
           return true;
         }
       }
@@ -74,13 +74,13 @@ if (isNobstacleWebsite) {
     }
     return false;
   };
-  
+
   // Send auth on multiple triggers
   console.log('[Nobstacle Content] 🚀 Sending initial auth check...');
   setTimeout(() => sendAuthToBackground(), 500);
   setTimeout(() => sendAuthToBackground(), 2000);
   setTimeout(() => sendAuthToBackground(), 5000);
-  
+
   // Listen for messages from background
   chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === 'fetchAuthCookies') {
@@ -88,9 +88,9 @@ if (isNobstacleWebsite) {
       return true;
     }
   });
-  
+
   console.log('[Nobstacle Content] ✅ Auth monitoring initialized');
-  
+
   // STOP HERE - don't run the rest of the script
 }
 
@@ -1133,10 +1133,35 @@ function showLoginPrompt() {
       </svg>
     </div>
     <h2 style="margin: 0 0 10px 0; color: #333; font-size: 20px; font-weight: 600;">Login Required</h2>
-    <p style="margin: 0 0 25px 0; color: #666; font-size: 14px; line-height: 1.5;">
-      Please log in to Nobstacle to use this extension.<br/>
-      <span style="font-size: 12px; color: #999;">We'll automatically detect when you're logged in.</span>
+    <p style="margin: 0 0 15px 0; color: #666; font-size: 14px; line-height: 1.5;">
+      To use this extension, you need to log in to Nobstacle.
     </p>
+    <div style="
+      background: #fff3cd;
+      border: 1px solid #ffc107;
+      border-radius: 8px;
+      padding: 12px 16px;
+      margin-bottom: 20px;
+      text-align: left;
+    ">
+      <div style="
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        color: #856404;
+        font-size: 13px;
+        line-height: 1.5;
+      ">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink: 0; margin-top: 2px;">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="16" x2="12" y2="12"></line>
+          <line x1="12" y1="8" x2="12.01" y2="8"></line>
+        </svg>
+        <div>
+          <strong>Important:</strong> After logging in, please enable this extension on <strong>nobstacle.com</strong> for it to work properly.
+        </div>
+      </div>
+    </div>
     <button 
       id="nobstacle-login-btn"
       style="
@@ -1221,12 +1246,36 @@ function showLoginPrompt() {
         </style>
       </div>
       <h2 style="margin: 0 0 10px 0; color: #333; font-size: 20px; font-weight: 600;">Waiting for Login...</h2>
-      <p style="margin: 0 0 25px 0; color: #666; font-size: 14px; line-height: 1.5;">
-        Log in to Nobstacle in the new tab.<br/>
-        <span style="font-size: 12px; color: #999;">This will automatically close once you're logged in.</span>
+      <p style="margin: 0 0 15px 0; color: #666; font-size: 14px; line-height: 1.5;">
+        Log in to Nobstacle in the new tab.
       </p>
+      <div style="
+        background: #e3f2fd;
+        border: 1px solid #2196f3;
+        border-radius: 8px;
+        padding: 12px 16px;
+        margin-bottom: 20px;
+        text-align: left;
+      ">
+        <div style="
+          display: flex;
+          align-items: flex-start;
+          gap: 10px;
+          color: #0d47a1;
+          font-size: 13px;
+          line-height: 1.5;
+        ">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink: 0; margin-top: 2px;">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+            <polyline points="22 4 12 14.01 9 11.01"></polyline>
+          </svg>
+          <div>
+            <strong>Next Step:</strong> After logging in, click the extension icon on <strong>nobstacle.com</strong> to activate it. Then it will work on all websites.
+          </div>
+        </div>
+      </div>
       <p style="margin: 0 0 15px 0; color: #999; font-size: 12px;">
-        After logging in, please wait a few seconds...
+        This will automatically close once you're logged in and activate the extension.
       </p>
       <button 
         id="nobstacle-cancel-btn"
