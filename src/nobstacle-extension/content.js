@@ -24,43 +24,43 @@ let loginWindowOpened = false;
 // Special handler for nobstacle.com - allows background to fetch cookies via this tab
 if (window.location.hostname.includes('nobstacle.com')) {
   console.log('[Nobstacle Content] 🌐 Running on nobstacle.com - enabling cookie fetching');
-  
+
   // Listen for requests from background to fetch cookies
   chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === 'fetchAuthCookies') {
       console.log('[Nobstacle Content] 📨 Background requested cookies');
-      
+
       // Get all cookies for this domain (we CAN do this because we're ON nobstacle.com)
       chrome.cookies.getAll({ domain: 'nobstacle.com' }, (cookies) => {
         console.log('[Nobstacle Content] 📦 Found cookies:', cookies.length);
-        
+
         const sessionCookie = cookies.find(c =>
           c.name === '__Secure-next-auth.session-token' ||
           c.name === 'next-auth.session-token'
         );
-        
+
         if (sessionCookie) {
           console.log('[Nobstacle Content] ✅ Session cookie found!');
-          
+
           // Send cookies to background via message
           chrome.runtime.sendMessage({
             action: 'authCookiesFromNobstacle',
             cookies: cookies
           });
-          
+
           sendResponse({ success: true, cookies: cookies });
         } else {
           console.log('[Nobstacle Content] ⚠️ No session cookie found');
           sendResponse({ success: false, cookies: [] });
         }
       });
-      
+
       return true; // Keep channel open for async response
     }
-    
+
     return false;
   });
-  
+
   // Also proactively send cookies on page load
   setTimeout(() => {
     chrome.cookies.getAll({ domain: 'nobstacle.com' }, (cookies) => {
@@ -68,7 +68,7 @@ if (window.location.hostname.includes('nobstacle.com')) {
         c.name === '__Secure-next-auth.session-token' ||
         c.name === 'next-auth.session-token'
       );
-      
+
       if (sessionCookie) {
         console.log('[Nobstacle Content] 🚀 Proactively sending auth to background');
         chrome.runtime.sendMessage({
@@ -213,7 +213,7 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
           const loginPrompt = document.getElementById('nobstacle-login-prompt');
           if (loginPrompt) {
             loginWindowOpened = false; // Reset flag
-            
+
             loginPrompt.innerHTML = `
               <div style="margin-bottom: 20px;">
                 <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2">
@@ -380,7 +380,7 @@ function getSupportedMimeType() {
 // ⭐ NEW: Aggressively check auth when content script loads
 (async function initContentScript() {
   console.log('[Content Script] 🚀 Initializing...');
-  
+
   // Force background to check auth immediately
   try {
     const authResponse = await new Promise((resolve) => {
@@ -393,7 +393,7 @@ function getSupportedMimeType() {
         }
       });
     });
-    
+
     if (authResponse?.isAuthenticated) {
       console.log('[Content Script] ✅ Auth confirmed on init');
       cachedAuthData = authResponse;
@@ -404,7 +404,7 @@ function getSupportedMimeType() {
   } catch (error) {
     console.error('[Content Script] Error checking auth:', error);
   }
-  
+
   // Continue with normal initialization
   chrome.storage.local.get(['extensionEnabled'], async (result) => {
     isEnabled = result.extensionEnabled !== false;
@@ -1243,7 +1243,7 @@ function showLoginPrompt() {
     // IMPROVED: Poll for auth status while waiting
     let pollAttempts = 0;
     const maxPollAttempts = 60; // 60 seconds max
-    
+
     const pollInterval = setInterval(async () => {
       pollAttempts++;
       console.log(`[Content Script] Polling for auth... (${pollAttempts}/${maxPollAttempts})`);
@@ -1254,7 +1254,7 @@ function showLoginPrompt() {
           console.log('[Content Script] ✅ Auth detected during polling!');
           clearInterval(pollInterval);
           loginWindowOpened = false;
-          
+
           // Update cached auth
           cachedAuthData = response;
           authDataReady = true;
@@ -1285,7 +1285,7 @@ function showLoginPrompt() {
       if (pollAttempts >= maxPollAttempts) {
         clearInterval(pollInterval);
         console.log('[Content Script] ⏱️ Polling timeout');
-        
+
         prompt.innerHTML = `
           <div style="margin-bottom: 20px;">
             <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2">
@@ -1355,27 +1355,27 @@ async function prefetchAuthData() {
   return new Promise((resolve) => {
     console.log('[Content Script] 🔍 Prefetching auth data...');
 
-const timeout = setTimeout(() => {
+    // Check if we have valid cached data (less than 10 seconds old)
+    if (cachedAuthData && cachedAuthData.isAuthenticated && cachedAuthData.sessionToken) {
+      const cacheAge = authDataReady ? 0 : Infinity;
+      if (cacheAge < 10000) { // Reduced from 30s to 10s
+        console.log('[Content Script] ✅ Using valid cached auth data');
+        resolve(cachedAuthData);
+        return;
+      }
+    }
+
+    // Set timeout for safety
+    const timeout = setTimeout(() => {
       console.error('[Content Script] ⏱️ Auth fetch timeout');
       resolve({
         sessionToken: null,
         cookies: [],
         isAuthenticated: false
       });
-    }, 15000); 
+    }, 8000); // Increased from 15s to 8s for faster failure
 
-    // IMPROVED: First check if we already have valid cached data
-    if (cachedAuthData && cachedAuthData.isAuthenticated && cachedAuthData.sessionToken) {
-      const age = authDataReady ? 0 : Infinity;
-      if (age < 30000) { // If cached data is less than 30 seconds old
-        console.log('[Content Script] ✅ Using valid cached auth data');
-        clearTimeout(timeout);
-        resolve(cachedAuthData);
-        return;
-      }
-    }
-
-    // IMPROVED: Try chrome.storage first (more reliable than message passing)
+    // Try chrome.storage FIRST (fastest)
     chrome.storage.local.get([
       'authSessionToken',
       'authCookies',
@@ -1385,11 +1385,7 @@ const timeout = setTimeout(() => {
       if (chrome.runtime.lastError) {
         console.error('[Content Script] ❌ Storage error:', chrome.runtime.lastError);
         clearTimeout(timeout);
-        resolve({
-          sessionToken: null,
-          cookies: [],
-          isAuthenticated: false
-        });
+        resolve({ sessionToken: null, cookies: [], isAuthenticated: false });
         return;
       }
 
@@ -1401,7 +1397,7 @@ const timeout = setTimeout(() => {
           : 'unknown'
       });
 
-      // If storage has valid auth, use it immediately
+      // If storage has valid auth, use it
       if (storageResult.isAuthenticated && storageResult.authSessionToken) {
         cachedAuthData = {
           sessionToken: storageResult.authSessionToken,
@@ -1409,28 +1405,20 @@ const timeout = setTimeout(() => {
           isAuthenticated: true
         };
         authDataReady = true;
-
         console.log('[Content Script] ✅ Auth loaded from storage');
         clearTimeout(timeout);
         resolve(cachedAuthData);
         return;
       }
 
-      // Storage doesn't have auth - try background script
-      console.log('[Content Script] 📨 Requesting auth from background...');
-
-      chrome.runtime.sendMessage({
-        action: 'getAuthData'
-      }, (response) => {
+      // Storage doesn't have auth - force background to fetch fresh cookies
+      console.log('[Content Script] 📨 Forcing background to fetch cookies...');
+      chrome.runtime.sendMessage({ action: 'forceAuthCheck' }, (response) => {
         clearTimeout(timeout);
 
         if (chrome.runtime.lastError) {
-          console.error('[Content Script] ❌ Error getting auth from background:', chrome.runtime.lastError);
-          cachedAuthData = {
-            sessionToken: null,
-            cookies: [],
-            isAuthenticated: false
-          };
+          console.error('[Content Script] ❌ Background error:', chrome.runtime.lastError);
+          cachedAuthData = { sessionToken: null, cookies: [], isAuthenticated: false };
           authDataReady = true;
           resolve(cachedAuthData);
           return;
@@ -1438,7 +1426,6 @@ const timeout = setTimeout(() => {
 
         console.log('[Content Script] 📦 Background response:', {
           hasToken: !!response?.sessionToken,
-          cookieCount: response?.cookies?.length || 0,
           isAuthenticated: response?.isAuthenticated
         });
 
@@ -1447,7 +1434,6 @@ const timeout = setTimeout(() => {
           cookies: response?.cookies || [],
           isAuthenticated: response?.isAuthenticated === true && !!response?.sessionToken
         };
-
         authDataReady = true;
         resolve(cachedAuthData);
       });

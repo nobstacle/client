@@ -11,19 +11,22 @@ export default withAuth(
     if (pathname.startsWith('/header-only')) {
       const response = NextResponse.next();
 
-      // Get token to check auth status
-      const token = await getToken({ req, secret:  "asdfgh1234" });
-      
-      // Log for debugging
+      const token = await getToken({ 
+        req, 
+        secret: "asdfgh1234",
+        cookieName: process.env.NODE_ENV === 'production' 
+          ? '__Secure-next-auth.session-token'
+          : 'next-auth.session-token'
+      });
+
       console.log('🔐 /header-only auth check:', {
         hasToken: !!token,
         user: token?.email || 'Not authenticated',
+        cookies: req.cookies.getAll().map(c => c.name), 
         origin: req.headers.get('origin'),
         referer: req.headers.get('referer')
       });
-
-      console.log("tokentokentokentokentoken",token);
-
+      
       // Remove frame restrictions
       response.headers.delete('X-Frame-Options');
       

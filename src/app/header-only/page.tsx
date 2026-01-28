@@ -112,32 +112,31 @@ export default function HeaderOnlyPage() {
 
     // More aggressive auth requests
     requestAuth();
-    setTimeout(requestAuth, 300);
-    setTimeout(requestAuth, 600);
-    setTimeout(requestAuth, 1000);
-    setTimeout(requestAuth, 1500);
-    setTimeout(requestAuth, 2000);
-    setTimeout(requestAuth, 3000);
+    setTimeout(requestAuth, 200);  
+    setTimeout(requestAuth, 500);  
+    setTimeout(requestAuth, 800); 
+    setTimeout(requestAuth, 1200);
+    setTimeout(requestAuth, 1600); 
+    setTimeout(requestAuth, 2200); 
+    setTimeout(requestAuth, 3000); 
 
-    // Fallback timeout
-    // Fallback timeout with retries
-    authTimeoutRef.current = setTimeout(async () => {
-      if (!authReceived) {
-        console.log('[HeaderOnly] ⏱️ Auth timeout - checking session with retries');
+  authTimeoutRef.current = setTimeout(async () => {
+    if (!authReceived) {
+      console.log('[HeaderOnly] ⏱️ Auth timeout - checking session with retries');
 
-        // Try multiple times
-        for (let i = 0; i < 5; i++) {
-          const success = await checkSession();
-          if (success) {
-            console.log('[HeaderOnly] ✅ Session found on retry', i + 1);
-            break;
-          }
-          if (i < 4) {
-            await new Promise(resolve => setTimeout(resolve, 1000));
-          }
+      // Try multiple times with shorter delays
+      for (let i = 0; i < 7; i++) { // Increased from 5 to 7
+        const success = await checkSession();
+        if (success) {
+          console.log('[HeaderOnly] ✅ Session found on retry', i + 1);
+          break;
+        }
+        if (i < 6) {
+          await new Promise(resolve => setTimeout(resolve, 800)); // Reduced from 1000ms
         }
       }
-    }, 6000); // Increased from 4s to 6s
+    }
+  }, 10000); 
 
     return () => {
       window.removeEventListener('message', handler);
