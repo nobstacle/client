@@ -26,8 +26,6 @@ const isNobstacleWebsite = window.location.hostname === 'nobstacle.com' ||
   window.location.hostname === 'www.nobstacle.com' ||
   window.location.hostname.endsWith('.nobstacle.com');
 
-console.info("fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", isNobstacleWebsite);
-
 if (isNobstacleWebsite) {
   console.log('[Nobstacle Content] 🌐 Running on nobstacle.com');
   console.log('[Nobstacle Content]   Hostname:', window.location.hostname);
@@ -96,6 +94,8 @@ if (isNobstacleWebsite) {
       return false;
     }
   };
+
+  sendAuthToBackground();
 
   // Listen for messages from background
   chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
