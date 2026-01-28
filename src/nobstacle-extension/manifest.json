@@ -14,7 +14,7 @@
     "https://www.nobstacle.com/*",
     "https://nobstacle-production-d145.up.railway.app/*",
     "http://localhost:3000/*",
-    "https://*/*",  
+    "https://*/*",
     "http://*/*",
     "*://*/*"
   ],
@@ -24,13 +24,29 @@
   "content_scripts": [
     {
       "matches": [
+        "https://nobstacle.com/*",
+        "https://www.nobstacle.com/*",
+        "https://*.nobstacle.com/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_idle",
+      "all_frames": false
+    },
+    {
+      "matches": [
         "<all_urls>"
       ],
       "js": [
         "content.js"
       ],
       "run_at": "document_end",
-      "all_frames": false
+      "all_frames": false,
+      "exclude_matches": [
+        "https://nobstacle.com/*",
+        "https://www.nobstacle.com/*"
+      ]
     }
   ],
   "action": {

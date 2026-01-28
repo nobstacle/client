@@ -21,63 +21,146 @@ let loginPromptShown = false;
 let loginCheckInProgress = false;
 let loginWindowOpened = false;
 
-// Special handler for nobstacle.com - allows background to fetch cookies via this tab
-if (window.location.hostname.includes('nobstacle.com')) {
-  console.log('[Nobstacle Content] 🌐 Running on nobstacle.com - enabling cookie fetching');
+// Special handler for nobstacle.com - IMPROVED VERSION
+const isNobstacleWebsite = window.location.hostname === 'nobstacle.com' ||
+  window.location.hostname === 'www.nobstacle.com' ||
+  window.location.hostname.endsWith('.nobstacle.com');
 
-  // Listen for requests from background to fetch cookies
-  chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    if (request.action === 'fetchAuthCookies') {
-      console.log('[Nobstacle Content] 📨 Background requested cookies');
+console.info("fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",isNobstacleWebsite);
 
-      // Get all cookies for this domain (we CAN do this because we're ON nobstacle.com)
-      chrome.cookies.getAll({ domain: 'nobstacle.com' }, (cookies) => {
-        console.log('[Nobstacle Content] 📦 Found cookies:', cookies.length);
-
-        const sessionCookie = cookies.find(c =>
-          c.name === '__Secure-next-auth.session-token' ||
-          c.name === 'next-auth.session-token'
-        );
-
-        if (sessionCookie) {
-          console.log('[Nobstacle Content] ✅ Session cookie found!');
-
-          // Send cookies to background via message
-          chrome.runtime.sendMessage({
-            action: 'authCookiesFromNobstacle',
-            cookies: cookies
-          });
-
-          sendResponse({ success: true, cookies: cookies });
-        } else {
-          console.log('[Nobstacle Content] ⚠️ No session cookie found');
-          sendResponse({ success: false, cookies: [] });
+if (isNobstacleWebsite) {
+  console.log('[Nobstacle Content] 🌐 Running on nobstacle.com');
+  console.log('[Nobstacle Content]   Hostname:', window.location.hostname);
+  console.log('[Nobstacle Content]   Protocol:', window.location.protocol);
+  console.log('[Nobstacle Content]   Full URL:', window.location.href);
+  
+  // Function to send auth to background
+  const sendAuthToBackground = async () => {
+    try {
+      console.log('[Nobstacle Content] 🔍 Checking authentication...');
+      
+      // Fetch the session endpoint (this works because we're on same domain)
+      const response = await fetch('/api/auth/session', {
+        credentials: 'include',
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache'
         }
       });
-
-      return true; // Keep channel open for async response
+      
+      console.log('[Nobstacle Content] Session response status:', response.status);
+      
+      if (response.ok) {
+        const sessionData = await response.json();
+        console.log('[Nobstacle Content] Session data:', sessionData);
+        
+        if (sessionData && sessionData.user) {
+          console.log('[Nobstacle Content] ✅ User logged in:', sessionData.user.email);
+          
+          // Send to background immediately
+          chrome.runtime.sendMessage({
+            action: 'authCookiesFromNobstacle',
+            cookies: [], // Can't read httpOnly cookies, but we have session data
+            sessionData: sessionData,
+            user: sessionData.user,
+            timestamp: Date.now()
+          }, (response) => {
+            if (chrome.runtime.lastError) {
+              console.error('[Nobstacle Content] ❌ Error sending to background:', chrome.runtime.lastError);
+            } else {
+              console.log('[Nobstacle Content] ✅ Auth data sent to background');
+            }
+          });
+          
+          return true;
+        } else {
+          console.log('[Nobstacle Content] ⚠️ No user in session data');
+          
+          // Send logout signal
+          chrome.runtime.sendMessage({
+            action: 'authCookiesFromNobstacle',
+            cookies: [],
+            sessionData: null,
+            user: null,
+            timestamp: Date.now()
+          });
+          
+          return false;
+        }
+      } else {
+        console.log('[Nobstacle Content] ❌ Session endpoint returned:', response.status);
+        return false;
+      }
+    } catch (error) {
+      console.error('[Nobstacle Content] ❌ Error checking session:', error);
+      return false;
     }
-
+  };
+  
+  // Listen for messages from background
+  chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    console.log('[Nobstacle Content] 📨 Received message:', request.action);
+    
+    if (request.action === 'fetchAuthCookies') {
+      console.log('[Nobstacle Content] Background requested auth');
+      sendAuthToBackground().then(success => {
+        sendResponse({ success });
+      });
+      return true;
+    }
+    
     return false;
   });
-
-  // Also proactively send cookies on page load
+  
+  // Send auth immediately when page loads
+  console.log('[Nobstacle Content] 🚀 Sending initial auth check...');
   setTimeout(() => {
-    chrome.cookies.getAll({ domain: 'nobstacle.com' }, (cookies) => {
-      const sessionCookie = cookies.find(c =>
-        c.name === '__Secure-next-auth.session-token' ||
-        c.name === 'next-auth.session-token'
-      );
-
-      if (sessionCookie) {
-        console.log('[Nobstacle Content] 🚀 Proactively sending auth to background');
-        chrome.runtime.sendMessage({
-          action: 'authCookiesFromNobstacle',
-          cookies: cookies
-        });
-      }
-    });
-  }, 1000);
+    sendAuthToBackground();
+  }, 500);
+  
+  // Send again after 2 seconds (in case first one was too early)
+  setTimeout(() => {
+    console.log('[Nobstacle Content] 🔄 Sending delayed auth check...');
+    sendAuthToBackground();
+  }, 2000);
+  
+  // Send periodically every 5 seconds for the first minute
+  let attempts = 0;
+  const quickInterval = setInterval(() => {
+    attempts++;
+    console.log('[Nobstacle Content] 🔄 Periodic auth check', attempts);
+    sendAuthToBackground();
+    
+    if (attempts >= 12) { // After 60 seconds
+      clearInterval(quickInterval);
+      console.log('[Nobstacle Content] Switching to slower interval');
+      
+      // Then every 30 seconds
+      setInterval(() => {
+        console.log('[Nobstacle Content] 🔄 Slow periodic check');
+        sendAuthToBackground();
+      }, 30000);
+    }
+  }, 5000);
+  
+  // Listen for focus events (when user returns to tab)
+  window.addEventListener('focus', () => {
+    console.log('[Nobstacle Content] 👀 Tab focused - checking auth');
+    sendAuthToBackground();
+  });
+  
+  // Listen for visibility changes
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) {
+      console.log('[Nobstacle Content] 👁️ Tab visible - checking auth');
+      sendAuthToBackground();
+    }
+  });
+  
+  console.log('[Nobstacle Content] ✅ Auth monitoring initialized');
+  
+  // STOP HERE - don't inject header on nobstacle.com
+  // The rest of the script should not run
 }
 
 function debugStorage() {
