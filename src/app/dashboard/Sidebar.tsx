@@ -19,9 +19,10 @@ import {
     IoSettings,
     IoHome
 } from 'react-icons/io5';
-import { IoRecordingSharp } from "react-icons/io5";
+// import { IoRecordingSharp } from "react-icons/io5";
 import { IoChatbubbleEllipses } from "react-icons/io5";
 import { FaMicrophone } from "react-icons/fa";
+import { TiUserAdd } from "react-icons/ti";
 
 interface ClientSidebarProps {
     user: Session | null;
@@ -67,6 +68,13 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
             href: "/dashboard/asignForms",
             roles: ["SAdmin"],
             icon: <IoHome size={18} />,
+            iconColor: "white"
+        },
+               {
+            title: "Register",
+            href: "/api/auth/register",
+            roles: ["SAdmin"],
+            icon: <TiUserAdd size={18} />,
             iconColor: "white"
         }
     ];

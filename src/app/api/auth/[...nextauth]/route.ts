@@ -148,7 +148,7 @@ export const authOptions: AuthOptions = {
   pages: {
     signIn: "/login",
     signOut: "/",
-    error: "/login",
+    error: "/",
   },
   events: {
     // Log when user signs out

@@ -3816,6 +3816,45 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                 </div>
                             </div>
                         )}
+
+                        {isSAdmin && (
+                            <div style={{ padding: '8px' }}>
+                                <button
+                                    onClick={() => {
+                                        handleLogout();
+                                        setIsHamburgerMenuOpen(false);
+                                    }}
+                                    style={{
+                                        width: '100%',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '0',
+                                        padding: '12px 16px',
+                                        backgroundColor: 'transparent',
+                                        border: 'none',
+                                        borderRadius: '8px',
+                                        cursor: 'pointer',
+                                        fontSize: '14px',
+                                        fontWeight: '500',
+                                        color: '#fff'
+                                    }}
+                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                >
+                                    <div style={{
+                                        width: '36px',
+                                        height: '36px',
+                                        borderRadius: '8px',
+                                        backgroundColor: 'transparent',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                    }}>
+                                        <RiLogoutBoxLine style={{ color: '#fff', fontSize: '18px' }} />
+                                    </div>
+                                    <span>Logout</span>
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </nav>
 
