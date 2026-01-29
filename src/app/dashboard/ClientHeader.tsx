@@ -231,6 +231,17 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
 
     const isMobileView = windowWidth < 1024;
 
+    function isIPad() {
+        const ua = navigator.userAgent;
+        return /iPad/.test(ua) ||
+            (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) ||
+            (window.innerWidth >= 768 && window.innerWidth < 1024);
+    }
+
+    function isTabletOrMobile() {
+        return window.innerWidth < 1024;
+    }
+
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (dropdownMenuRef.current && !dropdownMenuRef.current.contains(event.target)) {
@@ -396,6 +407,18 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
 
                 // Show success message
                 message.success(`Switched to Station ${newStation}`);
+            }
+
+            if (event.data.type === 'THREE_DOTS_DROPDOWN_CLOSED') {
+                setDropdownMenuOpen(false);
+            }
+
+            if (event.data.type === 'HAMBURGER_DROPDOWN_CLOSED') {
+                setIsHamburgerMenuOpen(false);
+            }
+
+            if (event.data.type === 'COLLAPSE_MENU') {
+                setDropdownMenuOpen(false);
             }
 
         };
@@ -2597,6 +2620,13 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                 processSubmission();
             }
 
+            if (event.data.type === 'THREE_DOTS_DROPDOWN_CLOSED') {
+                setDropdownMenuOpen(false);
+            }
+
+            if (event.data.type === 'COLLAPSE_MENU') {
+                setDropdownMenuOpen(false);
+            }
         };
 
         window.addEventListener('message', handler);
@@ -2746,161 +2776,301 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
 
                                     {/* Dropdown Menu */}
                                     {dropdownMenuOpen && (
-                                        <div
-                                            style={{
-                                                position: 'fixed',
-                                                top: '3.5rem',
-                                                left: '3%',
-                                                right: '3%',
-                                                backgroundColor: 'rgba(255, 255, 255, 0.7)',
-                                                backdropFilter: 'blur(10px)',
-                                                WebkitBackdropFilter: 'blur(10px)',
-                                                boxShadow: '0 10px 25px -5px rgba(0,0,0,0.2), 0 10px 10px -5px rgba(0,0,0,0.1)',
-                                                zIndex: 1000,
-                                                maxHeight: 'calc(100vh - 3.5rem - 6%)',
-                                                overflowY: 'auto',
-                                                borderRadius: '12px',
-                                                border: '1px solid rgba(59, 89, 152, 0.3)',
-                                                animation: 'slideDown 0.3s ease-out',
-                                            }}
-                                        >
-                                            <div className="p-5 space-y-6 max-w-screen-sm mx-auto">
-                                                {/* 1, 3, 4 Combined: Language Short, Template, Station - Single Row */}
-                                                <div className="bg-gray-50/80 border border-gray-200 rounded-xl p-4 shadow-sm">
-                                                    <div className="grid grid-cols-3 gap-3">
-                                                        {/* Language Shortcut */}
-                                                        <div>
-                                                            <label className="block text-xs font-medium text-gray-600 mb-1.5">
-                                                                Lang
-                                                            </label>
-                                                            <div className="bg-white rounded-lg shadow-sm">
-                                                                <LanguageShortcutPicker />
-                                                            </div>
-                                                        </div>
+                                        <>
+                                            {isInIframe ? (
+                                                (() => {
+                                                    const iframeRect = dropdownMenuRef.current?.getBoundingClientRect();
+                                                    const position = {
+                                                        top: iframeRect ? iframeRect.bottom + 8 : 72,
+                                                        left: 16,
+                                                        right: 16,
+                                                        isMobile: isTabletOrMobile()
+                                                    };
 
-                                                        {/* Template Shortcut */}
-                                                        <div>
-                                                            <label className="block text-xs font-medium text-gray-600 mb-1.5">
-                                                                Language
-                                                            </label>
-                                                            <div className="bg-white rounded-lg shadow-sm">
-                                                                <HeaderLanguagePicker />
-                                                            </div>
-                                                        </div>
+                                                    const dropdownHTML = `
+          <div style="
+            padding: 12px 16px;
+            border-bottom: 2px solid #3b5998;
+            background: #f8fafc;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+          ">
+            <div style="font-weight: 600; font-size: 14px; color: #1f2937;">Settings</div>
+          </div>
 
-                                                        {/* Station */}
-                                                        <div>
-                                                            <label className="block text-xs font-medium text-gray-600 mb-1.5">
-                                                                Station
-                                                            </label>
-                                                            <div className="bg-white rounded-lg shadow-sm">
-                                                                <StationPicker />
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
+          <!-- Language Settings Section -->
+          <div style="background: white; padding: 16px;">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+              <div style="width: 8px; height: 8px; border-radius: 50%; background: #3b5998;"></div>
+              <h3 style="margin: 0; font-size: 14px; font-weight: 600; color: #1f2937;">Language Settings</h3>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">
+              <div>
+                <label style="display: block; font-size: 12px; font-weight: 500; color: #6b7280; margin-bottom: 6px;">Lang</label>
+                <div id="lang-shortcut-placeholder"></div>
+              </div>
+              <div>
+                <label style="display: block; font-size: 12px; font-weight: 500; color: #6b7280; margin-bottom: 6px;">Language</label>
+                <div id="header-lang-placeholder"></div>
+              </div>
+              <div>
+                <label style="display: block; font-size: 12px; font-weight: 500; color: #6b7280; margin-bottom: 6px;">Station</label>
+                <div id="station-picker-placeholder"></div>
+              </div>
+            </div>
+          </div>
 
-                                                <div className="bg-gray-50/80 border border-gray-200 rounded-xl p-4 shadow-sm">
-                                                    <div className="">
-                                                        <TemplateShortcutPicker isMobile={isMobile} />
-                                                    </div>
-                                                </div>
+          <!-- Template Shortcut Section -->
+          <div style="background: white; padding: 16px; border-top: 1px solid #e5e7eb;">
+            <div id="template-shortcut-placeholder"></div>
+          </div>
 
-                                                <div className="bg-gray-50/80 border border-gray-200 rounded-xl p-4 shadow-sm">
-                                                    <div className="relative">
-                                                        <input
-                                                            ref={inputRef}
-                                                            autoComplete="off"
-                                                            type="text"
-                                                            placeholder="Search template or enter ID#"
-                                                            value={searchValue}
-                                                            onChange={handleSearchChange}
-                                                            className="w-full px-4 py-3.5 pr-10 border-2 border-blue-700 rounded-xl text-base font-medium focus:outline-none focus:border-blue-800 focus:ring-1 focus:ring-blue-800 transition"
-                                                        />
-                                                        {searchValue && (
-                                                            <CloseOutlined
-                                                                onMouseDown={(e) => {
-                                                                    e.preventDefault();
-                                                                    handleClear();
-                                                                }}
-                                                                className="absolute right-3 top-1/2 -translate-y-1/2 text-blue-700 text-xl cursor-pointer hover:text-blue-900 transition"
-                                                            />
-                                                        )}
-                                                    </div>
-                                                </div>
+          <!-- Search Template Section -->
+          <div style="background: white; padding: 16px; border-top: 1px solid #e5e7eb;">
+            <div style="position: relative;">
+              <input
+                id="extension-search-input"
+                autocomplete="off"
+                type="text"
+                placeholder="Search template or enter ID#"
+                style="
+                  width: 100%;
+                  padding: 12px 40px 12px 12px;
+                  border: 2px solid #3b5998;
+                  border-radius: 8px;
+                  font-size: 14px;
+                  font-weight: 500;
+                  outline: none;
+                "
+              />
+              <svg 
+                id="extension-search-clear"
+                style="
+                  position: absolute;
+                  right: 12px;
+                  top: 50%;
+                  transform: translateY(-50%);
+                  width: 20px;
+                  height: 20px;
+                  color: #3b5998;
+                  cursor: pointer;
+                  display: none;
+                "
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </div>
+          </div>
 
-                                                {/* 6. Quick Actions - Larger Icons, Full Width, No White Background */}
-                                                <div className="text-center">
-                                                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
-                                                        Quick Actions
-                                                    </p>
-                                                    <div className="flex justify-center items-center gap-5">
-                                                        {/* Survey Shortcut */}
-                                                        <div style={{ transform: 'scale(1.2)' }}>
-                                                            <HeaderSurveyShortcut
-                                                                confirmationNumber={confirmationNumber}
-                                                                clearConfirmationNumber={clearConfirmationNumber}
-                                                                checkTooltip={isInIframe}
-                                                                user={user}
-                                                                isMobile={isMobile}
-                                                            />
-                                                        </div>
+          <!-- Quick Actions Section -->
+          <div style="background: white; padding: 16px; border-top: 1px solid #e5e7eb; text-align: center;">
+            <p style="font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase; margin: 0 0 12px 0;">Quick Actions</p>
+            <div style="display: flex; justify-content: center; gap: 20px;">
+              <!-- Survey, Recording, ChatBot, Website, Text Survey icons will be added here -->
+            </div>
+          </div>
 
-                                                        {/* Recording Shortcut */}
-                                                        <div style={{ transform: 'scale(1.2)' }}>
-                                                            <HeaderRecordingShortcut
-                                                                confirmationNumber={confirmationNumber}
-                                                                clearConfirmationNumber={clearConfirmationNumber}
-                                                                checkTooltip={isInIframe}
-                                                                isMobile={isMobile}
-                                                            />
-                                                        </div>
+          <!-- Collapse Button -->
+          <div style="padding: 16px; background: #f8fafc; border-top: 1px solid #e5e7eb;">
+            <button 
+              id="extension-collapse-btn"
+              style="
+                width: 100%;
+                padding: 12px;
+                background: linear-gradient(to right, #3b5998, #2d4373);
+                color: white;
+                border: none;
+                border-radius: 8px;
+                font-size: 14px;
+                font-weight: 600;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 8px;
+              "
+            >
+              <span>▲</span> Collapse Menu
+            </button>
+          </div>
+        `;
 
-                                                        {/* ChatBot */}
-                                                        <div style={{ transform: 'scale(1.2)' }}>
-                                                            <ChatBot checkTooltip={isInIframe} isMobile={isMobile} />
-                                                        </div>
+                                                    // Send to parent window
+                                                    window.parent.postMessage({
+                                                        type: 'THREE_DOTS_DROPDOWN',
+                                                        isOpen: true,
+                                                        content: {
+                                                            html: dropdownHTML,
+                                                            position: position,
+                                                            currentStation: currentStation,
+                                                            selectedLang: selectedLang
+                                                        }
+                                                    }, '*');
 
-                                                        {/* Website Shortcut */}
-                                                        <div style={{ transform: 'scale(1.2)' }}>
-                                                            <WebsiteShortcut
-                                                                confirmationNumber={confirmationNumber}
-                                                                clearConfirmationNumber={clearConfirmationNumber}
-                                                                checkTooltip={isInIframe}
-                                                                isMobile={isMobile}
-                                                            />
-                                                        </div>
-
-                                                        {/* Text Survey Shortcut */}
-                                                        <div style={{ transform: 'scale(1.2)' }}>
-                                                            <TextSurveyShortcut
-                                                                confirmationNumber={confirmationNumber}
-                                                                clearConfirmationNumber={clearConfirmationNumber}
-                                                                checkTooltip={isInIframe}
-                                                                isMobile={isMobile}
-                                                            />
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                {/* 8. Collapse - Full width, company color (#3b5998) */}
-                                                <button
-                                                    onClick={() => setDropdownMenuOpen(false)}
-                                                    className="w-full py-3.5 text-white font-semibold rounded-xl shadow-md transition flex items-center justify-center gap-2 text-base"
+                                                    return null;
+                                                })()
+                                            ) : (
+                                                <div
                                                     style={{
-                                                        background: 'linear-gradient(to right, #3b5998, #2d4373)',
-                                                    }}
-                                                    onMouseEnter={(e) => {
-                                                        e.currentTarget.style.background = 'linear-gradient(to right, #2d4373, #1e2d4f)';
-                                                    }}
-                                                    onMouseLeave={(e) => {
-                                                        e.currentTarget.style.background = 'linear-gradient(to right, #3b5998, #2d4373)';
+                                                        position: 'fixed',
+                                                        top: '3.5rem',
+                                                        left: '3%',
+                                                        right: '3%',
+                                                        backgroundColor: 'rgba(255, 255, 255, 0.7)',
+                                                        backdropFilter: 'blur(10px)',
+                                                        WebkitBackdropFilter: 'blur(10px)',
+                                                        boxShadow: '0 10px 25px -5px rgba(0,0,0,0.2), 0 10px 10px -5px rgba(0,0,0,0.1)',
+                                                        zIndex: 1000,
+                                                        maxHeight: 'calc(100vh - 3.5rem - 6%)',
+                                                        overflowY: 'auto',
+                                                        borderRadius: '12px',
+                                                        border: '1px solid rgba(59, 89, 152, 0.3)',
+                                                        animation: 'slideDown 0.3s ease-out',
                                                     }}
                                                 >
-                                                    <span>▲</span> Collapse Menu
-                                                </button>
-                                            </div>
-                                        </div>
+                                                    <div className="p-5 space-y-6 max-w-screen-sm mx-auto">
+                                                        {/* 1, 3, 4 Combined: Language Short, Template, Station - Single Row */}
+                                                        <div className="bg-gray-50/80 border border-gray-200 rounded-xl p-4 shadow-sm">
+                                                            <div className="grid grid-cols-3 gap-3">
+                                                                {/* Language Shortcut */}
+                                                                <div>
+                                                                    <label className="block text-xs font-medium text-gray-600 mb-1.5">
+                                                                        Lang
+                                                                    </label>
+                                                                    <div className="bg-white rounded-lg shadow-sm">
+                                                                        <LanguageShortcutPicker />
+                                                                    </div>
+                                                                </div>
+
+                                                                {/* Template Shortcut */}
+                                                                <div>
+                                                                    <label className="block text-xs font-medium text-gray-600 mb-1.5">
+                                                                        Language
+                                                                    </label>
+                                                                    <div className="bg-white rounded-lg shadow-sm">
+                                                                        <HeaderLanguagePicker />
+                                                                    </div>
+                                                                </div>
+
+                                                                {/* Station */}
+                                                                <div>
+                                                                    <label className="block text-xs font-medium text-gray-600 mb-1.5">
+                                                                        Station
+                                                                    </label>
+                                                                    <div className="bg-white rounded-lg shadow-sm">
+                                                                        <StationPicker />
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="bg-gray-50/80 border border-gray-200 rounded-xl p-4 shadow-sm">
+                                                            <div className="">
+                                                                <TemplateShortcutPicker isMobile={isMobile} />
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="bg-gray-50/80 border border-gray-200 rounded-xl p-4 shadow-sm">
+                                                            <div className="relative">
+                                                                <input
+                                                                    ref={inputRef}
+                                                                    autoComplete="off"
+                                                                    type="text"
+                                                                    placeholder="Search template or enter ID#"
+                                                                    value={searchValue}
+                                                                    onChange={handleSearchChange}
+                                                                    className="w-full px-4 py-3.5 pr-10 border-2 border-blue-700 rounded-xl text-base font-medium focus:outline-none focus:border-blue-800 focus:ring-1 focus:ring-blue-800 transition"
+                                                                />
+                                                                {searchValue && (
+                                                                    <CloseOutlined
+                                                                        onMouseDown={(e) => {
+                                                                            e.preventDefault();
+                                                                            handleClear();
+                                                                        }}
+                                                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-blue-700 text-xl cursor-pointer hover:text-blue-900 transition"
+                                                                    />
+                                                                )}
+                                                            </div>
+                                                        </div>
+
+                                                        {/* 6. Quick Actions - Larger Icons, Full Width, No White Background */}
+                                                        <div className="text-center">
+                                                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
+                                                                Quick Actions
+                                                            </p>
+                                                            <div className="flex justify-center items-center gap-5">
+                                                                {/* Survey Shortcut */}
+                                                                <div style={{ transform: 'scale(1.2)' }}>
+                                                                    <HeaderSurveyShortcut
+                                                                        confirmationNumber={confirmationNumber}
+                                                                        clearConfirmationNumber={clearConfirmationNumber}
+                                                                        checkTooltip={isInIframe}
+                                                                        user={user}
+                                                                        isMobile={isMobile}
+                                                                    />
+                                                                </div>
+
+                                                                {/* Recording Shortcut */}
+                                                                <div style={{ transform: 'scale(1.2)' }}>
+                                                                    <HeaderRecordingShortcut
+                                                                        confirmationNumber={confirmationNumber}
+                                                                        clearConfirmationNumber={clearConfirmationNumber}
+                                                                        checkTooltip={isInIframe}
+                                                                        isMobile={isMobile}
+                                                                    />
+                                                                </div>
+
+                                                                {/* ChatBot */}
+                                                                <div style={{ transform: 'scale(1.2)' }}>
+                                                                    <ChatBot checkTooltip={isInIframe} isMobile={isMobile} />
+                                                                </div>
+
+                                                                {/* Website Shortcut */}
+                                                                <div style={{ transform: 'scale(1.2)' }}>
+                                                                    <WebsiteShortcut
+                                                                        confirmationNumber={confirmationNumber}
+                                                                        clearConfirmationNumber={clearConfirmationNumber}
+                                                                        checkTooltip={isInIframe}
+                                                                        isMobile={isMobile}
+                                                                    />
+                                                                </div>
+
+                                                                {/* Text Survey Shortcut */}
+                                                                <div style={{ transform: 'scale(1.2)' }}>
+                                                                    <TextSurveyShortcut
+                                                                        confirmationNumber={confirmationNumber}
+                                                                        clearConfirmationNumber={clearConfirmationNumber}
+                                                                        checkTooltip={isInIframe}
+                                                                        isMobile={isMobile}
+                                                                    />
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* 8. Collapse - Full width, company color (#3b5998) */}
+                                                        <button
+                                                            onClick={() => setDropdownMenuOpen(false)}
+                                                            className="w-full py-3.5 text-white font-semibold rounded-xl shadow-md transition flex items-center justify-center gap-2 text-base"
+                                                            style={{
+                                                                background: 'linear-gradient(to right, #3b5998, #2d4373)',
+                                                            }}
+                                                            onMouseEnter={(e) => {
+                                                                e.currentTarget.style.background = 'linear-gradient(to right, #2d4373, #1e2d4f)';
+                                                            }}
+                                                            onMouseLeave={(e) => {
+                                                                e.currentTarget.style.background = 'linear-gradient(to right, #3b5998, #2d4373)';
+                                                            }}
+                                                        >
+                                                            <span>▲</span> Collapse Menu
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </>
                                     )}
 
                                     {isDropdownVisible && dropdownMenuOpen && (
@@ -3309,70 +3479,62 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                 <div ref={hamburgerMenuRef} style={{ position: 'relative', marginLeft: '8px' }}>
                                     <div
                                         onClick={async () => {
-                                            console.log('[ClientHeader] 🍔 Hamburger clicked!');
-                                            console.log('[ClientHeader] isInIframe:', isInIframe);
-                                            console.log('[ClientHeader] current state:', isHamburgerMenuOpen);
-
                                             const newState = !isHamburgerMenuOpen;
                                             setIsHamburgerMenuOpen(newState);
 
                                             if (isInIframe) {
-                                                // Get FRESH station from multiple sources
+                                                // Get fresh station
                                                 let currentStation = params.get("station");
-
                                                 if (!currentStation) {
                                                     currentStation = localStorage.getItem(STATION_STORAGE_KEY);
                                                 }
-
                                                 if (!currentStation) {
-                                                    // Try chrome storage if available
-                                                    if (typeof (window as any).chrome?.storage?.local?.get === 'function') {
-                                                        try {
-                                                            const result = await new Promise((resolve) => {
-                                                                (window as any).chrome.storage.local.get([STATION_STORAGE_KEY], resolve);
-                                                            });
-                                                            currentStation = result[STATION_STORAGE_KEY] || "1";
-                                                        } catch (e) {
-                                                            currentStation = "1";
-                                                        }
-                                                    } else {
+                                                    try {
+                                                        const result = await new Promise((resolve) => {
+                                                            chrome.storage.local.get([STATION_STORAGE_KEY], resolve);
+                                                        });
+                                                        currentStation = result[STATION_STORAGE_KEY] || "1";
+                                                    } catch (e) {
                                                         currentStation = "1";
                                                     }
                                                 }
 
-                                                console.log('[ClientHeader] 📍 Final station for hamburger:', currentStation);
-
                                                 const stationCount = companyData?.stationCount || 10;
                                                 const stationOptions = Array.from({ length: stationCount }, (_, i) => i + 1)
                                                     .map(num => `
-                        <option value="${num}" ${num === Number(currentStation) ? 'selected' : ''}>
-                            Station ${num}
-                        </option>
-                    `).join('');
+          <option value="${num}" ${num === Number(currentStation) ? 'selected' : ''}>
+            Station ${num}
+          </option>
+        `).join('');
 
                                                 const stationPickerHTML = `
-                    <div style="position: relative;">
-                        <select 
-                            id="extension-station-select"
-                            style="
-                                width: 100%;
-                                padding: 6px 12px;
-                                border: 1px solid #e5e7eb;
-                                border-radius: 6px;
-                                font-size: 14px;
-                                font-weight: 600;
-                                color: #1f2937;
-                                background: white;
-                                cursor: pointer;
-                                outline: none;
-                            "
-                        >
-                            ${stationOptions}
-                        </select>
-                    </div>
-                `;
+        <select 
+          id="extension-station-select"
+          style="
+            width: 100%;
+            padding: 6px 12px;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            color: #1f2937;
+            background: white;
+            cursor: pointer;
+            outline: none;
+          "
+        >
+          ${stationOptions}
+        </select>
+      `;
 
-                                                console.log('[ClientHeader] 📤 Sending HAMBURGER_MENU message...');
+                                                // Calculate position for tablet/mobile
+                                                const iframeRect = hamburgerMenuRef.current?.getBoundingClientRect();
+                                                const position = {
+                                                    top: iframeRect ? iframeRect.bottom + 8 : 72,
+                                                    left: 16,
+                                                    right: 16,
+                                                    isMobile: isTabletOrMobile()
+                                                };
 
                                                 window.parent.postMessage({
                                                     type: 'HAMBURGER_MENU',
@@ -3381,11 +3543,10 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                                         station: currentStation,
                                                         companyName: companyData?.name || 'Company Name',
                                                         userName: user?.user?.name || user?.user?.email || 'User Name',
-                                                        stationPickerHTML: stationPickerHTML
+                                                        stationPickerHTML: stationPickerHTML,
+                                                        position: position
                                                     }
                                                 }, '*');
-
-                                                console.log('[ClientHeader] ✅ Message sent to parent');
                                             }
                                         }}
                                         style={{

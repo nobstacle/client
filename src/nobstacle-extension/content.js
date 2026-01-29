@@ -705,7 +705,7 @@ function createCategoryDropdown(categories) {
 
   const iframeRect = iframe.getBoundingClientRect();
   const isMobile = isMobileView();
-
+  console.info("11111111111", isMobile);
   const dropdown = document.createElement('div');
   dropdown.id = 'nobstacle-category-dropdown';
 
@@ -1577,7 +1577,7 @@ function createHamburgerDropdown(content) {
 
   const iframeRect = iframe.getBoundingClientRect();
   const isMobile = isMobileView();
-
+  console.info("222222222222222222222", isMobile);
   const dropdown = document.createElement('div');
   dropdown.id = 'nobstacle-hamburger-dropdown';
 
@@ -1782,6 +1782,7 @@ function createChatPopup(content) {
   }
 
   const isMobile = isMobileView();
+  console.info("333333333333333333333", isMobile);
   const popup = document.createElement('div');
   popup.id = 'nobstacle-chat-popup';
 
@@ -1909,7 +1910,7 @@ function createSearchDropdown(content) {
   dropdown.id = 'nobstacle-search-dropdown';
 
   const isMobile = isMobileView();
-
+  console.info("444444444444444444", isMobile);
   dropdown.style.cssText = isMobile ? `
     position: fixed !important;
     top: 56px !important;
@@ -2047,6 +2048,7 @@ function createFormPrefillModal(formData) {
   }
 
   const isMobile = isMobileView();
+  console.info("555555555555555555555555", isMobile);
   const modalOverlay = document.createElement('div');
   modalOverlay.id = 'nobstacle-form-prefill-modal';
 
@@ -2375,6 +2377,100 @@ async function injectHeader() {
         }
       }, 1000);
     };
+
+    function createThreeDotsDropdown(content) {
+      // Remove existing
+      document.getElementById('nobstacle-threedots-dropdown')?.remove();
+
+      const iframe = document.getElementById('nobstacle-header-iframe');
+      if (!iframe) return;
+
+      const dropdown = document.createElement('div');
+      dropdown.id = 'nobstacle-threedots-dropdown';
+
+      const isTablet = window.innerWidth >= 768 && window.innerWidth < 1024;
+
+      dropdown.style.cssText = `
+    position: fixed !important;
+    top: ${content.position.top}px !important;
+    left: ${content.position.left}px !important;
+    right: ${content.position.right}px !important;
+    background: white !important;
+    border-radius: 12px !important;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15) !important;
+    max-height: calc(100vh - ${content.position.top + 16}px) !important;
+    overflow-y: auto !important;
+    z-index: 2147483647 !important;
+    border: 1px solid #e5e7eb !important;
+    animation: slideDown 0.2s ease-out !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+  `;
+
+      dropdown.innerHTML = content.html;
+      document.body.appendChild(dropdown);
+
+      // Setup event listeners
+      setTimeout(() => {
+        // Collapse button
+        const collapseBtn = dropdown.querySelector('#extension-collapse-btn');
+        if (collapseBtn) {
+          collapseBtn.addEventListener('click', () => {
+            dropdown.remove();
+            iframe.contentWindow.postMessage({
+              type: 'THREE_DOTS_DROPDOWN_CLOSED'
+            }, '*');
+          });
+
+          collapseBtn.addEventListener('mouseenter', () => {
+            collapseBtn.style.background = 'linear-gradient(to right, #2d4373, #1e2d4f)';
+          });
+          collapseBtn.addEventListener('mouseleave', () => {
+            collapseBtn.style.background = 'linear-gradient(to right, #3b5998, #2d4373)';
+          });
+        }
+
+        // Search input
+        const searchInput = dropdown.querySelector('#extension-search-input');
+        const searchClear = dropdown.querySelector('#extension-search-clear');
+
+        if (searchInput && searchClear) {
+          searchInput.addEventListener('input', (e) => {
+            searchClear.style.display = e.target.value ? 'block' : 'none';
+
+            // Forward search to iframe
+            iframe.contentWindow.postMessage({
+              type: 'SEARCH_TEMPLATE',
+              value: e.target.value
+            }, '*');
+          });
+
+          searchClear.addEventListener('click', () => {
+            searchInput.value = '';
+            searchClear.style.display = 'none';
+            iframe.contentWindow.postMessage({
+              type: 'SEARCH_TEMPLATE',
+              value: ''
+            }, '*');
+          });
+        }
+      }, 100);
+
+      // Close on outside click
+      setTimeout(() => {
+        const closeHandler = (e) => {
+          if (!dropdown.contains(e.target) && e.target !== iframe) {
+            dropdown.remove();
+            iframe.contentWindow.postMessage({
+              type: 'THREE_DOTS_DROPDOWN_CLOSED'
+            }, '*');
+            document.removeEventListener('mousedown', closeHandler);
+          }
+        };
+        document.addEventListener('mousedown', closeHandler);
+      }, 200);
+
+      addDebugLog('✓ Three dots dropdown created');
+    }
 
     // ALL MESSAGE EVENT HANDLERS
     const handler = async (event) => {
@@ -3094,8 +3190,6 @@ async function injectHeader() {
         }
       }
 
-      // Handle form submission
-      // In content.js, update the SUBMIT_PREFILL_FORM handler
       if (event.data.type === 'SUBMIT_PREFILL_FORM') {
         const { formId, formData } = event.data;
 
@@ -3129,6 +3223,24 @@ async function injectHeader() {
           type: 'FORM_PREFILL_MODAL_CLOSED'
         }, '*');
       }
+
+      if (event.data.type === 'THREE_DOTS_DROPDOWN') {
+        if (event.data.isOpen) {
+          createThreeDotsDropdown(event.data.content);
+        } else {
+          document.getElementById('nobstacle-threedots-dropdown')?.remove();
+        }
+      }
+
+      // NEW: Handle hamburger menu for tablets
+      if (event.data.type === 'HAMBURGER_MENU') {
+        if (event.data.isOpen) {
+          createHamburgerDropdown(event.data.content);
+        } else {
+          document.getElementById('nobstacle-hamburger-dropdown')?.remove();
+        }
+      }
+
     };
 
     window.addEventListener('message', handler);
