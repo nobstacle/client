@@ -184,6 +184,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
     const [currentStation, setCurrentStation] = useState<string>(
         params.get("station") || "1"
     );
+    const [windowWidth, setWindowWidth] = useState(window.innerWidth);
 
     useEffect(() => {
         setIsInIframe(window.self !== window.top);
@@ -218,6 +219,17 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
             localStorage.setItem(STATION_STORAGE_KEY, urlStation);
         }
     }, [params]);
+
+    useEffect(() => {
+        const handleResize = () => {
+            setWindowWidth(window.innerWidth);
+        };
+
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
+    const isMobileView = windowWidth < 1024;
 
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -985,12 +997,20 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
             const rect = hamburgerMenuRef.current.getBoundingClientRect();
             const isInIframe = window.self !== window.top;
 
-            setHamburgerPosition({
-                top: rect.bottom + 8,
-                right: isInIframe ? 16 : (window.innerWidth - rect.right)
-            });
+            if (isMobileView) {
+                setHamburgerPosition({
+                    top: rect.bottom + 8,
+                    left: 16,
+                    right: 16
+                });
+            } else {
+                setHamburgerPosition({
+                    top: rect.bottom + 8,
+                    right: isInIframe ? 16 : (window.innerWidth - rect.right)
+                });
+            }
         }
-    }, [isHamburgerMenuOpen]);
+    }, [isHamburgerMenuOpen, isMobileView]);
 
     const generateFormsDropdownHTML = useCallback((forms, defaultFormId) => {
         if (!forms || forms.length === 0) {
@@ -1253,46 +1273,6 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
             };
         }
     }, [isInIframe, isDropdownVisible, assignedForms, handleSendBlankForm]);
-
-
-    // useEffect(() => {
-    //     if (!isInIframe && isDropdownVisible) {
-    //         const handleFormButtonClick = (e) => {
-    //             const button = e.target.closest('.form-action-btn');
-    //             if (button) {
-    //                 e.preventDefault();
-    //                 e.stopPropagation();
-
-    //                 const formId = button.getAttribute('data-form-id');
-    //                 const action = button.getAttribute('data-action');
-
-    //                 if (action === 'send-blank') {
-    //                     const form = assignedForms.find(f => f.form_id === formId);
-    //                     if (form) {
-    //                         handleSendBlankForm(formId);
-    //                         setSearchValue('');
-    //                         setIsDropdownVisible(false);
-    //                     }
-    //                 } else if (action === 'prefill') {
-    //                     const form = assignedForms.find(f => f.form_id === formId);
-    //                     if (form) {
-    //                         setSelectedFormForPrefill(form);
-    //                         setIsFormModalOpen(true);
-    //                         setSearchValue('');
-    //                         setIsDropdownVisible(false);
-    //                     }
-    //                 }
-    //             }
-    //         };
-
-    //         // Use capture phase to ensure we get the event
-    //         document.addEventListener('click', handleFormButtonClick, true);
-
-    //         return () => {
-    //             document.removeEventListener('click', handleFormButtonClick, true);
-    //         };
-    //     }
-    // }, [isInIframe, isDropdownVisible, assignedForms, handleSendBlankForm]);
 
     const handleLogout = async () => {
         localStorage.clear();
@@ -1558,16 +1538,24 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                     html = generateSearchDropdownHTML(filteredTemplates, categoriesData, isLoading, searchValue);
                 }
 
+                const position = isMobileView ? {
+                    top: 56,
+                    left: 16,
+                    right: 16,
+                    width: window.innerWidth - 32
+                } : {
+                    top: rect.bottom + 4,
+                    right: window.innerWidth - rect.right,
+                    width: Math.max(300, rect.width)
+                };
+
                 window.parent.postMessage({
                     type: 'SEARCH_DROPDOWN',
                     isOpen: true,
                     content: {
                         html: html,
-                        position: {
-                            top: rect.bottom + 4,
-                            right: window.innerWidth - rect.right,
-                            width: Math.max(300, rect.width)
-                        }
+                        position: position,
+                        isMobile: isMobileView
                     }
                 }, '*');
             }
@@ -1580,13 +1568,24 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
 
         if (isDropdownVisible && !isInIframe && searchRef.current) {
             const rect = searchRef.current.getBoundingClientRect();
-            setDropdownPosition({
-                top: rect.bottom + 4,
-                right: window.innerWidth - rect.right,
-                width: Math.max(300, rect.width)
-            });
+
+            if (isMobileView) {
+                setDropdownPosition({
+                    top: 56,
+                    left: 16,
+                    right: window.innerWidth - 16,
+                    width: window.innerWidth - 32
+                });
+            } else {
+                setDropdownPosition({
+                    top: rect.bottom + 4,
+                    right: window.innerWidth - rect.right,
+                    width: Math.max(300, rect.width)
+                });
+            }
         }
-    }, [isDropdownVisible, filteredTemplates, isLoading, isInIframe, generateSearchDropdownHTML, generateFormsDropdownHTML, searchValue, assignedForms, defaultFormId, categoriesData]);
+    }, [isDropdownVisible, filteredTemplates, isLoading, isInIframe, generateSearchDropdownHTML,
+        generateFormsDropdownHTML, searchValue, assignedForms, defaultFormId, categoriesData, isMobileView]);
 
     const updateChatPopupMessages = useCallback(() => {
         if (!isInIframe) return;
@@ -3446,11 +3445,17 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                         <div style={{
                                             position: 'fixed',
                                             top: `${hamburgerPosition.top}px`,
-                                            right: `${hamburgerPosition.right}px`,
+                                            ...(isMobileView ? {
+                                                left: '16px',
+                                                right: '16px',
+                                                width: 'auto'
+                                            } : {
+                                                right: `${hamburgerPosition.right}px`,
+                                                minWidth: '280px'
+                                            }),
                                             backgroundColor: 'white',
                                             borderRadius: '12px',
                                             boxShadow: '0 10px 40px rgba(0, 0, 0, 0.15)',
-                                            minWidth: '280px',
                                             zIndex: 2147483647,
                                             overflow: 'hidden',
                                             border: '1px solid #e5e7eb',
@@ -3657,16 +3662,17 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                     <div
                         style={{
                             position: 'fixed',
-                            top: `${dropdownPosition.top}px`,
-                            right: `${dropdownPosition.right}px`,
+                            top: isMobileView ? '56px' : `${dropdownPosition.top}px`,
+                            left: isMobileView ? '16px' : 'auto',
+                            right: isMobileView ? '16px' : `${dropdownPosition.right}px`,
                             backgroundColor: 'white',
                             borderRadius: '8px',
                             boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                            maxHeight: '400px',
+                            maxHeight: isMobileView ? 'calc(100vh - 72px)' : '400px',
                             overflowY: 'auto',
                             zIndex: 2147483647,
                             border: '1px solid #e5e7eb',
-                            minWidth: `${dropdownPosition.width}px`
+                            width: isMobileView ? 'auto' : `${dropdownPosition.width}px`
                         }}
                     >
                         {isLoading ? (

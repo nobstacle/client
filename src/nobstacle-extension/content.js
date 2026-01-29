@@ -94,6 +94,10 @@ if (isNobstacleWebsite) {
   // STOP HERE - don't run the rest of the script
 }
 
+function isMobileView() {
+  return window.innerWidth < 1024;
+}
+
 function debugStorage() {
   console.log('[Content Script] 🔍 Storage Debug:');
   console.log('  localStorage:', localStorage.getItem(STATION_STORAGE_KEY));
@@ -700,10 +704,26 @@ function createCategoryDropdown(categories) {
   }
 
   const iframeRect = iframe.getBoundingClientRect();
+  const isMobile = isMobileView();
 
   const dropdown = document.createElement('div');
   dropdown.id = 'nobstacle-category-dropdown';
-  dropdown.style.cssText = `
+
+  dropdown.style.cssText = isMobile ? `
+    position: fixed !important;
+    top: ${iframeRect.bottom + 8}px !important;
+    left: 16px !important;
+    right: 16px !important;
+    background: white !important;
+    border-radius: 12px !important;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15) !important;
+    max-height: calc(100vh - 80px) !important;
+    overflow-y: auto !important;
+    z-index: 2147483647 !important;
+    border: 1px solid #e5e7eb !important;
+    animation: slideDown 0.2s ease-out !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+  ` : `
     position: fixed !important;
     top: ${iframeRect.bottom + 8}px !important;
     left: 50% !important;
@@ -1556,23 +1576,38 @@ function createHamburgerDropdown(content) {
   console.log('[Content Script] ✅ Iframe found, creating dropdown...');
 
   const iframeRect = iframe.getBoundingClientRect();
+  const isMobile = isMobileView();
 
   const dropdown = document.createElement('div');
   dropdown.id = 'nobstacle-hamburger-dropdown';
-  dropdown.style.cssText = `
-        position: fixed !important;
-        top: ${iframeRect.bottom + 8}px !important;
-        right: 16px !important;
-        background: white !important;
-        border-radius: 12px !important;
-        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15) !important;
-        min-width: 280px !important;
-        z-index: 2147483647 !important;
-        border: 1px solid #e5e7eb !important;
-        overflow: hidden !important;
-        animation: slideDown 0.2s ease-out !important;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
-    `;
+
+  dropdown.style.cssText = isMobile ? `
+    position: fixed !important;
+    top: ${iframeRect.bottom + 8}px !important;
+    left: 16px !important;
+    right: 16px !important;
+    background: white !important;
+    border-radius: 12px !important;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15) !important;
+    z-index: 2147483647 !important;
+    border: 1px solid #e5e7eb !important;
+    overflow: hidden !important;
+    animation: slideDown 0.2s ease-out !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+  ` : `
+    position: fixed !important;
+    top: ${iframeRect.bottom + 8}px !important;
+    right: 16px !important;
+    background: white !important;
+    border-radius: 12px !important;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15) !important;
+    min-width: 280px !important;
+    z-index: 2147483647 !important;
+    border: 1px solid #e5e7eb !important;
+    overflow: hidden !important;
+    animation: slideDown 0.2s ease-out !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+  `;
 
   console.log('[Content Script] Dropdown position:', {
     top: `${iframeRect.bottom + 8}px`,
@@ -1746,9 +1781,26 @@ function createChatPopup(content) {
     return;
   }
 
+  const isMobile = isMobileView();
   const popup = document.createElement('div');
   popup.id = 'nobstacle-chat-popup';
-  popup.style.cssText = `
+
+  popup.style.cssText = isMobile ? `
+    position: fixed !important;
+    top: 70px !important;
+    left: 16px !important;
+    right: 16px !important;
+    bottom: 16px !important;
+    background: white !important;
+    border-radius: 12px !important;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15) !important;
+    z-index: 2147483647 !important;
+    border: 1px solid #e5e7eb !important;
+    overflow: hidden !important;
+    animation: slideDown 0.2s ease-out !important;
+    display: flex !important;
+    flex-direction: column !important;
+  ` : `
     position: fixed !important;
     top: ${content.position.top}px !important;
     right: ${content.position.right}px !important;
@@ -1855,7 +1907,24 @@ function createSearchDropdown(content) {
 
   const dropdown = document.createElement('div');
   dropdown.id = 'nobstacle-search-dropdown';
-  dropdown.style.cssText = `
+
+  const isMobile = isMobileView();
+
+  dropdown.style.cssText = isMobile ? `
+    position: fixed !important;
+    top: 56px !important;
+    left: 16px !important;
+    right: 16px !important;
+    background: white !important;
+    border-radius: 8px !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+    max-height: calc(100vh - 72px) !important;
+    overflow-y: auto !important;
+    z-index: 2147483647 !important;
+    border: 1px solid #e5e7eb !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+    animation: slideDown 0.2s ease-out !important;
+  ` : `
     position: fixed !important;
     top: ${content.position.top}px !important;
     right: ${content.position.right}px !important;
@@ -1977,9 +2046,10 @@ function createFormPrefillModal(formData) {
     return;
   }
 
-  // Create modal overlay
+  const isMobile = isMobileView();
   const modalOverlay = document.createElement('div');
   modalOverlay.id = 'nobstacle-form-prefill-modal';
+
   modalOverlay.style.cssText = `
     position: fixed !important;
     top: 0 !important;
@@ -1997,7 +2067,17 @@ function createFormPrefillModal(formData) {
 
   // Create modal content container
   const modalContent = document.createElement('div');
-  modalContent.style.cssText = `
+  modalContent.style.cssText = isMobile ? `
+    background: white !important;
+    border-radius: 12px !important;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3) !important;
+    width: 100% !important;
+    max-height: calc(100vh - 32px) !important;
+    overflow: hidden !important;
+    display: flex !important;
+    flex-direction: column !important;
+    animation: slideDown 0.3s ease-out !important;
+  ` : `
     background: white !important;
     border-radius: 12px !important;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3) !important;
