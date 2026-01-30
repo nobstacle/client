@@ -1295,3 +1295,10 @@ body.nobstacle-active {
   background: #3b5998 !important;
   border: none;
 }
+
+
+
+.primaryButton {
+    background: #3b5998;
+    color: white;
+}

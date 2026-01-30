@@ -71,8 +71,8 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
             iconColor: "white"
         },
                {
-            title: "Register",
-            href: "/api/auth/register",
+            title: "Users",
+            href: "/dashboard/register",
             roles: ["SAdmin"],
             icon: <TiUserAdd size={18} />,
             iconColor: "white"

@@ -182,10 +182,10 @@ export async function middleware(req: NextRequest) {
 
   // rules for dashboard page
   if (pathname.startsWith("/dashboard")) {
-    // SAdmin exclusive access to /dashboard/asignForms
-    if (pathname.startsWith("/dashboard/asignForms")) {
+    // SAdmin exclusive access to /dashboard/asignForms and /dashboard/register
+    if (pathname.startsWith("/dashboard/asignForms") || pathname.startsWith("/dashboard/register")) {
       if (!isAuthenticated || !isSAdmin) {
-        console.log("❌ Blocked access to /dashboard/asignForms - Not SAdmin");
+        console.log(`❌ Blocked access to ${pathname} - Not SAdmin`);
         if (isAuthenticated) {
           // Redirect authenticated non-SAdmins to their appropriate page
           if (isUser) {
@@ -200,11 +200,11 @@ export async function middleware(req: NextRequest) {
         return NextResponse.redirect(url);
       }
       // SAdmin is allowed, continue
-      console.log("✅ SAdmin accessing /dashboard/asignForms");
+      console.log(`✅ SAdmin accessing ${pathname}`);
     } 
     // Block SAdmin from accessing any other dashboard routes
     else if (isSAdmin && isAuthenticated) {
-      console.log("❌ SAdmin blocked from non-asignForms dashboard route");
+      console.log("❌ SAdmin blocked from non-allowed dashboard route");
       url.pathname = "/dashboard/asignForms";
       return NextResponse.redirect(url);
     }
