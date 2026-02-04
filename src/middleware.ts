@@ -10,10 +10,10 @@ export async function middleware(req: NextRequest) {
   console.log("🚀 MIDDLEWARE RUNNING for:", pathname);
 
   // Get the session token
-  const token = await getToken({ 
-    req, 
+  const token = await getToken({
+    req,
     secret: "asdfgh1234",
-    cookieName: process.env.NODE_ENV === 'production' 
+    cookieName: process.env.NODE_ENV === 'production'
       ? '__Secure-next-auth.session-token'
       : 'next-auth.session-token'
   });
@@ -26,16 +26,6 @@ export async function middleware(req: NextRequest) {
   const isCompanyExist = !!token?.user?.companyId;
   const isSAdmin = token?.user?.Roles?.includes("SAdmin");
 
-  console.log("👤 User Info:", {
-    isAuthenticated,
-    isAdmin,
-    isStaff,
-    isUser,
-    isSAdmin,
-    isCompanyExist,
-    pathname
-  });
-
   // Handle header-only routes
   if (pathname.startsWith('/header-only')) {
     const response = NextResponse.next();
@@ -43,20 +33,20 @@ export async function middleware(req: NextRequest) {
     console.log('🔐 /header-only auth check:', {
       hasToken: !!token,
       user: token?.email || 'Not authenticated',
-      cookies: req.cookies.getAll().map(c => c.name), 
+      cookies: req.cookies.getAll().map(c => c.name),
       origin: req.headers.get('origin'),
       referer: req.headers.get('referer')
     });
-    
+
     // Remove frame restrictions
     response.headers.delete('X-Frame-Options');
-    
+
     // Allow embedding from extensions and all origins
     response.headers.set(
       'Content-Security-Policy',
       "frame-ancestors 'self' chrome-extension://* https://* http://localhost:* http://127.0.0.1:*"
     );
-    
+
     // CRITICAL: Allow credentials in cross-origin
     const origin = req.headers.get('origin');
     if (origin) {
@@ -77,14 +67,14 @@ export async function middleware(req: NextRequest) {
   if (pathname === "/api/auth/register") {
     console.info("🔒 REGISTER ROUTE HIT:", {
       method: req.method,
-      isSAdmin, 
+      isSAdmin,
       isAuthenticated,
       willBlock: !isAuthenticated || !isSAdmin
     });
-    
+
     if (!isAuthenticated || !isSAdmin) {
       console.error("❌ BLOCKING /api/auth/register - Not SAdmin");
-      
+
       // If it's a page request (GET), redirect to appropriate dashboard
       if (req.method === 'GET') {
         if (isAuthenticated) {
@@ -101,14 +91,14 @@ export async function middleware(req: NextRequest) {
         }
         return NextResponse.redirect(url);
       }
-      
+
       // If it's an API request (POST), return 403
       return NextResponse.json(
         { error: "Unauthorized. Only Super Admins can access this endpoint." },
         { status: 403 }
       );
     }
-    
+
     console.log("✅ ALLOWING /api/auth/register - SAdmin verified");
   }
 
@@ -130,10 +120,10 @@ export async function middleware(req: NextRequest) {
     console.info("🔒 USER API ENDPOINT HIT:", {
       method: req.method,
       pathname,
-      isSAdmin, 
+      isSAdmin,
       isAuthenticated
     });
-    
+
     // Only protect POST/PUT/DELETE methods (user creation/modification)
     if (req.method !== 'GET') {
       if (!isAuthenticated || !isSAdmin) {
@@ -144,6 +134,28 @@ export async function middleware(req: NextRequest) {
         );
       }
       console.log("✅ ALLOWING user API - SAdmin verified");
+    }
+  }
+
+  // Protect companies API endpoint - SAdmin only
+  if (pathname.startsWith("/api/companies") || pathname === "/api/company") {
+    console.info("🔒 COMPANIES API ENDPOINT HIT:", {
+      method: req.method,
+      pathname,
+      isSAdmin,
+      isAuthenticated
+    });
+
+    // Only protect POST/PUT/DELETE methods (company creation/modification)
+    if (req.method !== 'GET') {
+      if (!isAuthenticated || !isSAdmin) {
+        console.error("❌ BLOCKING companies API - Not SAdmin");
+        return NextResponse.json(
+          { error: "Unauthorized. Only Super Admins can create or modify companies." },
+          { status: 403 }
+        );
+      }
+      console.log("✅ ALLOWING companies API - SAdmin verified");
     }
   }
 
@@ -182,8 +194,12 @@ export async function middleware(req: NextRequest) {
 
   // rules for dashboard page
   if (pathname.startsWith("/dashboard")) {
-    // SAdmin exclusive access to /dashboard/asignForms and /dashboard/register
-    if (pathname.startsWith("/dashboard/asignForms") || pathname.startsWith("/dashboard/register")) {
+    // SAdmin exclusive access to /dashboard/asignForms, /dashboard/register, and /dashboard/companies
+    if (
+      pathname.startsWith("/dashboard/asignForms") ||
+      pathname.startsWith("/dashboard/register") ||
+      pathname.startsWith("/dashboard/companies")
+    ) {
       if (!isAuthenticated || !isSAdmin) {
         console.log(`❌ Blocked access to ${pathname} - Not SAdmin`);
         if (isAuthenticated) {
@@ -201,7 +217,7 @@ export async function middleware(req: NextRequest) {
       }
       // SAdmin is allowed, continue
       console.log(`✅ SAdmin accessing ${pathname}`);
-    } 
+    }
     // Block SAdmin from accessing any other dashboard routes
     else if (isSAdmin && isAuthenticated) {
       console.log("❌ SAdmin blocked from non-allowed dashboard route");

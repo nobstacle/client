@@ -16,7 +16,7 @@ declare global {
 }
 
 import { useState } from "react";
-import { Drawer, Button, List, Tag, Spin, Empty, message } from "antd";
+import { Drawer, Button, List, Tag, Spin, Empty, message, Modal } from "antd";
 import { MenuOutlined, CloseOutlined, SettingOutlined, MoreOutlined } from "@ant-design/icons";
 import { HeaderLanguagePicker } from "../../components/pages/dashboard/Header/LanguagePicker";
 import { LanguageShortcutPicker } from "../../components/pages/dashboard/Header/LanguageShortcutPicker";
@@ -156,6 +156,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
     const justSelectedRef = useRef(false);
     const isSAdmin = user?.user.Roles?.includes("SAdmin");
     const [isHamburgerMenuOpen, setIsHamburgerMenuOpen] = useState(false);
+    const [resetPasswordModal, setResetPasswordModal] = useState(false);
     const hamburgerMenuRef = useRef(null);
     const [dropdownPosition, setDropdownPosition] = useState({ top: 0, right: 0, width: 0 });
     const [hamburgerPosition, setHamburgerPosition] = useState({ top: 0, right: 0 });
@@ -1609,6 +1610,14 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         }
     }, [isDropdownVisible, filteredTemplates, isLoading, isInIframe, generateSearchDropdownHTML,
         generateFormsDropdownHTML, searchValue, assignedForms, defaultFormId, categoriesData, isMobileView]);
+
+    const handleCancelResetPassword = () => {
+        setResetPasswordModal(false);
+    };
+
+    const handleOkResetPassword = () => {
+        setResetPasswordModal(false);
+    };
 
     const updateChatPopupMessages = useCallback(() => {
         if (!isInIframe) return;
@@ -3742,6 +3751,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                                 <button
                                                     onClick={() => {
                                                         setIsHamburgerMenuOpen(false);
+                                                        setResetPasswordModal(true);
                                                     }}
                                                     style={{
                                                         width: '100%',
@@ -4201,6 +4211,18 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                     </div>
                 </div>
             </Drawer>
+
+            <Modal
+                title="Basic Modal"
+                closable={{ 'aria-label': 'Custom Close Button' }}
+                open={resetPasswordModal}
+                onOk={handleOkResetPassword}
+                onCancel={handleCancelResetPassword}
+            >
+                <p>Some contents...</p>
+                <p>Some contents...</p>
+                <p>Some contents...</p>
+            </Modal>
 
             {/* JotForm Prefill Modal */}
             <JotFormPrefillModal

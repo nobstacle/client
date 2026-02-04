@@ -70,9 +70,16 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
             icon: <IoHome size={18} />,
             iconColor: "white"
         },
-               {
+        {
             title: "Users",
             href: "/dashboard/register",
+            roles: ["SAdmin"],
+            icon: <TiUserAdd size={18} />,
+            iconColor: "white"
+        },
+        {
+            title: "Companies",
+            href: "/dashboard/companies",
             roles: ["SAdmin"],
             icon: <TiUserAdd size={18} />,
             iconColor: "white"

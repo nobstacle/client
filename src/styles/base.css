@@ -1296,9 +1296,18 @@ body.nobstacle-active {
   border: none;
 }
 
-
-
 .primaryButton {
-    background: #3b5998;
-    color: white;
+  background: #3b5998;
+  color: white;
+}
+
+.companyModal .ant-modal-footer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.companyModal .ant-modal-footer button:last-child {
+  background: #3b5998;
+  color: white;
 }
