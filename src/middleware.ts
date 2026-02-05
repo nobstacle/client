@@ -173,8 +173,8 @@ export async function middleware(req: NextRequest) {
     }
 
     if (isAuthenticated && isSAdmin) {
-      console.log("🔄 Redirecting SAdmin to /dashboard/asignForms");
-      url.pathname = "/dashboard/asignForms";
+      console.log("🔄 Redirecting SAdmin to /dashboard/register");
+      url.pathname = "/dashboard/register";
       return NextResponse.redirect(url);
     }
 
@@ -221,7 +221,7 @@ export async function middleware(req: NextRequest) {
     // Block SAdmin from accessing any other dashboard routes
     else if (isSAdmin && isAuthenticated) {
       console.log("❌ SAdmin blocked from non-allowed dashboard route");
-      url.pathname = "/dashboard/asignForms";
+      url.pathname = "/dashboard/register";
       return NextResponse.redirect(url);
     }
 
@@ -255,7 +255,7 @@ export async function middleware(req: NextRequest) {
       // Block SAdmin from client routes
       if (isSAdmin) {
         console.log("❌ SAdmin blocked from client routes");
-        url.pathname = "/dashboard/asignForms";
+        url.pathname = "/dashboard/register";
         return NextResponse.redirect(url);
       }
       // Block Admin/Staff from client routes

@@ -16,7 +16,7 @@ declare global {
 }
 
 import { useState } from "react";
-import { Drawer, Button, List, Tag, Spin, Empty, message, Modal } from "antd";
+import { Drawer, Button, List, Tag, Spin, Empty, message, Modal, Form, Input, Alert } from "antd";
 import { MenuOutlined, CloseOutlined, SettingOutlined, MoreOutlined } from "@ant-design/icons";
 import { HeaderLanguagePicker } from "../../components/pages/dashboard/Header/LanguagePicker";
 import { LanguageShortcutPicker } from "../../components/pages/dashboard/Header/LanguageShortcutPicker";
@@ -156,7 +156,6 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
     const justSelectedRef = useRef(false);
     const isSAdmin = user?.user.Roles?.includes("SAdmin");
     const [isHamburgerMenuOpen, setIsHamburgerMenuOpen] = useState(false);
-    const [resetPasswordModal, setResetPasswordModal] = useState(false);
     const hamburgerMenuRef = useRef(null);
     const [dropdownPosition, setDropdownPosition] = useState({ top: 0, right: 0, width: 0 });
     const [hamburgerPosition, setHamburgerPosition] = useState({ top: 0, right: 0 });
@@ -186,6 +185,10 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         params.get("station") || "1"
     );
     const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+    const [resetPasswordModal, setResetPasswordModal] = useState(false);
+    const [form] = Form.useForm();
+    const [passwordMatch, setPasswordMatch] = useState<boolean | null>(null);
+    const [loading, setLoading] = useState(false);
 
     useEffect(() => {
         setIsInIframe(window.self !== window.top);
@@ -1611,13 +1614,51 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
     }, [isDropdownVisible, filteredTemplates, isLoading, isInIframe, generateSearchDropdownHTML,
         generateFormsDropdownHTML, searchValue, assignedForms, defaultFormId, categoriesData, isMobileView]);
 
-    const handleCancelResetPassword = () => {
-        setResetPasswordModal(false);
-    };
+const handlePasswordChange = () => {
+  const newPassword = form.getFieldValue('newPassword');
+  const confirmPassword = form.getFieldValue('confirmPassword');
+  
+  if (newPassword && confirmPassword) {
+    setPasswordMatch(newPassword === confirmPassword);
+  } else {
+    setPasswordMatch(null);
+  }
+};
 
-    const handleOkResetPassword = () => {
-        setResetPasswordModal(false);
-    };
+const handleOkResetPassword = async () => {
+  try {
+    setLoading(true);
+    const values = await form.validateFields();
+    
+    // Here you would call your API to change the password
+    // Example:
+    // await changePasswordAPI({
+    //   currentPassword: values.currentPassword,
+    //   newPassword: values.newPassword
+    // });
+    
+    console.log('Password change values:', values);
+    
+    // Reset form and close modal on success
+    form.resetFields();
+    setPasswordMatch(null);
+    setResetPasswordModal(false);
+    
+    // Show success message
+    // message.success('Password changed successfully!');
+    
+  } catch (error) {
+    console.error('Validation failed:', error);
+  } finally {
+    setLoading(false);
+  }
+};
+
+const handleCancelResetPassword = () => {
+  form.resetFields();
+  setPasswordMatch(null);
+  setResetPasswordModal(false);
+};
 
     const updateChatPopupMessages = useCallback(() => {
         if (!isInIframe) return;
@@ -4213,15 +4254,93 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
             </Drawer>
 
             <Modal
-                title="Basic Modal"
-                closable={{ 'aria-label': 'Custom Close Button' }}
+                title="Change Password"
                 open={resetPasswordModal}
                 onOk={handleOkResetPassword}
                 onCancel={handleCancelResetPassword}
+                confirmLoading={loading}
+                okText="Change Password"
+                cancelText="Cancel"
+                okButtonProps={{
+                    disabled: !passwordMatch || loading
+                }}
             >
-                <p>Some contents...</p>
-                <p>Some contents...</p>
-                <p>Some contents...</p>
+                <Form
+                    form={form}
+                    layout="vertical"
+                    autoComplete="off"
+                >
+                    <Form.Item
+                        label="Current Password"
+                        name="currentPassword"
+                        rules={[
+                            { required: true, message: 'Please enter your current password!' },
+                            { min: 6, message: 'Password must be at least 6 characters!' }
+                        ]}
+                    >
+                        <Input.Password
+                            placeholder="Enter current password"
+                            size="large"
+                        />
+                    </Form.Item>
+
+                    <Form.Item
+                        label="New Password"
+                        name="newPassword"
+                        rules={[
+                            { required: true, message: 'Please enter your new password!' },
+                            { min: 6, message: 'Password must be at least 6 characters!' },
+                            {
+                                validator: (_, value) => {
+                                    const currentPassword = form.getFieldValue('currentPassword');
+                                    if (value && value === currentPassword) {
+                                        return Promise.reject('New password must be different from current password!');
+                                    }
+                                    return Promise.resolve();
+                                }
+                            }
+                        ]}
+                    >
+                        <Input.Password
+                            placeholder="Enter new password"
+                            size="large"
+                            onChange={handlePasswordChange}
+                        />
+                    </Form.Item>
+
+                    <Form.Item
+                        label="Confirm New Password"
+                        name="confirmPassword"
+                        rules={[
+                            { required: true, message: 'Please confirm your new password!' },
+                            {
+                                validator: (_, value) => {
+                                    const newPassword = form.getFieldValue('newPassword');
+                                    if (value && value !== newPassword) {
+                                        return Promise.reject('Passwords do not match!');
+                                    }
+                                    return Promise.resolve();
+                                }
+                            }
+                        ]}
+                    >
+                        <Input.Password
+                            placeholder="Confirm new password"
+                            size="large"
+                            onChange={handlePasswordChange}
+                        />
+                    </Form.Item>
+
+                    {/* Real-time password match indicator */}
+                    {passwordMatch !== null && (
+                        <Alert
+                            message={passwordMatch ? 'Passwords match!' : 'Passwords do not match!'}
+                            type={passwordMatch ? 'success' : 'error'}
+                            showIcon
+                            style={{ marginBottom: 16 }}
+                        />
+                    )}
+                </Form>
             </Modal>
 
             {/* JotForm Prefill Modal */}

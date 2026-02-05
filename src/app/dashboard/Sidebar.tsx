@@ -23,6 +23,8 @@ import {
 import { IoChatbubbleEllipses } from "react-icons/io5";
 import { FaMicrophone } from "react-icons/fa";
 import { TiUserAdd } from "react-icons/ti";
+import { FaBuilding } from "react-icons/fa";
+import { FaWpforms } from "react-icons/fa";
 
 interface ClientSidebarProps {
     user: Session | null;
@@ -64,13 +66,6 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
     // Menu items for SAdmin users
     const sAdminMenuItems: MenuItem[] = [
         {
-            title: "Home",
-            href: "/dashboard/asignForms",
-            roles: ["SAdmin"],
-            icon: <IoHome size={18} />,
-            iconColor: "white"
-        },
-        {
             title: "Users",
             href: "/dashboard/register",
             roles: ["SAdmin"],
@@ -81,9 +76,16 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
             title: "Companies",
             href: "/dashboard/companies",
             roles: ["SAdmin"],
-            icon: <TiUserAdd size={18} />,
+            icon: <FaBuilding size={18} />,
             iconColor: "white"
-        }
+        },
+               {
+            title: "Forms",
+            href: "/dashboard/asignForms",
+            roles: ["SAdmin"],
+            icon: <FaWpforms size={18} />,
+            iconColor: "white"
+        },
     ];
 
     // Regular menu items for other users

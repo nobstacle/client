@@ -327,14 +327,9 @@ const CompaniesManagement: React.FC = () => {
             render: (name) => <Text strong>{name}</Text>,
         },
         {
-            title: 'Channel ID',
-            dataIndex: 'channelId',
-            key: 'channelId',
-            render: (channelId) => (
-                <Text code copyable style={{ fontSize: '12px' }}>
-                    {channelId}
-                </Text>
-            ),
+            title: 'Total No of Templates',
+            dataIndex: 'templateItemsCount',
+            key: 'templateItemsCount',
         },
         {
             title: 'Stations',

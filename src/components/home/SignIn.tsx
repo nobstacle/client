@@ -38,7 +38,7 @@ export default function SignInModal({ isOpen, onClose }: SignInModalProps) {
   const redirectuser = (session) => {
     let userRole = session?.user?.Roles[0];
     if (userRole === "SAdmin") {
-      window.location.href = "/dashboard/asignForms";
+      window.location.href = "/dashboard/register";
     } else if (userRole === "Admin" || userRole === "Staff") {
       window.location.href = "/dashboard/text";
     } else {
