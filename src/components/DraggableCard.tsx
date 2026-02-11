@@ -25,7 +25,6 @@ import { Button } from "./Button";
 import { TrashIcon } from "./icons/TrashIcon";
 import { PencilIcon } from "./icons/PencilIcon";
 import { DragIcon } from "./icons/DragIcon";
-// import { Color } from "antd/es/color-picker";
 import { IoQrCode } from "react-icons/io5";
 
 export const DraggableCardContainer: React.FC<{
@@ -155,7 +154,7 @@ export const DraggableCardItem: React.FC<
           </div>
         </div>
 
-        {type !== "slideshow" && type !== 'text' && type !== 'teamDocs' && (
+        {type !== "slideshow" && type !== 'text' && type !== 'teamDocs' && type?.includes('Scroll') && (
           <div className="absolute right-1 top-1 z-10">
             <button
               className="flex items-center justify-center

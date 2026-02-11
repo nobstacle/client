@@ -157,8 +157,8 @@ const PackageCard = ({ packageData, handleClick, loadingButton, langCode = 'en' 
   const [currentSlide, setCurrentSlide] = useState(0);
   const [expanded, setExpanded] = useState(false);
   const [isModalOpen, setisIsModalOpen] = useState(false);
-  const [isVideoModalOpen, setIsVideoModalOpen] = useState(false); 
-  const [selectedVideo, setSelectedVideo] = useState(null); 
+  const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
+  const [selectedVideo, setSelectedVideo] = useState(null);
 
   const formatCurrency = (price, currency = 'AED') => {
     return `${currency} ${price}`;
@@ -588,7 +588,7 @@ const PackageCard = ({ packageData, handleClick, loadingButton, langCode = 'en' 
           )}
         </>
       </Modal>
-      
+
       <Modal
         open={isVideoModalOpen}
         onCancel={closeVideoModal}
@@ -693,6 +693,7 @@ export const Content: React.FC = () => {
       }
     };
   }, [messageStore.receivedContent?.content, contentToDisplay?.type, isMobile, isTablet, isIPad]);
+
   useEffect(() => {
     const userAgent = navigator.userAgent;
 
@@ -1150,112 +1151,112 @@ export const Content: React.FC = () => {
   };
 
 
-const renderIPadPDF = (documentUrl: string) => {
-  const handleRetry = () => {
-    setRetryCount(prev => prev + 1);
-    setPdfKey(prev => prev + 1);
-    setIsLoading(true);
-    setLoadError(false);
-  };
+  const renderIPadPDF = (documentUrl: string) => {
+    const handleRetry = () => {
+      setRetryCount(prev => prev + 1);
+      setPdfKey(prev => prev + 1);
+      setIsLoading(true);
+      setLoadError(false);
+    };
 
-  const handleLoadSuccess = () => {
-    setIsLoading(false);
-    setLoadError(false);
-    if (pdfLoadTimeoutRef.current) {
-      clearTimeout(pdfLoadTimeoutRef.current);
-    }
-  };
+    const handleLoadSuccess = () => {
+      setIsLoading(false);
+      setLoadError(false);
+      if (pdfLoadTimeoutRef.current) {
+        clearTimeout(pdfLoadTimeoutRef.current);
+      }
+    };
 
-  const handleLoadFailure = () => {
-    setIsLoading(false);
-    setLoadError(true);
-    if (pdfLoadTimeoutRef.current) {
-      clearTimeout(pdfLoadTimeoutRef.current);
-    }
-  };
+    const handleLoadFailure = () => {
+      setIsLoading(false);
+      setLoadError(true);
+      if (pdfLoadTimeoutRef.current) {
+        clearTimeout(pdfLoadTimeoutRef.current);
+      }
+    };
 
-  // Simple strategy - same as mobile iOS
-  const getViewerStrategy = () => {
-    switch (retryCount % 3) {
-      case 0:
-        // Google Docs viewer first - works great on iPad
-        return `https://docs.google.com/viewer?url=${encodeURIComponent(documentUrl)}&embedded=true`;
-      case 1:
-        // Native Safari viewer
-        return documentUrl;
-      case 2:
-        // Office viewer as last resort
-        return `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(documentUrl)}`;
-      default:
-        return documentUrl;
-    }
-  };
+    // Simple strategy - same as mobile iOS
+    const getViewerStrategy = () => {
+      switch (retryCount % 3) {
+        case 0:
+          // Google Docs viewer first - works great on iPad
+          return `https://docs.google.com/viewer?url=${encodeURIComponent(documentUrl)}&embedded=true`;
+        case 1:
+          // Native Safari viewer
+          return documentUrl;
+        case 2:
+          // Office viewer as last resort
+          return `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(documentUrl)}`;
+        default:
+          return documentUrl;
+      }
+    };
 
-  const viewerUrl = getViewerStrategy();
+    const viewerUrl = getViewerStrategy();
 
-  return (
-    <div className="w-full h-screen flex flex-col overflow-hidden" key={`ipad-pdf-${pdfKey}`}>
-      {isLoading && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-50 z-10">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mb-4"></div>
-          <p className="text-gray-600 text-sm">Loading PDF...</p>
-        </div>
-      )}
-
-      {loadError && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-white p-4 space-y-4 z-20">
-          <svg className="h-16 w-16 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-1.964-1.333-2.732 0L3.732 16c-.77 1.333.192 3 1.732 3z" />
-          </svg>
-          <p className="text-gray-700 text-center font-medium">Unable to load PDF</p>
-          <div className="flex flex-col space-y-2 w-full max-w-xs">
-            <button
-              onClick={handleRetry}
-              className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition"
-            >
-              Try Again {retryCount > 0 ? `(Attempt ${retryCount + 1}/3)` : ''}
-            </button>
-            <a
-              href={documentUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-6 py-3 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition text-center"
-            >
-              Open in Safari
-            </a>
-            <a
-              href={documentUrl}
-              download
-              className="px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition text-center"
-            >
-              Download PDF
-            </a>
+    return (
+      <div className="w-full h-screen flex flex-col overflow-hidden" key={`ipad-pdf-${pdfKey}`}>
+        {isLoading && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-50 z-10">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mb-4"></div>
+            <p className="text-gray-600 text-sm">Loading PDF...</p>
           </div>
-        </div>
-      )}
+        )}
 
-      <div className="flex-1 w-full relative">
-        <iframe
-          key={`ipad-iframe-${pdfKey}-${retryCount}`}
-          src={viewerUrl}
-          className="w-full h-full border-0"
-          title="PDF Document"
-          style={{ width: '100%', height: '100%', border: 'none' }}
-          sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
-          onLoad={handleLoadSuccess}
-          onError={handleLoadFailure}
-        />
+        {loadError && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-white p-4 space-y-4 z-20">
+            <svg className="h-16 w-16 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-1.964-1.333-2.732 0L3.732 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <p className="text-gray-700 text-center font-medium">Unable to load PDF</p>
+            <div className="flex flex-col space-y-2 w-full max-w-xs">
+              <button
+                onClick={handleRetry}
+                className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition"
+              >
+                Try Again {retryCount > 0 ? `(Attempt ${retryCount + 1}/3)` : ''}
+              </button>
+              <a
+                href={documentUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-6 py-3 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition text-center"
+              >
+                Open in Safari
+              </a>
+              <a
+                href={documentUrl}
+                download
+                className="px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition text-center"
+              >
+                Download PDF
+              </a>
+            </div>
+          </div>
+        )}
+
+        <div className="flex-1 w-full relative">
+          <iframe
+            key={`ipad-iframe-${pdfKey}-${retryCount}`}
+            src={viewerUrl}
+            className="w-full h-full border-0"
+            title="PDF Document"
+            style={{ width: '100%', height: '100%', border: 'none' }}
+            sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
+            onLoad={handleLoadSuccess}
+            onError={handleLoadFailure}
+          />
+        </div>
+
+        {/* Helper text at bottom */}
+        {!isLoading && !loadError && (
+          <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black/70 text-white px-4 py-2 rounded-full text-sm">
+            Swipe to scroll PDF
+          </div>
+        )}
       </div>
-
-      {/* Helper text at bottom */}
-      {!isLoading && !loadError && (
-        <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black/70 text-white px-4 py-2 rounded-full text-sm">
-          Swipe to scroll PDF
-        </div>
-      )}
-    </div>
-  );
-};
+    );
+  };
 
   // 4. Keep your renderTabletPDF for Android tablets ONLY
   const renderAndroidTabletPDF = (documentUrl: string) => {
@@ -1579,6 +1580,187 @@ const renderIPadPDF = (documentUrl: string) => {
       setIsMuted(newMutedState);
     }
   };
+
+  const ScrollViewer: React.FC<{ items: any[] }> = ({ items }) => {
+    const [currentIndex, setCurrentIndex] = useState(0);
+    const containerRef = useRef<HTMLDivElement>(null);
+    const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
+    const [isMuted, setIsMuted] = useState(true);
+    const touchStartY = useRef(0);
+    const isScrolling = useRef(false);
+
+    // Auto-play current video
+    useEffect(() => {
+      const currentItem = items[currentIndex];
+      if (currentItem?.mediaType === 'video') {
+        const video = videoRefs.current[currentIndex];
+        if (video) {
+          video.muted = isMuted;
+          video.play().catch(err => console.error('Video play failed:', err));
+        }
+      }
+
+      // Pause other videos
+      videoRefs.current.forEach((video, idx) => {
+        if (video && idx !== currentIndex) {
+          video.pause();
+          video.currentTime = 0;
+        }
+      });
+    }, [currentIndex, isMuted]);
+
+    // Smooth scroll handling
+    const scrollToIndex = (index: number) => {
+      if (isScrolling.current) return;
+
+      isScrolling.current = true;
+      const newIndex = Math.max(0, Math.min(index, items.length - 1));
+      setCurrentIndex(newIndex);
+
+      if (containerRef.current) {
+        containerRef.current.scrollTo({
+          top: newIndex * window.innerHeight,
+          behavior: 'smooth'
+        });
+      }
+
+      setTimeout(() => {
+        isScrolling.current = false;
+      }, 600);
+    };
+
+    // Wheel event for desktop
+    const handleWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      if (isScrolling.current) return;
+
+      if (e.deltaY > 0 && currentIndex < items.length - 1) {
+        scrollToIndex(currentIndex + 1);
+      } else if (e.deltaY < 0 && currentIndex > 0) {
+        scrollToIndex(currentIndex - 1);
+      }
+    };
+
+    // Touch events for mobile
+    const handleTouchStart = (e: React.TouchEvent) => {
+      touchStartY.current = e.touches[0].clientY;
+    };
+
+    const handleTouchEnd = (e: React.TouchEvent) => {
+      if (isScrolling.current) return;
+
+      const touchEndY = e.changedTouches[0].clientY;
+      const diff = touchStartY.current - touchEndY;
+
+      if (Math.abs(diff) > 50) {
+        if (diff > 0 && currentIndex < items.length - 1) {
+          scrollToIndex(currentIndex + 1);
+        } else if (diff < 0 && currentIndex > 0) {
+          scrollToIndex(currentIndex - 1);
+        }
+      }
+    };
+
+    // Add wheel event listener
+    useEffect(() => {
+      const container = containerRef.current;
+      if (!container) return;
+
+      container.addEventListener('wheel', handleWheel, { passive: false });
+      return () => container.removeEventListener('wheel', handleWheel);
+    }, [currentIndex, items.length]);
+
+    const toggleMute = () => {
+      setIsMuted(!isMuted);
+      const video = videoRefs.current[currentIndex];
+      if (video) {
+        video.muted = !isMuted;
+      }
+    };
+
+    return (
+      <div
+        ref={containerRef}
+        className="fixed inset-0 w-screen h-screen overflow-hidden bg-black"
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+        style={{ scrollSnapType: 'y mandatory' }}
+      >
+        {items.map((item, index) => (
+          <div
+            key={index}
+            className="w-screen h-screen flex items-center justify-center relative"
+            style={{ scrollSnapAlign: 'start' }}
+          >
+            {item.mediaType === 'image' ? (
+              <img
+                src={item.signedUrl || item.url}
+                alt={item.name}
+                className="w-full h-full object-contain"
+              />
+            ) : (
+              <video
+                ref={(el) => (videoRefs.current[index] = el)}
+                src={item.signedUrl || item.url}
+                className="w-full h-full object-contain"
+                loop
+                playsInline
+                preload="auto"
+              />
+            )}
+
+            {/* Mute button for videos */}
+            {item.mediaType === 'video' && index === currentIndex && (
+              <button
+                onClick={toggleMute}
+                className="absolute bottom-20 right-6 w-12 h-12 bg-black/60 rounded-full flex items-center justify-center text-white text-xl backdrop-blur-sm hover:bg-black/80 transition z-10"
+              >
+                {isMuted ? '🔇' : '🔊'}
+              </button>
+            )}
+
+            {/* Progress indicators */}
+            <div className="absolute top-4 left-0 right-0 flex gap-1 px-4 z-10">
+              {items.map((_, idx) => (
+                <div
+                  key={idx}
+                  className={`flex-1 h-0.5 rounded-full transition-all duration-300 ${idx === currentIndex
+                      ? 'bg-white'
+                      : idx < currentIndex
+                        ? 'bg-white/50'
+                        : 'bg-white/20'
+                    }`}
+                />
+              ))}
+            </div>
+
+            {/* Item counter */}
+            <div className="absolute bottom-6 left-6 bg-black/60 text-white px-3 py-1.5 rounded-full text-sm backdrop-blur-sm">
+              {index + 1} / {items.length}
+            </div>
+
+            {/* Navigation hints */}
+            {index === 0 && currentIndex === 0 && (
+              <div className="absolute bottom-32 left-1/2 transform -translate-x-1/2 text-white/70 text-sm animate-bounce">
+                Swipe up for more ↑
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  const scrollViewerStyles = `
+  @keyframes fadeInOut {
+    0%, 100% { opacity: 0; }
+    50% { opacity: 1; }
+  }
+
+  .scroll-hint {
+    animation: fadeInOut 2s infinite;
+  }
+`;
 
   if (hasHydrated) {
     return (
@@ -2075,6 +2257,32 @@ const renderIPadPDF = (documentUrl: string) => {
             </>
           )
         )}
+
+        {contentToDisplay?.type === "Scroll" && (() => {
+          try {
+            // Parse the scroll items from extraContent
+            const scrollItems = contentToDisplay?.content?.extraContent
+              ? JSON.parse(contentToDisplay.content.extraContent)
+              : [];
+
+            if (!scrollItems || scrollItems.length === 0) {
+              return (
+                <div className="w-full h-screen flex items-center justify-center bg-gray-100">
+                  <p className="text-gray-500">No scroll content available</p>
+                </div>
+              );
+            }
+
+            return <ScrollViewer items={scrollItems} />;
+          } catch (error) {
+            console.error('Error parsing scroll content:', error);
+            return (
+              <div className="w-full h-screen flex items-center justify-center bg-gray-100">
+                <p className="text-red-500">Error loading scroll content</p>
+              </div>
+            );
+          }
+        })()}
 
         {(contentToDisplay?.type === "Map" ||
           contentToDisplay?.type?.includes("Map") ||

@@ -9,6 +9,7 @@ export enum ChatType {
   Form = "Form",
   Document = "Document",
   TeamDocument = "Team-document",
+  Scroll = 'Scroll'
 }
 
 export type ReceivedType =

@@ -25,6 +25,7 @@ import { FaMicrophone } from "react-icons/fa";
 import { TiUserAdd } from "react-icons/ti";
 import { FaBuilding } from "react-icons/fa";
 import { FaWpforms } from "react-icons/fa";
+import { IoCaretDownCircle } from "react-icons/io5";
 
 interface ClientSidebarProps {
     user: Session | null;
@@ -109,6 +110,13 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
             href: "/dashboard/video",
             roles: ["Admin", "User", "Staff"],
             icon: <IoPlay size={18} />,
+            iconColor: "white"
+        },
+                {
+            title: "Scroll",
+            href: "/dashboard/scroll",
+            roles: ["Admin", "User", "Staff"],
+            icon: <IoCaretDownCircle size={18} />,
             iconColor: "white"
         },
         {
