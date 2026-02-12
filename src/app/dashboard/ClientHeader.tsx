@@ -587,7 +587,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
     );
 
     const { data: scrolls, isLoading: scrollLoading } = useScrollControllerGetScrolls(
-        undefined,
+        { limit: 9999 },
         {
             query: {
                 queryKey: ['scrolls', currentStation],
@@ -670,7 +670,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
     );
 
     const isLoading = textLoading || imageLoading || videoLoading ||
-        websiteLoading || slideshowLoading || mapLoading || documentLoading;
+        websiteLoading || slideshowLoading || mapLoading || documentLoading || scrollLoading;
 
     // Template type configurations
     const templateConfig = useMemo(() => ({
@@ -2270,21 +2270,21 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                         );
                         contentExtra = template?.ext;
                     }
-                }else if (type === 'Scroll' || type === 'scroll' && scrolls) {
+                } else if (type === 'Scroll' || type === 'scroll' && scrolls) {
+                    template = scrolls.find(t =>
+                        t.tag === tag &&
+                        t.langCode?.includes(selectedLang)
+                    );
+                    contentExtra = template?.ext;
+
+                    if (!template && companyData?.defaultLangCode) {
                         template = scrolls.find(t =>
                             t.tag === tag &&
-                            t.langCode?.includes(selectedLang)
+                            t.langCode?.includes(companyData.defaultLangCode)
                         );
                         contentExtra = template?.ext;
-
-                        if (!template && companyData?.defaultLangCode) {
-                            template = scrolls.find(t =>
-                                t.tag === tag &&
-                                t.langCode?.includes(companyData.defaultLangCode)
-                            );
-                            contentExtra = template?.ext;
-                        }
                     }
+                }
 
                 if (template && socketConnected) {
                     emitSendTemplate({
