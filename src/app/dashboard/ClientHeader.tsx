@@ -586,7 +586,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         }
     );
 
-    const { data: scrolls, isLoading: scrollLoading } = useScrollControllerGetScrolls(
+    const { data: scrollsResponse, isLoading: scrollLoading } = useScrollControllerGetScrolls(
         { limit: 9999 },
         {
             query: {
@@ -600,7 +600,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         }
     );
 
-    console.info("scrollsscrollsscrollsscrolls", scrolls);
+    const scrolls = scrollsResponse?.data || [];
 
     const { data: videoTemplates, isLoading: videoLoading } = useTemplateControllerGetVideoTemplates(
         undefined,
