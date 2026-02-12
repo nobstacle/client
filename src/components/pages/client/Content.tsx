@@ -1741,8 +1741,8 @@ export const Content: React.FC = () => {
 
             {/* Navigation hints */}
             {index === 0 && currentIndex === 0 && (
-              <div className="absolute bottom-32 left-1/2 transform -translate-x-1/2 text-white/70 text-sm animate-bounce">
-                Swipe up for more ↑
+              <div className="absolute bottom-32 left-1/2 -translate-x-1/2 text-white/80 text-lg font-medium text-center animate-bounce">
+                Swipe for more ↑
               </div>
             )}
           </div>

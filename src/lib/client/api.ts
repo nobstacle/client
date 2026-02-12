@@ -6247,3 +6247,371 @@ export const useRecordingControllerGetByConfirmationNumber = <
 
 	return query;
 };
+
+
+
+// ==================== Scroll APIs ====================
+// Add these to your existing api.ts file.
+// Also add ScrollMediaItem and GetScrollTemplateRes to your model types file,
+// or import them from the scroll page if you prefer.
+
+export interface ScrollMediaItem {
+  url: string;
+  name: string;
+  mediaType: 'image' | 'video';
+  order: number;
+  ext: string;
+  signedUrl?: string;
+}
+
+export interface GetScrollTemplateRes {
+  id: number;
+  tag: string;
+  langCode: string;
+  order: number;
+  items: ScrollMediaItem[];
+}
+
+export interface GetScrollTemplateListRes {
+  data: GetScrollTemplateRes[];
+  total: number;
+}
+
+export interface PatchScrollOrderReq {
+  scrolls: { id: number; order: number }[];
+}
+
+// ─── GET /api/v1/scrolls ─────────────────────────────────────────────────────
+
+export const scrollControllerGetScrolls = (
+  params?: { limit?: number; skip?: number },
+  options?: SecondParameter<typeof nobstacleBackendApiInstance>,
+  signal?: AbortSignal
+) => {
+  return nobstacleBackendApiInstance<GetScrollTemplateListRes>(
+    { url: `/api/v1/scrolls`, method: 'GET', params, signal },
+    options
+  );
+};
+
+export const getScrollControllerGetScrollsQueryKey = (
+  params?: { limit?: number; skip?: number }
+) => {
+  return [`/api/v1/scrolls`, ...(params ? [params] : [])] as const;
+};
+
+export const getScrollControllerGetScrollsQueryOptions = <
+  TData = Awaited<ReturnType<typeof scrollControllerGetScrolls>>,
+  TError = ErrorType<HttpExceptionSchema>
+>(
+  params?: { limit?: number; skip?: number },
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof scrollControllerGetScrolls>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof nobstacleBackendApiInstance>;
+  }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+  const queryKey =
+    queryOptions?.queryKey ?? getScrollControllerGetScrollsQueryKey(params);
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof scrollControllerGetScrolls>>
+  > = ({ signal }) => scrollControllerGetScrolls(params, requestOptions, signal);
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof scrollControllerGetScrolls>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ScrollControllerGetScrollsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof scrollControllerGetScrolls>>
+>;
+export type ScrollControllerGetScrollsQueryError = ErrorType<HttpExceptionSchema>;
+
+export const useScrollControllerGetScrolls = <
+  TData = Awaited<ReturnType<typeof scrollControllerGetScrolls>>,
+  TError = ErrorType<HttpExceptionSchema>
+>(
+  params?: { limit?: number; skip?: number },
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof scrollControllerGetScrolls>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof nobstacleBackendApiInstance>;
+  }
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } => {
+  const queryOptions = getScrollControllerGetScrollsQueryOptions(params, options);
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+  query.queryKey = queryOptions.queryKey;
+  return query;
+};
+
+// ─── POST /api/v1/scrolls (multipart/form-data) ───────────────────────────────
+
+export const scrollControllerCreate = (
+  formData: FormData,
+  options?: SecondParameter<typeof nobstacleBackendApiInstance>
+) => {
+  return nobstacleBackendApiInstance<GetScrollTemplateRes>(
+    {
+      url: `/api/v1/scrolls`,
+      method: 'POST',
+      headers: { 'Content-Type': 'multipart/form-data' },
+      data: formData,
+    },
+    options
+  );
+};
+
+export const getScrollControllerCreateMutationOptions = <
+  TError = ErrorType<HttpExceptionSchema>,
+  TContext = unknown
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof scrollControllerCreate>>,
+    TError,
+    { data: FormData },
+    TContext
+  >;
+  request?: SecondParameter<typeof nobstacleBackendApiInstance>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof scrollControllerCreate>>,
+  TError,
+  { data: FormData },
+  TContext
+> => {
+  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof scrollControllerCreate>>,
+    { data: FormData }
+  > = (props) => {
+    const { data } = props ?? {};
+    return scrollControllerCreate(data, requestOptions);
+  };
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ScrollControllerCreateMutationResult = NonNullable<
+  Awaited<ReturnType<typeof scrollControllerCreate>>
+>;
+export type ScrollControllerCreateMutationError = ErrorType<HttpExceptionSchema>;
+
+export const useScrollControllerCreate = <
+  TError = ErrorType<HttpExceptionSchema>,
+  TContext = unknown
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof scrollControllerCreate>>,
+    TError,
+    { data: FormData },
+    TContext
+  >;
+  request?: SecondParameter<typeof nobstacleBackendApiInstance>;
+}) => {
+  const mutationOptions = getScrollControllerCreateMutationOptions(options);
+  return useMutation(mutationOptions);
+};
+
+// ─── DELETE /api/v1/scrolls/:id ───────────────────────────────────────────────
+
+export const scrollControllerDelete = (
+  id: number,
+  options?: SecondParameter<typeof nobstacleBackendApiInstance>
+) => {
+  return nobstacleBackendApiInstance<boolean>(
+    { url: `/api/v1/scrolls/${id}`, method: 'DELETE' },
+    options
+  );
+};
+
+export const getScrollControllerDeleteMutationOptions = <
+  TError = ErrorType<HttpExceptionSchema>,
+  TContext = unknown
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof scrollControllerDelete>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof nobstacleBackendApiInstance>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof scrollControllerDelete>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof scrollControllerDelete>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+    return scrollControllerDelete(id, requestOptions);
+  };
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ScrollControllerDeleteMutationResult = NonNullable<
+  Awaited<ReturnType<typeof scrollControllerDelete>>
+>;
+export type ScrollControllerDeleteMutationError = ErrorType<HttpExceptionSchema>;
+
+export const useScrollControllerDelete = <
+  TError = ErrorType<HttpExceptionSchema>,
+  TContext = unknown
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof scrollControllerDelete>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof nobstacleBackendApiInstance>;
+}) => {
+  const mutationOptions = getScrollControllerDeleteMutationOptions(options);
+  return useMutation(mutationOptions);
+};
+
+// ─── PUT /api/v1/scrolls/order/update ─────────────────────────────────────────
+
+export const scrollControllerUpdateOrder = (
+  patchScrollOrderReq: BodyType<PatchScrollOrderReq>,
+  options?: SecondParameter<typeof nobstacleBackendApiInstance>
+) => {
+  return nobstacleBackendApiInstance<boolean>(
+    {
+      url: `/api/v1/scrolls/order/update`,
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      data: patchScrollOrderReq,
+    },
+    options
+  );
+};
+
+export const getScrollControllerUpdateOrderMutationOptions = <
+  TError = ErrorType<HttpExceptionSchema>,
+  TContext = unknown
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof scrollControllerUpdateOrder>>,
+    TError,
+    { data: BodyType<PatchScrollOrderReq> },
+    TContext
+  >;
+  request?: SecondParameter<typeof nobstacleBackendApiInstance>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof scrollControllerUpdateOrder>>,
+  TError,
+  { data: BodyType<PatchScrollOrderReq> },
+  TContext
+> => {
+  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof scrollControllerUpdateOrder>>,
+    { data: BodyType<PatchScrollOrderReq> }
+  > = (props) => {
+    const { data } = props ?? {};
+    return scrollControllerUpdateOrder(data, requestOptions);
+  };
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ScrollControllerUpdateOrderMutationResult = NonNullable<
+  Awaited<ReturnType<typeof scrollControllerUpdateOrder>>
+>;
+export type ScrollControllerUpdateOrderMutationBody = BodyType<PatchScrollOrderReq>;
+export type ScrollControllerUpdateOrderMutationError = ErrorType<HttpExceptionSchema>;
+
+export const useScrollControllerUpdateOrder = <
+  TError = ErrorType<HttpExceptionSchema>,
+  TContext = unknown
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof scrollControllerUpdateOrder>>,
+    TError,
+    { data: BodyType<PatchScrollOrderReq> },
+    TContext
+  >;
+  request?: SecondParameter<typeof nobstacleBackendApiInstance>;
+}) => {
+  const mutationOptions = getScrollControllerUpdateOrderMutationOptions(options);
+  return useMutation(mutationOptions);
+};
+
+// ─── PUT /api/v1/scrolls/:id (update, multipart/form-data) ───────────────────
+// Used by UpdateScrollTemplateForm
+
+export const scrollControllerUpdate = (
+  id: number,
+  formData: FormData,
+  options?: SecondParameter<typeof nobstacleBackendApiInstance>
+) => {
+  return nobstacleBackendApiInstance<GetScrollTemplateRes>(
+    {
+      url: `/api/v1/scrolls/${id}`,
+      method: 'PUT',
+      headers: { 'Content-Type': 'multipart/form-data' },
+      data: formData,
+    },
+    options
+  );
+};
+
+export const getScrollControllerUpdateMutationOptions = <
+  TError = ErrorType<HttpExceptionSchema>,
+  TContext = unknown
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof scrollControllerUpdate>>,
+    TError,
+    { id: number; data: FormData },
+    TContext
+  >;
+  request?: SecondParameter<typeof nobstacleBackendApiInstance>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof scrollControllerUpdate>>,
+  TError,
+  { id: number; data: FormData },
+  TContext
+> => {
+  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof scrollControllerUpdate>>,
+    { id: number; data: FormData }
+  > = (props) => {
+    const { id, data } = props ?? {};
+    return scrollControllerUpdate(id, data, requestOptions);
+  };
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ScrollControllerUpdateMutationResult = NonNullable<
+  Awaited<ReturnType<typeof scrollControllerUpdate>>
+>;
+export type ScrollControllerUpdateMutationError = ErrorType<HttpExceptionSchema>;
+
+export const useScrollControllerUpdate = <
+  TError = ErrorType<HttpExceptionSchema>,
+  TContext = unknown
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof scrollControllerUpdate>>,
+    TError,
+    { id: number; data: FormData },
+    TContext
+  >;
+  request?: SecondParameter<typeof nobstacleBackendApiInstance>;
+}) => {
+  const mutationOptions = getScrollControllerUpdateMutationOptions(options);
+  return useMutation(mutationOptions);
+};

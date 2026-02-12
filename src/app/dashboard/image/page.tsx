@@ -56,16 +56,39 @@ export default function ImageDashboard() {
   // Get current language
   const currentLang = params.get("lang") || companyData?.defaultLangCode || "en";
 
-  // Since records are now merged with langCode arrays, we can work with them directly
-  const displayedImagesWithAvailability = useMemo(() => {
-    const imagesSource = searchImages.length > 0 ? searchImages : images;
-    
-    // Each image now has a langCode array with all available languages
-    return imagesSource.map(image => ({
-      ...image,
-      isAvailableInCurrentLang: image.langCode.includes(currentLang)
-    })).sort((a, b) => a.order - b.order);
-  }, [images, searchImages, currentLang]);
+const displayedImagesWithAvailability = useMemo(() => {
+  const imagesSource = searchImages.length > 0 ? searchImages : images;
+
+  // Group all records by tag (case-insensitive)
+  const tagMap = new Map<string, typeof imagesSource>();
+  for (const image of imagesSource) {
+    const key = image.tag.toLowerCase().trim();
+    if (!tagMap.has(key)) tagMap.set(key, []);
+    tagMap.get(key)!.push(image);
+  }
+
+  const deduplicated = Array.from(tagMap.values()).map((group) => {
+    // 1. Exact match for selected language
+    const exactMatch = group.find((img) => img.langCode.includes(currentLang));
+    if (exactMatch) {
+      return { ...exactMatch, isAvailableInCurrentLang: true };
+    }
+
+    // 2. Fallback: match company default language
+    const defaultLangCode = companyData?.defaultLangCode || "en";
+    const defaultMatch = group.find((img) =>
+      img.langCode.includes(defaultLangCode)
+    );
+    if (defaultMatch) {
+      return { ...defaultMatch, isAvailableInCurrentLang: false };
+    }
+
+    // 3. Last resort: just show the first record
+    return { ...group[0], isAvailableInCurrentLang: false };
+  });
+
+  return deduplicated.sort((a, b) => a.order - b.order);
+}, [images, searchImages, currentLang, companyData?.defaultLangCode]);
 
   const sendTemplate = (id: number, isAvailable: boolean, ext: string) => {
     emitSendTemplate({

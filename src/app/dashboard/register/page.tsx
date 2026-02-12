@@ -369,7 +369,7 @@ const RegisterUsers: React.FC = () => {
                         if (role === 'Staff') color = 'green';
                         return (
                             <Tag color={color} key={role}>
-                                {role.toUpperCase()}
+                                {role === 'Staff' ? 'CLIENT' : role.toUpperCase()}
                             </Tag>
                         );
                     })}

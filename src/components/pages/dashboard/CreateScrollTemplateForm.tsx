@@ -2,12 +2,13 @@ import * as React from "react";
 import { SubmitHandler, useForm, Controller } from "react-hook-form";
 import {
   useVideoTemplateControllerGetVideoTags,
+  useScrollControllerCreate,
+  type GetScrollTemplateRes,
 } from "../../../lib/client/api";
 import * as yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { Button, Select, Form, Space, Input, Upload, message } from "antd";
 import { languages } from "../../../constant/languages";
-import type { GetScrollTemplateRes } from "../../../app/dashboard/scroll/page";
 import {
   DndContext,
   closestCenter,
@@ -26,17 +27,15 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { FaImage, FaFilm, FaGripVertical, FaUpload } from "react-icons/fa";
+import { FaImage, FaFilm, FaGripVertical } from "react-icons/fa";
 import { InboxOutlined } from "@ant-design/icons";
-import type { UploadFile, RcFile } from "antd/es/upload/interface";
-import { useSession } from "next-auth/react";
+import type { RcFile } from "antd/es/upload/interface";
 
 const { Dragger } = Upload;
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-const MAX_ITEMS = 10;
-const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
-let Url = process.env.NEXT_PUBLIC_BACKEND_URL;
+const MAX_ITEMS = 15;                     // updated from 10
+const MAX_FILE_SIZE = 50 * 1024 * 1024;  // 50 MB — updated from 100 MB
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface SequenceEntry {
@@ -92,7 +91,6 @@ const SortableRow: React.FC<{
       style={style}
       className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-md px-2 py-1.5"
     >
-      {/* Drag handle */}
       <span
         {...attributes}
         {...listeners}
@@ -101,26 +99,16 @@ const SortableRow: React.FC<{
       >
         <FaGripVertical />
       </span>
-
-      {/* Order number */}
       <span className="flex-shrink-0 w-4 text-center text-xs font-semibold text-gray-400">
         {index + 1}
       </span>
-
-      {/* Type icon */}
       <span className="flex-shrink-0 text-gray-400 leading-none" style={{ fontSize: 11 }}>
         {entry.mediaType === "image" ? <FaImage /> : <FaFilm />}
       </span>
-
-      {/* Name */}
       <span className="flex-1 text-xs text-gray-700 truncate">{entry.name}</span>
-
-      {/* File size */}
       <span className="flex-shrink-0 text-xs text-gray-400">
         {(entry.file.size / 1024 / 1024).toFixed(1)}MB
       </span>
-
-      {/* Remove */}
       <button
         type="button"
         onClick={() => onRemove(entry.uid)}
@@ -136,13 +124,15 @@ const SortableRow: React.FC<{
 
 // ─── Main Form ────────────────────────────────────────────────────────────────
 export const CreateScrollTemplateForm: React.FC<{
-  cb?: (scroll: GetScrollTemplateRes, isUpdate: boolean) => void;
+  cb?: () => void;
 }> = ({ cb }) => {
   const [sequence, setSequence] = React.useState<SequenceEntry[]>([]);
   const [sequenceError, setSequenceError] = React.useState<string | null>(null);
-  const [uploading, setUploading] = React.useState(false);
-  const { data } = useSession();
+
   const videoTags = useVideoTemplateControllerGetVideoTags();
+  // Use the API hook — authentication header is injected automatically
+  // by nobstacleBackendApiInstance, same as every other form in this project.
+  const createScroll = useScrollControllerCreate();
 
   const {
     control,
@@ -163,9 +153,7 @@ export const CreateScrollTemplateForm: React.FC<{
       setSequence((prev) => {
         const old = prev.findIndex((e) => e.uid === active.id);
         const next = prev.findIndex((e) => e.uid === over.id);
-        const reordered = arrayMove(prev, old, next);
-        // Update order values
-        return reordered.map((item, idx) => ({ ...item, order: idx + 1 }));
+        return arrayMove(prev, old, next).map((item, idx) => ({ ...item, order: idx + 1 }));
       });
     }
   };
@@ -174,59 +162,36 @@ export const CreateScrollTemplateForm: React.FC<{
   const handleFileUpload = (file: RcFile): boolean => {
     setSequenceError(null);
 
-    // Check max items
     if (sequence.length >= MAX_ITEMS) {
       setSequenceError(`Maximum ${MAX_ITEMS} items allowed.`);
       return false;
     }
-
-    // Check file size
     if (file.size > MAX_FILE_SIZE) {
-      message.error(`File size must be less than 100MB`);
+      message.error(`File size must be less than 50MB`);
       return false;
     }
 
-    // Determine media type
-    const mediaType = file.type.startsWith("image/") ? "image" : "video";
-
-    // Validate file type
     const allowedTypes = [
-      "image/jpeg",
-      "image/jpg",
-      "image/png",
-      "image/webp",
-      "image/gif",
-      "video/mp4",
-      "video/webm",
-      "video/quicktime",
+      "image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif",
+      "video/mp4", "video/webm", "video/quicktime",
     ];
-
     if (!allowedTypes.includes(file.type)) {
       message.error("Only images (jpg, png, webp, gif) and videos (mp4, webm, mov) are allowed");
       return false;
     }
 
-    // Add to sequence
+    const mediaType = file.type.startsWith("image/") ? "image" : "video";
     setSequence((prev) => [
       ...prev,
-      {
-        uid: `${Date.now()}-${Math.random()}`,
-        file,
-        name: file.name,
-        mediaType,
-        order: prev.length + 1,
-      },
+      { uid: `${Date.now()}-${Math.random()}`, file, name: file.name, mediaType, order: prev.length + 1 },
     ]);
-
-    return false; // Prevent default upload behavior
+    return false; // prevent default ant upload behaviour
   };
 
   const removeItem = (uid: string) => {
-    setSequence((prev) => {
-      const filtered = prev.filter((e) => e.uid !== uid);
-      // Reorder after removal
-      return filtered.map((item, idx) => ({ ...item, order: idx + 1 }));
-    });
+    setSequence((prev) =>
+      prev.filter((e) => e.uid !== uid).map((item, idx) => ({ ...item, order: idx + 1 }))
+    );
     setSequenceError(null);
   };
 
@@ -237,45 +202,22 @@ export const CreateScrollTemplateForm: React.FC<{
       return;
     }
 
-    setUploading(true);
+    const formData = new FormData();
+    formData.append("tag", (value.tagCreate as string) || (value.tagSelect as string) || "scroll");
+    formData.append("langCode", value.langCode);
+    sequence.forEach((entry) => formData.append("files", entry.file));
+    formData.append(
+      "itemsMetadata",
+      JSON.stringify(sequence.map((e) => ({ order: e.order, name: e.name })))
+    );
 
     try {
-      const formData = new FormData();
-      formData.append("tag", (value.tagCreate as string) || (value.tagSelect as string) || "scroll");
-      formData.append("langCode", value.langCode);
-
-      // Add files in order
-      sequence.forEach((entry) => {
-        formData.append("files", entry.file);
-      });
-
-      // Add metadata
-      const itemsMetadata = sequence.map((entry) => ({
-        order: entry.order,
-        name: entry.name,
-      }));
-      formData.append("itemsMetadata", JSON.stringify(itemsMetadata));
-
-      // Make API call
-      const response = await fetch(`${Url}/api/v1/scrolls`, {
-        method: "POST",
-        body: formData,
-        headers: { Authorization: `Bearer ${data.user.backendTokens.at}` },
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to create scroll template");
-      }
-
-      const result = await response.json();
-
+      await createScroll.mutateAsync({ data: formData });
       message.success("Scroll template created successfully!");
-      cb?.(result, !!value.tagSelect);
+      cb?.();
     } catch (error) {
       console.error("Create scroll error:", error);
       message.error("Failed to create scroll template");
-    } finally {
-      setUploading(false);
     }
   };
 
@@ -286,12 +228,9 @@ export const CreateScrollTemplateForm: React.FC<{
       className="create-template-form customMapForm"
     >
       <hr />
-      <Space
-        direction="vertical"
-        size="small"
-        style={{ width: "100%", rowGap: "0.4rem", paddingTop: "1rem" }}
-      >
-        {/* ── File Upload ────────────────────────────────────────────────── */}
+      <Space direction="vertical" size="small" style={{ width: "100%", rowGap: "0.4rem", paddingTop: "1rem" }}>
+
+        {/* ── File Upload ───────────────────────────────────────────────── */}
         <Form.Item
           label={
             <span>
@@ -312,14 +251,11 @@ export const CreateScrollTemplateForm: React.FC<{
             disabled={sequence.length >= MAX_ITEMS}
             accept="image/jpeg,image/jpg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime"
           >
-            <p className="ant-upload-drag-icon">
-              <InboxOutlined />
-            </p>
+            <p className="ant-upload-drag-icon"><InboxOutlined /></p>
             <p className="ant-upload-text">Click or drag files to upload</p>
             <p className="ant-upload-hint">
-              Support for images (jpg, png, webp, gif) and videos (mp4, webm, mov).
-              <br />
-              Max file size: 100MB. Max files: {MAX_ITEMS}
+              Images (jpg, png, webp, gif) and videos (mp4, webm, mov).
+              Max file size: 50MB. Max files: {MAX_ITEMS}
             </p>
           </Dragger>
         </Form.Item>
@@ -327,23 +263,11 @@ export const CreateScrollTemplateForm: React.FC<{
         {/* ── Sequence list ─────────────────────────────────────────────── */}
         {sequence.length > 0 && (
           <Form.Item label="Sequence — drag to reorder">
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              onDragEnd={handleDragEnd}
-            >
-              <SortableContext
-                items={sequence.map((e) => e.uid)}
-                strategy={verticalListSortingStrategy}
-              >
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+              <SortableContext items={sequence.map((e) => e.uid)} strategy={verticalListSortingStrategy}>
                 <div className="flex flex-col gap-1">
                   {sequence.map((entry, i) => (
-                    <SortableRow
-                      key={entry.uid}
-                      entry={entry}
-                      index={i}
-                      onRemove={removeItem}
-                    />
+                    <SortableRow key={entry.uid} entry={entry} index={i} onRemove={removeItem} />
                   ))}
                 </div>
               </SortableContext>
@@ -376,12 +300,7 @@ export const CreateScrollTemplateForm: React.FC<{
             name="tagSelect"
             control={control}
             render={({ field }) => (
-              <Select
-                {...field}
-                placeholder="Select tag…"
-                style={{ width: "100%" }}
-                allowClear
-              >
+              <Select {...field} placeholder="Select tag…" style={{ width: "100%" }} allowClear>
                 {videoTags.data?.map((value, index) => (
                   <Select.Option value={value.tag} key={`${value.tag}-${index}`}>
                     {value.tag}
@@ -408,16 +327,12 @@ export const CreateScrollTemplateForm: React.FC<{
                 style={{ width: "100%" }}
                 showSearch
                 filterOption={(input, option) =>
-                  (option?.children as string)
-                    ?.toLowerCase()
-                    .includes(input.toLowerCase())
+                  (option?.children as string)?.toLowerCase().includes(input.toLowerCase())
                 }
                 optionFilterProp="children"
               >
                 {languages.map(({ code, name }, index) => (
-                  <Select.Option value={code} key={index}>
-                    {name}
-                  </Select.Option>
+                  <Select.Option value={code} key={index}>{name}</Select.Option>
                 ))}
               </Select>
             )}
@@ -431,10 +346,10 @@ export const CreateScrollTemplateForm: React.FC<{
             htmlType="submit"
             style={{ width: "100%" }}
             className="create-template-button"
-            loading={uploading}
-            disabled={uploading}
+            loading={createScroll.isPending}
+            disabled={createScroll.isPending}
           >
-            {uploading ? "Creating..." : "Create Scroll Template"}
+            {createScroll.isPending ? "Creating..." : "Create Scroll Template"}
           </Button>
         </Form.Item>
       </Space>

@@ -33,6 +33,7 @@ import "../../../styles/base.css";
 import 'sweetalert2/dist/sweetalert2.min.css';
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { languages } from "../../../constant/languages";
 
 const { Title, Text } = Typography;
 const { Search } = Input;
@@ -607,9 +608,11 @@ const CompaniesManagement: React.FC = () => {
                                     placeholder="Select default language"
                                     size="large"
                                 >
-                                    <Option value="en">English</Option>
-                                    <Option value="es">Spanish</Option>
-                                    <Option value="fr">French</Option>
+                                    {languages.map(({ code, name }, index) => (
+                                        <Select.Option value={code} key={index}>
+                                            {name}
+                                        </Select.Option>
+                                    ))}
                                 </Select>
                             </Form.Item>
                         </Col>

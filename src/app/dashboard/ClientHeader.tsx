@@ -35,7 +35,8 @@ import {
     useTemplateControllerGetSlideshowTemplates,
     useTemplateControllerGetMapTemplates,
     useTemplateControllerGetDocumenttemplates,
-    useCompanyControllerGetCompany
+    useCompanyControllerGetCompany,
+    useScrollControllerGetScrolls
 } from '../../lib/client/api';
 import { useSearchParams } from "next/navigation";
 import { useSocketContext } from "../../context/SocketContextProvider";
@@ -585,6 +586,20 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         }
     );
 
+    const { data: scrolls, isLoading: scrollLoading } = useScrollControllerGetScrolls(
+        undefined,
+        {
+            query: {
+                queryKey: ['scrolls', currentStation],
+                staleTime: 1000 * 60 * 5,
+                gcTime: 1000 * 60 * 10,
+                refetchOnWindowFocus: false,
+                refetchOnMount: true,
+                enabled: !!currentStation,
+            }
+        }
+    );
+
     const { data: videoTemplates, isLoading: videoLoading } = useTemplateControllerGetVideoTemplates(
         undefined,
         {
@@ -665,7 +680,8 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         website: { icon: <IoGlobe />, color: '#3b5998', label: 'Website' },
         slideshow: { icon: <IoImages />, color: '#3b5998', label: 'Slideshow' },
         map: { icon: <IoMap />, color: '#3b5998', label: 'Map' },
-        document: { icon: <IoDocuments />, color: '#3b5998', label: 'Document' }
+        document: { icon: <IoDocuments />, color: '#3b5998', label: 'Document' },
+        scroll: { icon: <IoImages />, color: '#3b5998', label: 'Scroll' }
     }), []);
 
     // Combine all templates
@@ -711,6 +727,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                 }
             }
         };
+
         if (textTemplates) {
             textTemplates.forEach(template => {
                 addTemplate(template, 'text', { content: template.content });
@@ -741,6 +758,12 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
             });
         }
 
+        if (scrolls) {
+            scrolls.forEach(template => {
+                addTemplate(template, 'scroll', { urls: template.url });
+            });
+        }
+
         if (mapTemplates) {
             mapTemplates.forEach(template => {
                 addTemplate(template, 'map', {
@@ -767,6 +790,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         slideshowTemplates,
         mapTemplates,
         documentTemplates,
+        scrolls,
         selectedLang,
         companyData?.defaultLangCode
     ]);
@@ -892,13 +916,15 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
             contentType = ChatType.Slideshow;
         } else if (template?.type === 'map') {
             contentType = ChatType.Map;
-            // For map templates, we need to send both origin and destination
             contentExtra = JSON.stringify({
                 origin: templateToSend?.origin || '',
                 destination: templateToSend?.destination || ''
             });
         } else if (template?.type === 'document') {
             contentType = ChatType.Document;
+        } else if (template?.type === 'scroll') {
+            contentType = ChatType.Scroll;
+            contentExtra = templateToSend?.ext;
         } else {
             contentType = ChatType.Text;
         }
@@ -1038,6 +1064,19 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
             }
         }
     }, [isHamburgerMenuOpen, isMobileView]);
+
+    useEffect(() => {
+        const inputs = document.querySelectorAll(
+            '#magic-box-search-desktop, #magic-box-search-mobile'
+        );
+        inputs.forEach((el) => {
+            (el as HTMLInputElement).value = '';
+            el.setAttribute('autocomplete', 'off');
+            el.setAttribute('data-lpignore', 'true');
+            el.setAttribute('data-1p-ignore', '');
+            el.setAttribute('data-bwignore', '');
+        });
+    }, []);
 
     const generateFormsDropdownHTML = useCallback((forms, defaultFormId) => {
         if (!forms || forms.length === 0) {
@@ -1433,6 +1472,12 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
     <path d="M384 32H64A64 64 0 000 96v256a64.11 64.11 0 0048 62V152a72 72 0 0172-72h326a64.11 64.11 0 00-62-48z"/>
   </svg>`,
 
+            // IoImages - Scroll icon (same as slideshow visually)
+            scroll: `<svg style="width: 24px; height: 24px;" fill="currentColor" viewBox="0 0 512 512">
+    <path d="M450.29 112H142c-34 0-62 27.51-62 61.33v245.34c0 33.82 28 61.33 62 61.33h308.29c34 0 61.71-27.51 61.71-61.33V173.33c0-33.82-27.68-61.33-61.71-61.33zm-77.15 61.34a46 46 0 11-46.28 46 46.19 46.19 0 0146.28-46.01zm-231.55 276c-17 0-29.86-13.75-29.86-30.66v-64.83l90.46-80.79a46.54 46.54 0 0163.44 1.83L328.27 337l-112 112.33zM480 418.67a30.67 30.67 0 01-30.71 30.66H259L376.08 333a46.24 46.24 0 0159.44-.16L480 370.59z"/>
+    <path d="M384 32H64A64 64 0 000 96v256a64.11 64.11 0 0048 62V152a72 72 0 0172-72h326a64.11 64.11 0 00-62-48z"/>
+  </svg>`
+
             // IoMap - Map icon
             map: `<svg style="width: 24px; height: 24px;" fill="currentColor" viewBox="0 0 512 512">
     <path d="M48.17 113.34A32 32 0 0032 141.24V438a32 32 0 0047 28.37c.43-.23.85-.47 1.26-.74l84.14-55.05a8 8 0 003.63-6.72V46.45a8 8 0 00-12.51-6.63zM212.36 39.31a8 8 0 00-8.42.15L171 58.55a8 8 0 00-3 6.78v357.51a8 8 0 0011.58 7.15 183.28 183.28 0 0140.43-17.16 8 8 0 004.99-7.42V46.45a8 8 0 00-12.64-6.63zM464.53 46.47a31.64 31.64 0 00-31.5-.88 201.48 201.48 0 01-70.55 14.77 201.32 201.32 0 01-70.68-12.87 8 8 0 00-11.8 7.14v358.12a8 8 0 004.52 7.21A183.87 183.87 0 01345 436a177.06 177.06 0 0171-15.29q5.14 0 10.13.32a31.62 31.62 0 0038.38-30.81V76.92a32 32 0 00-16.98-30.45z"/>
@@ -1463,7 +1508,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
 
         return templates.map(template => {
             const icon = templateIcons[template.type] || templateIcons.text;
-            const showQR = template.type !== "slideshow" && template.type !== "text";
+            const showQR = template.type !== "slideshow" && template.type !== "text" && template.type !== "scroll" && template.type !== "Scroll";
             const langTag = !template.availableInSelectedLang
                 ? `<span style="display: inline-block; background: #ff9800; color: white; font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-left: 8px;">${companyData?.defaultLangCode?.toUpperCase() || 'EN'}</span>`
                 : '';
@@ -1614,51 +1659,51 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
     }, [isDropdownVisible, filteredTemplates, isLoading, isInIframe, generateSearchDropdownHTML,
         generateFormsDropdownHTML, searchValue, assignedForms, defaultFormId, categoriesData, isMobileView]);
 
-const handlePasswordChange = () => {
-  const newPassword = form.getFieldValue('newPassword');
-  const confirmPassword = form.getFieldValue('confirmPassword');
-  
-  if (newPassword && confirmPassword) {
-    setPasswordMatch(newPassword === confirmPassword);
-  } else {
-    setPasswordMatch(null);
-  }
-};
+    const handlePasswordChange = () => {
+        const newPassword = form.getFieldValue('newPassword');
+        const confirmPassword = form.getFieldValue('confirmPassword');
 
-const handleOkResetPassword = async () => {
-  try {
-    setLoading(true);
-    const values = await form.validateFields();
-    
-    // Here you would call your API to change the password
-    // Example:
-    // await changePasswordAPI({
-    //   currentPassword: values.currentPassword,
-    //   newPassword: values.newPassword
-    // });
-    
-    console.log('Password change values:', values);
-    
-    // Reset form and close modal on success
-    form.resetFields();
-    setPasswordMatch(null);
-    setResetPasswordModal(false);
-    
-    // Show success message
-    // message.success('Password changed successfully!');
-    
-  } catch (error) {
-    console.error('Validation failed:', error);
-  } finally {
-    setLoading(false);
-  }
-};
+        if (newPassword && confirmPassword) {
+            setPasswordMatch(newPassword === confirmPassword);
+        } else {
+            setPasswordMatch(null);
+        }
+    };
 
-const handleCancelResetPassword = () => {
-  form.resetFields();
-  setPasswordMatch(null);
-  setResetPasswordModal(false);
-};
+    const handleOkResetPassword = async () => {
+        try {
+            setLoading(true);
+            const values = await form.validateFields();
+
+            // Here you would call your API to change the password
+            // Example:
+            // await changePasswordAPI({
+            //   currentPassword: values.currentPassword,
+            //   newPassword: values.newPassword
+            // });
+
+            console.log('Password change values:', values);
+
+            // Reset form and close modal on success
+            form.resetFields();
+            setPasswordMatch(null);
+            setResetPasswordModal(false);
+
+            // Show success message
+            // message.success('Password changed successfully!');
+
+        } catch (error) {
+            console.error('Validation failed:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleCancelResetPassword = () => {
+        form.resetFields();
+        setPasswordMatch(null);
+        setResetPasswordModal(false);
+    };
 
     const updateChatPopupMessages = useCallback(() => {
         if (!isInIframe) return;
@@ -2225,7 +2270,21 @@ const handleCancelResetPassword = () => {
                         );
                         contentExtra = template?.ext;
                     }
-                }
+                }else if (type === 'Scroll' || type === 'scroll' && scrolls) {
+                        template = scrolls.find(t =>
+                            t.tag === tag &&
+                            t.langCode?.includes(selectedLang)
+                        );
+                        contentExtra = template?.ext;
+
+                        if (!template && companyData?.defaultLangCode) {
+                            template = scrolls.find(t =>
+                                t.tag === tag &&
+                                t.langCode?.includes(companyData.defaultLangCode)
+                            );
+                            contentExtra = template?.ext;
+                        }
+                    }
 
                 if (template && socketConnected) {
                     emitSendTemplate({
@@ -3029,7 +3088,12 @@ const handleCancelResetPassword = () => {
                                                                 <input
                                                                     ref={inputRef}
                                                                     autoComplete="off"
-                                                                    type="text"
+                                                                    autoCorrect="off"
+                                                                    autoCapitalize="off"
+                                                                    spellCheck={false}
+                                                                    name={`magic-search-mobile-${Math.random()}`}
+                                                                    id="magic-box-search-mobile"
+                                                                    type="search"
                                                                     placeholder="Search template or enter ID#"
                                                                     value={searchValue}
                                                                     onChange={handleSearchChange}
@@ -3332,7 +3396,7 @@ const handleCancelResetPassword = () => {
                                                                         }
                                                                     />
                                                                 </div>
-                                                                {template.type !== "slideshow" && template.type !== "text" && (
+                                                                {template.type !== "slideshow" && template.type !== "text" && template.type !== "scroll" && template.type !== "Scroll" && (
                                                                     <div
                                                                         onTouchEnd={(e) => {
                                                                             e.preventDefault();
@@ -3481,14 +3545,17 @@ const handleCancelResetPassword = () => {
                                     <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                                         <input
                                             ref={inputRef}
-                                            readOnly
-                                            autoComplete="search-template"
-                                            type="text"
+                                            autoComplete="off"
+                                            autoCorrect="off"
+                                            autoCapitalize="off"
+                                            spellCheck={false}
+                                            name={`magic-search-${Math.random()}`}
+                                            id="magic-box-search-desktop"
+                                            type="search"
                                             placeholder={isInIframe ? 'Magic Box' : "ID# or Search Template"}
                                             value={searchValue}
                                             onChange={handleSearchChange}
                                             onFocus={(e) => {
-                                                e.target.removeAttribute('readOnly');
                                                 if (justSelectedRef.current) return;
                                                 if (searchValue.trim() && filteredTemplates.length > 0) {
                                                     setIsDropdownVisible(true);
@@ -4097,7 +4164,7 @@ const handleCancelResetPassword = () => {
                                                 />
                                             </div>
 
-                                            {template.type !== "slideshow" && template.type !== "text" && (
+                                            {template.type !== "slideshow" && template.type !== "text" && template.type !== "scroll" && template.type !== "Scroll" && (
                                                 <div
                                                     onMouseDown={(e) => {
                                                         e.preventDefault();
