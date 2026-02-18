@@ -2265,6 +2265,9 @@ export const Content: React.FC = () => {
               ? JSON.parse(contentToDisplay.content.extraContent)
               : [];
 
+console.info("aaaaaaaaaaaaaaaaaaaa",scrollItems);
+console.info("bbbbbbbbbbbbbbbbbbbbbbbbbbb",contentToDisplay);
+
             if (!scrollItems || scrollItems.length === 0) {
               return (
                 <div className="w-full h-screen flex items-center justify-center bg-gray-100">
