@@ -2033,9 +2033,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
 
     useEffect(() => {
         if (!isInIframe) return;
-        
-        console.info("CLICKED");
-
+    
         const handler = (event: MessageEvent) => {
 
             if (event.data.type === 'HAMBURGER_CLOSED') {
