@@ -625,7 +625,7 @@ export const Content: React.FC = () => {
   const company = useCompanyControllerGetCompany();
   const params = useSearchParams();
   const messageStore = useMessageStore();
-  const hasHydrated = useHasHydrated(); 
+  const hasHydrated = useHasHydrated();
   const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
   const [showQR, setShowQR] = useState(false);
   const [timer, setTimer] = useState(20);
@@ -1725,10 +1725,10 @@ export const Content: React.FC = () => {
                 <div
                   key={idx}
                   className={`flex-1 h-0.5 rounded-full transition-all duration-300 ${idx === currentIndex
-                      ? 'bg-white'
-                      : idx < currentIndex
-                        ? 'bg-white/50'
-                        : 'bg-white/20'
+                    ? 'bg-white'
+                    : idx < currentIndex
+                      ? 'bg-white/50'
+                      : 'bg-white/20'
                     }`}
                 />
               ))}
@@ -2259,32 +2259,29 @@ export const Content: React.FC = () => {
         )}
 
         {contentToDisplay?.type === "Scroll" && (() => {
-          try {
-            // Parse the scroll items from extraContent
-            const scrollItems = contentToDisplay?.content?.extraContent
-              ? JSON.parse(contentToDisplay.content.extraContent)
-              : [];
+          let scrollItems = contentToDisplay?.content?.extraContent ?? [];
 
-console.info("aaaaaaaaaaaaaaaaaaaa",scrollItems);
-console.info("bbbbbbbbbbbbbbbbbbbbbbbbbbb",contentToDisplay);
-
-            if (!scrollItems || scrollItems.length === 0) {
-              return (
-                <div className="w-full h-screen flex items-center justify-center bg-gray-100">
-                  <p className="text-gray-500">No scroll content available</p>
-                </div>
-              );
+          if (typeof scrollItems === "string") {
+            try {
+              scrollItems = JSON.parse(scrollItems);
+            } catch (err) {
+              console.error("Failed to parse extraContent string as JSON", err);
+              scrollItems = [];
             }
+          }
 
-            return <ScrollViewer items={scrollItems} />;
-          } catch (error) {
-            console.error('Error parsing scroll content:', error);
+          // Ensure it's an array
+          scrollItems = Array.isArray(scrollItems) ? scrollItems : [];
+
+          if (scrollItems.length === 0) {
             return (
               <div className="w-full h-screen flex items-center justify-center bg-gray-100">
-                <p className="text-red-500">Error loading scroll content</p>
+                <p className="text-gray-500">No scroll content available</p>
               </div>
             );
           }
+
+          return <ScrollViewer items={scrollItems} />;
         })()}
 
         {(contentToDisplay?.type === "Map" ||

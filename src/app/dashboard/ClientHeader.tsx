@@ -925,13 +925,15 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
             });
         } else if (template?.type === 'document') {
             contentType = ChatType.Document;
-        } else if (template?.type === 'scroll') {
+        } else if (template?.type === 'scroll' || template?.type === 'Scroll') {
             contentType = ChatType.Scroll;
-            contentExtra = templateToSend?.ext;
+            contentExtra = templateToSend?.ext ?? templateToSend?.items;
         } else {
             contentType = ChatType.Text;
         }
 
+
+        console.info("ffffffcontentExtracontentExtraffffgdgd", contentExtra);
         emitSendTemplate({
             refId: templateToSend?.id,
             langCode: langToSend,
@@ -2031,6 +2033,8 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
 
     useEffect(() => {
         if (!isInIframe) return;
+        
+        console.info("CLICKED");
 
         const handler = (event: MessageEvent) => {
 
@@ -2287,6 +2291,8 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                             contentExtra = template?.ext;
                         }
                     }
+
+
 
                 if (template && socketConnected) {
                     emitSendTemplate({
