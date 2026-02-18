@@ -2048,7 +2048,7 @@ function createFormPrefillModal(formData) {
   }
 
   const isMobile = isMobileView();
-  console.info("555555555555555555555555", isMobile);
+
   const modalOverlay = document.createElement('div');
   modalOverlay.id = 'nobstacle-form-prefill-modal';
 

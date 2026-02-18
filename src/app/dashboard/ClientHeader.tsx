@@ -2169,8 +2169,6 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                 let template;
                 let contentExtra;
 
-                                 console.info("12123222113123312312", type);
-
                 if (type === 'Text' && textTemplates) {
                     template = textTemplates.find(t =>
                         t.tag === tag &&
@@ -2274,24 +2272,21 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                         );
                         contentExtra = template?.ext;
                     }
-                } else if (type === 'Scroll' || type === 'scroll' && scrolls) {
-                    console.info("1111111111111111111111111111111", scrolls);
-                    template = scrolls.find(t =>
-                        t.tag === tag &&
-                        t.langCode?.includes(selectedLang)
-                    );
-                    contentExtra = template?.ext;
-
-                    console.info("22222222222222222222222222", contentExtra);
-
-                    if (!template && companyData?.defaultLangCode) {
+                 } else if ((type === 'Scroll' || type === 'scroll') && scrolls) {
                         template = scrolls.find(t =>
                             t.tag === tag &&
-                            t.langCode?.includes(companyData.defaultLangCode)
+                            t.langCode?.includes(selectedLang)
                         );
                         contentExtra = template?.ext;
+
+                        if (!template && companyData?.defaultLangCode) {
+                            template = scrolls.find(t =>
+                                t.tag === tag &&
+                                t.langCode?.includes(companyData.defaultLangCode)
+                            );
+                            contentExtra = template?.ext;
+                        }
                     }
-                }
 
                 if (template && socketConnected) {
                     emitSendTemplate({
@@ -2780,7 +2775,8 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         fetchFormQuestions,
         generateFormPrefillModalHTML,
         sendJotFormMessage,
-        buildUrlFromFormData
+        buildUrlFromFormData,
+        scrolls
     ]);
 
     const handleSendPackage = (categoryId: any) => {
