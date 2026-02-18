@@ -2273,12 +2273,13 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                         contentExtra = template?.ext;
                     }
                 } else if (type === 'Scroll' || type === 'scroll' && scrolls) {
+                    console.info("1111111111111111111111111111111", scrolls);
                     template = scrolls.find(t =>
                         t.tag === tag &&
                         t.langCode?.includes(selectedLang)
                     );
                     contentExtra = template?.ext;
-
+            console.info("22222222222222222222222222", contentExtra);
                     if (!template && companyData?.defaultLangCode) {
                         template = scrolls.find(t =>
                             t.tag === tag &&
