@@ -65,6 +65,10 @@ interface BearState {
   setSearchRecordings: (recordings: any[]) => void;
   receivedRecording: any[];
   setRecievedRecording: (recordings: any[]) => void;
+  scrolls: any[];
+  setScrolls: (scrolls: any[]) => void;
+  searchScrolls: any[];
+  setSearchScrolls: (scrolls: any[]) => void;
 }
 
 const useTemplateStore = create<BearState>()(
@@ -108,7 +112,7 @@ const useTemplateStore = create<BearState>()(
       setDocuments: (documents) => set(() => ({ documents })),
       searchDocuments: [],
       setSearchDocuments: (searchDocuments) => set(() => ({ searchDocuments })),
-       teamDocuments: [],
+      teamDocuments: [],
       setTeamDocuments: (teamDocuments) => set(() => ({ teamDocuments })),
       searchTeamDocuments: [],
       setSearchTeamDocuments: (searchTeamDocuments) => set(() => ({ searchTeamDocuments })),
@@ -124,6 +128,10 @@ const useTemplateStore = create<BearState>()(
       setSearchRecordings: (searchRecordings) => set(() => ({ searchRecordings })),
       receivedRecording: null,
       setRecievedRecording: (receivedRecording) => set(() => ({ receivedRecording })),
+      scrolls: [],
+      setScrolls: (scrolls) => set(() => ({ scrolls })),
+      searchScrolls: [],
+      setSearchScrolls: (searchScrolls) => set(() => ({ searchScrolls })),
     }),
     {
       name: "templates-storage",

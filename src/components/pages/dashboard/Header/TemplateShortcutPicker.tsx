@@ -19,13 +19,14 @@ import {
   GetWebsiteTemplateRes,
 } from "../../../../lib/client/model";
 
+
 export const TemplateShortcutPicker: React.FC<{ checkIframe?: boolean; isMobile?: boolean }> = ({
   checkIframe = true,
   isMobile
 }) => {
   const { emitSendTemplate } = useSocketContext();
   const { company } = useCompanyStore();
-  const { texts, images, videos, slideshows, maps, websites, documents } = useTemplateStore();
+  const { texts, images, videos, slideshows, maps, websites, documents, scrolls } = useTemplateStore();
   const isHydrated = useHasHydrated();
   const [isInIframe, setIsInIframe] = useState(false);
   const params = useSearchParams();
@@ -144,6 +145,21 @@ export const TemplateShortcutPicker: React.FC<{ checkIframe?: boolean; isMobile?
           isExistOnDefaultLanguage = true;
         }
         break;
+      case "Scroll":
+        template = scrolls.find(
+          (scroll) =>
+            scroll.tag === tag &&
+            scroll.langCode?.includes(params.get("lang") || company?.defaultLangCode || "en")
+        );
+        if (!template && company?.defaultLangCode) {
+          template = scrolls.find(
+            (scroll) =>
+              scroll.tag === tag &&
+              scroll.langCode?.includes(company?.defaultLangCode)
+          );
+          isExistOnDefaultLanguage = true;
+        }
+        break;
       case "Map":
         template = maps.find(
           (map) =>
@@ -175,7 +191,7 @@ export const TemplateShortcutPicker: React.FC<{ checkIframe?: boolean; isMobile?
     if (!template) return;
 
     let contentExtra = undefined;
-    if (type === "Image" || type === "Video" || type === "Website" || type === "Document") {
+    if (type === "Image" || type === "Video" || type === "Website" || type === "Document" || type === "Scroll") {
       contentExtra = (template as GetImageTemplateRes | GetVideoTemplateRes | GetWebsiteTemplateRes | GetDocumentTemplateRes)?.ext;
     } else if (type === "Map") {
       contentExtra = JSON.stringify({
@@ -229,15 +245,14 @@ export const TemplateShortcutPicker: React.FC<{ checkIframe?: boolean; isMobile?
   }
 
   return (
-    <div className={`flex cursor-pointer ${isMobile ? 'justify-center align-items-center gap-4': ''} ${isInIframe ? 'gap-1' : 'gap-2'}`}>
+    <div className={`flex cursor-pointer ${isMobile ? 'justify-center align-items-center gap-4' : ''} ${isInIframe ? 'gap-1' : 'gap-2'}`}>
       {sortedShortcuts.map((res) => (
         <span
           key={res.id}
           onClick={() => handleOnSendTemplateClick(res.id, res.key as any, res.value)}
           title={`${res.value}/${res.key}`}
-          className={`flex items-center justify-center ${
-            isInIframe ? 'h-[20px] w-[20px]' : 'h-[25px] w-[25px]'
-          }`}
+          className={`flex items-center justify-center ${isInIframe ? 'h-[20px] w-[20px]' : 'h-[25px] w-[25px]'
+            }`}
         >
           {renderIcon(res.extraValue ?? "IoAdd", res.color)}
         </span>

@@ -662,7 +662,7 @@ const RegisterUsers: React.FC = () => {
                             placeholder="Select role"
                             options={[
                                 { label: 'Admin', value: 'Admin' },
-                                { label: 'Staff', value: 'Staff' },
+                                { label: 'Client', value: 'Staff' },
                                 { label: 'User', value: 'User' },
                             ]}
                         />

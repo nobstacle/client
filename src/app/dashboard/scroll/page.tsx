@@ -269,6 +269,7 @@ export default function ScrollDashboard() {
                   }
                   isDraggable={searchResults.length === 0}
                   id={val.id}
+                  type="Scroll"
                 >
                   <Tooltip title="Click to preview scroll">
                     <div

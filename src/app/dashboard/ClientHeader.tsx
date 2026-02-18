@@ -67,6 +67,7 @@ import JotFormPrefillModal from "../../components/pages/dashboard/Header/FormSel
 import { SendIcon } from "@/components/icons/SendIcon";
 import { BsFillSendPlusFill } from "react-icons/bs";
 import axios from 'axios';
+import { IoCaretDownCircle } from 'react-icons/io5';
 
 interface ClientHeaderProps {
     user: Session | null;
@@ -683,7 +684,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         slideshow: { icon: <IoImages />, color: '#3b5998', label: 'Slideshow' },
         map: { icon: <IoMap />, color: '#3b5998', label: 'Map' },
         document: { icon: <IoDocuments />, color: '#3b5998', label: 'Document' },
-        scroll: { icon: <IoImages />, color: '#3b5998', label: 'Scroll' }
+        scroll: { icon: <IoCaretDownCircle />, color: '#3b5998', label: 'Scroll' }
     }), []);
 
     // Combine all templates
@@ -1474,10 +1475,9 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
     <path d="M384 32H64A64 64 0 000 96v256a64.11 64.11 0 0048 62V152a72 72 0 0172-72h326a64.11 64.11 0 00-62-48z"/>
   </svg>`,
 
-            // IoImages - Scroll icon (same as slideshow visually)
+            // WITH THIS:
             scroll: `<svg style="width: 24px; height: 24px;" fill="currentColor" viewBox="0 0 512 512">
-    <path d="M450.29 112H142c-34 0-62 27.51-62 61.33v245.34c0 33.82 28 61.33 62 61.33h308.29c34 0 61.71-27.51 61.71-61.33V173.33c0-33.82-27.68-61.33-61.71-61.33zm-77.15 61.34a46 46 0 11-46.28 46 46.19 46.19 0 0146.28-46.01zm-231.55 276c-17 0-29.86-13.75-29.86-30.66v-64.83l90.46-80.79a46.54 46.54 0 0163.44 1.83L328.27 337l-112 112.33zM480 418.67a30.67 30.67 0 01-30.71 30.66H259L376.08 333a46.24 46.24 0 0159.44-.16L480 370.59z"/>
-    <path d="M384 32H64A64 64 0 000 96v256a64.11 64.11 0 0048 62V152a72 72 0 0172-72h326a64.11 64.11 0 00-62-48z"/>
+    <path d="M256 48C141.13 48 48 141.13 48 256s93.13 208 208 208 208-93.13 208-208S370.87 48 256 48zm94.63 187.15l-78.38 78.38a22.62 22.62 0 01-32 0l-78.38-78.38a22.63 22.63 0 0132-32L256 265.37l62.13-62.22a22.63 22.63 0 0132 32z"/>
   </svg>`,
 
             // IoMap - Map icon
