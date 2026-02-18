@@ -1910,7 +1910,7 @@ function createSearchDropdown(content) {
   dropdown.id = 'nobstacle-search-dropdown';
 
   const isMobile = isMobileView();
-  console.info("444444444444444444", isMobile);
+
   dropdown.style.cssText = isMobile ? `
     position: fixed !important;
     top: 56px !important;

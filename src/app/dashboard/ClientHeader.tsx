@@ -2169,6 +2169,8 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                 let template;
                 let contentExtra;
 
+                                 console.info("12123222113123312312", type);
+
                 if (type === 'Text' && textTemplates) {
                     template = textTemplates.find(t =>
                         t.tag === tag &&
@@ -2279,7 +2281,9 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                         t.langCode?.includes(selectedLang)
                     );
                     contentExtra = template?.ext;
-            console.info("22222222222222222222222222", contentExtra);
+
+                    console.info("22222222222222222222222222", contentExtra);
+
                     if (!template && companyData?.defaultLangCode) {
                         template = scrolls.find(t =>
                             t.tag === tag &&
