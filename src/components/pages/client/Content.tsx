@@ -625,7 +625,7 @@ export const Content: React.FC = () => {
   const company = useCompanyControllerGetCompany();
   const params = useSearchParams();
   const messageStore = useMessageStore();
-  const hasHydrated = useHasHydrated();
+  const hasHydrated = useHasHydrated(); 
   const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
   const [showQR, setShowQR] = useState(false);
   const [timer, setTimer] = useState(20);
