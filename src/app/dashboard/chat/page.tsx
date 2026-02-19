@@ -41,7 +41,7 @@ export default function Dashboard() {
 
   if (hasHydrated) {
     return (
-      <div className="flex w-full flex-col items-center justify-center gap-2 p-4">
+      <div className="flex w-full flex-col items-center justify-center gap-2 p-4" style={{position:'relative', zIndex: 0}}>
         <div className="w-full max-w-[100%] sm:max-w-[75%] md:max-w-[50%]">
           <ChatBox
             ref={chatBoxRef}

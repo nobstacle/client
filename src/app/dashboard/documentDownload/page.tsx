@@ -286,7 +286,7 @@ export default function DocumentDownload() {
                     </Card>
                 </div>
 
-                <div className="flex w-full flex-col items-center justify-center gap-2 p-4">
+                <div className="flex w-full flex-col items-center justify-center gap-2 p-4" style={{position:'relative', zIndex: 0}}>
                     <div className="w-full">
                         <div className="flex h-full w-full">
                             <div className="flex w-full flex-wrap content-start gap-4">

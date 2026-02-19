@@ -21,6 +21,7 @@ import {
 import { useMessageStore } from "../lib/zustand/store/messageStore";
 import useTemplateStore from "../lib/zustand/store/templateStore";
 import { SendPackagePayloadType, ReceivedPackageContent, ReceivedUpsellPackageContent } from "../constant/types";
+import { notification } from 'antd';
 
 // Add document-related types
 export interface SendDocumentPayloadType {
@@ -116,26 +117,34 @@ export const SocketContextProvider = ({
   const session = useSession();
   const params = useSearchParams();
 
-  // Initialize socket connection
-  // In SocketContextProvider, modify the useEffect:
-  useEffect(() => {
-    if (session.data?.user.backendTokens.at) {
-      const socketC = socket(
-        session.data?.user.backendTokens.at ?? "",
-      );
+useEffect(() => {
+    if (!session.data?.user.backendTokens.at) return;
+    
+    // Don't recreate if already connected
+    if (socketClient?.connected) return;
 
-      // Set socket client immediately
-      setSocketClient(socketC);
+    const socketC = socket(session.data?.user.backendTokens.at ?? "");
+    setSocketClient(socketC);
+    socketC.connect();
 
-      // Then connect
-      socketC.connect();
-
-      // Listen for connection
-      socketC.on("connect", () => {
+    socketC.on("connect", () => {
         setSocketConnected(true);
-      });
-    }
-  }, [session.data?.user.backendTokens.at]);
+    });
+
+    socketC.on("disconnect", (reason) => {
+        setSocketConnected(false);
+        // Auto reconnect unless server explicitly closed it
+        if (reason === "io server disconnect") {
+            socketC.connect();
+        }
+    });
+
+    // Cleanup only on unmount, not on token change
+    return () => {
+        socketC.removeAllListeners();
+        socketC.disconnect();
+    };
+}, [session.data?.user.backendTokens.at]);
 
   // Socket event handlers
   const onConnect = () => {
@@ -356,21 +365,36 @@ export const SocketContextProvider = ({
     }
   }
 
-  const onDataSubmitted = (data: any) => {
+const onDataSubmitted = (data: any) => {
     try {
-      const parsedRes = JSON.parse(data);
-      if (parsedRes.status === 400) {
-        console.warn("⚠️ JotForm data error:", parsedRes);
-        return;
-      }
+        // Handle both string and object
+        const parsedRes = typeof data === 'string' ? JSON.parse(data) : data;
+        
+        if (parsedRes?.status === 400) {
+            console.warn("⚠️ JotForm data error:", parsedRes);
+            return;
+        }
 
-      const parsedData = parsedRes.data as ReceivedResponseType;
-      setReceivedResponse(parsedData);
+
+        const formId = parsedRes?.formId || parsedRes?.data?.formId;
+        const responseData = parsedRes?.data || parsedRes;
+
+        setReceivedResponse({ 
+            ...responseData,
+            formId  
+        } as ReceivedResponseType);
+
+        // notification.success({
+        //     message: 'Form Submitted',
+        //     description: 'A guest has submitted a form.',
+        //     placement: 'topRight',
+        //     duration: 3,
+        // });
 
     } catch (error) {
-      console.error("❌ Failed to parse JotForm data:", error);
+        console.error("❌ Failed to handle dataSaved event:", error);
     }
-  };
+};
 
   const onSubmittedRecordings = (data: any) => {
     try {
@@ -477,14 +501,21 @@ export const SocketContextProvider = ({
 
   const onRecievedUpsellPackage = (payload: any) => {
     try {
-
-      // payload.data is now an array of objects
       if (Array.isArray(payload.data)) {
         setReceivedContent(payload.data);
       } else {
         console.warn("Expected array but received:", typeof payload.data);
         setReceivedContent([payload.data]);
       }
+
+      // Show notification
+      notification.info({
+        message: 'Upsell Package Selected',
+        description: 'A guest has interacted with an upsell package.',
+        placement: 'topRight',
+        duration: 3,
+      });
+
     } catch (error) {
       console.error("❌ Error parsing package response:", error);
     }

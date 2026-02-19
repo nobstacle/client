@@ -4,7 +4,11 @@ import * as yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { Button, Select, Form, Space, Upload, message } from "antd";
 import { languages } from "../../../constant/languages";
-import type { GetScrollTemplateRes, ScrollMediaItem } from "../../../app/dashboard/scroll/page";
+import {
+  useScrollControllerUpdate,
+  type GetScrollTemplateRes,
+  type ScrollMediaItem,
+} from "../../../lib/client/api";
 import {
   DndContext,
   closestCenter,
@@ -30,8 +34,9 @@ import type { RcFile } from "antd/es/upload/interface";
 const { Dragger } = Upload;
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-const MAX_ITEMS = 10;
-const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
+// Kept consistent with CreateScrollTemplateForm
+const MAX_ITEMS = 15;
+const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50 MB
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface SequenceEntry {
@@ -143,7 +148,9 @@ export const UpdateScrollTemplateForm: React.FC<{
     }))
   );
   const [sequenceError, setSequenceError] = React.useState<string | null>(null);
-  const [uploading, setUploading] = React.useState(false);
+
+  // ✅ Use the generated API hook — auth headers injected automatically
+  const updateScroll = useScrollControllerUpdate();
 
   const {
     control,
@@ -151,9 +158,7 @@ export const UpdateScrollTemplateForm: React.FC<{
     formState: { errors },
   } = useForm<FormValues>({
     resolver: yupResolver(schema),
-    defaultValues: {
-      langCode: defaultLangCode,
-    },
+    defaultValues: { langCode: defaultLangCode },
   });
 
   // ── DnD ─────────────────────────────────────────────────────────────────────
@@ -167,11 +172,12 @@ export const UpdateScrollTemplateForm: React.FC<{
     const { active, over } = event;
     if (over && active.id !== over.id) {
       setSequence((prev) => {
-        const old = prev.findIndex((e) => e.uid === active.id);
-        const next = prev.findIndex((e) => e.uid === over.id);
-        const reordered = arrayMove(prev, old, next);
-        // Update order values
-        return reordered.map((item, idx) => ({ ...item, order: idx + 1 }));
+        const oldIdx = prev.findIndex((e) => e.uid === active.id);
+        const newIdx = prev.findIndex((e) => e.uid === over.id);
+        return arrayMove(prev, oldIdx, newIdx).map((item, idx) => ({
+          ...item,
+          order: idx + 1,
+        }));
       });
     }
   };
@@ -180,39 +186,25 @@ export const UpdateScrollTemplateForm: React.FC<{
   const handleFileUpload = (file: RcFile): boolean => {
     setSequenceError(null);
 
-    // Check max items
     if (sequence.length >= MAX_ITEMS) {
       setSequenceError(`Maximum ${MAX_ITEMS} items allowed.`);
       return false;
     }
-
-    // Check file size
     if (file.size > MAX_FILE_SIZE) {
-      message.error(`File size must be less than 100MB`);
+      message.error(`File size must be less than 50MB`);
       return false;
     }
 
-    // Determine media type
-    const mediaType = file.type.startsWith("image/") ? "image" : "video";
-
-    // Validate file type
     const allowedTypes = [
-      "image/jpeg",
-      "image/jpg",
-      "image/png",
-      "image/webp",
-      "image/gif",
-      "video/mp4",
-      "video/webm",
-      "video/quicktime",
+      "image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif",
+      "video/mp4", "video/webm", "video/quicktime",
     ];
-
     if (!allowedTypes.includes(file.type)) {
       message.error("Only images (jpg, png, webp, gif) and videos (mp4, webm, mov) are allowed");
       return false;
     }
 
-    // Add to sequence
+    const mediaType = file.type.startsWith("image/") ? "image" : "video";
     setSequence((prev) => [
       ...prev,
       {
@@ -225,15 +217,13 @@ export const UpdateScrollTemplateForm: React.FC<{
       },
     ]);
 
-    return false; // Prevent default upload behavior
+    return false; // prevent default ant upload behaviour
   };
 
   const removeItem = (uid: string) => {
-    setSequence((prev) => {
-      const filtered = prev.filter((e) => e.uid !== uid);
-      // Reorder after removal
-      return filtered.map((item, idx) => ({ ...item, order: idx + 1 }));
-    });
+    setSequence((prev) =>
+      prev.filter((e) => e.uid !== uid).map((item, idx) => ({ ...item, order: idx + 1 }))
+    );
     setSequenceError(null);
   };
 
@@ -244,65 +234,35 @@ export const UpdateScrollTemplateForm: React.FC<{
       return;
     }
 
-    setUploading(true);
+    const formData = new FormData();
+    formData.append("langCode", data.langCode);
+
+    const existingItemsToKeep = sequence
+      .filter((e) => e.isExisting)
+      .map((e) => ({ ...e.existingData, order: e.order }));
+
+    const newFiles = sequence.filter((e) => !e.isExisting);
+
+    if (existingItemsToKeep.length > 0) {
+      formData.append("existingItems", JSON.stringify(existingItemsToKeep));
+    }
+
+    if (newFiles.length > 0) {
+      newFiles.forEach((e) => { if (e.file) formData.append("files", e.file); });
+      formData.append(
+        "itemsMetadata",
+        JSON.stringify(newFiles.map((e) => ({ order: e.order, name: e.name })))
+      );
+    }
 
     try {
-      const formData = new FormData();
-      formData.append("langCode", data.langCode);
-
-      // Separate existing and new items
-      const existingItemsToKeep = sequence
-        .filter((entry) => entry.isExisting)
-        .map((entry) => ({
-          ...entry.existingData,
-          order: entry.order,
-        }));
-
-      const newFiles = sequence.filter((entry) => !entry.isExisting);
-
-      // Add existing items
-      if (existingItemsToKeep.length > 0) {
-        formData.append("existingItems", JSON.stringify(existingItemsToKeep));
-      }
-
-      // Add new files
-      if (newFiles.length > 0) {
-        newFiles.forEach((entry) => {
-          if (entry.file) {
-            formData.append("files", entry.file);
-          }
-        });
-
-        // Add metadata for new files
-        const itemsMetadata = newFiles.map((entry) => ({
-          order: entry.order,
-          name: entry.name,
-        }));
-        formData.append("itemsMetadata", JSON.stringify(itemsMetadata));
-      }
-
-      // Make API call
-      const response = await fetch(`/api/v1/scrolls/${sourceId}`, {
-        method: "PUT",
-        body: formData,
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to update scroll template");
-      }
-
-      const result = await response.json();
-
+      // ✅ mutateAsync via the generated hook — no manual fetch, no localStorage token
+      const result = await updateScroll.mutateAsync({ id: sourceId, data: formData });
       message.success("Scroll template updated successfully!");
       cb?.(result);
     } catch (error) {
       console.error("Update scroll error:", error);
       message.error("Failed to update scroll template");
-    } finally {
-      setUploading(false);
     }
   };
 
@@ -345,14 +305,11 @@ export const UpdateScrollTemplateForm: React.FC<{
             disabled={sequence.length >= MAX_ITEMS}
             accept="image/jpeg,image/jpg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime"
           >
-            <p className="ant-upload-drag-icon">
-              <InboxOutlined />
-            </p>
+            <p className="ant-upload-drag-icon"><InboxOutlined /></p>
             <p className="ant-upload-text">Click or drag files to add</p>
             <p className="ant-upload-hint">
-              Upload additional images or videos
-              <br />
-              Max file size: 100MB. Max total files: {MAX_ITEMS}
+              Images (jpg, png, webp, gif) and videos (mp4, webm, mov).
+              Max file size: 50MB. Max total files: {MAX_ITEMS}
             </p>
           </Dragger>
         </Form.Item>
@@ -360,23 +317,11 @@ export const UpdateScrollTemplateForm: React.FC<{
         {/* ── Sequence list ─────────────────────────────────────────────── */}
         {sequence.length > 0 && (
           <Form.Item label="Sequence — drag to reorder, click × to remove">
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              onDragEnd={handleDragEnd}
-            >
-              <SortableContext
-                items={sequence.map((e) => e.uid)}
-                strategy={verticalListSortingStrategy}
-              >
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+              <SortableContext items={sequence.map((e) => e.uid)} strategy={verticalListSortingStrategy}>
                 <div className="flex flex-col gap-1">
                   {sequence.map((entry, i) => (
-                    <SortableRow
-                      key={entry.uid}
-                      entry={entry}
-                      index={i}
-                      onRemove={removeItem}
-                    />
+                    <SortableRow key={entry.uid} entry={entry} index={i} onRemove={removeItem} />
                   ))}
                 </div>
               </SortableContext>
@@ -400,16 +345,12 @@ export const UpdateScrollTemplateForm: React.FC<{
                 style={{ width: "100%" }}
                 showSearch
                 filterOption={(input, option) =>
-                  (option?.children as string)
-                    ?.toLowerCase()
-                    .includes(input.toLowerCase())
+                  (option?.children as string)?.toLowerCase().includes(input.toLowerCase())
                 }
                 optionFilterProp="children"
               >
                 {languages.map(({ code, name }, index) => (
-                  <Select.Option value={code} key={index}>
-                    {name}
-                  </Select.Option>
+                  <Select.Option value={code} key={index}>{name}</Select.Option>
                 ))}
               </Select>
             )}
@@ -423,10 +364,10 @@ export const UpdateScrollTemplateForm: React.FC<{
             htmlType="submit"
             style={{ width: "100%" }}
             className="create-template-button"
-            loading={uploading}
-            disabled={uploading}
+            loading={updateScroll.isPending}
+            disabled={updateScroll.isPending}
           >
-            {uploading ? "Updating..." : "Update Scroll Template"}
+            {updateScroll.isPending ? "Updating..." : "Update Scroll Template"}
           </Button>
         </Form.Item>
       </Space>

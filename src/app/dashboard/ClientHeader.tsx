@@ -68,6 +68,7 @@ import { SendIcon } from "@/components/icons/SendIcon";
 import { BsFillSendPlusFill } from "react-icons/bs";
 import axios from 'axios';
 import { IoCaretDownCircle } from 'react-icons/io5';
+import { useUserControllerPatchOne } from '../../lib/client/api';
 
 interface ClientHeaderProps {
     user: Session | null;
@@ -191,6 +192,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
     const [form] = Form.useForm();
     const [passwordMatch, setPasswordMatch] = useState<boolean | null>(null);
     const [loading, setLoading] = useState(false);
+    const patchUserMutation = useUserControllerPatchOne();
 
     useEffect(() => {
         setIsInIframe(window.self !== window.top);
@@ -1679,25 +1681,29 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
             setLoading(true);
             const values = await form.validateFields();
 
-            // Here you would call your API to change the password
-            // Example:
-            // await changePasswordAPI({
-            //   currentPassword: values.currentPassword,
-            //   newPassword: values.newPassword
-            // });
+            const userId = user?.user?.id;
+            if (!userId) {
+                message.error('User ID not found');
+                return;
+            }
 
-            console.log('Password change values:', values);
+            await patchUserMutation.mutateAsync({
+                id: Number(userId),
+                data: {
+                    password: values.currentPassword,
+                    newPassword: values.newPassword,
+                }
+            });
 
-            // Reset form and close modal on success
             form.resetFields();
             setPasswordMatch(null);
             setResetPasswordModal(false);
+            message.success('Password changed successfully!');
 
-            // Show success message
-            // message.success('Password changed successfully!');
-
-        } catch (error) {
-            console.error('Validation failed:', error);
+        } catch (error: any) {
+            console.error('Password change failed:', error);
+            const errorMessage = error?.response?.data?.message || error?.message || 'Failed to change password';
+            message.error(errorMessage);
         } finally {
             setLoading(false);
         }
@@ -2033,7 +2039,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
 
     useEffect(() => {
         if (!isInIframe) return;
-    
+
         const handler = (event: MessageEvent) => {
 
             if (event.data.type === 'HAMBURGER_CLOSED') {
@@ -2044,10 +2050,9 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                 handleLogout();
             }
 
-            if (event.data.type === 'CHANGE_PASSWORD') {
-                // Handle password change
-                console.log('Change password clicked');
-            }
+            // if (event.data.type === 'CHANGE_PASSWORD') {
+            //     setResetPasswordModal(true);
+            // }
 
             if (event.data.type === 'REQUEST_STATION_PICKER') {
                 const currentStation = params.get("station") ?? "1";
@@ -2274,21 +2279,21 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                         );
                         contentExtra = template?.ext;
                     }
-                 } else if ((type === 'Scroll' || type === 'scroll') && scrolls) {
+                } else if ((type === 'Scroll' || type === 'scroll') && scrolls) {
+                    template = scrolls.find(t =>
+                        t.tag === tag &&
+                        t.langCode?.includes(selectedLang)
+                    );
+                    contentExtra = template?.ext;
+
+                    if (!template && companyData?.defaultLangCode) {
                         template = scrolls.find(t =>
                             t.tag === tag &&
-                            t.langCode?.includes(selectedLang)
+                            t.langCode?.includes(companyData.defaultLangCode)
                         );
                         contentExtra = template?.ext;
-
-                        if (!template && companyData?.defaultLangCode) {
-                            template = scrolls.find(t =>
-                                t.tag === tag &&
-                                t.langCode?.includes(companyData.defaultLangCode)
-                            );
-                            contentExtra = template?.ext;
-                        }
                     }
+                }
 
 
 
@@ -3093,6 +3098,11 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                                         <div className="bg-gray-50/80 border border-gray-200 rounded-xl p-4 shadow-sm">
                                                             <div className="relative">
                                                                 <input
+                                                                    readOnly
+                                                                    onFocus={(e) => {
+                                                                        e.target.removeAttribute('readonly'); // Remove on focus
+                                                                        // your existing focus logic...
+                                                                    }}
                                                                     ref={inputRef}
                                                                     autoComplete="off"
                                                                     autoCorrect="off"
@@ -3551,6 +3561,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                 }}>
                                     <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                                         <input
+                                            readOnly
                                             ref={inputRef}
                                             autoComplete="off"
                                             autoCorrect="off"
@@ -3563,6 +3574,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                             value={searchValue}
                                             onChange={handleSearchChange}
                                             onFocus={(e) => {
+                                                e.target.removeAttribute('readonly');
                                                 if (justSelectedRef.current) return;
                                                 if (searchValue.trim() && filteredTemplates.length > 0) {
                                                     setIsDropdownVisible(true);
@@ -4336,7 +4348,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                 okText="Change Password"
                 cancelText="Cancel"
                 okButtonProps={{
-                    disabled: !passwordMatch || loading
+                    disabled: passwordMatch !== true || loading
                 }}
             >
                 <Form

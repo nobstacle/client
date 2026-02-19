@@ -21,6 +21,7 @@ import { IoQrCode } from "react-icons/io5";
 import Papa from 'papaparse';
 import { debounce } from 'lodash';
 import { HiRefresh } from "react-icons/hi";
+import { useMessageStore } from "../../../lib/zustand/store/messageStore";
 
 const { Option } = Select;
 
@@ -153,6 +154,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 	const hasLoadedUserData = useRef(false);
 	const fetchControllerRef = useRef<AbortController | null>(null);
 	const currentFormIdRef = useRef<string | null>(null);
+	const { receivedResponse } = useMessageStore();
 
 	useEffect(() => {
 		const handleResize = () => {
@@ -165,6 +167,18 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 			return () => window.removeEventListener('resize', handleResize);
 		}
 	}, []);
+
+useEffect(() => {
+    if (!receivedResponse || !selectedForm) return;
+
+    getTableResponse(
+        selectedForm,
+        currentPage,
+        pageSize,
+        lastSearchedValue,
+        selectedFilter
+    );
+}, [receivedResponse]);
 
 	const getUrlParams = () => {
 		if (typeof window !== 'undefined') {
@@ -221,26 +235,26 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 			console.error("Socket error:", err);
 		};
 
-		const handleDataSaved = ({ formId }: { formId: string }) => {
-			setCurrentPage(1);
-			getTableResponse(
-				formId,
-				1,
-				itemsPerPage,
-				lastSearchRef.current,
-				filterRef.current
-			);
-		};
+		// const handleDataSaved = ({ formId }: { formId: string }) => {
+		// 	setCurrentPage(1);
+		// 	getTableResponse(
+		// 		formId,
+		// 		1,
+		// 		itemsPerPage,
+		// 		lastSearchRef.current,
+		// 		filterRef.current
+		// 	);
+		// };
 
 		// Don't listen to "connect" event
 		socket.on("disconnect", handleDisconnect);
 		socket.on("connect_error", handleError);
-		socket.on("dataSaved", handleDataSaved);
+		// socket.on("dataSaved", handleDataSaved);
 
 		return () => {
 			socket.off("disconnect", handleDisconnect);
 			socket.off("connect_error", handleError);
-			socket.off("dataSaved", handleDataSaved);
+			// socket.off("dataSaved", handleDataSaved);
 		};
 	}, [socket]);
 
