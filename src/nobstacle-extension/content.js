@@ -2601,9 +2601,22 @@ async function injectHeader() {
           console.log('[Content Script] ⏹️ Recording stopped');
 
           const audioBlob = new Blob(audioChunks, { type: mimeType });
+          if (audioBlob.size === 0) {
+            iframe.contentWindow.postMessage({
+              type: 'RECORDING_ERROR',
+              error: 'Recording is empty. Please record for a bit longer and try again.'
+            }, '*');
+            return;
+          }
 
           // Convert to base64 to send to iframe
           const reader = new FileReader();
+          reader.onerror = () => {
+            iframe.contentWindow.postMessage({
+              type: 'RECORDING_ERROR',
+              error: 'Unable to process recorded audio'
+            }, '*');
+          };
           reader.onloadend = () => {
             const base64Audio = reader.result.split(',')[1];
 
@@ -2614,6 +2627,13 @@ async function injectHeader() {
             }, '*');
           };
           reader.readAsDataURL(audioBlob);
+        };
+        mediaRecorder.onerror = (recorderError) => {
+          console.error('[Content Script] ❌ MediaRecorder error:', recorderError);
+          iframe.contentWindow.postMessage({
+            type: 'RECORDING_ERROR',
+            error: 'Recording failed due to a microphone error'
+          }, '*');
         };
 
         mediaRecorder.start(100);
@@ -2630,6 +2650,9 @@ async function injectHeader() {
         console.log('[Content Script] ⏹️ Stopping recording...');
 
         if (window.nobstacleMediaRecorder && window.nobstacleMediaRecorder.state !== 'inactive') {
+          if (window.nobstacleMediaRecorder.state === 'recording') {
+            window.nobstacleMediaRecorder.requestData();
+          }
           window.nobstacleMediaRecorder.stop();
         }
       }
@@ -3018,8 +3041,21 @@ async function injectHeader() {
               console.log('[Content Script] ⏹️ Recording stopped');
 
               const audioBlob = new Blob(audioChunks, { type: mimeType });
+              if (audioBlob.size === 0) {
+                iframe.contentWindow.postMessage({
+                  type: 'RECORDING_ERROR',
+                  error: 'Recording is empty. Please record for a bit longer and try again.'
+                }, '*');
+                return;
+              }
 
               const reader = new FileReader();
+              reader.onerror = () => {
+                iframe.contentWindow.postMessage({
+                  type: 'RECORDING_ERROR',
+                  error: 'Unable to process recorded audio'
+                }, '*');
+              };
               reader.onloadend = () => {
                 const base64Audio = reader.result.split(',')[1];
 
@@ -3037,6 +3073,13 @@ async function injectHeader() {
                 window.nobstacleAudioStream = null;
               };
               reader.readAsDataURL(audioBlob);
+            };
+            mediaRecorder.onerror = (recorderError) => {
+              console.error('[Content Script] ❌ MediaRecorder error:', recorderError);
+              iframe.contentWindow.postMessage({
+                type: 'RECORDING_ERROR',
+                error: 'Recording failed due to a microphone error'
+              }, '*');
             };
 
             mediaRecorder.start(100);

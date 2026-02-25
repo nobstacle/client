@@ -52,6 +52,11 @@ export const HeaderRecordingShortcut: React.FC<HeaderRecordingShortcutProps> = (
                 console.log('[HeaderRecording] 🔴 Recording started by content script');
                 setIsRecording(true);
                 setRecordingTime(0);
+                emitSendRecording({
+                    tag: confirmationNumberRef.current?.trim() || `REC-${Date.now()}`,
+                    station: params.get("station") ? Number(params.get("station")) : 1,
+                    langCode: params.get("lang") || "en",
+                });
 
                 // Start timer
                 timerRef.current = setInterval(() => {
@@ -77,31 +82,41 @@ export const HeaderRecordingShortcut: React.FC<HeaderRecordingShortcutProps> = (
                 setIsRecording(false);
                 setIsUploading(true);
 
-                // Convert base64 back to blob and upload
-                const base64Audio = event.data.audioData;
-                const mimeType = event.data.mimeType;
+                Promise.resolve()
+                    .then(async () => {
+                        const base64Audio = event.data.audioData;
+                        const mimeType = event.data.mimeType || 'audio/webm';
 
-                const binaryString = atob(base64Audio);
-                const bytes = new Uint8Array(binaryString.length);
-                for (let i = 0; i < binaryString.length; i++) {
-                    bytes[i] = binaryString.charCodeAt(i);
-                }
+                        if (!base64Audio) {
+                            throw new Error('No recording data was received');
+                        }
 
-                const audioBlob = new Blob([bytes], { type: mimeType });
+                        // Convert base64 back to blob and upload
+                        const binaryString = atob(base64Audio);
+                        const bytes = new Uint8Array(binaryString.length);
+                        for (let i = 0; i < binaryString.length; i++) {
+                            bytes[i] = binaryString.charCodeAt(i);
+                        }
 
-                // Determine extension
-                let extension = 'webm';
-                if (mimeType.includes('mp4')) extension = 'mp4';
-                else if (mimeType.includes('ogg')) extension = 'ogg';
+                        const audioBlob = new Blob([bytes], { type: mimeType });
+                        if (audioBlob.size === 0) {
+                            throw new Error('Recorded audio is empty');
+                        }
 
-                uploadRecording(audioBlob, extension)
+                        // Determine extension
+                        let extension = 'webm';
+                        if (mimeType.includes('mp4')) extension = 'mp4';
+                        else if (mimeType.includes('ogg')) extension = 'ogg';
+
+                        await uploadRecording(audioBlob, extension);
+                    })
                     .then(() => {
                         message.success('Recording saved successfully!');
                         clearConfirmationNumber();
                     })
-                    .catch((error) => {
+                    .catch((error: any) => {
                         console.error('[HeaderRecording] Upload error:', error);
-                        message.error('Failed to save recording');
+                        message.error(`Failed to save recording: ${error?.message || 'Unknown error'}`);
                     })
                     .finally(() => {
                         setIsUploading(false);
@@ -120,11 +135,18 @@ export const HeaderRecordingShortcut: React.FC<HeaderRecordingShortcutProps> = (
                 setIsRecording(false);
                 setIsUploading(false);
             }
+
+            if (event.data.type === 'MICROPHONE_PERMISSION_DENIED') {
+                console.error('[HeaderRecording] ❌ Microphone denied:', event.data);
+                message.error(event.data?.message || 'Microphone permission denied');
+                setIsRecording(false);
+                setIsUploading(false);
+            }
         };
 
         window.addEventListener('message', handler);
         return () => window.removeEventListener('message', handler);
-    }, [isInIframe, clearConfirmationNumber]);
+    }, [isInIframe, clearConfirmationNumber, emitSendRecording, params]);
 
     // Update recording indicator in extension
     useEffect(() => {
@@ -322,13 +344,6 @@ export const HeaderRecordingShortcut: React.FC<HeaderRecordingShortcutProps> = (
         window.parent.postMessage({
             type: 'REQUEST_MICROPHONE_AND_START_RECORDING'
         }, '*');
-
-        // Emit socket event
-        emitSendRecording({
-            tag: confirmationNumber.trim() || `REC-${Date.now()}`,
-            station: params.get("station") ? Number(params.get("station")) : 1,
-            langCode: params.get("lang") || "en",
-        });
     };
 
     const startRecording = async () => {
@@ -419,6 +434,15 @@ export const HeaderRecordingShortcut: React.FC<HeaderRecordingShortcutProps> = (
     };
 
     const uploadRecording = async (blob: Blob, extension: string = 'webm') => {
+        if (!Url) {
+            throw new Error('Backend URL is not configured');
+        }
+
+        const backendToken = data?.user?.backendTokens?.at;
+        if (!backendToken) {
+            throw new Error('Authentication token is missing. Please refresh and try again');
+        }
+
         let confirmationNumberVal = confirmationNumber ? confirmationNumber : confirmationNumberRef.current ? confirmationNumberRef.current : `REC-${Date.now()}`;
         const formData = new FormData();
         const fileName = `recording_${Date.now()}.${extension}`;
@@ -430,7 +454,7 @@ export const HeaderRecordingShortcut: React.FC<HeaderRecordingShortcutProps> = (
         const response = await fetch(`${Url}/api/v1/recordings/upload`, {
             method: 'POST',
             headers: {
-                Authorization: `Bearer ${data?.user.backendTokens.at}`,
+                Authorization: `Bearer ${backendToken}`,
             },
             body: formData,
         });
@@ -438,7 +462,7 @@ export const HeaderRecordingShortcut: React.FC<HeaderRecordingShortcutProps> = (
         if (!response.ok) {
             const errorText = await response.text();
             console.error('[Recording] Upload failed:', response.status, errorText);
-            throw new Error(`Upload failed: ${response.status}`);
+            throw new Error(errorText || `Upload failed: ${response.status}`);
         }
 
         const result = await response.json();
