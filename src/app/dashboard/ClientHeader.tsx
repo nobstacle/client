@@ -3079,10 +3079,10 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                                                 </div>
 
                                                                 <div>
-                                                                    <PairUrlButton 
-                                                                    stationNo={Number(currentStation)}
-                                                                    backendToken={data?.user?.backendTokens?.at}
-                                                                />
+                                                                    <PairUrlButton
+                                                                        stationNo={Number(currentStation)}
+                                                                        backendToken={data?.user?.backendTokens?.at}
+                                                                    />
                                                                 </div>
                                                                 {/* Station */}
                                                                 <div>
@@ -3765,10 +3765,10 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                             border: '1px solid #e5e7eb',
                                             animation: 'slideDown 0.2s ease-out'
                                         }}>
-                                            <PairUrlButton 
-    stationNo={Number(currentStation)}
-    backendToken={data?.user?.backendTokens?.at}
-  />
+                                            <PairUrlButton
+                                                stationNo={Number(currentStation)}
+                                                backendToken={data?.user?.backendTokens?.at}
+                                            />
                                             {/* Station Number */}
                                             <div style={{
                                                 padding: '16px 20px',

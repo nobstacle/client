@@ -19,7 +19,7 @@ export const PairUrlButton = ({ stationNo, backendToken }: PairUrlButtonProps) =
   // Countdown timer
   useEffect(() => {
     if (!expiresAt) return;
-    
+
     const tick = () => {
       const diff = expiresAt.getTime() - Date.now();
       if (diff <= 0) {
@@ -84,9 +84,9 @@ export const PairUrlButton = ({ stationNo, backendToken }: PairUrlButtonProps) =
 
   return (
     <div style={{
+      padding: '16px 20px',
       borderBottom: '1px solid #f0f0f0',
-      paddingBottom: '12px',
-      marginBottom: '12px',
+      backgroundColor: '#f8fafc'
     }}>
       {/* Label */}
       <label style={{
