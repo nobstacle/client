@@ -665,6 +665,8 @@ export const Content: React.FC = () => {
       },
     });
 
+  console.info("defaultSlideshowContentdefaultSlideshowContentdefaultSlideshowContent", defaultSlideshowContent?.data);
+
   const chatBoxRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -1840,7 +1842,7 @@ export const Content: React.FC = () => {
         })()}
 
         {contentToDisplay?.type === "ChatMessage" && (
-          <div className="flex w-full flex-col items-center justify-center gap-2 p-4" style={{position:'relative', zIndex: 0}}>
+          <div className="flex w-full flex-col items-center justify-center gap-2 p-4" style={{ position: 'relative', zIndex: 0 }}>
             <div className="w-full max-w-[100%] sm:max-w-[75%] md:max-w-[50%]">
               <ChatBox
                 ref={chatBoxRef}
@@ -2253,7 +2255,8 @@ export const Content: React.FC = () => {
             </Card>
           ) : (
             <>
-              <Slideshow contents={messageStore.receivedContent?.contents ?? contentToDisplay?.contents ?? defaultSlideshowContent.data?.contents ?? []} />
+              {console.info("IN", messageStore.receivedContent, contentToDisplay, defaultSlideshowContent)}
+              <Slideshow contents={messageStore.receivedContent?.contents && messageStore.receivedContent?.contents[0] !== null ? messageStore.receivedContent?.contents : contentToDisplay?.contents ? contentToDisplay?.contents : defaultSlideshowContent.data?.contents ?? []} />
             </>
           )
         )}
