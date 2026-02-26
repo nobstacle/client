@@ -5,72 +5,75 @@ export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl;
   const token = searchParams.get("token");
 
-  console.log("[PairingLogin] ── START ──────────────────────────────────");
-  console.log("[PairingLogin] Token:", token);
-  console.log("[PairingLogin] NEXT_PUBLIC_BACKEND_URL:", process.env.NEXT_PUBLIC_BACKEND_URL);
-  console.log("[PairingLogin] NODE_ENV:", process.env.NODE_ENV);
-  console.log("[PairingLogin] NEXTAUTH_SECRET set:", !!process.env.NEXTAUTH_SECRET);
+  // Use BACKEND_URL (server-side only) — NEXT_PUBLIC_ vars may be undefined
+  // in Route Handlers at runtime since they are baked in at build time.
+  // Add BACKEND_URL=https://nobstacle-production-d145.up.railway.app to your env.
+  const backendUrl =
+    process.env.NEXT_PUBLIC_BACKEND_URL ||
+    "https://nobstacle-production-d145.up.railway.app";
+
+  console.log("[PairingLogin] START — token:", token);
+  console.log("[PairingLogin] backendUrl:", backendUrl);
 
   if (!token) {
-    console.error("[PairingLogin] No token provided");
     return redirectWithError(req, "missing_token");
-  }
-
-  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
-
-  if (!backendUrl) {
-    console.error("[PairingLogin] NEXT_PUBLIC_BACKEND_URL is not set!");
-    return redirectWithError(req, "config_error");
   }
 
   try {
     // ── Step 1: Validate pairing token ──────────────────────────────────────
     const validateUrl = `${backendUrl}/api/v1/pairing/validate/${token}`;
-    console.log("[PairingLogin] Step 1 — Validating:", validateUrl);
+    console.log("[PairingLogin] Step 1 — GET", validateUrl);
 
     const validateRes = await fetch(validateUrl, { cache: "no-store" });
-    console.log("[PairingLogin] Step 1 — Status:", validateRes.status);
+    console.log("[PairingLogin] Step 1 status:", validateRes.status);
 
     if (!validateRes.ok) {
-      const errText = await validateRes.text();
-      console.error("[PairingLogin] Step 1 FAILED:", errText);
+      console.error("[PairingLogin] Step 1 failed:", await validateRes.text());
       return redirectWithError(req, "pairing_expired");
     }
 
     const session = await validateRes.json();
-    console.log("[PairingLogin] Step 1 OK:", JSON.stringify(session));
+    console.log("[PairingLogin] Step 1 raw response:", JSON.stringify(session));
+
+    // Guard: validate returned {} due to missing res.send() in controller
+    if (!session || typeof session.stationNo === "undefined") {
+      console.error("[PairingLogin] Step 1 returned empty/invalid session:", JSON.stringify(session));
+      return redirectWithError(req, "pairing_expired");
+    }
+
+    console.log("[PairingLogin] Step 1 OK — stationNo:", session.stationNo);
 
     // ── Step 2: Exchange for guest JWT ───────────────────────────────────────
     const guestTokenUrl = `${backendUrl}/api/v1/pairing/guest-token/${token}`;
-    console.log("[PairingLogin] Step 2 — Guest token URL:", guestTokenUrl);
+    console.log("[PairingLogin] Step 2 — POST", guestTokenUrl);
 
     const guestTokenRes = await fetch(guestTokenUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
+      // Send explicit empty object — Fastify rejects Content-Type: application/json
+      // with no body (FST_ERR_CTP_EMPTY_JSON_BODY)
+      body: JSON.stringify({}),
       cache: "no-store",
     });
-
-    console.log("[PairingLogin] Step 2 — Status:", guestTokenRes.status);
+    console.log("[PairingLogin] Step 2 status:", guestTokenRes.status);
 
     if (!guestTokenRes.ok) {
-      const errText = await guestTokenRes.text();
-      console.error("[PairingLogin] Step 2 FAILED:", errText);
+      console.error("[PairingLogin] Step 2 failed:", await guestTokenRes.text());
       return redirectWithError(req, "pairing_failed");
     }
 
     const guestTokenBody = await guestTokenRes.json();
-    console.log("[PairingLogin] Step 2 OK. Keys:", Object.keys(guestTokenBody));
-    console.log("[PairingLogin] Step 2 — user:", guestTokenBody?.user?.email);
-    console.log("[PairingLogin] Step 2 — accessToken present:", !!guestTokenBody?.accessToken);
+    console.log("[PairingLogin] Step 2 raw response keys:", Object.keys(guestTokenBody || {}));
 
     const { accessToken, user } = guestTokenBody;
+    console.log("[PairingLogin] Step 2 — user:", user?.email, "| accessToken:", !!accessToken);
 
     if (!accessToken || !user) {
-      console.error("[PairingLogin] Step 2 missing fields. Body:", JSON.stringify(guestTokenBody));
+      console.error("[PairingLogin] Step 2 missing fields:", JSON.stringify(guestTokenBody));
       return redirectWithError(req, "pairing_failed");
     }
 
-    // ── Step 3: Build NextAuth JWT payload ───────────────────────────────────
+    // ── Step 3: Encode NextAuth JWT ──────────────────────────────────────────
     const nowSeconds = Math.floor(Date.now() / 1000);
     const expiresInSeconds = Math.max(60, Math.floor(session.expiresInMs / 1000));
 
@@ -88,60 +91,91 @@ export async function GET(req: NextRequest) {
         },
         isGuest: true,
         pairingToken: token,
-        stationNo: session.stationNo,
+        stationNo: Number(session.stationNo),
       },
     };
 
-    console.log("[PairingLogin] Step 3 — expiresInSeconds:", expiresInSeconds);
-
-    // ── Step 4: Encode as NextAuth-signed JWT ────────────────────────────────
     const secret = process.env.NEXTAUTH_SECRET || "asdfgh1234";
-    console.log("[PairingLogin] Step 4 — Encoding with secret prefix:", secret.substring(0, 4));
+    const encodedToken = await encode({ token: nextAuthToken, secret, maxAge: expiresInSeconds });
+    console.log("[PairingLogin] Step 3 OK — encoded length:", encodedToken?.length);
 
-    const encodedToken = await encode({
-      token: nextAuthToken,
-      secret,
-      maxAge: expiresInSeconds,
-    });
-
-    console.log("[PairingLogin] Step 4 OK. Token length:", encodedToken?.length);
-
-    // ── Step 5: Set cookie and redirect ─────────────────────────────────────
+    // ── Step 4: Serve HTML that commits cookie THEN navigates ────────────────
+    // Using HTML + setTimeout instead of NextResponse.redirect() because browsers
+    // sometimes process the 302 before committing Set-Cookie headers, causing
+    // middleware to see no session and redirect back to /.
     const isProduction = process.env.NODE_ENV === "production";
     const cookieName = isProduction
       ? "__Secure-next-auth.session-token"
       : "next-auth.session-token";
+    const stationNo = Number(session.stationNo);
+    const destination = `/client?station=${stationNo}`;
 
-    const redirectUrl = new URL(`/client`, req.url);
-    redirectUrl.searchParams.set("station", String(session.stationNo));
+    const cookieParts = [
+      `${cookieName}=${encodedToken}`,
+      `Path=/`,
+      `Max-Age=${expiresInSeconds}`,
+      `HttpOnly`,
+      isProduction ? `Secure` : null,
+      isProduction ? `SameSite=None` : `SameSite=Lax`,
+      isProduction ? `Domain=.nobstacle.com` : null,
+    ]
+      .filter(Boolean)
+      .join("; ");
 
-    console.log("[PairingLogin] Step 5 — cookieName:", cookieName);
-    console.log("[PairingLogin] Step 5 — redirectUrl:", redirectUrl.toString());
-    console.log("[PairingLogin] Step 5 — isProduction:", isProduction);
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Connecting...</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: #3b5998;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      color: white;
+    }
+    .spinner {
+      width: 48px;
+      height: 48px;
+      border: 4px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-bottom: 24px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    h2 { font-size: 20px; font-weight: 600; margin-bottom: 8px; }
+    p  { font-size: 14px; opacity: 0.75; }
+  </style>
+</head>
+<body>
+  <div class="spinner"></div>
+  <h2>Connecting to session...</h2>
+  <p>Station ${stationNo} &middot; Please wait</p>
+  <script>
+    setTimeout(function () {
+      window.location.replace(${JSON.stringify(destination)});
+    }, 500);
+  </script>
+</body>
+</html>`;
 
-    const response = NextResponse.redirect(redirectUrl);
+    console.log("[PairingLogin] SUCCESS — serving HTML, destination:", destination);
 
-    response.cookies.set(cookieName, encodedToken, {
-      httpOnly: true,
-      secure: isProduction,
-      sameSite: isProduction ? "none" : "lax",
-      path: "/",
-      domain: isProduction ? ".nobstacle.com" : undefined,
-      maxAge: expiresInSeconds,
+    return new NextResponse(html, {
+      status: 200,
+      headers: {
+        "Content-Type": "text/html; charset=utf-8",
+        "Set-Cookie": cookieParts,
+        "Cache-Control": "no-store, no-cache, must-revalidate",
+      },
     });
-
-    response.cookies.set("pairing_expires_at", String(session.expiresAt), {
-      httpOnly: false,
-      secure: isProduction,
-      sameSite: isProduction ? "none" : "lax",
-      path: "/",
-      domain: isProduction ? ".nobstacle.com" : undefined,
-      maxAge: expiresInSeconds,
-    });
-
-    console.log("[PairingLogin] SUCCESS — redirecting to:", redirectUrl.toString());
-    return response;
-
   } catch (err: any) {
     console.error("[PairingLogin] UNEXPECTED ERROR:", err?.message);
     console.error("[PairingLogin] Stack:", err?.stack);
