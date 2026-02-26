@@ -69,6 +69,7 @@ import { BsFillSendPlusFill } from "react-icons/bs";
 import axios from 'axios';
 import { IoCaretDownCircle } from 'react-icons/io5';
 import { useUserControllerPatchOne } from '../../lib/client/api';
+import { PairUrlButton } from "@/components/pages/dashboard/Header/PairUrlButton";
 
 interface ClientHeaderProps {
     user: Session | null;
@@ -3077,6 +3078,12 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                                                     </div>
                                                                 </div>
 
+                                                                <div>
+                                                                    <PairUrlButton 
+                                                                    stationNo={Number(currentStation)}
+                                                                    backendToken={data?.user?.backendTokens?.at}
+                                                                />
+                                                                </div>
                                                                 {/* Station */}
                                                                 <div>
                                                                     <label className="block text-xs font-medium text-gray-600 mb-1.5">
@@ -3758,6 +3765,10 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                             border: '1px solid #e5e7eb',
                                             animation: 'slideDown 0.2s ease-out'
                                         }}>
+                                            <PairUrlButton 
+    stationNo={Number(currentStation)}
+    backendToken={data?.user?.backendTokens?.at}
+  />
                                             {/* Station Number */}
                                             <div style={{
                                                 padding: '16px 20px',
