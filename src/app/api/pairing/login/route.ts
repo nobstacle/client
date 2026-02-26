@@ -9,6 +9,7 @@ export async function GET(req: NextRequest) {
   // in Route Handlers at runtime since they are baked in at build time.
   // Add BACKEND_URL=https://nobstacle-production-d145.up.railway.app to your env.
   const backendUrl =
+    process.env.BACKEND_URL ||
     process.env.NEXT_PUBLIC_BACKEND_URL ||
     "https://nobstacle-production-d145.up.railway.app";
 

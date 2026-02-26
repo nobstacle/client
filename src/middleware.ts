@@ -6,27 +6,22 @@ export async function middleware(req: NextRequest) {
   const url = req.nextUrl.clone();
   const pathname = req.nextUrl.pathname;
 
-  console.log("🚀 MIDDLEWARE RUNNING for:", pathname);
+  console.log("🚀 MIDDLEWARE:", pathname);
 
-  // ── CRITICAL: Pairing paths must be whitelisted BEFORE getToken() ──────────
-  // /pair/[token]        → the page that redirects to /api/pairing/login
-  // /api/pairing/login   → the server route that sets the session cookie
-  // /api/pairing/        → all other public pairing API endpoints (validate etc.)
-  const isPairingPath =
+  // ── MUST be first — before ANY other check including getToken() ────────────
+  // These paths are fully public and must never require authentication.
+  if (
     pathname.startsWith("/pair/") ||
-    pathname.startsWith("/api/pairing/");
-
-  if (isPairingPath) {
+    pathname === "/pair" ||
+    pathname.startsWith("/api/pairing") ||  // catches /api/pairing/login and /api/pairing/login/
+    pathname.includes("/api/pairing")        // extra safety net
+  ) {
+    console.log("✅ PAIRING PATH — bypassing auth:", pathname);
     const response = NextResponse.next();
     response.headers.delete("X-Frame-Options");
-    response.headers.set(
-      "Content-Security-Policy",
-      "frame-ancestors 'self' chrome-extension://* https://* http://localhost:* http://127.0.0.1:*"
-    );
     return response;
   }
 
-  // Get the session token (only reached for non-pairing paths)
   const token = await getToken({
     req,
     secret: process.env.NEXTAUTH_SECRET || "asdfgh1234",
@@ -44,7 +39,7 @@ export async function middleware(req: NextRequest) {
   const isSAdmin = token?.user?.Roles?.includes("SAdmin");
   const isGuest = !!token?.user?.isGuest;
 
-  // ── /header-only routes ────────────────────────────────────────────────────
+  // ── /header-only ───────────────────────────────────────────────────────────
   if (pathname.startsWith("/header-only")) {
     const response = NextResponse.next();
     response.headers.delete("X-Frame-Options");
@@ -71,7 +66,7 @@ export async function middleware(req: NextRequest) {
     if (!isAuthenticated || !isSAdmin) {
       if (req.method === "GET") {
         if (isAuthenticated) {
-          url.pathname = (isUser || isGuest) ? "/client" : "/dashboard/text";
+          url.pathname = isUser || isGuest ? "/client" : "/dashboard/text";
           if (isUser || isGuest) url.searchParams.set("station", "1");
         } else {
           url.pathname = "/";
@@ -85,19 +80,19 @@ export async function middleware(req: NextRequest) {
     }
   }
 
-  // ── Other NextAuth routes ──────────────────────────────────────────────────
+  // ── NextAuth routes ────────────────────────────────────────────────────────
   if (pathname.startsWith("/api/auth")) {
     return NextResponse.next();
   }
 
-  // ── Require auth for non-public pages ─────────────────────────────────────
+  // ── Require auth ───────────────────────────────────────────────────────────
   if (!isPublicPath && !isAuthenticated) {
-    console.log("❌ Unauthenticated access attempt, redirecting to /");
+    console.log("❌ Unauthenticated, redirecting to /:", pathname);
     url.pathname = "/";
     return NextResponse.redirect(url);
   }
 
-  // ── /api/user & /api/users — SAdmin only (write) ──────────────────────────
+  // ── /api/user — SAdmin write ───────────────────────────────────────────────
   if (pathname.startsWith("/api/user") || pathname === "/api/users") {
     if (req.method !== "GET" && (!isAuthenticated || !isSAdmin)) {
       return NextResponse.json(
@@ -107,7 +102,7 @@ export async function middleware(req: NextRequest) {
     }
   }
 
-  // ── /api/companies — SAdmin only (write) ──────────────────────────────────
+  // ── /api/companies — SAdmin write ─────────────────────────────────────────
   if (pathname.startsWith("/api/companies") || pathname === "/api/company") {
     if (req.method !== "GET" && (!isAuthenticated || !isSAdmin)) {
       return NextResponse.json(
@@ -139,9 +134,8 @@ export async function middleware(req: NextRequest) {
     }
   }
 
-  // ── /dashboard rules ───────────────────────────────────────────────────────
+  // ── /dashboard ─────────────────────────────────────────────────────────────
   if (pathname.startsWith("/dashboard")) {
-    // Guests must never access dashboard
     if (isGuest) {
       url.pathname = "/client";
       url.searchParams.set("station", String(token?.user?.stationNo ?? "1"));
@@ -153,7 +147,7 @@ export async function middleware(req: NextRequest) {
       pathname.startsWith("/dashboard/companies")
     ) {
       if (!isAuthenticated || !isSAdmin) {
-        url.pathname = (isUser) ? "/client" : "/dashboard/text";
+        url.pathname = isUser ? "/client" : "/dashboard/text";
         if (isUser) url.searchParams.set("station", "1");
         return NextResponse.redirect(url);
       }
@@ -176,7 +170,7 @@ export async function middleware(req: NextRequest) {
     }
   }
 
-  // ── /client rules ──────────────────────────────────────────────────────────
+  // ── /client ────────────────────────────────────────────────────────────────
   if (pathname.startsWith("/client")) {
     if (isAuthenticated) {
       if (isSAdmin) {
@@ -187,11 +181,11 @@ export async function middleware(req: NextRequest) {
         url.pathname = "/dashboard/text";
         return NextResponse.redirect(url);
       }
-      // isUser and isGuest are both allowed through
+      // isUser and isGuest both allowed through
     }
   }
 
-  // ── /onboard rules ─────────────────────────────────────────────────────────
+  // ── /onboard ───────────────────────────────────────────────────────────────
   if (pathname === "/onboard/create-company") {
     if (isAuthenticated && isCompanyExist) {
       url.pathname = "/";
