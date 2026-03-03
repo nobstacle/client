@@ -188,7 +188,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
     const [currentStation, setCurrentStation] = useState<string>(
         params.get("station") || "1"
     );
-    const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+    const [windowWidth, setWindowWidth] = useState(0);
     const [resetPasswordModal, setResetPasswordModal] = useState(false);
     const [form] = Form.useForm();
     const [passwordMatch, setPasswordMatch] = useState<boolean | null>(null);
@@ -230,6 +230,8 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
     }, [params]);
 
     useEffect(() => {
+        setWindowWidth(window.innerWidth);
+
         const handleResize = () => {
             setWindowWidth(window.innerWidth);
         };
@@ -241,6 +243,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
     const isMobileView = windowWidth < 1024;
 
     function isIPad() {
+        if (typeof window === 'undefined') return false;
         const ua = navigator.userAgent;
         return /iPad/.test(ua) ||
             (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) ||
@@ -248,6 +251,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
     }
 
     function isTabletOrMobile() {
+        if (typeof window === 'undefined') return false;
         return window.innerWidth < 1024;
     }
 

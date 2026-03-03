@@ -52,6 +52,9 @@ export const PairUrlButton = ({ stationNo, backendToken }: PairUrlButtonProps) =
           body: JSON.stringify({ stationNo }),
         }
       );
+      if (!res.ok) {
+        throw new Error(`Failed to generate pairing URL (${res.status})`);
+      }
       const data = await res.json();
       setPairUrl(data.url);
       setExpiresAt(new Date(data.expiresAt));
@@ -71,8 +74,7 @@ export const PairUrlButton = ({ stationNo, backendToken }: PairUrlButtonProps) =
   };
 
   const revoke = async () => {
-    // Extract token from URL
-    const token = pairUrl?.split('/pair/')[1];
+    const token = pairUrl ? new URL(pairUrl).pathname.split('/').filter(Boolean).pop() : null;
     if (!token) return;
     await fetch(
       `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/pairing/revoke/${token}`,

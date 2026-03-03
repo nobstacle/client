@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
   const backendUrl =
     process.env.BACKEND_URL ||
     process.env.NEXT_PUBLIC_BACKEND_URL ||
-    "https://nobstacle-production-d145.up.railway.app";
+    "http://localhost:3001";
 
   console.log("[PairingLogin] START — token:", token);
   console.log("[PairingLogin] backendUrl:", backendUrl);
