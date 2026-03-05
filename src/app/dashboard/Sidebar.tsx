@@ -17,6 +17,7 @@ import {
     IoWallet,
     IoPeople,
     IoSettings,
+    IoLogoWhatsapp,
     IoHome
 } from 'react-icons/io5';
 // import { IoRecordingSharp } from "react-icons/io5";
@@ -80,7 +81,7 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
             icon: <FaBuilding size={18} />,
             iconColor: "white"
         },
-               {
+        {
             title: "Forms",
             href: "/dashboard/asignForms",
             roles: ["SAdmin"],
@@ -112,7 +113,7 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
             icon: <IoPlay size={18} />,
             iconColor: "white"
         },
-                {
+        {
             title: "Scroll",
             href: "/dashboard/scroll",
             roles: ["Admin", "User", "Staff"],
@@ -174,6 +175,14 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
             href: "/dashboard/form",
             roles: ["Admin", "User", "Staff"],
             icon: <IoDocumentText size={18} />,
+            iconColor: "#D9F2D0",
+            textColor: "#D9F2D0"
+        },
+        {
+            title: "WhatsApp",
+            href: "/dashboard/whatsapp",
+            roles: ["Admin", "User", "Staff"],
+            icon: <IoLogoWhatsapp size={18} />,
             iconColor: "#D9F2D0",
             textColor: "#D9F2D0"
         },
