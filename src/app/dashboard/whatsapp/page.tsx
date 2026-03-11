@@ -425,6 +425,19 @@ export default function WhatsAppPage() {
         }
     };
 
+    const approveTemplate = async (id: number) => {
+        try {
+            await apiRequest(`/api/v1/whatsapp/templates/${id}/status`, {
+                method: "PUT",
+                body: JSON.stringify({ status: "approved" }),
+            });
+            message.success("Template marked as approved");
+            await loadTemplates();
+        } catch (error) {
+            message.error(parseErrorMessage(error));
+        }
+    };
+
     const launchCampaign = async () => {
         try {
             if (!metaConnection.connected) {
@@ -468,8 +481,8 @@ export default function WhatsAppPage() {
 
     const testMetaConnection = async () => {
         try {
-            if (!metaForm.appId || !metaForm.businessAccountId || !metaForm.phoneNumberId || !metaForm.accessToken) {
-                message.error("App ID, business account ID, phone number ID and access token are required");
+            if (!metaForm.phoneNumberId || !metaForm.accessToken) {
+                message.error("Phone number ID and access token are required");
                 return;
             }
             setMetaActionLoading(true);
@@ -487,8 +500,8 @@ export default function WhatsAppPage() {
 
     const connectMetaApp = async () => {
         try {
-            if (!metaForm.appId || !metaForm.businessAccountId || !metaForm.phoneNumberId || !metaForm.accessToken) {
-                message.error("App ID, business account ID, phone number ID and access token are required");
+            if (!metaForm.phoneNumberId || !metaForm.accessToken) {
+                message.error("Phone number ID and access token are required");
                 return;
             }
             setMetaActionLoading(true);
@@ -615,6 +628,13 @@ export default function WhatsAppPage() {
                     <Tooltip title="Preview">
                         <Button size="small" icon={<EyeOutlined />} onClick={() => { setSelectedTemplate(record); setTemplatePreviewModal(true); }} />
                     </Tooltip>
+                    {record.status !== "approved" && (
+                        <Popconfirm title="Mark template as approved?" onConfirm={() => approveTemplate(record.id)}>
+                            <Tooltip title="Mark Approved">
+                                <Button size="small" type="primary" icon={<CheckCircleOutlined />} />
+                            </Tooltip>
+                        </Popconfirm>
+                    )}
                     <Button size="small" icon={<EditOutlined />} disabled />
                     <Popconfirm title="Delete template?" onConfirm={() => deleteTemplate(record.id)}>
                         <Button size="small" danger icon={<DeleteOutlined />} />
@@ -967,13 +987,13 @@ export default function WhatsAppPage() {
                 width={620}
             >
                 <Form layout="vertical">
-                    <Form.Item label="Meta App ID" required>
+                    <Form.Item label="Meta App ID (optional)">
                         <Input value={metaForm.appId} onChange={(e) => setMetaForm({ ...metaForm, appId: e.target.value })} />
                     </Form.Item>
                     <Form.Item label="Meta App Secret (optional)">
                         <Input.Password value={metaForm.appSecret} onChange={(e) => setMetaForm({ ...metaForm, appSecret: e.target.value })} />
                     </Form.Item>
-                    <Form.Item label="WhatsApp Business Account ID" required>
+                    <Form.Item label="WhatsApp Business Account ID (optional)">
                         <Input value={metaForm.businessAccountId} onChange={(e) => setMetaForm({ ...metaForm, businessAccountId: e.target.value })} />
                     </Form.Item>
                     <Form.Item label="WhatsApp Phone Number ID" required>

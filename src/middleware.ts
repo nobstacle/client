@@ -144,7 +144,8 @@ export async function middleware(req: NextRequest) {
     if (
       pathname.startsWith("/dashboard/asignForms") ||
       pathname.startsWith("/dashboard/register") ||
-      pathname.startsWith("/dashboard/companies")
+      pathname.startsWith("/dashboard/companies") ||
+      pathname.startsWith("/dashboard/whatsappMetaAccounts")
     ) {
       if (!isAuthenticated || !isSAdmin) {
         url.pathname = isUser ? "/client" : "/dashboard/text";

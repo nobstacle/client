@@ -63,7 +63,7 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
     const pathname = usePathname();
 
     // Check if user is SAdmin
-    const isSAdmin = user?.user.Roles?.includes("SAdmin");
+    const isSAdmin = user?.user?.Roles?.includes("SAdmin");
 
     // Menu items for SAdmin users
     const sAdminMenuItems: MenuItem[] = [
@@ -79,6 +79,13 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
             href: "/dashboard/companies",
             roles: ["SAdmin"],
             icon: <FaBuilding size={18} />,
+            iconColor: "white"
+        },
+        {
+            title: "WhatsApp Meta",
+            href: "/dashboard/whatsappMetaAccounts",
+            roles: ["SAdmin"],
+            icon: <IoLogoWhatsapp size={18} />,
             iconColor: "white"
         },
         {
