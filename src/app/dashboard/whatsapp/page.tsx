@@ -27,7 +27,12 @@ const { TextArea } = Input;
 const { Step } = Steps;
 const { Dragger } = Upload;
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+const API_URL = (() => {
+    const raw = (process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || "").trim();
+    if (!raw) return undefined;
+    const trimmed = raw.replace(/\/+$/, "");
+    return trimmed.endsWith("/api/v1") ? trimmed : `${trimmed}/api/v1`;
+})();
 
 interface ContactList {
     id: number;
@@ -84,15 +89,6 @@ interface MetaConnectionStatus {
     phoneNumberId?: string;
     hasAccessToken: boolean;
     webhookVerifyToken?: string;
-}
-
-interface MetaConnectionForm {
-    appId: string;
-    appSecret: string;
-    businessAccountId: string;
-    phoneNumberId: string;
-    accessToken: string;
-    webhookVerifyToken: string;
 }
 
 const defaultCampaignStats: CampaignStats = {
@@ -194,16 +190,10 @@ export default function WhatsAppPage() {
         connected: false,
         hasAccessToken: false,
     });
-    const [metaModal, setMetaModal] = useState(false);
-    const [metaActionLoading, setMetaActionLoading] = useState(false);
-    const [metaForm, setMetaForm] = useState<MetaConnectionForm>({
-        appId: "",
-        appSecret: "",
-        businessAccountId: "",
-        phoneNumberId: "",
-        accessToken: "",
-        webhookVerifyToken: "",
-    });
+
+    console.info("!111111111111111111111111111111111111111111111",metaConnection);
+
+    const metaConnected = metaConnection.connected || (metaConnection.hasAccessToken && Boolean(metaConnection.phoneNumberId));
 
     const [contactSearch, setContactSearch] = useState("");
     const [templateSearch, setTemplateSearch] = useState("");
@@ -235,12 +225,12 @@ export default function WhatsAppPage() {
     }>({ sendType: "now" });
 
     const apiRequest = async <T,>(path: string, options: RequestInit = {}): Promise<T> => {
-        if (!BACKEND_URL) throw new Error("NEXT_PUBLIC_BACKEND_URL is not configured");
+        if (!API_URL) throw new Error("NEXT_PUBLIC_API_URL (or NEXT_PUBLIC_BACKEND_URL) is not configured");
         if (!token) throw new Error("Authentication token missing");
 
         const isFormData = options.body instanceof FormData;
 
-        const response = await fetch(`${BACKEND_URL}${path}`, {
+        const response = await fetch(`${API_URL}${path}`, {
             ...options,
             headers: {
                 Authorization: `Bearer ${token}`,
@@ -265,42 +255,37 @@ export default function WhatsAppPage() {
     };
 
     const loadContactLists = async () => {
-        const response = await apiRequest<{ items: ContactList[] }>("/api/v1/whatsapp/contacts?page=1&limit=200");
+        const response = await apiRequest<{ items: ContactList[] }>("/whatsapp/contacts?page=1&limit=200");
         setContactLists(response.items || []);
     };
 
     const loadTemplates = async () => {
-        const response = await apiRequest<{ items: Template[] }>("/api/v1/whatsapp/templates?page=1&limit=200");
+        const response = await apiRequest<{ items: Template[] }>("/whatsapp/templates?page=1&limit=200");
         setTemplates(response.items || []);
     };
 
     const loadCampaigns = async () => {
-        const response = await apiRequest<{ items: Campaign[] }>("/api/v1/whatsapp/campaigns?page=1&limit=200");
+        const response = await apiRequest<{ items: Campaign[] }>("/whatsapp/campaigns?page=1&limit=200");
         setCampaigns(response.items || []);
     };
 
     const loadStats = async () => {
-        const response = await apiRequest<CampaignStats>("/api/v1/whatsapp/campaigns/stats");
+        const response = await apiRequest<CampaignStats>("/whatsapp/campaigns/stats");
         setStats(response);
     };
 
     const loadMetaSettings = async () => {
-        const response = await apiRequest<MetaConnectionStatus>("/api/v1/whatsapp/settings");
+        const response = await apiRequest<MetaConnectionStatus>("/whatsapp/settings");
+        console.info("responseresponseresponseresponse",response);
         setMetaConnection(response);
-        setMetaForm((prev) => ({
-            ...prev,
-            appId: response.appId || prev.appId,
-            businessAccountId: response.businessAccountId || prev.businessAccountId,
-            phoneNumberId: response.phoneNumberId || prev.phoneNumberId,
-            webhookVerifyToken: response.webhookVerifyToken || prev.webhookVerifyToken,
-        }));
     };
 
     const loadAll = async () => {
         if (!token) return;
         setLoading(true);
         try {
-            await Promise.all([loadContactLists(), loadTemplates(), loadCampaigns(), loadStats(), loadMetaSettings()]);
+            await loadMetaSettings();
+            await Promise.all([loadContactLists(), loadTemplates(), loadCampaigns(), loadStats()]);
         } catch (error) {
             message.error(parseErrorMessage(error));
         } finally {
@@ -330,7 +315,7 @@ export default function WhatsAppPage() {
                     return;
                 }
 
-                const created = await apiRequest<ContactList>("/api/v1/whatsapp/contacts", {
+                const created = await apiRequest<ContactList>("/whatsapp/contacts", {
                     method: "POST",
                     body: JSON.stringify({
                         name: contactForm.name.trim(),
@@ -342,7 +327,7 @@ export default function WhatsAppPage() {
                 const formData = new FormData();
                 formData.append("file", csvFile.originFileObj);
 
-                await apiRequest(`/api/v1/whatsapp/contacts/${created.id}/import-csv`, {
+                await apiRequest(`/whatsapp/contacts/${created.id}/import-csv`, {
                     method: "POST",
                     body: formData,
                 });
@@ -356,7 +341,7 @@ export default function WhatsAppPage() {
                     return;
                 }
 
-                await apiRequest<ContactList>("/api/v1/whatsapp/contacts", {
+                await apiRequest<ContactList>("/whatsapp/contacts", {
                     method: "POST",
                     body: JSON.stringify({
                         name: contactForm.name.trim(),
@@ -381,7 +366,7 @@ export default function WhatsAppPage() {
 
     const deleteContactList = async (id: number) => {
         try {
-            await apiRequest(`/api/v1/whatsapp/contacts/${id}`, { method: "DELETE" });
+            await apiRequest(`/whatsapp/contacts/${id}`, { method: "DELETE" });
             message.success("Contact list deleted");
             await loadContactLists();
         } catch (error) {
@@ -396,7 +381,7 @@ export default function WhatsAppPage() {
                 return;
             }
 
-            await apiRequest<Template>("/api/v1/whatsapp/templates", {
+            await apiRequest<Template>("/whatsapp/templates", {
                 method: "POST",
                 body: JSON.stringify({
                     name: newTemplate.name.trim(),
@@ -417,7 +402,7 @@ export default function WhatsAppPage() {
 
     const deleteTemplate = async (id: number) => {
         try {
-            await apiRequest(`/api/v1/whatsapp/templates/${id}`, { method: "DELETE" });
+            await apiRequest(`/whatsapp/templates/${id}`, { method: "DELETE" });
             message.success("Template deleted");
             await loadTemplates();
         } catch (error) {
@@ -427,7 +412,7 @@ export default function WhatsAppPage() {
 
     const approveTemplate = async (id: number) => {
         try {
-            await apiRequest(`/api/v1/whatsapp/templates/${id}/status`, {
+            await apiRequest(`/whatsapp/templates/${id}/status`, {
                 method: "PUT",
                 body: JSON.stringify({ status: "approved" }),
             });
@@ -440,8 +425,8 @@ export default function WhatsAppPage() {
 
     const launchCampaign = async () => {
         try {
-            if (!metaConnection.connected) {
-                message.error("Connect your company Meta app first");
+            if (!metaConnected) {
+                message.error("WhatsApp Meta is not assigned for this company. Ask your Super Admin to assign it.");
                 return;
             }
 
@@ -464,7 +449,7 @@ export default function WhatsAppPage() {
                 payload.scheduledAt = campaignForm.scheduledAt.toISOString();
             }
 
-            await apiRequest<Campaign>("/api/v1/whatsapp/campaigns", {
+            await apiRequest<Campaign>("/whatsapp/campaigns", {
                 method: "POST",
                 body: JSON.stringify(payload),
             });
@@ -479,62 +464,9 @@ export default function WhatsAppPage() {
         }
     };
 
-    const testMetaConnection = async () => {
-        try {
-            if (!metaForm.phoneNumberId || !metaForm.accessToken) {
-                message.error("Phone number ID and access token are required");
-                return;
-            }
-            setMetaActionLoading(true);
-            await apiRequest("/api/v1/whatsapp/settings/test", {
-                method: "POST",
-                body: JSON.stringify(metaForm),
-            });
-            message.success("Meta connection test successful");
-        } catch (error) {
-            message.error(parseErrorMessage(error));
-        } finally {
-            setMetaActionLoading(false);
-        }
-    };
-
-    const connectMetaApp = async () => {
-        try {
-            if (!metaForm.phoneNumberId || !metaForm.accessToken) {
-                message.error("Phone number ID and access token are required");
-                return;
-            }
-            setMetaActionLoading(true);
-            await apiRequest("/api/v1/whatsapp/settings/connect", {
-                method: "POST",
-                body: JSON.stringify(metaForm),
-            });
-            message.success("Company Meta app connected");
-            await loadMetaSettings();
-            setMetaModal(false);
-        } catch (error) {
-            message.error(parseErrorMessage(error));
-        } finally {
-            setMetaActionLoading(false);
-        }
-    };
-
-    const disconnectMetaApp = async () => {
-        try {
-            setMetaActionLoading(true);
-            await apiRequest("/api/v1/whatsapp/settings/disconnect", { method: "DELETE" });
-            message.success("Meta app disconnected");
-            await loadMetaSettings();
-        } catch (error) {
-            message.error(parseErrorMessage(error));
-        } finally {
-            setMetaActionLoading(false);
-        }
-    };
-
     const deleteCampaign = async (id: number) => {
         try {
-            await apiRequest(`/api/v1/whatsapp/campaigns/${id}`, { method: "DELETE" });
+            await apiRequest(`/whatsapp/campaigns/${id}`, { method: "DELETE" });
             message.success("Campaign deleted");
             await Promise.all([loadCampaigns(), loadStats()]);
         } catch (error) {
@@ -834,19 +766,12 @@ export default function WhatsAppPage() {
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
-                        <Badge dot status={metaConnection.connected ? "success" : "warning"}>
-                            <Tag color={metaConnection.connected ? "green" : "orange"} className="px-3 py-1 text-sm">
-                                {metaConnection.connected ? "Meta Connected" : "Meta Not Connected"}
+                        <Badge dot status={metaConnected ? "success" : "warning"}>
+                            <Tag color={metaConnected ? "green" : "orange"} className="px-3 py-1 text-sm">
+                                {metaConnected ? "Meta Connected" : "Meta Not Connected"}
                             </Tag>
                         </Badge>
-                        <Button onClick={() => setMetaModal(true)}>
-                            Connect Meta App
-                        </Button>
-                        {metaConnection.connected && (
-                            <Popconfirm title="Disconnect Meta app for this company?" onConfirm={disconnectMetaApp}>
-                                <Button danger loading={metaActionLoading}>Disconnect</Button>
-                            </Popconfirm>
-                        )}
+                        {!metaConnected && <Tag color="geekblue">Ask Super Admin to assign</Tag>}
                         <Button icon={<ReloadOutlined />} onClick={loadAll} loading={loading} />
                     </div>
                 </div>
@@ -895,7 +820,7 @@ export default function WhatsAppPage() {
                                     <Button
                                         type="primary"
                                         icon={<SendOutlined />}
-                                        disabled={!metaConnection.connected}
+                                        disabled={!metaConnected}
                                         onClick={() => { setCampaignModal(true); setCampaignStep(0); setCampaignForm({ sendType: "now" }); }}
                                     >
                                         New Campaign
@@ -978,39 +903,6 @@ export default function WhatsAppPage() {
                     </Tabs>
                 </Card>
             </div>
-
-            <Modal
-                title={<span><MdWhatsapp className="inline mr-2" />Connect Company Meta App</span>}
-                open={metaModal}
-                onCancel={() => setMetaModal(false)}
-                footer={null}
-                width={620}
-            >
-                <Form layout="vertical">
-                    <Form.Item label="Meta App ID (optional)">
-                        <Input value={metaForm.appId} onChange={(e) => setMetaForm({ ...metaForm, appId: e.target.value })} />
-                    </Form.Item>
-                    <Form.Item label="Meta App Secret (optional)">
-                        <Input.Password value={metaForm.appSecret} onChange={(e) => setMetaForm({ ...metaForm, appSecret: e.target.value })} />
-                    </Form.Item>
-                    <Form.Item label="WhatsApp Business Account ID (optional)">
-                        <Input value={metaForm.businessAccountId} onChange={(e) => setMetaForm({ ...metaForm, businessAccountId: e.target.value })} />
-                    </Form.Item>
-                    <Form.Item label="WhatsApp Phone Number ID" required>
-                        <Input value={metaForm.phoneNumberId} onChange={(e) => setMetaForm({ ...metaForm, phoneNumberId: e.target.value })} />
-                    </Form.Item>
-                    <Form.Item label="Permanent Access Token" required>
-                        <Input.Password value={metaForm.accessToken} onChange={(e) => setMetaForm({ ...metaForm, accessToken: e.target.value })} />
-                    </Form.Item>
-                    <Form.Item label="Webhook Verify Token (optional)">
-                        <Input value={metaForm.webhookVerifyToken} onChange={(e) => setMetaForm({ ...metaForm, webhookVerifyToken: e.target.value })} />
-                    </Form.Item>
-                </Form>
-                <div className="flex justify-end gap-2">
-                    <Button onClick={testMetaConnection} loading={metaActionLoading}>Test Connection</Button>
-                    <Button type="primary" onClick={connectMetaApp} loading={metaActionLoading}>Save & Connect</Button>
-                </div>
-            </Modal>
 
             <Modal
                 title={<span><TeamOutlined className="mr-2 text-blue-500" />Create Contact List</span>}
