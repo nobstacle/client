@@ -1403,7 +1403,6 @@ export default function Upsell() {
                                     value={selectedPackage}
                                     onChange={setSelectedPackage}
                                     style={{ minWidth: 120, width: '100%', maxWidth: 150 }}
-                                    allowClear
                                 >
                                     {allPackages.map(pkg => (
                                         <Option key={pkg.id} value={pkg.id}>

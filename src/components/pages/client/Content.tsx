@@ -59,6 +59,8 @@ const IframeWithPrefill = React.memo(({ src, prefillData }: { src: string, prefi
   );
 });
 
+IframeWithPrefill.displayName = "IframeWithPrefill";
+
 const getLocalizedContent = (contentObj, langCode = 'en', fallback = '') => {
   // If contentObj is null or undefined, return fallback
   if (contentObj == null) return fallback;

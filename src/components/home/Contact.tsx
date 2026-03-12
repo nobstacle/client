@@ -18,7 +18,7 @@ export default function Contact() {
       <div className="container">
         <div className="section-header animate-on-scroll">
           <h2>Ready to Elevate Your Desk Experience?</h2>
-          <p>Book a demo or drop us a line. We're excited to show you what Nobstacle can do for your business.</p>
+          <p>Book a demo or drop us a line. We&apos;re excited to show you what Nobstacle can do for your business.</p>
         </div>
         <div className="contact-layout">
           <div className="contact-form-wrapper animate-on-scroll embed-container">

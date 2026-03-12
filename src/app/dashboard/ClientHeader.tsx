@@ -1736,12 +1736,6 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
             return messageRole === userRole;
         };
 
-        useEffect(() => {
-            if (isInIframe && messageStore.receivedMessage.length > 0) {
-                updateChatPopupMessages();
-            }
-        }, [messageStore.receivedMessage.length, isInIframe, updateChatPopupMessages]);
-
         // Helper to get display message based on role
         const getDisplayMessage = (messageObj) => {
             const { message, originalMessage, role } = messageObj;
@@ -1806,6 +1800,12 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
             html: messagesHTML
         }, '*');
     }, [isInIframe, messageStore.receivedMessage, params, user, companyData]);
+
+    useEffect(() => {
+        if (isInIframe && messageStore.receivedMessage.length > 0) {
+            updateChatPopupMessages();
+        }
+    }, [isInIframe, messageStore.receivedMessage.length, updateChatPopupMessages]);
 
     useEffect(() => {
         if (!isInIframe) return;

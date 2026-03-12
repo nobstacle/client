@@ -278,7 +278,7 @@ const Recording: React.FC<RecordingProps> = ({ onSubmit, langCode = 'en', loadin
                       🎤 Listening...
                     </p>
                     <p className="text-lg text-blue-200 mb-4">
-                      We're all ears! Share your thoughts
+                      We&apos;re all ears! Share your thoughts
                     </p>
 
                     {/* Timer display */}

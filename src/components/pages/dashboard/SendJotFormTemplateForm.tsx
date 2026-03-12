@@ -574,7 +574,7 @@ useEffect(() => {
 			);
 		};
 
-		const normalizeTableData = useCallback((data: any, labelFields: any) => {
+		const normalizeTableData = (data: any, labelFields: any) => {
 			if (!data || !labelFields) return [];
 
 			// Pre-compute field label map
@@ -610,7 +610,7 @@ useEffect(() => {
 
 				return parseInt(submissionIdB) - parseInt(submissionIdA);
 			});
-		}, []);
+		};
 
 		const cleanTableData = normalizeTableData(tableData, listableFields);
 
@@ -693,11 +693,9 @@ useEffect(() => {
 			}
 		};
 
-		const sortedListableFields = useMemo(() => {
-			return Array.isArray(listableFields)
-				? [...listableFields].sort((a: any, b: any) => a.name.localeCompare(b.name))
-				: [];
-		}, [listableFields]);
+		const sortedListableFields = Array.isArray(listableFields)
+			? [...listableFields].sort((a: any, b: any) => a.name.localeCompare(b.name))
+			: [];
 
 		// Desktop Table Columns
 		const columns = [
@@ -1617,6 +1615,8 @@ useEffect(() => {
 				}
 			}
 		});
+
+	TableComponent.displayName = "TableComponent";
 
 		const searchParams = formattedData.length > 0
 			? JSON.stringify(formattedData)

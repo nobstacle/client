@@ -639,7 +639,11 @@ export default function Handover() {
                                 {isMobile ? (
                                     <div>
                                         {notesList.map((record, i) => (
-                                            <MobileCard record={record} index={i} />
+                                            <MobileCard
+                                                key={record?.id ?? record?._id ?? i}
+                                                record={record}
+                                                index={i}
+                                            />
                                         ))}
                                         <div className="flex justify-center mt-6">
                                             <Pagination

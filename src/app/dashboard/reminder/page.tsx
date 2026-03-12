@@ -1389,7 +1389,11 @@ export default function Reminder() {
                                 {isMobile ? (
                                     <div>
                                         {notesList.map((record, i) => (
-                                            <MobileCard record={record} index={i} />
+                                            <MobileCard
+                                                key={record?.id ?? record?._id ?? i}
+                                                record={record}
+                                                index={i}
+                                            />
                                         ))}
                                         {(loadingMore || hasMore) && (
                                             <div

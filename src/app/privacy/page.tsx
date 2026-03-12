@@ -131,7 +131,7 @@ export default function Privacy() {
                                 website or use our services.
                             </Paragraph>
                             <Paragraph style={{ fontSize: 15, lineHeight: 1.8 }}>
-                                Nobstacle ("we," "us," or "our") provides tools for header manipulation and web request management.
+                                Nobstacle (&quot;we,&quot; &quot;us,&quot; or &quot;our&quot;) provides tools for header manipulation and web request management.
                                 This policy outlines how we handle your data through our website and browser extension. Our core
                                 principle is to facilitate your workflow while maintaining the highest standards of data integrity.
                             </Paragraph>

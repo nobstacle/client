@@ -29,7 +29,7 @@ export default function FeaturesSummary() {
               </li>
               <li>
                 <ion-icon name="checkmark-circle"></ion-icon>
-                <span>Measure your customers' satisfaction real-time, on-site.</span>
+                <span>Measure your customers&apos; satisfaction real-time, on-site.</span>
               </li>
               <li>
                 <ion-icon name="checkmark-circle"></ion-icon>
