@@ -43,6 +43,12 @@ interface ContactList {
     tags?: string[];
 }
 
+interface ContactImportResult {
+    imported: number;
+    skipped: number;
+    errors: string[];
+}
+
 interface Template {
     id: number;
     name: string;
@@ -191,7 +197,7 @@ export default function WhatsAppPage() {
         hasAccessToken: false,
     });
 
-    console.info("!111111111111111111111111111111111111111111111",metaConnection);
+    console.info("!111111111111111111111111111111111111111111111", metaConnection);
 
     const metaConnected = metaConnection.connected || (metaConnection.hasAccessToken && Boolean(metaConnection.phoneNumberId));
 
@@ -205,7 +211,7 @@ export default function WhatsAppPage() {
     const [contactModal, setContactModal] = useState(false);
     const [contactSource, setContactSource] = useState<"csv" | "form" | null>(null);
     const [contactForm, setContactForm] = useState({ name: "", tags: "", formId: "" });
-    const [csvFile, setCsvFile] = useState<UploadFile | null>(null);
+    const [csvFile, setCsvFile] = useState<File | null>(null);
 
     const [templateModal, setTemplateModal] = useState(false);
     const [templatePreviewModal, setTemplatePreviewModal] = useState(false);
@@ -276,7 +282,7 @@ export default function WhatsAppPage() {
 
     const loadMetaSettings = async () => {
         const response = await apiRequest<MetaConnectionStatus>("/whatsapp/settings");
-        console.info("responseresponseresponseresponse",response);
+        console.info("responseresponseresponseresponse", response);
         setMetaConnection(response);
     };
 
@@ -297,6 +303,8 @@ export default function WhatsAppPage() {
         loadAll();
     }, [token]);
 
+    console.info("32432423423", csvFile);
+
     const createContactList = async () => {
         try {
             if (!contactForm.name.trim()) {
@@ -310,8 +318,9 @@ export default function WhatsAppPage() {
                 .filter(Boolean);
 
             if (contactSource === "csv") {
-                if (!csvFile?.originFileObj) {
-                    message.error("Please select a CSV or Excel file");
+
+                if (!csvFile) {
+                    message.error("Please select a contact file");
                     return;
                 }
 
@@ -325,14 +334,40 @@ export default function WhatsAppPage() {
                 });
 
                 const formData = new FormData();
-                formData.append("file", csvFile.originFileObj);
+                formData.append("file", csvFile);
 
-                await apiRequest(`/whatsapp/contacts/${created.id}/import-csv`, {
+                const result = await apiRequest<ContactImportResult>(`/whatsapp/contacts/${created.id}/import-csv`, {
                     method: "POST",
                     body: formData,
                 });
 
-                message.success("Contact list created and contacts imported");
+                message.success(`Contact list created. Imported ${result.imported} contact${result.imported === 1 ? "" : "s"}.`);
+
+                if (result.errors.length || result.skipped) {
+                    Modal.info({
+                        title: "Import completed with notes",
+                        width: 560,
+                        content: (
+                            <div className="space-y-2">
+                                <p className="mb-0">
+                                    Imported {result.imported}, skipped {result.skipped}, issues {result.errors.length}.
+                                </p>
+                                {result.errors.length ? (
+                                    <div className="max-h-56 overflow-auto rounded-lg border border-gray-200 bg-gray-50 p-3 text-xs text-gray-700">
+                                        {result.errors.slice(0, 10).map((item, index) => (
+                                            <div key={`${item}-${index}`}>{item}</div>
+                                        ))}
+                                        {result.errors.length > 10 && (
+                                            <div className="mt-2 text-gray-500">
+                                                {result.errors.length - 10} more issue(s) not shown.
+                                            </div>
+                                        )}
+                                    </div>
+                                ) : null}
+                            </div>
+                        ),
+                    });
+                }
             }
 
             if (contactSource === "form") {
@@ -922,8 +957,8 @@ export default function WhatsAppPage() {
                                 <CloudUploadOutlined className="text-blue-500 text-xl" />
                             </div>
                             <div>
-                                <div className="font-semibold text-gray-800">Upload CSV / Excel</div>
-                                <div className="text-xs text-gray-500">Import contacts from a spreadsheet file</div>
+                                <div className="font-semibold text-gray-800">Upload File</div>
+                                <div className="text-xs text-gray-500">Import contacts from text, CSV, Excel, or Word</div>
                             </div>
                         </button>
                         <button
@@ -951,11 +986,11 @@ export default function WhatsAppPage() {
                             {contactSource === "csv" && (
                                 <Form.Item label="Upload File">
                                     <Dragger
-                                        accept=".csv,.xlsx,.xls"
+                                        accept=".csv,.txt,.tsv,.xlsx,.docx"
                                         className="rounded-xl"
-                                        fileList={csvFile ? [csvFile] : []}
+                                        fileList={csvFile ? [{ uid: '-1', name: csvFile.name, status: 'done' } as UploadFile] : []}
                                         beforeUpload={(file) => {
-                                            setCsvFile(file as UploadFile);
+                                            setCsvFile(file);
                                             return false;
                                         }}
                                         onRemove={() => {
@@ -964,8 +999,9 @@ export default function WhatsAppPage() {
                                         }}
                                     >
                                         <p className="text-4xl mb-2">📂</p>
-                                        <p className="font-medium">Click or drag CSV/Excel file here</p>
-                                        <p className="text-gray-400 text-xs">Supports .csv, .xlsx, .xls · Max 10MB</p>
+                                        <p className="font-medium">Click or drag a contact file here</p>
+                                        <p className="text-gray-400 text-xs">Supports .csv, .txt, .tsv, .xlsx, .docx · Max 10MB</p>
+                                        <p className="text-gray-400 text-xs">Headers should include name, phone, email. Comma, pipe, tab, and semicolon separated text files are supported.</p>
                                     </Dragger>
                                 </Form.Item>
                             )}
