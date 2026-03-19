@@ -52,12 +52,36 @@ interface ContactImportResult {
 interface Template {
     id: number;
     name: string;
+    category: "utility" | "marketing" | "authentication" | "service";
     type: "text" | "image" | "video" | "carousel";
     status: "pending" | "approved" | "rejected";
+    metaSubmissionStatus: "submitted" | "saved_locally_only" | "failed";
+    metaSubmissionError?: string;
     content: string;
     variables?: string[];
     mediaUrl?: string;
+    carouselItems?: CarouselTemplateItem[] | null;
     createdAt: string;
+}
+
+interface CarouselTemplateItem {
+    mediaUrl?: string;
+    text: string;
+}
+
+interface CarouselDraftItem {
+    id: string;
+    text: string;
+    file: File | null;
+}
+
+interface TemplateFormState {
+    name: string;
+    category: "utility" | "marketing" | "authentication" | "service";
+    type: "text" | "image" | "video" | "carousel";
+    content: string;
+    mediaFile: File | null;
+    carouselItems: CarouselDraftItem[];
 }
 
 interface Campaign {
@@ -131,7 +155,47 @@ const TemplateTypeIcon = ({ type }: { type: string }) => {
     return <span>{icons[type] || <FileTextOutlined />}</span>;
 };
 
-const WhatsAppPreview = ({ content, type }: { content: string; type: string }) => (
+const MetaSubmissionTag = ({ status }: { status: Template["metaSubmissionStatus"] }) => {
+    const map: Record<Template["metaSubmissionStatus"], { color: string; label: string }> = {
+        submitted: { color: "success", label: "Submitted to Meta" },
+        saved_locally_only: { color: "default", label: "Saved Locally Only" },
+        failed: { color: "error", label: "Meta Submission Failed" },
+    };
+
+    const config = map[status];
+    return <Tag color={config.color}>{config.label}</Tag>;
+};
+
+const createCarouselDraftItem = (): CarouselDraftItem => ({
+    id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    text: "",
+    file: null,
+});
+
+const createEmptyTemplateState = (): TemplateFormState => ({
+    name: "",
+    category: "marketing",
+    type: "text",
+    content: "",
+    mediaFile: null,
+    carouselItems: [createCarouselDraftItem()],
+});
+
+const getUploadFileList = (file: File | null): UploadFile[] => (
+    file ? [{ uid: `${file.name}-${file.size}-${file.lastModified}`, name: file.name, status: "done" }] : []
+);
+
+const WhatsAppPreview = ({
+    content,
+    type,
+    mediaLabel,
+    carouselItems,
+}: {
+    content: string;
+    type: string;
+    mediaLabel?: string;
+    carouselItems?: Array<{ text: string }>;
+}) => (
     <div className="flex justify-center py-4">
         <div
             className="relative rounded-3xl shadow-2xl overflow-hidden"
@@ -151,17 +215,41 @@ const WhatsAppPreview = ({ content, type }: { content: string; type: string }) =
             <div className="p-3 min-h-40" style={{ background: "#ECE5DD" }}>
                 {type === "image" && (
                     <div className="rounded-lg mb-2 overflow-hidden" style={{ background: "#d0c8c0", height: 120, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                        <PictureOutlined style={{ fontSize: 36, color: "#999" }} />
+                        <div className="text-center px-4">
+                            <PictureOutlined style={{ fontSize: 36, color: "#999" }} />
+                            <div className="text-xs text-gray-500 mt-2">{mediaLabel || "Image upload preview"}</div>
+                        </div>
                     </div>
                 )}
                 {type === "video" && (
                     <div className="rounded-lg mb-2 overflow-hidden" style={{ background: "#d0c8c0", height: 120, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                        <VideoCameraOutlined style={{ fontSize: 36, color: "#999" }} />
+                        <div className="text-center px-4">
+                            <VideoCameraOutlined style={{ fontSize: 36, color: "#999" }} />
+                            <div className="text-xs text-gray-500 mt-2">{mediaLabel || "Video upload preview"}</div>
+                        </div>
+                    </div>
+                )}
+                {type === "carousel" && (
+                    <div className="grid grid-cols-2 gap-2 mb-2">
+                        {(carouselItems?.length ? carouselItems : [{ text: "" }, { text: "" }]).slice(0, 4).map((item, index) => (
+                            <div
+                                key={`${item.text}-${index}`}
+                                className="rounded-lg p-2 text-xs"
+                                style={{ background: "#d0c8c0", minHeight: 72 }}
+                            >
+                                <div className="flex items-center justify-center h-8 text-gray-500">
+                                    <AppstoreOutlined style={{ fontSize: 20 }} />
+                                </div>
+                                <div className="text-[10px] text-gray-600 mt-1 text-center" style={{ wordBreak: "break-word" }}>
+                                    {item.text || `Card ${index + 1}`}
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 )}
                 <div className="rounded-lg rounded-tl-none p-3 text-sm shadow-sm max-w-full" style={{ background: "#fff", color: "#333" }}>
                     <p className="m-0 leading-relaxed" style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
-                        {content || "Your message preview will appear here..."}
+                        {content || (type === "carousel" ? "Carousel card previews will appear here..." : "Your message preview will appear here...")}
                     </p>
                     <div className="flex justify-end mt-1">
                         <span className="text-gray-400" style={{ fontSize: 10 }}>{dayjs().format("HH:mm")} ✓✓</span>
@@ -216,7 +304,7 @@ export default function WhatsAppPage() {
     const [templateModal, setTemplateModal] = useState(false);
     const [templatePreviewModal, setTemplatePreviewModal] = useState(false);
     const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
-    const [newTemplate, setNewTemplate] = useState({ name: "", type: "text", content: "", mediaUrl: "" });
+    const [newTemplate, setNewTemplate] = useState<TemplateFormState>(createEmptyTemplateState());
 
     const [campaignModal, setCampaignModal] = useState(false);
     const [campaignStep, setCampaignStep] = useState(0);
@@ -411,24 +499,72 @@ export default function WhatsAppPage() {
 
     const createTemplate = async () => {
         try {
-            if (!newTemplate.name.trim() || !newTemplate.content.trim()) {
-                message.error("Template name and content are required");
+            if (!newTemplate.name.trim()) {
+                message.error("Template name is required");
                 return;
             }
 
-            await apiRequest<Template>("/whatsapp/templates", {
+            if (newTemplate.type !== "carousel" && !newTemplate.content.trim()) {
+                message.error("Template content is required");
+                return;
+            }
+
+            if ((newTemplate.type === "image" || newTemplate.type === "video") && !newTemplate.mediaFile) {
+                message.error(`Please upload a ${newTemplate.type} file`);
+                return;
+            }
+
+            if (newTemplate.type === "carousel") {
+                const invalidCard = newTemplate.carouselItems.find((item) => !item.text.trim() || !item.file);
+                if (invalidCard) {
+                    message.error("Each carousel card needs both text and a file");
+                    return;
+                }
+            }
+
+            const formData = new FormData();
+            formData.append("name", newTemplate.name.trim());
+            formData.append("category", newTemplate.category);
+            formData.append("type", newTemplate.type);
+            formData.append("content", newTemplate.content.trim());
+
+            if (newTemplate.type === "image" || newTemplate.type === "video") {
+                if (newTemplate.mediaFile) {
+                    formData.append("files", newTemplate.mediaFile);
+                }
+            }
+
+            if (newTemplate.type === "carousel") {
+                formData.append(
+                    "carouselItems",
+                    JSON.stringify(
+                        newTemplate.carouselItems.map((item) => ({
+                            text: item.text.trim(),
+                        })),
+                    ),
+                );
+
+                newTemplate.carouselItems.forEach((item) => {
+                    if (item.file) {
+                        formData.append("files", item.file);
+                    }
+                });
+            }
+
+            const createdTemplate = await apiRequest<Template>("/whatsapp/templates", {
                 method: "POST",
-                body: JSON.stringify({
-                    name: newTemplate.name.trim(),
-                    type: newTemplate.type,
-                    content: newTemplate.content,
-                    mediaUrl: newTemplate.mediaUrl.trim() || undefined,
-                }),
+                body: formData,
             });
 
-            message.success("Template submitted for approval");
+            if (createdTemplate.metaSubmissionStatus === "submitted") {
+                message.success("Template was created and submitted to Meta for approval");
+            } else if (createdTemplate.metaSubmissionError) {
+                message.warning(createdTemplate.metaSubmissionError);
+            } else {
+                message.warning("Template was saved locally only. Meta submission did not complete.");
+            }
             setTemplateModal(false);
-            setNewTemplate({ name: "", type: "text", content: "", mediaUrl: "" });
+            setNewTemplate(createEmptyTemplateState());
             await loadTemplates();
         } catch (error) {
             message.error(parseErrorMessage(error));
@@ -509,6 +645,39 @@ export default function WhatsAppPage() {
         }
     };
 
+    const updateTemplateType = (type: TemplateFormState["type"]) => {
+        setNewTemplate((prev) => ({
+            ...prev,
+            type,
+            content: type === "carousel" ? prev.content : prev.content,
+            mediaFile: type === "image" || type === "video" ? prev.mediaFile : null,
+            carouselItems: type === "carousel" ? (prev.carouselItems.length ? prev.carouselItems : [createCarouselDraftItem()]) : prev.carouselItems,
+        }));
+    };
+
+    const updateCarouselItem = (id: string, patch: Partial<CarouselDraftItem>) => {
+        setNewTemplate((prev) => ({
+            ...prev,
+            carouselItems: prev.carouselItems.map((item) => item.id === id ? { ...item, ...patch } : item),
+        }));
+    };
+
+    const addCarouselItem = () => {
+        setNewTemplate((prev) => ({
+            ...prev,
+            carouselItems: [...prev.carouselItems, createCarouselDraftItem()],
+        }));
+    };
+
+    const removeCarouselItem = (id: string) => {
+        setNewTemplate((prev) => ({
+            ...prev,
+            carouselItems: prev.carouselItems.length === 1
+                ? prev.carouselItems
+                : prev.carouselItems.filter((item) => item.id !== id),
+        }));
+    };
+
     const filteredTemplates = templates.filter((t) => {
         const matchesSearch = !templateSearch || t.name.toLowerCase().includes(templateSearch.toLowerCase()) || t.content.toLowerCase().includes(templateSearch.toLowerCase());
         const matchesStatus = !templateStatusFilter || t.status === templateStatusFilter;
@@ -571,6 +740,11 @@ export default function WhatsAppPage() {
                     <div>
                         <div className="font-medium text-gray-800">{name}</div>
                         <div className="text-xs text-gray-400 truncate max-w-xs">{record.content.slice(0, 60)}...</div>
+                        {record.metaSubmissionStatus !== "submitted" && record.metaSubmissionError ? (
+                            <div className="text-xs text-amber-700 max-w-sm mt-1" style={{ whiteSpace: "normal" }}>
+                                {record.metaSubmissionError}
+                            </div>
+                        ) : null}
                     </div>
                 </div>
             ),
@@ -578,6 +752,23 @@ export default function WhatsAppPage() {
         {
             title: "Type", dataIndex: "type", key: "type",
             render: (type: string) => <Tag color="blue" className="capitalize">{type}</Tag>,
+        },
+        {
+            title: "Category", dataIndex: "category", key: "category",
+            render: (category: string) => <Tag color="geekblue" className="capitalize">{category}</Tag>,
+        },
+        {
+            title: "Meta Submission", dataIndex: "metaSubmissionStatus", key: "metaSubmissionStatus",
+            render: (_: string, record: Template) => (
+                <div>
+                    <MetaSubmissionTag status={record.metaSubmissionStatus} />
+                    {record.metaSubmissionError ? (
+                        <div className="text-xs text-gray-500 mt-1 max-w-xs" style={{ whiteSpace: "normal" }}>
+                            {record.metaSubmissionError}
+                        </div>
+                    ) : null}
+                </div>
+            ),
         },
         { title: "Status", dataIndex: "status", key: "status", render: (s: string) => <StatusTag status={s} /> },
         {
@@ -847,7 +1038,14 @@ export default function WhatsAppPage() {
                                     </Button>
                                 )}
                                 {activeTab === "templates" && (
-                                    <Button type="primary" icon={<PlusOutlined />} onClick={() => setTemplateModal(true)}>
+                                    <Button
+                                        type="primary"
+                                        icon={<PlusOutlined />}
+                                        onClick={() => {
+                                            setNewTemplate(createEmptyTemplateState());
+                                            setTemplateModal(true);
+                                        }}
+                                    >
                                         New Template
                                     </Button>
                                 )}
@@ -1024,7 +1222,10 @@ export default function WhatsAppPage() {
             <Modal
                 title={<span><FileTextOutlined className="mr-2 text-purple-500" />Create Template</span>}
                 open={templateModal}
-                onCancel={() => setTemplateModal(false)}
+                onCancel={() => {
+                    setTemplateModal(false);
+                    setNewTemplate(createEmptyTemplateState());
+                }}
                 width={800}
                 footer={null}
             >
@@ -1041,8 +1242,19 @@ export default function WhatsAppPage() {
                                 </Form.Item>
                                 <Form.Item label="Template Type">
                                     <Select
+                                        value={newTemplate.category}
+                                        onChange={(value) => setNewTemplate({ ...newTemplate, category: value })}
+                                    >
+                                        <Option value="utility">Utility</Option>
+                                        <Option value="marketing">Marketing</Option>
+                                        <Option value="authentication">Authentication</Option>
+                                        <Option value="service">Service</Option>
+                                    </Select>
+                                </Form.Item>
+                                <Form.Item label="Media Type">
+                                    <Select
                                         value={newTemplate.type}
-                                        onChange={(v) => setNewTemplate({ ...newTemplate, type: v })}
+                                        onChange={updateTemplateType}
                                     >
                                         <Option value="text"><FileTextOutlined className="mr-2" />Text</Option>
                                         <Option value="image"><PictureOutlined className="mr-2" />Image</Option>
@@ -1051,32 +1263,108 @@ export default function WhatsAppPage() {
                                     </Select>
                                 </Form.Item>
                                 {(newTemplate.type === "image" || newTemplate.type === "video") && (
-                                    <Form.Item label="Media URL">
-                                        <Input
-                                            placeholder="https://..."
-                                            value={newTemplate.mediaUrl}
-                                            onChange={(e) => setNewTemplate({ ...newTemplate, mediaUrl: e.target.value })}
+                                    <Form.Item label={`Upload ${newTemplate.type === "image" ? "Image" : "Video"}`} required>
+                                        <Upload
+                                            accept={newTemplate.type === "image" ? "image/*" : "video/*"}
+                                            beforeUpload={(file) => {
+                                                setNewTemplate((prev) => ({ ...prev, mediaFile: file as File }));
+                                                return false;
+                                            }}
+                                            onRemove={() => {
+                                                setNewTemplate((prev) => ({ ...prev, mediaFile: null }));
+                                            }}
+                                            maxCount={1}
+                                            fileList={getUploadFileList(newTemplate.mediaFile)}
+                                        >
+                                            <Button icon={<UploadOutlined />}>Choose File</Button>
+                                        </Upload>
+                                    </Form.Item>
+                                )}
+                                {newTemplate.type !== "carousel" && (
+                                    <Form.Item label="Message Content" required>
+                                        <TextArea
+                                            rows={5}
+                                            placeholder={"Hi {{name}}, welcome to {{hotel}}!"}
+                                            value={newTemplate.content}
+                                            onChange={(e) => setNewTemplate({ ...newTemplate, content: e.target.value })}
                                         />
                                     </Form.Item>
                                 )}
-                                <Form.Item label="Message Content" required>
-                                    <TextArea
-                                        rows={5}
-                                        placeholder={"Hi {{name}}, welcome to {{hotel}}!"}
-                                        value={newTemplate.content}
-                                        onChange={(e) => setNewTemplate({ ...newTemplate, content: e.target.value })}
-                                    />
-                                </Form.Item>
+                                {newTemplate.type === "carousel" && (
+                                    <>
+                                        <Form.Item label="Intro Text">
+                                            <TextArea
+                                                rows={3}
+                                                placeholder="Optional text above the carousel"
+                                                value={newTemplate.content}
+                                                onChange={(e) => setNewTemplate({ ...newTemplate, content: e.target.value })}
+                                            />
+                                        </Form.Item>
+                                        <div className="space-y-3">
+                                            {newTemplate.carouselItems.map((item, index) => (
+                                                <Card key={item.id} size="small" title={`Card ${index + 1}`}>
+                                                    <div className="space-y-3">
+                                                        <Upload
+                                                            accept="image/*"
+                                                            beforeUpload={(file) => {
+                                                                updateCarouselItem(item.id, { file: file as File });
+                                                                return false;
+                                                            }}
+                                                            onRemove={() => {
+                                                                updateCarouselItem(item.id, { file: null });
+                                                            }}
+                                                            maxCount={1}
+                                                            fileList={getUploadFileList(item.file)}
+                                                        >
+                                                            <Button icon={<UploadOutlined />}>Upload Card Image</Button>
+                                                        </Upload>
+                                                        <TextArea
+                                                            rows={3}
+                                                            placeholder="Card text"
+                                                            value={item.text}
+                                                            onChange={(e) => updateCarouselItem(item.id, { text: e.target.value })}
+                                                        />
+                                                        <div className="flex justify-end">
+                                                            <Button
+                                                                danger
+                                                                icon={<DeleteOutlined />}
+                                                                disabled={newTemplate.carouselItems.length === 1}
+                                                                onClick={() => removeCarouselItem(item.id)}
+                                                            >
+                                                                Remove Card
+                                                            </Button>
+                                                        </div>
+                                                    </div>
+                                                </Card>
+                                            ))}
+                                            <Button type="dashed" block icon={<PlusOutlined />} onClick={addCarouselItem}>
+                                                Add Carousel Card
+                                            </Button>
+                                        </div>
+                                    </>
+                                )}
                             </Form>
                             <div className="flex gap-2 justify-end">
-                                <Button onClick={() => setTemplateModal(false)}>Cancel</Button>
+                                <Button
+                                    onClick={() => {
+                                        setTemplateModal(false);
+                                        setNewTemplate(createEmptyTemplateState());
+                                    }}
+                                >
+                                    Cancel
+                                </Button>
                                 <Button type="primary" onClick={createTemplate}>Submit for Approval</Button>
                             </div>
                         </div>
                     </Col>
                     <Col span={12}>
                         <div className="text-sm font-medium text-gray-600 mb-2 flex items-center gap-2"><EyeOutlined />Live Preview</div>
-                        <WhatsAppPreview content={newTemplate.content} type={newTemplate.type} />
+                        <WhatsAppPreview
+                            content={newTemplate.content}
+                            type={newTemplate.type}
+                            mediaLabel={newTemplate.mediaFile?.name}
+                            carouselItems={newTemplate.carouselItems}
+                        />
                     </Col>
                 </Row>
             </Modal>
@@ -1092,9 +1380,37 @@ export default function WhatsAppPage() {
                     <>
                         <div className="flex gap-2 mb-3 justify-center">
                             <StatusTag status={selectedTemplate.status} />
+                            <Tag color="geekblue" className="capitalize">{selectedTemplate.category}</Tag>
                             <Tag className="capitalize">{selectedTemplate.type}</Tag>
                         </div>
-                        <WhatsAppPreview content={selectedTemplate.content} type={selectedTemplate.type} />
+                        <div className="mb-3 text-center">
+                            <MetaSubmissionTag status={selectedTemplate.metaSubmissionStatus} />
+                            <div className="text-xs text-gray-500 mt-2">
+                                {selectedTemplate.metaSubmissionStatus === "submitted"
+                                    ? "This template was submitted to WhatsApp Meta for approval."
+                                    : selectedTemplate.metaSubmissionError || "This template is currently saved in your app only and has not been submitted to Meta."}
+                            </div>
+                        </div>
+                        <WhatsAppPreview
+                            content={selectedTemplate.content}
+                            type={selectedTemplate.type}
+                            mediaLabel={selectedTemplate.mediaUrl ? "Uploaded media attached" : undefined}
+                            carouselItems={selectedTemplate.carouselItems ?? undefined}
+                        />
+                        {selectedTemplate.carouselItems && selectedTemplate.carouselItems.length > 0 && (
+                            <div className="mt-3 space-y-2">
+                                {selectedTemplate.carouselItems.map((item, index) => (
+                                    <Card key={`${item.mediaUrl}-${index}`} size="small" title={`Card ${index + 1}`}>
+                                        {item.mediaUrl ? (
+                                            <div className="mb-2 rounded-lg bg-gray-100 p-4 text-center text-xs text-gray-500">
+                                                Media uploaded for this card
+                                            </div>
+                                        ) : null}
+                                        <div className="text-sm text-gray-700">{item.text || "No text"}</div>
+                                    </Card>
+                                ))}
+                            </div>
+                        )}
                         {selectedTemplate.variables && selectedTemplate.variables.length > 0 && (
                             <div className="mt-3">
                                 <div className="text-xs text-gray-500 mb-1">Dynamic Variables:</div>
