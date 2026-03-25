@@ -1891,6 +1891,15 @@ useEffect(() => {
 		}));
 	};
 
+	const searchableSelectProps = {
+		showSearch: true,
+		optionFilterProp: 'children' as const,
+		filterOption: (input: string, option?: { children?: React.ReactNode }) =>
+			String(option?.children ?? '')
+				.toLowerCase()
+				.includes(input.toLowerCase()),
+	};
+
 	const renderFieldInput = (item, value, onChange) => {
 		// Enhanced date field detection
 		const isDateField = (item) => {
@@ -1980,8 +1989,9 @@ useEffect(() => {
 					onChange={onChange}
 					className="w-full"
 					size="middle"
-					placeholder={`Select ${item.text}`}
+					placeholder={`Search or select ${item.text}`}
 					allowClear
+					{...searchableSelectProps}
 				>
 					{options.map(option => (
 						<Select.Option key={option.value} value={option.value}>

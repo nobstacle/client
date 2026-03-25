@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import {
     Table, Tag, Card, Input, message, Button, Space, Select, Modal,
     Tabs, Upload, Steps, Form, Progress, Badge, Tooltip,
-    Row, Col, Avatar, Popconfirm, DatePicker
+    Row, Col, Avatar, Popconfirm, DatePicker, Alert, Empty
 } from "antd";
 import type { UploadFile } from "antd/es/upload/interface";
 import {
@@ -41,6 +41,14 @@ interface ContactList {
     source: "csv" | "form";
     createdAt: string;
     tags?: string[];
+}
+
+interface ContactListContact {
+    id?: number;
+    name: string;
+    phone: string;
+    email?: string | null;
+    variables?: Record<string, string>;
 }
 
 interface ContactImportResult {
@@ -94,6 +102,7 @@ interface Campaign {
     status: "draft" | "scheduled" | "sending" | "completed" | "failed";
     scheduledAt?: string;
     sentAt?: string;
+    completedAt?: string;
     stats: {
         total: number;
         sent: number;
@@ -101,6 +110,22 @@ interface Campaign {
         failed: number;
     };
     createdAt: string;
+    updatedAt?: string;
+}
+
+interface CampaignMessage {
+    id: number;
+    phone: string;
+    status: "pending" | "sent" | "delivered" | "failed";
+    errorMessage?: string | null;
+    sentAt?: string | null;
+    deliveredAt?: string | null;
+    createdAt: string;
+    updatedAt: string;
+}
+
+interface CampaignDetails extends Campaign {
+    messages?: CampaignMessage[];
 }
 
 interface CampaignStats {
@@ -136,6 +161,8 @@ const StatusTag = ({ status }: { status: string }) => {
         pending: { color: "warning", icon: <ClockCircleOutlined />, label: "Pending" },
         rejected: { color: "error", icon: <CloseCircleOutlined />, label: "Rejected" },
         completed: { color: "success", icon: <CheckCircleOutlined />, label: "Completed" },
+        delivered: { color: "success", icon: <CheckCircleOutlined />, label: "Delivered" },
+        sent: { color: "processing", icon: <SendOutlined />, label: "Sent" },
         sending: { color: "processing", icon: <SendOutlined />, label: "Sending" },
         scheduled: { color: "default", icon: <CalendarOutlined />, label: "Scheduled" },
         draft: { color: "default", icon: <EditOutlined />, label: "Draft" },
@@ -185,19 +212,77 @@ const getUploadFileList = (file: File | null): UploadFile[] => (
     file ? [{ uid: `${file.name}-${file.size}-${file.lastModified}`, name: file.name, status: "done" }] : []
 );
 
+const createEmptyContactRow = (): ContactListContact => ({
+    name: "",
+    phone: "",
+    email: "",
+});
+
+const MediaPreviewCard = ({
+    type,
+    src,
+    label,
+}: {
+    type: "image" | "video";
+    src?: string;
+    label?: string;
+}) => {
+    if (src) {
+        return (
+            <div className="rounded-lg mb-2 overflow-hidden" style={{ background: "#d0c8c0", height: 120 }}>
+                {type === "image" ? (
+                    <img
+                        src={src}
+                        alt={label || "Template media"}
+                        className="w-full h-full object-cover"
+                    />
+                ) : (
+                    <video
+                        src={src}
+                        className="w-full h-full object-cover"
+                        controls
+                        muted
+                        playsInline
+                    />
+                )}
+            </div>
+        );
+    }
+
+    return (
+        <div
+            className="rounded-lg mb-2 overflow-hidden"
+            style={{ background: "#d0c8c0", height: 120, display: "flex", alignItems: "center", justifyContent: "center" }}
+        >
+            <div className="text-center px-4">
+                {type === "image" ? (
+                    <PictureOutlined style={{ fontSize: 36, color: "#999" }} />
+                ) : (
+                    <VideoCameraOutlined style={{ fontSize: 36, color: "#999" }} />
+                )}
+                <div className="text-xs text-gray-500 mt-2">
+                    {label || (type === "image" ? "Image upload preview" : "Video upload preview")}
+                </div>
+            </div>
+        </div>
+    );
+};
+
 
 
 
 const WhatsAppPreview = ({
     content,
     type,
+    mediaSrc,
     mediaLabel,
     carouselItems,
 }: {
     content: string;
     type: string;
+    mediaSrc?: string;
     mediaLabel?: string;
-    carouselItems?: Array<{ text: string }>;
+    carouselItems?: Array<{ text: string; mediaUrl?: string }>;
 }) => (
     <div className="flex justify-center py-4">
         <div
@@ -217,33 +302,31 @@ const WhatsAppPreview = ({
             </div>
             <div className="p-3 min-h-40" style={{ background: "#ECE5DD" }}>
                 {type === "image" && (
-                    <div className="rounded-lg mb-2 overflow-hidden" style={{ background: "#d0c8c0", height: 120, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                        <div className="text-center px-4">
-                            <PictureOutlined style={{ fontSize: 36, color: "#999" }} />
-                            <div className="text-xs text-gray-500 mt-2">{mediaLabel || "Image upload preview"}</div>
-                        </div>
-                    </div>
+                    <MediaPreviewCard type="image" src={mediaSrc} label={mediaLabel} />
                 )}
                 {type === "video" && (
-                    <div className="rounded-lg mb-2 overflow-hidden" style={{ background: "#d0c8c0", height: 120, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                        <div className="text-center px-4">
-                            <VideoCameraOutlined style={{ fontSize: 36, color: "#999" }} />
-                            <div className="text-xs text-gray-500 mt-2">{mediaLabel || "Video upload preview"}</div>
-                        </div>
-                    </div>
+                    <MediaPreviewCard type="video" src={mediaSrc} label={mediaLabel} />
                 )}
                 {type === "carousel" && (
                     <div className="grid grid-cols-2 gap-2 mb-2">
                         {(carouselItems?.length ? carouselItems : [{ text: "" }, { text: "" }]).slice(0, 4).map((item, index) => (
                             <div
                                 key={`${item.text}-${index}`}
-                                className="rounded-lg p-2 text-xs"
-                                style={{ background: "#d0c8c0", minHeight: 72 }}
+                                className="rounded-lg overflow-hidden text-xs"
+                                style={{ background: "#d0c8c0", minHeight: 96 }}
                             >
-                                <div className="flex items-center justify-center h-8 text-gray-500">
-                                    <AppstoreOutlined style={{ fontSize: 20 }} />
-                                </div>
-                                <div className="text-[10px] text-gray-600 mt-1 text-center" style={{ wordBreak: "break-word" }}>
+                                {item.mediaUrl ? (
+                                    <img
+                                        src={item.mediaUrl}
+                                        alt={item.text || `Card ${index + 1}`}
+                                        className="h-14 w-full object-cover"
+                                    />
+                                ) : (
+                                    <div className="flex items-center justify-center h-14 text-gray-500">
+                                        <AppstoreOutlined style={{ fontSize: 20 }} />
+                                    </div>
+                                )}
+                                <div className="text-[10px] text-gray-600 p-2 text-center" style={{ wordBreak: "break-word" }}>
                                     {item.text || `Card ${index + 1}`}
                                 </div>
                             </div>
@@ -274,6 +357,31 @@ const parseErrorMessage = (error: any) => {
     return "Something went wrong";
 };
 
+const getDeliveryFailureReason = (errorMessage?: string | null) => (
+    errorMessage?.trim() || "WhatsApp did not return a specific failure reason for this recipient."
+);
+
+const getFailedCampaignMessages = (campaign?: CampaignDetails | null) => (
+    (campaign?.messages || []).filter((item) => item.status === "failed")
+);
+
+const summarizeFailureReasons = (messages: CampaignMessage[]) => {
+    const counts = messages.reduce<Record<string, number>>((acc, item) => {
+        const reason = getDeliveryFailureReason(item.errorMessage);
+        acc[reason] = (acc[reason] || 0) + 1;
+        return acc;
+    }, {});
+
+    return Object.entries(counts)
+        .map(([reason, count]) => ({ reason, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 3);
+};
+
+const truncateReason = (reason: string, limit = 72) => (
+    reason.length > limit ? `${reason.slice(0, limit).trimEnd()}...` : reason
+);
+
 export default function WhatsAppPage() {
     const { data: session } = useSession();
     const token = session?.user?.backendTokens?.at;
@@ -288,9 +396,10 @@ export default function WhatsAppPage() {
         hasAccessToken: false,
     });
 
-    console.info("!111111111111111111111111111111111111111111111", metaConnection);
-
     const metaConnected = metaConnection.connected || (metaConnection.hasAccessToken && Boolean(metaConnection.phoneNumberId));
+    const hasPendingSubmittedTemplates = templates.some(
+        (template) => template.metaSubmissionStatus === "submitted" && template.status === "pending",
+    );
 
     const [contactSearch, setContactSearch] = useState("");
     const [templateSearch, setTemplateSearch] = useState("");
@@ -303,11 +412,17 @@ export default function WhatsAppPage() {
     const [contactSource, setContactSource] = useState<"csv" | "form" | null>(null);
     const [contactForm, setContactForm] = useState({ name: "", tags: "", formId: "" });
     const [csvFile, setCsvFile] = useState<File | null>(null);
+    const [contactEditModal, setContactEditModal] = useState(false);
+    const [editingContactListId, setEditingContactListId] = useState<number | null>(null);
+    const [contactEditLoading, setContactEditLoading] = useState(false);
+    const [contactEditRows, setContactEditRows] = useState<ContactListContact[]>([]);
 
     const [templateModal, setTemplateModal] = useState(false);
     const [templatePreviewModal, setTemplatePreviewModal] = useState(false);
     const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
     const [newTemplate, setNewTemplate] = useState<TemplateFormState>(createEmptyTemplateState());
+    const [templateMediaPreviewUrl, setTemplateMediaPreviewUrl] = useState<string>();
+    const [carouselMediaPreviewUrls, setCarouselMediaPreviewUrls] = useState<Record<string, string>>({});
 
     const [campaignModal, setCampaignModal] = useState(false);
     const [campaignStep, setCampaignStep] = useState(0);
@@ -320,6 +435,10 @@ export default function WhatsAppPage() {
         sendType?: "now" | "schedule";
         scheduledAt?: Dayjs;
     }>({ sendType: "now" });
+    const [campaignReportModal, setCampaignReportModal] = useState(false);
+    const [campaignReportLoading, setCampaignReportLoading] = useState(false);
+    const [selectedCampaignReport, setSelectedCampaignReport] = useState<CampaignDetails | null>(null);
+    const [campaignReportCache, setCampaignReportCache] = useState<Record<number, CampaignDetails>>({});
 
     const apiRequest = async <T,>(path: string, options: RequestInit = {}): Promise<T> => {
         if (!API_URL) throw new Error("NEXT_PUBLIC_API_URL (or NEXT_PUBLIC_BACKEND_URL) is not configured");
@@ -356,6 +475,10 @@ export default function WhatsAppPage() {
         setContactLists(response.items || []);
     };
 
+    const loadContactListContacts = async (contactListId: number, limit = 500) => {
+        return apiRequest<{ items: ContactListContact[] }>(`/whatsapp/contacts/${contactListId}/contacts?page=1&limit=${limit}`);
+    };
+
     const loadTemplates = async () => {
         const response = await apiRequest<{ items: Template[] }>("/whatsapp/templates?page=1&limit=200");
         setTemplates(response.items || []);
@@ -366,6 +489,12 @@ export default function WhatsAppPage() {
         setCampaigns(response.items || []);
     };
 
+    const loadCampaignReport = async (campaignId: number) => {
+        const response = await apiRequest<CampaignDetails>(`/whatsapp/campaigns/${campaignId}`);
+        setCampaignReportCache((prev) => ({ ...prev, [campaignId]: response }));
+        return response;
+    };
+
     const loadStats = async () => {
         const response = await apiRequest<CampaignStats>("/whatsapp/campaigns/stats");
         setStats(response);
@@ -373,7 +502,6 @@ export default function WhatsAppPage() {
 
     const loadMetaSettings = async () => {
         const response = await apiRequest<MetaConnectionStatus>("/whatsapp/settings");
-        console.info("responseresponseresponseresponse", response);
         setMetaConnection(response);
     };
 
@@ -391,10 +519,52 @@ export default function WhatsAppPage() {
     };
 
     useEffect(() => {
-        loadAll();
+        void loadAll();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [token]);
 
-    console.info("32432423423", csvFile);
+    useEffect(() => {
+        if (!token || !hasPendingSubmittedTemplates) return;
+
+        const interval = window.setInterval(() => {
+            loadTemplates().catch((error) => {
+                console.error("Template status polling failed:", error);
+            });
+        }, 30000);
+
+        return () => window.clearInterval(interval);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [token, hasPendingSubmittedTemplates]);
+
+    useEffect(() => {
+        if (!newTemplate.mediaFile) {
+            setTemplateMediaPreviewUrl(undefined);
+            return;
+        }
+
+        const previewUrl = URL.createObjectURL(newTemplate.mediaFile);
+        setTemplateMediaPreviewUrl(previewUrl);
+
+        return () => {
+            URL.revokeObjectURL(previewUrl);
+        };
+    }, [newTemplate.mediaFile]);
+
+    useEffect(() => {
+        const nextPreviewUrls = Object.fromEntries(
+            newTemplate.carouselItems
+                .filter((item) => item.file)
+                .map((item) => [item.id, URL.createObjectURL(item.file as File)]),
+        ) as Record<string, string>;
+
+        setCarouselMediaPreviewUrls(nextPreviewUrls);
+
+        return () => {
+            Object.values(nextPreviewUrls).forEach((url) => {
+                URL.revokeObjectURL(url);
+            });
+        };
+    }, [newTemplate.carouselItems]);
 
     const createContactList = async () => {
         try {
@@ -500,6 +670,102 @@ export default function WhatsAppPage() {
         }
     };
 
+    const openEditContactList = async (record: ContactList) => {
+        try {
+            setContactEditLoading(true);
+            setEditingContactListId(record.id);
+            setContactForm({
+                name: record.name,
+                tags: (record.tags || []).join(", "),
+                formId: "",
+            });
+
+            const response = await loadContactListContacts(record.id, Math.max(record.count || 0, 200));
+            setContactEditRows(response.items?.length ? response.items : [createEmptyContactRow()]);
+            setContactEditModal(true);
+        } catch (error) {
+            message.error(parseErrorMessage(error));
+        } finally {
+            setContactEditLoading(false);
+        }
+    };
+
+    const updateContactEditRow = (index: number, patch: Partial<ContactListContact>) => {
+        setContactEditRows((prev) => prev.map((row, rowIndex) => (
+            rowIndex === index ? { ...row, ...patch } : row
+        )));
+    };
+
+    const addContactEditRow = () => {
+        setContactEditRows((prev) => [...prev, createEmptyContactRow()]);
+    };
+
+    const removeContactEditRow = (index: number) => {
+        setContactEditRows((prev) => (
+            prev.length === 1 ? prev : prev.filter((_, rowIndex) => rowIndex !== index)
+        ));
+    };
+
+    const closeContactEditModal = () => {
+        setContactEditModal(false);
+        setEditingContactListId(null);
+        setContactEditRows([]);
+        setContactForm({ name: "", tags: "", formId: "" });
+    };
+
+    const saveEditedContactList = async () => {
+        if (!editingContactListId) return;
+
+        try {
+            setContactEditLoading(true);
+            const name = contactForm.name.trim();
+            if (!name) {
+                message.error("List name is required");
+                return;
+            }
+
+            const contacts = contactEditRows
+                .map((row) => ({
+                    name: row.name.trim(),
+                    phone: row.phone.trim(),
+                    email: row.email?.trim() || undefined,
+                }))
+                .filter((row) => row.name || row.phone || row.email);
+
+            if (!contacts.length) {
+                message.error("At least one contact is required");
+                return;
+            }
+
+            if (contacts.some((row) => !row.phone)) {
+                message.error("Each contact needs a phone number");
+                return;
+            }
+
+            const tags = contactForm.tags
+                .split(",")
+                .map((tag) => tag.trim())
+                .filter(Boolean);
+
+            await apiRequest(`/whatsapp/contacts/${editingContactListId}`, {
+                method: "PUT",
+                body: JSON.stringify({
+                    name,
+                    tags,
+                    contacts,
+                }),
+            });
+
+            message.success("Contact list updated");
+            closeContactEditModal();
+            await loadContactLists();
+        } catch (error) {
+            message.error(parseErrorMessage(error));
+        } finally {
+            setContactEditLoading(false);
+        }
+    };
+
     const createTemplate = async () => {
         try {
             if (!newTemplate.name.trim()) {
@@ -584,19 +850,6 @@ export default function WhatsAppPage() {
         }
     };
 
-    const approveTemplate = async (id: number) => {
-        try {
-            await apiRequest(`/whatsapp/templates/${id}/status`, {
-                method: "PUT",
-                body: JSON.stringify({ status: "approved" }),
-            });
-            message.success("Template marked as approved");
-            await loadTemplates();
-        } catch (error) {
-            message.error(parseErrorMessage(error));
-        }
-    };
-
     const launchCampaign = async () => {
         try {
             if (!metaConnected) {
@@ -648,6 +901,58 @@ export default function WhatsAppPage() {
         }
     };
 
+    const closeCampaignReport = () => {
+        setCampaignReportModal(false);
+        setSelectedCampaignReport(null);
+        setCampaignReportLoading(false);
+    };
+
+    const openCampaignReport = async (campaign: Campaign) => {
+        const cachedReport = campaignReportCache[campaign.id];
+
+        setCampaignReportModal(true);
+        setSelectedCampaignReport(cachedReport || null);
+        setCampaignReportLoading(true);
+
+        try {
+            const report = await loadCampaignReport(campaign.id);
+            setSelectedCampaignReport(report);
+        } catch (error) {
+            message.error(parseErrorMessage(error));
+            if (!cachedReport) {
+                setCampaignReportModal(false);
+            }
+        } finally {
+            setCampaignReportLoading(false);
+        }
+    };
+
+    const getCampaignFailureTooltip = (campaign: Campaign) => {
+        const cachedReport = campaignReportCache[campaign.id];
+        const topReasons = summarizeFailureReasons(getFailedCampaignMessages(cachedReport));
+
+        if (!topReasons.length) {
+            return campaign.stats.failed > 0
+                ? "View exact failure reasons"
+                : "No failed deliveries";
+        }
+
+        return (
+            <div className="max-w-xs">
+                <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                    Top failure reasons
+                </div>
+                <div className="space-y-1">
+                    {topReasons.map((item) => (
+                        <div key={item.reason} className="text-xs text-gray-700">
+                            {item.count}x {truncateReason(item.reason, 56)}
+                        </div>
+                    ))}
+                </div>
+            </div>
+        );
+    };
+
     const updateTemplateType = (type: TemplateFormState["type"]) => {
         setNewTemplate((prev) => ({
             ...prev,
@@ -687,6 +992,10 @@ export default function WhatsAppPage() {
         const matchesType = !templateTypeFilter || t.type === templateTypeFilter;
         return matchesSearch && matchesStatus && matchesType;
     });
+    const liveCarouselPreviewItems = newTemplate.carouselItems.map((item) => ({
+        text: item.text,
+        mediaUrl: carouselMediaPreviewUrls[item.id],
+    }));
 
     const filteredContactLists = contactLists.filter((c) => c.name.toLowerCase().includes(contactSearch.toLowerCase()));
 
@@ -725,6 +1034,9 @@ export default function WhatsAppPage() {
                 <Space>
                     <Tooltip title="Download CSV">
                         <Button size="small" icon={<FaFileDownload />} disabled />
+                    </Tooltip>
+                    <Tooltip title="Edit Contacts">
+                        <Button size="small" icon={<EditOutlined />} onClick={() => openEditContactList(record)} />
                     </Tooltip>
                     <Popconfirm title="Delete this list?" onConfirm={() => deleteContactList(record.id)}>
                         <Button size="small" danger icon={<DeleteOutlined />} />
@@ -789,12 +1101,10 @@ export default function WhatsAppPage() {
                     <Tooltip title="Preview">
                         <Button size="small" icon={<EyeOutlined />} onClick={() => { setSelectedTemplate(record); setTemplatePreviewModal(true); }} />
                     </Tooltip>
-                    {record.status !== "approved" && (
-                        <Popconfirm title="Mark template as approved?" onConfirm={() => approveTemplate(record.id)}>
-                            <Tooltip title="Mark Approved">
-                                <Button size="small" type="primary" icon={<CheckCircleOutlined />} />
-                            </Tooltip>
-                        </Popconfirm>
+                    {record.metaSubmissionStatus === "submitted" && record.status === "pending" && (
+                        <Tooltip title="Refresh Status">
+                            <Button size="small" icon={<ReloadOutlined />} onClick={() => { void loadTemplates(); }} />
+                        </Tooltip>
                     )}
                     <Button size="small" icon={<EditOutlined />} disabled />
                     <Popconfirm title="Delete template?" onConfirm={() => deleteTemplate(record.id)}>
@@ -834,7 +1144,16 @@ export default function WhatsAppPage() {
                 <Space size={4}>
                     <Tooltip title="Sent"><Tag color="blue"><SendOutlined /> {record.stats.sent}</Tag></Tooltip>
                     <Tooltip title="Delivered"><Tag color="green"><CheckCircleOutlined /> {record.stats.delivered}</Tag></Tooltip>
-                    <Tooltip title="Failed"><Tag color="red"><CloseCircleOutlined /> {record.stats.failed}</Tag></Tooltip>
+                    <Tooltip title={getCampaignFailureTooltip(record)}>
+                        <Tag
+                            color={record.stats.failed > 0 ? "error" : "default"}
+                            className={record.stats.failed > 0 ? "cursor-pointer select-none" : ""}
+                            onClick={record.stats.failed > 0 ? () => { void openCampaignReport(record); } : undefined}
+                        >
+                            <CloseCircleOutlined /> {record.stats.failed}
+                            {record.stats.failed > 0 ? <EyeOutlined className="ml-1" /> : null}
+                        </Tag>
+                    </Tooltip>
                 </Space>
             ),
         },
@@ -854,7 +1173,9 @@ export default function WhatsAppPage() {
             title: "Actions", key: "actions",
             render: (_: any, record: Campaign) => (
                 <Space>
-                    <Tooltip title="View report"><Button size="small" icon={<BarChartOutlined />} disabled /></Tooltip>
+                    <Tooltip title="View delivery report">
+                        <Button size="small" icon={<BarChartOutlined />} onClick={() => { void openCampaignReport(record); }} />
+                    </Tooltip>
                     <Popconfirm title="Delete campaign?" onConfirm={() => deleteCampaign(record.id)}>
                         <Button size="small" danger icon={<DeleteOutlined />} />
                     </Popconfirm>
@@ -980,6 +1301,61 @@ export default function WhatsAppPage() {
             </div>
         </div>
     );
+
+    const failedMessages = getFailedCampaignMessages(selectedCampaignReport);
+    const failureSummary = summarizeFailureReasons(failedMessages);
+    const failureColumns = [
+        {
+            title: "Recipient",
+            dataIndex: "phone",
+            key: "phone",
+            render: (phone: string) => (
+                <div>
+                    <div className="font-medium text-gray-800">{phone}</div>
+                    <div className="text-xs text-gray-500">WhatsApp recipient</div>
+                </div>
+            ),
+        },
+        {
+            title: "Failure Reason",
+            dataIndex: "errorMessage",
+            key: "errorMessage",
+            render: (value: string | null | undefined) => {
+                const reason = getDeliveryFailureReason(value);
+
+                return (
+                    <Tooltip title={<div className="max-w-md whitespace-pre-wrap">{reason}</div>}>
+                        <div
+                            className="rounded-2xl border border-red-100 bg-red-50 px-3 py-2 text-sm text-red-700"
+                            style={{
+                                display: "-webkit-box",
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: "vertical",
+                                overflow: "hidden",
+                            }}
+                        >
+                            {reason}
+                        </div>
+                    </Tooltip>
+                );
+            },
+        },
+        {
+            title: "Last Updated",
+            key: "updatedAt",
+            render: (_: any, record: CampaignMessage) => (
+                <div className="text-xs text-gray-600">
+                    {dayjs(record.updatedAt || record.createdAt).format("MMM DD, YYYY HH:mm")}
+                </div>
+            ),
+        },
+        {
+            title: "Status",
+            dataIndex: "status",
+            key: "status",
+            render: (status: CampaignMessage["status"]) => <StatusTag status={status} />,
+        },
+    ];
 
     return (
         <div className="min-h-screen p-6" style={{ background: "linear-gradient(135deg, #f0f7ff 0%, #f5f5f5 100%)" }}>
@@ -1223,6 +1599,91 @@ export default function WhatsAppPage() {
             </Modal>
 
             <Modal
+                title={<span><EditOutlined className="mr-2 text-blue-500" />Edit Contact List</span>}
+                open={contactEditModal}
+                onCancel={closeContactEditModal}
+                onOk={() => { void saveEditedContactList(); }}
+                confirmLoading={contactEditLoading}
+                okText="Save Changes"
+                width={900}
+            >
+                <div className="space-y-4 py-2">
+                    <Form layout="vertical">
+                        <Row gutter={16}>
+                            <Col xs={24} md={12}>
+                                <Form.Item label="List Name" required>
+                                    <Input
+                                        placeholder="E.g. VIP Guests March"
+                                        value={contactForm.name}
+                                        onChange={(e) => setContactForm({ ...contactForm, name: e.target.value })}
+                                    />
+                                </Form.Item>
+                            </Col>
+                            <Col xs={24} md={12}>
+                                <Form.Item label="Tags (comma separated)">
+                                    <Input
+                                        placeholder="vip, hotel"
+                                        value={contactForm.tags}
+                                        onChange={(e) => setContactForm({ ...contactForm, tags: e.target.value })}
+                                    />
+                                </Form.Item>
+                            </Col>
+                        </Row>
+                    </Form>
+
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <div className="text-sm font-semibold text-gray-800">Contacts</div>
+                            <div className="text-xs text-gray-500">Update the name, phone, and email for each contact in this list.</div>
+                        </div>
+                        <Button type="dashed" icon={<PlusOutlined />} onClick={addContactEditRow}>
+                            Add Contact
+                        </Button>
+                    </div>
+
+                    <div className="max-h-[420px] overflow-auto rounded-xl border border-gray-200 p-4 space-y-3">
+                        {contactEditRows.map((row, index) => (
+                            <div key={`${row.id || "new"}-${index}`} className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+                                <div className="flex items-center justify-between mb-3">
+                                    <div className="text-sm font-medium text-gray-700">Contact {index + 1}</div>
+                                    <Button
+                                        size="small"
+                                        danger
+                                        icon={<DeleteOutlined />}
+                                        disabled={contactEditRows.length === 1}
+                                        onClick={() => removeContactEditRow(index)}
+                                    />
+                                </div>
+                                <Row gutter={12}>
+                                    <Col xs={24} md={8}>
+                                        <Input
+                                            placeholder="Name"
+                                            value={row.name}
+                                            onChange={(e) => updateContactEditRow(index, { name: e.target.value })}
+                                        />
+                                    </Col>
+                                    <Col xs={24} md={8}>
+                                        <Input
+                                            placeholder="Phone"
+                                            value={row.phone}
+                                            onChange={(e) => updateContactEditRow(index, { phone: e.target.value })}
+                                        />
+                                    </Col>
+                                    <Col xs={24} md={8}>
+                                        <Input
+                                            placeholder="Email"
+                                            value={row.email || ""}
+                                            onChange={(e) => updateContactEditRow(index, { email: e.target.value })}
+                                        />
+                                    </Col>
+                                </Row>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </Modal>
+
+            <Modal
                 title={<span><FileTextOutlined className="mr-2 text-purple-500" />Create Template</span>}
                 open={templateModal}
                 onCancel={() => {
@@ -1365,8 +1826,9 @@ export default function WhatsAppPage() {
                         <WhatsAppPreview
                             content={newTemplate.content}
                             type={newTemplate.type}
+                            mediaSrc={templateMediaPreviewUrl}
                             mediaLabel={newTemplate.mediaFile?.name}
-                            carouselItems={newTemplate.carouselItems}
+                            carouselItems={liveCarouselPreviewItems}
                         />
                     </Col>
                 </Row>
@@ -1397,6 +1859,7 @@ export default function WhatsAppPage() {
                         <WhatsAppPreview
                             content={selectedTemplate.content}
                             type={selectedTemplate.type}
+                            mediaSrc={selectedTemplate.mediaUrl}
                             mediaLabel={selectedTemplate.mediaUrl ? "Uploaded media attached" : undefined}
                             carouselItems={selectedTemplate.carouselItems ?? undefined}
                         />
@@ -1405,9 +1868,11 @@ export default function WhatsAppPage() {
                                 {selectedTemplate.carouselItems.map((item, index) => (
                                     <Card key={`${item.mediaUrl}-${index}`} size="small" title={`Card ${index + 1}`}>
                                         {item.mediaUrl ? (
-                                            <div className="mb-2 rounded-lg bg-gray-100 p-4 text-center text-xs text-gray-500">
-                                                Media uploaded for this card
-                                            </div>
+                                            <img
+                                                src={item.mediaUrl}
+                                                alt={item.text || `Card ${index + 1}`}
+                                                className="mb-2 h-28 w-full rounded-lg object-cover"
+                                            />
                                         ) : null}
                                         <div className="text-sm text-gray-700">{item.text || "No text"}</div>
                                     </Card>
@@ -1425,6 +1890,128 @@ export default function WhatsAppPage() {
                             </div>
                         )}
                     </>
+                )}
+            </Modal>
+
+            <Modal
+                title={<span><BarChartOutlined className="mr-2 text-orange-500" />Delivery Report</span>}
+                open={campaignReportModal}
+                onCancel={closeCampaignReport}
+                width={940}
+                footer={[
+                    <Button
+                        key="refresh"
+                        icon={<ReloadOutlined />}
+                        loading={campaignReportLoading}
+                        onClick={() => {
+                            if (selectedCampaignReport) {
+                                void openCampaignReport(selectedCampaignReport);
+                            }
+                        }}
+                    >
+                        Refresh
+                    </Button>,
+                    <Button key="close" type="primary" onClick={closeCampaignReport}>
+                        Close
+                    </Button>,
+                ]}
+            >
+                {campaignReportLoading && !selectedCampaignReport ? (
+                    <div className="py-10 text-center text-sm text-gray-500">Loading delivery details...</div>
+                ) : selectedCampaignReport ? (
+                    <div className="space-y-4">
+                        <div
+                            className="rounded-3xl border p-5"
+                            style={{
+                                background: "linear-gradient(135deg, #fff7e6 0%, #fff1f0 100%)",
+                                borderColor: "#ffd8bf",
+                            }}
+                        >
+                            <div className="flex flex-wrap items-start justify-between gap-3">
+                                <div>
+                                    <div className="text-lg font-semibold text-gray-800">{selectedCampaignReport.name}</div>
+                                    <div className="text-sm text-gray-500">
+                                        {selectedCampaignReport.templateName} · {selectedCampaignReport.contactListName}
+                                    </div>
+                                </div>
+                                <StatusTag status={selectedCampaignReport.status} />
+                            </div>
+
+                            <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
+                                {[
+                                    { label: "Sent", value: selectedCampaignReport.stats.sent, color: "#1677ff", bg: "#e6f4ff" },
+                                    { label: "Delivered", value: selectedCampaignReport.stats.delivered, color: "#389e0d", bg: "#f6ffed" },
+                                    { label: "Failed", value: selectedCampaignReport.stats.failed, color: "#cf1322", bg: "#fff1f0" },
+                                ].map((item) => (
+                                    <div
+                                        key={item.label}
+                                        className="rounded-2xl px-4 py-3"
+                                        style={{ background: item.bg }}
+                                    >
+                                        <div className="text-xs uppercase tracking-wide text-gray-500">{item.label}</div>
+                                        <div className="mt-1 text-2xl font-semibold" style={{ color: item.color }}>
+                                            {item.value}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            {failedMessages.length > 0 ? (
+                                <div className="mt-4">
+                                    <div className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                                        Failure Summary
+                                    </div>
+                                    <div className="mt-2 flex flex-wrap gap-2">
+                                        {failureSummary.map((item) => (
+                                            <Tooltip key={item.reason} title={<div className="max-w-md whitespace-pre-wrap">{item.reason}</div>}>
+                                                <Tag color="volcano" className="rounded-full px-3 py-1">
+                                                    {item.count}x {truncateReason(item.reason, 54)}
+                                                </Tag>
+                                            </Tooltip>
+                                        ))}
+                                    </div>
+                                </div>
+                            ) : (
+                                <Alert
+                                    className="mt-4"
+                                    type="success"
+                                    showIcon
+                                    message="No failed deliveries in this campaign"
+                                    description="If a message fails later, the exact Meta or WhatsApp reason will show up here."
+                                />
+                            )}
+                        </div>
+
+                        <div>
+                            <div className="mb-2 flex items-center justify-between">
+                                <div className="text-sm font-semibold text-gray-700">Failed recipients</div>
+                                <div className="text-xs text-gray-500">
+                                    Showing {failedMessages.length} failed contact{failedMessages.length === 1 ? "" : "s"}
+                                </div>
+                            </div>
+                            <Table
+                                rowKey="id"
+                                columns={failureColumns}
+                                dataSource={failedMessages}
+                                loading={campaignReportLoading}
+                                pagination={{ pageSize: 6, hideOnSinglePage: true }}
+                                locale={{
+                                    emptyText: (
+                                        <Empty
+                                            image={Empty.PRESENTED_IMAGE_SIMPLE}
+                                            description="No failed recipients for this campaign"
+                                        />
+                                    ),
+                                }}
+                                scroll={{ x: 720 }}
+                            />
+                        </div>
+                    </div>
+                ) : (
+                    <Empty
+                        image={Empty.PRESENTED_IMAGE_SIMPLE}
+                        description="Campaign details are not available right now"
+                    />
                 )}
             </Modal>
 
