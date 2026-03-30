@@ -14,7 +14,8 @@ import {
     BarChartOutlined,
     ReloadOutlined,
     CloudUploadOutlined, FormOutlined, VideoCameraOutlined, PictureOutlined,
-    AppstoreOutlined, CalendarOutlined, ThunderboltOutlined
+    AppstoreOutlined, CalendarOutlined, ThunderboltOutlined,
+    LinkOutlined, PhoneOutlined, CopyOutlined,
 } from "@ant-design/icons";
 import { MdWhatsapp } from "react-icons/md";
 import { FaFileDownload } from "react-icons/fa";
@@ -69,6 +70,7 @@ interface Template {
     variables?: string[];
     mediaUrl?: string;
     carouselItems?: CarouselTemplateItem[] | null;
+    buttons?: TemplateButtonConfig[] | null;
     createdAt: string;
 }
 
@@ -83,6 +85,20 @@ interface CarouselDraftItem {
     file: File | null;
 }
 
+interface TemplateButtonConfig {
+    type: "phone_number" | "url" | "copy_code";
+    urlType?: "static" | "dynamic";
+    text?: string;
+    phoneNumber?: string;
+    url?: string;
+    urlSuffix?: string;
+    offerCode?: string;
+}
+
+interface TemplateButtonDraft extends TemplateButtonConfig {
+    id: string;
+}
+
 interface TemplateFormState {
     name: string;
     category: "utility" | "marketing" | "authentication" | "service";
@@ -90,6 +106,7 @@ interface TemplateFormState {
     content: string;
     mediaFile: File | null;
     carouselItems: CarouselDraftItem[];
+    buttons: TemplateButtonDraft[];
 }
 
 interface Campaign {
@@ -199,6 +216,17 @@ const createCarouselDraftItem = (): CarouselDraftItem => ({
     file: null,
 });
 
+const createTemplateButtonDraft = (): TemplateButtonDraft => ({
+    id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    type: "url",
+    urlType: "static",
+    text: "",
+    url: "",
+    urlSuffix: "",
+    phoneNumber: "",
+    offerCode: "",
+});
+
 const createEmptyTemplateState = (): TemplateFormState => ({
     name: "",
     category: "marketing",
@@ -206,6 +234,7 @@ const createEmptyTemplateState = (): TemplateFormState => ({
     content: "",
     mediaFile: null,
     carouselItems: [createCarouselDraftItem()],
+    buttons: [],
 });
 
 const getUploadFileList = (file: File | null): UploadFile[] => (
@@ -268,8 +297,28 @@ const MediaPreviewCard = ({
     );
 };
 
+const getButtonActionValue = (button: Pick<TemplateButtonConfig, "type" | "urlType">): "phone_number" | "url_static" | "url_dynamic" | "copy_code" => {
+    if (button.type === "phone_number") return "phone_number";
+    if (button.type === "copy_code") return "copy_code";
+    return button.urlType === "dynamic" ? "url_dynamic" : "url_static";
+};
 
+const getPreviewButtonLabel = (button: TemplateButtonConfig): string => {
+    if (button.type === "copy_code") return "Copy code";
+    return button.text?.trim() || (
+        button.type === "phone_number"
+            ? "Call now"
+            : button.urlType === "dynamic"
+                ? "Visit personalized link"
+                : "Visit website"
+    );
+};
 
+const getPreviewButtonIcon = (button: TemplateButtonConfig) => {
+    if (button.type === "phone_number") return <PhoneOutlined />;
+    if (button.type === "copy_code") return <CopyOutlined />;
+    return <LinkOutlined />;
+};
 
 const WhatsAppPreview = ({
     content,
@@ -277,12 +326,14 @@ const WhatsAppPreview = ({
     mediaSrc,
     mediaLabel,
     carouselItems,
+    buttons,
 }: {
     content: string;
     type: string;
     mediaSrc?: string;
     mediaLabel?: string;
     carouselItems?: Array<{ text: string; mediaUrl?: string }>;
+    buttons?: TemplateButtonConfig[];
 }) => (
     <div className="flex justify-center py-4">
         <div
@@ -341,6 +392,19 @@ const WhatsAppPreview = ({
                         <span className="text-gray-400" style={{ fontSize: 10 }}>{dayjs().format("HH:mm")} ✓✓</span>
                     </div>
                 </div>
+                {buttons?.length ? (
+                    <div className="mt-2 space-y-2">
+                        {buttons.map((button, index) => (
+                            <div
+                                key={`${button.type}-${button.text || button.offerCode || index}`}
+                                className="flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-medium text-blue-600 shadow-sm"
+                            >
+                                {getPreviewButtonIcon(button)}
+                                <span>{getPreviewButtonLabel(button)}</span>
+                            </div>
+                        ))}
+                    </div>
+                ) : null}
             </div>
             <div className="flex items-center gap-2 px-3 py-2" style={{ background: "#F0F0F0" }}>
                 <div className="flex-1 rounded-full bg-white px-3 py-1 text-gray-400 text-xs">Type a message</div>
@@ -791,11 +855,91 @@ export default function WhatsAppPage() {
                 }
             }
 
+            if (newTemplate.buttons.length > 3) {
+                message.error("You can add up to 3 call-to-action buttons");
+                return;
+            }
+
+            const phoneButtons = newTemplate.buttons.filter((button) => button.type === "phone_number");
+            const urlButtons = newTemplate.buttons.filter((button) => button.type === "url");
+            const copyCodeButtons = newTemplate.buttons.filter((button) => button.type === "copy_code");
+
+            if (phoneButtons.length > 1) {
+                message.error("Only one phone number CTA button is allowed");
+                return;
+            }
+
+            if (urlButtons.length > 2) {
+                message.error("Only two website CTA buttons are allowed");
+                return;
+            }
+
+            if (copyCodeButtons.length > 1) {
+                message.error("Only one copy code CTA button is allowed");
+                return;
+            }
+
+            if (newTemplate.type === "carousel" && newTemplate.buttons.length > 0) {
+                message.error("CTA buttons are currently available for text, image, and video templates only");
+                return;
+            }
+
+            const invalidButton = newTemplate.buttons.find((button) => {
+                if (button.type === "phone_number") {
+                    return !button.text?.trim() || !button.phoneNumber?.trim();
+                }
+
+                if (button.type === "copy_code") {
+                    return !button.offerCode?.trim();
+                }
+
+                return !button.text?.trim()
+                    || !button.url?.trim()
+                    || (button.urlType === "dynamic" && !button.urlSuffix?.trim());
+            });
+
+            if (invalidButton) {
+                message.error("Please complete all CTA button fields before submitting");
+                return;
+            }
+
             const formData = new FormData();
             formData.append("name", newTemplate.name.trim());
             formData.append("category", newTemplate.category);
             formData.append("type", newTemplate.type);
             formData.append("content", newTemplate.content.trim());
+
+            if (newTemplate.buttons.length > 0) {
+                formData.append(
+                    "buttons",
+                    JSON.stringify(
+                        newTemplate.buttons.map((button) => {
+                            if (button.type === "phone_number") {
+                                return {
+                                    type: "phone_number",
+                                    text: button.text?.trim(),
+                                    phoneNumber: button.phoneNumber?.trim(),
+                                };
+                            }
+
+                            if (button.type === "copy_code") {
+                                return {
+                                    type: "copy_code",
+                                    offerCode: button.offerCode?.trim(),
+                                };
+                            }
+
+                            return {
+                                type: "url",
+                                urlType: button.urlType,
+                                text: button.text?.trim(),
+                                url: button.url?.trim(),
+                                urlSuffix: button.urlType === "dynamic" ? button.urlSuffix?.trim() : undefined,
+                            };
+                        }),
+                    ),
+                );
+            }
 
             if (newTemplate.type === "image" || newTemplate.type === "video") {
                 if (newTemplate.mediaFile) {
@@ -960,6 +1104,7 @@ export default function WhatsAppPage() {
             content: type === "carousel" ? prev.content : prev.content,
             mediaFile: type === "image" || type === "video" ? prev.mediaFile : null,
             carouselItems: type === "carousel" ? (prev.carouselItems.length ? prev.carouselItems : [createCarouselDraftItem()]) : prev.carouselItems,
+            buttons: type === "carousel" ? [] : prev.buttons,
         }));
     };
 
@@ -986,6 +1131,74 @@ export default function WhatsAppPage() {
         }));
     };
 
+    const updateTemplateButton = (id: string, patch: Partial<TemplateButtonDraft>) => {
+        setNewTemplate((prev) => ({
+            ...prev,
+            buttons: prev.buttons.map((button) => button.id === id ? { ...button, ...patch } : button),
+        }));
+    };
+
+    const updateTemplateButtonAction = (id: string, action: "phone_number" | "url_static" | "url_dynamic" | "copy_code") => {
+        setNewTemplate((prev) => ({
+            ...prev,
+            buttons: prev.buttons.map((button) => {
+                if (button.id !== id) return button;
+
+                if (action === "phone_number") {
+                    return {
+                        ...button,
+                        type: "phone_number",
+                        urlType: undefined,
+                        url: "",
+                        urlSuffix: "",
+                        offerCode: "",
+                    };
+                }
+
+                if (action === "copy_code") {
+                    return {
+                        ...button,
+                        type: "copy_code",
+                        text: "",
+                        phoneNumber: "",
+                        urlType: undefined,
+                        url: "",
+                        urlSuffix: "",
+                    };
+                }
+
+                return {
+                    ...button,
+                    type: "url",
+                    urlType: action === "url_dynamic" ? "dynamic" : "static",
+                    phoneNumber: "",
+                    offerCode: "",
+                };
+            }),
+        }));
+    };
+
+    const addTemplateButton = () => {
+        setNewTemplate((prev) => {
+            if (prev.buttons.length >= 3) {
+                message.warning("A maximum of 3 CTA buttons is allowed");
+                return prev;
+            }
+
+            return {
+                ...prev,
+                buttons: [...prev.buttons, createTemplateButtonDraft()],
+            };
+        });
+    };
+
+    const removeTemplateButton = (id: string) => {
+        setNewTemplate((prev) => ({
+            ...prev,
+            buttons: prev.buttons.filter((button) => button.id !== id),
+        }));
+    };
+
     const filteredTemplates = templates.filter((t) => {
         const matchesSearch = !templateSearch || t.name.toLowerCase().includes(templateSearch.toLowerCase()) || t.content.toLowerCase().includes(templateSearch.toLowerCase());
         const matchesStatus = !templateStatusFilter || t.status === templateStatusFilter;
@@ -996,6 +1209,7 @@ export default function WhatsAppPage() {
         text: item.text,
         mediaUrl: carouselMediaPreviewUrls[item.id],
     }));
+    const liveButtonPreviewItems: TemplateButtonConfig[] = newTemplate.buttons.map(({ id, ...button }) => button);
 
     const filteredContactLists = contactLists.filter((c) => c.name.toLowerCase().includes(contactSearch.toLowerCase()));
 
@@ -1807,6 +2021,108 @@ export default function WhatsAppPage() {
                                         </div>
                                     </>
                                 )}
+                                {newTemplate.type !== "carousel" && (
+                                    <Form.Item label="Call To Action Buttons">
+                                        <div className="space-y-3">
+                                            {newTemplate.buttons.length === 0 ? (
+                                                <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 px-4 py-3 text-sm text-gray-500">
+                                                    Add up to 3 CTA buttons. Supported types: Phone Number, Static URL, Dynamic URL, and Copy Code.
+                                                </div>
+                                            ) : null}
+                                            {newTemplate.buttons.map((button, index) => (
+                                                <Card key={button.id} size="small" title={`CTA Button ${index + 1}`}>
+                                                    <div className="space-y-3">
+                                                        <Select
+                                                            value={getButtonActionValue(button)}
+                                                            onChange={(value) => updateTemplateButtonAction(button.id, value)}
+                                                            className="w-full"
+                                                        >
+                                                            <Option value="phone_number">Call phone number</Option>
+                                                            <Option value="url_static">Visit website (static)</Option>
+                                                            <Option value="url_dynamic">Visit website (dynamic)</Option>
+                                                            <Option value="copy_code">Copy offer code</Option>
+                                                        </Select>
+
+                                                        {button.type === "phone_number" && (
+                                                            <Row gutter={12}>
+                                                                <Col span={12}>
+                                                                    <Input
+                                                                        placeholder="Button label"
+                                                                        value={button.text}
+                                                                        onChange={(e) => updateTemplateButton(button.id, { text: e.target.value })}
+                                                                    />
+                                                                </Col>
+                                                                <Col span={12}>
+                                                                    <Input
+                                                                        placeholder="Phone number"
+                                                                        value={button.phoneNumber}
+                                                                        onChange={(e) => updateTemplateButton(button.id, { phoneNumber: e.target.value })}
+                                                                    />
+                                                                </Col>
+                                                            </Row>
+                                                        )}
+
+                                                        {button.type === "url" && (
+                                                            <>
+                                                                <Input
+                                                                    placeholder="Button label"
+                                                                    value={button.text}
+                                                                    onChange={(e) => updateTemplateButton(button.id, { text: e.target.value })}
+                                                                />
+                                                                <Input
+                                                                    placeholder="https://example.com/path"
+                                                                    value={button.url}
+                                                                    onChange={(e) => updateTemplateButton(button.id, { url: e.target.value })}
+                                                                />
+                                                                {button.urlType === "dynamic" ? (
+                                                                    <Input
+                                                                        placeholder="{{booking_id}} or offer/{{promo_code}}"
+                                                                        value={button.urlSuffix}
+                                                                        onChange={(e) => updateTemplateButton(button.id, { urlSuffix: e.target.value })}
+                                                                    />
+                                                                ) : null}
+                                                            </>
+                                                        )}
+
+                                                        {button.type === "copy_code" && (
+                                                            <Input
+                                                                placeholder="Offer code, e.g. SUMMER20"
+                                                                value={button.offerCode}
+                                                                onChange={(e) => updateTemplateButton(button.id, { offerCode: e.target.value })}
+                                                            />
+                                                        )}
+
+                                                        <div className="flex justify-end">
+                                                            <Button
+                                                                danger
+                                                                icon={<DeleteOutlined />}
+                                                                onClick={() => removeTemplateButton(button.id)}
+                                                            >
+                                                                Remove Button
+                                                            </Button>
+                                                        </div>
+                                                    </div>
+                                                </Card>
+                                            ))}
+                                            <Button
+                                                type="dashed"
+                                                block
+                                                icon={<PlusOutlined />}
+                                                onClick={addTemplateButton}
+                                                disabled={newTemplate.buttons.length >= 3}
+                                            >
+                                                Add CTA Button
+                                            </Button>
+                                        </div>
+                                    </Form.Item>
+                                )}
+                                {newTemplate.type === "carousel" && (
+                                    <Alert
+                                        type="info"
+                                        showIcon
+                                        message="CTA buttons are currently available for text, image, and video templates."
+                                    />
+                                )}
                             </Form>
                             <div className="flex gap-2 justify-end">
                                 <Button
@@ -1829,6 +2145,7 @@ export default function WhatsAppPage() {
                             mediaSrc={templateMediaPreviewUrl}
                             mediaLabel={newTemplate.mediaFile?.name}
                             carouselItems={liveCarouselPreviewItems}
+                            buttons={liveButtonPreviewItems}
                         />
                     </Col>
                 </Row>
@@ -1862,6 +2179,7 @@ export default function WhatsAppPage() {
                             mediaSrc={selectedTemplate.mediaUrl}
                             mediaLabel={selectedTemplate.mediaUrl ? "Uploaded media attached" : undefined}
                             carouselItems={selectedTemplate.carouselItems ?? undefined}
+                            buttons={selectedTemplate.buttons ?? undefined}
                         />
                         {selectedTemplate.carouselItems && selectedTemplate.carouselItems.length > 0 && (
                             <div className="mt-3 space-y-2">
@@ -1885,6 +2203,22 @@ export default function WhatsAppPage() {
                                 <div className="flex flex-wrap gap-1">
                                     {selectedTemplate.variables.map(v => (
                                         <Tag key={v} color="purple">{"{{" + v + "}}"}</Tag>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                        {selectedTemplate.buttons && selectedTemplate.buttons.length > 0 && (
+                            <div className="mt-3">
+                                <div className="text-xs text-gray-500 mb-1">CTA Buttons:</div>
+                                <div className="flex flex-wrap gap-2">
+                                    {selectedTemplate.buttons.map((button, index) => (
+                                        <Tag key={`${button.type}-${index}`} color="blue">
+                                            {button.type === "phone_number"
+                                                ? `Phone: ${button.text || "Call"}`
+                                                : button.type === "copy_code"
+                                                    ? `Copy Code: ${button.offerCode || "Configured"}`
+                                                    : `${button.urlType === "dynamic" ? "Dynamic URL" : "Static URL"}: ${button.text || "Visit"}`}
+                                        </Tag>
                                     ))}
                                 </div>
                             </div>

@@ -1311,3 +1311,7 @@ body.nobstacle-active {
   background: #3b5998;
   color: white;
 }
+
+.whatsappListContactModal .headerButton {
+  width: auto !important;
+}

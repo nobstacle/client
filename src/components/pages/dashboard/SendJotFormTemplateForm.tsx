@@ -6,7 +6,7 @@ import { useSocketContext } from "../../../context/SocketContextProvider";
 import "../../../styles/base.css";
 import { useSession } from "next-auth/react";
 import axios from 'axios';
-import { FaFileDownload, FaFileUpload, FaCopy, FaFilePdf, FaSearch, FaTrash, FaCheck, FaTimes, FaEdit } from "react-icons/fa";
+import { FaFileDownload, FaFileUpload, FaCopy, FaFilePdf, FaSearch, FaTrash, FaCheck, FaTimes, FaEdit, FaFileExport } from "react-icons/fa";
 import { toast, Bounce } from 'react-toastify';
 import { BsFillSendPlusFill } from "react-icons/bs";
 import { RiUploadCloudFill } from "react-icons/ri";
@@ -144,6 +144,10 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 	const [isMobile, setIsMobile] = useState(false);
 	const userRole = userData?.user?.Roles?.[0];
 	const [exportLoading, setExportLoading] = useState(false);
+	const [whatsappExportLoading, setWhatsappExportLoading] = useState(false);
+	const [isWhatsappExportModalOpen, setIsWhatsappExportModalOpen] = useState(false);
+	const [whatsappListName, setWhatsappListName] = useState("");
+	const [whatsappListTags, setWhatsappListTags] = useState("");
 	const abortControllerRef = useRef<AbortController | null>(null);
 	const [selectedFormFields, setSelectedFormFields] = useState<FormFields | null>(null);
 	const [isSearchActive, setIsSearchActive] = useState(false);
@@ -218,6 +222,34 @@ useEffect(() => {
 	const closeReportModal = () => {
 		setIsReportModal(false);
 	}
+
+	const buildDefaultWhatsappListName = () => {
+		const formName = assignedForms.find((form) => form.form_id === selectedForm)?.form_name || "Form Responses";
+		const suffixParts = [
+			selectedFilter !== "all" ? selectedFilter : "",
+			lastSearchedValue ? "filtered" : "",
+			dayjs().format("YYYY-MM-DD"),
+		].filter(Boolean);
+
+		return `${formName} ${suffixParts.join(" ")}`.trim();
+	};
+
+	const openWhatsappExportModal = () => {
+		if (!selectedForm) {
+			toast.error("Please select a form first");
+			return;
+		}
+
+		setWhatsappListName(buildDefaultWhatsappListName());
+		setWhatsappListTags(selectedFilter !== "all" ? selectedFilter : "");
+		setIsWhatsappExportModalOpen(true);
+	};
+
+	const closeWhatsappExportModal = () => {
+		setIsWhatsappExportModalOpen(false);
+		setWhatsappListName("");
+		setWhatsappListTags("");
+	};
 
 	useEffect(() => {
 		if (!socket) return;
@@ -2223,6 +2255,82 @@ useEffect(() => {
 		}
 	};
 
+	const handleExportToWhatsapp = async () => {
+		if (!selectedForm) {
+			toast.error("Please select a form first");
+			return;
+		}
+
+		if (!userData?.user?.backendTokens?.at) {
+			toast.error("Your session is missing a backend token. Please log in again.");
+			return;
+		}
+
+		if (!whatsappListName.trim()) {
+			toast.error("Please enter a contact list name");
+			return;
+		}
+
+		setWhatsappExportLoading(true);
+
+		try {
+			const Url = getBackendUrl();
+			const response = await axios.post(
+				`${Url}/api/jotform/export-to-whatsapp/${selectedForm}`,
+				{
+					name: whatsappListName.trim(),
+					tags: whatsappListTags
+						.split(",")
+						.map((tag) => tag.trim())
+						.filter(Boolean),
+					search: lastSearchedValue || "",
+					filter: selectedFilter,
+				},
+				{
+					headers: {
+						Authorization: `Bearer ${userData.user.backendTokens.at}`,
+						"Content-Type": "application/json",
+					},
+				}
+			);
+
+			const data = response.data;
+			toast.success(
+				`WhatsApp list created: ${data?.contactList?.name || whatsappListName.trim()} (${data?.imported || 0} contacts)`,
+				{
+					position: "bottom-right",
+					autoClose: 5000,
+					hideProgressBar: false,
+					closeOnClick: false,
+					pauseOnHover: true,
+					draggable: true,
+					progress: undefined,
+					theme: "colored",
+					transition: Bounce,
+				}
+			);
+			closeWhatsappExportModal();
+		} catch (error: any) {
+			console.error("WhatsApp export error:", error);
+			toast.error(
+				error?.response?.data?.message || "Failed to create WhatsApp contact list. Please try again.",
+				{
+					position: "bottom-right",
+					autoClose: 5000,
+					hideProgressBar: false,
+					closeOnClick: false,
+					pauseOnHover: true,
+					draggable: true,
+					progress: undefined,
+					theme: "colored",
+					transition: Bounce,
+				}
+			);
+		} finally {
+			setWhatsappExportLoading(false);
+		}
+	};
+
 	const renderFormField = (item, idx, arr) => {
 		const commonProps = {
 			key: item.qid,
@@ -2613,7 +2721,7 @@ useEffect(() => {
 			</Form>
 
 			<div className="card mt-5 bg-white rounded" style={{ position: 'relative' }}>
-				<div className="flex flex-wrap items-center gap-4 tableDataWrapper" style={{ padding: '0.5rem 1rem 0 1rem' }}>
+				<div className="flex flex-wrap items-center justify-between gap-4 tableDataWrapper" style={{ padding: '0.5rem 1rem 0 1rem' }}>
 					<div className="formFilter flex items-center gap-4 flex-wrap">
 						<Radio.Group
 							value={selectedFilter}
@@ -2625,16 +2733,27 @@ useEffect(() => {
 							<Radio.Button value="pending">Pending</Radio.Button>
 						</Radio.Group>
 					</div>
-					<Tooltip title="Export to Excel">
-						<Button
-							onClick={handleExportToExcel}
-							icon={<FaFileDownload size={20} color="#fff" />}
-							type="primary"
-							className="headerButton"
-							loading={exportLoading}
-							disabled={!selectedFormFields?.content}
-						/>
-					</Tooltip>
+					<div className="ml-auto flex items-center justify-end gap-2">
+						<Tooltip title="Export to Excel">
+							<Button
+								onClick={handleExportToExcel}
+								icon={<FaFileDownload size={20} color="#fff" />}
+								type="primary"
+								className="headerButton"
+								loading={exportLoading}
+								disabled={!selectedFormFields?.content}
+							/>
+						</Tooltip>
+						<Tooltip title="Create WhatsApp Contact List">
+							<Button
+								onClick={openWhatsappExportModal}
+								icon={<FaFileExport size={20} color="#fff" />}
+								type="primary"
+								className="headerButton"
+								disabled={!selectedFormFields?.content}
+							/>
+						</Tooltip>
+					</div>
 				</div>
 				{loader || !tableResponse || !selectedFormFields?.content ? (
 					<div className="p-4 bg-white shadow-md rounded-lg customTableWrapper">
@@ -2657,6 +2776,56 @@ useEffect(() => {
 					/>
 				)}
 			</div>
+
+			<Modal
+				open={isWhatsappExportModalOpen}
+				onCancel={closeWhatsappExportModal}
+				footer={null}
+				title="Create WhatsApp Contact List"
+				destroyOnClose
+				className="whatsappListContactModal"
+			>
+				<div className="flex flex-col gap-4">
+					<div>
+						<div className="mb-2 font-medium text-gray-700">List name</div>
+						<Input
+							value={whatsappListName}
+							onChange={(e) => setWhatsappListName(e.target.value)}
+							placeholder="Enter contact list name"
+							disabled={whatsappExportLoading}
+						/>
+					</div>
+					<div>
+						<div className="mb-2 font-medium text-gray-700">Tags</div>
+						<Input
+							value={whatsappListTags}
+							onChange={(e) => setWhatsappListTags(e.target.value)}
+							placeholder="vip, followup, march"
+							disabled={whatsappExportLoading}
+						/>
+					</div>
+					<div className="rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-600">
+						This will create a contact list in WhatsApp from the currently selected form results using the active search and status filters.
+					</div>
+					<div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+						<Button
+							onClick={closeWhatsappExportModal}
+							disabled={whatsappExportLoading}
+							className="w-full sm:w-28"
+						>
+							Cancel
+						</Button>
+						<Button
+							type="primary"
+							onClick={handleExportToWhatsapp}
+							loading={whatsappExportLoading}
+							className="headerButton w-full sm:w-32"
+						>
+							Create List
+						</Button>
+					</div>
+				</div>
+			</Modal>
 
 			<Modal
 				open={isModalOpen}
