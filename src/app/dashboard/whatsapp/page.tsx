@@ -27,6 +27,7 @@ const { TabPane } = Tabs;
 const { TextArea } = Input;
 const { Step } = Steps;
 const { Dragger } = Upload;
+const COPY_CODE_MAX_LENGTH = 15;
 
 const API_URL = (() => {
     const raw = (process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || "").trim();
@@ -236,6 +237,18 @@ const createEmptyTemplateState = (): TemplateFormState => ({
     carouselItems: [createCarouselDraftItem()],
     buttons: [],
 });
+
+const getCopyCodeValidationError = (value?: string): string | null => {
+    const normalized = value?.trim() || "";
+    if (!normalized) return "Copy offer code is required";
+    if (normalized.length > COPY_CODE_MAX_LENGTH) {
+        return `Copy offer code must be ${COPY_CODE_MAX_LENGTH} characters or fewer`;
+    }
+    if (/\{\{\w+\}\}/.test(normalized)) {
+        return "Copy offer code must be a fixed value. Template variables are not allowed here";
+    }
+    return null;
+};
 
 const getUploadFileList = (file: File | null): UploadFile[] => (
     file ? [{ uid: `${file.name}-${file.size}-${file.lastModified}`, name: file.name, status: "done" }] : []
@@ -503,6 +516,7 @@ export default function WhatsAppPage() {
     const [campaignReportLoading, setCampaignReportLoading] = useState(false);
     const [selectedCampaignReport, setSelectedCampaignReport] = useState<CampaignDetails | null>(null);
     const [campaignReportCache, setCampaignReportCache] = useState<Record<number, CampaignDetails>>({});
+    const hasCopyCodeButton = newTemplate.buttons.some((button) => button.type === "copy_code");
 
     const apiRequest = async <T,>(path: string, options: RequestInit = {}): Promise<T> => {
         if (!API_URL) throw new Error("NEXT_PUBLIC_API_URL (or NEXT_PUBLIC_BACKEND_URL) is not configured");
@@ -879,8 +893,19 @@ export default function WhatsAppPage() {
                 return;
             }
 
+            if (copyCodeButtons.length > 0 && newTemplate.category !== "marketing") {
+                message.error("Copy offer code CTA buttons are only supported for marketing templates");
+                return;
+            }
+
             if (newTemplate.type === "carousel" && newTemplate.buttons.length > 0) {
                 message.error("CTA buttons are currently available for text, image, and video templates only");
+                return;
+            }
+
+            const invalidCopyCodeButton = copyCodeButtons.find((button) => getCopyCodeValidationError(button.offerCode));
+            if (invalidCopyCodeButton) {
+                message.error(getCopyCodeValidationError(invalidCopyCodeButton.offerCode) || "Copy offer code is invalid");
                 return;
             }
 
@@ -890,7 +915,7 @@ export default function WhatsAppPage() {
                 }
 
                 if (button.type === "copy_code") {
-                    return !button.offerCode?.trim();
+                    return false;
                 }
 
                 return !button.text?.trim()
@@ -1138,9 +1163,23 @@ export default function WhatsAppPage() {
         }));
     };
 
+    const updateTemplateCategory = (category: TemplateFormState["category"]) => {
+        if (hasCopyCodeButton && category !== "marketing") {
+            message.warning("Copy offer code CTA buttons must stay under the Marketing category");
+            return;
+        }
+
+        setNewTemplate((prev) => ({ ...prev, category }));
+    };
+
     const updateTemplateButtonAction = (id: string, action: "phone_number" | "url_static" | "url_dynamic" | "copy_code") => {
+        if (action === "copy_code" && newTemplate.category !== "marketing") {
+            message.info("Switched this template to Marketing because Copy offer code buttons are approved there more reliably");
+        }
+
         setNewTemplate((prev) => ({
             ...prev,
+            category: action === "copy_code" ? "marketing" : prev.category,
             buttons: prev.buttons.map((button) => {
                 if (button.id !== id) return button;
 
@@ -1921,7 +1960,7 @@ export default function WhatsAppPage() {
                                 <Form.Item label="Template Type">
                                     <Select
                                         value={newTemplate.category}
-                                        onChange={(value) => setNewTemplate({ ...newTemplate, category: value })}
+                                        onChange={updateTemplateCategory}
                                     >
                                         <Option value="utility">Utility</Option>
                                         <Option value="marketing">Marketing</Option>
@@ -1929,6 +1968,13 @@ export default function WhatsAppPage() {
                                         <Option value="service">Service</Option>
                                     </Select>
                                 </Form.Item>
+                                {hasCopyCodeButton ? (
+                                    <Alert
+                                        showIcon
+                                        type="info"
+                                        message={`Copy offer code templates are safest as Marketing. Use a fixed code up to ${COPY_CODE_MAX_LENGTH} characters; WhatsApp controls the button label.`}
+                                    />
+                                ) : null}
                                 <Form.Item label="Media Type">
                                     <Select
                                         value={newTemplate.type}
@@ -2086,9 +2132,11 @@ export default function WhatsAppPage() {
 
                                                         {button.type === "copy_code" && (
                                                             <Input
-                                                                placeholder="Offer code, e.g. SUMMER20"
+                                                                placeholder={`Fixed offer code, e.g. SUMMER20 (${COPY_CODE_MAX_LENGTH} max)`}
                                                                 value={button.offerCode}
                                                                 onChange={(e) => updateTemplateButton(button.id, { offerCode: e.target.value })}
+                                                                maxLength={COPY_CODE_MAX_LENGTH}
+                                                                showCount
                                                             />
                                                         )}
 
