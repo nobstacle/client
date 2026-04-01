@@ -238,6 +238,52 @@ const createEmptyTemplateState = (): TemplateFormState => ({
     buttons: [],
 });
 
+const extractTemplateVariableTokens = (content: string): string[] => {
+    const matches = content.match(/\{\{(\w+)\}\}/g) || [];
+    return [...new Set(matches.map((match) => match.replace(/\{\{|\}\}/g, "")))];
+};
+
+const normalizeTemplateVariableToken = (value: string): string => (
+    String(value || "")
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "")
+);
+
+const TEMPLATE_VARIABLE_SUGGESTIONS = [
+    { token: "name", label: "Contact name" },
+    { token: "firstname", label: "First name" },
+    { token: "email", label: "Email" },
+    { token: "phone", label: "Phone" },
+    { token: "bookingid", label: "Custom ID example" },
+] as const;
+
+const getTemplateVariableHelpText = (token: string): string => {
+    const normalized = normalizeTemplateVariableToken(token);
+
+    if (["name", "fullname", "guestname", "customername"].includes(normalized)) {
+        return "Auto-maps to the contact's saved name. Recommended token: {{name}}.";
+    }
+
+    if (["firstname", "givenname"].includes(normalized)) {
+        return "Auto-maps to the first word of the contact name. Recommended token: {{firstname}}.";
+    }
+
+    if (["lastname", "surname", "familyname"].includes(normalized)) {
+        return "Auto-maps to the remaining part of the contact name after the first word.";
+    }
+
+    if (["email", "emailaddress", "mail"].includes(normalized)) {
+        return "Auto-maps to the contact email.";
+    }
+
+    if (["phone", "phonenumber", "mobile", "whatsapp", "whatsappnumber"].includes(normalized)) {
+        return "Auto-maps to the contact phone/WhatsApp number.";
+    }
+
+    return `Looks for a custom imported field normalized as "${normalized}". Example: "Booking ID" can be used as {{bookingid}} or {{booking_id}}.`;
+};
+
 const getCopyCodeValidationError = (value?: string): string | null => {
     const normalized = value?.trim() || "";
     if (!normalized) return "Copy offer code is required";
@@ -517,6 +563,7 @@ export default function WhatsAppPage() {
     const [selectedCampaignReport, setSelectedCampaignReport] = useState<CampaignDetails | null>(null);
     const [campaignReportCache, setCampaignReportCache] = useState<Record<number, CampaignDetails>>({});
     const hasCopyCodeButton = newTemplate.buttons.some((button) => button.type === "copy_code");
+    const extractedTemplateVariables = extractTemplateVariableTokens(newTemplate.content);
 
     const apiRequest = async <T,>(path: string, options: RequestInit = {}): Promise<T> => {
         if (!API_URL) throw new Error("NEXT_PUBLIC_API_URL (or NEXT_PUBLIC_BACKEND_URL) is not configured");
@@ -1163,6 +1210,18 @@ export default function WhatsAppPage() {
         }));
     };
 
+    const insertTemplateVariable = (token: string) => {
+        setNewTemplate((prev) => {
+            const nextToken = `{{${token}}}`;
+            const needsLeadingSpace = Boolean(prev.content) && !/[\s\n]$/.test(prev.content);
+
+            return {
+                ...prev,
+                content: `${prev.content}${needsLeadingSpace ? " " : ""}${nextToken}`,
+            };
+        });
+    };
+
     const updateTemplateCategory = (category: TemplateFormState["category"]) => {
         if (hasCopyCodeButton && category !== "marketing") {
             message.warning("Copy offer code CTA buttons must stay under the Marketing category");
@@ -1672,6 +1731,7 @@ export default function WhatsAppPage() {
                                 {activeTab === "templates" && (
                                     <Button
                                         type="primary"
+                                        style={{ backgroundColor: '#3b5998' }}
                                         icon={<PlusOutlined />}
                                         onClick={() => {
                                             setNewTemplate(createEmptyTemplateState());
@@ -1685,6 +1745,7 @@ export default function WhatsAppPage() {
                                     <Button
                                         type="primary"
                                         icon={<SendOutlined />}
+                                        style={{ backgroundColor: '#3b5998' }}
                                         disabled={!metaConnected}
                                         onClick={() => { setCampaignModal(true); setCampaignStep(0); setCampaignForm({ sendType: "now" }); }}
                                     >
@@ -1943,12 +2004,15 @@ export default function WhatsAppPage() {
                     setTemplateModal(false);
                     setNewTemplate(createEmptyTemplateState());
                 }}
-                width={800}
+                width="min(1120px, calc(100vw - 24px))"
                 footer={null}
             >
-                <Row gutter={24}>
-                    <Col span={12}>
-                        <div className="space-y-4">
+                <Row gutter={[24, 24]} align="top">
+                    <Col xs={24} lg={14}>
+                        <div
+                            className="space-y-4 pr-1 lg:pr-3"
+                            style={{ maxHeight: "calc(100vh - 220px)", overflowY: "auto" }}
+                        >
                             <Form layout="vertical">
                                 <Form.Item label="Template Name" required>
                                     <Input
@@ -2006,23 +2070,88 @@ export default function WhatsAppPage() {
                                 )}
                                 {newTemplate.type !== "carousel" && (
                                     <Form.Item label="Message Content" required>
-                                        <TextArea
-                                            rows={5}
-                                            placeholder={"Hi {{name}}, welcome to {{hotel}}!"}
-                                            value={newTemplate.content}
-                                            onChange={(e) => setNewTemplate({ ...newTemplate, content: e.target.value })}
-                                        />
+                                        <div className="space-y-3">
+                                            <TextArea
+                                                rows={5}
+                                                placeholder={"Hi {{name}}, welcome to {{hotel}}!"}
+                                                value={newTemplate.content}
+                                                onChange={(e) => setNewTemplate({ ...newTemplate, content: e.target.value })}
+                                            />
+                                            <Alert
+                                                showIcon
+                                                type="info"
+                                                message="Use variables in double braces"
+                                                description={(
+                                                    <div className="space-y-3">
+                                                        <div>
+                                                            Type values like <code>{"{{name}}"}</code> inside the message. Common contact fields are auto-mapped, and imported custom fields are matched after normalizing spaces, dashes, and underscores.
+                                                        </div>
+                                                        <div className="flex flex-wrap gap-2">
+                                                            {TEMPLATE_VARIABLE_SUGGESTIONS.map((item) => (
+                                                                <Button
+                                                                    key={item.token}
+                                                                    size="small"
+                                                                    onClick={() => insertTemplateVariable(item.token)}
+                                                                >
+                                                                    Insert {"{{" + item.token + "}}"}
+                                                                </Button>
+                                                            ))}
+                                                        </div>
+                                                        <div className="text-xs text-gray-600">
+                                                            Recommended: <code>{"{{name}}"}</code> for the contact name, <code>{"{{firstname}}"}</code> for the first name, <code>{"{{email}}"}</code> for email, and <code>{"{{phone}}"}</code> for phone. Example custom field mapping: <code>Booking ID</code> can be used as <code>{"{{bookingid}}"}</code> or <code>{"{{booking_id}}"}</code>.
+                                                        </div>
+                                                        {extractedTemplateVariables.length ? (
+                                                            <div className="space-y-2">
+                                                                <div className="text-xs font-medium text-gray-700">Detected variables</div>
+                                                                <div className="flex flex-wrap gap-2">
+                                                                    {extractedTemplateVariables.map((token) => (
+                                                                        <Tooltip key={token} title={getTemplateVariableHelpText(token)}>
+                                                                            <Tag color="purple">{"{{" + token + "}}"}</Tag>
+                                                                        </Tooltip>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+                                                        ) : null}
+                                                    </div>
+                                                )}
+                                            />
+                                        </div>
                                     </Form.Item>
                                 )}
                                 {newTemplate.type === "carousel" && (
                                     <>
                                         <Form.Item label="Intro Text">
-                                            <TextArea
-                                                rows={3}
-                                                placeholder="Optional text above the carousel"
-                                                value={newTemplate.content}
-                                                onChange={(e) => setNewTemplate({ ...newTemplate, content: e.target.value })}
-                                            />
+                                            <div className="space-y-3">
+                                                <TextArea
+                                                    rows={3}
+                                                    placeholder="Optional text above the carousel"
+                                                    value={newTemplate.content}
+                                                    onChange={(e) => setNewTemplate({ ...newTemplate, content: e.target.value })}
+                                                />
+                                                <Alert
+                                                    showIcon
+                                                    type="info"
+                                                    message="Variable tips"
+                                                    description={(
+                                                        <div className="space-y-2">
+                                                            <div>
+                                                                Carousel intro text also supports variables like <code>{"{{name}}"}</code>. Common contact fields map automatically.
+                                                            </div>
+                                                            <div className="flex flex-wrap gap-2">
+                                                                {TEMPLATE_VARIABLE_SUGGESTIONS.slice(0, 4).map((item) => (
+                                                                    <Button
+                                                                        key={item.token}
+                                                                        size="small"
+                                                                        onClick={() => insertTemplateVariable(item.token)}
+                                                                    >
+                                                                        Insert {"{{" + item.token + "}}"}
+                                                                    </Button>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                />
+                                            </div>
                                         </Form.Item>
                                         <div className="space-y-3">
                                             {newTemplate.carouselItems.map((item, index) => (
@@ -2172,29 +2301,33 @@ export default function WhatsAppPage() {
                                     />
                                 )}
                             </Form>
-                            <div className="flex gap-2 justify-end">
-                                <Button
-                                    onClick={() => {
-                                        setTemplateModal(false);
-                                        setNewTemplate(createEmptyTemplateState());
-                                    }}
-                                >
-                                    Cancel
-                                </Button>
-                                <Button type="primary" onClick={createTemplate}>Submit for Approval</Button>
+                            <div className="sticky bottom-0 bg-white pt-2">
+                                <div className="flex gap-2 justify-end">
+                                    <Button
+                                        onClick={() => {
+                                            setTemplateModal(false);
+                                            setNewTemplate(createEmptyTemplateState());
+                                        }}
+                                    >
+                                        Cancel
+                                    </Button>
+                                    <Button type="primary" style={{ backgroundColor: '#3b5998' }} onClick={createTemplate}>Submit for Approval</Button>
+                                </div>
                             </div>
                         </div>
                     </Col>
-                    <Col span={12}>
-                        <div className="text-sm font-medium text-gray-600 mb-2 flex items-center gap-2"><EyeOutlined />Live Preview</div>
-                        <WhatsAppPreview
-                            content={newTemplate.content}
-                            type={newTemplate.type}
-                            mediaSrc={templateMediaPreviewUrl}
-                            mediaLabel={newTemplate.mediaFile?.name}
-                            carouselItems={liveCarouselPreviewItems}
-                            buttons={liveButtonPreviewItems}
-                        />
+                    <Col xs={24} lg={10}>
+                        <div className="lg:sticky lg:top-0">
+                            <div className="text-sm font-medium text-gray-600 mb-2 flex items-center gap-2"><EyeOutlined />Live Preview</div>
+                            <WhatsAppPreview
+                                content={newTemplate.content}
+                                type={newTemplate.type}
+                                mediaSrc={templateMediaPreviewUrl}
+                                mediaLabel={newTemplate.mediaFile?.name}
+                                carouselItems={liveCarouselPreviewItems}
+                                buttons={liveButtonPreviewItems}
+                            />
+                        </div>
                     </Col>
                 </Row>
             </Modal>
