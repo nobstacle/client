@@ -519,7 +519,7 @@ export default function WhatsAppPage() {
         hasAccessToken: false,
     });
 
-    const metaConnected = metaConnection.connected || (metaConnection.hasAccessToken && Boolean(metaConnection.phoneNumberId));
+    const metaConnected = metaConnection.connected;
     const hasPendingSubmittedTemplates = templates.some(
         (template) => template.metaSubmissionStatus === "submitted" && template.status === "pending",
     );

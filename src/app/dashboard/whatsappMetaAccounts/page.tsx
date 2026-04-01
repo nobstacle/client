@@ -46,7 +46,7 @@ interface AssignWhatsappMetaFormValues {
     companyId: number;
     appId?: string;
     appSecret?: string;
-    businessAccountId?: string;
+    businessAccountId: string;
     phoneNumberId: string;
     accessToken: string;
     webhookVerifyToken?: string;
@@ -132,7 +132,7 @@ export default function WhatsappMetaAccountsPage() {
         form.setFieldsValue({
             companyId: row.companyId,
             appId: row.appId,
-            businessAccountId: row.businessAccountId,
+            businessAccountId: row.businessAccountId || "",
             phoneNumberId: row.phoneNumberId,
             webhookVerifyToken: row.webhookVerifyToken,
             appSecret: "",
@@ -340,7 +340,12 @@ export default function WhatsappMetaAccountsPage() {
                         <Input.Password placeholder="Enter app secret" />
                     </Form.Item>
 
-                    <Form.Item label="WhatsApp Business Account ID (optional)" name="businessAccountId">
+                    <Form.Item
+                        label="WhatsApp Business Account ID"
+                        name="businessAccountId"
+                        rules={[{ required: true, message: "WhatsApp Business Account ID is required" }]}
+                        extra="This is mandatory because template approval and sync require the WABA ID."
+                    >
                         <Input placeholder="WABA ID" />
                     </Form.Item>
 
