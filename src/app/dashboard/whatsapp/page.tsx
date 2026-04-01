@@ -15,7 +15,8 @@ import {
     ReloadOutlined,
     CloudUploadOutlined, FormOutlined, VideoCameraOutlined, PictureOutlined,
     AppstoreOutlined, CalendarOutlined, ThunderboltOutlined,
-    LinkOutlined, PhoneOutlined, CopyOutlined,
+    LinkOutlined, PhoneOutlined, CopyOutlined, MailOutlined,
+    DownOutlined, UpOutlined,
 } from "@ant-design/icons";
 import { MdWhatsapp } from "react-icons/md";
 import { FaFileDownload } from "react-icons/fa";
@@ -300,11 +301,104 @@ const getUploadFileList = (file: File | null): UploadFile[] => (
     file ? [{ uid: `${file.name}-${file.size}-${file.lastModified}`, name: file.name, status: "done" }] : []
 );
 
-const createEmptyContactRow = (): ContactListContact => ({
+const RESERVED_CONTACT_FIELD_KEYS = ["name", "phone", "email"] as const;
+
+const normalizeContactFieldKey = (value: string): string => (
+    String(value || "")
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "")
+);
+
+const getContactVariableKeys = (rows: ContactListContact[]): string[] => {
+    const keys: string[] = [];
+
+    rows.forEach((row) => {
+        Object.keys(row.variables || {}).forEach((key) => {
+            const normalizedKey = normalizeContactFieldKey(key);
+
+            if (!normalizedKey || RESERVED_CONTACT_FIELD_KEYS.includes(normalizedKey as typeof RESERVED_CONTACT_FIELD_KEYS[number])) {
+                return;
+            }
+
+            if (!keys.some((existingKey) => normalizeContactFieldKey(existingKey) === normalizedKey)) {
+                keys.push(key);
+            }
+        });
+    });
+
+    return keys;
+};
+
+const prepareContactRowsForEdit = (rows: ContactListContact[], variableKeys: string[]): ContactListContact[] => (
+    rows.map((row) => {
+        const variables = variableKeys.reduce<Record<string, string>>((acc, key) => {
+            acc[key] = String(row.variables?.[key] ?? "");
+            return acc;
+        }, {});
+
+        return {
+            ...row,
+            email: row.email || "",
+            variables: Object.keys(variables).length ? variables : undefined,
+        };
+    })
+);
+
+const createEmptyContactRow = (variableKeys: string[] = []): ContactListContact => ({
     name: "",
     phone: "",
     email: "",
+    variables: variableKeys.length
+        ? variableKeys.reduce<Record<string, string>>((acc, key) => {
+            acc[key] = "";
+            return acc;
+        }, {})
+        : undefined,
 });
+
+const formatContactFieldLabel = (value: string): string => {
+    const normalized = String(value || "").trim().replace(/[_-]+/g, " ");
+    if (!normalized) return "Custom Field";
+
+    return normalized
+        .split(/\s+/)
+        .filter(Boolean)
+        .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+        .join(" ");
+};
+
+const getFilledCustomFieldCount = (row: ContactListContact): number => (
+    Object.values(row.variables || {}).filter((value) => String(value || "").trim()).length
+);
+
+const getContactPreviewText = (row: ContactListContact): string => {
+    const parts = [row.phone, row.email]
+        .map((value) => String(value || "").trim())
+        .filter(Boolean);
+
+    return parts.join("  •  ") || "No primary details yet";
+};
+
+const sanitizeDownloadFilename = (value: string): string => (
+    String(value || "contact-list")
+        .trim()
+        .replace(/[^a-z0-9]+/gi, "-")
+        .replace(/^-+|-+$/g, "")
+        .toLowerCase() || "contact-list"
+);
+
+const getDownloadFilename = (contentDisposition: string | null, fallback: string): string => {
+    if (!contentDisposition) return fallback;
+
+    const utfMatch = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i);
+    if (utfMatch?.[1]) {
+        return decodeURIComponent(utfMatch[1]);
+    }
+
+    const plainMatch = contentDisposition.match(/filename="?([^"]+)"?/i);
+    return plainMatch?.[1] || fallback;
+};
 
 const MediaPreviewCard = ({
     type,
@@ -539,6 +633,9 @@ export default function WhatsAppPage() {
     const [editingContactListId, setEditingContactListId] = useState<number | null>(null);
     const [contactEditLoading, setContactEditLoading] = useState(false);
     const [contactEditRows, setContactEditRows] = useState<ContactListContact[]>([]);
+    const [contactEditVariableKeys, setContactEditVariableKeys] = useState<string[]>([]);
+    const [expandedContactEditCards, setExpandedContactEditCards] = useState<number[]>([]);
+    const [contactDownloadLoadingId, setContactDownloadLoadingId] = useState<number | null>(null);
 
     const [templateModal, setTemplateModal] = useState(false);
     const [templatePreviewModal, setTemplatePreviewModal] = useState(false);
@@ -795,6 +892,48 @@ export default function WhatsAppPage() {
         }
     };
 
+    const downloadContactList = async (record: ContactList) => {
+        try {
+            if (!API_URL) throw new Error("NEXT_PUBLIC_API_URL (or NEXT_PUBLIC_BACKEND_URL) is not configured");
+            if (!token) throw new Error("Authentication token missing");
+
+            setContactDownloadLoadingId(record.id);
+
+            const response = await fetch(`${API_URL}/whatsapp/contacts/${record.id}/export`, {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            });
+
+            if (!response.ok) {
+                const contentType = response.headers.get("content-type") || "";
+                const payload = contentType.includes("application/json") ? await response.json() : await response.text();
+                const serverMessage = typeof payload === "object"
+                    ? Array.isArray(payload?.message)
+                        ? payload.message.join(", ")
+                        : payload?.message
+                    : payload;
+                throw new Error(serverMessage || `Request failed (${response.status})`);
+            }
+
+            const blob = await response.blob();
+            const downloadUrl = window.URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            const fallbackFilename = `${sanitizeDownloadFilename(record.name)}-contacts.csv`;
+
+            link.href = downloadUrl;
+            link.download = getDownloadFilename(response.headers.get("content-disposition"), fallbackFilename);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(downloadUrl);
+        } catch (error) {
+            message.error(parseErrorMessage(error));
+        } finally {
+            setContactDownloadLoadingId(null);
+        }
+    };
+
     const openEditContactList = async (record: ContactList) => {
         try {
             setContactEditLoading(true);
@@ -806,7 +945,18 @@ export default function WhatsAppPage() {
             });
 
             const response = await loadContactListContacts(record.id, Math.max(record.count || 0, 200));
-            setContactEditRows(response.items?.length ? response.items : [createEmptyContactRow()]);
+            const baseRows = response.items?.length ? response.items : [];
+            const variableKeys = getContactVariableKeys(baseRows);
+
+            setContactEditVariableKeys(variableKeys);
+            setContactEditRows(
+                baseRows.length
+                    ? prepareContactRowsForEdit(baseRows, variableKeys)
+                    : [createEmptyContactRow(variableKeys)],
+            );
+            setExpandedContactEditCards(
+                baseRows.length ? [0] : [0],
+            );
             setContactEditModal(true);
         } catch (error) {
             message.error(parseErrorMessage(error));
@@ -821,13 +971,44 @@ export default function WhatsAppPage() {
         )));
     };
 
+    const updateContactEditVariable = (index: number, key: string, value: string) => {
+        setContactEditRows((prev) => prev.map((row, rowIndex) => (
+            rowIndex === index
+                ? {
+                    ...row,
+                    variables: {
+                        ...(row.variables || {}),
+                        [key]: value,
+                    },
+                }
+                : row
+        )));
+    };
+
     const addContactEditRow = () => {
-        setContactEditRows((prev) => [...prev, createEmptyContactRow()]);
+        setContactEditRows((prev) => {
+            const nextRows = [...prev, createEmptyContactRow(contactEditVariableKeys)];
+            setExpandedContactEditCards((expanded) => (
+                expanded.includes(nextRows.length - 1) ? expanded : [...expanded, nextRows.length - 1]
+            ));
+            return nextRows;
+        });
     };
 
     const removeContactEditRow = (index: number) => {
         setContactEditRows((prev) => (
             prev.length === 1 ? prev : prev.filter((_, rowIndex) => rowIndex !== index)
+        ));
+        setExpandedContactEditCards((prev) => prev
+            .filter((item) => item !== index)
+            .map((item) => (item > index ? item - 1 : item)));
+    };
+
+    const toggleContactEditCard = (index: number) => {
+        setExpandedContactEditCards((prev) => (
+            prev.includes(index)
+                ? prev.filter((item) => item !== index)
+                : [...prev, index]
         ));
     };
 
@@ -835,6 +1016,8 @@ export default function WhatsAppPage() {
         setContactEditModal(false);
         setEditingContactListId(null);
         setContactEditRows([]);
+        setContactEditVariableKeys([]);
+        setExpandedContactEditCards([]);
         setContactForm({ name: "", tags: "", formId: "" });
     };
 
@@ -850,12 +1033,23 @@ export default function WhatsAppPage() {
             }
 
             const contacts = contactEditRows
-                .map((row) => ({
-                    name: row.name.trim(),
-                    phone: row.phone.trim(),
-                    email: row.email?.trim() || undefined,
-                }))
-                .filter((row) => row.name || row.phone || row.email);
+                .map((row) => {
+                    const variables = contactEditVariableKeys.reduce<Record<string, string>>((acc, key) => {
+                        const value = String(row.variables?.[key] ?? "").trim();
+                        if (value) {
+                            acc[key] = value;
+                        }
+                        return acc;
+                    }, {});
+
+                    return {
+                        name: row.name.trim(),
+                        phone: row.phone.trim(),
+                        email: row.email?.trim() || undefined,
+                        variables: Object.keys(variables).length ? variables : undefined,
+                    };
+                })
+                .filter((row) => row.name || row.phone || row.email || Object.keys(row.variables || {}).length);
 
             if (!contacts.length) {
                 message.error("At least one contact is required");
@@ -1345,7 +1539,12 @@ export default function WhatsAppPage() {
             render: (_: any, record: ContactList) => (
                 <Space>
                     <Tooltip title="Download CSV">
-                        <Button size="small" icon={<FaFileDownload />} disabled />
+                        <Button
+                            size="small"
+                            icon={<FaFileDownload />}
+                            loading={contactDownloadLoadingId === record.id}
+                            onClick={() => { void downloadContactList(record); }}
+                        />
                     </Tooltip>
                     <Tooltip title="Edit Contacts">
                         <Button size="small" icon={<EditOutlined />} onClick={() => openEditContactList(record)} />
@@ -1919,80 +2118,210 @@ export default function WhatsAppPage() {
                 onOk={() => { void saveEditedContactList(); }}
                 confirmLoading={contactEditLoading}
                 okText="Save Changes"
-                width={900}
+                width={1040}
             >
                 <div className="space-y-4 py-2">
-                    <Form layout="vertical">
-                        <Row gutter={16}>
-                            <Col xs={24} md={12}>
-                                <Form.Item label="List Name" required>
-                                    <Input
-                                        placeholder="E.g. VIP Guests March"
-                                        value={contactForm.name}
-                                        onChange={(e) => setContactForm({ ...contactForm, name: e.target.value })}
-                                    />
-                                </Form.Item>
-                            </Col>
-                            <Col xs={24} md={12}>
-                                <Form.Item label="Tags (comma separated)">
-                                    <Input
-                                        placeholder="vip, hotel"
-                                        value={contactForm.tags}
-                                        onChange={(e) => setContactForm({ ...contactForm, tags: e.target.value })}
-                                    />
-                                </Form.Item>
-                            </Col>
-                        </Row>
-                    </Form>
+                    <div
+                        className="rounded-2xl border border-blue-100 p-4 sm:p-5"
+                        style={{ background: "linear-gradient(135deg, #f8fbff 0%, #ffffff 55%, #f5f9ff 100%)" }}
+                    >
+                        <Form layout="vertical">
+                            <Row gutter={[16, 8]} align="middle">
+                                <Col xs={24} lg={11}>
+                                    <Form.Item label="List Name" required className="mb-3">
+                                        <Input
+                                            size="large"
+                                            placeholder="E.g. VIP Guests March"
+                                            value={contactForm.name}
+                                            onChange={(e) => setContactForm({ ...contactForm, name: e.target.value })}
+                                        />
+                                    </Form.Item>
+                                </Col>
+                                <Col xs={24} lg={13}>
+                                    <Form.Item label="Tags (comma separated)" className="mb-3">
+                                        <Input
+                                            size="large"
+                                            placeholder="vip, hotel"
+                                            value={contactForm.tags}
+                                            onChange={(e) => setContactForm({ ...contactForm, tags: e.target.value })}
+                                        />
+                                    </Form.Item>
+                                </Col>
+                            </Row>
+                        </Form>
 
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <div className="text-sm font-semibold text-gray-800">Contacts</div>
-                            <div className="text-xs text-gray-500">Update the name, phone, and email for each contact in this list.</div>
+                        <div className="grid gap-3 sm:grid-cols-3">
+                            <div className="rounded-2xl border border-white bg-white/80 px-4 py-3 shadow-sm">
+                                <div className="text-xs font-medium uppercase tracking-wide text-gray-400">Contacts</div>
+                                <div className="mt-1 text-2xl font-semibold text-gray-900">{contactEditRows.length}</div>
+                                <div className="text-xs text-gray-500">Rows in this list</div>
+                            </div>
+                            <div className="rounded-2xl border border-white bg-white/80 px-4 py-3 shadow-sm">
+                                <div className="text-xs font-medium uppercase tracking-wide text-gray-400">Custom Fields</div>
+                                <div className="mt-1 text-2xl font-semibold text-gray-900">{contactEditVariableKeys.length}</div>
+                                <div className="text-xs text-gray-500">Imported columns preserved</div>
+                            </div>
+                            <div className="rounded-2xl border border-white bg-white/80 px-4 py-3 shadow-sm">
+                                <div className="text-xs font-medium uppercase tracking-wide text-gray-400">Editing Mode</div>
+                                <div className="mt-1 text-sm font-semibold text-gray-900">Structured contact editor</div>
+                                <div className="text-xs text-gray-500">Default details plus all detected custom fields</div>
+                            </div>
                         </div>
-                        <Button type="dashed" icon={<PlusOutlined />} onClick={addContactEditRow}>
+                    </div>
+
+                    <div className="flex flex-col gap-3 rounded-2xl border border-gray-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                            <div className="text-base font-semibold text-gray-900">Contacts</div>
+                            <div className="text-sm text-gray-500">Each contact now has a cleaner card layout. Expand cards to update all fields.</div>
+                        </div>
+                        <Button type="primary" icon={<PlusOutlined />} onClick={addContactEditRow} style={{ background: "#1677ff" }}>
                             Add Contact
                         </Button>
                     </div>
 
-                    <div className="max-h-[420px] overflow-auto rounded-xl border border-gray-200 p-4 space-y-3">
-                        {contactEditRows.map((row, index) => (
-                            <div key={`${row.id || "new"}-${index}`} className="rounded-xl border border-gray-200 bg-gray-50 p-4">
-                                <div className="flex items-center justify-between mb-3">
-                                    <div className="text-sm font-medium text-gray-700">Contact {index + 1}</div>
-                                    <Button
-                                        size="small"
-                                        danger
-                                        icon={<DeleteOutlined />}
-                                        disabled={contactEditRows.length === 1}
-                                        onClick={() => removeContactEditRow(index)}
-                                    />
-                                </div>
-                                <Row gutter={12}>
-                                    <Col xs={24} md={8}>
-                                        <Input
-                                            placeholder="Name"
-                                            value={row.name}
-                                            onChange={(e) => updateContactEditRow(index, { name: e.target.value })}
-                                        />
-                                    </Col>
-                                    <Col xs={24} md={8}>
-                                        <Input
-                                            placeholder="Phone"
-                                            value={row.phone}
-                                            onChange={(e) => updateContactEditRow(index, { phone: e.target.value })}
-                                        />
-                                    </Col>
-                                    <Col xs={24} md={8}>
-                                        <Input
-                                            placeholder="Email"
-                                            value={row.email || ""}
-                                            onChange={(e) => updateContactEditRow(index, { email: e.target.value })}
-                                        />
-                                    </Col>
-                                </Row>
+                    {contactEditVariableKeys.length ? (
+                        <div className="rounded-2xl border border-gray-200 bg-gray-50/80 p-4">
+                            <div className="mb-2 text-sm font-semibold text-gray-800">Detected Custom Fields</div>
+                            <div className="mb-3 text-xs text-gray-500">These imported columns are preserved for every contact and shown inside each card.</div>
+                            <div className="flex flex-wrap gap-2">
+                                {contactEditVariableKeys.slice(0, 10).map((key) => (
+                                    <Tag key={key} color="blue" className="rounded-full px-2 py-1">
+                                        {formatContactFieldLabel(key)}
+                                    </Tag>
+                                ))}
+                                {contactEditVariableKeys.length > 10 ? (
+                                    <Tag color="default" className="rounded-full px-2 py-1">
+                                        +{contactEditVariableKeys.length - 10} more
+                                    </Tag>
+                                ) : null}
                             </div>
-                        ))}
+                        </div>
+                    ) : null}
+
+                    <div className="max-h-[500px] overflow-auto rounded-2xl border border-gray-200 bg-gray-50/60 p-3 sm:p-4">
+                        <div className="space-y-4">
+                            {contactEditRows.map((row, index) => {
+                                const isExpanded = expandedContactEditCards.includes(index);
+                                const filledCustomFieldCount = getFilledCustomFieldCount(row);
+                                const title = row.name?.trim() || `Contact ${index + 1}`;
+
+                                return (
+                                    <div
+                                        key={`${row.id || "new"}-${index}`}
+                                        className="overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-sm transition-shadow hover:shadow-md"
+                                    >
+                                        <div className="flex flex-col gap-3 border-b border-gray-100 px-4 py-4 sm:px-5">
+                                            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                                <div className="flex items-start gap-3">
+                                                    <div
+                                                        className="flex h-11 w-11 items-center justify-center rounded-2xl text-sm font-semibold text-white shadow-sm"
+                                                        style={{ background: "linear-gradient(135deg, #1677ff 0%, #69b1ff 100%)" }}
+                                                    >
+                                                        {index + 1}
+                                                    </div>
+                                                    <div>
+                                                        <div className="text-base font-semibold text-gray-900">{title}</div>
+                                                        <div className="mt-1 text-sm text-gray-500">{getContactPreviewText(row)}</div>
+                                                        <div className="mt-2 flex flex-wrap gap-2">
+                                                            <Tag color="blue" className="rounded-full px-2 py-1">Basic Fields</Tag>
+                                                            {contactEditVariableKeys.length ? (
+                                                                <Tag color={filledCustomFieldCount ? "cyan" : "default"} className="rounded-full px-2 py-1">
+                                                                    {filledCustomFieldCount}/{contactEditVariableKeys.length} custom fields filled
+                                                                </Tag>
+                                                            ) : null}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-2 self-end sm:self-start">
+                                                    <Button
+                                                        size="small"
+                                                        icon={isExpanded ? <UpOutlined /> : <DownOutlined />}
+                                                        onClick={() => toggleContactEditCard(index)}
+                                                    >
+                                                        {isExpanded ? "Collapse" : "Expand"}
+                                                    </Button>
+                                                    <Button
+                                                        size="small"
+                                                        danger
+                                                        icon={<DeleteOutlined />}
+                                                        disabled={contactEditRows.length === 1}
+                                                        onClick={() => removeContactEditRow(index)}
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {isExpanded ? (
+                                            <div className="space-y-5 px-4 py-4 sm:px-5 sm:py-5">
+                                                <div>
+                                                    <div className="mb-3 text-sm font-semibold text-gray-800">Primary Details</div>
+                                                    <Row gutter={[14, 14]}>
+                                                        <Col xs={24} md={8}>
+                                                            <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                                                                <UserOutlined />
+                                                                Name
+                                                            </div>
+                                                            <Input
+                                                                size="large"
+                                                                placeholder="Contact name"
+                                                                value={row.name}
+                                                                onChange={(e) => updateContactEditRow(index, { name: e.target.value })}
+                                                            />
+                                                        </Col>
+                                                        <Col xs={24} md={8}>
+                                                            <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                                                                <PhoneOutlined />
+                                                                Phone
+                                                            </div>
+                                                            <Input
+                                                                size="large"
+                                                                placeholder="WhatsApp phone number"
+                                                                value={row.phone}
+                                                                onChange={(e) => updateContactEditRow(index, { phone: e.target.value })}
+                                                            />
+                                                        </Col>
+                                                        <Col xs={24} md={8}>
+                                                            <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                                                                <MailOutlined />
+                                                                Email
+                                                            </div>
+                                                            <Input
+                                                                size="large"
+                                                                placeholder="Email address"
+                                                                value={row.email || ""}
+                                                                onChange={(e) => updateContactEditRow(index, { email: e.target.value })}
+                                                            />
+                                                        </Col>
+                                                    </Row>
+                                                </div>
+
+                                                {contactEditVariableKeys.length ? (
+                                                    <div className="rounded-2xl border border-gray-200 bg-gray-50/80 p-4">
+                                                        <div className="mb-1 text-sm font-semibold text-gray-800">Custom Fields</div>
+                                                        <div className="mb-4 text-xs text-gray-500">Imported values stay attached to this contact and can be edited here.</div>
+                                                        <Row gutter={[14, 14]}>
+                                                            {contactEditVariableKeys.map((key) => (
+                                                                <Col xs={24} md={12} xl={8} key={key}>
+                                                                    <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                                                                        {formatContactFieldLabel(key)}
+                                                                    </div>
+                                                                    <Input
+                                                                        size="large"
+                                                                        placeholder={formatContactFieldLabel(key)}
+                                                                        value={row.variables?.[key] || ""}
+                                                                        onChange={(e) => updateContactEditVariable(index, key, e.target.value)}
+                                                                    />
+                                                                </Col>
+                                                            ))}
+                                                        </Row>
+                                                    </div>
+                                                ) : null}
+                                            </div>
+                                        ) : null}
+                                    </div>
+                                );
+                            })}
+                        </div>
                     </div>
                 </div>
             </Modal>
