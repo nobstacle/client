@@ -118,6 +118,8 @@ interface Campaign {
     templateName: string;
     contactListId: number;
     contactListName: string;
+    contactListIds?: number[];
+    contactListNames?: string[];
     status: "draft" | "scheduled" | "sending" | "completed" | "failed";
     scheduledAt?: string;
     sentAt?: string;
@@ -339,6 +341,7 @@ const prepareContactRowsForEdit = (rows: ContactListContact[], variableKeys: str
 
         return {
             ...row,
+            name: normalizeEditableContactName(row.name),
             email: row.email || "",
             variables: Object.keys(variables).length ? variables : undefined,
         };
@@ -398,6 +401,22 @@ const getDownloadFilename = (contentDisposition: string | null, fallback: string
 
     const plainMatch = contentDisposition.match(/filename="?([^"]+)"?/i);
     return plainMatch?.[1] || fallback;
+};
+
+const normalizeEditableContactName = (value?: string | null): string => {
+    const normalized = String(value || "").trim();
+    return normalized.toLowerCase() === "unknown" ? "" : normalized;
+};
+
+const matchesContactListSearch = (list: ContactList, rawSearch: string): boolean => {
+    const normalizedSearch = rawSearch.trim().toLowerCase();
+    if (!normalizedSearch) return true;
+
+    if (list.name.toLowerCase().includes(normalizedSearch)) {
+        return true;
+    }
+
+    return (list.tags || []).some((tag) => tag.toLowerCase().includes(normalizedSearch));
 };
 
 const MediaPreviewCard = ({
@@ -648,8 +667,7 @@ export default function WhatsAppPage() {
     const [campaignStep, setCampaignStep] = useState(0);
     const [campaignForm, setCampaignForm] = useState<{
         name?: string;
-        contactListId?: number;
-        contactListName?: string;
+        contactListIds?: number[];
         templateId?: number;
         templateName?: string;
         sendType?: "now" | "schedule";
@@ -661,6 +679,11 @@ export default function WhatsAppPage() {
     const [campaignReportCache, setCampaignReportCache] = useState<Record<number, CampaignDetails>>({});
     const hasCopyCodeButton = newTemplate.buttons.some((button) => button.type === "copy_code");
     const extractedTemplateVariables = extractTemplateVariableTokens(newTemplate.content);
+    const selectedCampaignContactLists = contactLists.filter((list) => (
+        (campaignForm.contactListIds || []).includes(list.id)
+    ));
+    const selectedCampaignContactListNames = selectedCampaignContactLists.map((list) => list.name);
+    const selectedCampaignRecipientCount = selectedCampaignContactLists.reduce((total, list) => total + list.count, 0);
 
     const apiRequest = async <T,>(path: string, options: RequestInit = {}): Promise<T> => {
         if (!API_URL) throw new Error("NEXT_PUBLIC_API_URL (or NEXT_PUBLIC_BACKEND_URL) is not configured");
@@ -1267,15 +1290,15 @@ export default function WhatsAppPage() {
                 return;
             }
 
-            if (!campaignForm.contactListId || !campaignForm.templateId) {
-                message.error("Please select a contact list and template");
+            if (!(campaignForm.contactListIds || []).length || !campaignForm.templateId) {
+                message.error("Please select at least one contact list and a template");
                 return;
             }
 
-            const payload: Record<string, string | number> = {
+            const payload: Record<string, string | number | number[]> = {
                 name: (campaignForm.name || "New Campaign").trim(),
                 templateId: campaignForm.templateId,
-                contactListId: campaignForm.contactListId,
+                contactListIds: campaignForm.contactListIds || [],
             };
 
             if (campaignForm.sendType === "schedule") {
@@ -1503,7 +1526,7 @@ export default function WhatsAppPage() {
     }));
     const liveButtonPreviewItems: TemplateButtonConfig[] = newTemplate.buttons.map(({ id, ...button }) => button);
 
-    const filteredContactLists = contactLists.filter((c) => c.name.toLowerCase().includes(contactSearch.toLowerCase()));
+    const filteredContactLists = contactLists.filter((contactList) => matchesContactListSearch(contactList, contactSearch));
 
     const contactColumns = [
         {
@@ -1632,7 +1655,9 @@ export default function WhatsAppPage() {
             render: (name: string, record: Campaign) => (
                 <div>
                     <div className="font-semibold text-gray-800">{name}</div>
-                    <div className="text-xs text-gray-500">{record.templateName} · {record.contactListName}</div>
+                    <div className="text-xs text-gray-500">
+                        {record.templateName} · {(record.contactListNames?.join(", ") || record.contactListName)}
+                    </div>
                 </div>
             ),
         },
@@ -1695,10 +1720,10 @@ export default function WhatsAppPage() {
         },
     ];
 
-    const CampaignSteps = () => (
+    const renderCampaignSteps = () => (
         <div>
             <Steps current={campaignStep} size="small" className="mb-6">
-                <Step title="Contact List" icon={<TeamOutlined />} />
+                <Step title="Contact Lists" icon={<TeamOutlined />} />
                 <Step title="Template" icon={<FileTextOutlined />} />
                 <Step title="Schedule" icon={<CalendarOutlined />} />
                 <Step title="Review" icon={<CheckCircleOutlined />} />
@@ -1706,23 +1731,29 @@ export default function WhatsAppPage() {
 
             {campaignStep === 0 && (
                 <div className="space-y-4">
-                    <div className="text-sm font-medium text-gray-700 mb-2">Select a Contact List</div>
+                    <div className="text-sm font-medium text-gray-700 mb-2">Select One or More Contact Lists</div>
                     <Select
+                        mode="multiple"
                         className="w-full"
-                        placeholder="Choose contact list..."
-                        value={campaignForm.contactListId}
-                        onChange={(v: number) => setCampaignForm({
-                            ...campaignForm,
-                            contactListId: v,
-                            contactListName: contactLists.find(c => c.id === v)?.name,
-                        })}
+                        placeholder="Choose contact lists..."
+                        value={campaignForm.contactListIds || []}
+                        onChange={(values: number[]) => setCampaignForm((prev) => ({
+                            ...prev,
+                            contactListIds: values,
+                        }))}
+                        optionFilterProp="label"
                     >
                         {contactLists.map(c => (
-                            <Option key={c.id} value={c.id}>
+                            <Option key={c.id} value={c.id} label={c.name}>
                                 <TeamOutlined className="mr-2 text-blue-500" />{c.name} <span className="text-gray-400 text-xs ml-2">({c.count} contacts)</span>
                             </Option>
                         ))}
                     </Select>
+                    <div className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600">
+                        {selectedCampaignContactLists.length
+                            ? `${selectedCampaignContactLists.length} list${selectedCampaignContactLists.length === 1 ? "" : "s"} selected · ${selectedCampaignRecipientCount} total contacts`
+                            : "No contact lists selected yet."}
+                    </div>
                 </div>
             )}
 
@@ -1733,7 +1764,7 @@ export default function WhatsAppPage() {
                         {templates.filter(t => t.status === "approved").map(t => (
                             <div
                                 key={t.id}
-                                onClick={() => setCampaignForm({ ...campaignForm, templateId: t.id, templateName: t.name })}
+                                onClick={() => setCampaignForm((prev) => ({ ...prev, templateId: t.id, templateName: t.name }))}
                                 className={`p-3 rounded-lg border-2 cursor-pointer transition-all ${campaignForm.templateId === t.id ? "border-blue-500 bg-blue-50" : "border-gray-200 hover:border-blue-300"}`}
                             >
                                 <div className="flex items-center gap-2">
@@ -1756,13 +1787,13 @@ export default function WhatsAppPage() {
                             <Input
                                 placeholder="E.g. Spring Promo"
                                 value={campaignForm.name}
-                                onChange={(e) => setCampaignForm({ ...campaignForm, name: e.target.value })}
+                                onChange={(e) => setCampaignForm((prev) => ({ ...prev, name: e.target.value }))}
                             />
                         </Form.Item>
                         <Form.Item label="Send">
                             <Select
                                 value={campaignForm.sendType || "now"}
-                                onChange={(v: "now" | "schedule") => setCampaignForm({ ...campaignForm, sendType: v })}
+                                onChange={(v: "now" | "schedule") => setCampaignForm((prev) => ({ ...prev, sendType: v }))}
                             >
                                 <Option value="now"><ThunderboltOutlined className="mr-2 text-yellow-500" />Send Immediately</Option>
                                 <Option value="schedule"><CalendarOutlined className="mr-2 text-blue-500" />Schedule for Later</Option>
@@ -1774,7 +1805,7 @@ export default function WhatsAppPage() {
                                     showTime
                                     className="w-full"
                                     value={campaignForm.scheduledAt}
-                                    onChange={(value) => setCampaignForm({ ...campaignForm, scheduledAt: value || undefined })}
+                                    onChange={(value) => setCampaignForm((prev) => ({ ...prev, scheduledAt: value || undefined }))}
                                 />
                             </Form.Item>
                         )}
@@ -1788,11 +1819,11 @@ export default function WhatsAppPage() {
                     <div className="space-y-2">
                         {[
                             { label: "Campaign Name", value: campaignForm.name || "Unnamed Campaign" },
-                            { label: "Contact List", value: campaignForm.contactListName || "-" },
+                            { label: "Contact Lists", value: selectedCampaignContactListNames.join(", ") || "-" },
                             { label: "Template", value: campaignForm.templateName || "-" },
                             { label: "Send Type", value: campaignForm.sendType === "schedule" ? "Scheduled" : "Immediately" },
                             { label: "Scheduled At", value: campaignForm.scheduledAt ? campaignForm.scheduledAt.format("MMM DD, YYYY HH:mm") : "-" },
-                            { label: "Total Recipients", value: contactLists.find(c => c.id === campaignForm.contactListId)?.count || 0 },
+                            { label: "Total Recipients", value: selectedCampaignRecipientCount },
                         ].map(item => (
                             <div key={item.label} className="flex justify-between py-2 border-b border-gray-100">
                                 <span className="text-gray-500 text-sm">{item.label}</span>
@@ -2052,15 +2083,16 @@ export default function WhatsAppPage() {
                             </div>
                         </button>
                         <button
-                            onClick={() => setContactSource("form")}
-                            className="w-full flex items-center gap-4 p-4 rounded-xl border-2 border-gray-200 hover:border-green-400 hover:bg-green-50 transition-all text-left cursor-pointer bg-white"
+                            type="button"
+                            disabled
+                            className="w-full flex items-center gap-4 p-4 rounded-xl border-2 border-gray-200 text-left bg-gray-50 opacity-60 cursor-not-allowed"
                         >
                             <div className="w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center">
                                 <FormOutlined className="text-green-500 text-xl" />
                             </div>
                             <div>
                                 <div className="font-semibold text-gray-800">Export from Forms</div>
-                                <div className="text-xs text-gray-500">Use existing form submission data</div>
+                                <div className="text-xs text-gray-500">Disabled here for now. Export directly from the Forms page.</div>
                             </div>
                         </button>
                     </div>
@@ -2775,7 +2807,7 @@ export default function WhatsAppPage() {
                                 <div>
                                     <div className="text-lg font-semibold text-gray-800">{selectedCampaignReport.name}</div>
                                     <div className="text-sm text-gray-500">
-                                        {selectedCampaignReport.templateName} · {selectedCampaignReport.contactListName}
+                                        {selectedCampaignReport.templateName} · {(selectedCampaignReport.contactListNames?.join(", ") || selectedCampaignReport.contactListName)}
                                     </div>
                                 </div>
                                 <StatusTag status={selectedCampaignReport.status} />
@@ -2866,7 +2898,7 @@ export default function WhatsAppPage() {
                 footer={null}
                 width={560}
             >
-                <CampaignSteps />
+                {renderCampaignSteps()}
             </Modal>
         </div>
     );
