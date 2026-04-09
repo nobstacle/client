@@ -39,6 +39,10 @@ function RootLayout({ children, session }: RootLayourPropsI) {
     <html lang="en" className={inter.variable}>
       <head>
         <meta name="theme-color" content="#000000" />
+        <meta
+          name="facebook-domain-verification"
+          content="syf2v0kwmjsl9lp8ytm6plv8puke1b"
+        />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="Nobstacle" />
