@@ -5,6 +5,15 @@ import {
   authControllerSignAccessToken,
 } from "./client/api";
 
+const getApiErrorMessage = (error: any) => {
+  return (
+    error?.response?.data?.message ||
+    error?.response?.data?.error ||
+    error?.message ||
+    "Unable to sign in right now."
+  );
+};
+
 export const authOptions: AuthOptions = {
   providers: [
     CredentialsProvider({
@@ -15,7 +24,12 @@ export const authOptions: AuthOptions = {
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        if (typeof credentials !== "undefined") {
+        if (typeof credentials === "undefined") {
+          console.log("OUT");
+          return null;
+        }
+
+        try {
           const res = await authControllerLogin({
             emailOrUsername: credentials.email,
             password: credentials.password,
@@ -23,12 +37,11 @@ export const authOptions: AuthOptions = {
 
           if (typeof res !== "undefined") {
             return res as any;
-          } else {
-            return null;
           }
-        } else {
-          console.log("OUT");
+
           return null;
+        } catch (error: any) {
+          throw new Error(getApiErrorMessage(error));
         }
       },
     }),

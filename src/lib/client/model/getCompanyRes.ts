@@ -8,7 +8,13 @@
 export interface GetCompanyRes {
   defaultLangCode: string;
   id: number;
+  isTrialAccount: boolean;
+  isTrialActive: boolean;
+  isTrialExpired: boolean;
   logoUrl: string;
   name: string;
   stationCount: number;
+  trialDaysLeft: number | null;
+  trialEndsAt: string | null;
+  trialStartedAt: string | null;
 }

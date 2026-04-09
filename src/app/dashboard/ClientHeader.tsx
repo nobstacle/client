@@ -70,6 +70,7 @@ import axios from 'axios';
 import { IoCaretDownCircle } from 'react-icons/io5';
 import { useUserControllerPatchOne } from '../../lib/client/api';
 import { PairUrlButton } from "@/components/pages/dashboard/Header/PairUrlButton";
+import { TrialBadge } from "@/components/trial/TrialBadge";
 
 interface ClientHeaderProps {
     user: Session | null;
@@ -3502,6 +3503,8 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                 <CompanyLogo />
                             </div>
 
+                            {!isSAdmin && <TrialBadge trial={companyData ?? data?.user ?? user?.user} compact />}
+
                             {!isSAdmin && (
                                 <div className={isInIframe ? "flex items-center gap-1" : "flex items-center gap-1 lg:gap-4"}>
                                     <div className={isInIframe ? "px-1 py-1text-xs lg:text-xs" : "bg-white/10 backdrop-blur-sm rounded-lg px-2 py-1 lg:px-4 text-xs lg:text-xs"}>
@@ -3847,6 +3850,9 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                                             textOverflow: 'ellipsis',
                                                             whiteSpace: 'nowrap'
                                                         }}>{companyData?.name || 'Company Name'}</div>
+                                                        <div style={{ marginTop: '8px' }}>
+                                                            <TrialBadge trial={companyData ?? data?.user ?? user?.user} compact />
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>

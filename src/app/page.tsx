@@ -23,6 +23,20 @@ export default function Home() {
 
   useEffect(() => {
     const animatedElements = document.querySelectorAll('.animate-on-scroll');
+
+    if (!animatedElements.length) {
+      return;
+    }
+
+    const revealAll = () => {
+      animatedElements.forEach((el) => el.classList.add('is-visible'));
+    };
+
+    if (typeof window === "undefined" || !("IntersectionObserver" in window)) {
+      revealAll();
+      return;
+    }
+
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
@@ -36,7 +50,12 @@ export default function Home() {
     );
 
     animatedElements.forEach((el) => observer.observe(el));
-    return () => observer.disconnect();
+    const fallbackTimer = window.setTimeout(revealAll, 1500);
+
+    return () => {
+      window.clearTimeout(fallbackTimer);
+      observer.disconnect();
+    };
   }, []);
 
   return (

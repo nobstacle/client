@@ -333,11 +333,11 @@ section {
 
 .signin-link {
   display: block;
-  font-weight: 500;
   color: var(--color-text-primary);
   border: none;
   box-shadow: none;
   background: transparent;
+  font-weight: 500;
 }
 
 
@@ -1074,7 +1074,7 @@ section {
 
 /* Scroll Animations */
 .animate-on-scroll {
-  opacity: 0;
+  opacity: 1;
   transform: translateY(30px);
   transition: opacity 0.6s ease-out, transform 0.6s ease-out;
 }
@@ -1082,6 +1082,12 @@ section {
 .animate-on-scroll.is-visible {
   opacity: 1;
   transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .animate-on-scroll:not(.is-visible) {
+    opacity: 0;
+  }
 }
 
 /* Media Queries */

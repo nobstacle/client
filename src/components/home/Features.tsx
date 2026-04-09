@@ -1,5 +1,13 @@
 
 // components/Features.tsx
+declare global {
+  namespace JSX {
+    interface IntrinsicElements {
+      'ion-icon': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement> & { name?: string }, HTMLElement>;
+    }
+  }
+}
+
 export default function Features() {
   const features = [
     { icon: 'flash', title: 'One-click sharing', description: 'Send any content with one click. No delays, no complex steps. Just instant delivery to your customer\'s screen.' },

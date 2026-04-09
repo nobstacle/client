@@ -12,6 +12,7 @@ import { LanguagePicker } from "../dashboard/Header/LanguagePicker";
 import { Button } from "../../Button";
 import useCompanyStore from "../../../lib/zustand/store/companyStore";
 import Input from "../../Input";
+import { formatTrialDate, getTrialStatus } from "../../../utils/trial";
 
 const schema = yup
   .object({
@@ -38,6 +39,7 @@ export const CreateCompanyForm: React.FC = () => {
       },
     },
   });
+  const trialStatus = getTrialStatus(session.data?.user);
 
   const { register, handleSubmit, formState } = useForm<FormValues>({
     resolver: yupResolver(schema),
@@ -68,6 +70,15 @@ export const CreateCompanyForm: React.FC = () => {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-2">
+      {trialStatus.isTrialAccount && trialStatus.isTrialActive && (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          Your 30-day trial is active. You have{" "}
+          <strong>{trialStatus.trialDaysLeft}</strong> day
+          {trialStatus.trialDaysLeft === 1 ? "" : "s"} left, until{" "}
+          <strong>{formatTrialDate(trialStatus.trialEndsAt)}</strong>.
+        </div>
+      )}
+
       <label htmlFor="email" className="text-md text-gray-500">
         Create Company
       </label>

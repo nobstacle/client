@@ -3,7 +3,9 @@
 
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { signIn, useSession } from "next-auth/react";
+import { Modal } from "antd";
 interface SignInModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -14,7 +16,38 @@ export default function SignInModal({ isOpen, onClose }: SignInModalProps) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const { data: session, update } = useSession();
+  const { data: session } = useSession();
+
+  const showTrialExpiredPopup = (message: string) => {
+    Modal.error({
+      title: "Trial Expired",
+      content:
+        message ||
+        "Your trial has expired. Please contact support or upgrade your plan to continue.",
+      okText: "Close",
+      centered: true,
+    });
+  };
+
+  const normalizeSignInError = (rawError?: string | null) => {
+    if (!rawError) {
+      return "Invalid email or password";
+    }
+
+    const decoded = decodeURIComponent(rawError);
+    if (
+      decoded.toLowerCase().includes("trial") &&
+      decoded.toLowerCase().includes("expired")
+    ) {
+      return decoded;
+    }
+
+    if (decoded === "CredentialsSignin") {
+      return "Invalid email or password";
+    }
+
+    return decoded;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,7 +61,14 @@ export default function SignInModal({ isOpen, onClose }: SignInModalProps) {
     });
 
     if (result?.error) {
-      setError("Invalid email or password");
+      const message = normalizeSignInError(result.error);
+      if (
+        message.toLowerCase().includes("trial") &&
+        message.toLowerCase().includes("expired")
+      ) {
+        showTrialExpiredPopup(message);
+      }
+      setError(message);
       setLoading(false);
     } else if (result?.ok) {
       onClose();
@@ -37,7 +77,9 @@ export default function SignInModal({ isOpen, onClose }: SignInModalProps) {
 
   const redirectuser = (session) => {
     let userRole = session?.user?.Roles[0];
-    if (userRole === "SAdmin") {
+    if (!session?.user?.companyId && userRole !== "SAdmin") {
+      window.location.href = "/onboard/create-company";
+    } else if (userRole === "SAdmin") {
       window.location.href = "/dashboard/register";
     } else if (userRole === "Admin" || userRole === "Staff") {
       window.location.href = "/dashboard/text";
@@ -100,6 +142,17 @@ export default function SignInModal({ isOpen, onClose }: SignInModalProps) {
         >
           Close
         </button>
+
+        <p className="mt-4 text-center text-sm text-gray-600">
+          Need an account?{" "}
+          <Link
+            href="/register"
+            className="font-semibold text-blue-600 hover:text-blue-700"
+            onClick={onClose}
+          >
+            Start your 30-day trial
+          </Link>
+        </p>
       </div>
     </div>
   );

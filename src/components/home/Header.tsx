@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { signIn } from "next-auth/react";
 import SignInModal from "./SignIn";
 import { Button } from "antd";
 
@@ -37,13 +36,6 @@ export default function Header() {
     }
   };
 
-  const handleSignIn = async () => {
-    await signIn("credentials", {
-      redirect: true,
-      callbackUrl: "/"
-    });
-  };
-
   return (
     <>
       <header className={`site-header ${scrolled ? 'scrolled' : ''}`}>
@@ -75,6 +67,15 @@ export default function Header() {
 
               {/* Mobile-only */}
               <li className="mobile-only">
+                <Link
+                  href="/register"
+                  className="cta-button-mobile"
+                  onClick={closeNav}
+                >
+                  Start Trial
+                </Link>
+              </li>
+              <li className="mobile-only">
                 <Button
                   className="signin-link-mobile"
                   onClick={() => { setSignInOpen(true); closeNav(); }}
@@ -98,13 +99,16 @@ export default function Header() {
           </nav>
 
           <div className="nav-actions">
+            {/* <Link href="/register" className="cta-button-header">
+              Start Trial
+            </Link> */}
             <Button className="signin-link" onClick={() => setSignInOpen(true)}>Sign In</Button>
             <a
-              href="#contact"
+              href="/register"
               className="cta-button-header"
-              onClick={handleBookDemoClick}
+              // onClick={handleBookDemoClick}
             >
-              Book a Demo
+              Start Trial
             </a>
 
             <button

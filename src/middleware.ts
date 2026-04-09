@@ -58,7 +58,7 @@ export async function middleware(req: NextRequest) {
   }
 
   // ── Public paths ───────────────────────────────────────────────────────────
-  const publicPaths = ["/", "/home", "/welcome", "/privacy", "/login"];
+  const publicPaths = ["/", "/home", "/welcome", "/privacy", "/login", "/register"];
   const isPublicPath = publicPaths.includes(pathname);
 
   // ── /api/auth/register — SAdmin only ──────────────────────────────────────
@@ -132,6 +132,11 @@ export async function middleware(req: NextRequest) {
       url.pathname = "/dashboard/text";
       return NextResponse.redirect(url);
     }
+  }
+
+  if (pathname === "/register" && isAuthenticated) {
+    url.pathname = "/";
+    return NextResponse.redirect(url);
   }
 
   // ── /dashboard ─────────────────────────────────────────────────────────────

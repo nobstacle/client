@@ -7,6 +7,7 @@ import { authOptions } from "../../lib/auth";
 import { ShortcutsProvider } from "./ShortcutProvider";
 import ClientSidebar from './Sidebar';
 import ClientHeader from './ClientHeader';
+import { TrialDashboardNotice } from "../../components/trial/TrialDashboardNotice";
 
 function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -16,6 +17,7 @@ function DashboardLayout({ children }: { children: React.ReactNode }) {
           <TemplateContextProvider>
             <ShortcutsProvider> {/* ← Add this wrapper */}
               <ServerHeaderWrapper />
+              <TrialDashboardNotice />
               <div className="flex flex-1 flex-row overflow-hidden">
                 <ServerSidebarWrapper />
                 <Body>{children}</Body>

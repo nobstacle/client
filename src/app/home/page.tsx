@@ -14,6 +14,7 @@ import Contact from '@/components/home/Contact';
 import Footer from '@/components/home/Footer';
 import Modal from '@/components/home/Modal';
 import Extension from '@/components/home/Extension';
+import ScrollToTop from '@/components/home/ScrollToTop';
 import "@/styles/home.css";
 
 export default function Home() {
@@ -32,6 +33,20 @@ export default function Home() {
 
   useEffect(() => {
     const animatedElements = document.querySelectorAll('.animate-on-scroll');
+
+    if (!animatedElements.length) {
+      return;
+    }
+
+    const revealAll = () => {
+      animatedElements.forEach((el) => el.classList.add('is-visible'));
+    };
+
+    if (typeof window === "undefined" || !("IntersectionObserver" in window)) {
+      revealAll();
+      return;
+    }
+
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
@@ -45,7 +60,12 @@ export default function Home() {
     );
 
     animatedElements.forEach((el) => observer.observe(el));
-    return () => observer.disconnect();
+    const fallbackTimer = window.setTimeout(revealAll, 1500);
+
+    return () => {
+      window.clearTimeout(fallbackTimer);
+      observer.disconnect();
+    };
   }, []);
 
   return (
@@ -81,6 +101,7 @@ export default function Home() {
       >
         <p>Content...</p>
       </Modal>
+      <ScrollToTop />
     </main>
   );
 }

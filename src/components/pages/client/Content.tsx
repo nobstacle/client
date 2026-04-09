@@ -21,6 +21,7 @@ import "antd/dist/reset.css";
 import { useSession } from "next-auth/react";
 import { Card, Button, Tag, Typography, Carousel, message, Modal, Image } from "antd";
 import { LeftOutlined, RightOutlined, ExpandAltOutlined } from '@ant-design/icons';
+import { TrialWatermark } from "../../trial/TrialWatermark";
 
 const { Title, Text } = Typography;
 
@@ -1769,6 +1770,7 @@ export const Content: React.FC = () => {
   if (hasHydrated) {
     return (
       <>
+        <TrialWatermark trial={company.data ?? data?.user} />
         {(contentToDisplay?.type === "TextTemplateMessage" ||
           contentToDisplay?.type === "Text") && (
             <div className="w-full p-5">
@@ -2502,6 +2504,7 @@ export const Content: React.FC = () => {
   if (isFirstTimeOpen && defaultSlideshowContent.data)
     return (
       <>
+        <TrialWatermark trial={company.data ?? data?.user} />
         <Slideshow contents={defaultSlideshowContent.data?.contents ?? contentToDisplay?.contents ?? []} />
       </>
     );

@@ -9,14 +9,20 @@ import type { GetUserResRolesItem } from './getUserResRolesItem';
 
 export interface GetUserRes {
   backendTokens: GetUserResBackendTokens;
-  companyId: number;
+  companyId: number | null;
   createdAt: string;
   email: string | null;
   emailVerified: boolean;
   firstName: string | null;
   id: number;
+  isTrialAccount: boolean;
+  isTrialActive: boolean;
+  isTrialExpired: boolean;
   lastName: string | null;
   Roles: GetUserResRolesItem[] | null;
+  trialDaysLeft: number | null;
+  trialEndsAt: string | null;
+  trialStartedAt: string | null;
   updatedAt: string;
 }
 
