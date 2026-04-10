@@ -190,8 +190,8 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
             href: "/dashboard/whatsapp",
             roles: ["Admin", "User", "Staff"],
             icon: <IoLogoWhatsapp size={18} />,
-            iconColor: "#D9F2D0",
-            textColor: "#D9F2D0"
+            iconColor: "#FAFA86",
+            textColor: "#FAFA86"
         },
     ];
 
