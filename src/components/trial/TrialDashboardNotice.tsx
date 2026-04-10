@@ -5,6 +5,7 @@ import { Button, Modal, Typography } from "antd";
 import { useSession } from "next-auth/react";
 import { useCompanyControllerGetCompany } from "@/lib/client/api";
 import { TrialBadge } from "./TrialBadge";
+import { TrialStatusBanner } from "./TrialStatusBanner";
 import { formatTrialDate, getTrialStatus } from "@/utils/trial";
 
 const { Paragraph, Title } = Typography;
@@ -52,21 +53,14 @@ export function TrialDashboardNotice() {
 
   return (
     <>
-      <div className="border-b border-amber-200 bg-gradient-to-r from-amber-50 via-orange-50 to-amber-100 px-4 py-3">
-        <div className="mx-auto flex max-w-7xl flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div className="flex flex-col gap-2 md:flex-row md:items-center">
-            <TrialBadge trial={trialSource} />
-            <p className="text-sm font-medium text-amber-950">
-              Trial active until{" "}
-              <strong>{formatTrialDate(trialStatus.trialEndsAt)}</strong>. You
-              have <strong>{daysLeft}</strong> day{daysLeft === 1 ? "" : "s"} left.
-            </p>
-          </div>
+      <TrialStatusBanner
+        trial={trialSource}
+        action={
           <Button size="small" onClick={() => setOpen(true)}>
             View details
           </Button>
-        </div>
-      </div>
+        }
+      />
 
       <Modal
         open={open}
