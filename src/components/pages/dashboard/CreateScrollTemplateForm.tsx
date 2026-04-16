@@ -7,7 +7,7 @@ import {
 } from "../../../lib/client/api";
 import * as yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
-import { Button, Select, Form, Space, Input, Upload, message } from "antd";
+import { Button, Select, Form, Space, Input, Upload, message, InputNumber } from "antd";
 import { languages } from "../../../constant/languages";
 import {
   DndContext,
@@ -27,7 +27,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { FaImage, FaFilm, FaGripVertical } from "react-icons/fa";
+import { FaImage, FaFilm, FaGripVertical, FaPlus } from "react-icons/fa";
 import { InboxOutlined } from "@ant-design/icons";
 import type { RcFile } from "antd/es/upload/interface";
 
@@ -44,6 +44,8 @@ interface SequenceEntry {
   name: string;
   mediaType: "image" | "video";
   order: number;
+  expiresAt?: string;
+  imageDurationSeconds?: number;
 }
 
 interface FormValues {
@@ -70,12 +72,28 @@ const schema = yup.object().shape(
   [["tagCreate", "tagSelect"]],
 );
 
+const toLocalDateTimeInputValue = (iso?: string) => {
+  if (!iso) return "";
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "";
+  const timezoneOffset = date.getTimezoneOffset() * 60000;
+  return new Date(date.getTime() - timezoneOffset).toISOString().slice(0, 16);
+};
+
+const fromLocalDateTimeInputValue = (value?: string) => {
+  if (!value) return undefined;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return undefined;
+  return date.toISOString();
+};
+
 // ─── Sortable Row ─────────────────────────────────────────────────────────────
 const SortableRow: React.FC<{
   entry: SequenceEntry;
   index: number;
   onRemove: (uid: string) => void;
-}> = ({ entry, index, onRemove }) => {
+  onChange: (uid: string, updates: Partial<SequenceEntry>) => void;
+}> = ({ entry, index, onRemove, onChange }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: entry.uid });
 
@@ -89,35 +107,87 @@ const SortableRow: React.FC<{
     <div
       ref={setNodeRef}
       style={style}
-      className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-md px-2 py-1.5"
+      className="flex flex-col gap-2 bg-gray-50 border border-gray-200 rounded-md px-2 py-2"
     >
-      <span
-        {...attributes}
-        {...listeners}
-        className="cursor-move text-gray-300 hover:text-gray-500 flex-shrink-0 leading-none"
-        style={{ fontSize: 12 }}
-      >
-        <FaGripVertical />
-      </span>
-      <span className="flex-shrink-0 w-4 text-center text-xs font-semibold text-gray-400">
-        {index + 1}
-      </span>
-      <span className="flex-shrink-0 text-gray-400 leading-none" style={{ fontSize: 11 }}>
-        {entry.mediaType === "image" ? <FaImage /> : <FaFilm />}
-      </span>
-      <span className="flex-1 text-xs text-gray-700 truncate">{entry.name}</span>
-      <span className="flex-shrink-0 text-xs text-gray-400">
-        {(entry.file.size / 1024 / 1024).toFixed(1)}MB
-      </span>
-      <button
-        type="button"
-        onClick={() => onRemove(entry.uid)}
-        className="flex-shrink-0 w-5 h-5 flex items-center justify-center rounded text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors leading-none"
-        style={{ fontSize: 14, fontWeight: 600 }}
-        title="Remove"
-      >
-        ×
-      </button>
+      <div className="flex items-center gap-2">
+        <span
+          {...attributes}
+          {...listeners}
+          className="cursor-move text-gray-300 hover:text-gray-500 flex-shrink-0 leading-none"
+          style={{ fontSize: 12 }}
+        >
+          <FaGripVertical />
+        </span>
+        <span className="flex-shrink-0 w-4 text-center text-xs font-semibold text-gray-400">
+          {index + 1}
+        </span>
+        <span className="flex-shrink-0 text-gray-400 leading-none" style={{ fontSize: 11 }}>
+          {entry.mediaType === "image" ? <FaImage /> : <FaFilm />}
+        </span>
+        <span className="flex-1 text-xs text-gray-700 truncate">{entry.name}</span>
+        <span className="flex-shrink-0 text-xs text-gray-400">
+          {(entry.file.size / 1024 / 1024).toFixed(1)}MB
+        </span>
+        <button
+          type="button"
+          onClick={() => onRemove(entry.uid)}
+          className="flex-shrink-0 w-5 h-5 flex items-center justify-center rounded text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors leading-none"
+          style={{ fontSize: 14, fontWeight: 600 }}
+          title="Remove"
+        >
+          ×
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+        <Input
+          size="small"
+          value={entry.name}
+          onChange={(event) =>
+            onChange(entry.uid, { name: event.target.value })
+          }
+          placeholder="Media name"
+        />
+
+        <Input
+          size="small"
+          type="datetime-local"
+          value={toLocalDateTimeInputValue(entry.expiresAt)}
+          onChange={(event) =>
+            onChange(entry.uid, {
+              expiresAt: fromLocalDateTimeInputValue(event.target.value),
+            })
+          }
+          placeholder="Expiration date"
+        />
+
+        {entry.mediaType === "image" ? (
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] text-gray-500 whitespace-nowrap">
+              Duration
+            </span>
+            <InputNumber
+              size="small"
+              min={1}
+              max={1209600}
+              value={entry.imageDurationSeconds}
+              onChange={(value) =>
+                onChange(entry.uid, {
+                  imageDurationSeconds:
+                    typeof value === "number" ? Math.floor(value) : undefined,
+                })
+              }
+              placeholder="Image duration"
+              addonAfter="sec"
+              className="w-full"
+            />
+          </div>
+        ) : (
+          <div className="text-[11px] text-gray-400 flex items-center px-1">
+            Video plays until it ends
+          </div>
+        )}
+      </div>
     </div>
   );
 };
@@ -125,9 +195,11 @@ const SortableRow: React.FC<{
 // ─── Main Form ────────────────────────────────────────────────────────────────
 export const CreateScrollTemplateForm: React.FC<{
   cb?: () => void;
-}> = ({ cb }) => {
+  entityLabel?: string;
+}> = ({ cb, entityLabel = "Scroll" }) => {
   const [sequence, setSequence] = React.useState<SequenceEntry[]>([]);
   const [sequenceError, setSequenceError] = React.useState<string | null>(null);
+  const isPublicTemplate = entityLabel.toLowerCase() === "public";
 
   const videoTags = useVideoTemplateControllerGetVideoTags();
   // Use the API hook — authentication header is injected automatically
@@ -158,8 +230,11 @@ export const CreateScrollTemplateForm: React.FC<{
     }
   };
 
-  // ── File upload handler ──────────────────────────────────────────────────────
-  const handleFileUpload = (file: RcFile): boolean => {
+  // ── File upload handlers ─────────────────────────────────────────────────────
+  const appendFileToSequence = (
+    file: RcFile,
+    forcedMediaType?: "image" | "video",
+  ): boolean => {
     setSequenceError(null);
 
     if (sequence.length >= MAX_ITEMS) {
@@ -180,19 +255,45 @@ export const CreateScrollTemplateForm: React.FC<{
       return false;
     }
 
-    const mediaType = file.type.startsWith("image/") ? "image" : "video";
+    const detectedMediaType = file.type.startsWith("image/") ? "image" : "video";
+    const mediaType = forcedMediaType ?? detectedMediaType;
+
+    if (forcedMediaType && forcedMediaType !== detectedMediaType) {
+      message.error(`Please select a valid ${forcedMediaType} file.`);
+      return false;
+    }
+
+    const defaultExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
     setSequence((prev) => [
       ...prev,
-      { uid: `${Date.now()}-${Math.random()}`, file, name: file.name, mediaType, order: prev.length + 1 },
+      {
+        uid: `${Date.now()}-${Math.random()}`,
+        file,
+        name: file.name,
+        mediaType,
+        order: prev.length + 1,
+        expiresAt: defaultExpiry,
+        imageDurationSeconds: mediaType === "image" ? 10 : undefined,
+      },
     ]);
     return false; // prevent default ant upload behaviour
   };
+
+  const handleFileUpload = (file: RcFile): boolean => appendFileToSequence(file);
+  const handleAddImage = (file: RcFile): boolean => appendFileToSequence(file, "image");
+  const handleAddVideo = (file: RcFile): boolean => appendFileToSequence(file, "video");
 
   const removeItem = (uid: string) => {
     setSequence((prev) =>
       prev.filter((e) => e.uid !== uid).map((item, idx) => ({ ...item, order: idx + 1 }))
     );
     setSequenceError(null);
+  };
+
+  const updateItem = (uid: string, updates: Partial<SequenceEntry>) => {
+    setSequence((prev) =>
+      prev.map((entry) => (entry.uid === uid ? { ...entry, ...updates } : entry))
+    );
   };
 
   // ── Submit ───────────────────────────────────────────────────────────────────
@@ -208,16 +309,24 @@ export const CreateScrollTemplateForm: React.FC<{
     sequence.forEach((entry) => formData.append("files", entry.file));
     formData.append(
       "itemsMetadata",
-      JSON.stringify(sequence.map((e) => ({ order: e.order, name: e.name })))
+      JSON.stringify(
+        sequence.map((e) => ({
+          order: e.order,
+          name: e.name?.trim() || e.file.name,
+          expiresAt: e.expiresAt || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+          imageDurationSeconds:
+            e.mediaType === "image" ? e.imageDurationSeconds || 10 : undefined,
+        }))
+      )
     );
 
     try {
       await createScroll.mutateAsync({ data: formData });
-      message.success("Scroll template created successfully!");
+      message.success(`${entityLabel} template created successfully!`);
       cb?.();
     } catch (error) {
       console.error("Create scroll error:", error);
-      message.error("Failed to create scroll template");
+      message.error(`Failed to create ${entityLabel.toLowerCase()} template`);
     }
   };
 
@@ -230,44 +339,102 @@ export const CreateScrollTemplateForm: React.FC<{
       <hr />
       <Space direction="vertical" size="small" style={{ width: "100%", rowGap: "0.4rem", paddingTop: "1rem" }}>
 
-        {/* ── File Upload ───────────────────────────────────────────────── */}
-        <Form.Item
-          label={
-            <span>
-              Upload files{" "}
-              <span className="text-gray-400 font-normal text-xs">
-                ({sequence.length}/{MAX_ITEMS})
+        {isPublicTemplate ? (
+          <Form.Item
+            label={
+              <span>
+                Add media one by one{" "}
+                <span className="text-gray-400 font-normal text-xs">
+                  ({sequence.length}/{MAX_ITEMS})
+                </span>
               </span>
-            </span>
-          }
-          validateStatus={sequenceError ? "error" : ""}
-          help={sequenceError}
-        >
-          <Dragger
-            name="files"
-            multiple
-            beforeUpload={handleFileUpload}
-            showUploadList={false}
-            disabled={sequence.length >= MAX_ITEMS}
-            accept="image/jpeg,image/jpg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime"
+            }
+            validateStatus={sequenceError ? "error" : ""}
+            help={sequenceError || "Add each image/video individually, then reorder below."}
           >
-            <p className="ant-upload-drag-icon"><InboxOutlined /></p>
-            <p className="ant-upload-text">Click or drag files to upload</p>
-            <p className="ant-upload-hint">
-              Images (jpg, png, webp, gif) and videos (mp4, webm, mov).
-              Max file size: 50MB. Max files: {MAX_ITEMS}
-            </p>
-          </Dragger>
-        </Form.Item>
+            <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+              <div className="flex flex-col md:flex-row gap-3">
+                <Upload
+                  beforeUpload={(file) => handleAddImage(file as RcFile)}
+                  showUploadList={false}
+                  maxCount={1}
+                  accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
+                  disabled={sequence.length >= MAX_ITEMS}
+                >
+                  <Button
+                    type="default"
+                    icon={<FaPlus size={12} />}
+                    className="w-full md:w-auto"
+                  >
+                    Add Image
+                  </Button>
+                </Upload>
+                <Upload
+                  beforeUpload={(file) => handleAddVideo(file as RcFile)}
+                  showUploadList={false}
+                  maxCount={1}
+                  accept="video/mp4,video/webm,video/quicktime"
+                  disabled={sequence.length >= MAX_ITEMS}
+                >
+                  <Button
+                    type="default"
+                    icon={<FaPlus size={12} />}
+                    className="w-full md:w-auto"
+                  >
+                    Add Video
+                  </Button>
+                </Upload>
+                <div className="text-xs text-gray-500 flex items-center">
+                  Max file size: 50MB per item
+                </div>
+              </div>
+            </div>
+          </Form.Item>
+        ) : (
+          <Form.Item
+            label={
+              <span>
+                Upload files{" "}
+                <span className="text-gray-400 font-normal text-xs">
+                  ({sequence.length}/{MAX_ITEMS})
+                </span>
+              </span>
+            }
+            validateStatus={sequenceError ? "error" : ""}
+            help={sequenceError}
+          >
+            <Dragger
+              name="files"
+              multiple
+              beforeUpload={handleFileUpload}
+              showUploadList={false}
+              disabled={sequence.length >= MAX_ITEMS}
+              accept="image/jpeg,image/jpg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime"
+            >
+              <p className="ant-upload-drag-icon"><InboxOutlined /></p>
+              <p className="ant-upload-text">Click or drag files to upload</p>
+              <p className="ant-upload-hint">
+                Images (jpg, png, webp, gif) and videos (mp4, webm, mov).
+                Max file size: 50MB. Max files: {MAX_ITEMS}
+              </p>
+            </Dragger>
+          </Form.Item>
+        )}
 
         {/* ── Sequence list ─────────────────────────────────────────────── */}
         {sequence.length > 0 && (
-          <Form.Item label="Sequence — drag to reorder">
+          <Form.Item label="Sequence — drag to reorder and edit item settings">
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
               <SortableContext items={sequence.map((e) => e.uid)} strategy={verticalListSortingStrategy}>
                 <div className="flex flex-col gap-1">
                   {sequence.map((entry, i) => (
-                    <SortableRow key={entry.uid} entry={entry} index={i} onRemove={removeItem} />
+                    <SortableRow
+                      key={entry.uid}
+                      entry={entry}
+                      index={i}
+                      onRemove={removeItem}
+                      onChange={updateItem}
+                    />
                   ))}
                 </div>
               </SortableContext>
@@ -349,7 +516,7 @@ export const CreateScrollTemplateForm: React.FC<{
             loading={createScroll.isPending}
             disabled={createScroll.isPending}
           >
-            {createScroll.isPending ? "Creating..." : "Create Scroll Template"}
+            {createScroll.isPending ? "Creating..." : `Create ${entityLabel} Template`}
           </Button>
         </Form.Item>
       </Space>

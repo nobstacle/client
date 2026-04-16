@@ -6262,6 +6262,8 @@ export interface ScrollMediaItem {
   order: number;
   ext: string;
   signedUrl?: string;
+  expiresAt?: string;
+  imageDurationSeconds?: number;
 }
 
 export interface GetScrollTemplateRes {

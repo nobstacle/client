@@ -6,7 +6,9 @@
     "dev": "next dev -H 0.0.0.0",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "extension:check": "node scripts/check-extension-version.mjs",
+    "extension:bump": "node scripts/bump-extension-version.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.1.0",

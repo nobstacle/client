@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Content } from "../../components/pages/client/Content";
 import { StationPicker } from "../../components/pages/dashboard/Header/StationPicker";
 import { useMessageStore } from "../../lib/zustand/store/messageStore";
@@ -16,11 +16,101 @@ import TestAudioRecorder from "../../components/TestAudioRecorder";
 export default function Client() {
   return (
     <>
+      <NetworkStatusIndicator />
       <Content />
       <ClientStationPicker />
     </>
   );
 }
+
+const NetworkStatusIndicator = () => {
+  const { socketConnected } = useSocketContext();
+  const [isOffline, setIsOffline] = useState(false);
+  const [isWeak, setIsWeak] = useState(false);
+  const [showReconnected, setShowReconnected] = useState(false);
+  const hadNetworkIssueRef = useRef(false);
+
+  const evaluateStatus = React.useCallback(() => {
+    const offline = typeof navigator !== "undefined" ? !navigator.onLine : false;
+    setIsOffline(offline);
+
+    let weak = false;
+    if (!offline && typeof navigator !== "undefined") {
+      const connection = (navigator as any).connection;
+      const effectiveType = connection?.effectiveType;
+      const rtt = Number(connection?.rtt);
+      const downlink = Number(connection?.downlink);
+
+      weak =
+        effectiveType === "slow-2g" ||
+        effectiveType === "2g" ||
+        (Number.isFinite(rtt) && rtt > 800) ||
+        (Number.isFinite(downlink) && downlink > 0 && downlink < 1);
+    }
+
+    setIsWeak(weak);
+
+    const currentlyProblematic = offline || weak || !socketConnected;
+
+    if (hadNetworkIssueRef.current && !currentlyProblematic) {
+      setShowReconnected(true);
+      window.setTimeout(() => setShowReconnected(false), 4000);
+    }
+
+    hadNetworkIssueRef.current = currentlyProblematic;
+  }, [socketConnected]);
+
+  useEffect(() => {
+    evaluateStatus();
+
+    const connection = (navigator as any)?.connection;
+    const onConnectivityChange = () => evaluateStatus();
+
+    window.addEventListener("online", onConnectivityChange);
+    window.addEventListener("offline", onConnectivityChange);
+    connection?.addEventListener?.("change", onConnectivityChange);
+
+    return () => {
+      window.removeEventListener("online", onConnectivityChange);
+      window.removeEventListener("offline", onConnectivityChange);
+      connection?.removeEventListener?.("change", onConnectivityChange);
+    };
+  }, [evaluateStatus]);
+
+  if (isOffline) {
+    return (
+      <div className="fixed top-4 right-4 z-[9999] rounded-md bg-red-600 text-white px-3 py-2 text-xs shadow-lg">
+        Network unavailable
+      </div>
+    );
+  }
+
+  if (!socketConnected) {
+    return (
+      <div className="fixed top-4 right-4 z-[9999] rounded-md bg-orange-500 text-white px-3 py-2 text-xs shadow-lg">
+        Reconnecting to server
+      </div>
+    );
+  }
+
+  if (isWeak) {
+    return (
+      <div className="fixed top-4 right-4 z-[9999] rounded-md bg-amber-500 text-white px-3 py-2 text-xs shadow-lg">
+        Weak network detected
+      </div>
+    );
+  }
+
+  if (showReconnected) {
+    return (
+      <div className="fixed top-4 right-4 z-[9999] rounded-md bg-green-600 text-white px-3 py-2 text-xs shadow-lg">
+        Network reconnected
+      </div>
+    );
+  }
+
+  return null;
+};
 
 const ClientStationPicker = () => {
   const { clearReceivedContent } = useMessageStore();

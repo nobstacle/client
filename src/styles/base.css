@@ -1315,3 +1315,8 @@ body.nobstacle-active {
 .whatsappListContactModal .headerButton {
   width: auto !important;
 }
+
+
+.customPublicModal {
+  max-width: 40rem !important;
+}

@@ -18,7 +18,8 @@ import {
     IoPeople,
     IoSettings,
     IoLogoWhatsapp,
-    IoHome
+    IoHome,
+    IoMegaphone
 } from 'react-icons/io5';
 // import { IoRecordingSharp } from "react-icons/io5";
 import { IoChatbubbleEllipses } from "react-icons/io5";
@@ -125,6 +126,13 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
             href: "/dashboard/scroll",
             roles: ["Admin", "User", "Staff"],
             icon: <IoCaretDownCircle size={18} />,
+            iconColor: "white"
+        },
+        {
+            title: "Public",
+            href: "/dashboard/public",
+            roles: ["Admin", "User", "Staff"],
+            icon: <IoMegaphone size={18} />,
             iconColor: "white"
         },
         {

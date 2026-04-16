@@ -24,6 +24,64 @@ import { LeftOutlined, RightOutlined, ExpandAltOutlined } from '@ant-design/icon
 import { TrialWatermark } from "../../trial/TrialWatermark";
 
 const { Title, Text } = Typography;
+const LAST_DISPLAYED_CONTENT_KEY = "lastDisplayedContent";
+const LAST_PUBLIC_CONTENT_KEY = "lastPublicContent";
+
+const parseScrollItems = (extraContent: any): any[] => {
+  if (Array.isArray(extraContent)) return extraContent;
+  if (typeof extraContent !== "string") return [];
+  try {
+    const parsed = JSON.parse(extraContent);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
+
+const getActiveScrollItems = (extraContent: any): any[] => {
+  const now = Date.now();
+  return parseScrollItems(extraContent).filter((item: any) => {
+    if (!item?.expiresAt) return true;
+    const expiresAtMs = new Date(item.expiresAt).getTime();
+    if (Number.isNaN(expiresAtMs)) return true;
+    return expiresAtMs > now;
+  });
+};
+
+const normalizePublicContentPayload = (content: any) => {
+  if (!content) return null;
+  const activeItems = getActiveScrollItems(content.extraContent);
+  if (activeItems.length === 0) return null;
+
+  return {
+    ...content,
+    type: "Scroll",
+    extraContent: JSON.stringify(activeItems),
+    contents: activeItems
+      .map((item: any) => item?.signedUrl || item?.url)
+      .filter(Boolean),
+  };
+};
+
+const getStoredPublicDisplay = () => {
+  if (typeof window === "undefined") return null;
+  const raw = localStorage.getItem(LAST_PUBLIC_CONTENT_KEY);
+  if (!raw) return null;
+
+  try {
+    const parsed = JSON.parse(raw);
+    const normalizedContent = normalizePublicContentPayload(parsed?.content);
+    if (!normalizedContent) return null;
+
+    return {
+      ...parsed,
+      type: "Scroll",
+      content: normalizedContent,
+    };
+  } catch {
+    return null;
+  }
+};
 
 const IframeWithPrefill = React.memo(({ src, prefillData }: { src: string, prefillData: Record<string, string> }) => {
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -724,17 +782,25 @@ export const Content: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (contentToDisplay === null && defaultSlideshowContent.data) {
+    if (!hasHydrated || contentToDisplay !== null) return;
+
+    const restoredPublic = getStoredPublicDisplay();
+    if (restoredPublic) {
+      setContentToDisplay(restoredPublic);
+      return;
+    }
+
+    if (defaultSlideshowContent.data) {
       setContentToDisplay({
         type: "Slideshow",
         content: defaultSlideshowContent.data,
       });
     }
-  }, [defaultSlideshowContent.data, contentToDisplay]);
+  }, [defaultSlideshowContent.data, contentToDisplay, hasHydrated]);
 
   useEffect(() => {
     if (messageStore.receivedType === "Recording") {
-      const lastContent = localStorage.getItem('lastDisplayedContent');
+      const lastContent = localStorage.getItem(LAST_DISPLAYED_CONTENT_KEY);
       if (lastContent) {
         try {
           const parsed = JSON.parse(lastContent);
@@ -746,6 +812,24 @@ export const Content: React.FC = () => {
         }
       }
     } else if (messageStore.receivedType) {
+      if (messageStore.receivedType === "Scroll") {
+        const normalizedPublicContent = normalizePublicContentPayload(
+          messageStore.receivedContent,
+        );
+
+        if (normalizedPublicContent) {
+          setContentToDisplay({
+            type: "Scroll",
+            content: normalizedPublicContent,
+            survey: messageStore.receivedSurvey,
+            messages: messageStore.receivedMessage,
+          });
+        } else {
+          setContentToDisplay(null);
+        }
+        return;
+      }
+
       setContentToDisplay({
         type: messageStore.receivedType,
         content: messageStore.receivedContent,
@@ -753,7 +837,8 @@ export const Content: React.FC = () => {
         messages: messageStore.receivedMessage
       });
     } else {
-      setContentToDisplay(null);
+      const restoredPublic = getStoredPublicDisplay();
+      setContentToDisplay(restoredPublic ?? null);
     }
   }, [messageStore.receivedType, messageStore.receivedContent, messageStore.receivedSurvey, messageStore.receivedMessage]);
 
@@ -901,36 +986,29 @@ export const Content: React.FC = () => {
         messages: messageStore.receivedMessage,
         timestamp: Date.now()
       };
-      localStorage.setItem('lastDisplayedContent', JSON.stringify(contentToStore));
-    }
-  }, [messageStore.receivedType, messageStore.receivedContent, messageStore.receivedSurvey, messageStore.receivedMessage]);
 
-  useEffect(() => {
-    if (messageStore.receivedType === "Recording") {
-      const lastContent = localStorage.getItem('lastDisplayedContent');
-      if (lastContent) {
-        try {
-          const parsed = JSON.parse(lastContent);
-          setContentToDisplay(parsed);
-          message.info("This conversation is recorded for quality and training purposes");
-        } catch (error) {
-          console.error("Failed to parse last content:", error);
-          setContentToDisplay(null);
+      localStorage.setItem(LAST_DISPLAYED_CONTENT_KEY, JSON.stringify(contentToStore));
+
+      if (messageStore.receivedType === "Scroll") {
+        const normalizedPublicContent = normalizePublicContentPayload(
+          messageStore.receivedContent,
+        );
+
+        if (normalizedPublicContent) {
+          localStorage.setItem(
+            LAST_PUBLIC_CONTENT_KEY,
+            JSON.stringify({
+              ...contentToStore,
+              type: "Scroll",
+              content: normalizedPublicContent,
+            }),
+          );
+        } else {
+          localStorage.removeItem(LAST_PUBLIC_CONTENT_KEY);
         }
       }
-    } else if (messageStore.receivedType) {
-      setContentToDisplay({
-        type: messageStore.receivedType,
-        content: messageStore.receivedContent,
-        survey: messageStore.receivedSurvey,
-        messages: messageStore.receivedMessage
-      });
     }
   }, [messageStore.receivedType, messageStore.receivedContent, messageStore.receivedSurvey, messageStore.receivedMessage]);
-
-  useEffect(() => {
-    localStorage?.removeItem("lastDisplayedContent");
-  }, []);
 
   const handleCloseQR = useCallback(() => {
     setIsClosing(true);
@@ -1588,170 +1666,140 @@ export const Content: React.FC = () => {
 
   const ScrollViewer: React.FC<{ items: any[] }> = ({ items }) => {
     const [currentIndex, setCurrentIndex] = useState(0);
-    const containerRef = useRef<HTMLDivElement>(null);
-    const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
     const [isMuted, setIsMuted] = useState(true);
-    const touchStartY = useRef(0);
-    const isScrolling = useRef(false);
+    const [now, setNow] = useState(Date.now());
+    const videoRef = useRef<HTMLVideoElement | null>(null);
 
-    // Auto-play current video
-    useEffect(() => {
-      const currentItem = items[currentIndex];
-      if (currentItem?.mediaType === 'video') {
-        const video = videoRefs.current[currentIndex];
-        if (video) {
-          video.muted = isMuted;
-          video.play().catch(err => console.error('Video play failed:', err));
-        }
-      }
+    const resolveImageDuration = (value?: any) => {
+      const parsed = Number(value);
+      if (!Number.isFinite(parsed) || parsed < 1) return 10;
+      return Math.min(Math.floor(parsed), 1209600);
+    };
 
-      // Pause other videos
-      videoRefs.current.forEach((video, idx) => {
-        if (video && idx !== currentIndex) {
-          video.pause();
-          video.currentTime = 0;
-        }
+    const getExpiryRemainingMs = (item: any) => {
+      if (!item?.expiresAt) return Number.POSITIVE_INFINITY;
+      const expiresAtMs = new Date(item.expiresAt).getTime();
+      if (Number.isNaN(expiresAtMs)) return Number.POSITIVE_INFINITY;
+      return expiresAtMs - Date.now();
+    };
+
+    const activeItems = React.useMemo(() => {
+      return (Array.isArray(items) ? items : []).filter((item) => {
+        if (!item?.expiresAt) return true;
+        const expiresAt = new Date(item.expiresAt).getTime();
+        if (Number.isNaN(expiresAt)) return true;
+        return expiresAt > now;
       });
-    }, [currentIndex, isMuted]);
+    }, [items, now]);
 
-    // Smooth scroll handling
-    const scrollToIndex = (index: number) => {
-      if (isScrolling.current) return;
-
-      isScrolling.current = true;
-      const newIndex = Math.max(0, Math.min(index, items.length - 1));
-      setCurrentIndex(newIndex);
-
-      if (containerRef.current) {
-        containerRef.current.scrollTo({
-          top: newIndex * window.innerHeight,
-          behavior: 'smooth'
-        });
-      }
-
-      setTimeout(() => {
-        isScrolling.current = false;
-      }, 600);
-    };
-
-    // Wheel event for desktop
-    const handleWheel = (e: WheelEvent) => {
-      e.preventDefault();
-      if (isScrolling.current) return;
-
-      if (e.deltaY > 0 && currentIndex < items.length - 1) {
-        scrollToIndex(currentIndex + 1);
-      } else if (e.deltaY < 0 && currentIndex > 0) {
-        scrollToIndex(currentIndex - 1);
-      }
-    };
-
-    // Touch events for mobile
-    const handleTouchStart = (e: React.TouchEvent) => {
-      touchStartY.current = e.touches[0].clientY;
-    };
-
-    const handleTouchEnd = (e: React.TouchEvent) => {
-      if (isScrolling.current) return;
-
-      const touchEndY = e.changedTouches[0].clientY;
-      const diff = touchStartY.current - touchEndY;
-
-      if (Math.abs(diff) > 50) {
-        if (diff > 0 && currentIndex < items.length - 1) {
-          scrollToIndex(currentIndex + 1);
-        } else if (diff < 0 && currentIndex > 0) {
-          scrollToIndex(currentIndex - 1);
-        }
-      }
-    };
-
-    // Add wheel event listener
     useEffect(() => {
-      const container = containerRef.current;
-      if (!container) return;
+      const timer = window.setInterval(() => {
+        setNow(Date.now());
+      }, 1000);
+      return () => window.clearInterval(timer);
+    }, []);
 
-      container.addEventListener('wheel', handleWheel, { passive: false });
-      return () => container.removeEventListener('wheel', handleWheel);
-    }, [currentIndex, items.length]);
-
-    const toggleMute = () => {
-      setIsMuted(!isMuted);
-      const video = videoRefs.current[currentIndex];
-      if (video) {
-        video.muted = !isMuted;
+    useEffect(() => {
+      if (activeItems.length === 0) return;
+      if (currentIndex >= activeItems.length) {
+        setCurrentIndex(0);
       }
-    };
+    }, [activeItems.length, currentIndex]);
+
+    const moveNext = useCallback(() => {
+      setCurrentIndex((prev) => {
+        if (activeItems.length <= 1) return 0;
+        return (prev + 1) % activeItems.length;
+      });
+    }, [activeItems.length]);
+
+    const currentItem = activeItems[currentIndex];
+    useEffect(() => {
+      if (!currentItem) return;
+
+      const expiryRemainingMs = getExpiryRemainingMs(currentItem);
+
+      if (currentItem.mediaType === "image") {
+        const imageDurationMs = resolveImageDuration(currentItem.imageDurationSeconds) * 1000;
+        const nextInMs = Math.max(
+          200,
+          Math.min(
+            imageDurationMs,
+            Number.isFinite(expiryRemainingMs) ? expiryRemainingMs : imageDurationMs,
+          ),
+        );
+        const timer = window.setTimeout(moveNext, nextInMs);
+        return () => window.clearTimeout(timer);
+      }
+
+      if (Number.isFinite(expiryRemainingMs)) {
+        const timer = window.setTimeout(moveNext, Math.max(200, expiryRemainingMs));
+        return () => window.clearTimeout(timer);
+      }
+    }, [
+      currentItem,
+      currentItem?.mediaType,
+      currentItem?.expiresAt,
+      currentItem?.imageDurationSeconds,
+      moveNext,
+    ]);
+
+    const isImage = currentItem?.mediaType === "image";
+
+    useEffect(() => {
+      const video = videoRef.current;
+      if (!video || isImage) return;
+
+      video.muted = isMuted;
+      video.play().catch((err) => console.error("Video play failed:", err));
+    }, [
+      isImage,
+      isMuted,
+      currentIndex,
+      currentItem?.signedUrl,
+      currentItem?.url,
+    ]);
+
+    if (activeItems.length === 0) {
+      return (
+        <div className="w-full h-screen flex items-center justify-center bg-gray-100">
+          <p className="text-gray-500">No active public content available</p>
+        </div>
+      );
+    }
 
     return (
-      <div
-        ref={containerRef}
-        className="fixed inset-0 w-screen h-screen overflow-hidden bg-black"
-        onTouchStart={handleTouchStart}
-        onTouchEnd={handleTouchEnd}
-        style={{ scrollSnapType: 'y mandatory' }}
-      >
-        {items.map((item, index) => (
-          <div
-            key={index}
-            className="w-screen h-screen flex items-center justify-center relative"
-            style={{ scrollSnapAlign: 'start' }}
-          >
-            {item.mediaType === 'image' ? (
-              <img
-                src={item.signedUrl || item.url}
-                alt={item.name}
-                className="w-full h-full object-contain"
-              />
-            ) : (
-              <video
-                ref={(el) => (videoRefs.current[index] = el)}
-                src={item.signedUrl || item.url}
-                className="w-full h-full object-contain"
-                loop
-                playsInline
-                preload="auto"
-              />
-            )}
+      <div className="fixed inset-0 w-screen h-screen overflow-hidden bg-black">
+        <div className="w-screen h-screen flex items-center justify-center relative">
+          {isImage ? (
+            <img
+              src={currentItem.signedUrl || currentItem.url}
+              alt={currentItem.name}
+              className="w-full h-full object-contain"
+            />
+          ) : (
+            <video
+              key={currentItem.signedUrl || currentItem.url}
+              ref={videoRef}
+              src={currentItem.signedUrl || currentItem.url}
+              className="w-full h-full object-contain"
+              playsInline
+              preload="auto"
+              onEnded={moveNext}
+              onError={moveNext}
+            />
+          )}
 
-            {/* Mute button for videos */}
-            {item.mediaType === 'video' && index === currentIndex && (
-              <button
-                onClick={toggleMute}
-                className="absolute bottom-20 right-6 w-12 h-12 bg-black/60 rounded-full flex items-center justify-center text-white text-xl backdrop-blur-sm hover:bg-black/80 transition z-10"
-              >
-                {isMuted ? '🔇' : '🔊'}
-              </button>
-            )}
+          {!isImage && (
+            <button
+              onClick={() => setIsMuted((prev) => !prev)}
+              className="absolute bottom-20 right-6 px-3 py-2 bg-black/60 rounded-full text-white text-xs backdrop-blur-sm hover:bg-black/80 transition z-10"
+            >
+              {isMuted ? "Unmute" : "Mute"}
+            </button>
+          )}
 
-            {/* Progress indicators */}
-            <div className="absolute top-4 left-0 right-0 flex gap-1 px-4 z-10">
-              {items.map((_, idx) => (
-                <div
-                  key={idx}
-                  className={`flex-1 h-0.5 rounded-full transition-all duration-300 ${idx === currentIndex
-                    ? 'bg-white'
-                    : idx < currentIndex
-                      ? 'bg-white/50'
-                      : 'bg-white/20'
-                    }`}
-                />
-              ))}
-            </div>
-
-            {/* Item counter */}
-            <div className="absolute bottom-6 left-6 bg-black/60 text-white px-3 py-1.5 rounded-full text-sm backdrop-blur-sm">
-              {index + 1} / {items.length}
-            </div>
-
-            {/* Navigation hints */}
-            {index === 0 && currentIndex === 0 && (
-              <div className="absolute bottom-32 left-1/2 -translate-x-1/2 text-white/80 text-lg font-medium text-center animate-bounce">
-                Swipe for more ↑
-              </div>
-            )}
-          </div>
-        ))}
+        </div>
       </div>
     );
   };
@@ -2454,7 +2502,7 @@ export const Content: React.FC = () => {
                   </div>
 
                   <div className="absolute bottom-2 right-4 text-sm text-gray-500">
-                    {timer}s
+                    Duration left: {timer}s
                   </div>
 
                   <button
