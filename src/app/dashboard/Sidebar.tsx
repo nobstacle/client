@@ -165,7 +165,7 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
         },
         {
             title: "Public",
-            href: "/dashboard/public",
+            href: "/dashboard/Screens",
             roles: ["Admin", "User", "Staff"],
             icon: <IoMegaphone size={18} />,
             iconColor: "white"
