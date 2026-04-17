@@ -256,7 +256,7 @@ export default function ScreensDashboard() {
 
       {userData?.user.Roles?.includes("Admin") && (
         <Modal
-          title="Create screens template"
+          title="Create Screen Template"
           closeModal={handleClose}
           isOpen={isOpen}
           panelStyleClass="max-w-[96vw] xl:max-w-7xl"
@@ -340,7 +340,7 @@ export default function ScreensDashboard() {
 
           {editTemplate && (
           <Modal
-            title="Update screens template"
+            title="Update Screen Template"
             closeModal={updateHandleClose}
             isOpen={updateIsOpen}
             panelStyleClass="max-w-[96vw] xl:max-w-7xl"
@@ -433,7 +433,7 @@ export default function ScreensDashboard() {
           >
             <PlusIcon className="w-6 h-6 sm:w-7 sm:h-7 opacity-100" />
             <div className="absolute right-full mr-3 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
-              Create Screens Template
+              Create Screen Template
               <div className="absolute top-1/2 left-full w-0 h-0 border-l-4 border-l-gray-900 border-y-4 border-y-transparent transform -translate-y-1/2" />
             </div>
           </button>

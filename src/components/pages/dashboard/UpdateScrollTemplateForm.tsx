@@ -74,6 +74,13 @@ const fromLocalDateTimeInputValue = (value?: string) => {
   return date.toISOString();
 };
 
+const getPlaybackStatus = (expiresAt?: string): "playing" | "expired" => {
+  if (!expiresAt) return "playing";
+  const expiresMs = new Date(expiresAt).getTime();
+  if (Number.isNaN(expiresMs)) return "playing";
+  return expiresMs > Date.now() ? "playing" : "expired";
+};
+
 // ─── Sortable Row ─────────────────────────────────────────────────────────────
 const SortableRow: React.FC<{
   entry: SequenceEntry;
@@ -83,6 +90,7 @@ const SortableRow: React.FC<{
 }> = ({ entry, index, onRemove, onChange }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: entry.uid });
+  const playbackStatus = getPlaybackStatus(entry.expiresAt);
 
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
@@ -116,11 +124,15 @@ const SortableRow: React.FC<{
 
         <span className="flex-1 text-xs text-gray-700 truncate">{entry.name}</span>
 
-        {entry.isExisting && (
-          <span className="flex-shrink-0 px-1.5 py-0.5 text-[10px] bg-blue-100 text-blue-600 rounded">
-            existing
-          </span>
-        )}
+        <span
+          className={`flex-shrink-0 px-1.5 py-0.5 text-[10px] rounded ${
+            playbackStatus === "playing"
+              ? "bg-green-100 text-green-700"
+              : "bg-red-100 text-red-700"
+          }`}
+        >
+          {playbackStatus === "playing" ? "Playing" : "Expired"}
+        </span>
 
         {!entry.isExisting && entry.file && (
           <span className="flex-shrink-0 text-xs text-gray-400">
