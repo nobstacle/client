@@ -1713,7 +1713,11 @@ export const Content: React.FC = () => {
       });
     }, [activeItems.length]);
 
-    const currentItem = activeItems[currentIndex];
+    const safeCurrentIndex =
+      activeItems.length === 0
+        ? 0
+        : Math.min(currentIndex, activeItems.length - 1);
+    const currentItem = activeItems[safeCurrentIndex];
     useEffect(() => {
       if (!currentItem) return;
 
@@ -1755,7 +1759,7 @@ export const Content: React.FC = () => {
     }, [
       isImage,
       isMuted,
-      currentIndex,
+      safeCurrentIndex,
       currentItem?.signedUrl,
       currentItem?.url,
     ]);
@@ -1764,6 +1768,14 @@ export const Content: React.FC = () => {
       return (
         <div className="w-full h-screen flex items-center justify-center bg-gray-100">
           <p className="text-gray-500">No active public content available</p>
+        </div>
+      );
+    }
+
+    if (!currentItem) {
+      return (
+        <div className="w-full h-screen flex items-center justify-center bg-gray-100">
+          <p className="text-gray-500">Refreshing public content...</p>
         </div>
       );
     }

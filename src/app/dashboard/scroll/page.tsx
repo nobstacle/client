@@ -31,6 +31,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import "../../../styles/base.css";
 import { CreateScrollTemplateForm } from "../../../components/pages/dashboard/CreateScrollTemplateForm";
 import { UpdateScrollTemplateForm } from "../../../components/pages/dashboard/UpdateScrollTemplateForm";
+import { isScrollTagInScope, toDisplayScrollTag } from "../../../utils/scrollScope";
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -71,7 +72,11 @@ export default function ScrollDashboard() {
 
   const serverScrolls: GetScrollTemplateRes[] = scrollsData?.data ?? [];
   // Use local optimistic order while a drag-reorder is in flight
-  const scrolls = localScrolls ?? serverScrolls;
+  const allScrolls = localScrolls ?? serverScrolls;
+  const scrolls = useMemo(
+    () => allScrolls.filter((s) => isScrollTagInScope(s.tag, "scroll")),
+    [allScrolls],
+  );
 
   const invalidateScrolls = () =>
     queryClient.invalidateQueries({
@@ -82,7 +87,9 @@ export default function ScrollDashboard() {
   const handleSearch = (value: string) => {
     if (!value) { setSearchResults([]); return; }
     setSearchResults(
-      scrolls.filter((s) => s.tag.toLowerCase().includes(value.toLowerCase()))
+      scrolls.filter((s) =>
+        toDisplayScrollTag(s.tag).toLowerCase().includes(value.toLowerCase())
+      )
     );
   };
 
@@ -262,7 +269,7 @@ export default function ScrollDashboard() {
                   isAdmin={userData?.user.Roles?.includes("Admin")}
                   onUpdate={() => onUpdateCard(val)}
                   key={val.id}
-                  tag={val.tag}
+                  tag={toDisplayScrollTag(val.tag)}
                   isAvailable={val.isAvailableInCurrentLang}
                   sendOnClick={() =>
                     sendTemplate(val.id, val.isAvailableInCurrentLang, val.items)
@@ -311,7 +318,7 @@ export default function ScrollDashboard() {
               <UpdateScrollTemplateForm
                 defaultLangCode={currentLang}
                 sourceId={editTemplate.id}
-                tag={editTemplate.tag}
+                tag={toDisplayScrollTag(editTemplate.tag)}
                 existingItems={editTemplate.items}
                 cb={() => { updateHandleClose(); invalidateScrolls(); }}
               />
@@ -322,7 +329,7 @@ export default function ScrollDashboard() {
 
       {previewTemplate && (
         <Modal
-          title={`Preview: ${previewTemplate.tag}`}
+          title={`Preview: ${toDisplayScrollTag(previewTemplate.tag)}`}
           closeModal={() => setPreviewTemplate(null)}
           isOpen={!!previewTemplate}
         >

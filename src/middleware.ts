@@ -13,6 +13,8 @@ export async function middleware(req: NextRequest) {
   if (
     pathname.startsWith("/pair/") ||
     pathname === "/pair" ||
+    pathname.startsWith("/forms/") ||
+    pathname === "/forms" ||
     pathname.startsWith("/api/pairing") ||  // catches /api/pairing/login and /api/pairing/login/
     pathname.includes("/api/pairing")        // extra safety net
   ) {

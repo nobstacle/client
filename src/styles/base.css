@@ -936,6 +936,15 @@ button {
   color: white !important;
 }
 
+.create-template-form .public-media-add-btn,
+.create-template-form .public-media-add-btn:hover,
+.create-template-form .public-media-add-btn:focus,
+.create-template-form .public-media-add-btn:active {
+  color: #111827 !important;
+  background: #ffffff !important;
+  border-color: #d1d5db !important;
+}
+
 .customMapForm .ant-form-item {
   margin-bottom: 0.3rem;
 }
@@ -1318,5 +1327,6 @@ body.nobstacle-active {
 
 
 .customPublicModal {
-  max-width: 40rem !important;
+  width: min(96vw, 72rem) !important;
+  max-width: min(96vw, 72rem) !important;
 }

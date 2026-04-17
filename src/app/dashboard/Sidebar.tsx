@@ -129,13 +129,6 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
             iconColor: "white"
         },
         {
-            title: "Public",
-            href: "/dashboard/public",
-            roles: ["Admin", "User", "Staff"],
-            icon: <IoMegaphone size={18} />,
-            iconColor: "white"
-        },
-        {
             title: "Website",
             href: "/dashboard/website",
             roles: ["Admin", "User", "Staff"],
@@ -168,6 +161,13 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
             href: "/dashboard/survey",
             roles: ["Admin", "User", "Staff"],
             icon: <IoSpeedometer size={18} />,
+            iconColor: "white"
+        },
+        {
+            title: "Public",
+            href: "/dashboard/public",
+            roles: ["Admin", "User", "Staff"],
+            icon: <IoMegaphone size={18} />,
             iconColor: "white"
         },
         {

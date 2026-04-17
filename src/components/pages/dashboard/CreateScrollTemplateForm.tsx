@@ -30,6 +30,11 @@ import { CSS } from "@dnd-kit/utilities";
 import { FaImage, FaFilm, FaGripVertical, FaPlus } from "react-icons/fa";
 import { InboxOutlined } from "@ant-design/icons";
 import type { RcFile } from "antd/es/upload/interface";
+import {
+  isScrollTagInScope,
+  toDisplayScrollTag,
+  toScopedScrollTag,
+} from "../../../utils/scrollScope";
 
 const { Dragger } = Upload;
 
@@ -139,7 +144,7 @@ const SortableRow: React.FC<{
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
         <Input
           size="small"
           value={entry.name}
@@ -211,6 +216,21 @@ export const CreateScrollTemplateForm: React.FC<{
     handleSubmit,
     formState: { errors },
   } = useForm<FormValues>({ resolver: yupResolver(schema) });
+
+  const existingTagOptions = React.useMemo(() => {
+    const scope = isPublicTemplate ? "public" : "scroll";
+    const unique = new Set<string>();
+
+    (videoTags.data || []).forEach((value) => {
+      const rawTag = value?.tag;
+      if (!rawTag || !isScrollTagInScope(rawTag, scope)) return;
+      const displayTag = toDisplayScrollTag(rawTag);
+      if (!displayTag) return;
+      unique.add(displayTag);
+    });
+
+    return Array.from(unique).sort((a, b) => a.localeCompare(b));
+  }, [videoTags.data, isPublicTemplate]);
 
   // ── DnD ─────────────────────────────────────────────────────────────────────
   const sensors = useSensors(
@@ -304,7 +324,10 @@ export const CreateScrollTemplateForm: React.FC<{
     }
 
     const formData = new FormData();
-    formData.append("tag", (value.tagCreate as string) || (value.tagSelect as string) || "scroll");
+    const rawTag =
+      ((value.tagCreate as string) || (value.tagSelect as string) || "scroll").trim();
+    const scopedTag = toScopedScrollTag(rawTag, isPublicTemplate ? "public" : "scroll");
+    formData.append("tag", scopedTag);
     formData.append("langCode", value.langCode);
     sequence.forEach((entry) => formData.append("files", entry.file));
     formData.append(
@@ -364,7 +387,7 @@ export const CreateScrollTemplateForm: React.FC<{
                   <Button
                     type="default"
                     icon={<FaPlus size={12} />}
-                    className="w-full md:w-auto"
+                    className="w-full md:w-auto public-media-add-btn"
                   >
                     Add Image
                   </Button>
@@ -379,7 +402,7 @@ export const CreateScrollTemplateForm: React.FC<{
                   <Button
                     type="default"
                     icon={<FaPlus size={12} />}
-                    className="w-full md:w-auto"
+                    className="w-full md:w-auto public-media-add-btn"
                   >
                     Add Video
                   </Button>
@@ -468,9 +491,9 @@ export const CreateScrollTemplateForm: React.FC<{
             control={control}
             render={({ field }) => (
               <Select {...field} placeholder="Select tag…" style={{ width: "100%" }} allowClear>
-                {videoTags.data?.map((value, index) => (
-                  <Select.Option value={value.tag} key={`${value.tag}-${index}`}>
-                    {value.tag}
+                {existingTagOptions.map((tag, index) => (
+                  <Select.Option value={tag} key={`${tag}-${index}`}>
+                    {tag}
                   </Select.Option>
                 ))}
               </Select>

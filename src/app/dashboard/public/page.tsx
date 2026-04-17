@@ -31,6 +31,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import "../../../styles/base.css";
 import { CreateScrollTemplateForm } from "../../../components/pages/dashboard/CreateScrollTemplateForm";
 import { UpdateScrollTemplateForm } from "../../../components/pages/dashboard/UpdateScrollTemplateForm";
+import { isScrollTagInScope, toDisplayScrollTag } from "../../../utils/scrollScope";
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -61,7 +62,7 @@ export default function PublicDashboard() {
 
   // ── Data fetching via React Query ────────────────────────────────────────────
   // enabled only after hydration so we never fetch before the session is ready
-  const { data: scrollsData, isLoading } = useScrollControllerGetScrolls(
+  const { data: scrollsData, isLoading, refetch: refetchScrolls } = useScrollControllerGetScrolls(
     { limit: 100 },
     { query: { enabled: isHydrated } }
   );
@@ -71,7 +72,11 @@ export default function PublicDashboard() {
 
   const serverScrolls: GetScrollTemplateRes[] = scrollsData?.data ?? [];
   // Use local optimistic order while a drag-reorder is in flight
-  const scrolls = localScrolls ?? serverScrolls;
+  const allScrolls = localScrolls ?? serverScrolls;
+  const scrolls = useMemo(
+    () => allScrolls.filter((s) => isScrollTagInScope(s.tag, "public")),
+    [allScrolls],
+  );
 
   const invalidateScrolls = () =>
     queryClient.invalidateQueries({
@@ -82,7 +87,9 @@ export default function PublicDashboard() {
   const handleSearch = (value: string) => {
     if (!value) { setSearchResults([]); return; }
     setSearchResults(
-      scrolls.filter((s) => s.tag.toLowerCase().includes(value.toLowerCase()))
+      scrolls.filter((s) =>
+        toDisplayScrollTag(s.tag).toLowerCase().includes(value.toLowerCase())
+      )
     );
   };
 
@@ -252,14 +259,17 @@ export default function PublicDashboard() {
           title="Create public template"
           closeModal={handleClose}
           isOpen={isOpen}
-          panelStyleClass="max-w-6xl"
+          panelStyleClass="max-w-[96vw] xl:max-w-7xl"
         >
           <div className="max-h-[78vh] overflow-y-auto pr-1">
             <CreateScrollTemplateForm
               entityLabel="Public"
-              cb={() => {
+              cb={async () => {
+                setSearchResults([]);
+                setLocalScrolls(null);
                 handleClose();
-                invalidateScrolls();
+                await invalidateScrolls();
+                await refetchScrolls();
               }}
             />
           </div>
@@ -283,7 +293,7 @@ export default function PublicDashboard() {
                   isAdmin={userData?.user.Roles?.includes("Admin")}
                   onUpdate={() => onUpdateCard(val)}
                   key={val.id}
-                  tag={val.tag}
+                  tag={toDisplayScrollTag(val.tag)}
                   isAvailable={val.isAvailableInCurrentLang}
                   sendOnClick={() =>
                     sendTemplate(val.id, val.isAvailableInCurrentLang, val.items)
@@ -328,19 +338,19 @@ export default function PublicDashboard() {
           )}
 
           {editTemplate && (
-            <Modal
-              title="Update public template"
-              closeModal={updateHandleClose}
-              isOpen={updateIsOpen}
-              panelStyleClass="max-w-6xl"
-              className="customPublicModal"
-            >
+          <Modal
+            title="Update public template"
+            closeModal={updateHandleClose}
+            isOpen={updateIsOpen}
+            panelStyleClass="max-w-[96vw] xl:max-w-7xl"
+            className="customPublicModal"
+          >
               <div className="max-h-[78vh] overflow-y-auto pr-1">
                 <UpdateScrollTemplateForm
                   entityLabel="Public"
                   defaultLangCode={currentLang}
                   sourceId={editTemplate.id}
-                  tag={editTemplate.tag}
+                  tag={toDisplayScrollTag(editTemplate.tag)}
                   existingItems={editTemplate.items}
                   cb={() => { updateHandleClose(); invalidateScrolls(); }}
                 />
@@ -352,7 +362,7 @@ export default function PublicDashboard() {
 
       {previewTemplate && (
         <Modal
-          title={`Preview: ${previewTemplate.tag}`}
+          title={`Preview: ${toDisplayScrollTag(previewTemplate.tag)}`}
           closeModal={() => setPreviewTemplate(null)}
           isOpen={!!previewTemplate}
         >
