@@ -2,6 +2,7 @@ import * as React from "react";
 import { SubmitHandler, useForm, Controller } from "react-hook-form";
 import {
   useVideoTemplateControllerGetVideoTags,
+  useScrollControllerGetScrolls,
   useScrollControllerCreate,
   type GetScrollTemplateRes,
 } from "../../../lib/client/api";
@@ -201,12 +202,16 @@ const SortableRow: React.FC<{
 export const CreateScrollTemplateForm: React.FC<{
   cb?: () => void;
   entityLabel?: string;
-}> = ({ cb, entityLabel = "Scroll" }) => {
+  templateScope?: "scroll" | "public";
+}> = ({ cb, entityLabel = "Scroll", templateScope }) => {
   const [sequence, setSequence] = React.useState<SequenceEntry[]>([]);
   const [sequenceError, setSequenceError] = React.useState<string | null>(null);
-  const isPublicTemplate = entityLabel.toLowerCase() === "public";
+  const resolvedScope =
+    templateScope ?? (entityLabel.toLowerCase() === "public" ? "public" : "scroll");
+  const isPublicTemplate = resolvedScope === "public";
 
   const videoTags = useVideoTemplateControllerGetVideoTags();
+  const scrollTags = useScrollControllerGetScrolls({ limit: 100 });
   // Use the API hook — authentication header is injected automatically
   // by nobstacleBackendApiInstance, same as every other form in this project.
   const createScroll = useScrollControllerCreate();
@@ -214,23 +219,32 @@ export const CreateScrollTemplateForm: React.FC<{
   const {
     control,
     handleSubmit,
+    setValue,
     formState: { errors },
-  } = useForm<FormValues>({ resolver: yupResolver(schema) });
+  } = useForm<FormValues>({
+    resolver: yupResolver(schema),
+    defaultValues: {
+      tagCreate: "",
+      tagSelect: undefined,
+    },
+  });
 
   const existingTagOptions = React.useMemo(() => {
-    const scope = isPublicTemplate ? "public" : "scroll";
     const unique = new Set<string>();
+    const tagSources = [
+      ...(videoTags.data || []).map((value) => value?.tag),
+      ...(scrollTags.data?.data || []).map((value) => value?.tag),
+    ];
 
-    (videoTags.data || []).forEach((value) => {
-      const rawTag = value?.tag;
-      if (!rawTag || !isScrollTagInScope(rawTag, scope)) return;
+    tagSources.forEach((rawTag) => {
+      if (!rawTag || !isScrollTagInScope(rawTag, resolvedScope)) return;
       const displayTag = toDisplayScrollTag(rawTag);
       if (!displayTag) return;
       unique.add(displayTag);
     });
 
     return Array.from(unique).sort((a, b) => a.localeCompare(b));
-  }, [videoTags.data, isPublicTemplate]);
+  }, [videoTags.data, scrollTags.data?.data, resolvedScope]);
 
   // ── DnD ─────────────────────────────────────────────────────────────────────
   const sensors = useSensors(
@@ -324,9 +338,10 @@ export const CreateScrollTemplateForm: React.FC<{
     }
 
     const formData = new FormData();
-    const rawTag =
-      ((value.tagCreate as string) || (value.tagSelect as string) || "scroll").trim();
-    const scopedTag = toScopedScrollTag(rawTag, isPublicTemplate ? "public" : "scroll");
+    const createdTag = (value.tagCreate || "").trim();
+    const selectedTag = (value.tagSelect || "").trim();
+    const rawTag = createdTag || selectedTag || "scroll";
+    const scopedTag = toScopedScrollTag(rawTag, resolvedScope);
     formData.append("tag", scopedTag);
     formData.append("langCode", value.langCode);
     sequence.forEach((entry) => formData.append("files", entry.file));
@@ -475,7 +490,17 @@ export const CreateScrollTemplateForm: React.FC<{
             name="tagCreate"
             control={control}
             render={({ field }) => (
-              <Input {...field} type="text" placeholder="Type tag name here…" />
+              <Input
+                {...field}
+                type="text"
+                placeholder="Type tag name here…"
+                onChange={(event) => {
+                  field.onChange(event);
+                  if (event.target.value.trim().length > 0) {
+                    setValue("tagSelect", undefined, { shouldValidate: true });
+                  }
+                }}
+              />
             )}
           />
         </Form.Item>
@@ -490,7 +515,18 @@ export const CreateScrollTemplateForm: React.FC<{
             name="tagSelect"
             control={control}
             render={({ field }) => (
-              <Select {...field} placeholder="Select tag…" style={{ width: "100%" }} allowClear>
+              <Select
+                {...field}
+                placeholder="Select tag…"
+                style={{ width: "100%" }}
+                allowClear
+                onChange={(selected) => {
+                  field.onChange(selected);
+                  if (selected) {
+                    setValue("tagCreate", "", { shouldValidate: true });
+                  }
+                }}
+              >
                 {existingTagOptions.map((tag, index) => (
                   <Select.Option value={tag} key={`${tag}-${index}`}>
                     {tag}

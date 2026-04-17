@@ -35,7 +35,7 @@ import { isScrollTagInScope, toDisplayScrollTag } from "../../../utils/scrollSco
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export default function PublicDashboard() {
+export default function ScreensDashboard() {
   const isMobile =
     typeof window !== "undefined" && window.innerWidth <= 500;
 
@@ -147,7 +147,7 @@ export default function PublicDashboard() {
     });
 
     if (activeItems.length === 0) {
-      message.warning("All media items are expired in this public template.");
+      message.warning("All media items are expired in this screens template.");
       return;
     }
 
@@ -164,10 +164,10 @@ export default function PublicDashboard() {
     try {
       await deleteScroll.mutateAsync({ id });
       await invalidateScrolls();
-      message.success("Public template deleted successfully");
+      message.success("Screens template deleted successfully");
     } catch (error) {
       console.error("Error deleting scroll:", error);
-      message.error("Failed to delete public template");
+      message.error("Failed to delete screens template");
     }
   };
 
@@ -213,7 +213,7 @@ export default function PublicDashboard() {
       await invalidateScrolls();
     } catch (error) {
       console.error("Error updating scroll order:", error);
-      message.error("Failed to update public order");
+      message.error("Failed to update screens order");
       setLocalScrolls(null); // roll back to server data
     } finally {
       orderPendingRef.current = false;
@@ -233,7 +233,7 @@ export default function PublicDashboard() {
   if (isLoading && scrolls.length === 0) {
     return (
       <div className="flex h-full w-full items-center justify-center">
-        <div className="text-gray-500">Loading public templates...</div>
+        <div className="text-gray-500">Loading screens templates...</div>
       </div>
     );
   }
@@ -248,7 +248,7 @@ export default function PublicDashboard() {
             <SearchTemplateForm
               searchOnChange={handleSearch}
               onClear={handleClearSearch}
-              placeholder="Search public template"
+              placeholder="Search screens template"
             />
           </div>
         </Card>
@@ -256,14 +256,15 @@ export default function PublicDashboard() {
 
       {userData?.user.Roles?.includes("Admin") && (
         <Modal
-          title="Create public template"
+          title="Create screens template"
           closeModal={handleClose}
           isOpen={isOpen}
           panelStyleClass="max-w-[96vw] xl:max-w-7xl"
         >
           <div className="max-h-[78vh] overflow-y-auto pr-1">
             <CreateScrollTemplateForm
-              entityLabel="Public"
+              entityLabel="Screens"
+              templateScope="public"
               cb={async () => {
                 setSearchResults([]);
                 setLocalScrolls(null);
@@ -280,9 +281,9 @@ export default function PublicDashboard() {
         <div className="flex w-full flex-wrap content-start gap-4">
           {displayedScrolls.length === 0 && !isLoading ? (
             <div className="w-full flex flex-col items-center justify-center py-12 text-gray-400">
-              <p className="text-lg">No public templates found</p>
+              <p className="text-lg">No screens templates found</p>
               {userData?.user.Roles?.includes("Admin") && (
-                <p className="text-sm mt-2">Click the + button to create your first public template</p>
+                <p className="text-sm mt-2">Click the + button to create your first screens template</p>
               )}
             </div>
           ) : (
@@ -302,7 +303,7 @@ export default function PublicDashboard() {
                   id={val.id}
                   type="Scroll"
                 >
-                  <Tooltip title="Click to preview public template">
+                  <Tooltip title="Click to preview screens template">
                     <div
                       className="relative w-full h-full bg-gradient-to-br from-indigo-900 to-violet-800 flex items-center justify-center cursor-pointer group overflow-hidden"
                       onClick={() => { setPreviewIndex(0); setPreviewTemplate(val); }}
@@ -339,7 +340,7 @@ export default function PublicDashboard() {
 
           {editTemplate && (
           <Modal
-            title="Update public template"
+            title="Update screens template"
             closeModal={updateHandleClose}
             isOpen={updateIsOpen}
             panelStyleClass="max-w-[96vw] xl:max-w-7xl"
@@ -347,7 +348,7 @@ export default function PublicDashboard() {
           >
               <div className="max-h-[78vh] overflow-y-auto pr-1">
                 <UpdateScrollTemplateForm
-                  entityLabel="Public"
+                  entityLabel="Screens"
                   defaultLangCode={currentLang}
                   sourceId={editTemplate.id}
                   tag={toDisplayScrollTag(editTemplate.tag)}
@@ -428,11 +429,11 @@ export default function PublicDashboard() {
           <button
             onClick={handleOpen}
             className="group relative flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 bg-white/50 backdrop-blur-md hover:bg-white/60 border border-white/20 text-gray-700 hover:text-gray-900 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-white/30"
-            aria-label="Create new public template"
+            aria-label="Create new screens template"
           >
             <PlusIcon className="w-6 h-6 sm:w-7 sm:h-7 opacity-100" />
             <div className="absolute right-full mr-3 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
-              Create Public Template
+              Create Screens Template
               <div className="absolute top-1/2 left-full w-0 h-0 border-l-4 border-l-gray-900 border-y-4 border-y-transparent transform -translate-y-1/2" />
             </div>
           </button>
