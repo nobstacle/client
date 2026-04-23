@@ -85,9 +85,10 @@ const getPlaybackStatus = (expiresAt?: string): "playing" | "expired" => {
 const SortableRow: React.FC<{
   entry: SequenceEntry;
   index: number;
+  showPlaybackSettings: boolean;
   onRemove: (uid: string) => void;
   onChange: (uid: string, updates: Partial<SequenceEntry>) => void;
-}> = ({ entry, index, onRemove, onChange }) => {
+}> = ({ entry, index, showPlaybackSettings, onRemove, onChange }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: entry.uid });
   const playbackStatus = getPlaybackStatus(entry.expiresAt);
@@ -124,15 +125,17 @@ const SortableRow: React.FC<{
 
         <span className="flex-1 text-xs text-gray-700 truncate">{entry.name}</span>
 
-        <span
-          className={`flex-shrink-0 px-1.5 py-0.5 text-[10px] rounded ${
-            playbackStatus === "playing"
-              ? "bg-green-100 text-green-700"
-              : "bg-red-100 text-red-700"
-          }`}
-        >
-          {playbackStatus === "playing" ? "Playing" : "Expired"}
-        </span>
+        {showPlaybackSettings && (
+          <span
+            className={`flex-shrink-0 px-1.5 py-0.5 text-[10px] rounded ${
+              playbackStatus === "playing"
+                ? "bg-green-100 text-green-700"
+                : "bg-red-100 text-red-700"
+            }`}
+          >
+            {playbackStatus === "playing" ? "Playing" : "Expired"}
+          </span>
+        )}
 
         {!entry.isExisting && entry.file && (
           <span className="flex-shrink-0 text-xs text-gray-400">
@@ -161,43 +164,47 @@ const SortableRow: React.FC<{
           placeholder="Media name"
         />
 
-        <Input
-          size="small"
-          type="datetime-local"
-          value={toLocalDateTimeInputValue(entry.expiresAt)}
-          onChange={(event) =>
-            onChange(entry.uid, {
-              expiresAt: fromLocalDateTimeInputValue(event.target.value),
-            })
-          }
-          placeholder="Expiration date"
-        />
-
-        {entry.mediaType === "image" ? (
-          <div className="flex items-center gap-2">
-            <span className="text-[11px] text-gray-500 whitespace-nowrap">
-              Duration
-            </span>
-            <InputNumber
+        {showPlaybackSettings && (
+          <>
+            <Input
               size="small"
-              min={1}
-              max={1209600}
-              value={entry.imageDurationSeconds}
-              onChange={(value) =>
+              type="datetime-local"
+              value={toLocalDateTimeInputValue(entry.expiresAt)}
+              onChange={(event) =>
                 onChange(entry.uid, {
-                  imageDurationSeconds:
-                    typeof value === "number" ? Math.floor(value) : undefined,
+                  expiresAt: fromLocalDateTimeInputValue(event.target.value),
                 })
               }
-              placeholder="Image duration"
-              addonAfter="sec"
-              className="w-full"
+              placeholder="Expiration date"
             />
-          </div>
-        ) : (
-          <div className="text-[11px] text-gray-400 flex items-center px-1">
-            Video plays until it ends
-          </div>
+
+            {entry.mediaType === "image" ? (
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] text-gray-500 whitespace-nowrap">
+                  Duration
+                </span>
+                <InputNumber
+                  size="small"
+                  min={1}
+                  max={1209600}
+                  value={entry.imageDurationSeconds}
+                  onChange={(value) =>
+                    onChange(entry.uid, {
+                      imageDurationSeconds:
+                        typeof value === "number" ? Math.floor(value) : undefined,
+                    })
+                  }
+                  placeholder="Image duration"
+                  addonAfter="sec"
+                  className="w-full"
+                />
+              </div>
+            ) : (
+              <div className="text-[11px] text-gray-400 flex items-center px-1">
+                Video plays until it ends
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
@@ -212,7 +219,23 @@ export const UpdateScrollTemplateForm: React.FC<{
   existingItems: ScrollMediaItem[];
   cb?: (scroll: GetScrollTemplateRes) => void;
   entityLabel?: string;
-}> = ({ sourceId, tag, defaultLangCode, existingItems, cb, entityLabel = "Scroll" }) => {
+  templateScope?: "scroll" | "public";
+}> = ({
+  sourceId,
+  tag,
+  defaultLangCode,
+  existingItems,
+  cb,
+  entityLabel = "Scroll",
+  templateScope,
+}) => {
+  const resolvedScope =
+    templateScope ??
+    (entityLabel.toLowerCase() === "public" || entityLabel.toLowerCase() === "screens"
+      ? "public"
+      : "scroll");
+  const isPublicTemplate = resolvedScope === "public";
+
   const [sequence, setSequence] = React.useState<SequenceEntry[]>(() =>
     existingItems.map((item, idx) => ({
       uid: `existing-${idx}`,
@@ -221,8 +244,8 @@ export const UpdateScrollTemplateForm: React.FC<{
       order: item.order,
       isExisting: true,
       existingData: item,
-      expiresAt: item.expiresAt,
-      imageDurationSeconds: item.imageDurationSeconds,
+      expiresAt: isPublicTemplate ? item.expiresAt : undefined,
+      imageDurationSeconds: isPublicTemplate ? item.imageDurationSeconds : undefined,
     }))
   );
   const [sequenceError, setSequenceError] = React.useState<string | null>(null);
@@ -283,7 +306,9 @@ export const UpdateScrollTemplateForm: React.FC<{
     }
 
     const mediaType = file.type.startsWith("image/") ? "image" : "video";
-    const defaultExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+    const defaultExpiry = isPublicTemplate
+      ? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+      : undefined;
     setSequence((prev) => [
       ...prev,
       {
@@ -294,7 +319,8 @@ export const UpdateScrollTemplateForm: React.FC<{
         order: prev.length + 1,
         isExisting: false,
         expiresAt: defaultExpiry,
-        imageDurationSeconds: mediaType === "image" ? 10 : undefined,
+        imageDurationSeconds:
+          isPublicTemplate && mediaType === "image" ? 10 : undefined,
       },
     ]);
 
@@ -330,9 +356,12 @@ export const UpdateScrollTemplateForm: React.FC<{
         ...e.existingData,
         order: e.order,
         name: e.name?.trim() || e.existingData?.name,
-        expiresAt: e.expiresAt || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-        imageDurationSeconds:
-          e.mediaType === "image" ? e.imageDurationSeconds || 10 : undefined,
+        expiresAt: isPublicTemplate
+          ? e.expiresAt || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+          : undefined,
+        imageDurationSeconds: isPublicTemplate && e.mediaType === "image"
+          ? e.imageDurationSeconds || 10
+          : undefined,
       }));
 
     const newFiles = sequence.filter((e) => !e.isExisting);
@@ -349,9 +378,12 @@ export const UpdateScrollTemplateForm: React.FC<{
           newFiles.map((e) => ({
             order: e.order,
             name: e.name?.trim() || e.file?.name,
-            expiresAt: e.expiresAt || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-            imageDurationSeconds:
-              e.mediaType === "image" ? e.imageDurationSeconds || 10 : undefined,
+            expiresAt: isPublicTemplate
+              ? e.expiresAt || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+              : undefined,
+            imageDurationSeconds: isPublicTemplate && e.mediaType === "image"
+              ? e.imageDurationSeconds || 10
+              : undefined,
           }))
         )
       );
@@ -418,7 +450,13 @@ export const UpdateScrollTemplateForm: React.FC<{
 
         {/* ── Sequence list ─────────────────────────────────────────────── */}
         {sequence.length > 0 && (
-          <Form.Item label="Sequence — drag to reorder and edit item settings">
+          <Form.Item
+            label={
+              isPublicTemplate
+                ? "Sequence — drag to reorder and edit item settings"
+                : "Sequence — drag to reorder"
+            }
+          >
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
               <SortableContext items={sequence.map((e) => e.uid)} strategy={verticalListSortingStrategy}>
                 <div className="flex flex-col gap-1">
@@ -427,6 +465,7 @@ export const UpdateScrollTemplateForm: React.FC<{
                       key={entry.uid}
                       entry={entry}
                       index={i}
+                      showPlaybackSettings={isPublicTemplate}
                       onRemove={removeItem}
                       onChange={updateItem}
                     />
@@ -448,14 +487,17 @@ export const UpdateScrollTemplateForm: React.FC<{
             control={control}
             render={({ field }) => (
               <Select
-                {...field}
                 placeholder="Search or select language…"
                 style={{ width: "100%" }}
+                value={field.value || undefined}
+                onChange={field.onChange}
                 showSearch
                 filterOption={(input, option) =>
                   (option?.children as string)?.toLowerCase().includes(input.toLowerCase())
                 }
                 optionFilterProp="children"
+                getPopupContainer={(triggerNode) => triggerNode.ownerDocument.body}
+                popupClassName="modal-select-dropdown"
               >
                 {languages.map(({ code, name }, index) => (
                   <Select.Option value={code} key={index}>{name}</Select.Option>

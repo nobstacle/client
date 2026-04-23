@@ -1,24 +1,62 @@
+/* eslint-disable @next/next/no-img-element */
 import * as React from "react";
-import { SubmitHandler, useForm } from "react-hook-form";
+import { Controller, SubmitHandler, useForm } from "react-hook-form";
 import {
   useCompanyControllerGetCompany,
-  useImageTemplateControllerGetImageTags,
   useSlideshowTemplateControllerGetTextTags,
-  useUploadControllerUploadCompanyFile,
   useUploadControllerUploadCompanyFileMany,
 } from "../../../lib/client/api";
-import { Button, Upload, Select, Typography, Space, Alert } from "antd";
+import { Button, Upload, Select, Typography, Space, Alert, Input } from "antd";
 import { UploadOutlined } from "@ant-design/icons";
-import { SlideShowDragImage } from "./Slideshow/DragImage";
-import { arrayMove } from "@dnd-kit/sortable";
-import { UniqueIdentifier } from "@dnd-kit/core";
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  TouchSensor,
+  KeyboardSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { FaGripVertical, FaPlay } from "react-icons/fa";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
 import { languages } from "../../../constant/languages";
-import { GetSlideshowTemplateRes } from "../../../lib/client/model";
+import type { RcFile } from "antd/es/upload/interface";
 
 const { Text } = Typography;
 const { Option } = Select;
+
+const SUPPORTED_SLIDESHOW_MIME_TYPES = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/jpg",
+  "image/webp",
+  "image/gif",
+  "video/mp4",
+  "video/webm",
+  "video/quicktime",
+]);
+
+const MAX_ITEMS = 20;
+const MAX_FILE_SIZE = 50 * 1024 * 1024;
+
+interface SequenceEntry {
+  uid: string;
+  file: RcFile;
+  previewUrl: string;
+  mediaType: "image" | "video";
+  order: number;
+  expiresAt?: string;
+}
 
 interface CreateSlideshowTemplateFormFieldValues {
   langCode: string;
@@ -28,11 +66,11 @@ interface CreateSlideshowTemplateFormFieldValues {
 
 const schema = yup.object().shape(
   {
-    langCode: yup.string().required(),
+    langCode: yup.string().required("Language is required"),
     tagSelect: yup.string().when("tagCreate", {
       is: (val: any) => val && val.length > 0,
       then: () => yup.string(),
-      otherwise: () => yup.string().required(),
+      otherwise: () => yup.string().required("Tag is required"),
     }),
 
     tagCreate: yup.string().when("tagSelect", {
@@ -48,188 +86,409 @@ const schema = yup.object().shape(
   [["tagCreate", "tagSelect"]],
 );
 
+const toLocalDateTimeInputValue = (iso?: string) => {
+  if (!iso) return "";
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "";
+  const timezoneOffset = date.getTimezoneOffset() * 60000;
+  return new Date(date.getTime() - timezoneOffset).toISOString().slice(0, 16);
+};
+
+const fromLocalDateTimeInputValue = (value?: string) => {
+  if (!value) return undefined;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return undefined;
+  return date.toISOString();
+};
+
+const SortableRow: React.FC<{
+  entry: SequenceEntry;
+  index: number;
+  onRemove: (uid: string) => void;
+  onChange: (uid: string, updates: Partial<SequenceEntry>) => void;
+}> = ({ entry, index, onRemove, onChange }) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id: entry.uid });
+
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="flex flex-col gap-2 bg-gray-50 border border-gray-200 rounded-md px-2 py-2"
+    >
+      <div className="flex items-center gap-2">
+        <span
+          {...attributes}
+          {...listeners}
+          className="cursor-move text-gray-300 hover:text-gray-500 flex-shrink-0 leading-none"
+          style={{ fontSize: 12 }}
+        >
+          <FaGripVertical />
+        </span>
+
+        <span className="flex-shrink-0 w-4 text-center text-xs font-semibold text-gray-400">
+          {index + 1}
+        </span>
+
+        <div className="relative flex-shrink-0 w-12 h-12 rounded overflow-hidden border border-gray-200 bg-white">
+          {entry.mediaType === "video" ? (
+            <>
+              <video
+                src={entry.previewUrl}
+                muted
+                playsInline
+                preload="metadata"
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute inset-0 flex items-center justify-center bg-black/35 text-white text-xs">
+                <FaPlay />
+              </div>
+            </>
+          ) : (
+            <img
+              src={entry.previewUrl}
+              alt={`slideshow-preview-${index + 1}`}
+              className="w-full h-full object-cover"
+            />
+          )}
+        </div>
+
+        <span className="flex-1 text-xs text-gray-700 truncate">{entry.file.name}</span>
+
+        <span className="flex-shrink-0 text-xs text-gray-400">
+          {(entry.file.size / 1024 / 1024).toFixed(1)}MB
+        </span>
+
+        <button
+          type="button"
+          onClick={() => onRemove(entry.uid)}
+          className="flex-shrink-0 w-5 h-5 flex items-center justify-center rounded text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors leading-none"
+          style={{ fontSize: 14, fontWeight: 600 }}
+          title="Remove"
+        >
+          ×
+        </button>
+      </div>
+
+      {entry.mediaType === "image" ? (
+        <div className="grid grid-cols-1 gap-2">
+          <Input
+            size="small"
+            type="datetime-local"
+            value={toLocalDateTimeInputValue(entry.expiresAt)}
+            onChange={(event) =>
+              onChange(entry.uid, {
+                expiresAt: fromLocalDateTimeInputValue(event.target.value),
+              })
+            }
+            placeholder="Expiration date/time"
+          />
+          <div className="text-[11px] text-gray-500">Image expires after selected date/time. Leave empty for no expiry.</div>
+        </div>
+      ) : (
+        <div className="text-[11px] text-gray-400">Video never expires.</div>
+      )}
+    </div>
+  );
+};
+
 export const CreateSlideshowTemplateForm: React.FC<{
   cb?: () => void;
 }> = ({ cb }) => {
   const {
-    register,
+    control,
     handleSubmit,
     formState: { errors },
     setValue,
-    watch,
   } = useForm<CreateSlideshowTemplateFormFieldValues>({
     resolver: yupResolver(schema),
+    defaultValues: {
+      langCode: "",
+      tagCreate: "",
+      tagSelect: "",
+    },
   });
-  const company = useCompanyControllerGetCompany();
 
+  const company = useCompanyControllerGetCompany();
   const slideshowTags = useSlideshowTemplateControllerGetTextTags();
 
-  const [images, setImages] = React.useState<
-    { id: number; src: string; file: Blob }[]
-  >([]);
+  const [sequence, setSequence] = React.useState<SequenceEntry[]>([]);
+  const [sequenceError, setSequenceError] = React.useState<string | null>(null);
 
   const uploadManyFile = useUploadControllerUploadCompanyFileMany({
     mutation: { retry: 0 },
   });
 
-  const addImagePreview = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.currentTarget.files) {
-      const file = e.currentTarget?.files[0];
-      if (file) {
-        const src = URL.createObjectURL(file);
-        setImages([...images, { id: images.length + 1, src, file }]);
-      }
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(TouchSensor),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      setSequence((prev) => {
+        const oldIndex = prev.findIndex((item) => item.uid === active.id);
+        const newIndex = prev.findIndex((item) => item.uid === over.id);
+        return arrayMove(prev, oldIndex, newIndex).map((entry, idx) => ({
+          ...entry,
+          order: idx + 1,
+        }));
+      });
     }
   };
 
-  const removeImagePreview = (id: number) => {
-    const filter = images.filter((image) => image.id !== id);
+  const appendMedia = (file: RcFile): boolean => {
+    setSequenceError(null);
 
-    setImages(filter);
+    if (sequence.length >= MAX_ITEMS) {
+      setSequenceError(`Maximum ${MAX_ITEMS} items allowed.`);
+      return false;
+    }
+
+    if (!SUPPORTED_SLIDESHOW_MIME_TYPES.has(file.type)) {
+      setSequenceError("Only image/video files are allowed.");
+      return false;
+    }
+
+    if (file.size > MAX_FILE_SIZE) {
+      setSequenceError("File size must be less than 50MB.");
+      return false;
+    }
+
+    const mediaType = file.type.startsWith("video/") ? "video" : "image";
+    const previewUrl = URL.createObjectURL(file);
+
+    setSequence((prev) => [
+      ...prev,
+      {
+        uid: `${Date.now()}-${Math.random()}`,
+        file,
+        previewUrl,
+        mediaType,
+        order: prev.length + 1,
+        expiresAt: undefined,
+      },
+    ]);
+
+    return false;
   };
 
-  const sortImages = (item1: UniqueIdentifier, item2: UniqueIdentifier) => {
-    setImages((prevItems) => {
-      const oldIndex = prevItems.findIndex((item) => item.id === item1);
-      const newIndex = prevItems.findIndex((item) => item.id === item2);
-
-      let shallow = [...prevItems];
-
-      shallow = arrayMove(prevItems, oldIndex, newIndex);
-
-      return shallow;
-    });
+  const handleAddImage = (file: RcFile): boolean => {
+    if (!file.type.startsWith("image/")) {
+      setSequenceError("Please select a valid image file.");
+      return false;
+    }
+    return appendMedia(file);
   };
 
-  const handleCreateSlideshowTemplate = (
-    data: CreateSlideshowTemplateFormFieldValues,
-  ) => {
-    const files = images.map(({ file }) => file);
-    uploadManyFile.mutate(
-      {
-        data: {
-          file: files,
-          defaultLangCode: company.data?.defaultLangCode ?? "en",
-          langCode: data.langCode,
-          tag: (data.tagCreate as string) || (data.tagSelect as string),
-        },
-      },
-      {
-        onSuccess: () => {
-          if (cb) {
-            cb();
-          }
-        },
-      },
+  const handleAddVideo = (file: RcFile): boolean => {
+    if (!file.type.startsWith("video/")) {
+      setSequenceError("Please select a valid video file.");
+      return false;
+    }
+    return appendMedia(file);
+  };
+
+  const removeItem = (uid: string) => {
+    setSequence((prev) =>
+      prev
+        .filter((entry) => entry.uid !== uid)
+        .map((entry, index) => ({ ...entry, order: index + 1 })),
+    );
+  };
+
+  const updateItem = (uid: string, updates: Partial<SequenceEntry>) => {
+    setSequence((prev) =>
+      prev.map((entry) => (entry.uid === uid ? { ...entry, ...updates } : entry)),
     );
   };
 
   const onSubmit: SubmitHandler<CreateSlideshowTemplateFormFieldValues> = (
     data,
-  ) => handleCreateSlideshowTemplate(data);
+  ) => {
+    if (sequence.length === 0) {
+      setSequenceError("Please upload at least one media item.");
+      return;
+    }
 
-  // Custom upload props to integrate with react-hook-form
-  const uploadProps = {
-    beforeUpload: (file: any) => {
-      const src = URL.createObjectURL(file);
-      setImages([...images, { id: images.length + 1, src, file }]);
-      return false; // Prevent automatic upload
-    },
-    maxCount: 1,
-    accept: "image/png, image/jpeg",
-    showUploadList: false, // We handle the list with SlideShowDragImage
+    const ordered = [...sequence].sort((a, b) => a.order - b.order);
+
+    uploadManyFile.mutate(
+      {
+        data: {
+          file: ordered.map((entry) => entry.file),
+          defaultLangCode: company.data?.defaultLangCode ?? "en",
+          langCode: data.langCode,
+          tag: (data.tagCreate as string) || (data.tagSelect as string),
+          itemsMetadata: JSON.stringify(
+            ordered.map((entry) => ({
+              order: entry.order,
+              mediaType: entry.mediaType,
+              expiresAt: entry.mediaType === "image" ? entry.expiresAt : undefined,
+            })),
+          ),
+        },
+      },
+      {
+        onSuccess: () => {
+          cb?.();
+        },
+      },
+    );
   };
-
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="create-template-form">
       <hr />
-      <Space direction="vertical" size="middle" style={{ width: "100%", paddingTop: '1rem' }}>
-        {images?.length > 0 && (
+      <Space direction="vertical" size="middle" style={{ width: "100%", paddingTop: "1rem" }}>
+        <div>
+          <Text>
+            Add media ({sequence.length}/{MAX_ITEMS})
+          </Text>
+          <div className="mt-2 flex flex-col sm:flex-row gap-2">
+            <Upload
+              beforeUpload={(file) => handleAddImage(file as RcFile)}
+              showUploadList={false}
+              maxCount={1}
+              accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
+              disabled={sequence.length >= MAX_ITEMS}
+            >
+              <Button style={{ color: "#000" }} icon={<UploadOutlined />}>Add Image</Button>
+            </Upload>
+
+            <Upload
+              beforeUpload={(file) => handleAddVideo(file as RcFile)}
+              showUploadList={false}
+              maxCount={1}
+              accept="video/mp4,video/webm,video/quicktime"
+              disabled={sequence.length >= MAX_ITEMS}
+            >
+              <Button style={{ color: "#000" }} icon={<UploadOutlined />}>Add Video</Button>
+            </Upload>
+          </div>
+          {sequenceError && (
+            <div className="text-xs text-rose-600 mt-1">{sequenceError}</div>
+          )}
+        </div>
+
+        {sequence.length > 0 && (
           <div>
-            <SlideShowDragImage
-              removeImagePreview={removeImagePreview}
-              sort={sortImages}
-              items={images}
-            />
+            <Text>Sequence (drag to reorder)</Text>
+            <div className="mt-2">
+              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                <SortableContext items={sequence.map((entry) => entry.uid)} strategy={verticalListSortingStrategy}>
+                  <div className="flex flex-col gap-2">
+                    {sequence.map((entry, index) => (
+                      <SortableRow
+                        key={entry.uid}
+                        entry={entry}
+                        index={index}
+                        onRemove={removeItem}
+                        onChange={updateItem}
+                      />
+                    ))}
+                  </div>
+                </SortableContext>
+              </DndContext>
+            </div>
           </div>
         )}
-        <div>
-          <Text>Image to upload</Text>
-          <Upload {...uploadProps}>
-            <Button style={{ color: '#000' }} icon={<UploadOutlined />}>Add Image</Button>
-          </Upload>
-        </div>
 
         <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start" }}>
           <div style={{ width: "100%" }}>
             <Text>Create a tag</Text>
-            <input
-              style={{
-                width: "100%",
-                borderRadius: "6px",
-                border: "1px solid #d9d9d9",
-                padding: "8px 11px",
-                fontSize: "14px",
-                outline: "none",
-                transition: "border-color 0.3s",
-              }}
-              {...register("tagCreate")}
-              placeholder="Type tag name here..."
-              onFocus={(e) => {
-                e.target.style.borderColor = "#1890ff";
-              }}
-              onBlur={(e) => {
-                e.target.style.borderColor = "#d9d9d9";
-              }}
+            <Controller
+              name="tagCreate"
+              control={control}
+              render={({ field }) => (
+                <Input
+                  {...field}
+                  placeholder="Type tag name here..."
+                  onChange={(event) => {
+                    field.onChange(event.target.value);
+                    if (event.target.value.trim().length > 0) {
+                      setValue("tagSelect", "", { shouldValidate: true });
+                    }
+                  }}
+                />
+              )}
             />
           </div>
+
           <div style={{ marginTop: "16px", width: "100%" }}>
             <Text>Or select an existing tag</Text>
-            <Select
-              placeholder="Select tag..."
-              style={{ width: '100%' }}
-              {...register("tagSelect")}
-              onChange={(value) => setValue("tagSelect", value)}
-            >
-              <Option value="">Select tag...</Option>
-              {slideshowTags.data?.map((value, index) => (
-                <Option value={value.tag} key={`${value.tag}-${index}`}>
-                  {value.tag}
-                </Option>
-              ))}
-            </Select>
+            <Controller
+              name="tagSelect"
+              control={control}
+              render={({ field }) => (
+                <Select
+                  placeholder="Select tag..."
+                  style={{ width: "100%" }}
+                  value={field.value || undefined}
+                  onChange={(value) => {
+                    field.onChange(value);
+                    if (value) {
+                      setValue("tagCreate", "", { shouldValidate: true });
+                    }
+                  }}
+                  getPopupContainer={(triggerNode) => triggerNode.ownerDocument.body}
+                  popupClassName="modal-select-dropdown"
+                  allowClear
+                >
+                  {slideshowTags.data?.map((value, index) => (
+                    <Option value={value.tag} key={`${value.tag}-${index}`}>
+                      {value.tag}
+                    </Option>
+                  ))}
+                </Select>
+              )}
+            />
           </div>
         </div>
 
         <div>
           <Text>Language</Text>
-          <Select
-            placeholder="Search or select language..."
-            style={{ width: "100%" }}
-            {...register("langCode")}
-            onChange={(value) => setValue("langCode", value)}
-                   showSearch
-                            filterOption={(input, option) =>
-                                (option?.children as string)
-                                    ?.toLowerCase()
-                                    .includes(input.toLowerCase())
-                            }
-                            optionFilterProp="children"
-          >
-            <Option value="">Select language...</Option>
-            {languages.map(({ code, name }, index) => (
-              <Select.Option value={code} key={index}>
-                {name}
-              </Select.Option>
-            ))}
-          </Select>
+          <Controller
+            name="langCode"
+            control={control}
+            render={({ field }) => (
+              <Select
+                placeholder="Search or select language..."
+                style={{ width: "100%" }}
+                value={field.value || undefined}
+                onChange={field.onChange}
+                showSearch
+                filterOption={(input, option) =>
+                  (option?.children as string)
+                    ?.toLowerCase()
+                    .includes(input.toLowerCase())
+                }
+                optionFilterProp="children"
+                getPopupContainer={(triggerNode) => triggerNode.ownerDocument.body}
+                popupClassName="modal-select-dropdown"
+              >
+                {languages.map(({ code, name }, index) => (
+                  <Select.Option value={code} key={index}>
+                    {name}
+                  </Select.Option>
+                ))}
+              </Select>
+            )}
+          />
         </div>
 
         <div style={{ textAlign: "center" }}>
           {errors.tagSelect && (
             <Alert
-              message="Tag is required"
+              message={errors.tagSelect?.message || "Tag is required"}
               type="error"
               showIcon
               style={{ marginBottom: "8px" }}
@@ -245,7 +504,7 @@ export const CreateSlideshowTemplateForm: React.FC<{
           )}
           {errors.langCode && (
             <Alert
-              message="Language is required"
+              message={errors.langCode?.message || "Language is required"}
               type="error"
               showIcon
               style={{ marginBottom: "8px" }}
@@ -266,8 +525,8 @@ export const CreateSlideshowTemplateForm: React.FC<{
           type="primary"
           htmlType="submit"
           loading={uploadManyFile.status === "pending"}
-          disabled={uploadManyFile.status === "pending" || images.length === 0}
-          style={{ width: "100%", }}
+          disabled={uploadManyFile.status === "pending" || sequence.length === 0}
+          style={{ width: "100%" }}
           className="create-template-button"
         >
           Create Template

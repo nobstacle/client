@@ -43,6 +43,10 @@ function RootLayout({ children, session }: RootLayourPropsI) {
           name="facebook-domain-verification"
           content="syf2v0kwmjsl9lp8ytm6plv8puke1b"
         />
+        <meta
+          name="google-site-verification"
+          content="BBS68lggXElONWbdzPJlkfgJFiL9MGEDj1ejH_XN58I"
+        />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="Nobstacle" />

@@ -1330,3 +1330,7 @@ body.nobstacle-active {
   width: min(96vw, 72rem) !important;
   max-width: min(96vw, 72rem) !important;
 }
+
+.modal-select-dropdown {
+  z-index: 1600 !important;
+}

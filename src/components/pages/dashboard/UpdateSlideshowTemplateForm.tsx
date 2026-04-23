@@ -1,17 +1,191 @@
+/* eslint-disable @next/next/no-img-element */
 import * as React from "react";
 import {
   getContentControllerFindOneQueryKey,
   useCompanyControllerGetCompany,
   useContentControllerFindOne,
-  useSlideshowTemplateControllerGetTextTags,
   useUploadControllerPatchCompanyFileMany,
 } from "../../../lib/client/api";
 import { Button } from "../../Button";
-import { SlideShowDragImage } from "./Slideshow/DragImage";
 import { arrayMove } from "@dnd-kit/sortable";
-import { UniqueIdentifier } from "@dnd-kit/core";
 import { linkToFile } from "../../../utils";
 import { Spinner } from "../../Spinner";
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  TouchSensor,
+  KeyboardSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { Upload, Typography, Input } from "antd";
+import { UploadOutlined } from "@ant-design/icons";
+import { FaGripVertical, FaPlay } from "react-icons/fa";
+import type { RcFile } from "antd/es/upload/interface";
+
+const { Text } = Typography;
+
+const SUPPORTED_SLIDESHOW_MIME_TYPES = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/jpg",
+  "image/webp",
+  "image/gif",
+  "video/mp4",
+  "video/webm",
+  "video/quicktime",
+]);
+
+const MAX_ITEMS = 20;
+const MAX_FILE_SIZE = 50 * 1024 * 1024;
+
+interface SlideshowItemMetadata {
+  order?: number;
+  mediaType?: "image" | "video";
+  expiresAt?: string;
+}
+
+interface SequenceEntry {
+  uid: string;
+  file: RcFile;
+  previewUrl: string;
+  mediaType: "image" | "video";
+  order: number;
+  expiresAt?: string;
+}
+
+const toLocalDateTimeInputValue = (iso?: string) => {
+  if (!iso) return "";
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "";
+  const timezoneOffset = date.getTimezoneOffset() * 60000;
+  return new Date(date.getTime() - timezoneOffset).toISOString().slice(0, 16);
+};
+
+const fromLocalDateTimeInputValue = (value?: string) => {
+  if (!value) return undefined;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return undefined;
+  return date.toISOString();
+};
+
+const parseSlideshowMetadata = (
+  raw?: string | null,
+): SlideshowItemMetadata[] => {
+  if (!raw || !raw.trim()) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
+
+const SortableRow: React.FC<{
+  entry: SequenceEntry;
+  index: number;
+  onRemove: (uid: string) => void;
+  onChange: (uid: string, updates: Partial<SequenceEntry>) => void;
+}> = ({ entry, index, onRemove, onChange }) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id: entry.uid });
+
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="flex flex-col gap-2 bg-gray-50 border border-gray-200 rounded-md px-2 py-2"
+    >
+      <div className="flex items-center gap-2">
+        <span
+          {...attributes}
+          {...listeners}
+          className="cursor-move text-gray-300 hover:text-gray-500 flex-shrink-0 leading-none"
+          style={{ fontSize: 12 }}
+        >
+          <FaGripVertical />
+        </span>
+
+        <span className="flex-shrink-0 w-4 text-center text-xs font-semibold text-gray-400">
+          {index + 1}
+        </span>
+
+        <div className="relative flex-shrink-0 w-12 h-12 rounded overflow-hidden border border-gray-200 bg-white">
+          {entry.mediaType === "video" ? (
+            <>
+              <video
+                src={entry.previewUrl}
+                muted
+                playsInline
+                preload="metadata"
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute inset-0 flex items-center justify-center bg-black/35 text-white text-xs">
+                <FaPlay />
+              </div>
+            </>
+          ) : (
+            <img
+              src={entry.previewUrl}
+              alt={`slideshow-preview-${index + 1}`}
+              className="w-full h-full object-cover"
+            />
+          )}
+        </div>
+
+        <span className="flex-1 text-xs text-gray-700 truncate">{entry.file.name}</span>
+
+        <span className="flex-shrink-0 text-xs text-gray-400">
+          {(entry.file.size / 1024 / 1024).toFixed(1)}MB
+        </span>
+
+        <button
+          type="button"
+          onClick={() => onRemove(entry.uid)}
+          className="flex-shrink-0 w-5 h-5 flex items-center justify-center rounded text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors leading-none"
+          style={{ fontSize: 14, fontWeight: 600 }}
+          title="Remove"
+        >
+          ×
+        </button>
+      </div>
+
+      {entry.mediaType === "image" ? (
+        <div className="grid grid-cols-1 gap-2">
+          <Input
+            size="small"
+            type="datetime-local"
+            value={toLocalDateTimeInputValue(entry.expiresAt)}
+            onChange={(event) =>
+              onChange(entry.uid, {
+                expiresAt: fromLocalDateTimeInputValue(event.target.value),
+              })
+            }
+            placeholder="Expiration date/time"
+          />
+          <div className="text-[11px] text-gray-500">Image expires after selected date/time. Leave empty for no expiry.</div>
+        </div>
+      ) : (
+        <div className="text-[11px] text-gray-400">Video never expires.</div>
+      )}
+    </div>
+  );
+};
 
 export const UpdateSlideshowTemplateForm: React.FC<{
   cb?: () => void;
@@ -19,9 +193,8 @@ export const UpdateSlideshowTemplateForm: React.FC<{
   sourceId: number;
   tag: string;
 }> = ({ cb, sourceId, langCode, tag }) => {
-  const [images, setImages] = React.useState<
-    { id: number; src: string; file: Blob }[]
-  >([]);
+  const [sequence, setSequence] = React.useState<SequenceEntry[]>([]);
+  const [sequenceError, setSequenceError] = React.useState<string | null>(null);
 
   const content = useContentControllerFindOne(
     {
@@ -41,84 +214,154 @@ export const UpdateSlideshowTemplateForm: React.FC<{
     },
   );
 
-  const fetchContent = async () => {
-    if (content.isSuccess) {
-      const data = [];
-      for (const [index, c] of Array.from(
-        content.data.contents?.entries() ?? [],
-      )) {
-        const obj = {
-          id: index + 1,
-          src: c,
-          file: await linkToFile(c),
-        };
-        data.push(obj);
-      }
+  const fetchContent = React.useCallback(async () => {
+    if (!content.isSuccess) return;
 
-      setImages([...images, ...data]);
+    const metadata = parseSlideshowMetadata(content.data.extraContent);
+    const nextSequence: SequenceEntry[] = [];
+
+    for (const [index, itemUrl] of Array.from(content.data.contents?.entries() ?? [])) {
+      const linkedFile = (await linkToFile(itemUrl)) as RcFile;
+      const itemMeta = metadata[index] || {};
+      const mediaType =
+        itemMeta.mediaType || (linkedFile.type.startsWith("video/") ? "video" : "image");
+
+      nextSequence.push({
+        uid: `${Date.now()}-${index}-${Math.random()}`,
+        file: linkedFile,
+        previewUrl: itemUrl,
+        mediaType,
+        order: index + 1,
+        expiresAt: mediaType === "image" ? itemMeta.expiresAt : undefined,
+      });
     }
-  };
+
+    setSequence(nextSequence);
+  }, [content.data.contents, content.data.extraContent, content.isSuccess]);
 
   React.useEffect(() => {
-    if (content.isSuccess) {
-      fetchContent();
-    }
-  }, [content.isSuccess]);
+    fetchContent();
+  }, [fetchContent]);
 
   const company = useCompanyControllerGetCompany();
-
-  const slideshowTags = useSlideshowTemplateControllerGetTextTags();
 
   const uploadManyFile = useUploadControllerPatchCompanyFileMany({
     mutation: { retry: 0 },
   });
 
-  const addImagePreview = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.currentTarget.files) {
-      const file = e.currentTarget?.files[0];
-      if (file) {
-        const src = URL.createObjectURL(file);
-        setImages([...images, { id: images.length + 1, src, file }]);
-      }
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(TouchSensor),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      setSequence((prev) => {
+        const oldIndex = prev.findIndex((item) => item.uid === active.id);
+        const newIndex = prev.findIndex((item) => item.uid === over.id);
+        return arrayMove(prev, oldIndex, newIndex).map((entry, idx) => ({
+          ...entry,
+          order: idx + 1,
+        }));
+      });
     }
   };
 
-  const removeImagePreview = (id: number) => {
-    const filter = images.filter((image) => image.id !== id);
+  const appendMedia = (file: RcFile): boolean => {
+    setSequenceError(null);
 
-    setImages(filter);
+    if (sequence.length >= MAX_ITEMS) {
+      setSequenceError(`Maximum ${MAX_ITEMS} items allowed.`);
+      return false;
+    }
+
+    if (!SUPPORTED_SLIDESHOW_MIME_TYPES.has(file.type)) {
+      setSequenceError("Only image/video files are allowed.");
+      return false;
+    }
+
+    if (file.size > MAX_FILE_SIZE) {
+      setSequenceError("File size must be less than 50MB.");
+      return false;
+    }
+
+    const mediaType = file.type.startsWith("video/") ? "video" : "image";
+    const previewUrl = URL.createObjectURL(file);
+
+    setSequence((prev) => [
+      ...prev,
+      {
+        uid: `${Date.now()}-${Math.random()}`,
+        file,
+        previewUrl,
+        mediaType,
+        order: prev.length + 1,
+        expiresAt: undefined,
+      },
+    ]);
+
+    return false;
   };
 
-  const sortImages = (item1: UniqueIdentifier, item2: UniqueIdentifier) => {
-    setImages((prevItems) => {
-      const oldIndex = prevItems.findIndex((item) => item.id === item1);
-      const newIndex = prevItems.findIndex((item) => item.id === item2);
+  const handleAddImage = (file: RcFile): boolean => {
+    if (!file.type.startsWith("image/")) {
+      setSequenceError("Please select a valid image file.");
+      return false;
+    }
+    return appendMedia(file);
+  };
 
-      let shallow = [...prevItems];
+  const handleAddVideo = (file: RcFile): boolean => {
+    if (!file.type.startsWith("video/")) {
+      setSequenceError("Please select a valid video file.");
+      return false;
+    }
+    return appendMedia(file);
+  };
 
-      shallow = arrayMove(prevItems, oldIndex, newIndex);
+  const removeItem = (uid: string) => {
+    setSequence((prev) =>
+      prev
+        .filter((entry) => entry.uid !== uid)
+        .map((entry, index) => ({ ...entry, order: index + 1 })),
+    );
+  };
 
-      return shallow;
-    });
+  const updateItem = (uid: string, updates: Partial<SequenceEntry>) => {
+    setSequence((prev) =>
+      prev.map((entry) => (entry.uid === uid ? { ...entry, ...updates } : entry)),
+    );
   };
 
   const handleCreateSlideshowTemplate = () => {
-    const files = images.map(({ file }) => file);
+    if (sequence.length === 0) {
+      setSequenceError("Please upload at least one media item.");
+      return;
+    }
+
+    const ordered = [...sequence].sort((a, b) => a.order - b.order);
 
     uploadManyFile.mutate(
       {
         data: {
-          file: files,
+          file: ordered.map((entry) => entry.file),
           defaultLangCode: company.data?.defaultLangCode ?? "en",
-          langCode: langCode,
+          langCode,
           tag,
+          itemsMetadata: JSON.stringify(
+            ordered.map((entry) => ({
+              order: entry.order,
+              mediaType: entry.mediaType,
+              expiresAt: entry.mediaType === "image" ? entry.expiresAt : undefined,
+            })),
+          ),
         },
       },
       {
         onSuccess: () => {
-          if (cb) {
-            cb();
-          }
+          cb?.();
         },
       },
     );
@@ -126,35 +369,69 @@ export const UpdateSlideshowTemplateForm: React.FC<{
 
   return (
     <form
-      onSubmit={(e) => {
-        e.preventDefault();
+      onSubmit={(event) => {
+        event.preventDefault();
         handleCreateSlideshowTemplate();
       }}
     >
       <div className="mt-3 flex flex-col gap-4">
-        <div className="flex flex-col gap-2">
-          {images.length === 0 && <Spinner />}
-
-          <SlideShowDragImage
-            removeImagePreview={removeImagePreview}
-            sort={sortImages}
-            items={images}
-          />
-        </div>
         <div>
-          <input
-            name="file"
-            type="file"
-            onChange={addImagePreview}
-            accept="image/png, image/jpeg"
-            disabled={content.isLoading}
-          />
+          <Text>
+            Add media ({sequence.length}/{MAX_ITEMS})
+          </Text>
+          <div className="mt-2 flex flex-col sm:flex-row gap-2">
+            <Upload
+              beforeUpload={(file) => handleAddImage(file as RcFile)}
+              showUploadList={false}
+              maxCount={1}
+              accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
+              disabled={sequence.length >= MAX_ITEMS || content.isLoading}
+            >
+              <Button style={{ color: "#000" }} icon={<UploadOutlined />}>Add Image</Button>
+            </Upload>
+
+            <Upload
+              beforeUpload={(file) => handleAddVideo(file as RcFile)}
+              showUploadList={false}
+              maxCount={1}
+              accept="video/mp4,video/webm,video/quicktime"
+              disabled={sequence.length >= MAX_ITEMS || content.isLoading}
+            >
+              <Button style={{ color: "#000" }} icon={<UploadOutlined />}>Add Video</Button>
+            </Upload>
+          </div>
+          {sequenceError && <p className="text-xs text-rose-600 mt-1">{sequenceError}</p>}
+        </div>
+
+        <div className="flex flex-col gap-2">
+          {content.isLoading && sequence.length === 0 && <Spinner />}
+
+          {sequence.length > 0 && (
+            <>
+              <Text>Sequence (drag to reorder)</Text>
+              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                <SortableContext items={sequence.map((entry) => entry.uid)} strategy={verticalListSortingStrategy}>
+                  <div className="flex flex-col gap-2">
+                    {sequence.map((entry, index) => (
+                      <SortableRow
+                        key={entry.uid}
+                        entry={entry}
+                        index={index}
+                        onRemove={removeItem}
+                        onChange={updateItem}
+                      />
+                    ))}
+                  </div>
+                </SortableContext>
+              </DndContext>
+            </>
+          )}
         </div>
 
         <div className="text-center">
           {uploadManyFile.error?.message && (
             <p className="text-xs text-rose-600">
-              {uploadManyFile.error.response?.data.message}{" "}
+              {uploadManyFile.error.response?.data.message}
             </p>
           )}
         </div>
@@ -162,7 +439,7 @@ export const UpdateSlideshowTemplateForm: React.FC<{
         <Button
           type="submit"
           isLoading={uploadManyFile.status === "pending"}
-          disabled={uploadManyFile.status === "pending" || images.length < 1}
+          disabled={uploadManyFile.status === "pending" || sequence.length < 1}
         >
           Update Template
         </Button>

@@ -305,10 +305,10 @@ export default function ScreensDashboard() {
                 >
                   <Tooltip title="Click to preview screens template">
                     <div
-                      className="relative w-full h-full bg-gradient-to-br from-indigo-900 to-violet-800 flex items-center justify-center cursor-pointer group overflow-hidden"
+                      className="relative w-full h-full bg-gradient-to-br from-orange-700 via-amber-700 to-yellow-700 flex items-center justify-center cursor-pointer group overflow-hidden"
                       onClick={() => { setPreviewIndex(0); setPreviewTemplate(val); }}
                     >
-                      <div className="absolute top-1 left-1 flex gap-0.5 flex-wrap max-w-full">
+                      <div className="absolute top-1 left-1 z-20 flex gap-0.5 flex-wrap max-w-full">
                         {val.items?.slice(0, 6).map((item, i) => (
                           <span key={i} className="flex items-center justify-center w-4 h-4 rounded-sm bg-white/20 backdrop-blur-sm">
                             {item.mediaType === "image"
@@ -322,15 +322,15 @@ export default function ScreensDashboard() {
                           </span>
                         )}
                       </div>
-                      <div className="absolute bottom-8 right-1 bg-black/40 text-white text-[10px] px-1.5 py-0.5 rounded-full backdrop-blur-sm">
+                      <div className="absolute bottom-2 right-1 z-30 bg-black/45 text-white text-[10px] px-1.5 py-0.5 rounded-full backdrop-blur-sm">
                         {val.items?.length ?? 0} items
                       </div>
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="bg-white/20 backdrop-blur-sm rounded-full p-4 group-hover:bg-white/30 transition-all duration-300 group-hover:scale-90">
+                      <div className="absolute inset-0 z-10 pointer-events-none flex items-center justify-center">
+                        <div className="bg-white/20 backdrop-blur-sm rounded-full p-3 group-hover:bg-white/30 transition-all duration-300 group-hover:scale-90">
                           <FaPlay className="w-4 h-4 text-white ml-1" />
                         </div>
                       </div>
-                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300" />
+                      <div className="absolute inset-0 z-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300" />
                     </div>
                   </Tooltip>
                 </DraggableCardItem>
@@ -349,6 +349,7 @@ export default function ScreensDashboard() {
               <div className="max-h-[78vh] overflow-y-auto pr-1">
                 <UpdateScrollTemplateForm
                   entityLabel="Screens"
+                  templateScope="public"
                   defaultLangCode={currentLang}
                   sourceId={editTemplate.id}
                   tag={toDisplayScrollTag(editTemplate.tag)}

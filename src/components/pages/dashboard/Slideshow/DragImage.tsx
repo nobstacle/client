@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 import type {
   DragStartEvent,
   DragOverEvent,
@@ -11,24 +12,24 @@ import {
   KeyboardSensor,
   DndContext,
   closestCenter,
-  DragOverlay,
 } from "@dnd-kit/core";
 import {
   SortableContext,
   horizontalListSortingStrategy,
   sortableKeyboardCoordinates,
   useSortable,
-  verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import Image from "next/image";
-import { useState } from "react";
-import { Typography } from "antd";
 
-const { Text } = Typography;
+const VIDEO_EXTENSIONS = ["mp4", "webm", "mov", "avi", "m4v"];
+
+const isVideoSource = (src: string): boolean => {
+  const normalized = src.split("?")[0].toLowerCase();
+  return VIDEO_EXTENSIONS.some((ext) => normalized.endsWith(`.${ext}`));
+};
 
 export const SlideShowDragImage: React.FC<{
-  items: { id: number; src: string }[];
+  items: { id: number; src: string; mediaType?: "image" | "video" }[];
   sort: (item1: UniqueIdentifier, item2: UniqueIdentifier) => void;
   removeImagePreview: (id: number) => void;
 }> = ({ items, sort, removeImagePreview }) => {
@@ -56,6 +57,7 @@ export const SlideShowDragImage: React.FC<{
             <SortableItem
               removeImagePreview={removeImagePreview}
               src={item.src}
+              mediaType={item.mediaType}
               key={item.id}
               id={item.id}
             />
@@ -65,9 +67,7 @@ export const SlideShowDragImage: React.FC<{
     </DndContext>
   );
 
-  function handleDragStart(event: DragStartEvent) {
-    const { active } = event;
-  }
+  function handleDragStart(_event: DragStartEvent) {}
 
   function handleDragOver(event: DragOverEvent) {
     // const activeContainerIndex = findContainerIndex(event.active.id);
@@ -82,6 +82,7 @@ export const SlideShowDragImage: React.FC<{
 function SortableItem(props: {
   id: number;
   src: string;
+  mediaType?: "image" | "video";
   removeImagePreview: (id: number) => void;
 }) {
   const {
@@ -111,20 +112,39 @@ function SortableItem(props: {
       ref={setNodeRef}
       style={{ ...style, zIndex: isDragging ? 9999 : 1, position: "relative" }}
     >
-      <Image
-        src={props.src}
-        width="100"
-        height="100"
-        alt={`preview-image-${props.id}`}
-        {...attributes}
-        {...listeners}
-        style={{
-          objectFit: "cover",
-          minHeight: "100px",
-          maxHeight: "100px",
-          cursor: isDragging ? "grabbing" : "grab",
-        }}
-      />
+      {(props.mediaType === "video" || isVideoSource(props.src)) ? (
+        <video
+          src={props.src}
+          muted
+          playsInline
+          preload="metadata"
+          {...attributes}
+          {...listeners}
+          style={{
+            objectFit: "cover",
+            minHeight: "100px",
+            maxHeight: "100px",
+            width: "100px",
+            cursor: isDragging ? "grabbing" : "grab",
+          }}
+        />
+      ) : (
+        <img
+          src={props.src}
+          width={100}
+          height={100}
+          alt={`preview-image-${props.id}`}
+          {...attributes}
+          {...listeners}
+          style={{
+            objectFit: "cover",
+            minHeight: "100px",
+            maxHeight: "100px",
+            width: "100px",
+            cursor: isDragging ? "grabbing" : "grab",
+          }}
+        />
+      )}
       <button
         type="button"
         className="absolute right-0 top-0 h-[20px] w-[20px] bg-black text-white"

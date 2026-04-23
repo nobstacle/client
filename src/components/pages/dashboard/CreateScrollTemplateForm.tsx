@@ -1,7 +1,6 @@
 import * as React from "react";
 import { SubmitHandler, useForm, Controller } from "react-hook-form";
 import {
-  useVideoTemplateControllerGetVideoTags,
   useScrollControllerGetScrolls,
   useScrollControllerCreate,
   type GetScrollTemplateRes,
@@ -97,9 +96,10 @@ const fromLocalDateTimeInputValue = (value?: string) => {
 const SortableRow: React.FC<{
   entry: SequenceEntry;
   index: number;
+  showPlaybackSettings: boolean;
   onRemove: (uid: string) => void;
   onChange: (uid: string, updates: Partial<SequenceEntry>) => void;
-}> = ({ entry, index, onRemove, onChange }) => {
+}> = ({ entry, index, showPlaybackSettings, onRemove, onChange }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: entry.uid });
 
@@ -155,43 +155,47 @@ const SortableRow: React.FC<{
           placeholder="Media name"
         />
 
-        <Input
-          size="small"
-          type="datetime-local"
-          value={toLocalDateTimeInputValue(entry.expiresAt)}
-          onChange={(event) =>
-            onChange(entry.uid, {
-              expiresAt: fromLocalDateTimeInputValue(event.target.value),
-            })
-          }
-          placeholder="Expiration date"
-        />
-
-        {entry.mediaType === "image" ? (
-          <div className="flex items-center gap-2">
-            <span className="text-[11px] text-gray-500 whitespace-nowrap">
-              Duration
-            </span>
-            <InputNumber
+        {showPlaybackSettings && (
+          <>
+            <Input
               size="small"
-              min={1}
-              max={1209600}
-              value={entry.imageDurationSeconds}
-              onChange={(value) =>
+              type="datetime-local"
+              value={toLocalDateTimeInputValue(entry.expiresAt)}
+              onChange={(event) =>
                 onChange(entry.uid, {
-                  imageDurationSeconds:
-                    typeof value === "number" ? Math.floor(value) : undefined,
+                  expiresAt: fromLocalDateTimeInputValue(event.target.value),
                 })
               }
-              placeholder="Image duration"
-              addonAfter="sec"
-              className="w-full"
+              placeholder="Expiration date"
             />
-          </div>
-        ) : (
-          <div className="text-[11px] text-gray-400 flex items-center px-1">
-            Video plays until it ends
-          </div>
+
+            {entry.mediaType === "image" ? (
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] text-gray-500 whitespace-nowrap">
+                  Duration
+                </span>
+                <InputNumber
+                  size="small"
+                  min={1}
+                  max={1209600}
+                  value={entry.imageDurationSeconds}
+                  onChange={(value) =>
+                    onChange(entry.uid, {
+                      imageDurationSeconds:
+                        typeof value === "number" ? Math.floor(value) : undefined,
+                    })
+                  }
+                  placeholder="Image duration"
+                  addonAfter="sec"
+                  className="w-full"
+                />
+              </div>
+            ) : (
+              <div className="text-[11px] text-gray-400 flex items-center px-1">
+                Video plays until it ends
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
@@ -207,10 +211,12 @@ export const CreateScrollTemplateForm: React.FC<{
   const [sequence, setSequence] = React.useState<SequenceEntry[]>([]);
   const [sequenceError, setSequenceError] = React.useState<string | null>(null);
   const resolvedScope =
-    templateScope ?? (entityLabel.toLowerCase() === "public" ? "public" : "scroll");
+    templateScope ??
+    (entityLabel.toLowerCase() === "public" || entityLabel.toLowerCase() === "screens"
+      ? "public"
+      : "scroll");
   const isPublicTemplate = resolvedScope === "public";
 
-  const videoTags = useVideoTemplateControllerGetVideoTags();
   const scrollTags = useScrollControllerGetScrolls({ limit: 100 });
   // Use the API hook — authentication header is injected automatically
   // by nobstacleBackendApiInstance, same as every other form in this project.
@@ -231,10 +237,7 @@ export const CreateScrollTemplateForm: React.FC<{
 
   const existingTagOptions = React.useMemo(() => {
     const unique = new Set<string>();
-    const tagSources = [
-      ...(videoTags.data || []).map((value) => value?.tag),
-      ...(scrollTags.data?.data || []).map((value) => value?.tag),
-    ];
+    const tagSources = [...(scrollTags.data?.data || []).map((value) => value?.tag)];
 
     tagSources.forEach((rawTag) => {
       if (!rawTag || !isScrollTagInScope(rawTag, resolvedScope)) return;
@@ -244,7 +247,7 @@ export const CreateScrollTemplateForm: React.FC<{
     });
 
     return Array.from(unique).sort((a, b) => a.localeCompare(b));
-  }, [videoTags.data, scrollTags.data?.data, resolvedScope]);
+  }, [scrollTags.data?.data, resolvedScope]);
 
   // ── DnD ─────────────────────────────────────────────────────────────────────
   const sensors = useSensors(
@@ -297,7 +300,9 @@ export const CreateScrollTemplateForm: React.FC<{
       return false;
     }
 
-    const defaultExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+    const defaultExpiry = isPublicTemplate
+      ? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+      : undefined;
     setSequence((prev) => [
       ...prev,
       {
@@ -307,7 +312,8 @@ export const CreateScrollTemplateForm: React.FC<{
         mediaType,
         order: prev.length + 1,
         expiresAt: defaultExpiry,
-        imageDurationSeconds: mediaType === "image" ? 10 : undefined,
+        imageDurationSeconds:
+          isPublicTemplate && mediaType === "image" ? 10 : undefined,
       },
     ]);
     return false; // prevent default ant upload behaviour
@@ -351,9 +357,12 @@ export const CreateScrollTemplateForm: React.FC<{
         sequence.map((e) => ({
           order: e.order,
           name: e.name?.trim() || e.file.name,
-          expiresAt: e.expiresAt || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-          imageDurationSeconds:
-            e.mediaType === "image" ? e.imageDurationSeconds || 10 : undefined,
+          expiresAt: isPublicTemplate
+            ? e.expiresAt || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+            : undefined,
+          imageDurationSeconds: isPublicTemplate && e.mediaType === "image"
+            ? e.imageDurationSeconds || 10
+            : undefined,
         }))
       )
     );
@@ -461,7 +470,13 @@ export const CreateScrollTemplateForm: React.FC<{
 
         {/* ── Sequence list ─────────────────────────────────────────────── */}
         {sequence.length > 0 && (
-          <Form.Item label="Sequence — drag to reorder and edit item settings">
+          <Form.Item
+            label={
+              isPublicTemplate
+                ? "Sequence — drag to reorder and edit item settings"
+                : "Sequence — drag to reorder"
+            }
+          >
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
               <SortableContext items={sequence.map((e) => e.uid)} strategy={verticalListSortingStrategy}>
                 <div className="flex flex-col gap-1">
@@ -470,6 +485,7 @@ export const CreateScrollTemplateForm: React.FC<{
                       key={entry.uid}
                       entry={entry}
                       index={i}
+                      showPlaybackSettings={isPublicTemplate}
                       onRemove={removeItem}
                       onChange={updateItem}
                     />
@@ -490,16 +506,16 @@ export const CreateScrollTemplateForm: React.FC<{
             name="tagCreate"
             control={control}
             render={({ field }) => (
-              <Input
-                {...field}
-                type="text"
-                placeholder="Type tag name here…"
-                onChange={(event) => {
-                  field.onChange(event);
-                  if (event.target.value.trim().length > 0) {
-                    setValue("tagSelect", undefined, { shouldValidate: true });
-                  }
-                }}
+                <Input
+                  {...field}
+                  type="text"
+                  placeholder="Type tag name here…"
+                  onChange={(event) => {
+                    field.onChange(event.target.value);
+                    if (event.target.value.trim().length > 0) {
+                      setValue("tagSelect", undefined, { shouldValidate: true });
+                    }
+                  }}
               />
             )}
           />
@@ -516,16 +532,25 @@ export const CreateScrollTemplateForm: React.FC<{
             control={control}
             render={({ field }) => (
               <Select
-                {...field}
                 placeholder="Select tag…"
                 style={{ width: "100%" }}
+                value={field.value || undefined}
                 allowClear
+                showSearch
+                optionFilterProp="children"
+                filterOption={(input, option) =>
+                  (option?.children as string)
+                    ?.toLowerCase()
+                    .includes(input.toLowerCase())
+                }
                 onChange={(selected) => {
                   field.onChange(selected);
                   if (selected) {
                     setValue("tagCreate", "", { shouldValidate: true });
                   }
                 }}
+                getPopupContainer={(triggerNode) => triggerNode.ownerDocument.body}
+                popupClassName="modal-select-dropdown"
               >
                 {existingTagOptions.map((tag, index) => (
                   <Select.Option value={tag} key={`${tag}-${index}`}>
@@ -548,14 +573,17 @@ export const CreateScrollTemplateForm: React.FC<{
             control={control}
             render={({ field }) => (
               <Select
-                {...field}
                 placeholder="Search or select language…"
                 style={{ width: "100%" }}
+                value={field.value || undefined}
+                onChange={field.onChange}
                 showSearch
                 filterOption={(input, option) =>
                   (option?.children as string)?.toLowerCase().includes(input.toLowerCase())
                 }
                 optionFilterProp="children"
+                getPopupContainer={(triggerNode) => triggerNode.ownerDocument.body}
+                popupClassName="modal-select-dropdown"
               >
                 {languages.map(({ code, name }, index) => (
                   <Select.Option value={code} key={index}>{name}</Select.Option>

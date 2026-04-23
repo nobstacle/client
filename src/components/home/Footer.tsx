@@ -1,4 +1,4 @@
-import { FaTwitter, FaLinkedin, FaFacebook } from 'react-icons/fa';
+import { FaLinkedin, FaFacebook, FaYoutube, FaInstagram } from 'react-icons/fa';
 
 interface FooterProps {
   onPrivacyClick: () => void;
@@ -13,6 +13,11 @@ export default function Footer({ onPrivacyClick, onTermsClick }: FooterProps) {
           <div className="footer-col">
             <h4>Nobstacle LLC</h4>
             <p>Moving desks to cloud</p>
+            <p>Lewes, Deleware, USA</p>
+            <p>Dubai, UAE</p>
+            <p>
+              <a href="mailto:info@nobstacle.com">info@nobstacle.com</a>
+            </p>
           </div>
           <div className="footer-col">
             <h4>Quick Links</h4>
@@ -32,9 +37,10 @@ export default function Footer({ onPrivacyClick, onTermsClick }: FooterProps) {
           <div className="footer-col">
             <h4>Follow Us</h4>
             <div className="social-links">
-              <a href="#" aria-label="Twitter"><FaTwitter /></a>
-              <a href="https://www.linkedin.com/company/109410250" target="_blank" aria-label="LinkedIn"><FaLinkedin /></a>
-              <a href="#" aria-label="Facebook"><FaFacebook /></a>
+              <a href="https://www.linkedin.com/company/109410250" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn"><FaLinkedin /></a>
+              <a href="https://www.facebook.com/people/Nobstacle/61564784671981/" target="_blank" rel="noopener noreferrer" aria-label="Facebook"><FaFacebook /></a>
+              <a href="https://www.youtube.com/@NobstacleApp" target="_blank" rel="noopener noreferrer" aria-label="YouTube"><FaYoutube /></a>
+              <a href="https://www.instagram.com/nobstacle_com/" target="_blank" rel="noopener noreferrer" aria-label="Instagram"><FaInstagram /></a>
             </div>
           </div>
         </div>

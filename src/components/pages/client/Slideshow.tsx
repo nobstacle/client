@@ -1,11 +1,45 @@
 /* eslint-disable @next/next/no-img-element */
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
 import Slider, { Settings } from "react-slick";
 
-// ─── Preloader hook ───────────────────────────────────────────────────────────
-function usePreloadImages(urls: string[], maxWaitMs = 10000) {
+const VIDEO_EXTENSIONS = ["mp4", "webm", "mov", "avi", "m4v"];
+
+interface SlideshowMediaMetadata {
+  mediaType?: "image" | "video";
+  expiresAt?: string;
+}
+
+interface ResolvedSlideshowMediaItem {
+  url: string;
+  mediaType: "image" | "video";
+  expiresAt?: string;
+}
+
+const isVideoSource = (src: string): boolean => {
+  if (!src) return false;
+  const normalized = src.split("?")[0].toLowerCase();
+  return VIDEO_EXTENSIONS.some((ext) => normalized.endsWith(`.${ext}`));
+};
+
+const preloadMedia = (src: string, onSettled: () => void) => {
+  if (isVideoSource(src)) {
+    const video = document.createElement("video");
+    video.preload = "metadata";
+    video.onloadeddata = onSettled;
+    video.onerror = onSettled;
+    video.src = src;
+    return;
+  }
+
+  const img = new Image();
+  img.onload = onSettled;
+  img.onerror = onSettled;
+  img.src = src;
+};
+
+function usePreloadMedia(urls: string[], maxWaitMs = 10000) {
   const [ready, setReady] = useState(false);
   const [progress, setProgress] = useState(0);
 
@@ -38,11 +72,11 @@ function usePreloadImages(urls: string[], maxWaitMs = 10000) {
     }, maxWaitMs);
 
     urls.forEach((src) => {
-      if (!src) { onSettled(); return; }
-      const img = new Image();
-      img.onload = onSettled;
-      img.onerror = onSettled; // count failures so we never hang
-      img.src = src;
+      if (!src) {
+        onSettled();
+        return;
+      }
+      preloadMedia(src, onSettled);
     });
 
     return () => {
@@ -54,24 +88,104 @@ function usePreloadImages(urls: string[], maxWaitMs = 10000) {
   return { ready, progress };
 }
 
-// ─── Component ────────────────────────────────────────────────────────────────
-export const Slideshow: React.FC<{ contents: string[] }> = ({ contents }) => {
-  const { ready, progress } = usePreloadImages(contents, 10000);
+const isNotExpired = (expiresAt?: string): boolean => {
+  if (!expiresAt) return true;
+  const expiresAtMs = new Date(expiresAt).getTime();
+  if (Number.isNaN(expiresAtMs)) return true;
+  return expiresAtMs > Date.now();
+};
 
-  const settings: Settings = {
-    dots: false,
-    infinite: true,
-    speed: 500,
-    autoplaySpeed: 6000,
-    arrows: false,
-    autoplay: true,
-    // Disable lazyLoad so slick doesn't interfere — we handle preloading ourselves
-    lazyLoad: undefined,
+// ─── Component ────────────────────────────────────────────────────────────────
+export const Slideshow: React.FC<{
+  contents: string[];
+  metadata?: SlideshowMediaMetadata[];
+}> = ({ contents, metadata = [] }) => {
+  const sliderRef = useRef<Slider | null>(null);
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  const mediaItems = useMemo<ResolvedSlideshowMediaItem[]>(() => {
+    return contents.map((url, index) => {
+      const itemMetadata = metadata[index];
+      const mediaType =
+        itemMetadata?.mediaType ||
+        (isVideoSource(url) ? "video" : "image");
+
+      return {
+        url,
+        mediaType,
+        expiresAt: mediaType === "image" ? itemMetadata?.expiresAt : undefined,
+      };
+    });
+  }, [contents, metadata]);
+
+  const activeMediaItems = useMemo(
+    () =>
+      mediaItems.filter((item) =>
+        item.mediaType === "video" ? true : isNotExpired(item.expiresAt),
+      ),
+    [mediaItems],
+  );
+
+  const { ready, progress } = usePreloadMedia(
+    activeMediaItems.map((item) => item.url),
+    10000,
+  );
+  const activeMediaIsVideo = activeMediaItems[activeIndex]?.mediaType === "video";
+
+  useEffect(() => {
+    if (!ready || activeMediaItems.length === 0) return;
+
+    if (activeMediaIsVideo) {
+      sliderRef.current?.slickPause();
+      return;
+    }
+
+    sliderRef.current?.slickPlay();
+  }, [ready, activeMediaIsVideo, activeMediaItems.length]);
+
+  useEffect(() => {
+    setActiveIndex(0);
+  }, [activeMediaItems]);
+
+  const settings: Settings = useMemo(
+    () => ({
+      dots: false,
+      infinite: true,
+      speed: 500,
+      autoplaySpeed: 6000,
+      arrows: false,
+      autoplay: true,
+      lazyLoad: undefined,
+      afterChange: (index: number) => setActiveIndex(index),
+    }),
+    [],
+  );
+
+  const handleVideoEnded = () => {
+    sliderRef.current?.slickPlay();
+    sliderRef.current?.slickNext();
   };
 
   // ── Loading screen ──────────────────────────────────────────────────────────
+  if (activeMediaItems.length === 0) {
+    return (
+      <div className="relative flex h-screen w-full items-center justify-center bg-black overflow-hidden">
+        <p
+          style={{
+            color: "rgba(255,255,255,0.75)",
+            fontSize: 16,
+            letterSpacing: "0.02em",
+            margin: 0,
+          }}
+        >
+          No active slideshow media
+        </p>
+      </div>
+    );
+  }
+
   if (!ready) {
-    const firstImage = contents[0];
+    const firstImage = activeMediaItems.find((item) => item.mediaType === "image")?.url;
     return (
       <div className="relative flex h-screen w-full items-center justify-center bg-black overflow-hidden">
         {/* Blurred first image as background so it doesn't feel like a blank screen */}
@@ -167,20 +281,34 @@ export const Slideshow: React.FC<{ contents: string[] }> = ({ contents }) => {
 
   // ── Slideshow (only mounts after all images are ready) ──────────────────────
   return (
-    <Slider {...settings}>
-      {contents.map((content) => (
+    <Slider ref={sliderRef} {...settings}>
+      {activeMediaItems.map((item, index) => (
         <div
           id="content-container"
           className="!flex h-screen items-center justify-center self-center"
-          key={content}
+          key={`${item.url}-${index}`}
         >
           <div>
-            <img
-              height="100%"
-              alt="template_image"
-              src={content ?? ""}
-              style={{ maxHeight: "100vh" }}
-            />
+            {item.mediaType === "video" ? (
+              <video
+                key={`${item.url}-${index}-${activeIndex}`}
+                src={item.url}
+                muted
+                autoPlay={activeIndex === index}
+                playsInline
+                preload="auto"
+                onEnded={handleVideoEnded}
+                onError={handleVideoEnded}
+                style={{ maxHeight: "100vh" }}
+              />
+            ) : (
+              <img
+                height="100%"
+                alt="template_image"
+                src={item.url ?? ""}
+                style={{ maxHeight: "100vh" }}
+              />
+            )}
           </div>
         </div>
       ))}

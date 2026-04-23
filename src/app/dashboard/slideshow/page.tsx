@@ -33,6 +33,14 @@ import { arrayMove } from "@dnd-kit/sortable";
 import { Card } from 'antd';
 import "../../../styles/base.css";
 
+const VIDEO_EXTENSIONS = ["mp4", "webm", "mov", "avi", "m4v"];
+
+const isVideoSource = (src?: string) => {
+  if (!src) return false;
+  const normalized = src.split("?")[0].toLowerCase();
+  return VIDEO_EXTENSIONS.some((ext) => normalized.endsWith(`.${ext}`));
+};
+
 export default function SlideshowDashboard() {
   const [editTemplate, setEditTemplate] =
     useState<null | GetSlideshowTemplateRes>(null);
@@ -258,17 +266,31 @@ export default function SlideshowDashboard() {
                   isDraggable={searchSlideshows.length === 0}
                   type="slideshow"
                 >
-                  <Image
-                    alt="template_image"
-                    width="250"
-                    height="100"
-                    style={{
-                      objectFit: "cover",
-                      width: "100%",
-                      height: "100%",
-                    }}
-                    src={val.url as any}
-                  />
+                  {isVideoSource(val.url) ? (
+                    <video
+                      src={val.url}
+                      muted
+                      playsInline
+                      preload="metadata"
+                      style={{
+                        objectFit: "cover",
+                        width: "100%",
+                        height: "100%",
+                      }}
+                    />
+                  ) : (
+                    <Image
+                      alt="template_image"
+                      width="250"
+                      height="100"
+                      style={{
+                        objectFit: "cover",
+                        width: "100%",
+                        height: "100%",
+                      }}
+                      src={val.url as any}
+                    />
+                  )}
                 </DraggableCardItem>
               ))}
             </DraggableCardContainer>

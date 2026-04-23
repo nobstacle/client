@@ -2746,6 +2746,9 @@ export const uploadControllerUploadCompanyFileMany = (
 	formData.append('tag', uploadControllerUploadCompanyFileManyBody.tag)
 	formData.append('langCode', uploadControllerUploadCompanyFileManyBody.langCode)
 	formData.append('defaultLangCode', uploadControllerUploadCompanyFileManyBody.defaultLangCode)
+	if (uploadControllerUploadCompanyFileManyBody.itemsMetadata) {
+		formData.append('itemsMetadata', uploadControllerUploadCompanyFileManyBody.itemsMetadata)
+	}
 
 	return nobstacleBackendApiInstance<GetUploadUrlRes>(
 		{
@@ -2796,6 +2799,9 @@ export const uploadControllerPatchCompanyFileMany = (
 	formData.append('tag', uploadControllerPatchCompanyFileManyBody.tag)
 	formData.append('langCode', uploadControllerPatchCompanyFileManyBody.langCode)
 	formData.append('defaultLangCode', uploadControllerPatchCompanyFileManyBody.defaultLangCode)
+	if (uploadControllerPatchCompanyFileManyBody.itemsMetadata) {
+		formData.append('itemsMetadata', uploadControllerPatchCompanyFileManyBody.itemsMetadata)
+	}
 
 	return nobstacleBackendApiInstance<GetUploadUrlRes>(
 		{

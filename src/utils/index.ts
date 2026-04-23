@@ -4,9 +4,9 @@ export const linkToFile = async (link: string) => {
   let metadata = {
     type: data.type,
   };
-  const ext = data.type.split("/")[1];
+  const ext = data.type.split("/")[1] || "bin";
 
-  let file = new File([data], `image.${ext}`, metadata);
+  let file = new File([data], `file.${ext}`, metadata);
 
   return file;
 };

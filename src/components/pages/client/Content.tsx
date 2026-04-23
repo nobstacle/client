@@ -38,6 +38,19 @@ const parseScrollItems = (extraContent: any): any[] => {
   }
 };
 
+const parseSlideshowItemsMetadata = (
+  extraContent: any,
+): Array<{ mediaType?: "image" | "video"; expiresAt?: string }> => {
+  if (Array.isArray(extraContent)) return extraContent;
+  if (typeof extraContent !== "string") return [];
+  try {
+    const parsed = JSON.parse(extraContent);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
+
 const getActiveScrollItems = (extraContent: any): any[] => {
   const now = Date.now();
   return parseScrollItems(extraContent).filter((item: any) => {
@@ -2320,7 +2333,24 @@ export const Content: React.FC = () => {
           ) : (
             <>
               {console.info("IN", messageStore.receivedContent, contentToDisplay, defaultSlideshowContent)}
-              <Slideshow contents={messageStore.receivedContent?.contents && messageStore.receivedContent?.contents[0] !== null ? messageStore.receivedContent?.contents : contentToDisplay?.contents ? contentToDisplay?.contents : defaultSlideshowContent.data?.contents ?? []} />
+              <Slideshow
+                contents={
+                  messageStore.receivedContent?.contents &&
+                  messageStore.receivedContent?.contents[0] !== null
+                    ? messageStore.receivedContent?.contents
+                    : contentToDisplay?.contents
+                    ? contentToDisplay?.contents
+                    : defaultSlideshowContent.data?.contents ?? []
+                }
+                metadata={parseSlideshowItemsMetadata(
+                  messageStore.receivedContent?.contents &&
+                    messageStore.receivedContent?.contents[0] !== null
+                    ? messageStore.receivedContent?.extraContent
+                    : contentToDisplay?.contents
+                    ? contentToDisplay?.extraContent
+                    : defaultSlideshowContent.data?.extraContent,
+                )}
+              />
             </>
           )
         )}
@@ -2565,7 +2595,10 @@ export const Content: React.FC = () => {
     return (
       <>
         <TrialWatermark trial={company.data ?? data?.user} />
-        <Slideshow contents={defaultSlideshowContent.data?.contents ?? contentToDisplay?.contents ?? []} />
+        <Slideshow
+          contents={defaultSlideshowContent.data?.contents ?? contentToDisplay?.contents ?? []}
+          metadata={parseSlideshowItemsMetadata(defaultSlideshowContent.data?.extraContent)}
+        />
       </>
     );
 

@@ -8,6 +8,7 @@
 export type UploadControllerUploadCompanyFileManyBody = {
   defaultLangCode: string;
   file: Blob[];
+  itemsMetadata?: string;
   langCode: string;
   tag: string;
 };
