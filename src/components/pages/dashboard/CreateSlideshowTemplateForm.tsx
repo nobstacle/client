@@ -1,12 +1,12 @@
 /* eslint-disable @next/next/no-img-element */
 import * as React from "react";
-import { Controller, SubmitHandler, useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import {
   useCompanyControllerGetCompany,
   useSlideshowTemplateControllerGetTextTags,
   useUploadControllerUploadCompanyFileMany,
 } from "../../../lib/client/api";
-import { Button, Upload, Select, Typography, Space, Alert, Input } from "antd";
+import { Button, Upload, Select, Typography, Space, Alert, Input, InputNumber } from "antd";
 import { UploadOutlined } from "@ant-design/icons";
 import {
   DndContext,
@@ -56,6 +56,7 @@ interface SequenceEntry {
   mediaType: "image" | "video";
   order: number;
   expiresAt?: string;
+  durationSeconds?: number;
 }
 
 interface CreateSlideshowTemplateFormFieldValues {
@@ -176,8 +177,8 @@ const SortableRow: React.FC<{
         </button>
       </div>
 
-      {entry.mediaType === "image" ? (
-        <div className="grid grid-cols-1 gap-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        {entry.mediaType === "image" && (
           <Input
             size="small"
             type="datetime-local"
@@ -189,11 +190,36 @@ const SortableRow: React.FC<{
             }
             placeholder="Expiration date/time"
           />
-          <div className="text-[11px] text-gray-500">Image expires after selected date/time. Leave empty for no expiry.</div>
+        )}
+
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] text-gray-500 whitespace-nowrap">
+              Duration
+            </span>
+            <InputNumber
+              size="small"
+              min={1}
+              max={1209600}
+              value={entry.durationSeconds}
+              onChange={(value) =>
+                onChange(entry.uid, {
+                  durationSeconds:
+                    typeof value === "number" ? Math.floor(value) : undefined,
+                })
+              }
+              placeholder="Display duration"
+              addonAfter="sec"
+              className="w-full"
+            />
+          </div>
+          <div className="text-[11px] text-gray-500">
+            {entry.mediaType === "image"
+              ? "Controls how long the image is shown."
+              : "Controls how long the video slide stays active."}
+          </div>
         </div>
-      ) : (
-        <div className="text-[11px] text-gray-400">Video never expires.</div>
-      )}
+      </div>
     </div>
   );
 };
@@ -207,7 +233,7 @@ export const CreateSlideshowTemplateForm: React.FC<{
     formState: { errors },
     setValue,
   } = useForm<CreateSlideshowTemplateFormFieldValues>({
-    resolver: yupResolver(schema),
+    resolver: yupResolver(schema) as any,
     defaultValues: {
       langCode: "",
       tagCreate: "",
@@ -275,6 +301,7 @@ export const CreateSlideshowTemplateForm: React.FC<{
         mediaType,
         order: prev.length + 1,
         expiresAt: undefined,
+        durationSeconds: 10,
       },
     ]);
 
@@ -311,9 +338,7 @@ export const CreateSlideshowTemplateForm: React.FC<{
     );
   };
 
-  const onSubmit: SubmitHandler<CreateSlideshowTemplateFormFieldValues> = (
-    data,
-  ) => {
+  const onSubmit = (data: CreateSlideshowTemplateFormFieldValues) => {
     if (sequence.length === 0) {
       setSequenceError("Please upload at least one media item.");
       return;
@@ -333,6 +358,7 @@ export const CreateSlideshowTemplateForm: React.FC<{
               order: entry.order,
               mediaType: entry.mediaType,
               expiresAt: entry.mediaType === "image" ? entry.expiresAt : undefined,
+              durationSeconds: entry.durationSeconds,
             })),
           ),
         },
@@ -361,7 +387,10 @@ export const CreateSlideshowTemplateForm: React.FC<{
               accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
               disabled={sequence.length >= MAX_ITEMS}
             >
-              <Button style={{ color: "#000" }} icon={<UploadOutlined />}>Add Image</Button>
+              <Button htmlType="button" style={{ color: "#000" }}>
+                <UploadOutlined className="mr-1" />
+                Add Image
+              </Button>
             </Upload>
 
             <Upload
@@ -371,7 +400,10 @@ export const CreateSlideshowTemplateForm: React.FC<{
               accept="video/mp4,video/webm,video/quicktime"
               disabled={sequence.length >= MAX_ITEMS}
             >
-              <Button style={{ color: "#000" }} icon={<UploadOutlined />}>Add Video</Button>
+              <Button htmlType="button" style={{ color: "#000" }}>
+                <UploadOutlined className="mr-1" />
+                Add Video
+              </Button>
             </Upload>
           </div>
           {sequenceError && (

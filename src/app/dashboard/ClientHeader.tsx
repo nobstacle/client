@@ -71,6 +71,7 @@ import { IoCaretDownCircle } from 'react-icons/io5';
 import { useUserControllerPatchOne } from '../../lib/client/api';
 import { PairUrlButton } from "@/components/pages/dashboard/Header/PairUrlButton";
 import { TrialBadge } from "@/components/trial/TrialBadge";
+import { toDisplayScrollTag } from "../../utils/scrollScope";
 
 interface ClientHeaderProps {
     user: Session | null;
@@ -898,7 +899,9 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
 
     const handleTemplateSelect = useCallback((template) => {
         justSelectedRef.current = true;
-        setSearchValue(template.tag);
+        setSearchValue(template.type === 'scroll' || template.type === 'Scroll'
+            ? toDisplayScrollTag(template.tag)
+            : template.tag);
         setIsDropdownVisible(false);
 
         if (!socketConnected) {
@@ -935,7 +938,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
             contentType = ChatType.Document;
         } else if (template?.type === 'scroll' || template?.type === 'Scroll') {
             contentType = ChatType.Scroll;
-            contentExtra = templateToSend?.ext ?? templateToSend?.items;
+            contentExtra = JSON.stringify(templateToSend?.items ?? []);
         } else {
             contentType = ChatType.Text;
         }
@@ -1254,7 +1257,9 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
 
     const handleQRCodeClick = useCallback((template) => {
         justSelectedRef.current = true;
-        setSearchValue(template.tag);
+        setSearchValue(template.type === 'scroll' || template.type === 'Scroll'
+            ? toDisplayScrollTag(template.tag)
+            : template.tag);
         setIsDropdownVisible(false);
 
         if (!socketConnected) {
@@ -1521,6 +1526,9 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         return templates.map(template => {
             const icon = templateIcons[template.type] || templateIcons.text;
             const showQR = template.type !== "slideshow" && template.type !== "text" && template.type !== "scroll" && template.type !== "Scroll";
+            const displayTag = template.type === "scroll" || template.type === "Scroll"
+                ? toDisplayScrollTag(template.tag)
+                : template.tag;
             const langTag = !template.availableInSelectedLang
                 ? `<span style="display: inline-block; background: #ff9800; color: white; font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-left: 8px;">${companyData?.defaultLangCode?.toUpperCase() || 'EN'}</span>`
                 : '';
@@ -1544,7 +1552,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                     </div>
                     <div style="flex: 1;">
                         <div style="font-weight: 500; color: #1f2937; font-size: 14px;">
-                            ${template.tag}${langTag}
+                            ${displayTag}${langTag}
                         </div>
                     </div>
                 </div>
@@ -3386,11 +3394,11 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                                     dataSource={filteredTemplates}
                                                     renderItem={(template) => {
                                                         const config = templateConfig[template.type];
-                                                        return (
-                                                            <List.Item
-                                                                style={{
-                                                                    cursor: 'pointer',
-                                                                    padding: '16px',
+                                                return (
+                                                    <List.Item
+                                                        style={{
+                                                            cursor: 'pointer',
+                                                            padding: '16px',
                                                                     borderBottom: '1px solid #f0f0f0',
                                                                 }}
                                                             >
@@ -3413,12 +3421,14 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                                                                 {config.icon}
                                                                             </div>
                                                                         }
-                                                                        title={
-                                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '15px' }}>
-                                                                                <span>{template.tag}</span>
-                                                                                {!template.availableInSelectedLang && (
-                                                                                    <Tag color="orange" style={{ fontSize: '10px' }}>
-                                                                                        {companyData?.defaultLangCode?.toUpperCase() || 'EN'}
+                                                                    title={
+                                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '15px' }}>
+                                                                            <span>{template.type === 'scroll' || template.type === 'Scroll'
+                                                                                ? toDisplayScrollTag(template.tag)
+                                                                                : template.tag}</span>
+                                                                            {!template.availableInSelectedLang && (
+                                                                                <Tag color="orange" style={{ fontSize: '10px' }}>
+                                                                                    {companyData?.defaultLangCode?.toUpperCase() || 'EN'}
                                                                                     </Tag>
                                                                                 )}
                                                                             </div>
@@ -4193,7 +4203,9 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                                     }
                                                     title={
                                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                            <span>{template.tag}</span>
+                                                            <span>{template.type === 'scroll' || template.type === 'Scroll'
+                                                                ? toDisplayScrollTag(template.tag)
+                                                                : template.tag}</span>
                                                             {!template.availableInSelectedLang && (
                                                                 <Tag color="orange" style={{ fontSize: '10px', padding: '0 4px', margin: 0 }}>
                                                                     {companyData?.defaultLangCode?.toUpperCase() || 'EN'}

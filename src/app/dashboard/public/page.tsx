@@ -100,8 +100,9 @@ export default function ScreensDashboard() {
     const source = searchResults.length > 0 ? searchResults : scrolls;
 
     const grouped = source.reduce((acc, s) => {
-      if (!acc[s.tag]) acc[s.tag] = [];
-      acc[s.tag].push(s);
+      const displayTag = toDisplayScrollTag(s.tag);
+      if (!acc[displayTag]) acc[displayTag] = [];
+      acc[displayTag].push(s);
       return acc;
     }, {} as Record<string, GetScrollTemplateRes[]>);
 

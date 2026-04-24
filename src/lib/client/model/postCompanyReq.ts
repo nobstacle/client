@@ -7,7 +7,14 @@
 
 export interface PostCompanyReq {
   defaultLangCode?: string | null;
+  displayEnabled?: boolean | null;
+  formsEnabled?: boolean | null;
   logoUrl?: string | null;
   name: string;
+  recordingsEnabled?: boolean | null;
+  screensEnabled?: boolean | null;
   stationCount: number;
+  teamEnabled?: boolean | null;
+  upsellEnabled?: boolean | null;
+  whatsappEnabled?: boolean | null;
 }

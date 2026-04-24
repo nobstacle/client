@@ -7,14 +7,21 @@
 
 export interface GetCompanyRes {
   defaultLangCode: string;
+  displayEnabled: boolean;
   id: number;
   isTrialAccount: boolean;
   isTrialActive: boolean;
   isTrialExpired: boolean;
   logoUrl: string;
+  formsEnabled: boolean;
   name: string;
+  recordingsEnabled: boolean;
+  screensEnabled: boolean;
   stationCount: number;
+  teamEnabled: boolean;
   trialDaysLeft: number | null;
   trialEndsAt: string | null;
   trialStartedAt: string | null;
+  upsellEnabled: boolean;
+  whatsappEnabled: boolean;
 }

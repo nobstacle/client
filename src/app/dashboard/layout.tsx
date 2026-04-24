@@ -8,6 +8,7 @@ import { ShortcutsProvider } from "./ShortcutProvider";
 import ClientSidebar from './Sidebar';
 import ClientHeader from './ClientHeader';
 import { TrialDashboardNotice } from "../../components/trial/TrialDashboardNotice";
+import DashboardFeatureGate from "../../components/pages/dashboard/DashboardFeatureGate";
 
 function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -20,7 +21,9 @@ function DashboardLayout({ children }: { children: React.ReactNode }) {
               <TrialDashboardNotice />
               <div className="flex flex-1 flex-row overflow-hidden">
                 <ServerSidebarWrapper />
-                <Body>{children}</Body>
+                <Body>
+                  <DashboardFeatureGate>{children}</DashboardFeatureGate>
+                </Body>
               </div>
             </ShortcutsProvider> {/* ← Close wrapper */}
           </TemplateContextProvider>

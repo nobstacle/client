@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useCallback, useState, useEffect } from "react";
 import {
     Form,
     Input,
@@ -16,6 +16,7 @@ import {
     Row,
     Col,
     Select,
+    Checkbox,
 } from 'antd';
 import {
     PlusOutlined,
@@ -49,6 +50,13 @@ interface Company {
     logoUrl?: string | null;
     stationCount: number;
     defaultLangCode?: string | null;
+    displayEnabled?: boolean;
+    screensEnabled?: boolean;
+    recordingsEnabled?: boolean;
+    upsellEnabled?: boolean;
+    formsEnabled?: boolean;
+    whatsappEnabled?: boolean;
+    teamEnabled?: boolean;
     createdAt?: string;
     updatedAt?: string;
     _count?: {
@@ -58,6 +66,26 @@ interface Company {
         Package: number;
     };
 }
+
+const DEFAULT_FEATURE_ACCESS = {
+    displayEnabled: true,
+    screensEnabled: true,
+    recordingsEnabled: true,
+    upsellEnabled: true,
+    formsEnabled: true,
+    whatsappEnabled: true,
+    teamEnabled: true,
+};
+
+const getFeatureAccessValues = (company?: Company | null) => ({
+    displayEnabled: company?.displayEnabled ?? true,
+    screensEnabled: company?.screensEnabled ?? true,
+    recordingsEnabled: company?.recordingsEnabled ?? true,
+    upsellEnabled: company?.upsellEnabled ?? true,
+    formsEnabled: company?.formsEnabled ?? true,
+    whatsappEnabled: company?.whatsappEnabled ?? true,
+    teamEnabled: company?.teamEnabled ?? true,
+});
 
 const CompaniesManagement: React.FC = () => {
     const [form] = Form.useForm();
@@ -84,6 +112,7 @@ const CompaniesManagement: React.FC = () => {
 
     // Debounce search
     const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+    const { current, pageSize, total } = pagination;
 
     // Debounce search term
     useEffect(() => {
@@ -95,23 +124,11 @@ const CompaniesManagement: React.FC = () => {
     }, [searchTerm]);
 
     // Fetch companies when filters, pagination, or search changes
-    useEffect(() => {
-        if (session?.user?.backendTokens?.at) {
-            fetchCompanies();
-        }
-    }, [
-        pagination.current,
-        pagination.pageSize,
-        debouncedSearchTerm,
-        selectedLangCode,
-        session?.user?.backendTokens?.at
-    ]);
-
-    const fetchCompanies = async () => {
+    const fetchCompanies = useCallback(async () => {
         setTableLoading(true);
         try {
-            const skip = (pagination.current - 1) * pagination.pageSize;
-            const take = pagination.pageSize;
+            const skip = (current - 1) * pageSize;
+            const take = pageSize;
 
             // Build query parameters
             const params = new URLSearchParams({
@@ -153,12 +170,25 @@ const CompaniesManagement: React.FC = () => {
         } finally {
             setTableLoading(false);
         }
-    };
+    }, [
+        current,
+        pageSize,
+        debouncedSearchTerm,
+        selectedLangCode,
+        session?.user?.backendTokens?.at,
+    ]);
+
+    useEffect(() => {
+        if (session?.user?.backendTokens?.at) {
+            fetchCompanies();
+        }
+    }, [session?.user?.backendTokens?.at, fetchCompanies]);
 
     const handleCreateCompany = () => {
         setModalMode('create');
         setEditingCompany(null);
         form.resetFields();
+        form.setFieldsValue(DEFAULT_FEATURE_ACCESS);
         setFileList([]);
         setIsModalOpen(true);
     };
@@ -170,6 +200,7 @@ const CompaniesManagement: React.FC = () => {
             name: company.name,
             stationCount: company.stationCount,
             defaultLangCode: company.defaultLangCode || 'en',
+            ...getFeatureAccessValues(company),
         });
 
         // Set file list if logo exists
@@ -227,6 +258,13 @@ const CompaniesManagement: React.FC = () => {
                 stationCount: values.stationCount,
                 defaultLangCode: values.defaultLangCode || 'en',
                 logoUrl: fileList.length > 0 && fileList[0].url ? fileList[0].url : null, // Handle logo URL
+                displayEnabled: values.displayEnabled ?? true,
+                screensEnabled: values.screensEnabled ?? true,
+                recordingsEnabled: values.recordingsEnabled ?? true,
+                upsellEnabled: values.upsellEnabled ?? true,
+                formsEnabled: values.formsEnabled ?? true,
+                whatsappEnabled: values.whatsappEnabled ?? true,
+                teamEnabled: values.teamEnabled ?? true,
             };
 
             if (modalMode === 'create') {
@@ -294,7 +332,7 @@ const CompaniesManagement: React.FC = () => {
         setPagination({
             current: newPagination.current,
             pageSize: newPagination.pageSize,
-            total: pagination.total,
+            total,
         });
     };
 
@@ -527,7 +565,7 @@ const CompaniesManagement: React.FC = () => {
                         pagination={{
                             current: pagination.current,
                             pageSize: pagination.pageSize,
-                            total: pagination.total,
+                            total,
                             showSizeChanger: true,
                             showTotal: (total) => `Total ${total} companies`,
                             pageSizeOptions: ['10', '20', '50', '100'],
@@ -617,6 +655,59 @@ const CompaniesManagement: React.FC = () => {
                             </Form.Item>
                         </Col>
                     </Row>
+
+                    <Card
+                        size="small"
+                        title="Feature Access"
+                        style={{ marginTop: 8, backgroundColor: '#fafafa' }}
+                    >
+                        <Row gutter={[16, 12]}>
+                            <Col xs={24}>
+                                <Form.Item
+                                    name="displayEnabled"
+                                    valuePropName="checked"
+                                    style={{ marginBottom: 0 }}
+                                >
+                                    <Checkbox>
+                                        <span className="font-medium">Display</span>
+                                        <span className="text-gray-500 text-xs ml-2">
+                                            Image, Slideshow, Video, Scroll, Website, Document, Map, Text, Survey
+                                        </span>
+                                    </Checkbox>
+                                </Form.Item>
+                            </Col>
+                            <Col xs={24} sm={12}>
+                                <Form.Item name="screensEnabled" valuePropName="checked" style={{ marginBottom: 0 }}>
+                                    <Checkbox> Screens</Checkbox>
+                                </Form.Item>
+                            </Col>
+                            <Col xs={24} sm={12}>
+                                <Form.Item name="recordingsEnabled" valuePropName="checked" style={{ marginBottom: 0 }}>
+                                    <Checkbox> Recordings</Checkbox>
+                                </Form.Item>
+                            </Col>
+                            <Col xs={24} sm={12}>
+                                <Form.Item name="upsellEnabled" valuePropName="checked" style={{ marginBottom: 0 }}>
+                                    <Checkbox> Upsell</Checkbox>
+                                </Form.Item>
+                            </Col>
+                            <Col xs={24} sm={12}>
+                                <Form.Item name="formsEnabled" valuePropName="checked" style={{ marginBottom: 0 }}>
+                                    <Checkbox> Forms</Checkbox>
+                                </Form.Item>
+                            </Col>
+                            <Col xs={24} sm={12}>
+                                <Form.Item name="whatsappEnabled" valuePropName="checked" style={{ marginBottom: 0 }}>
+                                    <Checkbox> Whatsapp</Checkbox>
+                                </Form.Item>
+                            </Col>
+                            <Col xs={24} sm={12}>
+                                <Form.Item name="teamEnabled" valuePropName="checked" style={{ marginBottom: 0 }}>
+                                    <Checkbox> Team</Checkbox>
+                                </Form.Item>
+                            </Col>
+                        </Row>
+                    </Card>
                 </Form>
             </Modal>
         </div>

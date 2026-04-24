@@ -5,6 +5,7 @@ import {
   getTemplateControllerGetSlideshowTemplatesQueryKey,
   getTemplateControllerGetTextTemplatesQueryKey,
   getTemplateControllerGetVideoTemplatesQueryKey,
+  getScrollControllerGetScrollsQueryKey,
   useTemplateControllerGetImageTemplates,
   useTemplateControllerGetMapTemplates,
   useTemplateControllerGetSlideshowTemplates,
@@ -17,7 +18,8 @@ import {
   useTemplateControllerGetJotformTemplates,
   getTemplateControllerGetJotformTemplatesQueryKey,
   useTemplateControllerGetDocumenttemplates,
-  getTemplateControllerGetDocumentTemplatesQueryKey
+  getTemplateControllerGetDocumentTemplatesQueryKey,
+  useScrollControllerGetScrolls,
 } from "../lib/client/api";
 import useTemplateStore from "../lib/zustand/store/templateStore";
 
@@ -30,7 +32,8 @@ export const useFetchTemplates = () => {
     setMaps,
     setSurveyAnswers,
     setWebsites,
-    setDocuments
+    setDocuments,
+    setScrolls,
   } = useTemplateStore();
   const textTemplates = useTemplateControllerGetTextTemplates(
     {},
@@ -132,6 +135,18 @@ export const useFetchTemplates = () => {
     },
   );
 
+  const scrollTemplates = useScrollControllerGetScrolls(
+    { limit: 9999 },
+    {
+      query: {
+        staleTime: Infinity,
+        retry: 0,
+        queryKey: getScrollControllerGetScrollsQueryKey({ limit: 9999 }),
+        gcTime: Infinity,
+      },
+    },
+  );
+
   useEffect(() => {
     if (textTemplates.isSuccess) {
       setTexts(textTemplates.data);
@@ -200,12 +215,21 @@ export const useFetchTemplates = () => {
     }
   }, [documentTemplates.isSuccess]);
 
+  useEffect(() => {
+    if (scrollTemplates.isSuccess) {
+      if (scrollTemplates.data?.data) {
+        setScrolls(scrollTemplates.data.data);
+      }
+    }
+  }, [scrollTemplates.isSuccess]);
+
   return {
     isTextTemplatesLoading: textTemplates.isLoading,
     isImageTemplatesLoading: imageTemplates.isLoading,
     isVideoTemplatesLoading: videoTemplates.isLoading,
     isSlideshowTemplatesLoading: slideshowTemplates.isLoading,
     isDocumentsTemplatesLoading: documentTemplates.isLoading,
+    isScrollTemplatesLoading: scrollTemplates.isLoading,
     refetchSlideshow: slideshowTemplates.refetch,
   };
 };

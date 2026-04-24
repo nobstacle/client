@@ -41,7 +41,7 @@ export const useFetchCompany = () => {
         setCompany(company.data);
       }
     }
-  }, [company.isSuccess, company.isRefetching]);
+  }, [company.data, company.isSuccess, setCompany]);
 
   useEffect(() => {
     if (companyUsers.isSuccess) {
@@ -49,5 +49,5 @@ export const useFetchCompany = () => {
         setCompanyUsers(companyUsers.data);
       }
     }
-  }, [companyUsers.isSuccess, companyUsers.isRefetching]);
+  }, [companyUsers.data, companyUsers.isSuccess, setCompanyUsers]);
 };

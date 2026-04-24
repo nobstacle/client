@@ -40,7 +40,7 @@ const parseScrollItems = (extraContent: any): any[] => {
 
 const parseSlideshowItemsMetadata = (
   extraContent: any,
-): Array<{ mediaType?: "image" | "video"; expiresAt?: string }> => {
+): Array<{ mediaType?: "image" | "video"; expiresAt?: string; durationSeconds?: number }> => {
   if (Array.isArray(extraContent)) return extraContent;
   if (typeof extraContent !== "string") return [];
   try {
@@ -94,6 +94,71 @@ const getStoredPublicDisplay = () => {
   } catch {
     return null;
   }
+};
+
+const ScrollSection: React.FC<{ item: any; index: number }> = ({ item, index }) => {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+
+  useEffect(() => {
+    if (item?.mediaType !== "video") return;
+
+    const node = containerRef.current;
+    const video = videoRef.current;
+    if (!node || !video) return;
+
+    if (typeof IntersectionObserver === "undefined") {
+      video.play().catch((error) => {
+        console.error("Failed to autoplay scroll video:", error);
+      });
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && entry.intersectionRatio >= 0.65) {
+          video.play().catch((error) => {
+            console.error("Failed to autoplay scroll video:", error);
+          });
+        } else {
+          video.pause();
+        }
+      },
+      {
+        threshold: [0.25, 0.65, 0.9],
+      },
+    );
+
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [item?.mediaType, item?.signedUrl, item?.url]);
+
+  return (
+    <section
+      ref={containerRef}
+      className="relative h-screen w-screen snap-start overflow-hidden bg-black"
+    >
+      {item.mediaType === "video" ? (
+        <video
+          ref={videoRef}
+          src={item.signedUrl || item.url}
+          className="h-full w-full object-cover"
+          playsInline
+          muted
+          loop
+          preload="metadata"
+        />
+      ) : (
+        <img
+          src={item.signedUrl || item.url}
+          alt={item.name || `scroll-item-${index + 1}`}
+          className="h-full w-full object-cover"
+        />
+      )}
+
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-black/40 to-transparent" />
+    </section>
+  );
 };
 
 const IframeWithPrefill = React.memo(({ src, prefillData }: { src: string, prefillData: Record<string, string> }) => {
@@ -171,7 +236,8 @@ const getLocalizedContent = (contentObj, langCode = 'en', fallback = '') => {
             preferredLanguage = availableLanguages[0];
           }
 
-          let result = parsed[preferredLanguage];
+          const localizedMap = parsed as Record<string, unknown>;
+          let result = localizedMap[preferredLanguage];
           if (typeof result === 'string' && (result.startsWith('{') || result.startsWith('['))) {
             return getLocalizedContent(result, langCode, fallback);
           }
@@ -1678,24 +1744,7 @@ export const Content: React.FC = () => {
   };
 
   const ScrollViewer: React.FC<{ items: any[] }> = ({ items }) => {
-    const [currentIndex, setCurrentIndex] = useState(0);
-    const [isMuted, setIsMuted] = useState(true);
     const [now, setNow] = useState(Date.now());
-    const videoRef = useRef<HTMLVideoElement | null>(null);
-
-    const resolveImageDuration = (value?: any) => {
-      const parsed = Number(value);
-      if (!Number.isFinite(parsed) || parsed < 1) return 10;
-      return Math.min(Math.floor(parsed), 1209600);
-    };
-
-    const getExpiryRemainingMs = (item: any) => {
-      if (!item?.expiresAt) return Number.POSITIVE_INFINITY;
-      const expiresAtMs = new Date(item.expiresAt).getTime();
-      if (Number.isNaN(expiresAtMs)) return Number.POSITIVE_INFINITY;
-      return expiresAtMs - Date.now();
-    };
-
     const activeItems = React.useMemo(() => {
       return (Array.isArray(items) ? items : []).filter((item) => {
         if (!item?.expiresAt) return true;
@@ -1712,71 +1761,6 @@ export const Content: React.FC = () => {
       return () => window.clearInterval(timer);
     }, []);
 
-    useEffect(() => {
-      if (activeItems.length === 0) return;
-      if (currentIndex >= activeItems.length) {
-        setCurrentIndex(0);
-      }
-    }, [activeItems.length, currentIndex]);
-
-    const moveNext = useCallback(() => {
-      setCurrentIndex((prev) => {
-        if (activeItems.length <= 1) return 0;
-        return (prev + 1) % activeItems.length;
-      });
-    }, [activeItems.length]);
-
-    const safeCurrentIndex =
-      activeItems.length === 0
-        ? 0
-        : Math.min(currentIndex, activeItems.length - 1);
-    const currentItem = activeItems[safeCurrentIndex];
-    useEffect(() => {
-      if (!currentItem) return;
-
-      const expiryRemainingMs = getExpiryRemainingMs(currentItem);
-
-      if (currentItem.mediaType === "image") {
-        const imageDurationMs = resolveImageDuration(currentItem.imageDurationSeconds) * 1000;
-        const nextInMs = Math.max(
-          200,
-          Math.min(
-            imageDurationMs,
-            Number.isFinite(expiryRemainingMs) ? expiryRemainingMs : imageDurationMs,
-          ),
-        );
-        const timer = window.setTimeout(moveNext, nextInMs);
-        return () => window.clearTimeout(timer);
-      }
-
-      if (Number.isFinite(expiryRemainingMs)) {
-        const timer = window.setTimeout(moveNext, Math.max(200, expiryRemainingMs));
-        return () => window.clearTimeout(timer);
-      }
-    }, [
-      currentItem,
-      currentItem?.mediaType,
-      currentItem?.expiresAt,
-      currentItem?.imageDurationSeconds,
-      moveNext,
-    ]);
-
-    const isImage = currentItem?.mediaType === "image";
-
-    useEffect(() => {
-      const video = videoRef.current;
-      if (!video || isImage) return;
-
-      video.muted = isMuted;
-      video.play().catch((err) => console.error("Video play failed:", err));
-    }, [
-      isImage,
-      isMuted,
-      safeCurrentIndex,
-      currentItem?.signedUrl,
-      currentItem?.url,
-    ]);
-
     if (activeItems.length === 0) {
       return (
         <div className="w-full h-screen flex items-center justify-center bg-gray-100">
@@ -1785,46 +1769,11 @@ export const Content: React.FC = () => {
       );
     }
 
-    if (!currentItem) {
-      return (
-        <div className="w-full h-screen flex items-center justify-center bg-gray-100">
-          <p className="text-gray-500">Refreshing public content...</p>
-        </div>
-      );
-    }
-
     return (
-      <div className="fixed inset-0 w-screen h-screen overflow-hidden bg-black">
-        <div className="w-screen h-screen flex items-center justify-center relative">
-          {isImage ? (
-            <img
-              src={currentItem.signedUrl || currentItem.url}
-              alt={currentItem.name}
-              className="w-full h-full object-contain"
-            />
-          ) : (
-            <video
-              key={currentItem.signedUrl || currentItem.url}
-              ref={videoRef}
-              src={currentItem.signedUrl || currentItem.url}
-              className="w-full h-full object-contain"
-              playsInline
-              preload="auto"
-              onEnded={moveNext}
-              onError={moveNext}
-            />
-          )}
-
-          {!isImage && (
-            <button
-              onClick={() => setIsMuted((prev) => !prev)}
-              className="absolute bottom-20 right-6 px-3 py-2 bg-black/60 rounded-full text-white text-xs backdrop-blur-sm hover:bg-black/80 transition z-10"
-            >
-              {isMuted ? "Unmute" : "Mute"}
-            </button>
-          )}
-
-        </div>
+      <div className="h-screen w-screen overflow-y-auto snap-y snap-mandatory bg-black">
+        {activeItems.map((item, index) => (
+          <ScrollSection key={`${item?.url || item?.signedUrl || index}`} item={item} index={index} />
+        ))}
       </div>
     );
   };

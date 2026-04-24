@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useCallback, useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
     Card,
@@ -89,6 +89,13 @@ interface CompanyDetails {
     logoUrl?: string | null;
     stationCount: number;
     defaultLangCode?: string | null;
+    displayEnabled?: boolean;
+    screensEnabled?: boolean;
+    recordingsEnabled?: boolean;
+    upsellEnabled?: boolean;
+    formsEnabled?: boolean;
+    whatsappEnabled?: boolean;
+    teamEnabled?: boolean;
     Employees: Employee[];
     Templates?: Templates;
     Package: Package[];
@@ -115,13 +122,7 @@ const CompanyDetailsPage: React.FC = () => {
 
     const companyId = params?.id as string;
 
-    useEffect(() => {
-        if (session?.user?.backendTokens?.at && companyId) {
-            fetchCompanyDetails();
-        }
-    }, [session?.user?.backendTokens?.at, companyId]);
-
-    const fetchCompanyDetails = async () => {
+    const fetchCompanyDetails = useCallback(async () => {
         setLoading(true);
         try {
             const response = await fetch(
@@ -148,7 +149,13 @@ const CompanyDetailsPage: React.FC = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [companyId, router, session?.user?.backendTokens?.at]);
+
+    useEffect(() => {
+        if (session?.user?.backendTokens?.at && companyId) {
+            fetchCompanyDetails();
+        }
+    }, [session?.user?.backendTokens?.at, companyId, fetchCompanyDetails]);
 
     const employeeColumns: ColumnsType<Employee> = [
         {
@@ -374,6 +381,27 @@ const CompanyDetailsPage: React.FC = () => {
                                     </Tag>
                                 </Descriptions.Item>
                             </Descriptions>
+
+                            <Card size="small" title="Feature Access" style={{ marginTop: 16 }}>
+                                <Space wrap>
+                                    {[
+                                        { label: 'Display', enabled: company.displayEnabled ?? true },
+                                        { label: 'Screens', enabled: company.screensEnabled ?? true },
+                                        { label: 'Recordings', enabled: company.recordingsEnabled ?? true },
+                                        { label: 'Upsell', enabled: company.upsellEnabled ?? true },
+                                        { label: 'Forms', enabled: company.formsEnabled ?? true },
+                                        { label: 'Whatsapp', enabled: company.whatsappEnabled ?? true },
+                                        { label: 'Team', enabled: company.teamEnabled ?? true },
+                                    ].map((feature) => (
+                                        <Tag
+                                            key={feature.label}
+                                            color={feature.enabled ? 'green' : 'default'}
+                                        >
+                                            {feature.label}: {feature.enabled ? 'Enabled' : 'Disabled'}
+                                        </Tag>
+                                    ))}
+                                </Space>
+                            </Card>
                         </Card>
                     </Col>
 

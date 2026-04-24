@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { Session } from 'next-auth';
 import { ClientLink } from "../../components/pages/dashboard/Sidebar/ClientLink";
+import useCompanyStore from "../../lib/zustand/store/companyStore";
 import {
     IoImage,
     IoImages,
@@ -41,19 +42,193 @@ interface MenuItem {
     icon?: React.ReactNode;
     iconColor?: string;
     textColor?: string;
+    featureKey?: FeatureKey;
 }
 
 interface SettingsItem {
     title: string;
     href: string;
     roles?: string[];
+    featureKey?: FeatureKey;
 }
 
 interface TeamItem {
     title: string;
     href: string;
     roles?: string[];
+    featureKey?: FeatureKey;
 }
+
+type FeatureKey =
+    | 'display'
+    | 'screens'
+    | 'recordings'
+    | 'upsell'
+    | 'forms'
+    | 'whatsapp'
+    | 'team';
+
+const sAdminMenuItems: MenuItem[] = [
+    {
+        title: "Users",
+        href: "/dashboard/register",
+        roles: ["SAdmin"],
+        icon: <TiUserAdd size={18} />,
+        iconColor: "white"
+    },
+    {
+        title: "Companies",
+        href: "/dashboard/companies",
+        roles: ["SAdmin"],
+        icon: <FaBuilding size={18} />,
+        iconColor: "white"
+    },
+    {
+        title: "WhatsApp Meta",
+        href: "/dashboard/whatsappMetaAccounts",
+        roles: ["SAdmin"],
+        icon: <IoLogoWhatsapp size={18} />,
+        iconColor: "white"
+    },
+    {
+        title: "Forms",
+        href: "/dashboard/asignForms",
+        roles: ["SAdmin"],
+        icon: <FaWpforms size={18} />,
+        iconColor: "white"
+    },
+];
+
+const menuItems: MenuItem[] = [
+    {
+        title: "Image",
+        href: "/dashboard/image",
+        roles: ["Admin", "User", "Staff"],
+        icon: <IoImage size={18} />,
+        iconColor: "white",
+        featureKey: "display",
+    },
+    {
+        title: "Slideshow",
+        href: "/dashboard/slideshow",
+        roles: ["Admin", "User", "Staff"],
+        icon: <IoImages size={18} />,
+        iconColor: "white",
+        featureKey: "display",
+    },
+    {
+        title: "Video",
+        href: "/dashboard/video",
+        roles: ["Admin", "User", "Staff"],
+        icon: <IoPlay size={18} />,
+        iconColor: "white",
+        featureKey: "display",
+    },
+    {
+        title: "Scroll",
+        href: "/dashboard/scroll",
+        roles: ["Admin", "User", "Staff"],
+        icon: <IoCaretDownCircle size={18} />,
+        iconColor: "white",
+        featureKey: "display",
+    },
+    {
+        title: "Website",
+        href: "/dashboard/website",
+        roles: ["Admin", "User", "Staff"],
+        icon: <IoGlobe size={18} />,
+        iconColor: "white",
+        featureKey: "display",
+    },
+    {
+        title: "Document",
+        href: "/dashboard/documents",
+        roles: ["Admin", "User", "Staff"],
+        icon: <IoDocuments size={18} />,
+        iconColor: "white",
+        featureKey: "display",
+    },
+    {
+        title: "Map",
+        href: "/dashboard/maps",
+        roles: ["Admin", "User", "Staff"],
+        icon: <IoMap size={18} />,
+        iconColor: "white",
+        featureKey: "display",
+    },
+    {
+        title: "Text",
+        href: "/dashboard/text",
+        roles: ["Admin", "User", "Staff"],
+        icon: <IoChatbubbleEllipses size={18} />,
+        iconColor: "white",
+        featureKey: "display",
+    },
+    {
+        title: "Survey",
+        href: "/dashboard/survey",
+        roles: ["Admin", "User", "Staff"],
+        icon: <IoSpeedometer size={18} />,
+        iconColor: "white",
+        featureKey: "display",
+    },
+    {
+        title: "Screens",
+        href: "/dashboard/public",
+        roles: ["Admin", "User", "Staff"],
+        icon: <IoMegaphone size={18} />,
+        iconColor: "white",
+        featureKey: "screens",
+    },
+    {
+        title: "Recordings",
+        href: "/dashboard/recordings",
+        roles: ["Admin", "User", "Staff"],
+        icon: <FaMicrophone size={18} />,
+        iconColor: "white",
+        featureKey: "recordings",
+    },
+    {
+        title: "Upsell",
+        href: "/dashboard/upsell",
+        roles: ["Admin", "User", "Staff"],
+        icon: <IoWallet size={18} />,
+        iconColor: "#F6C6AD",
+        textColor: "#F6C6AD",
+        featureKey: "upsell",
+    },
+    {
+        title: "Forms",
+        href: "/dashboard/form",
+        roles: ["Admin", "User", "Staff"],
+        icon: <IoDocumentText size={18} />,
+        iconColor: "#FAFA86",
+        textColor: "#FAFA86",
+        featureKey: "forms",
+    },
+    {
+        title: "WhatsApp",
+        href: "/dashboard/whatsapp",
+        roles: ["Admin", "User", "Staff"],
+        icon: <IoLogoWhatsapp size={18} />,
+        iconColor: "#D9F2D0",
+        textColor: "#D9F2D0",
+        featureKey: "whatsapp",
+    },
+];
+
+const teamItems: TeamItem[] = [
+    { title: "Handover", href: "/dashboard/handover", roles: ["Admin", "User", "Staff"], featureKey: "team" },
+    { title: "Reminder", href: "/dashboard/reminder", roles: ["Admin", "User", "Staff"], featureKey: "team" },
+    { title: "Information", href: "/dashboard/information", roles: ["Admin", "User", "Staff"], featureKey: "team" },
+    { title: "Documents", href: "/dashboard/documentDownload", roles: ["Admin", "User", "Staff"], featureKey: "team" },
+];
+
+const settingsItems: SettingsItem[] = [
+    { title: "General Settings", href: "/dashboard/settings", roles: ["Admin"] },
+    { title: "Upsell Categories", href: "/dashboard/category", roles: ["Admin", "User"], featureKey: "upsell" },
+    { title: "Upsell Packages", href: "/dashboard/package", roles: ["Admin", "User"], featureKey: "upsell" },
+];
 
 const ClientSidebar = ({ user }: ClientSidebarProps) => {
     const [isOpen, setIsOpen] = useState(false);
@@ -62,161 +237,19 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
     const [teamExpanded, setTeamExpanded] = useState(false);
     const [mounted, setMounted] = useState(false);
     const pathname = usePathname();
+    const company = useCompanyStore((state) => state.company);
 
     // Check if user is SAdmin
     const isSAdmin = user?.user?.Roles?.includes("SAdmin");
-
-    // Menu items for SAdmin users
-    const sAdminMenuItems: MenuItem[] = [
-        {
-            title: "Users",
-            href: "/dashboard/register",
-            roles: ["SAdmin"],
-            icon: <TiUserAdd size={18} />,
-            iconColor: "white"
-        },
-        {
-            title: "Companies",
-            href: "/dashboard/companies",
-            roles: ["SAdmin"],
-            icon: <FaBuilding size={18} />,
-            iconColor: "white"
-        },
-        {
-            title: "WhatsApp Meta",
-            href: "/dashboard/whatsappMetaAccounts",
-            roles: ["SAdmin"],
-            icon: <IoLogoWhatsapp size={18} />,
-            iconColor: "white"
-        },
-        {
-            title: "Forms",
-            href: "/dashboard/asignForms",
-            roles: ["SAdmin"],
-            icon: <FaWpforms size={18} />,
-            iconColor: "white"
-        },
-    ];
-
-    // Regular menu items for other users
-    const menuItems: MenuItem[] = [
-        {
-            title: "Image",
-            href: "/dashboard/image",
-            roles: ["Admin", "User", "Staff"],
-            icon: <IoImage size={18} />,
-            iconColor: "white"
-        },
-        {
-            title: "Slideshow",
-            href: "/dashboard/slideshow",
-            roles: ["Admin", "User", "Staff"],
-            icon: <IoImages size={18} />,
-            iconColor: "white"
-        },
-        {
-            title: "Video",
-            href: "/dashboard/video",
-            roles: ["Admin", "User", "Staff"],
-            icon: <IoPlay size={18} />,
-            iconColor: "white"
-        },
-        {
-            title: "Scroll",
-            href: "/dashboard/scroll",
-            roles: ["Admin", "User", "Staff"],
-            icon: <IoCaretDownCircle size={18} />,
-            iconColor: "white"
-        },
-        {
-            title: "Website",
-            href: "/dashboard/website",
-            roles: ["Admin", "User", "Staff"],
-            icon: <IoGlobe size={18} />,
-            iconColor: "white"
-        },
-        {
-            title: "Document",
-            href: "/dashboard/documents",
-            roles: ["Admin", "User", "Staff"],
-            icon: <IoDocuments size={18} />,
-            iconColor: "white"
-        },
-        {
-            title: "Map",
-            href: "/dashboard/maps",
-            roles: ["Admin", "User", "Staff"],
-            icon: <IoMap size={18} />,
-            iconColor: "white"
-        },
-        {
-            title: "Text",
-            href: "/dashboard/text",
-            roles: ["Admin", "User", "Staff"],
-            icon: <IoChatbubbleEllipses size={18} />,
-            iconColor: "white"
-        },
-        {
-            title: "Survey",
-            href: "/dashboard/survey",
-            roles: ["Admin", "User", "Staff"],
-            icon: <IoSpeedometer size={18} />,
-            iconColor: "white"
-        },
-        {
-            title: "Screens",
-            href: "/dashboard/public",
-            roles: ["Admin", "User", "Staff"],
-            icon: <IoMegaphone size={18} />,
-            iconColor: "white"
-        },
-        {
-            title: "Recordings",
-            href: "/dashboard/recordings",
-            roles: ["Admin", "User", "Staff"],
-            icon: <FaMicrophone size={18} />,
-            iconColor: "white"
-        },
-        {
-            title: "Upsell",
-            href: "/dashboard/upsell",
-            roles: ["Admin", "User", "Staff"],
-            icon: <IoWallet size={18} />,
-            iconColor: "#F6C6AD",
-            textColor: "#F6C6AD"
-        },
-        {
-            title: "Forms",
-            href: "/dashboard/form",
-            roles: ["Admin", "User", "Staff"],
-            icon: <IoDocumentText size={18} />,
-            iconColor: "#FAFA86",
-            textColor: "#FAFA86"
-        },
-        {
-            title: "WhatsApp",
-            href: "/dashboard/whatsapp",
-            roles: ["Admin", "User", "Staff"],
-            icon: <IoLogoWhatsapp size={18} />,
-            iconColor: "#D9F2D0",
-            textColor: "#D9F2D0"
-        },
-    ];
-
-    // Team submenu
-    const teamItems: TeamItem[] = [
-        { title: "Handover", href: "/dashboard/handover", roles: ["Admin", "User", "Staff"] },
-        { title: "Reminder", href: "/dashboard/reminder", roles: ["Admin", "User", "Staff"] },
-        { title: "Information", href: "/dashboard/information", roles: ["Admin", "User", "Staff"] },
-        { title: "Documents", href: "/dashboard/documentDownload", roles: ["Admin", "User", "Staff"] },
-    ];
-
-    // Settings submenu
-    const settingsItems: SettingsItem[] = [
-        { title: "General Settings", href: "/dashboard/settings", roles: ["Admin"] },
-        { title: "Upsell Categories", href: "/dashboard/category", roles: ["Admin", "User"] },
-        { title: "Upsell Packages", href: "/dashboard/package", roles: ["Admin", "User"] },
-    ];
+    const featureFlags = {
+        display: company?.displayEnabled ?? true,
+        screens: company?.screensEnabled ?? true,
+        recordings: company?.recordingsEnabled ?? true,
+        upsell: company?.upsellEnabled ?? true,
+        forms: company?.formsEnabled ?? true,
+        whatsapp: company?.whatsappEnabled ?? true,
+        team: company?.teamEnabled ?? true,
+    };
 
     // Select which menu to display based on user role
     const displayMenuItems = isSAdmin ? sAdminMenuItems : menuItems;
@@ -280,27 +313,36 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
         return roles.some(role => user?.user.Roles?.includes(role));
     };
 
+    const isFeatureEnabled = (featureKey?: FeatureKey) => {
+        if (!featureKey) return true;
+        return featureFlags[featureKey];
+    };
+
     const renderMenuItem = (item: MenuItem) => {
         if (item.roles && !hasAccess(item.roles)) return null;
         if (item.condition !== undefined && !item.condition) return null;
 
         const isActive = item.href === pathname;
-        const textColor = item.textColor || (isActive ? 'white' : 'white');
+        const isDisabled = !isFeatureEnabled(item.featureKey);
 
         return (
-            <li key={item.title} className="w-full" onClick={closeSidebar}>
+            <li key={item.title} className="w-full" onClick={isDisabled ? undefined : closeSidebar}>
                 <div
                     className={`
-                        flex items-center gap-3 px-6 py-3 transition-colors duration-200 cursor-pointer
-                        ${isActive
+                        flex items-center gap-3 px-6 py-3 transition-colors duration-200
+                        ${isDisabled
+                            ? 'cursor-not-allowed opacity-45 bg-white/0'
+                            : 'cursor-pointer'
+                        }
+                        ${!isDisabled && isActive
                             ? 'bg-white/10 border-l-4 border-white'
-                            : 'hover:bg-white/5 border-l-4 border-transparent'
+                            : !isDisabled ? 'hover:bg-white/5 border-l-4 border-transparent' : 'border-l-4 border-transparent'
                         }
                     `}
-                    style={{ color: item.textColor || '#fff' }}
+                    style={{ color: isDisabled ? 'rgba(255,255,255,0.45)' : (item.textColor || '#fff') }}
                 >
                     {item.icon && (
-                        <span style={{ color: item.iconColor || 'white' }}>
+                        <span style={{ color: isDisabled ? 'rgba(255,255,255,0.45)' : (item.iconColor || 'white') }}>
                             {item.icon}
                         </span>
                     )}
@@ -308,7 +350,8 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
                         href={item.href}
                         title={item.title}
                         className="flex-1 text-sm font-normal"
-                        style={{ color: item.textColor }}
+                        style={{ color: isDisabled ? 'rgba(255,255,255,0.45)' : item.textColor }}
+                        disabled={isDisabled}
                     />
                 </div>
             </li>
@@ -319,19 +362,20 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
         if (item.roles && !hasAccess(item.roles)) return null;
 
         const isActive = item.href === pathname;
-
-        const handleClick = (e: React.MouseEvent) => {
-            closeSidebar();
-        };
+        const isDisabled = !isFeatureEnabled(item.featureKey);
 
         return (
-            <li key={item.title} className="w-full" onClick={handleClick}>
+            <li key={item.title} className="w-full" onClick={isDisabled ? undefined : closeSidebar}>
                 <div
                     className={`
-                    flex items-center pl-10 pr-0 py-2.5 pr-2 transition-colors duration-200 cursor-pointer
-                    ${isActive
+                    flex items-center pl-10 pr-0 py-2.5 pr-2 transition-colors duration-200
+                    ${isDisabled
+                            ? 'opacity-45 cursor-not-allowed'
+                            : ''
+                        }
+                    ${!isDisabled && isActive
                             ? 'bg-white/10 text-white border-l-4 border-white'
-                            : 'text-white/80 hover:bg-white/5 hover:text-white border-l-4 border-transparent'
+                            : !isDisabled ? 'text-white/80 hover:bg-white/5 hover:text-white border-l-4 border-transparent' : 'text-white/80 border-l-4 border-transparent'
                         }
                 `}
                 >
@@ -339,6 +383,7 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
                         href={item.href}
                         title={item.title}
                         className="flex-1 text-sm font-normal"
+                        disabled={isDisabled}
                     />
                 </div>
             </li>
@@ -349,15 +394,20 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
         if (item.roles && !hasAccess(item.roles)) return null;
 
         const isActive = item.href === pathname;
+        const isDisabled = !isFeatureEnabled(item.featureKey);
 
         return (
-            <li key={item.title} className="w-full" onClick={closeSidebar}>
+            <li key={item.title} className="w-full" onClick={isDisabled ? undefined : closeSidebar}>
                 <div
                     className={`
-                        flex items-center pl-10 py-2.5 pr-2 transition-colors duration-200 cursor-pointer
-                        ${isActive
+                        flex items-center pl-10 py-2.5 pr-2 transition-colors duration-200
+                        ${isDisabled
+                            ? 'opacity-45 cursor-not-allowed'
+                            : ''
+                        }
+                        ${!isDisabled && isActive
                             ? 'bg-white/10 text-white border-l-4 border-white'
-                            : 'text-white/80 hover:bg-white/5 hover:text-white border-l-4 border-transparent'
+                            : !isDisabled ? 'text-white/80 hover:bg-white/5 hover:text-white border-l-4 border-transparent' : 'text-white/80 border-l-4 border-transparent'
                         }
                     `}
                 >
@@ -365,6 +415,7 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
                         href={item.href}
                         title={item.title}
                         className="flex-1 text-sm font-normal"
+                        disabled={isDisabled}
                     />
                 </div>
             </li>

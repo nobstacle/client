@@ -191,9 +191,11 @@ export const TemplateShortcutPicker: React.FC<{ checkIframe?: boolean; isMobile?
     if (!template) return;
 
     let contentExtra = undefined;
-    if (type === "Image" || type === "Video" || type === "Website" || type === "Document" || type === "Scroll") {
-  contentExtra = (template as any)?.ext;
-  } else if (type === "Map") {
+    if (type === "Image" || type === "Video" || type === "Website" || type === "Document") {
+      contentExtra = (template as any)?.ext;
+    } else if (type === "Scroll") {
+      contentExtra = JSON.stringify((template as any)?.items ?? []);
+    } else if (type === "Map") {
       contentExtra = JSON.stringify({
         origin: (template as GetMapTemplateRes)?.origin || '',
         destination: (template as GetMapTemplateRes)?.destination || ''

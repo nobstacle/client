@@ -9,12 +9,14 @@ const VIDEO_EXTENSIONS = ["mp4", "webm", "mov", "avi", "m4v"];
 interface SlideshowMediaMetadata {
   mediaType?: "image" | "video";
   expiresAt?: string;
+  durationSeconds?: number;
 }
 
 interface ResolvedSlideshowMediaItem {
   url: string;
   mediaType: "image" | "video";
   expiresAt?: string;
+  durationSeconds?: number;
 }
 
 const isVideoSource = (src: string): boolean => {
@@ -101,6 +103,7 @@ export const Slideshow: React.FC<{
   metadata?: SlideshowMediaMetadata[];
 }> = ({ contents, metadata = [] }) => {
   const sliderRef = useRef<Slider | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
 
   const mediaItems = useMemo<ResolvedSlideshowMediaItem[]>(() => {
@@ -114,6 +117,7 @@ export const Slideshow: React.FC<{
         url,
         mediaType,
         expiresAt: mediaType === "image" ? itemMetadata?.expiresAt : undefined,
+        durationSeconds: itemMetadata?.durationSeconds,
       };
     });
   }, [contents, metadata]);
@@ -131,20 +135,47 @@ export const Slideshow: React.FC<{
     10000,
   );
   const activeMediaIsVideo = activeMediaItems[activeIndex]?.mediaType === "video";
+  const activeMediaDurationMs = useMemo(() => {
+    const current = activeMediaItems[activeIndex];
+    if (!current) return null;
 
-  useEffect(() => {
-    if (!ready || activeMediaItems.length === 0) return;
-
-    if (activeMediaIsVideo) {
-      sliderRef.current?.slickPause();
-      return;
+    const parsed = Number(current.durationSeconds);
+    if (Number.isFinite(parsed) && parsed > 0) {
+      return Math.floor(parsed * 1000);
     }
 
-    sliderRef.current?.slickPlay();
-  }, [ready, activeMediaIsVideo, activeMediaItems.length]);
+    return current.mediaType === "image" ? 6000 : null;
+  }, [activeMediaItems, activeIndex]);
+
+  useEffect(() => {
+    if (!ready || activeMediaItems.length === 0 || activeMediaDurationMs === null) return;
+
+    const timer = window.setTimeout(() => {
+      const video = videoRef.current;
+      if (video) {
+        video.pause();
+      }
+      sliderRef.current?.slickNext();
+    }, activeMediaDurationMs);
+
+    return () => window.clearTimeout(timer);
+  }, [ready, activeMediaItems.length, activeMediaDurationMs, activeIndex]);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !activeMediaIsVideo) return;
+
+    video.currentTime = 0;
+    video.play().catch((err) => console.error("Video play failed:", err));
+
+    return () => {
+      video.pause();
+    };
+  }, [activeMediaIsVideo, activeIndex, activeMediaItems[activeIndex]?.url]);
 
   useEffect(() => {
     setActiveIndex(0);
+    sliderRef.current?.slickGoTo(0, true);
   }, [activeMediaItems]);
 
   const settings: Settings = useMemo(
@@ -152,9 +183,8 @@ export const Slideshow: React.FC<{
       dots: false,
       infinite: true,
       speed: 500,
-      autoplaySpeed: 6000,
       arrows: false,
-      autoplay: true,
+      autoplay: false,
       lazyLoad: undefined,
       afterChange: (index: number) => setActiveIndex(index),
     }),
@@ -162,7 +192,8 @@ export const Slideshow: React.FC<{
   );
 
   const handleVideoEnded = () => {
-    sliderRef.current?.slickPlay();
+    if (activeMediaItems[activeIndex]?.mediaType !== "video") return;
+    if (activeMediaItems[activeIndex]?.durationSeconds) return;
     sliderRef.current?.slickNext();
   };
 
@@ -281,16 +312,17 @@ export const Slideshow: React.FC<{
 
   // ── Slideshow (only mounts after all images are ready) ──────────────────────
   return (
-    <Slider ref={sliderRef} {...settings}>
-      {activeMediaItems.map((item, index) => (
-        <div
-          id="content-container"
-          className="!flex h-screen items-center justify-center self-center"
-          key={`${item.url}-${index}`}
-        >
-          <div>
+    <div className="h-screen w-screen overflow-hidden bg-black">
+      <Slider ref={sliderRef} {...settings}>
+        {activeMediaItems.map((item, index) => (
+          <div
+            id="content-container"
+            className="!flex h-screen w-screen items-stretch justify-stretch overflow-hidden"
+            key={`${item.url}-${index}`}
+          >
             {item.mediaType === "video" ? (
               <video
+                ref={activeIndex === index ? videoRef : null}
                 key={`${item.url}-${index}-${activeIndex}`}
                 src={item.url}
                 muted
@@ -299,20 +331,29 @@ export const Slideshow: React.FC<{
                 preload="auto"
                 onEnded={handleVideoEnded}
                 onError={handleVideoEnded}
-                style={{ maxHeight: "100vh" }}
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "cover",
+                  display: "block",
+                }}
               />
             ) : (
               <img
-                height="100%"
                 alt="template_image"
                 src={item.url ?? ""}
-                style={{ maxHeight: "100vh" }}
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "cover",
+                  display: "block",
+                }}
               />
             )}
           </div>
-        </div>
-      ))}
-    </Slider>
+        ))}
+      </Slider>
+    </div>
   );
 };
 

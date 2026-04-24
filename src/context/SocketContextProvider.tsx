@@ -2,6 +2,7 @@
 import { useSession } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 import { createContext, useContext, useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Socket } from "socket.io-client";
 import socket from "../lib/socket/init";
 import {
@@ -22,6 +23,8 @@ import { useMessageStore } from "../lib/zustand/store/messageStore";
 import useTemplateStore from "../lib/zustand/store/templateStore";
 import { SendPackagePayloadType, ReceivedPackageContent, ReceivedUpsellPackageContent } from "../constant/types";
 import { notification } from 'antd';
+import useCompanyStore from "../lib/zustand/store/companyStore";
+import { getCompanyControllerGetCompanyQueryKey } from "../lib/client/api";
 
 // Add document-related types
 export interface SendDocumentPayloadType {
@@ -113,6 +116,8 @@ export const SocketContextProvider = ({
   } = useMessageStore();
 
   const { addSurveyAnswer } = useTemplateStore();
+  const { setCompany } = useCompanyStore();
+  const queryClient = useQueryClient();
 
   const session = useSession();
   const params = useSearchParams();
@@ -365,6 +370,22 @@ useEffect(() => {
     }
   }
 
+  const onCompanyFeatureFlagsUpdated = (payload: any) => {
+    try {
+      const parsedPayload = typeof payload === 'string' ? JSON.parse(payload) : payload;
+      const company = parsedPayload?.company ?? parsedPayload;
+
+      if (!company) {
+        return;
+      }
+
+      setCompany(company);
+      queryClient.setQueryData(getCompanyControllerGetCompanyQueryKey(), company);
+    } catch (error) {
+      console.error("❌ Error parsing company update response:", error);
+    }
+  };
+
 const onDataSubmitted = (data: any) => {
     try {
         // Handle both string and object
@@ -426,6 +447,7 @@ const onDataSubmitted = (data: any) => {
     socketClient.on("document-sent-successfully", onReceivedDocument);
     socketClient.on("team-document-sent-successfully", onReceivedTeamDocument);
     socketClient.on("information-updated", onInformationUpdated);
+    socketClient.on("company-feature-flags-updated", onCompanyFeatureFlagsUpdated);
     socketClient.on("received-packages", onReceivedPackages);
     socketClient.on("received-upsell-transaction", onRecievedUpsellPackage);
     socketClient.on("recordingSaved", onSubmittedRecordings);
@@ -445,6 +467,7 @@ const onDataSubmitted = (data: any) => {
       socketClient.off("document-sent-successfully", onReceivedDocument);
       socketClient.off("team-document-sent-successfully", onReceivedTeamDocument);
       socketClient.off("information-updated", onInformationUpdated);
+      socketClient.off("company-feature-flags-updated", onCompanyFeatureFlagsUpdated);
       socketClient.off("received-packages", onReceivedPackages);
       socketClient.off("received-upsell-transaction", onRecievedUpsellPackage);
       socketClient.off("received-recording", onReceivedRecording);

@@ -27,7 +27,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Upload, Typography, Input } from "antd";
+import { Upload, Typography, Input, InputNumber } from "antd";
 import { UploadOutlined } from "@ant-design/icons";
 import { FaGripVertical, FaPlay } from "react-icons/fa";
 import type { RcFile } from "antd/es/upload/interface";
@@ -52,15 +52,18 @@ interface SlideshowItemMetadata {
   order?: number;
   mediaType?: "image" | "video";
   expiresAt?: string;
+  durationSeconds?: number;
 }
 
 interface SequenceEntry {
   uid: string;
-  file: RcFile;
+  file?: RcFile;
+  name: string;
   previewUrl: string;
   mediaType: "image" | "video";
   order: number;
   expiresAt?: string;
+  durationSeconds?: number;
 }
 
 const toLocalDateTimeInputValue = (iso?: string) => {
@@ -88,6 +91,27 @@ const parseSlideshowMetadata = (
   } catch {
     return [];
   }
+};
+
+const getFilenameFromUrl = (value: string) => {
+  if (!value) return "existing-media";
+
+  try {
+    const parsed = new URL(value);
+    const filename = parsed.pathname.split("/").filter(Boolean).pop();
+    return filename || "existing-media";
+  } catch {
+    const filename = value.split("?")[0].split("/").filter(Boolean).pop();
+    return filename || "existing-media";
+  }
+};
+
+const isVideoSource = (value: string) => {
+  if (!value) return false;
+  const normalized = value.split("?")[0].toLowerCase();
+  return [".mp4", ".webm", ".mov", ".avi", ".m4v"].some((ext) =>
+    normalized.endsWith(ext),
+  );
 };
 
 const SortableRow: React.FC<{
@@ -148,11 +172,15 @@ const SortableRow: React.FC<{
           )}
         </div>
 
-        <span className="flex-1 text-xs text-gray-700 truncate">{entry.file.name}</span>
+        <span className="flex-1 text-xs text-gray-700 truncate">{entry.name}</span>
 
-        <span className="flex-shrink-0 text-xs text-gray-400">
-          {(entry.file.size / 1024 / 1024).toFixed(1)}MB
-        </span>
+        {entry.file ? (
+          <span className="flex-shrink-0 text-xs text-gray-400">
+            {(entry.file.size / 1024 / 1024).toFixed(1)}MB
+          </span>
+        ) : (
+          <span className="flex-shrink-0 text-xs text-gray-400">Existing</span>
+        )}
 
         <button
           type="button"
@@ -165,8 +193,8 @@ const SortableRow: React.FC<{
         </button>
       </div>
 
-      {entry.mediaType === "image" ? (
-        <div className="grid grid-cols-1 gap-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        {entry.mediaType === "image" && (
           <Input
             size="small"
             type="datetime-local"
@@ -178,11 +206,36 @@ const SortableRow: React.FC<{
             }
             placeholder="Expiration date/time"
           />
-          <div className="text-[11px] text-gray-500">Image expires after selected date/time. Leave empty for no expiry.</div>
+        )}
+
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] text-gray-500 whitespace-nowrap">
+              Duration
+            </span>
+            <InputNumber
+              size="small"
+              min={1}
+              max={1209600}
+              value={entry.durationSeconds}
+              onChange={(value) =>
+                onChange(entry.uid, {
+                  durationSeconds:
+                    typeof value === "number" ? Math.floor(value) : undefined,
+                })
+              }
+              placeholder="Display duration"
+              addonAfter="sec"
+              className="w-full"
+            />
+          </div>
+          <div className="text-[11px] text-gray-500">
+            {entry.mediaType === "image"
+              ? "Controls how long the image is shown."
+              : "Controls how long the video slide stays active."}
+          </div>
         </div>
-      ) : (
-        <div className="text-[11px] text-gray-400">Video never expires.</div>
-      )}
+      </div>
     </div>
   );
 };
@@ -195,6 +248,7 @@ export const UpdateSlideshowTemplateForm: React.FC<{
 }> = ({ cb, sourceId, langCode, tag }) => {
   const [sequence, setSequence] = React.useState<SequenceEntry[]>([]);
   const [sequenceError, setSequenceError] = React.useState<string | null>(null);
+  const [loadError, setLoadError] = React.useState<string | null>(null);
 
   const content = useContentControllerFindOne(
     {
@@ -214,30 +268,39 @@ export const UpdateSlideshowTemplateForm: React.FC<{
     },
   );
 
-  const fetchContent = React.useCallback(async () => {
+  const fetchContent = React.useCallback(() => {
     if (!content.isSuccess) return;
 
-    const metadata = parseSlideshowMetadata(content.data.extraContent);
-    const nextSequence: SequenceEntry[] = [];
+    try {
+      const metadata = parseSlideshowMetadata(content.data?.extraContent);
+      const storedContents = Array.isArray(content.data?.contents)
+        ? content.data.contents
+        : [];
 
-    for (const [index, itemUrl] of Array.from(content.data.contents?.entries() ?? [])) {
-      const linkedFile = (await linkToFile(itemUrl)) as RcFile;
-      const itemMeta = metadata[index] || {};
-      const mediaType =
-        itemMeta.mediaType || (linkedFile.type.startsWith("video/") ? "video" : "image");
+      const nextSequence: SequenceEntry[] = storedContents.map((itemUrl, index) => {
+        const itemMeta = metadata[index] || {};
 
-      nextSequence.push({
-        uid: `${Date.now()}-${index}-${Math.random()}`,
-        file: linkedFile,
-        previewUrl: itemUrl,
-        mediaType,
-        order: index + 1,
-        expiresAt: mediaType === "image" ? itemMeta.expiresAt : undefined,
+        return {
+          uid: `${Date.now()}-${index}-${Math.random()}`,
+          file: undefined,
+          name: getFilenameFromUrl(itemUrl),
+          previewUrl: itemUrl,
+          mediaType: itemMeta.mediaType || (isVideoSource(itemUrl) ? "video" : "image"),
+          order: index + 1,
+          expiresAt: itemMeta.expiresAt,
+          durationSeconds: itemMeta.durationSeconds,
+        };
       });
-    }
 
-    setSequence(nextSequence);
-  }, [content.data.contents, content.data.extraContent, content.isSuccess]);
+      setLoadError(null);
+      setSequence(nextSequence);
+    } catch (error) {
+      console.error("Failed to load slideshow template for editing:", error);
+      setLoadError("Failed to load slideshow template. Please reopen and try again.");
+      setSequenceError(null);
+      setSequence([]);
+    }
+  }, [content.data?.contents, content.data?.extraContent, content.isSuccess]);
 
   React.useEffect(() => {
     fetchContent();
@@ -295,10 +358,12 @@ export const UpdateSlideshowTemplateForm: React.FC<{
       {
         uid: `${Date.now()}-${Math.random()}`,
         file,
+        name: file.name,
         previewUrl,
         mediaType,
         order: prev.length + 1,
         expiresAt: undefined,
+        durationSeconds: 10,
       },
     ]);
 
@@ -335,36 +400,52 @@ export const UpdateSlideshowTemplateForm: React.FC<{
     );
   };
 
-  const handleCreateSlideshowTemplate = () => {
+  const handleCreateSlideshowTemplate = async () => {
     if (sequence.length === 0) {
       setSequenceError("Please upload at least one media item.");
       return;
     }
 
-    const ordered = [...sequence].sort((a, b) => a.order - b.order);
+    try {
+      const ordered = [...sequence].sort((a, b) => a.order - b.order);
+      const files = await Promise.all(
+        ordered.map(async (entry) => {
+          if (entry.file) return entry.file;
 
-    uploadManyFile.mutate(
-      {
-        data: {
-          file: ordered.map((entry) => entry.file),
-          defaultLangCode: company.data?.defaultLangCode ?? "en",
-          langCode,
-          tag,
-          itemsMetadata: JSON.stringify(
-            ordered.map((entry) => ({
-              order: entry.order,
-              mediaType: entry.mediaType,
-              expiresAt: entry.mediaType === "image" ? entry.expiresAt : undefined,
-            })),
-          ),
+          const linked = (await linkToFile(entry.previewUrl)) as RcFile;
+          return new File([linked], linked.name || `${entry.name || "media"}.bin`, {
+            type: linked.type,
+          }) as RcFile;
+        }),
+      );
+
+      uploadManyFile.mutate(
+        {
+          data: {
+            file: files,
+            defaultLangCode: company.data?.defaultLangCode ?? "en",
+            langCode,
+            tag,
+            itemsMetadata: JSON.stringify(
+              ordered.map((entry) => ({
+                order: entry.order,
+                mediaType: entry.mediaType,
+                expiresAt: entry.mediaType === "image" ? entry.expiresAt : undefined,
+                durationSeconds: entry.durationSeconds,
+              })),
+            ),
+          },
         },
-      },
-      {
-        onSuccess: () => {
-          cb?.();
+        {
+          onSuccess: () => {
+            cb?.();
+          },
         },
-      },
-    );
+      );
+    } catch (error) {
+      console.error("Failed to prepare slideshow files for editing:", error);
+      setLoadError("Failed to load one or more slideshow items for editing.");
+    }
   };
 
   return (
@@ -387,7 +468,10 @@ export const UpdateSlideshowTemplateForm: React.FC<{
               accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
               disabled={sequence.length >= MAX_ITEMS || content.isLoading}
             >
-              <Button style={{ color: "#000" }} icon={<UploadOutlined />}>Add Image</Button>
+              <Button type="button" style={{ color: "#000" }}>
+                <UploadOutlined className="mr-1" />
+                Add Image
+              </Button>
             </Upload>
 
             <Upload
@@ -397,13 +481,17 @@ export const UpdateSlideshowTemplateForm: React.FC<{
               accept="video/mp4,video/webm,video/quicktime"
               disabled={sequence.length >= MAX_ITEMS || content.isLoading}
             >
-              <Button style={{ color: "#000" }} icon={<UploadOutlined />}>Add Video</Button>
+              <Button type="button" style={{ color: "#000" }}>
+                <UploadOutlined className="mr-1" />
+                Add Video
+              </Button>
             </Upload>
           </div>
           {sequenceError && <p className="text-xs text-rose-600 mt-1">{sequenceError}</p>}
         </div>
 
         <div className="flex flex-col gap-2">
+          {loadError && <p className="text-xs text-rose-600">{loadError}</p>}
           {content.isLoading && sequence.length === 0 && <Spinner />}
 
           {sequence.length > 0 && (
