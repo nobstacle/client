@@ -12,8 +12,10 @@ export default function Footer({ onPrivacyClick, onTermsClick }: FooterProps) {
         <div className="footer-grid">
           <div className="footer-col">
             <h4>Nobstacle LLC</h4>
-            <p>Lewes, Delaware, USA</p>
-            <p>Dubai, UAE</p>
+            <p>16192 Coastal HWY Lewes, DE 19958 USA</p>
+            <p>
+              <a href="tel:+13025488798">+1 (302) 548-8798</a>
+            </p>
             <p>
               <a href="mailto:info@nobstacle.com">info@nobstacle.com</a>
             </p>
