@@ -597,10 +597,10 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
     );
 
     const { data: scrollsResponse, isLoading: scrollLoading } = useScrollControllerGetScrolls(
-        { limit: 9999 },
+        { limit: 9999, langCode: selectedLang, scope: 'scroll' },
         {
             query: {
-                queryKey: ['scrolls', currentStation],
+                queryKey: ['scrolls', currentStation, selectedLang, 'scroll'],
                 staleTime: 1000 * 60 * 5,
                 gcTime: 1000 * 60 * 10,
                 refetchOnWindowFocus: false,
@@ -772,7 +772,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
 
         if (scrolls) {
             scrolls.forEach(template => {
-                addTemplate(template, 'scroll', { urls: template.url });
+                addTemplate(template, 'scroll', { items: template.items });
             });
         }
 
@@ -2298,14 +2298,14 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                         t.tag === tag &&
                         t.langCode?.includes(selectedLang)
                     );
-                    contentExtra = template?.ext;
+                    contentExtra = JSON.stringify(template?.items ?? []);
 
                     if (!template && companyData?.defaultLangCode) {
                         template = scrolls.find(t =>
                             t.tag === tag &&
                             t.langCode?.includes(companyData.defaultLangCode)
                         );
-                        contentExtra = template?.ext;
+                        contentExtra = JSON.stringify(template?.items ?? []);
                     }
                 }
 

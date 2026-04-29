@@ -69,6 +69,8 @@ interface BearState {
   setScrolls: (scrolls: any[]) => void;
   searchScrolls: any[];
   setSearchScrolls: (scrolls: any[]) => void;
+  publicScrolls: any[];
+  setPublicScrolls: (scrolls: any[]) => void;
 }
 
 const useTemplateStore = create<BearState>()(
@@ -132,6 +134,8 @@ const useTemplateStore = create<BearState>()(
       setScrolls: (scrolls) => set(() => ({ scrolls })),
       searchScrolls: [],
       setSearchScrolls: (searchScrolls) => set(() => ({ searchScrolls })),
+      publicScrolls: [],
+      setPublicScrolls: (publicScrolls) => set(() => ({ publicScrolls })),
     }),
     {
       name: "templates-storage",

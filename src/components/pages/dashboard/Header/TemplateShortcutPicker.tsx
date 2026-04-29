@@ -9,7 +9,6 @@ import useTemplateStore from "../../../../lib/zustand/store/templateStore";
 import * as Io5Icons from "react-icons/io5";
 import { useShortcuts } from "../../../../app/dashboard/ShortcutProvider";
 import {
-  ChatType,
   GetDocumentTemplateRes,
   GetImageTemplateRes,
   GetMapTemplateRes,
@@ -18,6 +17,8 @@ import {
   GetVideoTemplateRes,
   GetWebsiteTemplateRes,
 } from "../../../../lib/client/model";
+import { ChatType } from "../../../../constant/types";
+import { getScrollScopeFromTag } from "../../../../utils/scrollScope";
 
 
 export const TemplateShortcutPicker: React.FC<{ checkIframe?: boolean; isMobile?: boolean }> = ({
@@ -26,7 +27,7 @@ export const TemplateShortcutPicker: React.FC<{ checkIframe?: boolean; isMobile?
 }) => {
   const { emitSendTemplate } = useSocketContext();
   const { company } = useCompanyStore();
-  const { texts, images, videos, slideshows, maps, websites, documents, scrolls } = useTemplateStore();
+  const { texts, images, videos, slideshows, maps, websites, documents, scrolls, publicScrolls } = useTemplateStore();
   const isHydrated = useHasHydrated();
   const [isInIframe, setIsInIframe] = useState(false);
   const params = useSearchParams();
@@ -146,18 +147,22 @@ export const TemplateShortcutPicker: React.FC<{ checkIframe?: boolean; isMobile?
         }
         break;
       case "Scroll":
-        template = scrolls.find(
-          (scroll) =>
-            scroll.tag === tag &&
-            scroll.langCode?.includes(params.get("lang") || company?.defaultLangCode || "en")
-        );
-        if (!template && company?.defaultLangCode) {
-          template = scrolls.find(
+        {
+          const scope = getScrollScopeFromTag(tag);
+          const sourceScrolls = scope === "public" ? publicScrolls : scrolls;
+          template = sourceScrolls.find(
             (scroll) =>
               scroll.tag === tag &&
-              scroll.langCode?.includes(company?.defaultLangCode)
+              scroll.langCode?.includes(params.get("lang") || company?.defaultLangCode || "en")
           );
-          isExistOnDefaultLanguage = true;
+          if (!template && company?.defaultLangCode) {
+            template = sourceScrolls.find(
+              (scroll) =>
+                scroll.tag === tag &&
+                scroll.langCode?.includes(company?.defaultLangCode)
+            );
+            isExistOnDefaultLanguage = true;
+          }
         }
         break;
       case "Map":

@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   getTemplateControllerGetImageTemplatesQueryKey,
   getTemplateControllerGetMapTemplatesQueryKey,
@@ -24,6 +25,8 @@ import {
 import useTemplateStore from "../lib/zustand/store/templateStore";
 
 export const useFetchTemplates = () => {
+  const searchParams = useSearchParams();
+  const currentLang = searchParams.get("lang") || undefined;
   const {
     setTexts,
     setSlideshows,
@@ -34,6 +37,7 @@ export const useFetchTemplates = () => {
     setWebsites,
     setDocuments,
     setScrolls,
+    setPublicScrolls,
   } = useTemplateStore();
   const textTemplates = useTemplateControllerGetTextTemplates(
     {},
@@ -136,12 +140,24 @@ export const useFetchTemplates = () => {
   );
 
   const scrollTemplates = useScrollControllerGetScrolls(
-    { limit: 9999 },
+    { limit: 9999, langCode: currentLang, scope: "scroll" },
     {
       query: {
         staleTime: Infinity,
         retry: 0,
-        queryKey: getScrollControllerGetScrollsQueryKey({ limit: 9999 }),
+        queryKey: getScrollControllerGetScrollsQueryKey({ limit: 9999, langCode: currentLang, scope: "scroll" }),
+        gcTime: Infinity,
+      },
+    },
+  );
+
+  const publicScrollTemplates = useScrollControllerGetScrolls(
+    { limit: 9999, langCode: currentLang, scope: "public" },
+    {
+      query: {
+        staleTime: Infinity,
+        retry: 0,
+        queryKey: getScrollControllerGetScrollsQueryKey({ limit: 9999, langCode: currentLang, scope: "public" }),
         gcTime: Infinity,
       },
     },
@@ -222,6 +238,14 @@ export const useFetchTemplates = () => {
       }
     }
   }, [scrollTemplates.isSuccess]);
+
+  useEffect(() => {
+    if (publicScrollTemplates.isSuccess) {
+      if (publicScrollTemplates.data?.data) {
+        setPublicScrolls(publicScrollTemplates.data.data);
+      }
+    }
+  }, [publicScrollTemplates.isSuccess]);
 
   return {
     isTextTemplatesLoading: textTemplates.isLoading,

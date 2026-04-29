@@ -1744,7 +1744,9 @@ export const Content: React.FC = () => {
   };
 
   const ScrollViewer: React.FC<{ items: any[] }> = ({ items }) => {
+    const scrollContainerRef = useRef<HTMLDivElement | null>(null);
     const [now, setNow] = useState(Date.now());
+    const [showScrollHint, setShowScrollHint] = useState(true);
     const activeItems = React.useMemo(() => {
       return (Array.isArray(items) ? items : []).filter((item) => {
         if (!item?.expiresAt) return true;
@@ -1761,6 +1763,19 @@ export const Content: React.FC = () => {
       return () => window.clearInterval(timer);
     }, []);
 
+    useEffect(() => {
+      const node = scrollContainerRef.current;
+      if (!node) return;
+
+      const handleScroll = () => {
+        setShowScrollHint(node.scrollTop < 24);
+      };
+
+      handleScroll();
+      node.addEventListener("scroll", handleScroll, { passive: true });
+      return () => node.removeEventListener("scroll", handleScroll);
+    }, []);
+
     if (activeItems.length === 0) {
       return (
         <div className="w-full h-screen flex items-center justify-center bg-gray-100">
@@ -1770,10 +1785,18 @@ export const Content: React.FC = () => {
     }
 
     return (
-      <div className="h-screen w-screen overflow-y-auto snap-y snap-mandatory bg-black">
+      <div
+        ref={scrollContainerRef}
+        className="h-screen w-screen overflow-y-auto snap-y snap-mandatory bg-black"
+      >
         {activeItems.map((item, index) => (
           <ScrollSection key={`${item?.url || item?.signedUrl || index}`} item={item} index={index} />
         ))}
+        {showScrollHint && activeItems.length > 1 && (
+          <div className="pointer-events-none fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-full bg-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-white backdrop-blur-md scroll-hint">
+            Scroll down
+          </div>
+        )}
       </div>
     );
   };
@@ -1792,6 +1815,7 @@ export const Content: React.FC = () => {
   if (hasHydrated) {
     return (
       <>
+        <style>{scrollViewerStyles}</style>
         <TrialWatermark trial={company.data ?? data?.user} />
         {(contentToDisplay?.type === "TextTemplateMessage" ||
           contentToDisplay?.type === "Text") && (

@@ -217,7 +217,7 @@ export const CreateScrollTemplateForm: React.FC<{
       : "scroll");
   const isPublicTemplate = resolvedScope === "public";
 
-  const scrollTags = useScrollControllerGetScrolls({ limit: 100 });
+  const scrollTags = useScrollControllerGetScrolls({ limit: 100, scope: resolvedScope });
   // Use the API hook — authentication header is injected automatically
   // by nobstacleBackendApiInstance, same as every other form in this project.
   const createScroll = useScrollControllerCreate();
@@ -228,7 +228,7 @@ export const CreateScrollTemplateForm: React.FC<{
     setValue,
     formState: { errors },
   } = useForm<FormValues>({
-    resolver: yupResolver(schema),
+    resolver: yupResolver(schema) as any,
     defaultValues: {
       tagCreate: "",
       tagSelect: undefined,
@@ -539,8 +539,8 @@ export const CreateScrollTemplateForm: React.FC<{
                 showSearch
                 optionFilterProp="children"
                 filterOption={(input, option) =>
-                  (option?.children as string)
-                    ?.toLowerCase()
+                  String(option?.children ?? "")
+                    .toLowerCase()
                     .includes(input.toLowerCase())
                 }
                 onChange={(selected) => {

@@ -6275,7 +6275,8 @@ export interface ScrollMediaItem {
 export interface GetScrollTemplateRes {
   id: number;
   tag: string;
-  langCode: string;
+  langCode: string[];
+  scope: 'scroll' | 'public';
   order: number;
   items: ScrollMediaItem[];
 }
@@ -6292,7 +6293,7 @@ export interface PatchScrollOrderReq {
 // ─── GET /api/v1/scrolls ─────────────────────────────────────────────────────
 
 export const scrollControllerGetScrolls = (
-  params?: { limit?: number; skip?: number },
+  params?: { limit?: number; skip?: number; langCode?: string; scope?: 'scroll' | 'public' },
   options?: SecondParameter<typeof nobstacleBackendApiInstance>,
   signal?: AbortSignal
 ) => {
@@ -6303,7 +6304,7 @@ export const scrollControllerGetScrolls = (
 };
 
 export const getScrollControllerGetScrollsQueryKey = (
-  params?: { limit?: number; skip?: number }
+  params?: { limit?: number; skip?: number; langCode?: string; scope?: 'scroll' | 'public' }
 ) => {
   return [`/api/v1/scrolls`, ...(params ? [params] : [])] as const;
 };
@@ -6312,7 +6313,7 @@ export const getScrollControllerGetScrollsQueryOptions = <
   TData = Awaited<ReturnType<typeof scrollControllerGetScrolls>>,
   TError = ErrorType<HttpExceptionSchema>
 >(
-  params?: { limit?: number; skip?: number },
+  params?: { limit?: number; skip?: number; langCode?: string; scope?: 'scroll' | 'public' },
   options?: {
     query?: UseQueryOptions<
       Awaited<ReturnType<typeof scrollControllerGetScrolls>>,
@@ -6344,7 +6345,7 @@ export const useScrollControllerGetScrolls = <
   TData = Awaited<ReturnType<typeof scrollControllerGetScrolls>>,
   TError = ErrorType<HttpExceptionSchema>
 >(
-  params?: { limit?: number; skip?: number },
+  params?: { limit?: number; skip?: number; langCode?: string; scope?: 'scroll' | 'public' },
   options?: {
     query?: UseQueryOptions<
       Awaited<ReturnType<typeof scrollControllerGetScrolls>>,

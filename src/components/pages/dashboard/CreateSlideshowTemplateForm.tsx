@@ -177,8 +177,17 @@ const SortableRow: React.FC<{
         </button>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-        {entry.mediaType === "image" && (
+      <div
+        className={
+          entry.mediaType === "image"
+            ? "grid grid-cols-1 sm:grid-cols-2 gap-2"
+            : "grid grid-cols-1 gap-2"
+        }
+      >
+        <div className="flex flex-col gap-1">
+          <span className="text-[11px] text-gray-500 whitespace-nowrap">
+            Expiry
+          </span>
           <Input
             size="small"
             type="datetime-local"
@@ -188,37 +197,41 @@ const SortableRow: React.FC<{
                 expiresAt: fromLocalDateTimeInputValue(event.target.value),
               })
             }
-            placeholder="Expiration date/time"
+            placeholder="Date and time"
           />
-        )}
-
-        <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-2">
-            <span className="text-[11px] text-gray-500 whitespace-nowrap">
-              Duration
-            </span>
-            <InputNumber
-              size="small"
-              min={1}
-              max={1209600}
-              value={entry.durationSeconds}
-              onChange={(value) =>
-                onChange(entry.uid, {
-                  durationSeconds:
-                    typeof value === "number" ? Math.floor(value) : undefined,
-                })
-              }
-              placeholder="Display duration"
-              addonAfter="sec"
-              className="w-full"
-            />
-          </div>
-          <div className="text-[11px] text-gray-500">
-            {entry.mediaType === "image"
-              ? "Controls how long the image is shown."
-              : "Controls how long the video slide stays active."}
-          </div>
         </div>
+
+        {entry.mediaType === "image" ? (
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] text-gray-500 whitespace-nowrap">
+                Duration
+              </span>
+              <InputNumber
+                size="small"
+                min={1}
+                max={1209600}
+                value={entry.durationSeconds}
+                onChange={(value) =>
+                  onChange(entry.uid, {
+                    durationSeconds:
+                      typeof value === "number" ? Math.floor(value) : undefined,
+                  })
+                }
+                placeholder="Display duration"
+                addonAfter="sec"
+                className="w-full"
+              />
+            </div>
+            <div className="text-[11px] text-gray-500">
+              Controls how long the image is shown.
+            </div>
+          </div>
+        ) : (
+          <div className="text-[11px] text-gray-500">
+            Videos play until they end.
+          </div>
+        )}
       </div>
     </div>
   );
@@ -301,7 +314,7 @@ export const CreateSlideshowTemplateForm: React.FC<{
         mediaType,
         order: prev.length + 1,
         expiresAt: undefined,
-        durationSeconds: 10,
+        durationSeconds: mediaType === "image" ? 6 : undefined,
       },
     ]);
 
@@ -357,8 +370,9 @@ export const CreateSlideshowTemplateForm: React.FC<{
             ordered.map((entry) => ({
               order: entry.order,
               mediaType: entry.mediaType,
-              expiresAt: entry.mediaType === "image" ? entry.expiresAt : undefined,
-              durationSeconds: entry.durationSeconds,
+              expiresAt: entry.expiresAt,
+              durationSeconds:
+                entry.mediaType === "image" ? entry.durationSeconds : undefined,
             })),
           ),
         },

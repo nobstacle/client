@@ -31,3 +31,8 @@ export const isScrollTagInScope = (tag: string, scope: ScrollScope): boolean => 
   return value.startsWith(SCROLL_PREFIX) || !value.startsWith(PUBLIC_PREFIX);
 };
 
+export const getScrollScopeFromTag = (tag: string): ScrollScope => {
+  const value = tag || "";
+  if (value.startsWith(PUBLIC_PREFIX)) return "public";
+  return "scroll";
+};

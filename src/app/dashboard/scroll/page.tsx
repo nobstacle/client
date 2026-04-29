@@ -33,6 +33,46 @@ import { CreateScrollTemplateForm } from "../../../components/pages/dashboard/Cr
 import { UpdateScrollTemplateForm } from "../../../components/pages/dashboard/UpdateScrollTemplateForm";
 import { isScrollTagInScope, toDisplayScrollTag } from "../../../utils/scrollScope";
 
+const hasMatchingLangCode = (
+  langCode: string | string[] | undefined,
+  targetLang: string,
+) => {
+  if (!langCode || !targetLang) return false;
+  if (Array.isArray(langCode)) return langCode.includes(targetLang);
+
+  return langCode
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean)
+    .includes(targetLang);
+};
+
+const pickScrollVariant = (
+  tagScrolls: GetScrollTemplateRes[],
+  currentLang: string,
+  defaultLangCode: string,
+) => {
+  const exactMatch = tagScrolls.find((scroll) =>
+    hasMatchingLangCode(scroll.langCode, currentLang),
+  );
+
+  if (exactMatch) {
+    return { ...exactMatch, isAvailableInCurrentLang: true };
+  }
+
+  const defaultMatch =
+    tagScrolls.find((scroll) =>
+      hasMatchingLangCode(scroll.langCode, defaultLangCode),
+    ) || tagScrolls[0];
+
+  return {
+    ...(defaultMatch || tagScrolls[0]),
+    isAvailableInCurrentLang: tagScrolls.some((scroll) =>
+      hasMatchingLangCode(scroll.langCode, currentLang),
+    ),
+  };
+};
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function ScrollDashboard() {
@@ -63,8 +103,17 @@ export default function ScrollDashboard() {
   // ── Data fetching via React Query ────────────────────────────────────────────
   // enabled only after hydration so we never fetch before the session is ready
   const { data: scrollsData, isLoading } = useScrollControllerGetScrolls(
-    { limit: 100 },
-    { query: { enabled: isHydrated } }
+    { limit: 100, langCode: currentLang, scope: "scroll" },
+    {
+      query: {
+        enabled: isHydrated,
+        queryKey: getScrollControllerGetScrollsQueryKey({
+          limit: 100,
+          langCode: currentLang,
+          scope: "scroll",
+        }),
+      },
+    }
   );
 
   const deleteScroll = useScrollControllerDelete();
@@ -80,7 +129,11 @@ export default function ScrollDashboard() {
 
   const invalidateScrolls = () =>
     queryClient.invalidateQueries({
-      queryKey: getScrollControllerGetScrollsQueryKey({ limit: 100 }),
+      queryKey: getScrollControllerGetScrollsQueryKey({
+        limit: 100,
+        langCode: currentLang,
+        scope: "scroll",
+      }),
     });
 
   // ── Search ──────────────────────────────────────────────────────────────────
@@ -109,21 +162,14 @@ export default function ScrollDashboard() {
     const display: (GetScrollTemplateRes & { isAvailableInCurrentLang: boolean })[] = [];
 
     Object.values(grouped).forEach((tagScrolls) => {
-      const defaultLang =
-        tagScrolls.find((s) => {
-          const lc = s.langCode;
-          if (typeof lc !== "string") return false;
-          return lc.includes(companyData?.defaultLangCode || "en");
-        }) || tagScrolls[0];
-
-      const isAvailableInCurrentLang = tagScrolls.some((s) => {
-        const lc = s.langCode;
-        if (typeof lc !== "string") return false;
-        return lc.includes(currentLang);
-      });
-
-      if (!defaultLang) return;
-      display.push({ ...defaultLang, isAvailableInCurrentLang });
+      if (tagScrolls.length === 0) return;
+      display.push(
+        pickScrollVariant(
+          tagScrolls,
+          currentLang,
+          companyData?.defaultLangCode || "en",
+        ),
+      );
     });
 
     return display.sort((a, b) => a.order - b.order);

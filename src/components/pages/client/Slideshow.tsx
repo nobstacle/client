@@ -116,17 +116,15 @@ export const Slideshow: React.FC<{
       return {
         url,
         mediaType,
-        expiresAt: mediaType === "image" ? itemMetadata?.expiresAt : undefined,
-        durationSeconds: itemMetadata?.durationSeconds,
+        expiresAt: itemMetadata?.expiresAt,
+        durationSeconds:
+          mediaType === "image" ? itemMetadata?.durationSeconds : undefined,
       };
     });
   }, [contents, metadata]);
 
   const activeMediaItems = useMemo(
-    () =>
-      mediaItems.filter((item) =>
-        item.mediaType === "video" ? true : isNotExpired(item.expiresAt),
-      ),
+    () => mediaItems.filter((item) => isNotExpired(item.expiresAt)),
     [mediaItems],
   );
 
@@ -139,12 +137,16 @@ export const Slideshow: React.FC<{
     const current = activeMediaItems[activeIndex];
     if (!current) return null;
 
+    if (current.mediaType === "video") {
+      return null;
+    }
+
     const parsed = Number(current.durationSeconds);
     if (Number.isFinite(parsed) && parsed > 0) {
       return Math.floor(parsed * 1000);
     }
 
-    return current.mediaType === "image" ? 6000 : null;
+    return 6000;
   }, [activeMediaItems, activeIndex]);
 
   useEffect(() => {
@@ -193,7 +195,6 @@ export const Slideshow: React.FC<{
 
   const handleVideoEnded = () => {
     if (activeMediaItems[activeIndex]?.mediaType !== "video") return;
-    if (activeMediaItems[activeIndex]?.durationSeconds) return;
     sliderRef.current?.slickNext();
   };
 
@@ -317,7 +318,7 @@ export const Slideshow: React.FC<{
         {activeMediaItems.map((item, index) => (
           <div
             id="content-container"
-            className="!flex h-screen w-screen items-stretch justify-stretch overflow-hidden"
+            className="!flex h-screen w-screen items-center justify-center overflow-hidden bg-black"
             key={`${item.url}-${index}`}
           >
             {item.mediaType === "video" ? (
@@ -334,7 +335,8 @@ export const Slideshow: React.FC<{
                 style={{
                   width: "100%",
                   height: "100%",
-                  objectFit: "cover",
+                  objectFit: "contain",
+                  objectPosition: "center center",
                   display: "block",
                 }}
               />
@@ -345,7 +347,8 @@ export const Slideshow: React.FC<{
                 style={{
                   width: "100%",
                   height: "100%",
-                  objectFit: "cover",
+                  objectFit: "contain",
+                  objectPosition: "center center",
                   display: "block",
                 }}
               />
