@@ -12,14 +12,14 @@ import DashboardFeatureGate from "../../components/pages/dashboard/DashboardFeat
 
 function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div id="parent" className="flex h-screen w-full flex-col bg-white">
+    <div id="parent" className="flex h-dvh w-full min-w-0 flex-col overflow-hidden bg-white">
       <CompanyContextProvider>
         <SocketContextProvider>
           <TemplateContextProvider>
             <ShortcutsProvider> {/* ← Add this wrapper */}
               <ServerHeaderWrapper />
               <TrialDashboardNotice />
-              <div className="flex flex-1 flex-row overflow-hidden">
+              <div className="flex flex-1 min-h-0 min-w-0 flex-row overflow-hidden">
                 <ServerSidebarWrapper />
                 <Body>
                   <DashboardFeatureGate>{children}</DashboardFeatureGate>
@@ -47,7 +47,7 @@ const Body: React.FC<PropsWithChildren> = ({ children }) => {
   return (
     <div
       id="child3"
-      className="h-full w-full flex-col items-stretch justify-stretch overflow-x-hidden bg-white"
+      className="flex h-full min-h-0 w-full min-w-0 flex-col items-stretch justify-stretch overflow-hidden bg-white"
     >
       {children}
     </div>

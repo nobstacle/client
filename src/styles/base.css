@@ -675,7 +675,7 @@ button {
 }
 
 .searchInputWidth {
-  width: 20%;
+  width: min(100%, 360px);
 }
 
 .customCards {
@@ -1333,4 +1333,132 @@ body.nobstacle-active {
 
 .modal-select-dropdown {
   z-index: 1600 !important;
+}
+
+@media (min-width: 1024px) and (max-width: 1350px) {
+  .searchInputWidth {
+    width: min(100%, 300px);
+  }
+
+  .customCards .ant-card-body,
+  .ant-card .ant-card-body,
+  .customPackageCard .ant-card-body,
+  .customUpsellCard .ant-card-body,
+  .customSUrveyHeaderCard .ant-card-body,
+  .customCardBottom .ant-card-body {
+    padding: 10px !important;
+  }
+
+  .customInputPadding {
+    padding: 0.4rem 0.8rem !important;
+  }
+
+  .customInputHorizontal {
+    height: 32px;
+    padding: 0 0.9rem !important;
+  }
+
+  .textSendButton {
+    min-width: 3rem !important;
+    height: 2.2rem;
+  }
+
+  .headerButton,
+  .customHeaderButton,
+  .customHeaderButtonMobile,
+  .exportButton {
+    padding: 0.25rem 0.85rem;
+  }
+
+  .customWidth {
+    width: 6vw;
+  }
+
+  .customFont {
+    font-size: 0.72rem !important;
+  }
+
+  .customSidebar li {
+    font-size: 0.78rem;
+  }
+
+  .ant-table .ant-table-thead tr .ant-table-cell {
+    padding: 8px 12px;
+  }
+
+  .ant-table .ant-table-body td {
+    padding: 2px 12px !important;
+  }
+
+  .ant-modal .ant-modal-content,
+  .customReportModal .ant-modal-content,
+  .view-package-modal .ant-modal-content {
+    padding: 12px !important;
+  }
+
+  .ReminderModal {
+    max-width: 50vw;
+  }
+
+  .ant-select-dropdown {
+    min-width: 9vw !important;
+  }
+
+  .handOverModal .bottomActionSection,
+  .handoverModal .bottomActionSection {
+    padding: 0.75rem;
+  }
+
+  .density-card {
+    width: clamp(166px, 16vw, 220px) !important;
+    height: 156px !important;
+  }
+
+  .density-card-body {
+    min-height: 106px !important;
+    padding: 0.75rem 0.85rem 0 !important;
+  }
+
+  .density-card-footer {
+    height: 2.2rem !important;
+    font-size: 0.82rem !important;
+  }
+
+  .density-draggable-card {
+    width: clamp(140px, 15vw, 198px) !important;
+    min-height: 140px !important;
+  }
+
+  .density-draggable-card-body {
+    padding: 0.45rem !important;
+  }
+
+  .density-draggable-card-action {
+    height: 1.6rem !important;
+    width: 1.6rem !important;
+  }
+
+  .density-draggable-card-footer {
+    height: 2.1rem !important;
+    font-size: 0.8rem !important;
+  }
+
+  .density-chatbox {
+    height: 440px !important;
+  }
+
+  .density-chatbox-messages {
+    padding: 0.75rem !important;
+  }
+
+  .density-chatbox-actions {
+    padding: 0.75rem !important;
+    gap: 0.5rem !important;
+  }
+
+  .density-chatbox-input {
+    height: 36px !important;
+    padding: 0.45rem 0.75rem !important;
+    font-size: 0.9rem !important;
+  }
 }

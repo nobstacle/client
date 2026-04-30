@@ -233,6 +233,7 @@ const settingsItems: SettingsItem[] = [
 const ClientSidebar = ({ user }: ClientSidebarProps) => {
     const [isOpen, setIsOpen] = useState(false);
     const [isMobile, setIsMobile] = useState(false);
+    const [windowWidth, setWindowWidth] = useState(0);
     const [settingsExpanded, setSettingsExpanded] = useState(false);
     const [teamExpanded, setTeamExpanded] = useState(false);
     const [mounted, setMounted] = useState(false);
@@ -258,6 +259,7 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
         setMounted(true);
 
         const checkScreenSize = () => {
+            setWindowWidth(window.innerWidth);
             const isMobileView = window.innerWidth < 768;
             setIsMobile(isMobileView);
             if (window.innerWidth >= 768) {
@@ -282,6 +284,8 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
 
         return () => window.removeEventListener('resize', checkScreenSize);
     }, [pathname]);
+
+    const isCompactDesktop = windowWidth >= 1024 && windowWidth < 1350;
 
     const toggleSidebar = () => {
         setIsOpen(!isOpen);
@@ -330,6 +334,7 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
                 <div
                     className={`
                         flex items-center gap-3 px-6 py-3 transition-colors duration-200
+                        ${isCompactDesktop ? 'px-4 py-2.5 gap-2.5' : ''}
                         ${isDisabled
                             ? 'cursor-not-allowed opacity-45 bg-white/0'
                             : 'cursor-pointer'
@@ -349,7 +354,7 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
                     <ClientLink
                         href={item.href}
                         title={item.title}
-                        className="flex-1 text-sm font-normal"
+                        className={`flex-1 font-normal ${isCompactDesktop ? 'text-xs' : 'text-sm'}`}
                         style={{ color: isDisabled ? 'rgba(255,255,255,0.45)' : item.textColor }}
                         disabled={isDisabled}
                     />
@@ -369,6 +374,7 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
                 <div
                     className={`
                     flex items-center pl-10 pr-0 py-2.5 pr-2 transition-colors duration-200
+                    ${isCompactDesktop ? 'pl-8 py-2' : ''}
                     ${isDisabled
                             ? 'opacity-45 cursor-not-allowed'
                             : ''
@@ -382,7 +388,7 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
                     <ClientLink
                         href={item.href}
                         title={item.title}
-                        className="flex-1 text-sm font-normal"
+                        className={`flex-1 font-normal ${isCompactDesktop ? 'text-xs' : 'text-sm'}`}
                         disabled={isDisabled}
                     />
                 </div>
@@ -401,6 +407,7 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
                 <div
                     className={`
                         flex items-center pl-10 py-2.5 pr-2 transition-colors duration-200
+                        ${isCompactDesktop ? 'pl-8 py-2' : ''}
                         ${isDisabled
                             ? 'opacity-45 cursor-not-allowed'
                             : ''
@@ -414,7 +421,7 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
                     <ClientLink
                         href={item.href}
                         title={item.title}
-                        className="flex-1 text-sm font-normal"
+                        className={`flex-1 font-normal ${isCompactDesktop ? 'text-xs' : 'text-sm'}`}
                         disabled={isDisabled}
                     />
                 </div>
@@ -471,7 +478,7 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
         flex flex-col bg-primary customSidebar transition-transform duration-300 ease-in-out z-40
         ${isMobile
                         ? `fixed left-0 top-0 h-full w-64 ${isOpen ? 'translate-x-0' : '-translate-x-full'}`
-                        : 'relative w-[20%] sm:w-[18%] md:w-[15%] lg:w-[13%] xl:w-[12%] h-full'
+                        : `relative h-full ${isCompactDesktop ? 'w-[clamp(190px,15vw,230px)]' : 'w-[clamp(210px,17vw,260px)]'}`
                     }
     `}
             >
@@ -491,13 +498,14 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
                                             onClick={toggleTeam}
                                             className={`
                                                 flex items-center justify-between gap-3 px-6 py-3 cursor-pointer
+                                                ${isCompactDesktop ? 'px-4 py-2.5 gap-2.5' : ''}
                                                 transition-colors duration-200
                                                 text-white/90 hover:bg-white/5 hover:text-white border-l-4 border-transparent
                                             `}
                                         >
-                                            <div className="flex items-center gap-3 flex-1">
-                                                <IoPeople size={18} />
-                                                <span className="text-sm font-normal">Team</span>
+                                            <div className={`flex items-center gap-3 flex-1 ${isCompactDesktop ? 'gap-2' : ''}`}>
+                                                <IoPeople size={isCompactDesktop ? 16 : 18} />
+                                                <span className={`${isCompactDesktop ? 'text-xs' : 'text-sm'} font-normal`}>Team</span>
                                             </div>
                                             <svg
                                                 className={`w-4 h-4 transition-transform duration-300 ${teamExpanded ? 'rotate-180' : ''}`}
@@ -533,13 +541,14 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
                                             onClick={toggleSettings}
                                             className={`
                                                 flex items-center justify-between px-6 py-3 cursor-pointer
+                                                ${isCompactDesktop ? 'px-4 py-2.5' : ''}
                                                 transition-colors duration-200
                                                 text-white/90 hover:bg-white/5 hover:text-white border-l-4 border-transparent
                                             `}
                                         >
-                                            <div className="flex items-center gap-3 flex-1">
-                                                <IoSettings size={18} />
-                                                <span className="text-sm font-normal">Settings</span>
+                                            <div className={`flex items-center gap-3 flex-1 ${isCompactDesktop ? 'gap-2' : ''}`}>
+                                                <IoSettings size={isCompactDesktop ? 16 : 18} />
+                                                <span className={`${isCompactDesktop ? 'text-xs' : 'text-sm'} font-normal`}>Settings</span>
                                             </div>
                                             <svg
                                                 className={`w-4 h-4 transition-transform duration-300 ${settingsExpanded ? 'rotate-180' : ''}`}

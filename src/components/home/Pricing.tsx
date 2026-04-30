@@ -4,18 +4,6 @@
 export default function Pricing() {
   const plans = [
     {
-      name: 'Free',
-      description: 'For individuals and small teams getting started.',
-      price: 'Free',
-      features: [
-        'Watermark on customer screen',
-        '90 days trial account',
-        '100mb asset space',
-        '1 trial digital form',
-        'Up to 4 stations'
-      ]
-    },
-    {
       name: 'Professional',
       description: 'Small / Midscale companies',
       price: '$19',
@@ -76,10 +64,10 @@ export default function Pricing() {
                       {feature}
                     </li>
                   ))}
-                </ul>
-              </div>
-              <a href="#contact" className="cta-button">
-                {plan.name === 'Free' ? 'Start for Free' : plan.name === 'Professional' ? 'Choose Pro' : 'Contact Sales'}
+              </ul>
+            </div>
+            <a href="#contact" className="cta-button">
+                {plan.name === 'Professional' ? 'Choose Pro' : 'Contact Sales'}
               </a>
             </article>
           ))}

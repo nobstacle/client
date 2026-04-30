@@ -60,7 +60,19 @@ export async function middleware(req: NextRequest) {
   }
 
   // ── Public paths ───────────────────────────────────────────────────────────
-  const publicPaths = ["/", "/home", "/welcome", "/privacy", "/login", "/register"];
+  const publicPaths = [
+    "/",
+    "/home",
+    "/welcome",
+    "/privacy",
+    "/login",
+    "/register",
+    "/display",
+    "/registeration",
+    "/Upselling",
+    "/Screens",
+    "/Whatsapp",
+  ];
   const isPublicPath = publicPaths.includes(pathname);
 
   // ── /api/auth/register — SAdmin only ──────────────────────────────────────

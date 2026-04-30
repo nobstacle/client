@@ -27,6 +27,7 @@ export const Card: React.FC<React.PropsWithChildren<CardPropsI>> = ({
   children,
   isAdmin,
   icon,
+  className,
 }) => {
   const [isHover, setIsHover] = React.useState(false);
 
@@ -41,9 +42,9 @@ export const Card: React.FC<React.PropsWithChildren<CardPropsI>> = ({
         }
       }}
       id="card-container"
-      className="relative flex h-[166px] w-full max-w-[166px] cursor-pointer flex-col rounded-md bg-neutral-300 shadow-2xl"
+      className={`density-card relative flex h-[170px] w-[clamp(180px,18vw,240px)] max-w-full cursor-pointer flex-col rounded-md bg-neutral-300 shadow-2xl ${className || ''}`}
     >
-      <div className="min-h-[118px] px-3 pt-3">{children}</div>
+      <div className="density-card-body min-h-[118px] px-3 pt-3">{children}</div>
 
       {!isRecevied && isAvailable && isHover && isAdmin && (
         <div className="absolute left-0 top-0 z-10 flex ">
@@ -78,7 +79,7 @@ export const Card: React.FC<React.PropsWithChildren<CardPropsI>> = ({
       )}
       <div className="p-2"></div>
       <div className="h-full">
-        <Button className="relative h-full w-full rounded-b-md bg-primary  text-sm text-white">
+        <Button className="density-card-footer relative h-full w-full rounded-b-md bg-primary  text-sm text-white">
           {tag}
           {icon}
           {!icon && isAvailable && (

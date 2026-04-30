@@ -131,15 +131,15 @@ export const DraggableCardItem: React.FC<
           }
         }}
         id="card-container"
-        className="relative flex cursor-pointer flex-col rounded-lg bg-neutral-300 shadow-md hover:shadow-lg transition-all duration-200
+        className="density-draggable-card relative flex cursor-pointer flex-col rounded-lg bg-neutral-300 shadow-md hover:shadow-lg transition-all duration-200
                    flex-shrink-0 flex-grow-0
                    w-[calc(50%-0.375rem)] aspect-[4/5]
-                   min-h-[150px] 
-                   sm:w-[120px] sm:h-[150px] sm:shadow-lg hover:sm:shadow-xl
-                   md:w-[120px] md:h-[150px] md:shadow-xl hover:md:shadow-2xl
-                   lg:w-[120px] lg:h-[170px]
-                   xl:w-[130px] xl:h-[180px]
-                   2xl:w-[160px] 2xl:h-[180px]"
+                   min-h-[150px]
+                   sm:w-[clamp(150px,18vw,190px)] sm:h-[190px] sm:shadow-lg hover:sm:shadow-xl
+                   md:w-[clamp(160px,16vw,200px)] md:h-[200px] md:shadow-xl hover:md:shadow-2xl
+                   lg:w-[clamp(170px,14vw,220px)] lg:h-[220px]
+                   xl:w-[clamp(180px,13vw,240px)] xl:h-[230px]
+                   2xl:w-[clamp(190px,12vw,250px)] 2xl:h-[240px]"
         style={{
           ...style,
           zIndex: isDragging ? 9999 : 1,
@@ -148,7 +148,7 @@ export const DraggableCardItem: React.FC<
         }}
       >
         {/* Content Area - Flexible height */}
-        <div className="flex-1 p-2 sm:p-3 md:p-3 lg:p-4 overflow-hidden">
+        <div className="density-draggable-card-body flex-1 p-2 sm:p-3 md:p-3 lg:p-4 overflow-hidden">
           <div className="h-full text-xs sm:text-sm md:text-sm lg:text-base leading-tight" style={{ whiteSpace: 'pre-wrap' }}>
             {children}
           </div>
@@ -157,7 +157,7 @@ export const DraggableCardItem: React.FC<
         {type !== "slideshow" && type !== 'text' && type !== 'teamDocs' && !type?.includes('Scroll') && (
           <div className="absolute right-1 top-1 z-10">
             <button
-              className="flex items-center justify-center
+              className="density-draggable-card-action flex items-center justify-center
                        h-6 w-6 sm:h-7 sm:w-7 md:h-7 md:w-7 lg:h-8 lg:w-8
                        rounded-md text-gray-700 bg-white/90 hover:bg-blue-500 hover:text-white
                        shadow-sm hover:shadow-md transition-all duration-150"
@@ -178,7 +178,7 @@ export const DraggableCardItem: React.FC<
         {!isRecevied && isHover && isAdmin && !isDragging && (
           <div className="absolute left-1 top-1 z-10">
             <button
-              className="flex items-center justify-center
+            className="density-draggable-card-action flex items-center justify-center
                          h-6 w-6 sm:h-7 sm:w-7 md:h-7 md:w-7 lg:h-8 lg:w-8
                          rounded-md text-gray-700 bg-white/90 hover:bg-white 
                          shadow-sm hover:shadow-md transition-all duration-150"
@@ -198,7 +198,7 @@ export const DraggableCardItem: React.FC<
         {!isRecevied && isHover && isAdmin && !isDragging && (
           <div className="absolute right-1 z-10" style={{ bottom: '3rem' }}>
             <button
-              className="flex items-center justify-center
+            className="density-draggable-card-action flex items-center justify-center
                          h-6 w-6 sm:h-7 sm:w-7 md:h-7 md:w-7 lg:h-8 lg:w-8
                          rounded-md text-red-600 bg-white/90 hover:bg-white 
                          shadow-sm hover:shadow-md transition-all duration-150"
@@ -228,7 +228,7 @@ export const DraggableCardItem: React.FC<
               e.stopPropagation();
             }}
           >
-            <div className="flex items-center justify-center
+            <div className="density-draggable-card-action flex items-center justify-center
                            h-6 w-6 sm:h-7 sm:w-7 md:h-7 md:w-7 lg:h-8 lg:w-8
                            bg-white/90 hover:bg-white rounded-md 
                            shadow-sm hover:shadow-md transition-all duration-150">
@@ -239,7 +239,7 @@ export const DraggableCardItem: React.FC<
 
         {/* Button Footer - Fixed at bottom */}
         <div className="mt-auto">
-          <Button className="relative w-full rounded-b-lg bg-primary text-white customFont
+          <Button className="density-draggable-card-footer relative w-full rounded-b-lg bg-primary text-white customFont
                  h-8 text-xs
                  sm:h-9 sm:text-xs
                  md:h-10 md:text-xs

@@ -72,6 +72,23 @@ export default function SlideshowDashboard() {
 
   // Get current language
   const currentLang = params.get("lang") || companyData?.defaultLangCode || "en";
+  const defaultLangCode = companyData?.defaultLangCode || "en";
+
+  const editTemplateLangCode = useMemo(() => {
+    if (!editTemplate?.langCode?.length) {
+      return currentLang;
+    }
+
+    if (editTemplate.langCode.includes(currentLang)) {
+      return currentLang;
+    }
+
+    if (editTemplate.langCode.includes(defaultLangCode)) {
+      return defaultLangCode;
+    }
+
+    return editTemplate.langCode[0];
+  }, [currentLang, defaultLangCode, editTemplate]);
 
   // Group slideshows by tag and show the default language version
   // but track availability for the current language
@@ -195,7 +212,7 @@ export default function SlideshowDashboard() {
 
   if (isHydrated)
     return (
-      <div className="flex h-full w-full flex-col justify-start gap-4 overflow-y-auto  p-6">
+      <div className="flex h-full w-full flex-col justify-start gap-4 overflow-y-auto p-2 md:p-4 lg:p-6">
         {displayedSlideshowsWithAvailability.length > 0 && (
           <Card className="w-full customCards">
             <div className="searchInputWidth">
@@ -208,21 +225,19 @@ export default function SlideshowDashboard() {
           </Card>
         )}
         {userData?.user.Roles?.includes("Admin") && (
-          <div className="flex w-2/12 flex-col gap-4">
-            <Modal
-              title="Create template"
-              closeModal={handleClose}
-              isOpen={isOpen}
-              panelStyleClass="max-w-2xl"
-            >
-              <CreateSlideshowTemplateForm
-                cb={() => {
-                  handleClose();
-                  refetchSlideshow();
-                }}
-              />
-            </Modal>
-          </div>
+          <Modal
+            title="Create template"
+            closeModal={handleClose}
+            isOpen={isOpen}
+            panelStyleClass="max-w-2xl"
+          >
+            <CreateSlideshowTemplateForm
+              cb={() => {
+                handleClose();
+                refetchSlideshow();
+              }}
+            />
+          </Modal>
         )}
         {editTemplate && (
           <Modal
@@ -232,7 +247,7 @@ export default function SlideshowDashboard() {
           >
             <UpdateSlideshowTemplateForm
               tag={editTemplate.tag}
-              langCode={currentLang}
+              langCode={editTemplateLangCode}
               cb={() => {
                 updateHandleClose();
                 refetchSlideshow();

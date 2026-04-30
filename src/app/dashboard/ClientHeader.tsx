@@ -243,6 +243,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
     }, []);
 
     const isMobileView = windowWidth < 1024;
+    const isCompactDesktop = windowWidth >= 1024 && windowWidth < 1350;
 
     function isIPad() {
         if (typeof window === 'undefined') return false;
@@ -3478,16 +3479,16 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
 
                 {/* Desktop Header */}
                 <nav
-                    className="w-full shadow-sm px-6 hidden lg:block"
+                    className={`w-full shadow-sm hidden lg:block ${isCompactDesktop ? 'px-3 py-2' : 'px-6'}`}
                     style={{
                         backgroundColor: '#3b5998',
-                        height: isInIframe ? '3.5rem' : '4.09rem',
+                        height: isCompactDesktop ? 'auto' : (isInIframe ? '3.5rem' : '4.09rem'),
                         position: 'relative',
                         zIndex: 1
                     }}
                 >
-                    <div className="flex h-full w-full items-center justify-between mx-auto">
-                        <div className="flex items-center gap-2 lg:gap-6">
+                    <div className={`flex w-full items-center justify-between mx-auto gap-3 ${isCompactDesktop ? 'h-auto flex-wrap' : 'h-full'}`}>
+                        <div className={`flex min-w-0 items-center ${isCompactDesktop ? 'flex-wrap gap-2' : 'gap-2 lg:gap-6'}`}>
                             <div
                                 onClick={() => {
                                     const defaultSlideshow = slideshowTemplates?.[0];
@@ -3516,7 +3517,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                             {!isSAdmin && <TrialBadge trial={companyData ?? data?.user ?? user?.user} compact />}
 
                             {!isSAdmin && (
-                                <div className={isInIframe ? "flex items-center gap-1" : "flex items-center gap-1 lg:gap-4"}>
+                                <div className={`flex min-w-0 items-center ${isInIframe ? "gap-1" : isCompactDesktop ? "flex-wrap gap-2" : "gap-1 lg:gap-4"}`}>
                                     <div className={isInIframe ? "px-1 py-1text-xs lg:text-xs" : "bg-white/10 backdrop-blur-sm rounded-lg px-2 py-1 lg:px-4 text-xs lg:text-xs"}>
                                         <LanguageShortcutPicker checkIframe={isInIframe} />
                                     </div>
@@ -3531,9 +3532,9 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                         </div>
 
                         {!isSAdmin && (
-                            <div className="flex items-center gap-0.5 lg:gap-1">
+                            <div className={`flex min-w-0 items-center justify-end ${isCompactDesktop ? 'flex-wrap gap-0.5' : 'gap-0.5 lg:gap-1'}`}>
                                 {/* Recording - First (leftmost) */}
-                                <div className="scale-75 lg:scale-100">
+                                <div className={isCompactDesktop ? "scale-75" : "scale-75 lg:scale-100"}>
                                     <HeaderRecordingShortcut
                                         confirmationNumber={searchValue !== "" ? searchValue : confirmationNumber}
                                         clearConfirmationNumber={clearConfirmationNumber}
@@ -3543,7 +3544,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                 </div>
 
                                 {/* Website Shortcut */}
-                                <div className="scale-75 lg:scale-100">
+                                <div className={isCompactDesktop ? "scale-75" : "scale-75 lg:scale-100"}>
                                     <WebsiteShortcut
                                         confirmationNumber={searchValue !== "" ? searchValue : confirmationNumber}
                                         clearConfirmationNumber={clearConfirmationNumber}
@@ -3553,7 +3554,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                 </div>
 
                                 {/* Survey Shortcut */}
-                                <div className="scale-75 lg:scale-100">
+                                <div className={isCompactDesktop ? "scale-75" : "scale-75 lg:scale-100"}>
                                     <HeaderSurveyShortcut
                                         confirmationNumber={searchValue !== "" ? searchValue : confirmationNumber}
                                         clearConfirmationNumber={clearConfirmationNumber}
@@ -3564,7 +3565,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                 </div>
 
                                 {/* Text Survey Shortcut */}
-                                <div className="scale-75 lg:scale-100">
+                                <div className={isCompactDesktop ? "scale-75" : "scale-75 lg:scale-100"}>
                                     <TextSurveyShortcut
                                         confirmationNumber={searchValue !== "" ? searchValue : confirmationNumber}
                                         clearConfirmationNumber={clearConfirmationNumber}
@@ -3574,12 +3575,14 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                 </div>
 
                                 {/* ChatBot - Last (closest to input box) */}
-                                <div className="scale-75 lg:scale-100">
+                                <div className={isCompactDesktop ? "scale-75" : "scale-75 lg:scale-100"}>
                                     <ChatBot checkTooltip={isInIframe} isMobile={isMobile} />
                                 </div>
 
                                 {/* Template Search Input */}
-                                <div ref={searchRef} className="bg-white/10 backdrop-blur-sm rounded-lg px-3 py-1" style={{
+                                <div ref={searchRef} className="bg-white/10 backdrop-blur-sm rounded-lg px-2 py-1" style={{
+                                    flex: '0 1 auto',
+                                    minWidth: 0,
                                     position: 'relative',
                                     zIndex: 1000
                                 }}>
@@ -3605,13 +3608,14 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                                 }
                                             }}
                                             style={{
-                                                width: isInIframe ? '180px' : '190px',
+                                                width: isInIframe ? 'clamp(130px, 11vw, 180px)' : isCompactDesktop ? 'clamp(130px, 10vw, 160px)' : '190px',
+                                                maxWidth: '100%',
                                                 color: 'white',
                                                 backgroundColor: 'transparent',
                                                 border: 'none',
                                                 outline: 'none',
-                                                fontSize: '14px',
-                                                padding: '4px 24px 4px 0',
+                                                fontSize: isCompactDesktop ? '13px' : '14px',
+                                                padding: isCompactDesktop ? '3px 16px 3px 0' : '4px 20px 4px 0',
                                                 caretColor: 'white',
                                             }}
                                             className="placeholder-white/60"

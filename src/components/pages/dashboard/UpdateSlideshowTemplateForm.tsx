@@ -269,17 +269,26 @@ export const UpdateSlideshowTemplateForm: React.FC<{
       sourceId,
       langCode,
     },
-    {
-      query: {
-        queryKey: getContentControllerFindOneQueryKey({
-          refType: "Slideshow",
-          sourceId,
-          langCode,
-        }),
-        retry: 0,
+      {
+        query: {
+          queryKey: getContentControllerFindOneQueryKey({
+            refType: "Slideshow",
+            sourceId,
+            langCode,
+          }),
+          retry: 0,
+        },
       },
-    },
-  );
+    );
+
+  React.useEffect(() => {
+    if (!content.isLoading && content.isError) {
+      console.error("Failed to load slideshow template for editing:", content.error);
+      setLoadError("Failed to load slideshow template. Please reopen and try again.");
+      setSequenceError(null);
+      setSequence([]);
+    }
+  }, [content.error, content.isError, content.isLoading]);
 
   const fetchContent = React.useCallback(() => {
     if (!content.isSuccess) return;

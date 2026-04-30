@@ -76,7 +76,7 @@ function RootLayout({ children, session }: RootLayourPropsI) {
 
         <ReactQueryContextProvider>
           <SessionContextProvider session={session}>
-            <div>{children}</div>
+            <div id="app-shell">{children}</div>
             <ToastContainer
               position="top-right"
               autoClose={5000}
