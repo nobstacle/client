@@ -10,12 +10,13 @@ export default function ScreensPage() {
   return (
     <PublicFeaturePage
       title="Screens"
-      description="Coordinate what appears on each screen, keep layouts synchronized, and manage live content across your entire venue from one place."
-      imageLabel={"2048 px to\n2048 px\nimage"}
+      description="Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aenean quam elit, consequat sit amet sapien non, varius ornare ligula."
+      imageSrc="/Screens.png"
+      imageAlt="Screens page preview"
       features={[
-        "Track and organize screen-specific content by station",
-        "Keep playback and templates aligned across locations",
-        "Built for reliable public display workflows",
+        "Lorem ipsum dolor sit amet, consectetur adipiscing elit",
+        "Aenean commodo ligula eget dolor. Aenean massa",
+        "Cum sociis natoque penatibus et magnis dis parturient montes",
       ]}
     />
   );

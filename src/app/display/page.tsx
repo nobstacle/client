@@ -10,12 +10,13 @@ export default function DisplayPage() {
   return (
     <PublicFeaturePage
       title="Display"
-      description="Create and manage visually rich content for screens, signage, and in-lobby displays with a simple workflow that keeps your team moving quickly."
-      imageLabel={"2048 px to\n2048 px\nimage"}
+      description="Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."
+      imageSrc="/Display.png"
+      imageAlt="Display page preview"
       features={[
-        "Drag-and-drop display templates for promotions and announcements",
-        "Language-aware content handling for regional deployments",
-        "Fast preview and publish flow for public-facing screens",
+        "Lorem ipsum dolor sit amet, consectetur adipiscing elit",
+        "Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua",
+        "Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris",
       ]}
     />
   );

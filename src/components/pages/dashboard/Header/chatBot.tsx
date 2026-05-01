@@ -13,10 +13,11 @@ import AudioRecorder from "../../../../components/AudioRecorder";
 interface ChatBotProps {
   cb?: () => void;
   checkTooltip?: boolean;
-  isMobile: boolean
+  isMobile: boolean;
+  compactDesktop?: boolean;
 }
 
-export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true, isMobile }) => {
+export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true, isMobile, compactDesktop = false }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isInIframe, setIsInIframe] = useState(false);
   const [inputValue, setInputValue] = useState("");
@@ -551,15 +552,15 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true, isMob
     <Button
       ref={buttonRef}
       type="text"
-      icon={<IoChatbubbles className="text-white text-xl" />}
+      icon={<IoChatbubbles className={`text-white ${compactDesktop ? 'text-lg' : 'text-xl'}`} />}
       onClick={showModal}
       className={isMobile ? "flex items-center justify-center customHeaderButtonMobile " : "flex items-center justify-center customHeaderButton"}
       style={{
         background: isMobile ? "#3b5998" : "transparent",
         border: "none",
         color: "white",
-        height: isMobile ? "40px" : "auto",
-        width: isMobile ? "40px" : "auto",
+        height: isMobile ? "40px" : compactDesktop ? "36px" : "auto",
+        width: isMobile ? "40px" : compactDesktop ? "36px" : "auto",
         ...(isMobile && { boxShadow: "0 4px 12px rgba(0,0,0,0.15)" }), 
       }}
     />

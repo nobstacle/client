@@ -15,13 +15,15 @@ interface HeaderWebsiteShortcutProps {
     confirmationNumber: string;
     clearConfirmationNumber: () => void;
     checkTooltip: boolean;
-    isMobile: boolean
+    isMobile: boolean;
+    compactDesktop?: boolean;
 }
 export const WebsiteShortcut: React.FC<HeaderWebsiteShortcutProps> = ({
     confirmationNumber,
     clearConfirmationNumber,
     checkTooltip,
-    isMobile
+    isMobile,
+    compactDesktop = false
 }) => {
     const [isLoading, setIsLoading] = useState(false);
     const { emitSendTemplate } = useSocketContext();
@@ -71,26 +73,26 @@ export const WebsiteShortcut: React.FC<HeaderWebsiteShortcutProps> = ({
                 <Tooltip title="Display Website" placement="bottom">
                     <Button
                         type="primary"
-                        icon={<IoGlobe style={{ fontSize: "20px" }} />}
+                        icon={<IoGlobe style={{ fontSize: compactDesktop ? "18px" : "20px" }} />}
                         onClick={handleConfirmSend}
                         className={isMobile ? "flex items-center justify-center customHeaderButtonMobile" : "flex items-center justify-center customHeaderButton"}
                         style={{
                             backgroundColor: "#3b5998",
                             border: "none",
-                            height: "40px",
+                            height: compactDesktop ? "36px" : "40px",
                         }}
                     />
                 </Tooltip>
             ) : (
                 <Button
                     type="primary"
-                    icon={<IoGlobe style={{ fontSize: "20px" }} />}
+                    icon={<IoGlobe style={{ fontSize: compactDesktop ? "18px" : "20px" }} />}
                     onClick={handleConfirmSend}
                     className={isMobile ? "flex items-center justify-center customHeaderButtonMobile" : "flex items-center justify-center customHeaderButton"}
                     style={{
                         backgroundColor: "#3b5998",
                         border: "none",
-                        height: "40px",
+                        height: compactDesktop ? "36px" : "40px",
                     }}
                 />
             )}

@@ -1,7 +1,11 @@
+import Image from "next/image";
+
 type PublicFeaturePageProps = {
   title: string;
   description: string;
-  imageLabel: string;
+  imageSrc?: string;
+  imageAlt?: string;
+  imageLabel?: string;
   features: string[];
   headerLabel?: string;
   footerLabel?: string;
@@ -13,10 +17,12 @@ export function PublicFeaturePage({
   title,
   description,
   imageLabel,
+  imageSrc,
+  imageAlt,
   features,
   headerLabel = "Header",
   footerLabel = "Footer",
-  mediaLabel = "Video Preview",
+  mediaLabel = "Preview",
   accent = "#3b5998",
 }: PublicFeaturePageProps) {
   return (
@@ -47,17 +53,32 @@ export function PublicFeaturePage({
               {title}
             </h1>
 
-            <div className="mt-7 grid gap-6 lg:grid-cols-[200px_minmax(0,1fr)] lg:items-start">
-              <div
-                className="flex aspect-square w-full max-w-[190px] items-center justify-center rounded-2xl border border-white/30 px-4 text-center text-xl font-semibold leading-snug text-white shadow-[0_20px_40px_-22px_rgba(15,23,42,0.75)] sm:max-w-[200px] lg:max-w-[210px]"
-                style={{
-                  background: `linear-gradient(145deg, ${accent} 0%, #2f477a 100%)`,
-                }}
-              >
-                <span className="whitespace-pre-line">{imageLabel}</span>
+            <div className="mt-7 grid gap-6 lg:grid-cols-[minmax(260px,420px)_minmax(0,1fr)] lg:items-start">
+              <div className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_24px_60px_-34px_rgba(15,23,42,0.55)]">
+                <div className="relative aspect-[4/5] min-h-[320px] w-full bg-slate-100 sm:min-h-[420px]">
+                  {imageSrc ? (
+                    <Image
+                      src={imageSrc}
+                      alt={imageAlt || title}
+                      fill
+                      sizes="(max-width: 1024px) 100vw, 420px"
+                      className="object-cover object-center"
+                      priority
+                    />
+                  ) : (
+                    <div
+                      className="flex h-full w-full items-center justify-center px-4 text-center text-xl font-semibold leading-snug text-white"
+                      style={{
+                        background: `linear-gradient(145deg, ${accent} 0%, #2f477a 100%)`,
+                      }}
+                    >
+                      <span className="whitespace-pre-line">{imageLabel || title}</span>
+                    </div>
+                  )}
+                </div>
               </div>
 
-              <div className="flex flex-col gap-5 pt-0 lg:pt-1">
+              <div className="flex flex-col gap-5 pt-0 lg:pt-2">
                 <p className="max-w-3xl text-base leading-7 text-slate-600 sm:text-lg">
                   {description}
                 </p>
@@ -87,33 +108,34 @@ export function PublicFeaturePage({
             </div>
 
             <div className="mt-8 overflow-hidden rounded-[26px] border border-slate-200 bg-white shadow-[0_22px_55px_-28px_rgba(15,23,42,0.42)]">
-              <div
-                className="relative aspect-[16/7] min-h-[240px] w-full overflow-hidden sm:min-h-[300px] lg:min-h-[360px]"
-                style={{
-                  background:
-                    "linear-gradient(180deg, rgba(59,89,152,0.06) 0%, rgba(59,89,152,0.02) 100%)",
-                }}
-              >
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(59,89,152,0.12),_transparent_42%)]" />
-                <div className="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center gap-4">
-                  <div
-                    className="flex h-16 w-16 items-center justify-center rounded-full border border-white/40 bg-white/90 shadow-[0_16px_30px_-18px_rgba(15,23,42,0.55)] sm:h-20 sm:w-20"
-                    aria-hidden="true"
-                  >
-                    <div
-                      className="h-0 w-0 border-y-[18px] border-y-transparent border-l-[28px] sm:border-y-[22px] sm:border-l-[34px]"
-                      style={{ borderLeftColor: accent }}
-                    />
-                  </div>
-                </div>
-                <div className="absolute bottom-4 right-4 rounded-full border border-white/50 bg-white/90 px-3 py-1 text-xs font-bold uppercase tracking-[0.2em] text-slate-500 shadow-sm">
+              <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3 sm:px-6">
+                <span className="text-xs font-bold uppercase tracking-[0.22em] text-slate-500">
                   {mediaLabel}
-                </div>
-                <div
-                  className="absolute left-4 top-4 rounded-full px-3 py-1 text-xs font-semibold text-white shadow-sm"
+                </span>
+                <span
+                  className="h-2.5 w-2.5 rounded-full"
                   style={{ backgroundColor: accent }}
-                >
-                  Preview Area
+                  aria-hidden="true"
+                />
+              </div>
+              <div className="p-4 sm:p-6">
+                <div className="relative aspect-[16/7] min-h-[240px] w-full overflow-hidden rounded-[22px] border border-slate-200 bg-slate-100 sm:min-h-[300px] lg:min-h-[360px]">
+                  {imageSrc ? (
+                    <Image
+                      src={imageSrc}
+                      alt={imageAlt || title}
+                      fill
+                      sizes="(max-width: 1024px) 100vw, 960px"
+                      className="object-cover object-center"
+                    />
+                  ) : (
+                    <div
+                      className="flex h-full w-full items-center justify-center px-6 text-center text-2xl font-semibold text-slate-400"
+                      aria-label={imageAlt || title}
+                    >
+                      {imageLabel || "Preview Area"}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

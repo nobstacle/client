@@ -5,6 +5,7 @@ import "./globals.css";
 import { ReactQueryContextProvider } from "../context/ReactQueryContextProvider";
 import { SessionContextProvider } from "../context/SessionContextProvider";
 import { ToastContainer, Bounce } from 'react-toastify';
+import { InstallPrompt } from "../components/pwa/InstallPrompt";
 
 const inter = Inter({
   subsets: ['latin'],
@@ -77,6 +78,7 @@ function RootLayout({ children, session }: RootLayourPropsI) {
         <ReactQueryContextProvider>
           <SessionContextProvider session={session}>
             <div id="app-shell">{children}</div>
+            <InstallPrompt />
             <ToastContainer
               position="top-right"
               autoClose={5000}

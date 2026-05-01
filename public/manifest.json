@@ -1,7 +1,8 @@
 {
-  "id": "2",
+  "id": "/",
   "name": "Nobstacle",
   "short_name": "Nobstacle",
+  "scope": "/",
   "icons": [
     {
       "src": "/img-192.png",

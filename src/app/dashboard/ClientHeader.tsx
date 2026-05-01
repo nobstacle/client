@@ -243,7 +243,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
     }, []);
 
     const isMobileView = windowWidth < 1024;
-    const isCompactDesktop = windowWidth >= 1024 && windowWidth < 1350;
+    const isCompactDesktop = windowWidth >= 1050 && windowWidth <= 1360;
 
     function isIPad() {
         if (typeof window === 'undefined') return false;
@@ -3479,7 +3479,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
 
                 {/* Desktop Header */}
                 <nav
-                    className={`w-full shadow-sm hidden lg:block ${isCompactDesktop ? 'px-3 py-2' : 'px-6'}`}
+                    className={`w-full shadow-sm hidden lg:block ${isCompactDesktop ? 'px-2 py-1.5' : 'px-6'}`}
                     style={{
                         backgroundColor: '#3b5998',
                         height: isCompactDesktop ? 'auto' : (isInIframe ? '3.5rem' : '4.09rem'),
@@ -3487,8 +3487,8 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                         zIndex: 1
                     }}
                 >
-                    <div className={`flex w-full items-center justify-between mx-auto gap-3 ${isCompactDesktop ? 'h-auto flex-wrap' : 'h-full'}`}>
-                        <div className={`flex min-w-0 items-center ${isCompactDesktop ? 'flex-wrap gap-2' : 'gap-2 lg:gap-6'}`}>
+                    <div className={`flex w-full items-center justify-between mx-auto gap-3 ${isCompactDesktop ? 'h-auto flex-nowrap' : 'h-full'}`}>
+                        <div className={`flex min-w-0 items-center ${isCompactDesktop ? 'flex-nowrap gap-1.5' : 'gap-2 lg:gap-6'}`}>
                             <div
                                 onClick={() => {
                                     const defaultSlideshow = slideshowTemplates?.[0];
@@ -3505,9 +3505,9 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                 }}
                                 style={{
                                     paddingTop: "0.2em",
-                                    paddingRight: isInIframe ? "0.5em" : "1em",
-                                    width: isInIframe ? '3vw' : '4vw',
-                                    minWidth: '40px',
+                                    paddingRight: isInIframe ? "0.5em" : isCompactDesktop ? "0.5em" : "1em",
+                                    width: isInIframe ? '3vw' : isCompactDesktop ? '3.2vw' : '4vw',
+                                    minWidth: '36px',
                                     cursor: 'pointer'
                                 }}
                             >
@@ -3517,22 +3517,22 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                             {!isSAdmin && <TrialBadge trial={companyData ?? data?.user ?? user?.user} compact />}
 
                             {!isSAdmin && (
-                                <div className={`flex min-w-0 items-center ${isInIframe ? "gap-1" : isCompactDesktop ? "flex-wrap gap-2" : "gap-1 lg:gap-4"}`}>
-                                    <div className={isInIframe ? "px-1 py-1text-xs lg:text-xs" : "bg-white/10 backdrop-blur-sm rounded-lg px-2 py-1 lg:px-4 text-xs lg:text-xs"}>
-                                        <LanguageShortcutPicker checkIframe={isInIframe} />
+                                <div className={`flex min-w-0 items-center ${isInIframe ? "gap-1" : isCompactDesktop ? "flex-nowrap gap-1" : "gap-1 lg:gap-4"}`}>
+                                    <div className={isInIframe ? "px-1 py-1text-xs lg:text-xs" : isCompactDesktop ? "bg-white/10 backdrop-blur-sm rounded-lg px-1.5 py-0.5 text-[11px]" : "bg-white/10 backdrop-blur-sm rounded-lg px-2 py-1 lg:px-4 text-xs lg:text-xs"}>
+                                        <LanguageShortcutPicker checkIframe={isInIframe} compactDesktop={isCompactDesktop} />
                                     </div>
-                                    <div className={isInIframe ? "py-1 lg:py-2 text-xs lg:text-sm" : "bg-white/10 backdrop-blur-sm rounded-lg px-2 py-1 lg:px-4 lg:py-2 text-xs lg:text-sm"}>
-                                        <HeaderLanguagePicker checkIframe={isInIframe} />
+                                    <div className={isInIframe ? "py-1 lg:py-2 text-xs lg:text-sm" : isCompactDesktop ? "bg-white/10 backdrop-blur-sm rounded-lg px-1.5 py-0.5 text-[11px]" : "bg-white/10 backdrop-blur-sm rounded-lg px-2 py-1 lg:px-4 lg:py-2 text-xs lg:text-sm"}>
+                                        <HeaderLanguagePicker checkIframe={isInIframe} compactDesktop={isCompactDesktop} />
                                     </div>
-                                    <div className={isInIframe ? "px-1 py-1 lg:py-2 text-xs lg:text-sm" : "bg-white/10 backdrop-blur-sm rounded-lg px-2 py-1 lg:px-4 lg:py-2 text-xs lg:text-sm"}>
-                                        <TemplateShortcutPicker checkIframe={isInIframe} />
+                                    <div className={isInIframe ? "px-1 py-1 lg:py-2 text-xs lg:text-sm" : isCompactDesktop ? "bg-white/10 backdrop-blur-sm rounded-lg px-1.5 py-0.5 text-[11px]" : "bg-white/10 backdrop-blur-sm rounded-lg px-2 py-1 lg:px-4 lg:py-2 text-xs lg:text-sm"}>
+                                        <TemplateShortcutPicker checkIframe={isInIframe} compactDesktop={isCompactDesktop} />
                                     </div>
                                 </div>
                             )}
                         </div>
 
                         {!isSAdmin && (
-                            <div className={`flex min-w-0 items-center justify-end ${isCompactDesktop ? 'flex-wrap gap-0.5' : 'gap-0.5 lg:gap-1'}`}>
+                            <div className={`flex min-w-0 items-center justify-end ${isCompactDesktop ? 'flex-nowrap gap-0.5' : 'gap-0.5 lg:gap-1'}`}>
                                 {/* Recording - First (leftmost) */}
                                 <div className={isCompactDesktop ? "scale-75" : "scale-75 lg:scale-100"}>
                                     <HeaderRecordingShortcut
@@ -3540,6 +3540,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                         clearConfirmationNumber={clearConfirmationNumber}
                                         checkTooltip={isInIframe}
                                         isMobile={isMobile}
+                                        compactDesktop={isCompactDesktop}
                                     />
                                 </div>
 
@@ -3550,6 +3551,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                         clearConfirmationNumber={clearConfirmationNumber}
                                         checkTooltip={isInIframe}
                                         isMobile={isMobile}
+                                        compactDesktop={isCompactDesktop}
                                     />
                                 </div>
 
@@ -3561,6 +3563,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                         checkTooltip={isInIframe}
                                         user={user}
                                         isMobile={isMobile}
+                                        compactDesktop={isCompactDesktop}
                                     />
                                 </div>
 
@@ -3571,12 +3574,13 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                         clearConfirmationNumber={clearConfirmationNumber}
                                         checkTooltip={isInIframe}
                                         isMobile={isMobile}
+                                        compactDesktop={isCompactDesktop}
                                     />
                                 </div>
 
                                 {/* ChatBot - Last (closest to input box) */}
                                 <div className={isCompactDesktop ? "scale-75" : "scale-75 lg:scale-100"}>
-                                    <ChatBot checkTooltip={isInIframe} isMobile={isMobile} />
+                                    <ChatBot checkTooltip={isInIframe} isMobile={isMobile} compactDesktop={isCompactDesktop} />
                                 </div>
 
                                 {/* Template Search Input */}
@@ -3608,14 +3612,14 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                                 }
                                             }}
                                             style={{
-                                                width: isInIframe ? 'clamp(130px, 11vw, 180px)' : isCompactDesktop ? 'clamp(130px, 10vw, 160px)' : '190px',
+                                                width: isInIframe ? 'clamp(130px, 11vw, 180px)' : isCompactDesktop ? 'clamp(110px, 8vw, 145px)' : '190px',
                                                 maxWidth: '100%',
                                                 color: 'white',
                                                 backgroundColor: 'transparent',
                                                 border: 'none',
                                                 outline: 'none',
-                                                fontSize: isCompactDesktop ? '13px' : '14px',
-                                                padding: isCompactDesktop ? '3px 16px 3px 0' : '4px 20px 4px 0',
+                                                fontSize: isCompactDesktop ? '12px' : '14px',
+                                                padding: isCompactDesktop ? '2px 14px 2px 0' : '4px 20px 4px 0',
                                                 caretColor: 'white',
                                             }}
                                             className="placeholder-white/60"

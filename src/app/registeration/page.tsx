@@ -10,12 +10,13 @@ export default function RegisterationPage() {
   return (
     <PublicFeaturePage
       title="Registration"
-      description="Let new users sign up, capture key details, and get started with the right permissions and station settings from the very first screen."
-      imageLabel={"2048 px to\n2048 px\nimage"}
+      description="Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer nec odio. Praesent libero. Sed cursus ante dapibus diam."
+      imageSrc="/Registeration.png"
+      imageAlt="Registration page preview"
       features={[
-        "Simple sign-up flow for guests, staff, and operators",
-        "Responsive form layout for laptop, tablet, and mobile use",
-        "Clear validation and friendly guidance for first-time users",
+        "Lorem ipsum dolor sit amet, consectetur adipiscing elit",
+        "Integer nec odio. Praesent libero. Sed cursus ante dapibus diam",
+        "Sed nisi. Nulla quis sem at nibh elementum imperdiet",
       ]}
     />
   );

@@ -15,6 +15,7 @@ interface LanguagePickerPropsI {
   register?: UseFormRegister<any>;
   name: string;
   checkIframe?: boolean;
+  compactDesktop?: boolean;
 }
 
 export const LanguagePicker: React.FC<LanguagePickerPropsI> = ({
@@ -23,18 +24,20 @@ export const LanguagePicker: React.FC<LanguagePickerPropsI> = ({
   register,
   name,
   checkIframe = true,
+  compactDesktop = false,
 }) => {
   const registerActive = register ? { ...register(name) } : {};
   let isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
+  const dense = checkIframe || compactDesktop;
 
   return (
     <select
-      className={isMobile ? 'w-full rounded-md' : "rounded-md truncate"}
+      className={isMobile ? 'w-full rounded-md' : `rounded-md truncate ${dense ? 'text-xs' : ''}`}
       onChange={onChange}
       defaultValue={defaultValue}
       name={name}
       style={{ 
-        maxWidth: isMobile ? '' : checkIframe ? '120px' : '145px',
+        maxWidth: isMobile ? '' : dense ? '112px' : '145px',
         textOverflow: 'ellipsis',
         overflow: 'hidden',
         whiteSpace: 'nowrap'
@@ -59,7 +62,13 @@ export const LanguagePicker: React.FC<LanguagePickerPropsI> = ({
   );
 };
 
-export const HeaderLanguagePicker = ({ checkIframe = true }: { checkIframe?: boolean }) => {
+export const HeaderLanguagePicker = ({
+  checkIframe = true,
+  compactDesktop = false,
+}: {
+  checkIframe?: boolean;
+  compactDesktop?: boolean;
+}) => {
   const router = useRouterWithQueryParams();
   const params = useSearchParams();
   const { data } = useCompanyControllerGetCompany();
@@ -103,6 +112,7 @@ export const HeaderLanguagePicker = ({ checkIframe = true }: { checkIframe?: boo
     <LanguagePicker
       name="header-language-picker"
       checkIframe={checkIframe}
+      compactDesktop={compactDesktop}
       defaultValue={headerLangaugePickerDefault}
       onChange={handleLanguageChange}
     />

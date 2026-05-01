@@ -10,14 +10,16 @@ interface HeaderRecordingShortcutProps {
     confirmationNumber: string;
     clearConfirmationNumber: () => void;
     checkTooltip: boolean;
-    isMobile: boolean
+    isMobile: boolean;
+    compactDesktop?: boolean;
 }
 
 export const HeaderRecordingShortcut: React.FC<HeaderRecordingShortcutProps> = ({
     confirmationNumber,
     clearConfirmationNumber,
     checkTooltip,
-    isMobile
+    isMobile,
+    compactDesktop = false
 }) => {
     const [isRecording, setIsRecording] = useState(false);
     const [recordingTime, setRecordingTime] = useState(0);
@@ -507,14 +509,14 @@ export const HeaderRecordingShortcut: React.FC<HeaderRecordingShortcutProps> = (
                 >
                     <Button
                         type="primary"
-                        icon={isRecording ? <FaMicrophone style={{ fontSize: "18px", color: 'red' }} /> : <FaMicrophone style={{ fontSize: "18px" }} />}
+                        icon={isRecording ? <FaMicrophone style={{ fontSize: compactDesktop ? "16px" : "18px", color: 'red' }} /> : <FaMicrophone style={{ fontSize: compactDesktop ? "16px" : "18px" }} />}
                         onClick={handleToggleRecording}
                         disabled={isUploading}
                         className={`flex items-center justify-center ${isMobile ? "customHeaderButtonMobile " : "customHeaderButton"} ${isRecording ? 'recording-pulse' : ''}`}
                         style={{
                             backgroundColor: "#3b5998",
                             border: "none",
-                            height: "40px",
+                            height: compactDesktop ? "36px" : "40px",
                             transition: "all 0.3s ease",
                         }}
                     />
@@ -522,14 +524,14 @@ export const HeaderRecordingShortcut: React.FC<HeaderRecordingShortcutProps> = (
             ) : (
                 <Button
                     type="primary"
-                    icon={isRecording ? <FaMicrophone style={{ fontSize: "18px", color: 'red' }} /> : <FaMicrophone style={{ fontSize: "18px" }} />}
+                    icon={isRecording ? <FaMicrophone style={{ fontSize: compactDesktop ? "16px" : "18px", color: 'red' }} /> : <FaMicrophone style={{ fontSize: compactDesktop ? "16px" : "18px" }} />}
                     onClick={handleToggleRecording}
                     disabled={isUploading}
                     className={`flex items-center justify-center ${isMobile ? "customHeaderButtonMobile " : "customHeaderButton"} ${isRecording ? 'recording-pulse' : ''}`}
                     style={{
                         backgroundColor: "#3b5998",
                         border: "none",
-                        height: "40px",
+                        height: compactDesktop ? "36px" : "40px",
                         transition: "all 0.3s ease",
                     }}
                 />

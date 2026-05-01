@@ -21,9 +21,10 @@ import { ChatType } from "../../../../constant/types";
 import { getScrollScopeFromTag } from "../../../../utils/scrollScope";
 
 
-export const TemplateShortcutPicker: React.FC<{ checkIframe?: boolean; isMobile?: boolean }> = ({
+export const TemplateShortcutPicker: React.FC<{ checkIframe?: boolean; isMobile?: boolean; compactDesktop?: boolean }> = ({
   checkIframe = true,
-  isMobile
+  isMobile,
+  compactDesktop = false
 }) => {
   const { emitSendTemplate } = useSocketContext();
   const { company } = useCompanyStore();
@@ -48,7 +49,7 @@ export const TemplateShortcutPicker: React.FC<{ checkIframe?: boolean; isMobile?
 
   const renderIcon = (iconName: string, color?: string) => {
     const IconComponent = (Io5Icons as any)[iconName];
-    const iconSize = isInIframe ? 18 : 25;
+    const iconSize = isInIframe || compactDesktop ? 18 : 25;
     return IconComponent ? <IconComponent size={iconSize} color={color || "white"} /> : null;
   };
 
@@ -221,7 +222,7 @@ export const TemplateShortcutPicker: React.FC<{ checkIframe?: boolean; isMobile?
   // Only show skeleton on initial mount
   if (!isHydrated) {
     return (
-      <div className="flex gap-2">
+      <div className={`flex ${isInIframe || compactDesktop ? 'gap-1' : 'gap-2'}`}>
         {[1, 2, 3].map((i) => (
           <div key={i} className="w-6 h-6 bg-white/20 rounded animate-pulse" />
         ))}
@@ -238,8 +239,8 @@ export const TemplateShortcutPicker: React.FC<{ checkIframe?: boolean; isMobile?
   // If loading and no data, show minimal loader
   if (isLoading && templateShortcuts.length === 0) {
     return (
-      <div className={`flex items-center ${isInIframe ? 'gap-1 px-2' : 'gap-2 px-3'}`}>
-        <span className={`text-white/60 ${isInIframe ? 'text-xs' : 'text-sm'}`}>
+      <div className={`flex items-center ${isInIframe || compactDesktop ? 'gap-1 px-2' : 'gap-2 px-3'}`}>
+        <span className={`text-white/60 ${isInIframe || compactDesktop ? 'text-xs' : 'text-sm'}`}>
           Loading...
         </span>
       </div>
@@ -252,13 +253,13 @@ export const TemplateShortcutPicker: React.FC<{ checkIframe?: boolean; isMobile?
   }
 
   return (
-    <div className={`flex cursor-pointer ${isMobile ? 'justify-center align-items-center gap-4' : ''} ${isInIframe ? 'gap-1' : 'gap-2'}`}>
+    <div className={`flex cursor-pointer ${isMobile ? 'justify-center align-items-center gap-4' : ''} ${isInIframe || compactDesktop ? 'gap-1' : 'gap-2'}`}>
       {sortedShortcuts.map((res) => (
         <span
           key={res.id}
           onClick={() => handleOnSendTemplateClick(res.id, res.key as any, res.value)}
           title={`${res.value}/${res.key}`}
-          className={`flex items-center justify-center ${isInIframe ? 'h-[20px] w-[20px]' : 'h-[25px] w-[25px]'
+          className={`flex items-center justify-center ${(isInIframe || compactDesktop) ? 'h-[20px] w-[20px]' : 'h-[25px] w-[25px]'
             }`}
         >
           {renderIcon(res.extraValue ?? "IoAdd", res.color)}

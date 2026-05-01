@@ -10,12 +10,13 @@ export default function UpsellingPage() {
   return (
     <PublicFeaturePage
       title="Upselling"
-      description="Show targeted upgrades, add-ons, and package offers that help your team increase order value without interrupting the guest experience."
-      imageLabel={"2048 px to\n2048 px\nimage"}
+      description="Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus sagittis lacus vel augue laoreet rutrum faucibus dolor auctor."
+      imageSrc="/Upsell.png"
+      imageAlt="Upselling page preview"
       features={[
-        "Promote room upgrades, add-ons, and premium packages",
-        "Custom offer cards that fit seamlessly into your workflow",
-        "Fast publishing for seasonal campaigns and live promotions",
+        "Lorem ipsum dolor sit amet, consectetur adipiscing elit",
+        "Vivamus sagittis lacus vel augue laoreet rutrum faucibus dolor auctor",
+        "Maecenas sed diam eget risus varius blandit sit amet non magna",
       ]}
     />
   );

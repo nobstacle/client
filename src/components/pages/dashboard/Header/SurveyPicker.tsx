@@ -11,7 +11,8 @@ interface HeaderSurveyShortcutProps {
   clearConfirmationNumber: () => void;
   checkTooltip: boolean,
   user: string,
-  isMobile: boolean
+  isMobile: boolean,
+  compactDesktop?: boolean
 }
 
 export const HeaderSurveyShortcut: React.FC<HeaderSurveyShortcutProps> = ({
@@ -19,7 +20,8 @@ export const HeaderSurveyShortcut: React.FC<HeaderSurveyShortcutProps> = ({
   clearConfirmationNumber,
   checkTooltip,
   user,
-  isMobile
+  isMobile,
+  compactDesktop = false
 }) => {
   const [isLoading, setIsLoading] = useState(false);
   const params = useSearchParams();
@@ -69,28 +71,28 @@ export const HeaderSurveyShortcut: React.FC<HeaderSurveyShortcutProps> = ({
         <Tooltip title="Display Survey" placement="bottom">
           <Button
             type="primary"
-            icon={<IoSpeedometer style={{ fontSize: "20px" }} />}
+            icon={<IoSpeedometer style={{ fontSize: compactDesktop ? "18px" : "20px" }} />}
             onClick={handleConfirmSend}
             disabled={isLoading}
             className={isMobile ? "flex items-center justify-center customHeaderButtonMobile " : "ml-2 flex items-center justify-center customHeaderButton"}
             style={{
               backgroundColor: "#3b5998",
               border: "none",
-              height: "40px",
+              height: compactDesktop ? "36px" : "40px",
             }}
           />
         </Tooltip>
       ) : (
         <Button
           type="primary"
-          icon={<IoSpeedometer style={{ fontSize: "20px" }} />}
+          icon={<IoSpeedometer style={{ fontSize: compactDesktop ? "18px" : "20px" }} />}
           onClick={handleConfirmSend}
           disabled={isLoading}
             className={isMobile ? "flex items-center justify-center customHeaderButtonMobile " : "ml-2 flex items-center justify-center customHeaderButton"}
           style={{
             backgroundColor: "#3b5998",
             border: "none",
-            height: "40px",
+            height: compactDesktop ? "36px" : "40px",
           }}
         />
       )}
