@@ -1,8 +1,5 @@
 /* eslint-disable @next/next/no-img-element */
 import React, { useState, useEffect, useMemo, useRef } from "react";
-import "slick-carousel/slick/slick.css";
-import "slick-carousel/slick/slick-theme.css";
-import Slider, { Settings } from "react-slick";
 
 const VIDEO_EXTENSIONS = ["mp4", "webm", "mov", "avi", "m4v"];
 
@@ -102,7 +99,6 @@ export const Slideshow: React.FC<{
   contents: string[];
   metadata?: SlideshowMediaMetadata[];
 }> = ({ contents, metadata = [] }) => {
-  const sliderRef = useRef<Slider | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
 
@@ -157,7 +153,7 @@ export const Slideshow: React.FC<{
       if (video) {
         video.pause();
       }
-      sliderRef.current?.slickNext();
+      setActiveIndex((current) => (current + 1) % activeMediaItems.length);
     }, activeMediaDurationMs);
 
     return () => window.clearTimeout(timer);
@@ -177,25 +173,11 @@ export const Slideshow: React.FC<{
 
   useEffect(() => {
     setActiveIndex(0);
-    sliderRef.current?.slickGoTo(0, true);
   }, [activeMediaItems]);
-
-  const settings: Settings = useMemo(
-    () => ({
-      dots: false,
-      infinite: true,
-      speed: 500,
-      arrows: false,
-      autoplay: false,
-      lazyLoad: undefined,
-      afterChange: (index: number) => setActiveIndex(index),
-    }),
-    [],
-  );
 
   const handleVideoEnded = () => {
     if (activeMediaItems[activeIndex]?.mediaType !== "video") return;
-    sliderRef.current?.slickNext();
+    setActiveIndex((current) => (current + 1) % activeMediaItems.length);
   };
 
   // ── Loading screen ──────────────────────────────────────────────────────────
@@ -314,12 +296,15 @@ export const Slideshow: React.FC<{
   // ── Slideshow (only mounts after all images are ready) ──────────────────────
   return (
     <div className="h-screen w-screen overflow-hidden bg-black">
-      <Slider ref={sliderRef} {...settings}>
+      <div className="relative h-screen w-screen overflow-hidden bg-black">
         {activeMediaItems.map((item, index) => (
           <div
             id="content-container"
-            className="!flex h-screen w-screen items-center justify-center overflow-hidden bg-black"
+            className={`absolute inset-0 flex h-screen w-screen items-center justify-center overflow-hidden bg-black transition-opacity duration-300 ${
+              index === activeIndex ? "opacity-100" : "pointer-events-none opacity-0"
+            }`}
             key={`${item.url}-${index}`}
+            aria-hidden={index !== activeIndex}
           >
             {item.mediaType === "video" ? (
               <video
@@ -355,7 +340,7 @@ export const Slideshow: React.FC<{
             )}
           </div>
         ))}
-      </Slider>
+      </div>
     </div>
   );
 };

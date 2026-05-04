@@ -384,10 +384,6 @@ export const languages = [
     code: "th",
   },
   {
-    name: "Tugcish",
-    code: "tg",
-  },
-  {
     name: "Turkish",
     code: "tr",
   },

@@ -13,6 +13,10 @@ const inter = Inter({
   display: 'swap',
 })
 
+const enableGoogleAds =
+  process.env.NODE_ENV === "production" &&
+  process.env.NEXT_PUBLIC_ENABLE_GOOGLE_ADS !== "false";
+
 export const metadata: Metadata = {
   title: "Nobstacle",
   description: "Nobstacle",
@@ -57,23 +61,27 @@ function RootLayout({ children, session }: RootLayourPropsI) {
       </head>
 
       <body className={inter.className}>
-        {/* Google Ads Tracking */}
-        <Script
-          strategy="afterInteractive"
-          src="https://www.googletagmanager.com/gtag/js?id=AW-17688003710"
-        />
-        <Script
-          id="google-ads-init"
-          strategy="afterInteractive"
-          dangerouslySetInnerHTML={{
-            __html: `
-              window.dataLayer = window.dataLayer || [];
-              function gtag(){dataLayer.push(arguments);}
-              gtag('js', new Date());
-              gtag('config', 'AW-17688003710');
-            `,
-          }}
-        />
+        {enableGoogleAds && (
+          <>
+            {/* Google Ads Tracking */}
+            <Script
+              strategy="afterInteractive"
+              src="https://www.googletagmanager.com/gtag/js?id=AW-17688003710"
+            />
+            <Script
+              id="google-ads-init"
+              strategy="afterInteractive"
+              dangerouslySetInnerHTML={{
+                __html: `
+                  window.dataLayer = window.dataLayer || [];
+                  function gtag(){dataLayer.push(arguments);}
+                  gtag('js', new Date());
+                  gtag('config', 'AW-17688003710');
+                `,
+              }}
+            />
+          </>
+        )}
 
         <ReactQueryContextProvider>
           <SessionContextProvider session={session}>

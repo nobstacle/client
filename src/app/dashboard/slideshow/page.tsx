@@ -35,7 +35,21 @@ import "../../../styles/base.css";
 
 const VIDEO_EXTENSIONS = ["mp4", "webm", "mov", "avi", "m4v"];
 
-const isVideoSource = (src?: string) => {
+const resolvePreviewUrl = (src?: string | string[] | null) => {
+  if (Array.isArray(src)) {
+    return src.find(
+      (item): item is string => typeof item === "string" && item.trim().length > 0,
+    ) ?? null;
+  }
+
+  if (typeof src === "string" && src.trim().length > 0) {
+    return src;
+  }
+
+  return null;
+};
+
+const isVideoSource = (src?: string | null) => {
   if (!src) return false;
   const normalized = src.split("?")[0].toLowerCase();
   return VIDEO_EXTENSIONS.some((ext) => normalized.endsWith(`.${ext}`));
@@ -264,6 +278,8 @@ export default function SlideshowDashboard() {
               sort={sortSlideshows}
             >
               {displayedSlideshowsWithAvailability?.map((val) => (
+                // Some slideshow records may not have a signed media URL yet.
+                // In that case, show a safe placeholder instead of letting next/image crash.
                 <DraggableCardItem
                   id={val.id}
                   tag={val.tag}
@@ -281,31 +297,47 @@ export default function SlideshowDashboard() {
                   isDraggable={searchSlideshows.length === 0}
                   type="slideshow"
                 >
-                  {isVideoSource(val.url) ? (
-                    <video
-                      src={val.url}
-                      muted
-                      playsInline
-                      preload="metadata"
-                      style={{
-                        objectFit: "cover",
-                        width: "100%",
-                        height: "100%",
-                      }}
-                    />
-                  ) : (
-                    <Image
-                      alt="template_image"
-                      width="250"
-                      height="100"
-                      style={{
-                        objectFit: "cover",
-                        width: "100%",
-                        height: "100%",
-                      }}
-                      src={val.url as any}
-                    />
-                  )}
+                  {(() => {
+                    const previewUrl = resolvePreviewUrl(val.url);
+
+                    if (!previewUrl) {
+                      return (
+                        <div className="flex h-full w-full items-center justify-center bg-neutral-200 text-center text-xs text-neutral-500">
+                          No preview available
+                        </div>
+                      );
+                    }
+
+                    if (isVideoSource(previewUrl)) {
+                      return (
+                        <video
+                          src={previewUrl}
+                          muted
+                          playsInline
+                          preload="metadata"
+                          style={{
+                            objectFit: "cover",
+                            width: "100%",
+                            height: "100%",
+                          }}
+                        />
+                      );
+                    }
+
+                    return (
+                      <Image
+                        alt="template_image"
+                        width="250"
+                        height="100"
+                        style={{
+                          objectFit: "cover",
+                          width: "100%",
+                          height: "100%",
+                        }}
+                        src={previewUrl}
+                      />
+                    );
+                  })()}
                 </DraggableCardItem>
               ))}
             </DraggableCardContainer>

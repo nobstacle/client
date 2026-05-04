@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import { languages } from "../../../../constant/languages";
 import { useCompanyControllerGetCompany } from "../../../../lib/client/api";
@@ -29,12 +30,22 @@ export const LanguagePicker: React.FC<LanguagePickerPropsI> = ({
   const registerActive = register ? { ...register(name) } : {};
   let isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
   const dense = checkIframe || compactDesktop;
+  const uniqueLanguages = useMemo(() => {
+    const seen = new Set<string>();
+    return languages.filter((language) => {
+      if (seen.has(language.code)) {
+        return false;
+      }
+      seen.add(language.code);
+      return true;
+    });
+  }, []);
 
   return (
     <select
       className={isMobile ? 'w-full rounded-md' : `rounded-md truncate ${dense ? 'text-xs' : ''}`}
       onChange={onChange}
-      defaultValue={defaultValue}
+      value={defaultValue}
       name={name}
       style={{ 
         maxWidth: isMobile ? '' : dense ? '112px' : '145px',
@@ -44,10 +55,9 @@ export const LanguagePicker: React.FC<LanguagePickerPropsI> = ({
       }}
       {...registerActive}
     >
-      {languages.map(({ code, name }) => (
-        <option 
-          selected={code === defaultValue} 
-          value={code} 
+      {uniqueLanguages.map(({ code, name }) => (
+        <option
+          value={code}
           key={code}
           style={{
             textOverflow: 'ellipsis',
