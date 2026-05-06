@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
@@ -17,12 +17,17 @@ const enableGoogleAds =
   process.env.NODE_ENV === "production" &&
   process.env.NEXT_PUBLIC_ENABLE_GOOGLE_ADS !== "false";
 
+export const viewport: Viewport = {
+  themeColor: "#000000",
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+};
+
 export const metadata: Metadata = {
   title: "Nobstacle",
   description: "Nobstacle",
   manifest: "/manifest.json",
-  themeColor: "#000000",
-  viewport: "width=device-width, initial-scale=1.0",
   icons: {
     icon: "/Icon2.png",
     apple: "/Icon2.png",
@@ -43,7 +48,6 @@ function RootLayout({ children, session }: RootLayourPropsI) {
   return (
     <html lang="en" className={inter.variable}>
       <head>
-        <meta name="theme-color" content="#000000" />
         <meta
           name="facebook-domain-verification"
           content="syf2v0kwmjsl9lp8ytm6plv8puke1b"
@@ -52,11 +56,6 @@ function RootLayout({ children, session }: RootLayourPropsI) {
           name="google-site-verification"
           content="BBS68lggXElONWbdzPJlkfgJFiL9MGEDj1ejH_XN58I"
         />
-        <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta name="apple-mobile-web-app-title" content="Nobstacle" />
-        <link rel="apple-touch-icon" href="/Icon2.png" />
-        <link rel="icon" type="image/svg+xml" href="/Icon2.png" />
         <meta httpEquiv="Permissions-Policy" content="camera=*, microphone=*, geolocation=*" />
       </head>
 

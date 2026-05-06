@@ -181,7 +181,7 @@ const SurveyAnswer: React.FC<{ tag: string; survey?: any; handleComplete: any }>
               height: "auto",
               maxHeight: "100%",
               maxWidth: "100%",
-              objectFit: "cover",
+              objectFit: "contain",
               display: "block",
             }}
             src={templateData.url}

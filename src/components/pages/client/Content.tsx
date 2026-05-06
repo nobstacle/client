@@ -96,64 +96,75 @@ const getStoredPublicDisplay = () => {
   }
 };
 
-const ScrollSection: React.FC<{ item: any; index: number }> = ({ item, index }) => {
-  const containerRef = useRef<HTMLDivElement | null>(null);
+const ScrollSection: React.FC<{
+  item: any;
+  index: number;
+  isActive: boolean;
+  onEnded: () => void;
+  isMuted: boolean;
+  toggleMute: () => void;
+}> = ({ item, index, isActive, onEnded, isMuted, toggleMute }) => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
   useEffect(() => {
-    if (item?.mediaType !== "video") return;
-
-    const node = containerRef.current;
-    const video = videoRef.current;
-    if (!node || !video) return;
-
-    if (typeof IntersectionObserver === "undefined") {
-      video.play().catch((error) => {
+    if (item?.mediaType !== "video" || !videoRef.current) return;
+    if (isActive) {
+      videoRef.current.play().catch((error) => {
         console.error("Failed to autoplay scroll video:", error);
       });
-      return;
+    } else {
+      videoRef.current.pause();
+      videoRef.current.currentTime = 0;
     }
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting && entry.intersectionRatio >= 0.65) {
-          video.play().catch((error) => {
-            console.error("Failed to autoplay scroll video:", error);
-          });
-        } else {
-          video.pause();
-        }
-      },
-      {
-        threshold: [0.25, 0.65, 0.9],
-      },
-    );
-
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, [item?.mediaType, item?.signedUrl, item?.url]);
+  }, [isActive, item?.mediaType]);
 
   return (
     <section
-      ref={containerRef}
       className="relative h-screen w-screen snap-start overflow-hidden bg-black"
     >
       {item.mediaType === "video" ? (
         <video
           ref={videoRef}
           src={item.signedUrl || item.url}
-          className="h-full w-full object-cover"
+          className="h-full w-full object-contain"
           playsInline
-          muted
-          loop
-          preload="metadata"
+          muted={isMuted}
+          onEnded={onEnded}
+          preload="auto"
         />
       ) : (
         <img
           src={item.signedUrl || item.url}
           alt={item.name || `scroll-item-${index + 1}`}
-          className="h-full w-full object-cover"
+          className="h-full w-full object-contain"
         />
+      )}
+
+      {item?.mediaType === "video" && isMuted && isActive && (
+        <div
+          className="absolute bottom-10 right-10 z-[60] flex cursor-pointer items-center gap-2 rounded-full bg-black/50 px-6 py-3 text-white backdrop-blur-sm transition-all hover:bg-black/70"
+          onClick={(e) => {
+            e.stopPropagation();
+            toggleMute();
+          }}
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M11 5L6 9H2v6h4l5 4V5z" />
+            <line x1="23" y1="9" x2="17" y2="15" />
+            <line x1="17" y1="9" x2="23" y2="15" />
+          </svg>
+          <span className="text-sm font-medium">Tap to Unmute</span>
+        </div>
       )}
 
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-black/40 to-transparent" />
@@ -491,7 +502,7 @@ const PackageCard = ({ packageData, handleClick, loadingButton, langCode = 'en' 
                       <img
                         src={item.url}
                         alt={item.alt}
-                        className="w-full h-full object-cover object-center"
+                        className="w-full h-full object-contain object-center"
                         style={{
                           borderRadius: '8px',
                           height: '100%',
@@ -1736,17 +1747,18 @@ export const Content: React.FC = () => {
   };
 
   const toggleMute = () => {
+    const newMutedState = !isMuted;
+    setIsMuted(newMutedState);
     if (videoElement.current) {
-      const newMutedState = !isMuted;
       videoElement.current.muted = newMutedState;
-      setIsMuted(newMutedState);
     }
   };
 
   const ScrollViewer: React.FC<{ items: any[] }> = ({ items }) => {
     const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+    const [activeIndex, setActiveIndex] = useState(0);
     const [now, setNow] = useState(Date.now());
-    const [showScrollHint, setShowScrollHint] = useState(true);
+
     const activeItems = React.useMemo(() => {
       return (Array.isArray(items) ? items : []).filter((item) => {
         if (!item?.expiresAt) return true;
@@ -1763,38 +1775,118 @@ export const Content: React.FC = () => {
       return () => window.clearInterval(timer);
     }, []);
 
+    const scrollTo = useCallback((index: number) => {
+      const node = scrollContainerRef.current;
+      if (!node) return;
+      node.scrollTo({
+        top: index * node.clientHeight,
+        behavior: "smooth",
+      });
+      setActiveIndex(index);
+    }, []);
+
+    const nextSlide = useCallback(() => {
+      const nextIndex = (activeIndex + 1) % activeItems.length;
+      scrollTo(nextIndex);
+    }, [activeIndex, activeItems.length, scrollTo]);
+
     useEffect(() => {
       const node = scrollContainerRef.current;
       if (!node) return;
 
       const handleScroll = () => {
-        setShowScrollHint(node.scrollTop < 24);
+        const index = Math.round(node.scrollTop / node.clientHeight);
+        if (index !== activeIndex && index >= 0 && index < activeItems.length) {
+          setActiveIndex(index);
+        }
       };
 
-      handleScroll();
       node.addEventListener("scroll", handleScroll, { passive: true });
       return () => node.removeEventListener("scroll", handleScroll);
-    }, []);
+    }, [activeIndex, activeItems.length]);
+
+    useEffect(() => {
+      if (activeItems.length <= 1) return;
+
+      const currentItem = activeItems[activeIndex];
+      if (currentItem?.mediaType === "video") return;
+
+      const duration = (currentItem?.imageDurationSeconds || 6) * 1000;
+      const timer = setTimeout(nextSlide, duration);
+      return () => clearTimeout(timer);
+    }, [activeIndex, activeItems, nextSlide]);
 
     if (activeItems.length === 0) {
       return (
         <div className="w-full h-screen flex items-center justify-center bg-gray-100">
-          <p className="text-gray-500">No active public content available</p>
+          <p className="text-gray-500">No active screen content available</p>
         </div>
       );
     }
 
     return (
-      <div
-        ref={scrollContainerRef}
-        className="h-screen w-screen overflow-y-auto snap-y snap-mandatory bg-black"
-      >
-        {activeItems.map((item, index) => (
-          <ScrollSection key={`${item?.url || item?.signedUrl || index}`} item={item} index={index} />
-        ))}
-        {showScrollHint && activeItems.length > 1 && (
-          <div className="pointer-events-none fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-full bg-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-white backdrop-blur-md scroll-hint">
-            Scroll down
+      <div className="relative h-screen w-screen overflow-hidden bg-black group">
+        <div
+          ref={scrollContainerRef}
+          className="no-scrollbar h-full w-full snap-y snap-mandatory overflow-y-auto"
+          style={{ scrollBehavior: "smooth" }}
+        >
+          {activeItems.map((item, index) => (
+            <ScrollSection
+              key={`${item?.url || item?.signedUrl || index}`}
+              item={item}
+              index={index}
+              isActive={index === activeIndex}
+              onEnded={nextSlide}
+              isMuted={isMuted}
+              toggleMute={toggleMute}
+            />
+          ))}
+        </div>
+
+        {/* Navigation Dots */}
+        {activeItems.length > 1 && (
+          <div className="absolute right-6 top-1/2 z-50 flex -translate-y-1/2 flex-col gap-3">
+            {activeItems.map((_, idx) => (
+              <button
+                key={idx}
+                onClick={() => scrollTo(idx)}
+                className={`h-2.5 w-2.5 rounded-full transition-all duration-300 ${
+                  idx === activeIndex
+                    ? "scale-125 bg-white shadow-[0_0_8px_rgba(255,255,255,0.8)]"
+                    : "bg-white/30 hover:bg-white/50"
+                }`}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* Scroll Indicator */}
+        {activeItems.length > 1 && (
+          <div
+            className={`absolute bottom-8 left-1/2 z-50 flex -translate-x-1/2 cursor-pointer flex-col items-center gap-1 transition-all duration-500 ${
+              activeIndex === activeItems.length - 1
+                ? "pointer-events-none opacity-0"
+                : "animate-bounce opacity-100"
+            }`}
+            onClick={nextSlide}
+          >
+            <span className="text-[10px] font-bold uppercase tracking-widest text-white/70">
+              Scroll
+            </span>
+            <svg
+              className="text-white/70"
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M7 13l5 5 5-5M7 6l5 5 5-5" />
+            </svg>
           </div>
         )}
       </div>
@@ -1809,6 +1901,14 @@ export const Content: React.FC = () => {
 
   .scroll-hint {
     animation: fadeInOut 2s infinite;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
   }
 `;
 
@@ -2300,7 +2400,7 @@ export const Content: React.FC = () => {
               <img
                 src={qrCodeUrl}
                 alt="QR Code"
-                className="w-96 h-96 object-cover"
+                className="w-96 h-96 object-contain"
               />
             </Card>
           ) : (
@@ -2550,7 +2650,7 @@ export const Content: React.FC = () => {
                 <img
                   src={qrCodeUrl}
                   alt="QR Code"
-                  className="w-96 h-96 object-cover"
+                  className="w-96 h-96 object-contain"
                 />
               </Card>
             ) : (

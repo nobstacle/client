@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { usePathname } from 'next/navigation';
 import { Session } from 'next-auth';
 import { ClientLink } from "../../components/pages/dashboard/Sidebar/ClientLink";
@@ -20,7 +20,8 @@ import {
     IoSettings,
     IoLogoWhatsapp,
     IoHome,
-    IoMegaphone
+    IoMegaphone,
+    IoDesktop
 } from 'react-icons/io5';
 // import { IoRecordingSharp } from "react-icons/io5";
 import { IoChatbubbleEllipses } from "react-icons/io5";
@@ -99,7 +100,7 @@ const sAdminMenuItems: MenuItem[] = [
     },
 ];
 
-const menuItems: MenuItem[] = [
+const displayItems: MenuItem[] = [
     {
         title: "Image",
         href: "/dashboard/image",
@@ -172,6 +173,9 @@ const menuItems: MenuItem[] = [
         iconColor: "white",
         featureKey: "display",
     },
+];
+
+const menuItems: MenuItem[] = [
     {
         title: "Screens",
         href: "/dashboard/public",
@@ -236,6 +240,7 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
     const [windowWidth, setWindowWidth] = useState(0);
     const [settingsExpanded, setSettingsExpanded] = useState(false);
     const [teamExpanded, setTeamExpanded] = useState(false);
+    const [displayExpanded, setDisplayExpanded] = useState(false);
     const [mounted, setMounted] = useState(false);
     const pathname = usePathname();
     const company = useCompanyStore((state) => state.company);
@@ -276,6 +281,12 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
             setSettingsExpanded(true);
         }
 
+        // Auto-expand display if any display route is active
+        const isDisplayRoute = displayItems.some(item => item.href === pathname);
+        if (isDisplayRoute) {
+            setDisplayExpanded(true);
+        }
+
         // Auto-expand team if any team route is active
         const isTeamRoute = teamItems.some(item => item.href === pathname);
         if (isTeamRoute) {
@@ -309,6 +320,15 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
         setTeamExpanded(!teamExpanded);
         if (!teamExpanded) {
             setSettingsExpanded(false);
+            setDisplayExpanded(false);
+        }
+    };
+
+    const toggleDisplay = () => {
+        setDisplayExpanded(!displayExpanded);
+        if (!displayExpanded) {
+            setSettingsExpanded(false);
+            setTeamExpanded(false);
         }
     };
 
@@ -385,6 +405,44 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
                         }
                 `}
                 >
+                    <ClientLink
+                        href={item.href}
+                        title={item.title}
+                        className={`flex-1 font-normal ${isCompactDesktop ? 'text-xs' : 'text-sm'}`}
+                        disabled={isDisabled}
+                    />
+                </div>
+            </li>
+        );
+    };
+
+    const renderDisplayItem = (item: MenuItem) => {
+        if (item.roles && !hasAccess(item.roles)) return null;
+
+        const isActive = item.href === pathname;
+        const isDisabled = !isFeatureEnabled(item.featureKey);
+
+        return (
+            <li key={item.title} className="w-full" onClick={isDisabled ? undefined : closeSidebar}>
+                <div
+                    className={`
+                        flex items-center pl-10 pr-0 py-2.5 transition-colors duration-200
+                        ${isCompactDesktop ? 'pl-8 py-2' : ''}
+                        ${isDisabled
+                            ? 'opacity-45 cursor-not-allowed'
+                            : 'cursor-pointer'
+                        }
+                        ${!isDisabled && isActive
+                            ? 'bg-white/10 text-white border-l-4 border-white'
+                            : !isDisabled ? 'text-white/80 hover:bg-white/5 hover:text-white border-l-4 border-transparent' : 'text-white/80 border-l-4 border-transparent'
+                        }
+                    `}
+                >
+                    {item.icon && (
+                        <span className="mr-3 opacity-80">
+                            {React.cloneElement(item.icon as React.ReactElement, { size: 14 })}
+                        </span>
+                    )}
                     <ClientLink
                         href={item.href}
                         title={item.title}
@@ -485,6 +543,49 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
                 <div className="flex h-full w-full flex-col justify-between" style={{ overflow: 'hidden' }}>
                     <div className="flex-1 overflow-y-auto">
                         <ul className="w-full py-2">
+                            {/* Display Dropdown (only for non-SAdmin) */}
+                            {!isSAdmin && (
+                                <div className="w-full">
+                                    <div
+                                        onClick={toggleDisplay}
+                                        className={`
+                                            flex items-center justify-between gap-3 px-6 py-3 cursor-pointer
+                                            ${isCompactDesktop ? 'px-4 py-2.5 gap-2.5' : ''}
+                                            transition-colors duration-200
+                                            text-white/90 hover:bg-white/5 hover:text-white border-l-4 border-transparent
+                                        `}
+                                    >
+                                        <div className={`flex items-center gap-3 flex-1 ${isCompactDesktop ? 'gap-2' : ''}`}>
+                                            <IoDesktop size={isCompactDesktop ? 16 : 18} />
+                                            <span className={`${isCompactDesktop ? 'text-xs' : 'text-sm'} font-normal`}>Display</span>
+                                        </div>
+                                        <svg
+                                            className={`w-4 h-4 transition-transform duration-300 ${displayExpanded ? 'rotate-180' : ''}`}
+                                            fill="none"
+                                            stroke="currentColor"
+                                            viewBox="0 0 24 24"
+                                        >
+                                            <path
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                strokeWidth={2}
+                                                d="M19 9l-7 7-7-7"
+                                            />
+                                        </svg>
+                                    </div>
+                                    <div
+                                        className={`
+                                            overflow-hidden transition-all duration-300 ease-in-out
+                                            ${displayExpanded ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}
+                                        `}
+                                    >
+                                        <ul className="bg-primary-dark/30">
+                                            {displayItems.map(item => renderDisplayItem(item))}
+                                        </ul>
+                                    </div>
+                                </div>
+                            )}
+
                             {displayMenuItems.map(item => renderMenuItem(item))}
                         </ul>
 

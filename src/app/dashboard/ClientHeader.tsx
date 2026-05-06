@@ -598,10 +598,10 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
     );
 
     const { data: scrollsResponse, isLoading: scrollLoading } = useScrollControllerGetScrolls(
-        { limit: 9999, langCode: selectedLang, scope: 'scroll' },
+        { limit: 9999, scope: 'scroll' },
         {
             query: {
-                queryKey: ['scrolls', currentStation, selectedLang, 'scroll'],
+                queryKey: ['scrolls', currentStation, 'scroll'],
                 staleTime: 1000 * 60 * 5,
                 gcTime: 1000 * 60 * 10,
                 refetchOnWindowFocus: false,
