@@ -245,7 +245,8 @@ export const CreateMapsTemplateForm: React.FC<{
                   style={{ width: '100%' }}
                   status={errors.tagSelect ? 'error' : ''}
                   allowClear
-
+                  popupClassName="modal-select-dropdown"
+                  getPopupContainer={(trigger) => trigger.parentElement!}
                 >
                   {mapTags.data?.map((value, index) => (
                     <Option value={value.tag} key={`${value.tag}-${index}`}>
@@ -276,6 +277,8 @@ export const CreateMapsTemplateForm: React.FC<{
                 style={{ width: '100%' }}
                 status={errors.langCode ? 'error' : ''}
                 showSearch
+                popupClassName="modal-select-dropdown"
+                getPopupContainer={(trigger) => trigger.parentElement!}
                 filterOption={(input, option) =>
                   (option?.children as string)
                     ?.toLowerCase()

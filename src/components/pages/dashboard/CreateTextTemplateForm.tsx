@@ -160,6 +160,8 @@ export const CreateTextTemplateForm: React.FC<{
                   options={tagOptions}
                   allowClear
                   showSearch
+                  popupClassName="modal-select-dropdown"
+                  getPopupContainer={(trigger) => trigger.parentElement!}
                   filterOption={(input, option) =>
                     (option?.label as string)
                       ?.toLowerCase()
@@ -184,6 +186,8 @@ export const CreateTextTemplateForm: React.FC<{
                 style={{ width: "100%" }}
                 options={languageOptions}
                 showSearch
+                popupClassName="modal-select-dropdown"
+                getPopupContainer={(trigger) => trigger.parentElement!}
                 filterOption={(input, option) =>
                   (option?.label as string)
                     ?.toLowerCase()

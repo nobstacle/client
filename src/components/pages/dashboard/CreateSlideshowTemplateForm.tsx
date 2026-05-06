@@ -485,7 +485,7 @@ export const CreateSlideshowTemplateForm: React.FC<{
                       setValue("tagCreate", "", { shouldValidate: true });
                     }
                   }}
-                  getPopupContainer={(triggerNode) => triggerNode.ownerDocument.body}
+                  getPopupContainer={(triggerNode) => triggerNode.parentElement!}
                   popupClassName="modal-select-dropdown"
                   allowClear
                 >
@@ -518,7 +518,7 @@ export const CreateSlideshowTemplateForm: React.FC<{
                     .includes(input.toLowerCase())
                 }
                 optionFilterProp="children"
-                getPopupContainer={(triggerNode) => triggerNode.ownerDocument.body}
+                getPopupContainer={(triggerNode) => triggerNode.parentElement!}
                 popupClassName="modal-select-dropdown"
               >
                 {languages.map(({ code, name }, index) => (

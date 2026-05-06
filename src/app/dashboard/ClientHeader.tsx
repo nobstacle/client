@@ -704,26 +704,34 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
 
         const addTemplate = (template, type, extraData = {}) => {
             const tag = template.tag;
-            // Create unique key by combining tag and type to prevent overwriting
-            const mapKey = `${tag}__${type}`;
+            if (!tag) return;
+
+            // Use tag and type for grouping (case-insensitive for tag) to prevent duplicates
+            const normalizedTag = tag.trim();
+            const mapKey = `${normalizedTag.toLowerCase()}__${type}`;
+
+            const isSelected = template.langCode?.includes(selectedLang);
+            const isDefault = template.langCode?.includes(companyData?.defaultLangCode);
 
             if (!templateMap.has(mapKey)) {
                 // First time seeing this tag+type combination
                 templateMap.set(mapKey, {
                     id: template.id,
-                    tag: template.tag,
+                    tag: normalizedTag, // Use trimmed tag for display
                     type: type,
                     langCode: template.langCode,
                     order: template.order,
-                    templateData: template,
-                    availableInSelectedLang: template.langCode?.includes(selectedLang),
-                    defaultLangData: template,
+                    templateData: template, // Default to this one as initial data
+                    availableInSelectedLang: !!isSelected,
+                    defaultLangData: isDefault ? template : null,
                     ...extraData
                 });
             } else {
-                // Tag+type exists, check if this version has the selected language
+                // Tag+type exists, update if we found a better match for selected or default language
                 const existing = templateMap.get(mapKey);
-                if (template.langCode?.includes(selectedLang) && !existing.availableInSelectedLang) {
+                
+                // If this version is in the selected language and we haven't found one yet
+                if (isSelected && !existing.availableInSelectedLang) {
                     templateMap.set(mapKey, {
                         ...existing,
                         id: template.id,
@@ -732,11 +740,25 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                         availableInSelectedLang: true,
                         ...extraData
                     });
-                } else if (!existing.availableInSelectedLang && template.langCode?.includes(companyData?.defaultLangCode)) {
+                } 
+                
+                // If this version is the default language, store it as the fallback
+                if (isDefault) {
+                    const currentMapEntry = templateMap.get(mapKey) || existing;
                     templateMap.set(mapKey, {
-                        ...existing,
+                        ...currentMapEntry,
                         defaultLangData: template
                     });
+                    
+                    // If we still don't have a template in the selected language, use the default language template as primary
+                    if (!templateMap.get(mapKey).availableInSelectedLang) {
+                         templateMap.set(mapKey, {
+                            ...templateMap.get(mapKey),
+                            id: template.id,
+                            templateData: template,
+                            ...extraData
+                         });
+                    }
                 }
             }
         };
@@ -912,11 +934,11 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
 
         const templateToSend = template.availableInSelectedLang
             ? template.templateData
-            : template.defaultLangData;
+            : (template.defaultLangData || template.templateData);
 
         const langToSend = template.availableInSelectedLang
             ? selectedLang
-            : (companyData?.defaultLangCode || "en");
+            : (templateToSend?.langCode?.[0] || companyData?.defaultLangCode || "en");
 
         let contentType = "";
         let contentExtra = templateToSend?.ext;
@@ -1270,11 +1292,11 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
 
         const templateToSend = template.availableInSelectedLang
             ? template.templateData
-            : template.defaultLangData;
+            : (template.defaultLangData || template.templateData);
 
         const langToSend = template.availableInSelectedLang
             ? selectedLang
-            : (companyData?.defaultLangCode || "en");
+            : (templateToSend?.langCode?.[0] || companyData?.defaultLangCode || "en");
 
         let contentType = "";
         let contentExtra = templateToSend?.ext;

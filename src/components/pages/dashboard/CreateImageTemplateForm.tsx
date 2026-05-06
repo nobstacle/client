@@ -165,6 +165,8 @@ export const CreateImageTemplateForm: React.FC<{
                   style={{ width: '100%' }}
                   options={tagOptions}
                   allowClear
+                  popupClassName="modal-select-dropdown"
+                  getPopupContainer={(trigger) => trigger.parentElement!}
                 />
               )}
             />
@@ -183,6 +185,8 @@ export const CreateImageTemplateForm: React.FC<{
                 style={{ width: "100%" }}
                 options={languageOptions}
                 showSearch
+                popupClassName="modal-select-dropdown"
+                getPopupContainer={(trigger) => trigger.parentElement!}
                 filterOption={(input, option) =>
                   (option?.label as string)
                     ?.toLowerCase()

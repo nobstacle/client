@@ -18,6 +18,7 @@ import SurveyAnswer from "./SurveyAnswer";
 import QRCode from 'qrcode';
 import "../../../styles/base.css";
 import "antd/dist/reset.css";
+import { motion, AnimatePresence } from "framer-motion";
 import { useSession } from "next-auth/react";
 import { Card, Button, Tag, Typography, Carousel, message, Modal, Image } from "antd";
 import { LeftOutlined, RightOutlined, ExpandAltOutlined } from '@ant-design/icons';
@@ -68,7 +69,7 @@ const normalizePublicContentPayload = (content: any) => {
 
   return {
     ...content,
-    type: "Scroll",
+    type: content.type || "Scroll",
     extraContent: JSON.stringify(activeItems),
     contents: activeItems
       .map((item: any) => item?.signedUrl || item?.url)
@@ -888,6 +889,8 @@ export const Content: React.FC = () => {
     }
   }, [defaultSlideshowContent.data, contentToDisplay, hasHydrated]);
 
+  console.info("messageStore.receivedTypemessageStore.receivedType", messageStore.receivedType);
+
   useEffect(() => {
     if (messageStore.receivedType === "Recording") {
       const lastContent = localStorage.getItem(LAST_DISPLAYED_CONTENT_KEY);
@@ -902,14 +905,14 @@ export const Content: React.FC = () => {
         }
       }
     } else if (messageStore.receivedType) {
-      if (messageStore.receivedType === "Scroll") {
+      if (messageStore.receivedType === "Scroll" || messageStore.receivedType === "Slideshow") {
         const normalizedPublicContent = normalizePublicContentPayload(
           messageStore.receivedContent,
         );
 
         if (normalizedPublicContent) {
           setContentToDisplay({
-            type: "Scroll",
+            type: messageStore.receivedType,
             content: normalizedPublicContent,
             survey: messageStore.receivedSurvey,
             messages: messageStore.receivedMessage,
@@ -1079,7 +1082,7 @@ export const Content: React.FC = () => {
 
       localStorage.setItem(LAST_DISPLAYED_CONTENT_KEY, JSON.stringify(contentToStore));
 
-      if (messageStore.receivedType === "Scroll") {
+      if (messageStore.receivedType === "Scroll" || messageStore.receivedType === "Slideshow") {
         const normalizedPublicContent = normalizePublicContentPayload(
           messageStore.receivedContent,
         );
@@ -1089,7 +1092,7 @@ export const Content: React.FC = () => {
             LAST_PUBLIC_CONTENT_KEY,
             JSON.stringify({
               ...contentToStore,
-              type: "Scroll",
+              type: messageStore.receivedType,
               content: normalizedPublicContent,
             }),
           );
@@ -1755,7 +1758,6 @@ export const Content: React.FC = () => {
   };
 
   const ScrollViewer: React.FC<{ items: any[] }> = ({ items }) => {
-    const scrollContainerRef = useRef<HTMLDivElement | null>(null);
     const [activeIndex, setActiveIndex] = useState(0);
     const [now, setNow] = useState(Date.now());
 
@@ -1775,40 +1777,16 @@ export const Content: React.FC = () => {
       return () => window.clearInterval(timer);
     }, []);
 
-    const scrollTo = useCallback((index: number) => {
-      const node = scrollContainerRef.current;
-      if (!node) return;
-      node.scrollTo({
-        top: index * node.clientHeight,
-        behavior: "smooth",
-      });
-      setActiveIndex(index);
-    }, []);
-
     const nextSlide = useCallback(() => {
-      const nextIndex = (activeIndex + 1) % activeItems.length;
-      scrollTo(nextIndex);
-    }, [activeIndex, activeItems.length, scrollTo]);
-
-    useEffect(() => {
-      const node = scrollContainerRef.current;
-      if (!node) return;
-
-      const handleScroll = () => {
-        const index = Math.round(node.scrollTop / node.clientHeight);
-        if (index !== activeIndex && index >= 0 && index < activeItems.length) {
-          setActiveIndex(index);
-        }
-      };
-
-      node.addEventListener("scroll", handleScroll, { passive: true });
-      return () => node.removeEventListener("scroll", handleScroll);
-    }, [activeIndex, activeItems.length]);
+      if (activeItems.length === 0) return;
+      setActiveIndex((prev) => (prev + 1) % activeItems.length);
+    }, [activeItems.length]);
 
     useEffect(() => {
       if (activeItems.length <= 1) return;
 
       const currentItem = activeItems[activeIndex];
+      // Videos handle their own transition via onEnded
       if (currentItem?.mediaType === "video") return;
 
       const duration = (currentItem?.imageDurationSeconds || 6) * 1000;
@@ -1826,23 +1804,25 @@ export const Content: React.FC = () => {
 
     return (
       <div className="relative h-screen w-screen overflow-hidden bg-black group">
-        <div
-          ref={scrollContainerRef}
-          className="no-scrollbar h-full w-full snap-y snap-mandatory overflow-y-auto"
-          style={{ scrollBehavior: "smooth" }}
-        >
-          {activeItems.map((item, index) => (
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={`${activeItems[activeIndex]?.url || activeItems[activeIndex]?.signedUrl || activeIndex}`}
+            initial={{ opacity: 0, y: "100%" }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: "-100%" }}
+            transition={{ duration: 1.2, ease: [0.4, 0, 0.2, 1] }}
+            className="absolute inset-0 h-full w-full"
+          >
             <ScrollSection
-              key={`${item?.url || item?.signedUrl || index}`}
-              item={item}
-              index={index}
-              isActive={index === activeIndex}
+              item={activeItems[activeIndex]}
+              index={activeIndex}
+              isActive={true}
               onEnded={nextSlide}
               isMuted={isMuted}
               toggleMute={toggleMute}
             />
-          ))}
-        </div>
+          </motion.div>
+        </AnimatePresence>
 
         {/* Navigation Dots */}
         {activeItems.length > 1 && (
@@ -1850,43 +1830,25 @@ export const Content: React.FC = () => {
             {activeItems.map((_, idx) => (
               <button
                 key={idx}
-                onClick={() => scrollTo(idx)}
-                className={`h-2.5 w-2.5 rounded-full transition-all duration-300 ${
-                  idx === activeIndex
-                    ? "scale-125 bg-white shadow-[0_0_8px_rgba(255,255,255,0.8)]"
+                onClick={() => setActiveIndex(idx)}
+                className={`h-3 w-3 rounded-full transition-all duration-300 ${idx === activeIndex
+                    ? "h-10 bg-white shadow-[0_0_15px_rgba(255,255,255,0.6)]"
                     : "bg-white/30 hover:bg-white/50"
-                }`}
+                  }`}
               />
             ))}
           </div>
         )}
 
-        {/* Scroll Indicator */}
-        {activeItems.length > 1 && (
+        {/* Enhanced Scroll/More Hint */}
+        {activeItems.length > 1 && activeIndex < activeItems.length - 1 && (
           <div
-            className={`absolute bottom-8 left-1/2 z-50 flex -translate-x-1/2 cursor-pointer flex-col items-center gap-1 transition-all duration-500 ${
-              activeIndex === activeItems.length - 1
-                ? "pointer-events-none opacity-0"
-                : "animate-bounce opacity-100"
-            }`}
-            onClick={nextSlide}
+            className="absolute bottom-12 left-1/2 -translate-x-1/2 flex flex-col items-center gap-3 animate-bounce z-50 cursor-pointer pointer-events-none"
           >
-            <span className="text-[10px] font-bold uppercase tracking-widest text-white/70">
+            <span className="text-white text-lg font-black tracking-[0.3em] uppercase drop-shadow-lg opacity-90">
               Scroll
             </span>
-            <svg
-              className="text-white/70"
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M7 13l5 5 5-5M7 6l5 5 5-5" />
-            </svg>
+            <div className="w-[3px] h-14 bg-gradient-to-b from-white via-white/50 to-transparent rounded-full shadow-[0_0_10px_rgba(255,255,255,0.3)]" />
           </div>
         )}
       </div>
@@ -1894,15 +1856,6 @@ export const Content: React.FC = () => {
   };
 
   const scrollViewerStyles = `
-  @keyframes fadeInOut {
-    0%, 100% { opacity: 0; }
-    50% { opacity: 1; }
-  }
-
-  .scroll-hint {
-    animation: fadeInOut 2s infinite;
-  }
-
   .no-scrollbar::-webkit-scrollbar {
     display: none;
   }
@@ -2409,19 +2362,19 @@ export const Content: React.FC = () => {
               <Slideshow
                 contents={
                   messageStore.receivedContent?.contents &&
-                  messageStore.receivedContent?.contents[0] !== null
+                    messageStore.receivedContent?.contents[0] !== null
                     ? messageStore.receivedContent?.contents
                     : contentToDisplay?.contents
-                    ? contentToDisplay?.contents
-                    : defaultSlideshowContent.data?.contents ?? []
+                      ? contentToDisplay?.contents
+                      : defaultSlideshowContent.data?.contents ?? []
                 }
                 metadata={parseSlideshowItemsMetadata(
                   messageStore.receivedContent?.contents &&
                     messageStore.receivedContent?.contents[0] !== null
                     ? messageStore.receivedContent?.extraContent
                     : contentToDisplay?.contents
-                    ? contentToDisplay?.extraContent
-                    : defaultSlideshowContent.data?.extraContent,
+                      ? contentToDisplay?.extraContent
+                      : defaultSlideshowContent.data?.extraContent,
                 )}
               />
             </>
