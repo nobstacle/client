@@ -154,8 +154,9 @@ export default function ScreensDashboard() {
 
     const grouped = source.reduce((acc, s) => {
       const displayTag = toDisplayScrollTag(s.tag);
-      if (!acc[displayTag]) acc[displayTag] = [];
-      acc[displayTag].push(s);
+      const key = displayTag.toLowerCase().trim();
+      if (!acc[key]) acc[key] = [];
+      acc[key].push(s);
       return acc;
     }, {} as Record<string, GetScrollTemplateRes[]>);
 

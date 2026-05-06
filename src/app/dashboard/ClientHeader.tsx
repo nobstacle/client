@@ -611,7 +611,22 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         }
     );
 
+    const { data: publicScrollsResponse, isLoading: publicScrollLoading } = useScrollControllerGetScrolls(
+        { limit: 9999, scope: 'public' },
+        {
+            query: {
+                queryKey: ['scrolls', currentStation, 'public'],
+                staleTime: 1000 * 60 * 5,
+                gcTime: 1000 * 60 * 10,
+                refetchOnWindowFocus: false,
+                refetchOnMount: true,
+                enabled: !!currentStation,
+            }
+        }
+    );
+
     const scrolls = scrollsResponse?.data || [];
+    const publicScrolls = publicScrollsResponse?.data || [];
 
     const { data: videoTemplates, isLoading: videoLoading } = useTemplateControllerGetVideoTemplates(
         undefined,
@@ -683,7 +698,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
     );
 
     const isLoading = textLoading || imageLoading || videoLoading ||
-        websiteLoading || slideshowLoading || mapLoading || documentLoading || scrollLoading;
+        websiteLoading || slideshowLoading || mapLoading || documentLoading || scrollLoading || publicScrollLoading;
 
     // Template type configurations
     const templateConfig = useMemo(() => ({
@@ -706,8 +721,9 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
             const tag = template.tag;
             if (!tag) return;
 
-            // Use tag and type for grouping (case-insensitive for tag) to prevent duplicates
-            const normalizedTag = tag.trim();
+            // For Scroll/Public templates, we use the display tag for deduplication
+            const displayTag = type === 'scroll' ? toDisplayScrollTag(tag) : tag;
+            const normalizedTag = displayTag.trim();
             const mapKey = `${normalizedTag.toLowerCase()}__${type}`;
 
             const isSelected = template.langCode?.includes(selectedLang);
@@ -799,6 +815,12 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
             });
         }
 
+        if (publicScrolls) {
+            publicScrolls.forEach(template => {
+                addTemplate(template, 'scroll', { items: template.items });
+            });
+        }
+
         if (mapTemplates) {
             mapTemplates.forEach(template => {
                 addTemplate(template, 'map', {
@@ -826,6 +848,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         mapTemplates,
         documentTemplates,
         scrolls,
+        publicScrolls,
         selectedLang,
         companyData?.defaultLangCode
     ]);
