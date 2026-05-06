@@ -549,7 +549,7 @@ export const CreateScrollTemplateForm: React.FC<{
                     setValue("tagCreate", "", { shouldValidate: true });
                   }
                 }}
-                getPopupContainer={(triggerNode) => triggerNode.ownerDocument.body}
+                getPopupContainer={(triggerNode) => triggerNode.parentElement!}
                 popupClassName="modal-select-dropdown"
               >
                 {existingTagOptions.map((tag, index) => (
@@ -582,7 +582,7 @@ export const CreateScrollTemplateForm: React.FC<{
                   (option?.children as string)?.toLowerCase().includes(input.toLowerCase())
                 }
                 optionFilterProp="children"
-                getPopupContainer={(triggerNode) => triggerNode.ownerDocument.body}
+                getPopupContainer={(triggerNode) => triggerNode.parentElement!}
                 popupClassName="modal-select-dropdown"
               >
                 {languages.map(({ code, name }, index) => (

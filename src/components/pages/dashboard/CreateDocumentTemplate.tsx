@@ -320,6 +320,8 @@ export const UploadDocumentTemplateForm: React.FC<{
                         className="w-full"
                         allowClear
                         value={watch('tagSelect') || undefined}
+                        popupClassName="modal-select-dropdown"
+                        getPopupContainer={(trigger) => trigger.parentElement!}
                     >
                         {documentTags.data?.map((value, index) => (
                             <Option value={value.tag} key={`${value.tag}-${index}`}>
@@ -347,6 +349,8 @@ export const UploadDocumentTemplateForm: React.FC<{
                             status={errors.langCode ? "error" : ""}
                             className="w-full"
                             showSearch
+                            popupClassName="modal-select-dropdown"
+                            getPopupContainer={(trigger) => trigger.parentElement!}
                             filterOption={(input, option) =>
                                 (option?.children as string)
                                     ?.toLowerCase()

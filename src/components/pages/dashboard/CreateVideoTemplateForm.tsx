@@ -178,6 +178,8 @@ export const CreateVideoTemplateForm: React.FC<{
                 placeholder="Select tag..."
                 style={{ width: "100%" }}
                 allowClear
+                popupClassName="modal-select-dropdown"
+                getPopupContainer={(trigger) => trigger.parentElement!}
               >
                 {videoTags.data?.map((value, index) => (
                   <Select.Option value={value.tag} key={`${value.tag}-${index}`}>
@@ -204,6 +206,8 @@ export const CreateVideoTemplateForm: React.FC<{
                 placeholder="Search or select language..."
                 style={{ width: "100%" }}
                 showSearch
+                popupClassName="modal-select-dropdown"
+                getPopupContainer={(trigger) => trigger.parentElement!}
                 filterOption={(input, option) =>
                   (option?.children as string)
                     ?.toLowerCase()
