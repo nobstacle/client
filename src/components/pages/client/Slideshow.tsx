@@ -1,6 +1,6 @@
 /* eslint-disable @next/next/no-img-element */
 import React, { useState, useEffect, useMemo, useRef } from "react";
-import { useMediaFit } from "../../../hooks/useMediaFit";
+import { getFullscreenMediaStyle, useMediaFit } from "../../../hooks/useMediaFit";
 
 const VIDEO_EXTENSIONS = ["mp4", "webm", "mov", "avi", "m4v"];
 
@@ -124,25 +124,13 @@ const FullscreenMediaLayer: React.FC<{
           preload="auto"
           onEnded={onEnded}
           onError={onEnded}
-          style={{
-            width: "100%",
-            height: "100%",
-            objectFit: mediaFit,
-            objectPosition: "center center",
-            display: "block",
-          }}
+          style={getFullscreenMediaStyle(mediaFit)}
         />
       ) : (
         <img
           alt="template_image"
           src={item.url ?? ""}
-          style={{
-            width: "100%",
-            height: "100%",
-            objectFit: mediaFit,
-            objectPosition: "center center",
-            display: "block",
-          }}
+          style={getFullscreenMediaStyle(mediaFit)}
         />
       )}
     </div>

@@ -24,7 +24,7 @@ import { Card, Button, Tag, Typography, Carousel, message, Modal, Image } from "
 import { LeftOutlined, RightOutlined, ExpandAltOutlined } from '@ant-design/icons';
 import { TrialWatermark } from "../../trial/TrialWatermark";
 import { useViewportScale } from "../../../hooks/useViewportScale";
-import { useMediaFit } from "../../../hooks/useMediaFit";
+import { getFullscreenMediaStyle, useMediaFit } from "../../../hooks/useMediaFit";
 
 const { Title, Text } = Typography;
 const LAST_DISPLAYED_CONTENT_KEY = "lastDisplayedContent";
@@ -213,7 +213,7 @@ const ScreensSection: React.FC<{
 
   return (
     <section
-      className="relative h-[100dvh] w-[100dvw] overflow-hidden bg-black"
+      className="relative h-[100dvh] w-100 overflow-hidden bg-black"
     >
       {item.mediaType === "video" ? (
         <video
@@ -1915,7 +1915,7 @@ export const Content: React.FC = () => {
     }
 
     return (
-      <div className="relative h-[100dvh] w-[100dvw] overflow-hidden bg-black group">
+      <div className="relative h-[100dvh] w-100 overflow-hidden bg-black group">
         <AnimatePresence mode="wait">
           <motion.div
             key={`${activeItems[activeIndex]?.url || activeItems[activeIndex]?.signedUrl || activeIndex}`}
@@ -2045,7 +2045,7 @@ export const Content: React.FC = () => {
     }
 
     return (
-      <div className="relative h-[100dvh] w-[100dvw] overflow-hidden bg-black">
+      <div className="relative h-[100dvh] w-100 overflow-hidden bg-black">
         <AnimatePresence mode="wait">
           <motion.div
             key={`${activeItems[activeIndex]?.url || activeItems[activeIndex]?.signedUrl || activeIndex}`}
@@ -2192,20 +2192,14 @@ export const Content: React.FC = () => {
               </Card>
             ) : (
               <div className="relative flex h-[100dvh] w-[100dvw] items-center justify-center overflow-hidden bg-black">
-                <img
-                  key={messageStore.receivedContent?.id ?? ""}
-                  alt="template_image"
-                  style={{
-                    width: "100%",
-                    height: "100%",
-                    objectFit: activeMediaFit,
-                    objectPosition: "center center",
-                    display: "block",
-                  }}
-                  src={messageStore.receivedContent?.content ?? ""}
-                />
-              </div>
-            )}
+                  <img
+                    key={messageStore.receivedContent?.id ?? ""}
+                    alt="template_image"
+                    style={getFullscreenMediaStyle(activeMediaFit)}
+                    src={messageStore.receivedContent?.content ?? ""}
+                  />
+                </div>
+              )}
           </>
         )}
 
@@ -2459,10 +2453,6 @@ export const Content: React.FC = () => {
         }
 
         .fullscreen-video {
-          width: 100dvw !important;
-          height: 100dvh !important;
-          max-width: 100dvw !important;
-          max-height: 100dvh !important;
           position: absolute !important;
           top: 0 !important;
           left: 0 !important;
@@ -2480,10 +2470,7 @@ export const Content: React.FC = () => {
                   preload="auto"
                   className="fullscreen-video"
                   key={messageStore.receivedContent?.content ?? ""}
-                  style={{
-                    objectFit: activeMediaFit,
-                    objectPosition: "center center",
-                  }}
+                  style={getFullscreenMediaStyle(activeMediaFit)}
                   onLoadedData={() => {
                     if (videoElement.current) {
                       videoElement.current.muted = isMuted;

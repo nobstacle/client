@@ -15,7 +15,7 @@ import { NotBadIcon } from "../../icons/survey/NotBadIcon";
 import { VeryNiceIcon } from "../../icons/survey/VeryNiceIcon";
 import { GoodIcon } from "../../icons/survey/GoodIcon";
 import { useViewportScale } from "../../../hooks/useViewportScale";
-import { useMediaFit } from "../../../hooks/useMediaFit";
+import { getFullscreenMediaStyle, useMediaFit } from "../../../hooks/useMediaFit";
 
 // Add CSS to your global stylesheet or component styles
 const responsiveStyles = `
@@ -202,14 +202,7 @@ const SurveyAnswer: React.FC<{ tag: string; survey?: any; handleComplete: any }>
         {templateType === 'Image' && (
           <img
             alt="emoticon_template_image"
-            style={{
-              width: "100%",
-              height: "100%",
-              maxHeight: "100%",
-              maxWidth: "100%",
-              objectFit: emoticonFit,
-              display: "block",
-            }}
+            style={getFullscreenMediaStyle(emoticonFit)}
             src={templateData.url}
           />
         )}
@@ -235,14 +228,7 @@ const SurveyAnswer: React.FC<{ tag: string; survey?: any; handleComplete: any }>
               autoPlay
               loop
               playsInline
-              style={{
-                width: '100%',
-                height: '100%',
-                maxWidth: '100%',
-                maxHeight: '100%',
-                objectFit: emoticonFit,
-                display: 'block',
-              }}
+              style={getFullscreenMediaStyle(emoticonFit)}
             >
               <source src={templateData.url} type="video/mp4" />
             </video>

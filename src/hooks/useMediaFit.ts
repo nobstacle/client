@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import { useEffect, useState } from "react";
 
 type MediaFit = "cover" | "contain";
@@ -76,4 +77,16 @@ export const useMediaFit = (
   }, [mediaType, src]);
 
   return fit;
+};
+
+export const getFullscreenMediaStyle = (fit: MediaFit): CSSProperties => {
+  return {
+    width: "100%",
+    height: "100%",
+    maxWidth: "100%",
+    maxHeight: "100%",
+    objectFit: fit,
+    objectPosition: "center center",
+    display: "block",
+  };
 };
