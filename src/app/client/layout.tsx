@@ -1,8 +1,44 @@
+"use client";
+
+import { useEffect } from "react";
 import { SocketContextProvider } from "../../context/SocketContextProvider";
 
 function Layout({ children }: { children: React.ReactNode }) {
+  useEffect(() => {
+    const root = document.documentElement;
+    const body = document.body;
+
+    root.classList.add("client-fullscreen");
+    body.classList.add("client-fullscreen");
+
+    const enterFullscreen = async () => {
+      if (document.fullscreenElement) return;
+
+      try {
+        await root.requestFullscreen?.({ navigationUI: "hide" } as FullscreenOptions);
+      } catch {
+        // Browsers may require a user gesture; the interaction fallback below retries.
+      }
+    };
+
+    const retryFullscreen = () => {
+      void enterFullscreen();
+    };
+
+    void enterFullscreen();
+    document.addEventListener("pointerdown", retryFullscreen, { passive: true });
+    document.addEventListener("keydown", retryFullscreen);
+
+    return () => {
+      root.classList.remove("client-fullscreen");
+      body.classList.remove("client-fullscreen");
+      document.removeEventListener("pointerdown", retryFullscreen);
+      document.removeEventListener("keydown", retryFullscreen);
+    };
+  }, []);
+
   return (
-    <main className="flex h-[100dvh] w-[100dvw] items-stretch justify-stretch overflow-hidden bg-white">
+    <main className="flex h-[100dvh] w-[100dvw] items-stretch justify-stretch overflow-hidden bg-black">
       <SocketContextProvider>{children}</SocketContextProvider>
     </main>
   );

@@ -910,11 +910,14 @@ export const Content: React.FC = () => {
   const adaptiveTextSizeRem = Math.min(4.2, Math.max(1.75, 3.2 * scale));
   const adaptiveLineHeightRem = Math.min(5.2, Math.max(2.4, 4.1 * scale));
   const activeMediaSrc = messageStore.receivedContent?.content ?? contentToDisplay?.content?.content ?? "";
+  const activeContentType = String(
+    contentToDisplay?.type ?? messageStore.receivedType ?? "",
+  ).toLowerCase();
   const shouldFitActiveMedia =
-    contentToDisplay?.type === "Image" || contentToDisplay?.type === "Video";
+    activeContentType.includes("image") || activeContentType.includes("video");
   const activeMediaFit = useMediaFit(
     shouldFitActiveMedia ? activeMediaSrc : "",
-    contentToDisplay?.type === "Video" ? "video" : "image",
+    activeContentType.includes("video") ? "video" : "image",
   );
 
   let Url = process.env.NEXT_PUBLIC_BACKEND_URL;
