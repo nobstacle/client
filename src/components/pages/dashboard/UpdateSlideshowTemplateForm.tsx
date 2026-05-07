@@ -1,7 +1,10 @@
 /* eslint-disable @next/next/no-img-element */
 import * as React from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   getContentControllerFindOneQueryKey,
+  getSlideshowTemplateControllerGetTextTagsQueryKey,
+  getTemplateControllerGetSlideshowTemplatesQueryKey,
   useCompanyControllerGetCompany,
   useContentControllerFindOne,
   useUploadControllerPatchCompanyFileMany,
@@ -259,6 +262,7 @@ export const UpdateSlideshowTemplateForm: React.FC<{
   sourceId: number;
   tag: string;
 }> = ({ cb, sourceId, langCode, tag }) => {
+  const queryClient = useQueryClient();
   const [sequence, setSequence] = React.useState<SequenceEntry[]>([]);
   const [sequenceError, setSequenceError] = React.useState<string | null>(null);
   const [loadError, setLoadError] = React.useState<string | null>(null);
@@ -463,6 +467,12 @@ export const UpdateSlideshowTemplateForm: React.FC<{
         {
           onSuccess: () => {
             cb?.();
+            void queryClient.invalidateQueries({
+              queryKey: getTemplateControllerGetSlideshowTemplatesQueryKey(),
+            });
+            void queryClient.invalidateQueries({
+              queryKey: getSlideshowTemplateControllerGetTextTagsQueryKey(),
+            });
           },
         },
       );

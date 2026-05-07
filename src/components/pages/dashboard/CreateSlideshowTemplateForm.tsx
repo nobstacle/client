@@ -1,7 +1,10 @@
 /* eslint-disable @next/next/no-img-element */
 import * as React from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Controller, useForm } from "react-hook-form";
 import {
+  getSlideshowTemplateControllerGetTextTagsQueryKey,
+  getTemplateControllerGetSlideshowTemplatesQueryKey,
   useCompanyControllerGetCompany,
   useSlideshowTemplateControllerGetTextTags,
   useUploadControllerUploadCompanyFileMany,
@@ -240,6 +243,7 @@ const SortableRow: React.FC<{
 export const CreateSlideshowTemplateForm: React.FC<{
   cb?: () => void;
 }> = ({ cb }) => {
+  const queryClient = useQueryClient();
   const {
     control,
     handleSubmit,
@@ -380,6 +384,12 @@ export const CreateSlideshowTemplateForm: React.FC<{
       {
         onSuccess: () => {
           cb?.();
+          void queryClient.invalidateQueries({
+            queryKey: getTemplateControllerGetSlideshowTemplatesQueryKey(),
+          });
+          void queryClient.invalidateQueries({
+            queryKey: getSlideshowTemplateControllerGetTextTagsQueryKey(),
+          });
         },
       },
     );

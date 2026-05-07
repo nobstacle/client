@@ -1,6 +1,9 @@
 import * as React from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { SubmitHandler, useForm, Controller } from "react-hook-form";
 import {
+  getTemplateControllerGetWebsiteTemplatesQueryKey,
+  getWebsiteTemplateControllerGetWebsiteTagsQueryKey,
   useCompanyControllerGetCompany,
   useTextTemplateControllerGetTextTags,
   useWebsiteTemplateControllerCreateWebsiteTemplate,
@@ -56,6 +59,7 @@ const schema = yup.object().shape(
 export const CreateWebsiteTemplateForm: React.FC<{
   cb?: (template: GetWebsiteTemplateRes, isUpdate: boolean) => void;
 }> = ({ cb }) => {
+  const queryClient = useQueryClient();
   const websiteTags = useWebsiteTemplateControllerGetWebsiteTags();
   const company = useCompanyControllerGetCompany();
 
@@ -97,6 +101,12 @@ export const CreateWebsiteTemplateForm: React.FC<{
               false,
             );
           }
+          void queryClient.invalidateQueries({
+            queryKey: getTemplateControllerGetWebsiteTemplatesQueryKey(),
+          });
+          void queryClient.invalidateQueries({
+            queryKey: getWebsiteTemplateControllerGetWebsiteTagsQueryKey(),
+          });
         },
       },
     );

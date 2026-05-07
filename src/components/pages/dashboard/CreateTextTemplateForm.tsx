@@ -1,8 +1,11 @@
 // Updated CreateTextTemplateForm with matching design to CreateImageTemplateForm
 
 import * as React from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Controller, SubmitHandler, useForm } from "react-hook-form";
 import {
+  getTemplateControllerGetTextTemplatesQueryKey,
+  getTextTemplateControllerGetTextTagsQueryKey,
   useCompanyControllerGetCompany,
   useTextTemplateControllerCreateTextTemplate,
   useTextTemplateControllerGetTextTags,
@@ -49,6 +52,7 @@ const schema = yup.object().shape(
 export const CreateTextTemplateForm: React.FC<{
   cb?: (template: GetTextTemplateRes, isUpdate: boolean) => void;
 }> = ({ cb }) => {
+  const queryClient = useQueryClient();
   const textTags = useTextTemplateControllerGetTextTags();
   const company = useCompanyControllerGetCompany();
 
@@ -89,6 +93,12 @@ export const CreateTextTemplateForm: React.FC<{
               false,
             );
           }
+          void queryClient.invalidateQueries({
+            queryKey: getTemplateControllerGetTextTemplatesQueryKey(),
+          });
+          void queryClient.invalidateQueries({
+            queryKey: getTextTemplateControllerGetTextTagsQueryKey(),
+          });
         },
       },
     );

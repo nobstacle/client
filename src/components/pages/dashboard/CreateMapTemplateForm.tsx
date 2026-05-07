@@ -1,19 +1,13 @@
 import * as React from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { SubmitHandler, useForm, Controller } from "react-hook-form";
 import * as yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
-import {
-  Form,
-  Input,
-  Button,
-  Select,
-  Space,
-  Typography,
-  Alert,
-  Spin
-} from "antd";
+import { Form, Input, Button, Select, Space, Typography, Alert, Spin } from "antd";
 import { languages } from "../../../constant/languages";
 import {
+  getMapTemplateControllerGetMapTagsQueryKey,
+  getTemplateControllerGetMapTemplatesQueryKey,
   useCompanyControllerGetCompany,
   useMapTemplateControllerCreateMapTemplate,
   useMapTemplateControllerGetMapTags,
@@ -58,6 +52,7 @@ const schema = yup.object().shape(
 export const CreateMapsTemplateForm: React.FC<{
   cb?: (template: any, isUpdate: boolean) => void;
 }> = ({ cb }) => {
+  const queryClient = useQueryClient();
   const { isLoaded } = useJsApiLoader({
     googleMapsApiKey: "AIzaSyBB5xoUCTVJoyYUy-4r7LAySR8SpfaVsHA",
     libraries: ["places"],
@@ -135,6 +130,12 @@ export const CreateMapsTemplateForm: React.FC<{
               false,
             );
           }
+          void queryClient.invalidateQueries({
+            queryKey: getTemplateControllerGetMapTemplatesQueryKey(),
+          });
+          void queryClient.invalidateQueries({
+            queryKey: getMapTemplateControllerGetMapTagsQueryKey(),
+          });
         },
       },
     );

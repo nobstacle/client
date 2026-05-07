@@ -1,7 +1,10 @@
 import * as React from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { SubmitHandler, useForm } from "react-hook-form";
 import {
   getContentControllerFindOneQueryKey,
+  getMapTemplateControllerGetMapTagsQueryKey,
+  getTemplateControllerGetMapTemplatesQueryKey,
   useCompanyControllerGetCompany,
   useContentControllerFindOne,
   useMapTemplateControllerPatchMapTemplateOne,
@@ -32,6 +35,7 @@ export const UpdateMapTemplateForm: React.FC<{
   defaultLangCode: string;
   tag: string;
 }> = ({ cb, sourceId, defaultLangCode, tag }) => {
+  const queryClient = useQueryClient();
   const content = useContentControllerFindOne(
     {
       refType: "Map",
@@ -91,6 +95,12 @@ export const UpdateMapTemplateForm: React.FC<{
           if (cb) {
             cb(template);
           }
+          void queryClient.invalidateQueries({
+            queryKey: getTemplateControllerGetMapTemplatesQueryKey(),
+          });
+          void queryClient.invalidateQueries({
+            queryKey: getMapTemplateControllerGetMapTagsQueryKey(),
+          });
         },
       },
     );

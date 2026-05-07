@@ -1,6 +1,9 @@
 import * as React from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { SubmitHandler, useForm } from "react-hook-form";
 import {
+  getTemplateControllerGetVideoTemplatesQueryKey,
+  getVideoTemplateControllerGetVideoTagsQueryKey,
   templateControllerGetVideoTemplates,
   useCompanyControllerGetCompany,
   useUploadControllerUploadCompanyFile,
@@ -27,6 +30,7 @@ export const UpdateVideoTemplateForm: React.FC<{
   defaultLangCode: string;
   tag: string;
 }> = ({ cb, defaultLangCode, tag }) => {
+  const queryClient = useQueryClient();
   const company = useCompanyControllerGetCompany();
 
   const uploadFile = useUploadControllerUploadCompanyFile({
@@ -64,6 +68,12 @@ export const UpdateVideoTemplateForm: React.FC<{
 
             cb(template[0]);
           }
+          void queryClient.invalidateQueries({
+            queryKey: getTemplateControllerGetVideoTemplatesQueryKey(),
+          });
+          void queryClient.invalidateQueries({
+            queryKey: getVideoTemplateControllerGetVideoTagsQueryKey(),
+          });
         },
       },
     );

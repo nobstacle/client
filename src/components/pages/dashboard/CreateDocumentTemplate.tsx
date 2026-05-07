@@ -15,10 +15,11 @@ import {
 import { UploadOutlined, InboxOutlined } from "@ant-design/icons";
 import { languages } from "../../../constant/languages";
 import {
+    getTemplateControllerGetDocumentTemplatesQueryKey,
     useCompanyControllerGetCompany,
     useDocumentControllerGetDocumentTags
 } from "../../../lib/client/api";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
 import { toast, Bounce } from 'react-toastify';
 import "react-toastify/dist/ReactToastify.css";
@@ -94,6 +95,7 @@ export const UploadDocumentTemplateForm: React.FC<{
     document?: any; // The document to edit (for update mode)
     mode?: 'create' | 'update'; // Mode of the form
 }> = ({ onSuccess, onClose, document, mode = 'create' }) => {
+    const queryClient = useQueryClient();
     const documentTags = useDocumentControllerGetDocumentTags();
     const company = useCompanyControllerGetCompany();
     const { data } = useSession();
@@ -181,6 +183,12 @@ export const UploadDocumentTemplateForm: React.FC<{
                 transition: Bounce,
             });
             reset();
+            void queryClient.invalidateQueries({
+                queryKey: getTemplateControllerGetDocumentTemplatesQueryKey(),
+            });
+            void queryClient.invalidateQueries({
+                queryKey: ["documentControllerGetDocumentTags"],
+            });
             onSuccess?.(data);
             onClose?.();
         },

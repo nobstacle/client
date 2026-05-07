@@ -1,7 +1,10 @@
 import * as React from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { SubmitHandler, useForm } from "react-hook-form";
 import {
   getContentControllerFindOneQueryKey,
+  getTemplateControllerGetTextTemplatesQueryKey,
+  getTextTemplateControllerGetTextTagsQueryKey,
   useCompanyControllerGetCompany,
   useContentControllerFindOne,
   useTextTemplateControllerCreateTextTemplate,
@@ -31,6 +34,7 @@ export const UpdateTextTemplateForm: React.FC<{
   defaultLangCode: string;
   tag: string;
 }> = ({ cb, sourceId, defaultLangCode, tag }) => {
+  const queryClient = useQueryClient();
   const content = useContentControllerFindOne(
     {
       refType: "Text",
@@ -89,6 +93,12 @@ export const UpdateTextTemplateForm: React.FC<{
           if (cb) {
             cb(template);
           }
+          void queryClient.invalidateQueries({
+            queryKey: getTemplateControllerGetTextTemplatesQueryKey(),
+          });
+          void queryClient.invalidateQueries({
+            queryKey: getTextTemplateControllerGetTextTagsQueryKey(),
+          });
         },
       },
     );

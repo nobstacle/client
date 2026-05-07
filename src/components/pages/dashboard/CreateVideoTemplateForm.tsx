@@ -1,6 +1,9 @@
 import * as React from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { SubmitHandler, useForm, Controller } from "react-hook-form";
 import {
+  getTemplateControllerGetVideoTemplatesQueryKey,
+  getVideoTemplateControllerGetVideoTagsQueryKey,
   templateControllerGetVideoTemplates,
   useCompanyControllerGetCompany,
   useUploadControllerUploadCompanyFile,
@@ -56,6 +59,7 @@ const schema = yup.object().shape(
 export const CreateVideoTemplateForm: React.FC<{
   cb?: (video: GetVideoTemplateRes, isUpdate: boolean) => void;
 }> = ({ cb }) => {
+  const queryClient = useQueryClient();
   const videoTags = useVideoTemplateControllerGetVideoTags();
 
   const {
@@ -101,6 +105,12 @@ export const CreateVideoTemplateForm: React.FC<{
               false,
             );
           }
+          void queryClient.invalidateQueries({
+            queryKey: getTemplateControllerGetVideoTemplatesQueryKey(),
+          });
+          void queryClient.invalidateQueries({
+            queryKey: getVideoTemplateControllerGetVideoTagsQueryKey(),
+          });
         },
       },
     );

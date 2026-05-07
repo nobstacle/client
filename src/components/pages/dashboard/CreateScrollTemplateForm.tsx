@@ -1,6 +1,8 @@
 import * as React from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { SubmitHandler, useForm, Controller } from "react-hook-form";
 import {
+  getScrollControllerGetScrollsQueryKey,
   useScrollControllerGetScrolls,
   useScrollControllerCreate,
   type GetScrollTemplateRes,
@@ -208,6 +210,7 @@ export const CreateScrollTemplateForm: React.FC<{
   entityLabel?: string;
   templateScope?: "scroll" | "public";
 }> = ({ cb, entityLabel = "Scroll", templateScope }) => {
+  const queryClient = useQueryClient();
   const [sequence, setSequence] = React.useState<SequenceEntry[]>([]);
   const [sequenceError, setSequenceError] = React.useState<string | null>(null);
   const resolvedScope =
@@ -370,6 +373,9 @@ export const CreateScrollTemplateForm: React.FC<{
     try {
       await createScroll.mutateAsync({ data: formData });
       message.success(`${entityLabel} template created successfully!`);
+      void queryClient.invalidateQueries({
+        queryKey: getScrollControllerGetScrollsQueryKey(),
+      });
       cb?.();
     } catch (error) {
       console.error("Create scroll error:", error);

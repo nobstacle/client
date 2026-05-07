@@ -1,10 +1,12 @@
 import * as React from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { SubmitHandler, useForm, Controller } from "react-hook-form";
 import * as yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { Button, Select, Form, Space, Upload, message, Input, InputNumber } from "antd";
 import { languages } from "../../../constant/languages";
 import {
+  getScrollControllerGetScrollsQueryKey,
   useScrollControllerUpdate,
   type GetScrollTemplateRes,
   type ScrollMediaItem,
@@ -229,6 +231,7 @@ export const UpdateScrollTemplateForm: React.FC<{
   entityLabel = "Scroll",
   templateScope,
 }) => {
+  const queryClient = useQueryClient();
   const resolvedScope =
     templateScope ??
     (entityLabel.toLowerCase() === "public" || entityLabel.toLowerCase() === "screens"
@@ -393,6 +396,9 @@ export const UpdateScrollTemplateForm: React.FC<{
       // ✅ mutateAsync via the generated hook — no manual fetch, no localStorage token
       const result = await updateScroll.mutateAsync({ id: sourceId, data: formData });
       message.success(`${entityLabel} template updated successfully!`);
+      void queryClient.invalidateQueries({
+        queryKey: getScrollControllerGetScrollsQueryKey(),
+      });
       cb?.(result);
     } catch (error) {
       console.error("Update scroll error:", error);
