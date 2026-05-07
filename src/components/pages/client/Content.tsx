@@ -90,7 +90,7 @@ const getStoredPublicDisplay = () => {
 
     return {
       ...parsed,
-      type: "Scroll",
+      type: normalizedContent.type ?? parsed?.type ?? "Scroll",
       content: normalizedContent,
     };
   } catch {
@@ -1968,16 +1968,38 @@ export const Content: React.FC = () => {
       setActiveIndex((prev) => (prev + 1) % activeItems.length);
     }, [activeItems.length]);
 
+    const currentItem = activeItems[activeIndex];
+
+    useEffect(() => {
+      if (activeItems.length === 0) {
+        setActiveIndex(0);
+        return;
+      }
+
+      if (activeIndex >= activeItems.length) {
+        setActiveIndex(0);
+      }
+    }, [activeIndex, activeItems.length]);
+
     useEffect(() => {
       if (activeItems.length <= 1) return;
 
-      const currentItem = activeItems[activeIndex];
       if (currentItem?.mediaType === "video") return;
 
-      const duration = (currentItem?.imageDurationSeconds || 6) * 1000;
+      const durationSeconds = Number(
+        currentItem?.imageDurationSeconds ?? currentItem?.durationSeconds ?? 6,
+      );
+      const duration = Math.max(durationSeconds, 1) * 1000;
       const timer = setTimeout(nextSlide, duration);
       return () => clearTimeout(timer);
-    }, [activeIndex, activeItems, nextSlide]);
+    }, [
+      activeIndex,
+      activeItems.length,
+      currentItem?.mediaType,
+      currentItem?.imageDurationSeconds,
+      currentItem?.durationSeconds,
+      nextSlide,
+    ]);
 
     if (activeItems.length === 0) {
       return (
@@ -2009,21 +2031,6 @@ export const Content: React.FC = () => {
           </motion.div>
         </AnimatePresence>
 
-        {/* Navigation Dots */}
-        {activeItems.length > 1 && (
-          <div className="absolute right-6 top-1/2 z-50 flex -translate-y-1/2 flex-col gap-3">
-            {activeItems.map((_, idx) => (
-              <button
-                key={idx}
-                onClick={() => setActiveIndex(idx)}
-                className={`h-3 w-3 rounded-full transition-all duration-300 ${idx === activeIndex
-                    ? "h-10 bg-white shadow-[0_0_15px_rgba(255,255,255,0.6)]"
-                    : "bg-white/30 hover:bg-white/50"
-                  }`}
-              />
-            ))}
-          </div>
-        )}
       </div>
     );
   };

@@ -216,7 +216,7 @@ export default function ScreensDashboard() {
     emitSendTemplate({
       refId: template.shareTemplate.id,
       langCode: template.shareLangCode,
-      refType: ChatType.Scroll,
+      refType: ChatType.Screens,
       station: Number(params.get("station") ?? 1),
       contentExtra: JSON.stringify(activeItems),
     });
