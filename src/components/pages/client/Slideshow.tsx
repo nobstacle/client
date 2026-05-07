@@ -1,5 +1,6 @@
 /* eslint-disable @next/next/no-img-element */
 import React, { useState, useEffect, useMemo, useRef } from "react";
+import { useMediaFit } from "../../../hooks/useMediaFit";
 
 const VIDEO_EXTENSIONS = ["mp4", "webm", "mov", "avi", "m4v"];
 
@@ -94,6 +95,60 @@ const isNotExpired = (expiresAt?: string): boolean => {
   return expiresAtMs > Date.now();
 };
 
+const FullscreenMediaLayer: React.FC<{
+  item: ResolvedSlideshowMediaItem;
+  index: number;
+  isActive: boolean;
+  onEnded: () => void;
+  videoRef: React.RefObject<HTMLVideoElement | null>;
+}> = ({ item, index, isActive, onEnded, videoRef }) => {
+  const mediaFit = useMediaFit(item.url, item.mediaType);
+
+  return (
+    <div
+      id="content-container"
+      className={`absolute inset-0 flex h-[100dvh] w-[100dvw] items-center justify-center overflow-hidden bg-black transition-opacity duration-300 ${
+        isActive ? "opacity-100" : "pointer-events-none opacity-0"
+      }`}
+      key={`${item.url}-${index}`}
+      aria-hidden={!isActive}
+    >
+      {item.mediaType === "video" ? (
+        <video
+          ref={isActive ? videoRef : null}
+          key={`${item.url}-${index}-${isActive ? "active" : "inactive"}`}
+          src={item.url}
+          muted
+          autoPlay={isActive}
+          playsInline
+          preload="auto"
+          onEnded={onEnded}
+          onError={onEnded}
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: mediaFit,
+            objectPosition: "center center",
+            display: "block",
+          }}
+        />
+      ) : (
+        <img
+          alt="template_image"
+          src={item.url ?? ""}
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: mediaFit,
+            objectPosition: "center center",
+            display: "block",
+          }}
+        />
+      )}
+    </div>
+  );
+};
+
 // ─── Component ────────────────────────────────────────────────────────────────
 export const Slideshow: React.FC<{
   contents: string[];
@@ -129,6 +184,7 @@ export const Slideshow: React.FC<{
     10000,
   );
   const activeMediaIsVideo = activeMediaItems[activeIndex]?.mediaType === "video";
+  const activeMediaUrl = activeMediaItems[activeIndex]?.url ?? "";
   const activeMediaDurationMs = useMemo(() => {
     const current = activeMediaItems[activeIndex];
     if (!current) return null;
@@ -169,7 +225,7 @@ export const Slideshow: React.FC<{
     return () => {
       video.pause();
     };
-  }, [activeMediaIsVideo, activeIndex, activeMediaItems[activeIndex]?.url]);
+  }, [activeMediaIsVideo, activeIndex, activeMediaUrl]);
 
   useEffect(() => {
     setActiveIndex(0);
@@ -298,47 +354,14 @@ export const Slideshow: React.FC<{
     <div className="h-[100dvh] w-[100dvw] overflow-hidden bg-black">
       <div className="relative h-[100dvh] w-[100dvw] overflow-hidden bg-black">
         {activeMediaItems.map((item, index) => (
-          <div
-            id="content-container"
-            className={`absolute inset-0 flex h-[100dvh] w-[100dvw] items-center justify-center overflow-hidden bg-black transition-opacity duration-300 ${
-              index === activeIndex ? "opacity-100" : "pointer-events-none opacity-0"
-            }`}
+          <FullscreenMediaLayer
             key={`${item.url}-${index}`}
-            aria-hidden={index !== activeIndex}
-          >
-            {item.mediaType === "video" ? (
-              <video
-                ref={activeIndex === index ? videoRef : null}
-                key={`${item.url}-${index}-${activeIndex}`}
-                src={item.url}
-                muted
-                autoPlay={activeIndex === index}
-                playsInline
-                preload="auto"
-                onEnded={handleVideoEnded}
-                onError={handleVideoEnded}
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  objectFit: "contain",
-                  objectPosition: "center center",
-                  display: "block",
-                }}
-              />
-            ) : (
-              <img
-                alt="template_image"
-                src={item.url ?? ""}
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  objectFit: "contain",
-                  objectPosition: "center center",
-                  display: "block",
-                }}
-              />
-            )}
-          </div>
+            item={item}
+            index={index}
+            isActive={index === activeIndex}
+            onEnded={handleVideoEnded}
+            videoRef={videoRef}
+          />
         ))}
       </div>
     </div>

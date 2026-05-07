@@ -15,6 +15,7 @@ import { NotBadIcon } from "../../icons/survey/NotBadIcon";
 import { VeryNiceIcon } from "../../icons/survey/VeryNiceIcon";
 import { GoodIcon } from "../../icons/survey/GoodIcon";
 import { useViewportScale } from "../../../hooks/useViewportScale";
+import { useMediaFit } from "../../../hooks/useMediaFit";
 
 // Add CSS to your global stylesheet or component styles
 const responsiveStyles = `
@@ -109,6 +110,17 @@ const SurveyAnswer: React.FC<{ tag: string; survey?: any; handleComplete: any }>
     setSelectedEmoticonData(null);
   }, [tag]);
 
+  const emoticonMediaSrc = selectedEmoticonData?.templateData?.url ?? "";
+  const emoticonMediaType = selectedEmoticonData?.templateType?.toLowerCase?.();
+  const emoticonFit = useMediaFit(
+    emoticonMediaSrc,
+    emoticonMediaType === "video"
+      ? "video"
+      : emoticonMediaType === "image"
+        ? "image"
+        : undefined,
+  );
+
   const sendSurveyAnswer = (value: number) => {
     setSelectedVal(value);
 
@@ -191,10 +203,11 @@ const SurveyAnswer: React.FC<{ tag: string; survey?: any; handleComplete: any }>
           <img
             alt="emoticon_template_image"
             style={{
-              height: "auto",
+              width: "100%",
+              height: "100%",
               maxHeight: "100%",
               maxWidth: "100%",
-              objectFit: "contain",
+              objectFit: emoticonFit,
               display: "block",
             }}
             src={templateData.url}
@@ -223,11 +236,11 @@ const SurveyAnswer: React.FC<{ tag: string; survey?: any; handleComplete: any }>
               loop
               playsInline
               style={{
+                width: '100%',
+                height: '100%',
                 maxWidth: '100%',
                 maxHeight: '100%',
-                width: 'auto',
-                height: 'auto',
-                objectFit: 'contain',
+                objectFit: emoticonFit,
                 display: 'block',
               }}
             >

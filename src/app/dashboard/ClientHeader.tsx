@@ -2921,8 +2921,8 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                 position: 'relative',
             }}>
                 {/* Mobile Header */}
-                <div className="block lg:hidden" style={{ backgroundColor: 'transparent' }}>
-                    <nav className="h-14 w-full border-b border-transparent px-4" style={{ backgroundColor: 'transparent', boxShadow: 'none' }}>
+                <div className="block lg:hidden" style={{ backgroundColor: '#3b5998' }}>
+                    <nav className="h-14 w-full border-b border-transparent px-4" style={{ backgroundColor: '#3b5998', boxShadow: 'none' }}>
                         <div className="flex h-full w-full items-center justify-between">
                             <Button
                                 type="text"
@@ -3517,7 +3517,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                 <nav
                     className={`w-full hidden lg:block ${isCompactDesktop ? 'px-2 py-1.5' : 'px-6'}`}
                     style={{
-                        backgroundColor: 'transparent',
+                        backgroundColor:'#3b5998',
                         height: isCompactDesktop ? 'auto' : (isInIframe ? '3.5rem' : '4.09rem'),
                         position: 'relative',
                         zIndex: 1,

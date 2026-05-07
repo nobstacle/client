@@ -14,6 +14,19 @@ import { ErudaContainer } from "../../components/containers/ErudaContainer";
 import TestAudioRecorder from "../../components/TestAudioRecorder";
 
 export default function Client() {
+  useEffect(() => {
+    const root = document.documentElement;
+    const body = document.body;
+
+    root.classList.add("client-fullscreen");
+    body.classList.add("client-fullscreen");
+
+    return () => {
+      root.classList.remove("client-fullscreen");
+      body.classList.remove("client-fullscreen");
+    };
+  }, []);
+
   return (
     <>
       <NetworkStatusIndicator />

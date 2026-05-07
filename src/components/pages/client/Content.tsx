@@ -24,6 +24,7 @@ import { Card, Button, Tag, Typography, Carousel, message, Modal, Image } from "
 import { LeftOutlined, RightOutlined, ExpandAltOutlined } from '@ant-design/icons';
 import { TrialWatermark } from "../../trial/TrialWatermark";
 import { useViewportScale } from "../../../hooks/useViewportScale";
+import { useMediaFit } from "../../../hooks/useMediaFit";
 
 const { Title, Text } = Typography;
 const LAST_DISPLAYED_CONTENT_KEY = "lastDisplayedContent";
@@ -107,6 +108,8 @@ const ScrollSection: React.FC<{
   toggleMute: () => void;
 }> = ({ item, index, isActive, onEnded, isMuted, toggleMute }) => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const mediaSrc = item?.signedUrl || item?.url || "";
+  const mediaFit = useMediaFit(mediaSrc, item?.mediaType);
 
   useEffect(() => {
     if (item?.mediaType !== "video" || !videoRef.current) return;
@@ -133,12 +136,22 @@ const ScrollSection: React.FC<{
           muted={isMuted}
           onEnded={onEnded}
           preload="auto"
+          style={{
+            objectFit: mediaFit,
+            objectPosition: "center center",
+            display: "block",
+          }}
         />
       ) : (
         <img
           src={item.signedUrl || item.url}
           alt={item.name || `scroll-item-${index + 1}`}
-          className="h-full w-full object-contain"
+          className="h-full w-full"
+          style={{
+            objectFit: mediaFit,
+            objectPosition: "center center",
+            display: "block",
+          }}
         />
       )}
 
@@ -183,6 +196,8 @@ const ScreensSection: React.FC<{
   toggleMute: () => void;
 }> = ({ item, index, isActive, onEnded, isMuted, toggleMute }) => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const mediaSrc = item?.signedUrl || item?.url || "";
+  const mediaFit = useMediaFit(mediaSrc, item?.mediaType);
 
   useEffect(() => {
     if (item?.mediaType !== "video" || !videoRef.current) return;
@@ -209,12 +224,22 @@ const ScreensSection: React.FC<{
           muted={isMuted}
           onEnded={onEnded}
           preload="auto"
+          style={{
+            objectFit: mediaFit,
+            objectPosition: "center center",
+            display: "block",
+          }}
         />
       ) : (
         <img
           src={item.signedUrl || item.url}
           alt={item.name || `screens-item-${index + 1}`}
-          className="h-full w-full object-contain"
+          className="h-full w-full"
+          style={{
+            objectFit: mediaFit,
+            objectPosition: "center center",
+            display: "block",
+          }}
         />
       )}
 
@@ -884,6 +909,13 @@ export const Content: React.FC = () => {
   const adaptiveQrSize = Math.round(Math.min(384, Math.max(224, width * 0.24)));
   const adaptiveTextSizeRem = Math.min(4.2, Math.max(1.75, 3.2 * scale));
   const adaptiveLineHeightRem = Math.min(5.2, Math.max(2.4, 4.1 * scale));
+  const activeMediaSrc = messageStore.receivedContent?.content ?? contentToDisplay?.content?.content ?? "";
+  const shouldFitActiveMedia =
+    contentToDisplay?.type === "Image" || contentToDisplay?.type === "Video";
+  const activeMediaFit = useMediaFit(
+    shouldFitActiveMedia ? activeMediaSrc : "",
+    contentToDisplay?.type === "Video" ? "video" : "image",
+  );
 
   let Url = process.env.NEXT_PUBLIC_BACKEND_URL;
 
@@ -1040,7 +1072,7 @@ export const Content: React.FC = () => {
         // Force video to cover the entire viewport
         video.style.width = '100dvw';
         video.style.height = '100dvh';
-        video.style.objectFit = 'contain';
+        video.style.objectFit = activeMediaFit;
         video.style.position = 'absolute';
         video.style.top = '0';
         video.style.left = '0';
@@ -1061,7 +1093,7 @@ export const Content: React.FC = () => {
       if (videoElement.current) {
         videoElement.current.style.width = '100dvw';
         videoElement.current.style.height = '100dvh';
-        videoElement.current.style.objectFit = 'contain';
+        videoElement.current.style.objectFit = activeMediaFit;
       }
     };
 
@@ -1074,7 +1106,7 @@ export const Content: React.FC = () => {
       window.removeEventListener("resize", handleResize);
       window.removeEventListener("orientationchange", handleResize);
     };
-  }, [messageStore.receivedContent?.content]);
+  }, [activeMediaFit, messageStore.receivedContent?.content]);
 
   useEffect(() => {
     const generateQR = async () => {
@@ -2163,7 +2195,7 @@ export const Content: React.FC = () => {
                   style={{
                     width: "100%",
                     height: "100%",
-                    objectFit: "contain",
+                    objectFit: activeMediaFit,
                     objectPosition: "center center",
                     display: "block",
                   }}
@@ -2428,7 +2460,6 @@ export const Content: React.FC = () => {
           height: 100dvh !important;
           max-width: 100dvw !important;
           max-height: 100dvh !important;
-          object-fit: contain !important;
           position: absolute !important;
           top: 0 !important;
           left: 0 !important;
@@ -2446,6 +2477,10 @@ export const Content: React.FC = () => {
                   preload="auto"
                   className="fullscreen-video"
                   key={messageStore.receivedContent?.content ?? ""}
+                  style={{
+                    objectFit: activeMediaFit,
+                    objectPosition: "center center",
+                  }}
                   onLoadedData={() => {
                     if (videoElement.current) {
                       videoElement.current.muted = isMuted;
