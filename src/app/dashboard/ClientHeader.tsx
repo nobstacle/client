@@ -961,7 +961,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
 
         const langToSend = template.availableInSelectedLang
             ? selectedLang
-            : (templateToSend?.langCode?.[0] || companyData?.defaultLangCode || "en");
+            : (companyData?.defaultLangCode || "en");
 
         let contentType = "";
         let contentExtra = templateToSend?.ext;
@@ -1319,7 +1319,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
 
         const langToSend = template.availableInSelectedLang
             ? selectedLang
-            : (templateToSend?.langCode?.[0] || companyData?.defaultLangCode || "en");
+            : (companyData?.defaultLangCode || "en");
 
         let contentType = "";
         let contentExtra = templateToSend?.ext;
@@ -1575,10 +1575,6 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
             const displayTag = template.type === "scroll" || template.type === "Scroll"
                 ? toDisplayScrollTag(template.tag)
                 : template.tag;
-            const langTag = !template.availableInSelectedLang
-                ? `<span style="display: inline-block; background: #ff9800; color: white; font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-left: 8px;">${companyData?.defaultLangCode?.toUpperCase() || 'EN'}</span>`
-                : '';
-
             return `
             <div style="
                 cursor: pointer;
@@ -1598,7 +1594,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                     </div>
                     <div style="flex: 1;">
                         <div style="font-weight: 500; color: #1f2937; font-size: 14px;">
-                            ${displayTag}${langTag}
+                            ${displayTag}
                         </div>
                     </div>
                 </div>
@@ -3472,11 +3468,6 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                                                             <span>{template.type === 'scroll' || template.type === 'Scroll'
                                                                                 ? toDisplayScrollTag(template.tag)
                                                                                 : template.tag}</span>
-                                                                            {!template.availableInSelectedLang && (
-                                                                                <Tag color="orange" style={{ fontSize: '10px' }}>
-                                                                                    {companyData?.defaultLangCode?.toUpperCase() || 'EN'}
-                                                                                    </Tag>
-                                                                                )}
                                                                             </div>
                                                                         }
                                                                     />
@@ -4259,11 +4250,6 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                                             <span>{template.type === 'scroll' || template.type === 'Scroll'
                                                                 ? toDisplayScrollTag(template.tag)
                                                                 : template.tag}</span>
-                                                            {!template.availableInSelectedLang && (
-                                                                <Tag color="orange" style={{ fontSize: '10px', padding: '0 4px', margin: 0 }}>
-                                                                    {companyData?.defaultLangCode?.toUpperCase() || 'EN'}
-                                                                </Tag>
-                                                            )}
                                                         </div>
                                                     }
                                                 />

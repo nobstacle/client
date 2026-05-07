@@ -28,6 +28,10 @@ import {
     AiFillFileUnknown,
 } from "react-icons/ai";
 import "../../../styles/base.css";
+import {
+    groupLanguageAwareTemplates,
+    type LanguageAwareTemplate,
+} from "../../../utils/templateVariants";
 
 export default function Documents() {
     const { data } = useSession();
@@ -49,7 +53,8 @@ export default function Documents() {
     const { data: companyData } = useCompanyControllerGetCompany();
 
     // Get current language
-    const currentLang = params.get("lang") || companyData?.defaultLangCode || "en";
+    const defaultLangCode = companyData?.defaultLangCode || "en";
+    const currentLang = params.get("lang") || defaultLangCode;
 
     useEffect(() => {
         setIsMounted(true);
@@ -208,69 +213,41 @@ export default function Documents() {
         }
     };
 
-    const sendDocument = (document: any) => {
+    const sendDocument = (
+        document: LanguageAwareTemplate<any>,
+    ) => {
         emitSendDocument({
-            refId: document?.id,
-            langCode: document?.isAvailableInCurrentLang
-                ? currentLang
-                : companyData?.defaultLangCode || "en",
+            refId: document.shareTemplate.id,
+            langCode: document.shareLangCode,
             refType: ChatType.Document,
             station: Number(params.get("station") ?? 1),
-            contentExtra: document?.ext,
+            contentExtra: document.shareTemplate.ext,
         });
     };
 
-    const handleQrCodeClick = (id: number, url: string, tag: string, isAvailable: boolean) => {
+    const handleQrCodeClick = (
+        document: LanguageAwareTemplate<any>,
+    ) => {
         emitSendDocument({
-            refId: id,
-            langCode: isAvailable
-                ? currentLang
-                : companyData?.defaultLangCode || "en",
+            refId: document.shareTemplate.id,
+            langCode: document.shareLangCode,
             refType: ChatType.Document,
             station: Number(params.get("station") ?? 1),
-            contentExtra: url,
+            contentExtra: document.shareTemplate.url,
             directContent: 'QR'
         });
     };
 
-    // Group documents by tag and show the default language version
-    // but track availability for the current language
-    const displayedDocumentsWithAvailability = useMemo(() => {
-        const documentsSource = searchDocuments.length > 0 ? searchDocuments : documents;
-
-        // Group documents by tag
-        const groupedByTag = documentsSource.reduce((acc, document) => {
-            if (!acc[document.tag]) {
-                acc[document.tag] = [];
-            }
-            acc[document.tag].push(document);
-            return acc;
-        }, {} as Record<string, any[]>);
-
-        // For each tag, always show the default language version
-        // but check if current language is available
-        const displayDocuments: any[] = [];
-
-        Object.values(groupedByTag).forEach((tagDocuments) => {
-            // Always use default language document for display
-            const defaultLangDocument = tagDocuments.find(doc =>
-                doc.langCode.includes(companyData?.defaultLangCode || "en")
-            ) || tagDocuments[0];
-
-            // Check if current language is available for this tag
-            const isAvailableInCurrentLang = tagDocuments.some(doc =>
-                doc.langCode.includes(currentLang)
-            );
-
-            displayDocuments.push({
-                ...defaultLangDocument,
-                isAvailableInCurrentLang
-            });
-        });
-
-        // Sort by order to maintain original ordering
-        return displayDocuments.sort((a, b) => (a.order || 0) - (b.order || 0));
-    }, [documents, searchDocuments, currentLang, companyData?.defaultLangCode]);
+    const documentsSource = searchDocuments.length > 0 ? searchDocuments : documents;
+    const displayedDocumentsWithAvailability = useMemo(
+        () =>
+            groupLanguageAwareTemplates(
+                documentsSource,
+                currentLang,
+                defaultLangCode,
+            ),
+        [documentsSource, currentLang, defaultLangCode],
+    );
 
     if (!isMounted) {
         return null;
@@ -302,7 +279,7 @@ export default function Documents() {
                                             key={document.id}
                                             id={document.id}
                                             tag={document.tag}
-                                            onQrCodeClick={() => handleQrCodeClick(document.id, document.ext, document.tag, document.isAvailableInCurrentLang)}
+                                            onQrCodeClick={() => handleQrCodeClick(document)}
                                             isAdmin={data?.user.Roles?.includes("Admin")}
                                             isAvailable={document.isAvailableInCurrentLang}
                                             onUpdate={() => onUpdateDocument(document)}

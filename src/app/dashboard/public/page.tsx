@@ -9,7 +9,6 @@ import {
   useScrollControllerUpdateOrder,
   getScrollControllerGetScrollsQueryKey,
   type GetScrollTemplateRes,
-  type ScrollMediaItem,
 } from "../../../lib/client/api";
 import { useSearchParams } from "next/navigation";
 import { useSocketContext } from "../../../context/SocketContextProvider";
@@ -32,6 +31,7 @@ import "../../../styles/base.css";
 import { CreateScrollTemplateForm } from "../../../components/pages/dashboard/CreateScrollTemplateForm";
 import { UpdateScrollTemplateForm } from "../../../components/pages/dashboard/UpdateScrollTemplateForm";
 import { isScrollTagInScope, toDisplayScrollTag } from "../../../utils/scrollScope";
+import type { LanguageAwareTemplate } from "../../../utils/templateVariants";
 
 const hasMatchingLangCode = (
   langCode: string | string[] | undefined,
@@ -51,25 +51,37 @@ const pickScrollVariant = (
   tagScrolls: GetScrollTemplateRes[],
   currentLang: string,
   defaultLangCode: string,
-) => {
+) : LanguageAwareTemplate<GetScrollTemplateRes> => {
   const exactMatch = tagScrolls.find((scroll) =>
     hasMatchingLangCode(scroll.langCode, currentLang),
   );
 
-  if (exactMatch) {
-    return { ...exactMatch, isAvailableInCurrentLang: true };
-  }
+  const displayMatch =
+    tagScrolls.find((scroll) =>
+      hasMatchingLangCode(scroll.langCode, defaultLangCode),
+    ) || exactMatch || tagScrolls[0];
 
   const defaultMatch =
     tagScrolls.find((scroll) =>
       hasMatchingLangCode(scroll.langCode, defaultLangCode),
     ) || tagScrolls[0];
 
+  if (exactMatch) {
+    return {
+      ...displayMatch,
+      isAvailableInCurrentLang: true,
+      shareTemplate: exactMatch,
+      shareLangCode: currentLang,
+    };
+  }
+
   return {
-    ...(defaultMatch || tagScrolls[0]),
-    isAvailableInCurrentLang: tagScrolls.some((scroll) =>
-      hasMatchingLangCode(scroll.langCode, currentLang),
-    ),
+    ...displayMatch,
+    isAvailableInCurrentLang: false,
+    shareTemplate: defaultMatch || tagScrolls[0],
+    shareLangCode: hasMatchingLangCode(defaultMatch?.langCode, defaultLangCode)
+      ? defaultLangCode
+      : (defaultMatch?.langCode?.[0] || defaultLangCode),
   };
 };
 
@@ -97,8 +109,8 @@ export default function ScreensDashboard() {
   const { emitSendTemplate } = useSocketContext();
   const queryClient = useQueryClient();
 
-  const currentLang =
-    params.get("lang") || companyData?.defaultLangCode || "en";
+  const defaultLangCode = companyData?.defaultLangCode || "en";
+  const currentLang = params.get("lang") || defaultLangCode;
 
   // ── Data fetching via React Query ────────────────────────────────────────────
   // enabled only after hydration so we never fetch before the session is ready
@@ -168,13 +180,13 @@ export default function ScreensDashboard() {
         pickScrollVariant(
           tagScrolls,
           currentLang,
-          companyData?.defaultLangCode || "en",
+          defaultLangCode,
         ),
       );
     });
 
     return display.sort((a, b) => a.order - b.order);
-  }, [scrolls, searchResults, currentLang, companyData?.defaultLangCode]);
+  }, [scrolls, searchResults, currentLang, defaultLangCode]);
 
   // ── Modals ───────────────────────────────────────────────────────────────────
   const { handleClose, handleOpen, isOpen } = useDisclousure();
@@ -185,9 +197,11 @@ export default function ScreensDashboard() {
   } = useDisclousure();
 
   // ── Actions ──────────────────────────────────────────────────────────────────
-  const sendTemplate = (id: number, isAvailable: boolean, items: ScrollMediaItem[]) => {
+  const sendTemplate = (
+    template: LanguageAwareTemplate<GetScrollTemplateRes>,
+  ) => {
     const now = Date.now();
-    const activeItems = (items || []).filter((item) => {
+    const activeItems = (template.shareTemplate.items || []).filter((item) => {
       if (!item.expiresAt) return true;
       const expiresAt = new Date(item.expiresAt).getTime();
       if (Number.isNaN(expiresAt)) return true;
@@ -200,8 +214,8 @@ export default function ScreensDashboard() {
     }
 
     emitSendTemplate({
-      refId: id,
-      langCode: isAvailable ? currentLang : companyData?.defaultLangCode || "en",
+      refId: template.shareTemplate.id,
+      langCode: template.shareLangCode,
       refType: ChatType.Scroll,
       station: Number(params.get("station") ?? 1),
       contentExtra: JSON.stringify(activeItems),
@@ -344,9 +358,7 @@ export default function ScreensDashboard() {
                   key={val.id}
                   tag={toDisplayScrollTag(val.tag)}
                   isAvailable={val.isAvailableInCurrentLang}
-                  sendOnClick={() =>
-                    sendTemplate(val.id, val.isAvailableInCurrentLang, val.items)
-                  }
+                  sendOnClick={() => sendTemplate(val)}
                   isDraggable={searchResults.length === 0}
                   id={val.id}
                   type="Scroll"

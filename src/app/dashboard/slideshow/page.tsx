@@ -32,6 +32,10 @@ import { UniqueIdentifier } from "@dnd-kit/core";
 import { arrayMove } from "@dnd-kit/sortable";
 import { Card } from 'antd';
 import "../../../styles/base.css";
+import {
+  groupLanguageAwareTemplates,
+  type LanguageAwareTemplate,
+} from "../../../utils/templateVariants";
 
 const VIDEO_EXTENSIONS = ["mp4", "webm", "mov", "avi", "m4v"];
 
@@ -85,8 +89,8 @@ export default function SlideshowDashboard() {
   const { data: userData } = useSession();
 
   // Get current language
-  const currentLang = params.get("lang") || companyData?.defaultLangCode || "en";
   const defaultLangCode = companyData?.defaultLangCode || "en";
+  const currentLang = params.get("lang") || defaultLangCode;
 
   const editTemplateLangCode = useMemo(() => {
     if (!editTemplate?.langCode?.length) {
@@ -104,51 +108,23 @@ export default function SlideshowDashboard() {
     return editTemplate.langCode[0];
   }, [currentLang, defaultLangCode, editTemplate]);
 
-  // Group slideshows by tag and show the default language version
-  // but track availability for the current language
-  const displayedSlideshowsWithAvailability = useMemo(() => {
-    const slideshowsSource = searchSlideshows.length > 0 ? searchSlideshows : slideshows;
-    
-    // Group slideshows by tag
-    const groupedByTag = slideshowsSource.reduce((acc, slideshow) => {
-      if (!acc[slideshow.tag]) {
-        acc[slideshow.tag] = [];
-      }
-      acc[slideshow.tag].push(slideshow);
-      return acc;
-    }, {} as Record<string, GetSlideshowTemplateRes[]>);
+  const slideshowSource = searchSlideshows.length > 0 ? searchSlideshows : slideshows;
+  const displayedSlideshowsWithAvailability = useMemo(
+    () =>
+      groupLanguageAwareTemplates(
+        slideshowSource,
+        currentLang,
+        defaultLangCode,
+      ),
+    [slideshowSource, currentLang, defaultLangCode],
+  );
 
-    // For each tag, always show the default language version
-    // but check if current language is available
-    const displaySlideshows: (GetSlideshowTemplateRes & { isAvailableInCurrentLang: boolean })[] = [];
-    
-    Object.values(groupedByTag).forEach((tagSlideshows) => {
-      // Always use default language slideshow for display
-      const defaultLangSlideshow = tagSlideshows.find(slide =>
-        slide.langCode.includes(companyData?.defaultLangCode || "en")
-      ) || tagSlideshows[0];
-      
-      // Check if current language is available for this tag
-      const isAvailableInCurrentLang = tagSlideshows.some(slide => 
-        slide.langCode.includes(currentLang)
-      );
-      
-      displaySlideshows.push({
-        ...defaultLangSlideshow,
-        isAvailableInCurrentLang
-      });
-    });
-
-    // Sort by order to maintain original ordering
-    return displaySlideshows.sort((a, b) => a.order - b.order);
-  }, [slideshows, searchSlideshows, currentLang, companyData?.defaultLangCode]);
-
-  const sendTemplate = (id: number, isAvailable: boolean) => {
+  const sendTemplate = (
+    template: LanguageAwareTemplate<GetSlideshowTemplateRes>,
+  ) => {
     emitSendTemplate({
-      refId: id,
-      langCode: isAvailable
-        ? currentLang
-        : companyData?.defaultLangCode || "en",
+      refId: template.shareTemplate.id,
+      langCode: template.shareLangCode,
       refType: ChatType.Slideshow,
       station: Number(params.get("station") ?? 1),
     });
@@ -288,12 +264,7 @@ export default function SlideshowDashboard() {
                   isAdmin={userData?.user.Roles?.includes("Admin")}
                   isAvailable={val.isAvailableInCurrentLang}
                   onUpdate={() => onUpdateCard(val)}
-                  sendOnClick={() =>
-                    sendTemplate(
-                      val.id,
-                      val.isAvailableInCurrentLang,
-                    )
-                  }
+                  sendOnClick={() => sendTemplate(val)}
                   isDraggable={searchSlideshows.length === 0}
                   type="slideshow"
                 >

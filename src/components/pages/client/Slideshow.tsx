@@ -183,7 +183,7 @@ export const Slideshow: React.FC<{
   // ── Loading screen ──────────────────────────────────────────────────────────
   if (activeMediaItems.length === 0) {
     return (
-      <div className="relative flex h-screen w-full items-center justify-center bg-black overflow-hidden">
+      <div className="relative flex h-[100dvh] w-[100dvw] items-center justify-center bg-black overflow-hidden">
         <p
           style={{
             color: "rgba(255,255,255,0.75)",
@@ -201,7 +201,7 @@ export const Slideshow: React.FC<{
   if (!ready) {
     const firstImage = activeMediaItems.find((item) => item.mediaType === "image")?.url;
     return (
-      <div className="relative flex h-screen w-full items-center justify-center bg-black overflow-hidden">
+      <div className="relative flex h-[100dvh] w-[100dvw] items-center justify-center bg-black overflow-hidden">
         {/* Blurred first image as background so it doesn't feel like a blank screen */}
         {firstImage && (
           <img
@@ -295,12 +295,12 @@ export const Slideshow: React.FC<{
 
   // ── Slideshow (only mounts after all images are ready) ──────────────────────
   return (
-    <div className="h-screen w-screen overflow-hidden bg-black">
-      <div className="relative h-screen w-screen overflow-hidden bg-black">
+    <div className="h-[100dvh] w-[100dvw] overflow-hidden bg-black">
+      <div className="relative h-[100dvh] w-[100dvw] overflow-hidden bg-black">
         {activeMediaItems.map((item, index) => (
           <div
             id="content-container"
-            className={`absolute inset-0 flex h-screen w-screen items-center justify-center overflow-hidden bg-black transition-opacity duration-300 ${
+            className={`absolute inset-0 flex h-[100dvh] w-[100dvw] items-center justify-center overflow-hidden bg-black transition-opacity duration-300 ${
               index === activeIndex ? "opacity-100" : "pointer-events-none opacity-0"
             }`}
             key={`${item.url}-${index}`}

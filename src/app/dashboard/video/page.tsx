@@ -29,6 +29,10 @@ import { UniqueIdentifier } from "@dnd-kit/core";
 import { Card, Tooltip } from "antd";
 import { FaPlay } from "react-icons/fa";
 import "../../../styles/base.css";
+import {
+  groupLanguageAwareTemplates,
+  type LanguageAwareTemplate,
+} from "../../../utils/templateVariants";
 
 export default function VideoDashboard() {
   let isMobile = typeof window !== 'undefined' && window.innerWidth <= 500;
@@ -62,68 +66,42 @@ export default function VideoDashboard() {
   const { data: userData } = useSession();
 
   // Get current language
-  const currentLang = params.get("lang") || companyData?.defaultLangCode || "en";
+  const defaultLangCode = companyData?.defaultLangCode || "en";
+  const currentLang = params.get("lang") || defaultLangCode;
 
-  // Group videos by tag and show the default language version
-  // but track availability for the current language
-  const displayedVideosWithAvailability = useMemo(() => {
-    const videosSource = searchVideos.length > 0 ? searchVideos : videos;
+  const videosSource = searchVideos.length > 0 ? searchVideos : videos;
+  const displayedVideosWithAvailability = useMemo(
+    () =>
+      groupLanguageAwareTemplates(
+        videosSource,
+        currentLang,
+        defaultLangCode,
+      ),
+    [videosSource, currentLang, defaultLangCode],
+  );
 
-    // Group videos by tag
-    const groupedByTag = videosSource.reduce((acc, video) => {
-      if (!acc[video.tag]) {
-        acc[video.tag] = [];
-      }
-      acc[video.tag].push(video);
-      return acc;
-    }, {} as Record<string, GetVideoTemplateRes[]>);
-
-    // For each tag, always show the default language version
-    // but check if current language is available
-    const displayVideos: (GetVideoTemplateRes & { isAvailableInCurrentLang: boolean })[] = [];
-
-    Object.values(groupedByTag).forEach((tagVideos) => {
-      // Always use default language video for display
-      const defaultLangVideo = tagVideos.find(vid =>
-        vid.langCode.includes(companyData?.defaultLangCode || "en")
-      ) || tagVideos[0];
-
-      // Check if current language is available for this tag
-      const isAvailableInCurrentLang = tagVideos.some(vid =>
-        vid.langCode.includes(currentLang)
-      );
-
-      displayVideos.push({
-        ...defaultLangVideo,
-        isAvailableInCurrentLang
-      });
-    });
-
-    // Sort by order to maintain original ordering
-    return displayVideos.sort((a, b) => a.order - b.order);
-  }, [videos, searchVideos, currentLang, companyData?.defaultLangCode]);
-
-  const sendTemplate = (id: number, isAvailable: boolean, ext: string) => {
+  const sendTemplate = (
+    template: LanguageAwareTemplate<GetVideoTemplateRes>,
+    ext: string,
+  ) => {
     emitSendTemplate({
-      refId: id,
-      langCode: isAvailable
-        ? currentLang
-        : companyData?.defaultLangCode || "en",
+      refId: template.shareTemplate.id,
+      langCode: template.shareLangCode,
       refType: ChatType.Video,
       station: Number(params.get("station") ?? 1),
       contentExtra: ext,
     });
   };
 
-  const handleQrCodeClick = (id: number, url: string, tag: string, isAvailable: boolean) => {
+  const handleQrCodeClick = (
+    template: LanguageAwareTemplate<GetVideoTemplateRes>,
+  ) => {
     emitSendTemplate({
-      refId: id,
-      langCode: isAvailable
-        ? currentLang
-        : companyData?.defaultLangCode || "en",
+      refId: template.shareTemplate.id,
+      langCode: template.shareLangCode,
       refType: ChatType.Video,
       station: Number(params.get("station") ?? 1),
-      contentExtra: url,
+      contentExtra: template.shareTemplate.url,
       directContent: 'QR'
     });
   };
@@ -248,14 +226,13 @@ export default function VideoDashboard() {
                   onDelete={() => onDeleteCard(val.id)}
                   isAdmin={userData?.user.Roles?.includes("Admin")}
                   onUpdate={() => onUpdateCard(val)}
-                  onQrCodeClick={() => handleQrCodeClick(val.id, val.ext, val.tag, val.isAvailableInCurrentLang)}
+                  onQrCodeClick={() => handleQrCodeClick(val)}
                   key={val.id}
                   tag={val.tag}
                   isAvailable={val.isAvailableInCurrentLang}
                   sendOnClick={() =>
                     sendTemplate(
-                      val.id,
-                      val.isAvailableInCurrentLang,
+                      val,
                       val.ext,
                     )
                   }

@@ -14,6 +14,7 @@ import { MehIcon } from "../../icons/survey/MehIcon";
 import { NotBadIcon } from "../../icons/survey/NotBadIcon";
 import { VeryNiceIcon } from "../../icons/survey/VeryNiceIcon";
 import { GoodIcon } from "../../icons/survey/GoodIcon";
+import { useViewportScale } from "../../../hooks/useViewportScale";
 
 // Add CSS to your global stylesheet or component styles
 const responsiveStyles = `
@@ -69,6 +70,10 @@ const SurveyAnswer: React.FC<{ tag: string; survey?: any; handleComplete: any }>
   const { emitSendSurveyAnswer, emitSendTemplate } = useSocketContext();
   const params = useSearchParams();
   const { company } = useCompanyStore();
+  const { scale } = useViewportScale();
+
+  const adaptiveTextSizeRem = Math.min(4.2, Math.max(1.75, 3.2 * scale));
+  const adaptiveLineHeightRem = Math.min(5.2, Math.max(2.4, 4.1 * scale));
 
   const defaultSlideshowShortcut = useShortcutControllerGetShortcutOne(
     { type: "DefaultSlideshow" },
@@ -168,7 +173,15 @@ const SurveyAnswer: React.FC<{ tag: string; survey?: any; handleComplete: any }>
       <div className="w-full h-full flex items-center justify-center">
         {templateType === 'Text' && (
           <div className="w-full p-5">
-            <p className="text-center text-4xl" style={{ lineHeight: "3.5rem", whiteSpace: 'pre-wrap' }}>
+            <p
+              className="mx-auto text-center"
+              style={{
+                fontSize: `${adaptiveTextSizeRem}rem`,
+                lineHeight: `${adaptiveLineHeightRem}rem`,
+                whiteSpace: "pre-wrap",
+                maxWidth: "92vw",
+              }}
+            >
               {templateData.content}
             </p>
           </div>
@@ -194,8 +207,8 @@ const SurveyAnswer: React.FC<{ tag: string; survey?: any; handleComplete: any }>
               position: 'fixed',
               top: 0,
               left: 0,
-              width: '100vw',
-              height: '100vh',
+              width: '100dvw',
+              height: '100dvh',
               overflow: 'hidden',
               zIndex: 9,
               pointerEvents: 'none',
@@ -231,7 +244,7 @@ const SurveyAnswer: React.FC<{ tag: string; survey?: any; handleComplete: any }>
         )}
 
         {templateType === 'Document' && (
-          <div className="w-full h-screen border rounded-lg overflow-hidden">
+          <div className="w-full h-[100dvh] border rounded-lg overflow-hidden">
             <iframe
               src={templateData.url}
               className="w-full h-full"
@@ -267,7 +280,7 @@ const SurveyAnswer: React.FC<{ tag: string; survey?: any; handleComplete: any }>
           <div
             className="text-center px-4 sm:px-6 md:px-8 max-w-5xl leading-snug mb-6"
             style={{
-              fontSize: "clamp(1.25rem, 2vw + 0.5rem, 2.25rem)",
+              fontSize: `clamp(1.25rem, ${Math.max(1.75, scale * 1.95)}vw, 2.5rem)`,
               fontWeight: 600,
               lineHeight: 1.4,
               color: "#3b5998",

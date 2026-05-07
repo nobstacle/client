@@ -208,7 +208,7 @@ const Recording: React.FC<RecordingProps> = ({ onSubmit, langCode = 'en', loadin
   };
 
   return (
-    <div className="w-full h-screen flex items-center justify-center bg-gray-50 p-4">
+    <div className="w-full h-[100dvh] flex items-center justify-center bg-gray-50 p-4">
       <Card className="w-full max-w-2xl shadow-lg">
         {loading ? (
           <div className="space-y-6">

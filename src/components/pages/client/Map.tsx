@@ -67,7 +67,7 @@ const Directions: React.FC<{
     setDuration(results.routes[0].legs[0].duration?.text ?? "");
   }
   return (
-    <div className="relative flex h-screen w-screen flex-col items-center">
+    <div className="relative flex h-[100dvh] w-[100dvw] flex-col items-center overflow-hidden">
       <div className="absolute left-0 top-0 h-full w-full">
         {/* Google Map Box */}
         <GoogleMap

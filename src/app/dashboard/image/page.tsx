@@ -28,6 +28,10 @@ import { arrayMove } from "@dnd-kit/sortable";
 import { UniqueIdentifier } from "@dnd-kit/core";
 import { Card } from 'antd';
 import "../../../styles/base.css";
+import {
+  groupLanguageAwareTemplates,
+  type LanguageAwareTemplate,
+} from "../../../utils/templateVariants";
 
 export default function ImageDashboard() {
   let isMobile = typeof window !== 'undefined' && window.innerWidth <= 500;
@@ -54,63 +58,42 @@ export default function ImageDashboard() {
   const { data: userData } = useSession();
 
   // Get current language
-  const currentLang = params.get("lang") || companyData?.defaultLangCode || "en";
+  const defaultLangCode = companyData?.defaultLangCode || "en";
+  const currentLang = params.get("lang") || defaultLangCode;
 
-const displayedImagesWithAvailability = useMemo(() => {
   const imagesSource = searchImages.length > 0 ? searchImages : images;
+  const displayedImagesWithAvailability = useMemo(
+    () =>
+      groupLanguageAwareTemplates(
+        imagesSource,
+        currentLang,
+        defaultLangCode,
+      ),
+    [imagesSource, currentLang, defaultLangCode],
+  );
 
-  // Group all records by tag (case-insensitive)
-  const tagMap = new Map<string, typeof imagesSource>();
-  for (const image of imagesSource) {
-    const key = image.tag.toLowerCase().trim();
-    if (!tagMap.has(key)) tagMap.set(key, []);
-    tagMap.get(key)!.push(image);
-  }
-
-  const deduplicated = Array.from(tagMap.values()).map((group) => {
-    // 1. Exact match for selected language
-    const exactMatch = group.find((img) => img.langCode.includes(currentLang));
-    if (exactMatch) {
-      return { ...exactMatch, isAvailableInCurrentLang: true };
-    }
-
-    // 2. Fallback: match company default language
-    const defaultLangCode = companyData?.defaultLangCode || "en";
-    const defaultMatch = group.find((img) =>
-      img.langCode.includes(defaultLangCode)
-    );
-    if (defaultMatch) {
-      return { ...defaultMatch, isAvailableInCurrentLang: false };
-    }
-
-    // 3. Last resort: just show the first record
-    return { ...group[0], isAvailableInCurrentLang: false };
-  });
-
-  return deduplicated.sort((a, b) => a.order - b.order);
-}, [images, searchImages, currentLang, companyData?.defaultLangCode]);
-
-  const sendTemplate = (id: number, isAvailable: boolean, ext: string) => {
+  const sendTemplate = (
+    template: LanguageAwareTemplate<GetImageTemplateRes>,
+    ext: string,
+  ) => {
     emitSendTemplate({
-      refId: id,
-      langCode: isAvailable
-        ? currentLang
-        : companyData?.defaultLangCode || "en",
+      refId: template.shareTemplate.id,
+      langCode: template.shareLangCode,
       refType: ChatType.Image,
       station: Number(params.get("station") ?? 1),
       contentExtra: ext,
     });
   };
 
-  const handleQrCodeClick = (id: number, url: string, tag: string, isAvailable: boolean) => {
+  const handleQrCodeClick = (
+    template: LanguageAwareTemplate<GetImageTemplateRes>,
+  ) => {
     emitSendTemplate({
-      refId: id,
-      langCode: isAvailable
-        ? currentLang
-        : companyData?.defaultLangCode || "en",
+      refId: template.shareTemplate.id,
+      langCode: template.shareLangCode,
       refType: ChatType.Image,
       station: Number(params.get("station") ?? 1),
-      contentExtra: url,
+      contentExtra: template.shareTemplate.url,
       directContent: 'QR'
     });
   };
@@ -219,14 +202,13 @@ const displayedImagesWithAvailability = useMemo(() => {
                   onUpdate={() => onUpdateCard(val)}
                   isAdmin={userData?.user.Roles?.includes("Admin")}
                   onDelete={() => onDeleteCard(val.id)}
-                  onQrCodeClick={() => handleQrCodeClick(val.id, val.ext, val.tag, val.isAvailableInCurrentLang)}
+                  onQrCodeClick={() => handleQrCodeClick(val)}
                   tag={val.tag}
                   key={val.id}
                   isAvailable={val.isAvailableInCurrentLang}
                   sendOnClick={() =>
                     sendTemplate(
-                      val.id,
-                      val.isAvailableInCurrentLang,
+                      val,
                       val.ext,
                     )
                   }

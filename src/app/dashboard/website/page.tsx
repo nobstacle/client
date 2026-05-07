@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Modal from "../../../components/Modal";
 import { CreateWebsiteTemplateForm } from "../../../components/pages/dashboard/CreateWebsiteTemplateForm";
 import { useDisclousure } from "../../../hooks/useDisclosure";
@@ -31,6 +31,10 @@ import {
 } from "../../../components/DraggableCard";
 import { UniqueIdentifier } from "@dnd-kit/core";
 import { arrayMove } from "@dnd-kit/sortable";
+import {
+  groupLanguageAwareTemplates,
+  type LanguageAwareTemplate,
+} from "../../../utils/templateVariants";
 
 export default function Dashboard() {
   const [editTemplate, setEditTemplate] =
@@ -59,14 +63,15 @@ export default function Dashboard() {
   const { data: userData } = useSession();
 
   // Get current selected language
-  const selectedLang = params.get("lang") || companyData?.defaultLangCode || "en";
+  const defaultLangCode = companyData?.defaultLangCode || "en";
+  const selectedLang = params.get("lang") || defaultLangCode;
 
-  const sendTemplate = (id: number, isAvailable: boolean) => {
+  const sendTemplate = (
+    template: LanguageAwareTemplate<GetWebsiteTemplateRes>,
+  ) => {
     emitSendTemplate({
-      refId: id,
-      langCode: isAvailable
-        ? selectedLang
-        : companyData?.defaultLangCode || "en",
+      refId: template.shareTemplate.id,
+      langCode: template.shareLangCode,
       refType: ChatType.Website,
       station: Number(params.get("station") ?? 1),
     });
@@ -127,8 +132,16 @@ export default function Dashboard() {
     });
   };
 
-  // Show search results if searching, otherwise show all websites
   const websitesSource = searchWebsites.length > 0 ? searchWebsites : websites;
+  const displayedWebsitesWithAvailability = useMemo(
+    () =>
+      groupLanguageAwareTemplates(
+        websitesSource,
+        selectedLang,
+        defaultLangCode,
+      ),
+    [websitesSource, selectedLang, defaultLangCode],
+  );
 
   if (hasHydrated)
     return (
@@ -171,11 +184,8 @@ export default function Dashboard() {
         )}
         <div id="card-wrapper" className="flex h-full w-full">
           <div className="flex w-full flex-wrap content-start gap-4">
-            <DraggableCardContainer items={websitesSource} sort={sortWebsites}>
-              {websitesSource?.map((val) => {
-                // Check if template is available in selected language
-                const isAvailable = val.langCode.includes(selectedLang);
-                
+            <DraggableCardContainer items={displayedWebsitesWithAvailability} sort={sortWebsites}>
+              {displayedWebsitesWithAvailability?.map((val) => {
                 return (
                   <DraggableCardItem
                     id={val.id}
@@ -186,9 +196,9 @@ export default function Dashboard() {
                     onDelete={() => {
                       onDeleteCard(val.id);
                     }}
-                    onQrCodeClick={() => sendWebsiteTemplateQR(val.url || '')}
-                    sendOnClick={() => sendTemplate(val.id, isAvailable)}
-                    isAvailable={isAvailable}
+                    onQrCodeClick={() => sendWebsiteTemplateQR(val.shareTemplate.url || '')}
+                    sendOnClick={() => sendTemplate(val)}
+                    isAvailable={val.isAvailableInCurrentLang}
                     icon={
                       userData?.user.Roles?.includes("Staff") ? (
                         <button
@@ -198,9 +208,9 @@ export default function Dashboard() {
                               window.open(`${val.url}`);
                             }
                           }}
-                          className="absolute bottom-0 right-0 text-white"
+                            className="absolute bottom-0 right-0 text-white"
                         >
-                          {isAvailable ? (
+                          {val.isAvailableInCurrentLang ? (
                             <span
                               className="absolute bottom-0 right-0 h-0 w-0
                    border-b-[15px] border-l-[15px]

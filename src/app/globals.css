@@ -4,7 +4,7 @@
 
 body {
   color: rgb(var(--foreground-rgb));
-  background: rgb(59, 89, 152);
+  background: transparent;
   box-sizing: border-box;
 }
 

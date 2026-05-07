@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Modal from "../../../components/Modal";
 import { CreateTextTemplateForm } from "../../../components/pages/dashboard/CreateTextTemplateForm";
 import { useDisclousure } from "../../../hooks/useDisclosure";
@@ -29,6 +29,10 @@ import {
 import { UniqueIdentifier } from "@dnd-kit/core";
 import { arrayMove } from "@dnd-kit/sortable";
 import { Card } from "antd";
+import {
+  groupLanguageAwareTemplates,
+  type LanguageAwareTemplate,
+} from "../../../utils/templateVariants";
 
 export default function Dashboard() {
   const [editTemplate, setEditTemplate] = useState<null | GetTextTemplateRes>(
@@ -55,14 +59,15 @@ export default function Dashboard() {
   const { data: userData } = useSession();
 
   // Get current selected language
-  const selectedLang = params.get("lang") || companyData?.defaultLangCode || "en";
+  const defaultLangCode = companyData?.defaultLangCode || "en";
+  const selectedLang = params.get("lang") || defaultLangCode;
 
-  const sendTemplate = (id: number, isAvailable: boolean) => {
+  const sendTemplate = (
+    template: LanguageAwareTemplate<GetTextTemplateRes>,
+  ) => {
     emitSendTemplate({
-      refId: id,
-      langCode: isAvailable
-        ? selectedLang
-        : companyData?.defaultLangCode || "en",
+      refId: template.shareTemplate.id,
+      langCode: template.shareLangCode,
       refType: ChatType.Text,
       station: Number(params.get("station") ?? 1),
     });
@@ -113,8 +118,16 @@ export default function Dashboard() {
     setTexts(shallow);
   };
 
-  // Show search results if searching, otherwise show all texts
   const textsSource = searchTexts.length > 0 ? searchTexts : texts;
+  const displayedTextsWithAvailability = useMemo(
+    () =>
+      groupLanguageAwareTemplates(
+        textsSource,
+        selectedLang,
+        defaultLangCode,
+      ),
+    [textsSource, selectedLang, defaultLangCode],
+  );
 
   if (hasHydrated)
     return (
@@ -156,11 +169,8 @@ export default function Dashboard() {
           )}
           <div id="card-wrapper" className="mt-5 flex h-full w-full   ">
             <div className="flex w-full flex-wrap content-start gap-4">
-              <DraggableCardContainer items={textsSource} sort={sortTexts}>
-                {textsSource?.map((val) => {
-                  // Check if template is available in selected language
-                  const isAvailable = val.langCode.includes(selectedLang);
-                  
+              <DraggableCardContainer items={displayedTextsWithAvailability} sort={sortTexts}>
+                {displayedTextsWithAvailability?.map((val) => {
                   return (
                     <DraggableCardItem
                       id={val.id}
@@ -171,8 +181,8 @@ export default function Dashboard() {
                       onDelete={() => {
                         onDeleteCard(val.id);
                       }}
-                      sendOnClick={() => sendTemplate(val.id, isAvailable)}
-                      isAvailable={isAvailable}
+                      sendOnClick={() => sendTemplate(val)}
+                      isAvailable={val.isAvailableInCurrentLang}
                       isDraggable={searchTexts.length === 0}
                       type="text"
                     >

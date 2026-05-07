@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Modal from "../../../components/Modal";
 import { useDisclousure } from "../../../hooks/useDisclosure";
 import {
@@ -29,6 +29,10 @@ import {
 } from "../../../components/DraggableCard";
 import { UniqueIdentifier } from "@dnd-kit/core";
 import { arrayMove } from "@dnd-kit/sortable";
+import {
+  groupLanguageAwareTemplates,
+  type LanguageAwareTemplate,
+} from "../../../utils/templateVariants";
 
 export default function MapsDashboard() {
   let isMobile = typeof window !== 'undefined' && window.innerWidth <= 500;
@@ -56,14 +60,15 @@ export default function MapsDashboard() {
   const { data: userData } = useSession();
 
   // Get current selected language
-  const selectedLang = params.get("lang") || companyData?.defaultLangCode || "en";
+  const defaultLangCode = companyData?.defaultLangCode || "en";
+  const selectedLang = params.get("lang") || defaultLangCode;
 
-  const sendTemplate = (id: number, isAvailable: boolean) => {
+  const sendTemplate = (
+    template: LanguageAwareTemplate<GetMapTemplateRes>,
+  ) => {
     emitSendTemplate({
-      refId: id,
-      langCode: isAvailable
-        ? selectedLang
-        : companyData?.defaultLangCode || "en",
+      refId: template.shareTemplate.id,
+      langCode: template.shareLangCode,
       refType: ChatType.Map,
       station: Number(params.get("station") ?? 1),
     });
@@ -115,16 +120,16 @@ export default function MapsDashboard() {
     });
   };
 
-  const handleQrCodeClick = (id: number, origin: string, destination: string, tag: string, isAvailable: boolean) => {
+  const handleQrCodeClick = (
+    template: LanguageAwareTemplate<GetMapTemplateRes>,
+  ) => {
     emitSendTemplate({
-      refId: id,
-      langCode: isAvailable
-        ? selectedLang
-        : companyData?.defaultLangCode || "en",
+      refId: template.shareTemplate.id,
+      langCode: template.shareLangCode,
       refType: 'MapTemplateQr',
       station: Number(params.get("station") ?? 1),
-      directContent: origin,
-      contentExtra: destination,
+      directContent: template.shareTemplate.origin,
+      contentExtra: template.shareTemplate.destination,
     });
   };
 
@@ -139,8 +144,11 @@ export default function MapsDashboard() {
     });
   };
 
-  // Show search results if searching, otherwise show all maps
   const mapsSource = searchMaps.length > 0 ? searchMaps : maps;
+  const displayedMapsWithAvailability = useMemo(
+    () => groupLanguageAwareTemplates(mapsSource, selectedLang, defaultLangCode),
+    [mapsSource, selectedLang, defaultLangCode],
+  );
 
   if (hasHydrated)
     return (
@@ -185,11 +193,8 @@ export default function MapsDashboard() {
         )}
         <div id="card-wrapper" className="mt-5 flex h-full w-full   ">
           <div className="flex w-full flex-wrap content-start gap-4">
-            <DraggableCardContainer items={mapsSource} sort={sortMaps}>
-              {mapsSource?.map((val) => {
-                // Check if template is available in selected language
-                const isAvailable = val.langCode.includes(selectedLang);
-                
+            <DraggableCardContainer items={displayedMapsWithAvailability} sort={sortMaps}>
+              {displayedMapsWithAvailability?.map((val) => {
                 return (
                   <DraggableCardItem
                     id={val.id}
@@ -200,15 +205,9 @@ export default function MapsDashboard() {
                     onDelete={() => {
                       onDeleteCard(val.id);
                     }}
-                    onQrCodeClick={() => handleQrCodeClick(
-                      val.id,
-                      val.origin,
-                      val.destination,
-                      val.tag,
-                      isAvailable
-                    )}
-                    sendOnClick={() => sendTemplate(val.id, isAvailable)}
-                    isAvailable={isAvailable}
+                    onQrCodeClick={() => handleQrCodeClick(val)}
+                    sendOnClick={() => sendTemplate(val)}
+                    isAvailable={val.isAvailableInCurrentLang}
                     isDraggable={searchMaps.length === 0}
                   >
                     <div className="flex w-full items-center justify-center">
