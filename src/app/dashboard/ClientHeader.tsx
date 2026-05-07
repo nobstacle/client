@@ -2921,8 +2921,8 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                 position: 'relative',
             }}>
                 {/* Mobile Header */}
-                <div className="block lg:hidden" style={{ backgroundColor: '#3b5998' }}>
-                    <nav className="h-14 w-full shadow-sm border-b border-white/20 px-4">
+                <div className="block lg:hidden" style={{ backgroundColor: 'transparent' }}>
+                    <nav className="h-14 w-full border-b border-transparent px-4" style={{ backgroundColor: 'transparent', boxShadow: 'none' }}>
                         <div className="flex h-full w-full items-center justify-between">
                             <Button
                                 type="text"
@@ -3515,12 +3515,13 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
 
                 {/* Desktop Header */}
                 <nav
-                    className={`w-full shadow-sm hidden lg:block ${isCompactDesktop ? 'px-2 py-1.5' : 'px-6'}`}
+                    className={`w-full hidden lg:block ${isCompactDesktop ? 'px-2 py-1.5' : 'px-6'}`}
                     style={{
-                        backgroundColor: '#3b5998',
+                        backgroundColor: 'transparent',
                         height: isCompactDesktop ? 'auto' : (isInIframe ? '3.5rem' : '4.09rem'),
                         position: 'relative',
-                        zIndex: 1
+                        zIndex: 1,
+                        boxShadow: 'none'
                     }}
                 >
                     <div className={`flex w-full items-center justify-between mx-auto gap-3 ${isCompactDesktop ? 'h-auto flex-nowrap' : 'h-full'}`}>

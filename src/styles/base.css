@@ -1240,7 +1240,7 @@ button {
 
 
 body.nobstacle-active {
-  padding-top: 56px !important;
+  padding-top: 0 !important;
   box-sizing: border-box !important;
 }
 

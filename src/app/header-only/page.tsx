@@ -165,15 +165,16 @@ export default function HeaderOnlyPage() {
     return (
       <div style={{
         height: '56px',
-        background: '#3b5998',
+        background: 'transparent',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center'
       }}>
         <div style={{
-          color: 'white',
+          color: '#ffffff',
           fontSize: '14px',
-          opacity: 0.8
+          opacity: 0.8,
+          textShadow: '0 1px 2px rgba(0,0,0,0.35)'
         }}>
           Loading...
         </div>
@@ -186,15 +187,15 @@ export default function HeaderOnlyPage() {
       <div style={{
         height: '56px',
         padding: '0 24px',
-        background: '#3b5998',
+        background: 'transparent',
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
+        boxShadow: 'none'
       }}>
         <div style={{
           fontWeight: '500',
-          color: 'white',
+          color: '#ffffff',
           fontSize: '14px'
         }}>
           Not logged in
@@ -203,8 +204,8 @@ export default function HeaderOnlyPage() {
           onClick={() => window.open('https://nobstacle.com', '_blank')}
           style={{
             padding: '8px 16px',
-            background: 'white',
-            color: '#3b5998',
+            background: 'rgba(255, 255, 255, 0.9)',
+            color: '#1f2937',
             border: 'none',
             borderRadius: '6px',
             cursor: 'pointer',

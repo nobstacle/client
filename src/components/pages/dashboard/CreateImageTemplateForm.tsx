@@ -1,6 +1,9 @@
 import * as React from "react";
 import { SubmitHandler, useForm, Controller } from "react-hook-form";
+import { useQueryClient } from "@tanstack/react-query";
 import {
+  getImageTemplateControllerGetImageTagsQueryKey,
+  getTemplateControllerGetImageTemplatesQueryKey,
   templateControllerGetImageTemplates,
   useCompanyControllerGetCompany,
   useImageTemplateControllerGetImageTags,
@@ -49,6 +52,7 @@ export const CreateImageTemplateForm: React.FC<{
 }> = ({ cb }) => {
   const imageTags = useImageTemplateControllerGetImageTags();
   const company = useCompanyControllerGetCompany();
+  const queryClient = useQueryClient();
 
   const {
     control,
@@ -89,6 +93,15 @@ export const CreateImageTemplateForm: React.FC<{
             // Use it directly instead of trying to determine it here
             cb(template[0], res.isUpdate || false);
           }
+
+          await Promise.all([
+            queryClient.invalidateQueries({
+              queryKey: getTemplateControllerGetImageTemplatesQueryKey(),
+            }),
+            queryClient.invalidateQueries({
+              queryKey: getImageTemplateControllerGetImageTagsQueryKey(),
+            }),
+          ]);
         },
       },
     );

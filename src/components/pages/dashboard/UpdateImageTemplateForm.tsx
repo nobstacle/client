@@ -1,6 +1,9 @@
 import * as React from "react";
 import { SubmitHandler, useForm } from "react-hook-form";
+import { useQueryClient } from "@tanstack/react-query";
 import {
+  getImageTemplateControllerGetImageTagsQueryKey,
+  getTemplateControllerGetImageTemplatesQueryKey,
   templateControllerGetImageTemplates,
   useCompanyControllerGetCompany,
   useUploadControllerUploadCompanyFile,
@@ -28,6 +31,7 @@ export const UpdateImageTemplateForm: React.FC<{
   tag: string;
 }> = ({ cb, defaultLangCode, tag }) => {
   const company = useCompanyControllerGetCompany();
+  const queryClient = useQueryClient();
 
   const uploadFile = useUploadControllerUploadCompanyFile({
     mutation: { retry: 0 },
@@ -64,6 +68,15 @@ export const UpdateImageTemplateForm: React.FC<{
 
             cb(template[0]);
           }
+
+          await Promise.all([
+            queryClient.invalidateQueries({
+              queryKey: getTemplateControllerGetImageTemplatesQueryKey(),
+            }),
+            queryClient.invalidateQueries({
+              queryKey: getImageTemplateControllerGetImageTagsQueryKey(),
+            }),
+          ]);
         },
       },
     );

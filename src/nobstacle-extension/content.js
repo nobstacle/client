@@ -640,8 +640,8 @@ function injectStyles() {
       width: 100% !important;
       height: ${HEADER_HEIGHT} !important;
       z-index: 2147483647 !important;
-      background: white !important;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+      background: transparent !important;
+      box-shadow: none !important;
       overflow: visible !important;
       margin: 0 !important;
       padding: 0 !important;
@@ -652,15 +652,16 @@ function injectStyles() {
       width: 100% !important;
       height: ${HEADER_HEIGHT} !important;
       border: none !important;
+      background: transparent !important;
       margin: 0 !important;
       padding: 0 !important;
       overflow: visible !important;
       pointer-events: auto !important;
     }
     
-    /* Push ALL body content down */
+    /* Keep the host page edge-to-edge; the header now floats transparently above it. */
     body.nobstacle-active {
-      padding-top: ${HEADER_HEIGHT} !important;
+      padding-top: 0 !important;
       box-sizing: border-box !important;
     }
     

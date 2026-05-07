@@ -164,88 +164,70 @@ export const useFetchTemplates = () => {
   );
 
   useEffect(() => {
-    if (textTemplates.isSuccess) {
+    if (textTemplates.data) {
       setTexts(textTemplates.data);
     }
-  }, [textTemplates.isSuccess]);
+  }, [textTemplates.data, setTexts]);
 
   useEffect(() => {
-    if (imageTemplates.isSuccess) {
+    if (imageTemplates.data) {
       setImages(imageTemplates.data);
     }
-  }, [imageTemplates.isSuccess]);
+  }, [imageTemplates.data, setImages]);
 
   useEffect(() => {
-    if (videoTemplates.isSuccess) {
+    if (videoTemplates.data) {
       setVideos(videoTemplates.data);
     }
-  }, [videoTemplates.isSuccess]);
+  }, [videoTemplates.data, setVideos]);
 
   useEffect(() => {
-    if (slideshowTemplates.isSuccess || slideshowTemplates.isRefetching) {
-      if (slideshowTemplates.data) {
-        setSlideshows(slideshowTemplates.data);
-      }
+    if (slideshowTemplates.data) {
+      setSlideshows(slideshowTemplates.data);
     }
-  }, [slideshowTemplates.isSuccess, slideshowTemplates.isRefetching]);
+  }, [slideshowTemplates.data, setSlideshows]);
 
   useEffect(() => {
-    if (mapTemplates.isSuccess || mapTemplates.isRefetching) {
-      if (mapTemplates.data) {
-        setMaps(mapTemplates.data);
-      }
+    if (mapTemplates.data) {
+      setMaps(mapTemplates.data);
     }
-  }, [mapTemplates.isSuccess, mapTemplates.isRefetching]);
+  }, [mapTemplates.data, setMaps]);
 
   useEffect(() => {
-    if (mapTemplates.isSuccess || mapTemplates.isRefetching) {
-      if (mapTemplates.data) {
-        setMaps(mapTemplates.data);
-      }
+    if (surveyAnswers.data) {
+      setSurveyAnswers(surveyAnswers.data);
     }
-  }, [mapTemplates.isSuccess, mapTemplates.isRefetching]);
+  }, [surveyAnswers.data, setSurveyAnswers]);
 
   useEffect(() => {
-    if (surveyAnswers.isSuccess || surveyAnswers.isRefetching) {
-      if (surveyAnswers.data) {
-        setSurveyAnswers(surveyAnswers.data);
-      }
-    }
-  }, [surveyAnswers.isSuccess, surveyAnswers.isRefetching]);
-
-  useEffect(() => {
-    if (websiteTemplates.isSuccess) {
+    if (websiteTemplates.data) {
       setWebsites(websiteTemplates.data);
     }
-  }, [websiteTemplates.isSuccess]);
+  }, [websiteTemplates.data, setWebsites]);
 
   useEffect(() => {
-    if (jotformTemplates.isSuccess) {
+    if (jotformTemplates.data) {
       setWebsites(jotformTemplates.data);
     }
-  }, [jotformTemplates.isSuccess]);
+  }, [jotformTemplates.data, setWebsites]);
 
   useEffect(() => {
-    if (documentTemplates.isSuccess) {
+    if (documentTemplates.data) {
       setDocuments(documentTemplates.data);
     }
-  }, [documentTemplates.isSuccess]);
+  }, [documentTemplates.data, setDocuments]);
 
   useEffect(() => {
-    if (scrollTemplates.isSuccess) {
-      if (scrollTemplates.data?.data) {
-        setScrolls(scrollTemplates.data.data);
-      }
+    if (scrollTemplates.data?.data) {
+      setScrolls(scrollTemplates.data.data);
     }
-  }, [scrollTemplates.isSuccess]);
+  }, [scrollTemplates.data, setScrolls]);
 
   useEffect(() => {
-    if (publicScrollTemplates.isSuccess) {
-      if (publicScrollTemplates.data?.data) {
-        setPublicScrolls(publicScrollTemplates.data.data);
-      }
+    if (publicScrollTemplates.data?.data) {
+      setPublicScrolls(publicScrollTemplates.data.data);
     }
-  }, [publicScrollTemplates.isSuccess]);
+  }, [publicScrollTemplates.data, setPublicScrolls]);
 
   return {
     isTextTemplatesLoading: textTemplates.isLoading,

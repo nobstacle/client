@@ -2156,18 +2156,20 @@ export const Content: React.FC = () => {
                 />
               </Card>
             ) : (
-              <img
-                key={messageStore.receivedContent?.id ?? ""}
-                alt="template_image"
-                style={{
-                  height: "auto",
-                  maxHeight: "100%",
-                  maxWidth: "100%",
-                  objectFit: "cover",
-                  display: "block",
-                }}
-                src={messageStore.receivedContent?.content ?? ""}
-              />
+              <div className="relative flex h-[100dvh] w-[100dvw] items-center justify-center overflow-hidden bg-black">
+                <img
+                  key={messageStore.receivedContent?.id ?? ""}
+                  alt="template_image"
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "contain",
+                    objectPosition: "center center",
+                    display: "block",
+                  }}
+                  src={messageStore.receivedContent?.content ?? ""}
+                />
+              </div>
             )}
           </>
         )}
