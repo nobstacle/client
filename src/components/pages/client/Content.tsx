@@ -134,6 +134,8 @@ const ScrollSection: React.FC<{
     }
   }, [isActive, item?.mediaType]);
 
+  const mediaFit = useMediaFit(item.signedUrl || item.url, item.mediaType);
+
   return (
     <section
       className="relative flex h-[100dvh] w-[100dvw] snap-start items-center justify-center overflow-hidden bg-black"
@@ -142,35 +144,19 @@ const ScrollSection: React.FC<{
         <video
           ref={videoRef}
           src={item.signedUrl || item.url}
-          className="object-contain"
+          className={mediaFit === "cover" ? "object-cover" : "object-contain"}
           playsInline
           muted={isMuted}
           onEnded={onEnded}
           preload="auto"
-          style={{
-            width: "100%",
-            height: "100%",
-            maxWidth: "100%",
-            maxHeight: "100%",
-            objectFit: "contain",
-            objectPosition: "center center",
-            display: "block",
-          }}
+          style={getFullscreenMediaStyle(mediaFit)}
         />
       ) : (
         <img
           src={item.signedUrl || item.url}
           alt={item.name || `scroll-item-${index + 1}`}
-          className="object-contain"
-          style={{
-            width: "100%",
-            height: "100%",
-            maxWidth: "100%",
-            maxHeight: "100%",
-            objectFit: "contain",
-            objectPosition: "center center",
-            display: "block",
-          }}
+          className={mediaFit === "cover" ? "object-cover" : "object-contain"}
+          style={getFullscreenMediaStyle(mediaFit)}
         />
       )}
 
@@ -228,6 +214,8 @@ const ScreensSection: React.FC<{
     }
   }, [isActive, item?.mediaType]);
 
+  const mediaFit = useMediaFit(item.signedUrl || item.url, item.mediaType);
+
   return (
     <section
       className="relative flex h-[100dvh] w-full items-center justify-center overflow-hidden bg-black"
@@ -236,35 +224,19 @@ const ScreensSection: React.FC<{
         <video
           ref={videoRef}
           src={item.signedUrl || item.url}
-          className="object-contain"
+          className={mediaFit === "cover" ? "object-cover" : "object-contain"}
           playsInline
           muted={isMuted}
           onEnded={onEnded}
           preload="auto"
-          style={{
-            width: "100%",
-            height: "100%",
-            maxWidth: "100%",
-            maxHeight: "100%",
-            objectFit: "contain",
-            objectPosition: "center center",
-            display: "block",
-          }}
+          style={getFullscreenMediaStyle(mediaFit)}
         />
       ) : (
         <img
           src={item.signedUrl || item.url}
           alt={item.name || `screens-item-${index + 1}`}
-          className="object-contain"
-          style={{
-            width: "100%",
-            height: "100%",
-            maxWidth: "100%",
-            maxHeight: "100%",
-            objectFit: "contain",
-            objectPosition: "center center",
-            display: "block",
-          }}
+          className={mediaFit === "cover" ? "object-cover" : "object-contain"}
+          style={getFullscreenMediaStyle(mediaFit)}
         />
       )}
 

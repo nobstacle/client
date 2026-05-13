@@ -15,6 +15,7 @@ import { Button, Upload, Select, Form, Alert, Space, Input } from "antd";
 import { UploadOutlined } from "@ant-design/icons";
 import { languages } from "../../../constant/languages";
 import { GetVideoTemplateRes } from "../../../lib/client/model";
+import { RecommendedDimensions } from "./RecommendedDimensions";
 
 interface CreateImageTemplateFormFieldValues {
   file: any;
@@ -136,7 +137,7 @@ export const CreateVideoTemplateForm: React.FC<{
       <hr />
       {/* Origin and Destination Address Fields */}
       <Space direction="vertical" size="small" style={{ width: '100%', rowGap: '0.3rem', paddingTop: '1rem' }}>
-
+        <RecommendedDimensions />
         {/* File Upload */}
         <Form.Item
           label="Video to upload"

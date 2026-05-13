@@ -15,6 +15,7 @@ import { Button, Upload, Select, Form, Input, Alert, Typography } from "antd";
 import { UploadOutlined } from "@ant-design/icons";
 import { languages } from "../../../constant/languages";
 import { GetImageTemplateRes } from "../../../lib/client/model";
+import { RecommendedDimensions } from "./RecommendedDimensions";
 
 const { Text } = Typography;
 
@@ -138,6 +139,7 @@ export const CreateImageTemplateForm: React.FC<{
     <form onSubmit={handleSubmit(onSubmit)} className="create-template-form">
       <hr />
       <div className="mt-3 flex flex-col gap-4">
+        <RecommendedDimensions />
         <div className="flex flex-col gap-2">
           <Text>Image to upload</Text>
           <Controller

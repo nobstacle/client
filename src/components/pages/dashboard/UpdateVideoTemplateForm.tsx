@@ -13,6 +13,7 @@ import { yupResolver } from "@hookform/resolvers/yup";
 import Input from "../../Input";
 import { Button } from "../../Button";
 import { GetVideoTemplateRes } from "../../../lib/client/model";
+import { RecommendedDimensions } from "./RecommendedDimensions";
 
 interface CreateVideoTemplateFormFieldValues {
   file: any;
@@ -85,6 +86,7 @@ export const UpdateVideoTemplateForm: React.FC<{
   return (
     <form onSubmit={handleSubmit(onSubmit)}>
       <div className="mt-3 flex flex-col gap-4">
+        <RecommendedDimensions />
         <div className="flex flex-col gap-2">
           <Input
             register={register}

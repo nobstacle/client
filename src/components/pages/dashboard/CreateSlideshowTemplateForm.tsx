@@ -34,6 +34,7 @@ import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
 import { languages } from "../../../constant/languages";
 import type { RcFile } from "antd/es/upload/interface";
+import { RecommendedDimensions } from "./RecommendedDimensions";
 
 const { Text } = Typography;
 const { Option } = Select;
@@ -399,6 +400,7 @@ export const CreateSlideshowTemplateForm: React.FC<{
     <form onSubmit={handleSubmit(onSubmit)} className="create-template-form">
       <hr />
       <Space direction="vertical" size="middle" style={{ width: "100%", paddingTop: "1rem" }}>
+        <RecommendedDimensions />
         <div>
           <Text>
             Add media ({sequence.length}/{MAX_ITEMS})

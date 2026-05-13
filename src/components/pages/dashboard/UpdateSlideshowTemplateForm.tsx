@@ -34,6 +34,7 @@ import { Upload, Typography, Input, InputNumber } from "antd";
 import { UploadOutlined } from "@ant-design/icons";
 import { FaGripVertical, FaPlay } from "react-icons/fa";
 import type { RcFile } from "antd/es/upload/interface";
+import { RecommendedDimensions } from "./RecommendedDimensions";
 
 const { Text } = Typography;
 
@@ -490,6 +491,7 @@ export const UpdateSlideshowTemplateForm: React.FC<{
       }}
     >
       <div className="mt-3 flex flex-col gap-4">
+        <RecommendedDimensions />
         <div>
           <Text>
             Add media ({sequence.length}/{MAX_ITEMS})

@@ -32,6 +32,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { FaImage, FaFilm, FaGripVertical } from "react-icons/fa";
 import { InboxOutlined } from "@ant-design/icons";
 import type { RcFile } from "antd/es/upload/interface";
+import { RecommendedDimensions } from "./RecommendedDimensions";
 
 const { Dragger } = Upload;
 
@@ -423,6 +424,8 @@ export const UpdateScrollTemplateForm: React.FC<{
             Tag: <span className="font-normal text-gray-600">{tag}</span>
           </p>
         </div>
+
+        <RecommendedDimensions />
 
         {/* ── File Upload ────────────────────────────────────────────────── */}
         <Form.Item

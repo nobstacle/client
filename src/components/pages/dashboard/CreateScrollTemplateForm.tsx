@@ -37,6 +37,7 @@ import {
   toDisplayScrollTag,
   toScopedScrollTag,
 } from "../../../utils/scrollScope";
+import { RecommendedDimensions } from "./RecommendedDimensions";
 
 const { Dragger } = Upload;
 
@@ -391,7 +392,7 @@ export const CreateScrollTemplateForm: React.FC<{
     >
       <hr />
       <Space direction="vertical" size="small" style={{ width: "100%", rowGap: "0.4rem", paddingTop: "1rem" }}>
-
+        <RecommendedDimensions />
         {isPublicTemplate ? (
           <Form.Item
             label={
