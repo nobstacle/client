@@ -17,7 +17,6 @@ import Extension from '@/components/home/Extension';
 import ScrollToTop from '@/components/home/ScrollToTop';
 import "@/styles/home.css";
 
-
 export default function Home() {
   const [privacyModalOpen, setPrivacyModalOpen] = useState(false);
   const [termsModalOpen, setTermsModalOpen] = useState(false);
