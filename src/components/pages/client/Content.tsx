@@ -64,14 +64,27 @@ const getActiveScrollItems = (extraContent: any): any[] => {
   });
 };
 
-const normalizePublicContentPayload = (content: any) => {
+const normalizePublicContentPayload = (content: any, type?: string) => {
   if (!content) return null;
+  const contentType = content.type || type || "Scroll";
+  
   const activeItems = getActiveScrollItems(content.extraContent);
-  if (activeItems.length === 0) return null;
+  
+  if (activeItems.length === 0) {
+    // If it's a Slideshow and we have contents but no extraContent metadata,
+    // we should still allow it (Slideshow component handles its own filtering/defaults)
+    if (contentType === "Slideshow" && content.contents && content.contents.length > 0) {
+      return {
+        ...content,
+        type: contentType,
+      };
+    }
+    return null;
+  }
 
   return {
     ...content,
-    type: content.type || "Scroll",
+    type: contentType,
     extraContent: JSON.stringify(activeItems),
     contents: activeItems
       .map((item: any) => item?.signedUrl || item?.url)
@@ -86,7 +99,7 @@ const getStoredPublicDisplay = () => {
 
   try {
     const parsed = JSON.parse(raw);
-    const normalizedContent = normalizePublicContentPayload(parsed?.content);
+    const normalizedContent = normalizePublicContentPayload(parsed?.content, parsed?.type);
     if (!normalizedContent) return null;
 
     return {
@@ -108,8 +121,6 @@ const ScrollSection: React.FC<{
   toggleMute: () => void;
 }> = ({ item, index, isActive, onEnded, isMuted, toggleMute }) => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const mediaSrc = item?.signedUrl || item?.url || "";
-  const mediaFit = useMediaFit(mediaSrc, item?.mediaType);
 
   useEffect(() => {
     if (item?.mediaType !== "video" || !videoRef.current) return;
@@ -125,19 +136,23 @@ const ScrollSection: React.FC<{
 
   return (
     <section
-      className="relative h-[100dvh] w-[100dvw] snap-start overflow-hidden bg-black"
+      className="relative flex h-[100dvh] w-[100dvw] snap-start items-center justify-center overflow-hidden bg-black"
     >
       {item.mediaType === "video" ? (
         <video
           ref={videoRef}
           src={item.signedUrl || item.url}
-          className="h-full w-full object-contain"
+          className="object-contain"
           playsInline
           muted={isMuted}
           onEnded={onEnded}
           preload="auto"
           style={{
-            objectFit: mediaFit,
+            width: "100%",
+            height: "100%",
+            maxWidth: "100%",
+            maxHeight: "100%",
+            objectFit: "contain",
             objectPosition: "center center",
             display: "block",
           }}
@@ -146,9 +161,13 @@ const ScrollSection: React.FC<{
         <img
           src={item.signedUrl || item.url}
           alt={item.name || `scroll-item-${index + 1}`}
-          className="h-full w-full"
+          className="object-contain"
           style={{
-            objectFit: mediaFit,
+            width: "100%",
+            height: "100%",
+            maxWidth: "100%",
+            maxHeight: "100%",
+            objectFit: "contain",
             objectPosition: "center center",
             display: "block",
           }}
@@ -196,8 +215,6 @@ const ScreensSection: React.FC<{
   toggleMute: () => void;
 }> = ({ item, index, isActive, onEnded, isMuted, toggleMute }) => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const mediaSrc = item?.signedUrl || item?.url || "";
-  const mediaFit = useMediaFit(mediaSrc, item?.mediaType);
 
   useEffect(() => {
     if (item?.mediaType !== "video" || !videoRef.current) return;
@@ -213,19 +230,23 @@ const ScreensSection: React.FC<{
 
   return (
     <section
-      className="relative h-[100dvh] w-100 overflow-hidden bg-black"
+      className="relative flex h-[100dvh] w-full items-center justify-center overflow-hidden bg-black"
     >
       {item.mediaType === "video" ? (
         <video
           ref={videoRef}
           src={item.signedUrl || item.url}
-          className="h-full w-full object-contain"
+          className="object-contain"
           playsInline
           muted={isMuted}
           onEnded={onEnded}
           preload="auto"
           style={{
-            objectFit: mediaFit,
+            width: "100%",
+            height: "100%",
+            maxWidth: "100%",
+            maxHeight: "100%",
+            objectFit: "contain",
             objectPosition: "center center",
             display: "block",
           }}
@@ -234,9 +255,13 @@ const ScreensSection: React.FC<{
         <img
           src={item.signedUrl || item.url}
           alt={item.name || `screens-item-${index + 1}`}
-          className="h-full w-full"
+          className="object-contain"
           style={{
-            objectFit: mediaFit,
+            width: "100%",
+            height: "100%",
+            maxWidth: "100%",
+            maxHeight: "100%",
+            objectFit: "contain",
             objectPosition: "center center",
             display: "block",
           }}
@@ -1020,6 +1045,7 @@ export const Content: React.FC = () => {
       if (messageStore.receivedType === "Scroll" || messageStore.receivedType === "Slideshow" || messageStore.receivedType === "Screens") {
         const normalizedPublicContent = normalizePublicContentPayload(
           messageStore.receivedContent,
+          messageStore.receivedType,
         );
 
         if (normalizedPublicContent) {
@@ -1072,13 +1098,14 @@ export const Content: React.FC = () => {
       const video = videoElement.current;
 
       const handleLoadedMetadata = () => {
-        // Force video to cover the entire viewport
-        video.style.width = '100dvw';
-        video.style.height = '100dvh';
-        video.style.objectFit = activeMediaFit;
-        video.style.position = 'absolute';
-        video.style.top = '0';
-        video.style.left = '0';
+        video.style.width = 'auto';
+        video.style.height = 'auto';
+        video.style.maxWidth = '100%';
+        video.style.maxHeight = '100%';
+        video.style.objectFit = 'contain';
+        video.style.position = 'static';
+        video.style.top = '';
+        video.style.left = '';
       };
 
       if (video.readyState >= 1) {
@@ -1094,9 +1121,11 @@ export const Content: React.FC = () => {
 
     const handleResize = () => {
       if (videoElement.current) {
-        videoElement.current.style.width = '100dvw';
-        videoElement.current.style.height = '100dvh';
-        videoElement.current.style.objectFit = activeMediaFit;
+        videoElement.current.style.width = 'auto';
+        videoElement.current.style.height = 'auto';
+        videoElement.current.style.maxWidth = '100%';
+        videoElement.current.style.maxHeight = '100%';
+        videoElement.current.style.objectFit = 'contain';
       }
     };
 
@@ -1197,6 +1226,7 @@ export const Content: React.FC = () => {
       if (messageStore.receivedType === "Scroll" || messageStore.receivedType === "Slideshow" || messageStore.receivedType === "Screens") {
         const normalizedPublicContent = normalizePublicContentPayload(
           messageStore.receivedContent,
+          messageStore.receivedType,
         );
 
         if (normalizedPublicContent) {
@@ -1870,8 +1900,9 @@ export const Content: React.FC = () => {
   };
 
   const ScrollViewer: React.FC<{ items: any[] }> = ({ items }) => {
-    const [activeIndex, setActiveIndex] = useState(0);
     const [now, setNow] = useState(Date.now());
+    const containerRef = useRef<HTMLDivElement>(null);
+    const [visibleIndices, setVisibleIndices] = useState<Set<number>>(new Set([0]));
 
     const activeItems = React.useMemo(() => {
       return (Array.isArray(items) ? items : []).filter((item) => {
@@ -1889,78 +1920,68 @@ export const Content: React.FC = () => {
       return () => window.clearInterval(timer);
     }, []);
 
-    const nextSlide = useCallback(() => {
-      if (activeItems.length === 0) return;
-      setActiveIndex((prev) => (prev + 1) % activeItems.length);
-    }, [activeItems.length]);
-
     useEffect(() => {
-      if (activeItems.length <= 1) return;
+      if (activeItems.length === 0) return;
 
-      const currentItem = activeItems[activeIndex];
-      // Videos handle their own transition via onEnded
-      if (currentItem?.mediaType === "video") return;
+      const observer = new IntersectionObserver(
+        (entries) => {
+          setVisibleIndices((prev) => {
+            const next = new Set(prev);
+            entries.forEach((entry) => {
+              const index = parseInt(entry.target.getAttribute("data-index") || "0", 10);
+              if (entry.isIntersecting) {
+                next.add(index);
+              } else {
+                next.delete(index);
+              }
+            });
+            return next;
+          });
+        },
+        {
+          threshold: 0.6,
+        }
+      );
 
-      const duration = (currentItem?.imageDurationSeconds || 6) * 1000;
-      const timer = setTimeout(nextSlide, duration);
-      return () => clearTimeout(timer);
-    }, [activeIndex, activeItems, nextSlide]);
+      const elements = containerRef.current?.querySelectorAll("[data-index]");
+      elements?.forEach((el) => observer.observe(el));
+
+      return () => observer.disconnect();
+    }, [activeItems]);
 
     if (activeItems.length === 0) {
       return (
-        <div className="w-full h-[100dvh] flex items-center justify-center bg-gray-100">
-          <p className="text-gray-500">No active screen content available</p>
+        <div className="flex h-[100dvh] w-full items-center justify-center bg-black">
+          <p className="text-gray-500">No active scroll content available</p>
         </div>
       );
     }
 
     return (
-      <div className="relative h-[100dvh] w-100 overflow-hidden bg-black group">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={`${activeItems[activeIndex]?.url || activeItems[activeIndex]?.signedUrl || activeIndex}`}
-            initial={{ opacity: 0, y: "100%" }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: "-100%" }}
-            transition={{ duration: 1.2, ease: [0.4, 0, 0.2, 1] }}
-            className="absolute inset-0 h-full w-full"
-          >
+      <div 
+        ref={containerRef}
+        className="h-[100dvh] w-full overflow-y-auto snap-y snap-mandatory bg-black no-scrollbar"
+      >
+        {activeItems.map((item, index) => (
+          <div key={`${item.url || index}`} data-index={index} className="snap-start h-[100dvh] w-full">
             <ScrollSection
-              item={activeItems[activeIndex]}
-              index={activeIndex}
-              isActive={true}
-              onEnded={nextSlide}
+              item={item}
+              index={index}
+              isActive={visibleIndices.has(index)}
+              onEnded={() => {}} 
               isMuted={isMuted}
               toggleMute={toggleMute}
             />
-          </motion.div>
-        </AnimatePresence>
-
-        {/* Navigation Dots */}
-        {activeItems.length > 1 && (
-          <div className="absolute right-6 top-1/2 z-50 flex -translate-y-1/2 flex-col gap-3">
-            {activeItems.map((_, idx) => (
-              <button
-                key={idx}
-                onClick={() => setActiveIndex(idx)}
-                className={`h-3 w-3 rounded-full transition-all duration-300 ${idx === activeIndex
-                  ? "h-10 bg-white shadow-[0_0_15px_rgba(255,255,255,0.6)]"
-                  : "bg-white/30 hover:bg-white/50"
-                  }`}
-              />
-            ))}
           </div>
-        )}
+        ))}
 
-        {/* Enhanced Scroll/More Hint */}
-        {activeItems.length > 1 && activeIndex < activeItems.length - 1 && (
-          <div
-            className="absolute bottom-12 left-1/2 -translate-x-1/2 flex flex-col items-center gap-3 animate-bounce z-50 cursor-pointer pointer-events-none"
-          >
-            <span className="text-white text-lg font-black tracking-[0.3em] uppercase drop-shadow-lg opacity-90">
+        {/* Scroll indicator for multiple items */}
+        {activeItems.length > 1 && !visibleIndices.has(activeItems.length - 1) && (
+          <div className="fixed bottom-12 left-1/2 -translate-x-1/2 flex flex-col items-center gap-3 animate-bounce z-50 pointer-events-none">
+            <span className="text-white/70 text-xs font-bold tracking-[0.3em] uppercase drop-shadow-lg">
               Scroll
             </span>
-            <div className="w-[3px] h-14 bg-gradient-to-b from-white via-white/50 to-transparent rounded-full shadow-[0_0_10px_rgba(255,255,255,0.3)]" />
+            <div className="w-[2px] h-10 bg-gradient-to-b from-white/80 to-transparent rounded-full" />
           </div>
         )}
       </div>
@@ -2045,7 +2066,7 @@ export const Content: React.FC = () => {
     }
 
     return (
-      <div className="relative h-[100dvh] w-100 overflow-hidden bg-black">
+      <div className="relative h-[100dvh] w-full overflow-hidden bg-black">
         <AnimatePresence mode="wait">
           <motion.div
             key={`${activeItems[activeIndex]?.url || activeItems[activeIndex]?.signedUrl || activeIndex}`}
@@ -2084,7 +2105,9 @@ export const Content: React.FC = () => {
     return (
       <>
         <style>{scrollViewerStyles}</style>
-        <TrialWatermark trial={company.data ?? data?.user} />
+        {!["Scroll", "Slideshow", "Screens"].includes(contentToDisplay?.type as string) && (
+          <TrialWatermark trial={company.data ?? data?.user} />
+        )}
         {(contentToDisplay?.type === "TextTemplateMessage" ||
           contentToDisplay?.type === "Text") && (
             <div className="w-full p-5">
@@ -2442,7 +2465,9 @@ export const Content: React.FC = () => {
           position: fixed;
           top: 0;
           left: 0;
+          width: 100vw;
           width: 100dvw;
+          height: 100vh;
           height: 100dvh;
           overflow: hidden;
           z-index: 9;
@@ -2453,9 +2478,6 @@ export const Content: React.FC = () => {
         }
 
         .fullscreen-video {
-          position: absolute !important;
-          top: 0 !important;
-          left: 0 !important;
           display: block !important;
         }
       `}</style>

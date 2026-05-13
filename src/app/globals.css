@@ -23,6 +23,7 @@ body {
 }
 
 #app-shell {
+  min-height: 100vh;
   min-height: 100dvh;
   width: 100%;
 }
@@ -37,10 +38,26 @@ body.client-fullscreen {
 html.client-fullscreen #app-shell,
 body.client-fullscreen #app-shell {
   background: #000;
+  height: 100vh;
   height: 100dvh;
+  min-height: 100vh;
   min-height: 100dvh;
   overflow: hidden;
   width: 100vw;
+}
+
+@supports not (height: 100dvh) {
+  .h-\[100dvh\] {
+    height: 100vh !important;
+  }
+
+  .min-h-\[100dvh\] {
+    min-height: 100vh !important;
+  }
+
+  .w-\[100dvw\] {
+    width: 100vw !important;
+  }
 }
 
 @media (min-width: 1024px) and (max-width: 1350px) {

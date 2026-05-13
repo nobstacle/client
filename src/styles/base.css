@@ -1462,3 +1462,12 @@ body.nobstacle-active {
     font-size: 0.9rem !important;
   }
 }
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

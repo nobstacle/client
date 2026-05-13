@@ -24,19 +24,54 @@ const isVideoSource = (src: string): boolean => {
 };
 
 const preloadMedia = (src: string, onSettled: () => void) => {
+  let settled = false;
+  const settleOnce = () => {
+    if (settled) return;
+    settled = true;
+    onSettled();
+  };
+
   if (isVideoSource(src)) {
     const video = document.createElement("video");
+    const timeout = window.setTimeout(settleOnce, 3000);
+
+    const settleVideo = () => {
+      window.clearTimeout(timeout);
+      settleOnce();
+    };
+
     video.preload = "metadata";
-    video.onloadeddata = onSettled;
-    video.onerror = onSettled;
+    video.muted = true;
+    video.playsInline = true;
+    video.setAttribute("playsinline", "true");
+    video.setAttribute("webkit-playsinline", "true");
+    video.onloadedmetadata = settleVideo;
+    video.onloadeddata = settleVideo;
+    video.oncanplay = settleVideo;
+    video.onerror = settleVideo;
     video.src = src;
-    return;
+    video.load();
+
+    return () => {
+      window.clearTimeout(timeout);
+      video.onloadedmetadata = null;
+      video.onloadeddata = null;
+      video.oncanplay = null;
+      video.onerror = null;
+      video.removeAttribute("src");
+      video.load();
+    };
   }
 
   const img = new Image();
-  img.onload = onSettled;
-  img.onerror = onSettled;
+  img.onload = settleOnce;
+  img.onerror = settleOnce;
   img.src = src;
+
+  return () => {
+    img.onload = null;
+    img.onerror = null;
+  };
 };
 
 function usePreloadMedia(urls: string[], maxWaitMs = 10000) {
@@ -71,17 +106,18 @@ function usePreloadMedia(urls: string[], maxWaitMs = 10000) {
       if (!cancelled) setReady(true);
     }, maxWaitMs);
 
-    urls.forEach((src) => {
+    const cleanups = urls.map((src) => {
       if (!src) {
         onSettled();
-        return;
+        return undefined;
       }
-      preloadMedia(src, onSettled);
+      return preloadMedia(src, onSettled);
     });
 
     return () => {
       cancelled = true;
       clearTimeout(timeout);
+      cleanups.forEach((cleanup) => cleanup?.());
     };
   }, [urls.join(",")]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -106,17 +142,15 @@ const FullscreenMediaLayer: React.FC<{
 
   return (
     <div
-      id="content-container"
-      className={`absolute inset-0 flex h-[100dvh] w-[100dvw] items-center justify-center overflow-hidden bg-black transition-opacity duration-300 ${
-        isActive ? "opacity-100" : "pointer-events-none opacity-0"
+      className={`absolute inset-0 flex h-[100dvh] w-[100dvw] items-center justify-center overflow-hidden bg-black transition-opacity duration-500 ${
+        isActive ? "opacity-100 z-10" : "pointer-events-none opacity-0 z-0"
       }`}
-      key={`${item.url}-${index}`}
       aria-hidden={!isActive}
     >
       {item.mediaType === "video" ? (
         <video
           ref={isActive ? videoRef : null}
-          key={`${item.url}-${index}-${isActive ? "active" : "inactive"}`}
+          key={`${item.url}-${index}`}
           src={item.url}
           muted
           autoPlay={isActive}
@@ -207,6 +241,10 @@ export const Slideshow: React.FC<{
     const video = videoRef.current;
     if (!video || !activeMediaIsVideo) return;
 
+    video.muted = true;
+    video.playsInline = true;
+    video.setAttribute("playsinline", "true");
+    video.setAttribute("webkit-playsinline", "true");
     video.currentTime = 0;
     video.play().catch((err) => console.error("Video play failed:", err));
 
