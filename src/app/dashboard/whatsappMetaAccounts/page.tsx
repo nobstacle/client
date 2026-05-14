@@ -269,23 +269,25 @@ export default function WhatsappMetaAccountsPage() {
             : companies;
 
     return (
-        <Card>
-            <div className="flex items-center justify-between">
+        <div className="p-6 bg-gray-50 min-h-screen">
+            <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                    <Title level={4} style={{ marginBottom: 0 }}>
+                    <Title level={3} className="!mb-1">
                         WhatsApp Meta Accounts
                     </Title>
-                    <Text type="secondary">Assign Meta WhatsApp credentials to companies.</Text>
+                    <Text className="text-gray-500">Assign Meta WhatsApp credentials to companies.</Text>
                 </div>
                 <Space>
                     <Button icon={<ReloadOutlined />} onClick={fetchAssignments}>
                         Refresh
                     </Button>
                     <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
-                        Add New
+                        Add New Account
                     </Button>
                 </Space>
             </div>
+
+            <Card bordered={false} className="shadow-sm">
 
             <div style={{ marginTop: 16 }}>
                 <Table
@@ -371,5 +373,6 @@ export default function WhatsappMetaAccountsPage() {
                 </Form>
             </Modal>
         </Card>
-    );
+    </div>
+);
 }

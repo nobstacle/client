@@ -149,7 +149,7 @@ const SortableRow: React.FC<{
                 muted
                 playsInline
                 preload="metadata"
-                className="w-full h-full object-cover"
+                className="w-full h-full object-contain"
               />
               <div className="absolute inset-0 flex items-center justify-center bg-black/35 text-white text-xs">
                 <FaPlay />
@@ -159,7 +159,7 @@ const SortableRow: React.FC<{
             <img
               src={entry.previewUrl}
               alt={`slideshow-preview-${index + 1}`}
-              className="w-full h-full object-cover"
+              className="w-full h-full object-contain"
             />
           )}
         </div>

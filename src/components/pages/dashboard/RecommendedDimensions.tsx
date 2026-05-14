@@ -1,39 +1,199 @@
-import React from "react";
-import { Typography, Space } from "antd";
-import { InfoCircleOutlined } from "@ant-design/icons";
+import React, { useEffect, useMemo, useState } from "react";
+import { Button, Modal, Select, Space, Table, Tooltip, Typography } from "antd";
+import { QuestionCircleOutlined } from "@ant-design/icons";
+import { useSession } from "next-auth/react";
 
 const { Text } = Typography;
+const DEVICE_LIBRARY_MODAL_Z_INDEX = 5000;
+
+type DeviceLibraryItem = {
+  id: number;
+  name: string;
+  model?: string | null;
+  widthPx: number;
+  heightPx: number;
+  orientationSupported: string[];
+  notes?: string | null;
+};
+
+const gcd = (a: number, b: number): number => {
+  let x = Math.abs(a);
+  let y = Math.abs(b);
+
+  while (y) {
+    const next = x % y;
+    x = y;
+    y = next;
+  }
+
+  return x || 1;
+};
+
+const getRatio = (width: number, height: number) => {
+  const divisor = gcd(width, height);
+  return `${width / divisor}:${height / divisor}`;
+};
 
 export const RecommendedDimensions: React.FC = () => {
+  const { data } = useSession();
+  const [devices, setDevices] = useState<DeviceLibraryItem[]>([]);
+  const [selectedDeviceId, setSelectedDeviceId] = useState<number | undefined>();
+  const [isOpen, setIsOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const token = data?.user?.backendTokens?.at;
+    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+
+    if (!backendUrl) {
+      setError("Backend URL is not configured");
+      return;
+    }
+
+    const loadDevices = async () => {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const response = await fetch(`${backendUrl}/api/v1/device-library`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        });
+
+        if (!response.ok) {
+          throw new Error(`Unable to load devices (${response.status})`);
+        }
+
+        const result = await response.json();
+        const nextDevices = Array.isArray(result) ? result : [];
+        setDevices(nextDevices);
+        setSelectedDeviceId((current) =>
+          nextDevices.some((device) => device.id === current)
+            ? current
+            : nextDevices[0]?.id,
+        );
+      } catch (err) {
+        setDevices([]);
+        setSelectedDeviceId(undefined);
+        setError(err instanceof Error ? err.message : "Unable to load devices");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    void loadDevices();
+  }, [data?.user?.backendTokens?.at]);
+
+  const selectedDevice = useMemo(
+    () => devices.find((device) => device.id === selectedDeviceId),
+    [devices, selectedDeviceId],
+  );
+
+  const options = devices.map((device) => ({
+    value: device.id,
+    label: [device.name, device.model].filter(Boolean).join(" - "),
+  }));
+
   return (
-    <div className="bg-blue-50 border border-blue-200 rounded-md p-3 my-2 mb-4">
-      <Space direction="vertical" size={2} className="w-full">
-        <div className="flex items-center gap-2 text-blue-700 font-semibold text-xs">
-          <InfoCircleOutlined />
-          <span>Recommended Dimensions (Landscape View)</span>
-        </div>
-        <div className="text-[11px] text-blue-600 leading-tight mt-1">
-          For the best full-screen experience without cropping or black bars, use these dimensions:
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 mt-2">
-          <div className="flex justify-between text-[11px] border-b border-blue-100 pb-1">
-            <span className="text-blue-800">iPad (4:3):</span>
-            <span className="font-bold text-blue-900">2048 × 1536 px</span>
-          </div>
-          <div className="flex justify-between text-[11px] border-b border-blue-100 pb-1">
-            <span className="text-blue-800">Samsung Tab (16:10):</span>
-            <span className="font-bold text-blue-900">2560 × 1600 px</span>
-          </div>
-          <div className="flex justify-between text-[11px] border-b border-blue-100 pb-1">
-            <span className="text-blue-800">Desktop (16:9):</span>
-            <span className="font-bold text-blue-900">1920 × 1080 px</span>
-          </div>
-          <div className="flex justify-between text-[11px] border-b border-blue-100 pb-1">
-            <span className="text-blue-800 font-medium italic text-blue-700">Best All-rounder:</span>
-            <span className="font-bold text-blue-900">2560 × 1600 px</span>
-          </div>
-        </div>
-      </Space>
+    <div className="my-2">
+      <Space.Compact className="w-full">
+        <Select
+          loading={isLoading}
+          allowClear
+          value={selectedDeviceId}
+          onChange={setSelectedDeviceId}
+          placeholder="Target device"
+          options={options}
+          style={{ width: "100%" }}
+          popupClassName="modal-select-dropdown"
+          dropdownStyle={{ zIndex: DEVICE_LIBRARY_MODAL_Z_INDEX + 1 }}
+          getPopupContainer={(trigger) => trigger.parentElement ?? document.body}
+          notFoundContent={isLoading ? "Loading devices..." : "No devices found"}
+        />
+        <Tooltip
+          title="Recommended dimensions"
+          zIndex={DEVICE_LIBRARY_MODAL_Z_INDEX + 1}
+          getPopupContainer={() => document.body}
+        >
+          <Button
+            type="default"
+            aria-label="Show recommended dimensions"
+            icon={<QuestionCircleOutlined />}
+            onClick={() => setIsOpen(true)}
+          />
+        </Tooltip>
+      </Space.Compact>
+
+      {selectedDevice && (
+        <Text className="mt-1 block text-xs text-gray-500">
+          Recommended: {selectedDevice.widthPx}x{selectedDevice.heightPx} (
+          {getRatio(selectedDevice.widthPx, selectedDevice.heightPx)})
+        </Text>
+      )}
+
+      <Modal
+        title="Recommended Device Dimensions"
+        open={isOpen}
+        footer={null}
+        onCancel={() => setIsOpen(false)}
+        width={720}
+        zIndex={DEVICE_LIBRARY_MODAL_Z_INDEX}
+        getContainer={
+          typeof document === "undefined" ? false : () => document.body
+        }
+      >
+        {error && (
+          <Text className="mb-3 block text-xs text-amber-600">
+            Device Library is unavailable right now: {error}
+          </Text>
+        )}
+        <Table
+          rowKey="id"
+          size="small"
+          loading={isLoading}
+          dataSource={devices}
+          pagination={false}
+          scroll={{ x: true }}
+          columns={[
+            {
+              title: "Device",
+              dataIndex: "name",
+              render: (_value, record) =>
+                [record.name, record.model].filter(Boolean).join(" - "),
+            },
+            {
+              title: "Resolution",
+              render: (_value, record) =>
+                `${record.widthPx}x${record.heightPx}`,
+            },
+            {
+              title: "Recommended ratio",
+              render: (_value, record) =>
+                `${record.widthPx}x${record.heightPx} (${getRatio(
+                  record.widthPx,
+                  record.heightPx,
+                )})`,
+            },
+            {
+              title: "Orientation",
+              dataIndex: "orientationSupported",
+              render: (value: string[]) => value?.join(", ") || "-",
+            },
+            {
+              title: "Notes",
+              dataIndex: "notes",
+              render: (value: string | null) => value || "-",
+            },
+          ]}
+        />
+        {!isLoading && devices.length === 0 && (
+          <Text className="mt-3 block text-sm text-gray-500">
+            {error
+              ? "Device recommendations can still be added by Super Admin once the backend library is ready."
+              : "No devices have been added to the Device Library yet."}
+          </Text>
+        )}
+      </Modal>
     </div>
   );
 };

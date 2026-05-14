@@ -7,8 +7,10 @@ import { saveFormData } from "./util";
 import { FaTrash } from "react-icons/fa";
 import Swal from 'sweetalert2';
 import "../../../styles/base.css";
-import { Table, Button, Card, Row, Col, Input, Select, Form } from 'antd';
+import { Table, Button, Card, Row, Col, Input, Select, Form, Typography,Space  } from 'antd';
 import 'sweetalert2/dist/sweetalert2.min.css';
+
+const { Title, Text } = Typography;
 
 let Url = process.env.NEXT_PUBLIC_BACKEND_URL;
 const API_URL = process.env.NEXT_PUBLIC_API_URL || Url + '/api/assigned-form';
@@ -187,11 +189,16 @@ const AsignForms: React.FC = () => {
 	}
 
 	return (
-		<div className="mx-auto mt-2 p-6 bg-white shadow-lg rounded-lg">
-			<Card className="p-2 mb-6">
-				<h2 className="text-xl font-semibold text-gray-700 mb-4">Assign Forms</h2>
-				<hr />
-				<div className="mt-4">
+		<div className="p-6 bg-gray-50 min-h-screen">
+			<div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+				<div>
+					<Title level={3} className="!mb-1">Assign Forms</Title>
+					<Text className="text-gray-500">Assign JotForm templates to companies and manage report URLs.</Text>
+				</div>
+			</div>
+
+			<Space direction="vertical" size="large" className="w-full">
+				<Card bordered={false} className="shadow-sm">
 					<Form
 						form={form}
 						onFinish={handleSubmit}
@@ -206,12 +213,12 @@ const AsignForms: React.FC = () => {
 						<Row gutter={16}>
 							<Col md={8} xs={24}>
 								<Form.Item label="Form ID" name="form_id" rules={[{ required: true, message: "Form ID is required" }]}>
-									<Input />
+									<Input placeholder="e.g. 253148270974059" />
 								</Form.Item>
 							</Col>
 							<Col md={8} xs={24}>
 								<Form.Item label="Form Name" name="form_name" rules={[{ required: true, message: "Form Name is required" }]}>
-									<Input />
+									<Input placeholder="e.g. Survey Feedback" />
 								</Form.Item>
 							</Col>
 							<Col md={8} xs={24}>
@@ -221,55 +228,56 @@ const AsignForms: React.FC = () => {
 										placeholder="Select companies"
 										onChange={handleCompanyChange}
 										value={formData.assigned_companies}
-										options={companyOptions}
+										options={companyOptions || []}
 									/>
 								</Form.Item>
 							</Col>
 						</Row>
 
 						<Row gutter={16}>
-							<Col md={8} xs={24}>
+							<Col md={6} xs={24}>
 								<Form.Item label="Previous year Report URL" name="previous_year_url">
-									<Input placeholder="Enter previous year's report URL here" />
+									<Input placeholder="Enter URL" />
 								</Form.Item>
 							</Col>
-							<Col md={8} xs={24}>
+							<Col md={6} xs={24}>
 								<Form.Item label="This year Report URL" name="this_year_url">
-									<Input placeholder="Enter this year's report URL here" />
+									<Input placeholder="Enter URL" />
 								</Form.Item>
 							</Col>
-							<Col md={8} xs={24}>
+							<Col md={6} xs={24}>
 								<Form.Item label="Last 30 days Report URL" name="this_month_url">
-									<Input placeholder="Enter this month's report URL here" />
+									<Input placeholder="Enter URL" />
 								</Form.Item>
 							</Col>
-							<Col md={8} xs={24}>
+							<Col md={6} xs={24}>
 								<Form.Item label="Previous month Report URL" name="previous_month_url">
-									<Input placeholder="Enter previous month's report URL here" />
+									<Input placeholder="Enter URL" />
 								</Form.Item>
 							</Col>
 						</Row>
 
-						<div className="flex justify-center items-center">
+						<div className="flex justify-end">
 							<Form.Item className="mb-0">
-								<Button type="primary" htmlType="submit" className="customSearchButton text-white py-3 rounded-md transition" style={{ background: '#3b5998' }}>
-									Assign
+								<Button type="primary" htmlType="submit" size="large" className="px-8">
+									Assign Form
 								</Button>
 							</Form.Item>
 						</div>
 					</Form>
-				</div>
-			</Card>
+				</Card>
 
-			<div className="mt-4">
-				<Table
-					columns={columns}
-					dataSource={assignedForms}
-					rowKey="form_id"
-					pagination={{ pageSize: 8 }}
-					className="superAdminTable"
-				/>
-			</div>
+				<Card bordered={false} className="shadow-sm">
+					<Table
+						columns={columns}
+						dataSource={assignedForms}
+						rowKey="form_id"
+						pagination={{ pageSize: 10, showSizeChanger: true }}
+						className="superAdminTable"
+						scroll={{ x: true }}
+					/>
+				</Card>
+			</Space>
 		</div>
 	);
 };

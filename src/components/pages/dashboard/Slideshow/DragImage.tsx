@@ -121,7 +121,7 @@ function SortableItem(props: {
           {...attributes}
           {...listeners}
           style={{
-            objectFit: "cover",
+            objectFit: "contain",
             minHeight: "100px",
             maxHeight: "100px",
             width: "100px",
@@ -137,7 +137,7 @@ function SortableItem(props: {
           {...attributes}
           {...listeners}
           style={{
-            objectFit: "cover",
+            objectFit: "contain",
             minHeight: "100px",
             maxHeight: "100px",
             width: "100px",

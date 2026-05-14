@@ -4,6 +4,7 @@ import {
   LoadScript,
 } from "@react-google-maps/api";
 import { useEffect, useState } from "react";
+import SafeContentFrame from "./SafeContentFrame";
 
 const center = { lat: 45.90458978842966, lng: -103.64974223855128 };
 
@@ -67,7 +68,7 @@ const Directions: React.FC<{
     setDuration(results.routes[0].legs[0].duration?.text ?? "");
   }
   return (
-    <div className="relative flex h-[100dvh] w-[100dvw] flex-col items-center overflow-hidden">
+    <SafeContentFrame className="relative flex flex-col items-center overflow-hidden">
       <div className="absolute left-0 top-0 h-full w-full">
         {/* Google Map Box */}
         <GoogleMap
@@ -87,7 +88,7 @@ const Directions: React.FC<{
         </GoogleMap>
       </div>
 
-      <div className="z-1 fixed left-0 top-0 m-4   overflow-x-auto rounded-lg bg-white p-4 shadow-lg">
+      <div className="z-1 absolute left-0 top-0 m-4 overflow-x-auto rounded-lg bg-white p-4 shadow-lg">
         <div className="flex flex-col justify-between gap-2">
           <div className="flex w-full items-center">
             <svg
@@ -356,7 +357,7 @@ m101 -30 c52 -40 51 -100 -1 -166 -22 -28 -44 -51 -48 -51 -24 0 -92 102 -92
           </button>
         </div>
       </div>
-    </div>
+    </SafeContentFrame>
   );
 };
 

@@ -98,6 +98,13 @@ const sAdminMenuItems: MenuItem[] = [
         icon: <FaWpforms size={18} />,
         iconColor: "white"
     },
+    {
+        title: "Device Library",
+        href: "/dashboard/device-library",
+        roles: ["SAdmin"],
+        icon: <IoDesktop size={18} />,
+        iconColor: "white"
+    },
 ];
 
 const displayItems: MenuItem[] = [

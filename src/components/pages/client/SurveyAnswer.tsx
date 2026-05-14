@@ -15,7 +15,8 @@ import { NotBadIcon } from "../../icons/survey/NotBadIcon";
 import { VeryNiceIcon } from "../../icons/survey/VeryNiceIcon";
 import { GoodIcon } from "../../icons/survey/GoodIcon";
 import { useViewportScale } from "../../../hooks/useViewportScale";
-import { getFullscreenMediaStyle, useMediaFit } from "../../../hooks/useMediaFit";
+import { getContainMediaStyle } from "../../../utils/contentFit";
+import SafeContentFrame from "./SafeContentFrame";
 
 // Add CSS to your global stylesheet or component styles
 const responsiveStyles = `
@@ -110,17 +111,6 @@ const SurveyAnswer: React.FC<{ tag: string; survey?: any; handleComplete: any }>
     setSelectedEmoticonData(null);
   }, [tag]);
 
-  const emoticonMediaSrc = selectedEmoticonData?.templateData?.url ?? "";
-  const emoticonMediaType = selectedEmoticonData?.templateType?.toLowerCase?.();
-  const emoticonFit = useMediaFit(
-    emoticonMediaSrc,
-    emoticonMediaType === "video"
-      ? "video"
-      : emoticonMediaType === "image"
-        ? "image"
-        : undefined,
-  );
-
   const sendSurveyAnswer = (value: number) => {
     setSelectedVal(value);
 
@@ -182,9 +172,9 @@ const SurveyAnswer: React.FC<{ tag: string; survey?: any; handleComplete: any }>
     const { templateType, templateData } = selectedEmoticonData;
 
     return (
-      <div className="w-full h-full flex items-center justify-center">
+      <SafeContentFrame className="flex items-center justify-center bg-black">
         {templateType === 'Text' && (
-          <div className="w-full p-5">
+          <div className="w-full bg-white p-5">
             <p
               className="mx-auto text-center"
               style={{
@@ -202,7 +192,7 @@ const SurveyAnswer: React.FC<{ tag: string; survey?: any; handleComplete: any }>
         {templateType === 'Image' && (
           <img
             alt="emoticon_template_image"
-            style={getFullscreenMediaStyle(emoticonFit)}
+            style={getContainMediaStyle()}
             src={templateData.url}
           />
         )}
@@ -210,13 +200,9 @@ const SurveyAnswer: React.FC<{ tag: string; survey?: any; handleComplete: any }>
         {templateType === 'Video' && (
           <div
             style={{
-              position: 'fixed',
-              top: 0,
-              left: 0,
-              width: '100vw',
-              height: '100vh',
+              width: '100%',
+              height: '100%',
               overflow: 'hidden',
-              zIndex: 9,
               pointerEvents: 'none',
               backgroundColor: 'black',
               display: 'flex',
@@ -228,7 +214,7 @@ const SurveyAnswer: React.FC<{ tag: string; survey?: any; handleComplete: any }>
               autoPlay
               loop
               playsInline
-              style={getFullscreenMediaStyle(emoticonFit)}
+              style={getContainMediaStyle()}
             >
               <source src={templateData.url} type="video/mp4" />
             </video>
@@ -243,7 +229,7 @@ const SurveyAnswer: React.FC<{ tag: string; survey?: any; handleComplete: any }>
         )}
 
         {templateType === 'Document' && (
-          <div className="w-full h-[100dvh] border rounded-lg overflow-hidden">
+          <div className="w-full h-full overflow-hidden">
             <iframe
               src={templateData.url}
               className="w-full h-full"
@@ -252,15 +238,15 @@ const SurveyAnswer: React.FC<{ tag: string; survey?: any; handleComplete: any }>
             />
           </div>
         )}
-      </div>
+      </SafeContentFrame>
     );
   }
 
   if (emptyDefaultSlideshow) {
     return (
-      <div className="text-center text-lg md:text-xl lg:text-2xl font-medium">
+      <SafeContentFrame className="flex items-center justify-center bg-white text-center text-lg md:text-xl lg:text-2xl font-medium">
         Thank you for your feedback!
-      </div>
+      </SafeContentFrame>
     );
   }
 
@@ -273,7 +259,7 @@ const SurveyAnswer: React.FC<{ tag: string; survey?: any; handleComplete: any }>
   return (
     <>
       <style jsx>{responsiveStyles}</style>
-      <div className="flex flex-col items-center gap-10 md:gap-6 emoticonWrapper">
+      <SafeContentFrame className="flex flex-col items-center justify-center gap-10 bg-white md:gap-6 emoticonWrapper">
         {/* ✅ Conditionally show template text */}
         {templateContent && (
           <div
@@ -313,7 +299,7 @@ const SurveyAnswer: React.FC<{ tag: string; survey?: any; handleComplete: any }>
             </button>
           ))}
         </div>
-      </div>
+      </SafeContentFrame>
     </>
   );
 };

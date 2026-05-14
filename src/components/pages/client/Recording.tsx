@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Button, Card, message } from 'antd';
 import { AudioOutlined } from '@ant-design/icons';
+import SafeContentFrame from './SafeContentFrame';
 interface RecordingProps {
   onSubmit: (blob: Blob, type: 'audio' | 'video') => void;
   langCode?: string;
@@ -208,7 +209,7 @@ const Recording: React.FC<RecordingProps> = ({ onSubmit, langCode = 'en', loadin
   };
 
   return (
-    <div className="w-full h-[100dvh] flex items-center justify-center bg-gray-50 p-4">
+    <SafeContentFrame className="flex w-full items-center justify-center bg-gray-50 p-4">
       <Card className="w-full max-w-2xl shadow-lg">
         {loading ? (
           <div className="space-y-6">
@@ -325,7 +326,7 @@ const Recording: React.FC<RecordingProps> = ({ onSubmit, langCode = 'en', loadin
           </>
         )}
       </Card>
-    </div>
+    </SafeContentFrame>
   );
 };
 

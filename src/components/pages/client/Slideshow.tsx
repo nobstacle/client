@@ -1,6 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 import React, { useState, useEffect, useMemo, useRef } from "react";
-import { getFullscreenMediaStyle, useMediaFit } from "../../../hooks/useMediaFit";
+import SafeContentFrame from "./SafeContentFrame";
+import { getContainMediaStyle } from "../../../utils/contentFit";
 
 const VIDEO_EXTENSIONS = ["mp4", "webm", "mov", "avi", "m4v"];
 
@@ -138,11 +139,9 @@ const FullscreenMediaLayer: React.FC<{
   onEnded: () => void;
   videoRef: React.RefObject<HTMLVideoElement | null>;
 }> = ({ item, index, isActive, onEnded, videoRef }) => {
-  const mediaFit = useMediaFit(item.url, item.mediaType);
-
   return (
     <div
-      className={`absolute inset-0 flex h-[100dvh] w-[100dvw] items-center justify-center overflow-hidden bg-black transition-opacity duration-500 ${
+      className={`absolute inset-0 flex h-full w-full items-center justify-center overflow-hidden bg-black transition-opacity duration-500 ${
         isActive ? "opacity-100 z-10" : "pointer-events-none opacity-0 z-0"
       }`}
       aria-hidden={!isActive}
@@ -158,13 +157,13 @@ const FullscreenMediaLayer: React.FC<{
           preload="auto"
           onEnded={onEnded}
           onError={onEnded}
-          style={getFullscreenMediaStyle(mediaFit)}
+          style={getContainMediaStyle()}
         />
       ) : (
         <img
           alt="template_image"
           src={item.url ?? ""}
-          style={getFullscreenMediaStyle(mediaFit)}
+          style={getContainMediaStyle()}
         />
       )}
     </div>
@@ -265,7 +264,7 @@ export const Slideshow: React.FC<{
   // ── Loading screen ──────────────────────────────────────────────────────────
   if (activeMediaItems.length === 0) {
     return (
-      <div className="relative flex h-[100dvh] w-[100dvw] items-center justify-center bg-black overflow-hidden">
+      <SafeContentFrame className="relative flex items-center justify-center bg-black">
         <p
           style={{
             color: "rgba(255,255,255,0.75)",
@@ -276,15 +275,15 @@ export const Slideshow: React.FC<{
         >
           No active slideshow media
         </p>
-      </div>
+      </SafeContentFrame>
     );
   }
 
   if (!ready) {
     const firstImage = activeMediaItems.find((item) => item.mediaType === "image")?.url;
     return (
-      <div className="relative flex h-[100dvh] w-[100dvw] items-center justify-center bg-black overflow-hidden">
-        {/* Blurred first image as background so it doesn't feel like a blank screen */}
+      <SafeContentFrame className="relative flex items-center justify-center bg-black">
+        {/* First image preview stays contained so loading never crops branded artwork. */}
         {firstImage && (
           <img
             src={firstImage}
@@ -295,9 +294,8 @@ export const Slideshow: React.FC<{
               inset: 0,
               width: "100%",
               height: "100%",
-              objectFit: "cover",
+              objectFit: "contain",
               filter: "blur(16px) brightness(0.4)",
-              transform: "scale(1.05)", // hide blur edge artifacts
             }}
           />
         )}
@@ -371,14 +369,14 @@ export const Slideshow: React.FC<{
             Loading slideshow…
           </p>
         </div>
-      </div>
+      </SafeContentFrame>
     );
   }
 
   // ── Slideshow (only mounts after all images are ready) ──────────────────────
   return (
-    <div className="h-[100dvh] w-[100dvw] overflow-hidden bg-black">
-      <div className="relative h-[100dvh] w-[100dvw] overflow-hidden bg-black">
+    <SafeContentFrame className="overflow-hidden bg-black">
+      <div className="relative h-full w-full overflow-hidden bg-black">
         {activeMediaItems.map((item, index) => (
           <FullscreenMediaLayer
             key={`${item.url}-${index}`}
@@ -390,7 +388,7 @@ export const Slideshow: React.FC<{
           />
         ))}
       </div>
-    </div>
+    </SafeContentFrame>
   );
 };
 

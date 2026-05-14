@@ -13,6 +13,7 @@ import {
   useContentControllerGetDefaultSlideshowContent,
 } from "../../../lib/client/api";
 import Slideshow from "./Slideshow";
+import SafeContentFrame from "./SafeContentFrame";
 import SimpleMap from "./Map";
 import SurveyAnswer from "./SurveyAnswer";
 import QRCode from 'qrcode';
@@ -24,7 +25,7 @@ import { Card, Button, Tag, Typography, Carousel, message, Modal, Image } from "
 import { LeftOutlined, RightOutlined, ExpandAltOutlined } from '@ant-design/icons';
 import { TrialWatermark } from "../../trial/TrialWatermark";
 import { useViewportScale } from "../../../hooks/useViewportScale";
-import { getFullscreenMediaStyle, useMediaFit } from "../../../hooks/useMediaFit";
+import { getContainMediaStyle } from "../../../utils/contentFit";
 
 const { Title, Text } = Typography;
 const LAST_DISPLAYED_CONTENT_KEY = "lastDisplayedContent";
@@ -134,29 +135,27 @@ const ScrollSection: React.FC<{
     }
   }, [isActive, item?.mediaType]);
 
-  const mediaFit = useMediaFit(item.signedUrl || item.url, item.mediaType);
-
   return (
     <section
-      className="relative flex h-[100dvh] w-[100dvw] snap-start items-center justify-center overflow-hidden bg-black"
+      className="relative flex h-full w-full snap-start items-center justify-center overflow-hidden bg-black"
     >
       {item.mediaType === "video" ? (
         <video
           ref={videoRef}
           src={item.signedUrl || item.url}
-          className={mediaFit === "cover" ? "object-cover" : "object-contain"}
+          className="object-contain"
           playsInline
           muted={isMuted}
           onEnded={onEnded}
           preload="auto"
-          style={getFullscreenMediaStyle(mediaFit)}
+          style={getContainMediaStyle()}
         />
       ) : (
         <img
           src={item.signedUrl || item.url}
           alt={item.name || `scroll-item-${index + 1}`}
-          className={mediaFit === "cover" ? "object-cover" : "object-contain"}
-          style={getFullscreenMediaStyle(mediaFit)}
+          className="object-contain"
+          style={getContainMediaStyle()}
         />
       )}
 
@@ -214,29 +213,27 @@ const ScreensSection: React.FC<{
     }
   }, [isActive, item?.mediaType]);
 
-  const mediaFit = useMediaFit(item.signedUrl || item.url, item.mediaType);
-
   return (
     <section
-      className="relative flex h-[100dvh] w-full items-center justify-center overflow-hidden bg-black"
+      className="relative flex h-full w-full items-center justify-center overflow-hidden bg-black"
     >
       {item.mediaType === "video" ? (
         <video
           ref={videoRef}
           src={item.signedUrl || item.url}
-          className={mediaFit === "cover" ? "object-cover" : "object-contain"}
+          className="object-contain"
           playsInline
           muted={isMuted}
           onEnded={onEnded}
           preload="auto"
-          style={getFullscreenMediaStyle(mediaFit)}
+          style={getContainMediaStyle()}
         />
       ) : (
         <img
           src={item.signedUrl || item.url}
           alt={item.name || `screens-item-${index + 1}`}
-          className={mediaFit === "cover" ? "object-cover" : "object-contain"}
-          style={getFullscreenMediaStyle(mediaFit)}
+          className="object-contain"
+          style={getContainMediaStyle()}
         />
       )}
 
@@ -906,17 +903,6 @@ export const Content: React.FC = () => {
   const adaptiveQrSize = Math.round(Math.min(384, Math.max(224, width * 0.24)));
   const adaptiveTextSizeRem = Math.min(4.2, Math.max(1.75, 3.2 * scale));
   const adaptiveLineHeightRem = Math.min(5.2, Math.max(2.4, 4.1 * scale));
-  const activeMediaSrc = messageStore.receivedContent?.content ?? contentToDisplay?.content?.content ?? "";
-  const activeContentType = String(
-    contentToDisplay?.type ?? messageStore.receivedType ?? "",
-  ).toLowerCase();
-  const shouldFitActiveMedia =
-    activeContentType.includes("image") || activeContentType.includes("video");
-  const activeMediaFit = useMediaFit(
-    shouldFitActiveMedia ? activeMediaSrc : "",
-    activeContentType.includes("video") ? "video" : "image",
-  );
-
   let Url = process.env.NEXT_PUBLIC_BACKEND_URL;
 
   const defaultSlideshowContent =
@@ -1110,7 +1096,7 @@ export const Content: React.FC = () => {
       window.removeEventListener("resize", handleResize);
       window.removeEventListener("orientationchange", handleResize);
     };
-  }, [activeMediaFit, messageStore.receivedContent?.content]);
+  }, [messageStore.receivedContent?.content]);
 
   useEffect(() => {
     const generateQR = async () => {
@@ -1361,7 +1347,7 @@ export const Content: React.FC = () => {
     const viewerUrl = getViewerStrategy();
 
     return (
-      <div className="w-full h-[100dvh] flex flex-col overflow-hidden" key={pdfKey}>
+      <div className="w-full h-full flex flex-col overflow-hidden" key={pdfKey}>
         {isLoading && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-50 z-10">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mb-4"></div>
@@ -1485,7 +1471,7 @@ export const Content: React.FC = () => {
     const viewerUrl = getViewerStrategy();
 
     return (
-      <div className="w-full h-[100dvh] flex flex-col overflow-hidden" key={`ipad-pdf-${pdfKey}`}>
+      <div className="w-full h-full flex flex-col overflow-hidden" key={`ipad-pdf-${pdfKey}`}>
         {isLoading && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-50 z-10">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mb-4"></div>
@@ -1589,7 +1575,7 @@ export const Content: React.FC = () => {
     const viewerUrl = getAndroidTabletViewerUrl();
 
     return (
-      <div className="w-full h-[100dvh] flex flex-col overflow-hidden bg-gray-50" key={`android-tablet-${pdfKey}`}>
+      <div className="w-full h-full flex flex-col overflow-hidden bg-gray-50" key={`android-tablet-${pdfKey}`}>
         {isLoading && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-50 z-10">
             <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-500 mb-4"></div>
@@ -1923,19 +1909,20 @@ export const Content: React.FC = () => {
 
     if (activeItems.length === 0) {
       return (
-        <div className="flex h-[100dvh] w-full items-center justify-center bg-black">
+        <SafeContentFrame className="flex w-full items-center justify-center bg-black">
           <p className="text-gray-500">No active scroll content available</p>
-        </div>
+        </SafeContentFrame>
       );
     }
 
     return (
-      <div 
+      <SafeContentFrame
         ref={containerRef}
-        className="h-[100dvh] w-full overflow-y-auto snap-y snap-mandatory bg-black no-scrollbar"
+        allowScroll
+        className="w-full snap-y snap-mandatory bg-black no-scrollbar"
       >
         {activeItems.map((item, index) => (
-          <div key={`${item.url || index}`} data-index={index} className="snap-start h-[100dvh] w-full">
+          <div key={`${item.url || index}`} data-index={index} className="snap-start h-full w-full">
             <ScrollSection
               item={item}
               index={index}
@@ -1956,7 +1943,7 @@ export const Content: React.FC = () => {
             <div className="w-[2px] h-10 bg-gradient-to-b from-white/80 to-transparent rounded-full" />
           </div>
         )}
-      </div>
+      </SafeContentFrame>
     );
   };
 
@@ -2031,14 +2018,14 @@ export const Content: React.FC = () => {
 
     if (activeItems.length === 0) {
       return (
-        <div className="w-full h-[100dvh] flex items-center justify-center bg-gray-100">
+        <SafeContentFrame className="w-full flex items-center justify-center bg-gray-100">
           <p className="text-gray-500">No active screen content available</p>
-        </div>
+        </SafeContentFrame>
       );
     }
 
     return (
-      <div className="relative h-[100dvh] w-full overflow-hidden bg-black">
+      <SafeContentFrame className="relative w-full overflow-hidden bg-black">
         <AnimatePresence mode="wait">
           <motion.div
             key={`${activeItems[activeIndex]?.url || activeItems[activeIndex]?.signedUrl || activeIndex}`}
@@ -2059,7 +2046,7 @@ export const Content: React.FC = () => {
           </motion.div>
         </AnimatePresence>
 
-      </div>
+      </SafeContentFrame>
     );
   };
 
@@ -2082,7 +2069,7 @@ export const Content: React.FC = () => {
         )}
         {(contentToDisplay?.type === "TextTemplateMessage" ||
           contentToDisplay?.type === "Text") && (
-            <div className="w-full p-5">
+            <SafeContentFrame className="flex w-full items-center justify-center bg-white p-5">
               <p
                 className="mx-auto text-center"
                 style={{
@@ -2094,7 +2081,7 @@ export const Content: React.FC = () => {
               >
                 {messageStore.receivedContent?.content ?? ""}
               </p>
-            </div>
+            </SafeContentFrame>
           )}
 
         {contentToDisplay?.type === 'Packages' && (() => {
@@ -2145,9 +2132,10 @@ export const Content: React.FC = () => {
 
 
           return (
-            <div
-              className="w-full space-y-6 relative"
-              style={{ height: '100%', padding: '3rem 1rem', overflowY: 'scroll' }}
+            <SafeContentFrame
+              allowScroll
+              className="w-full space-y-6 bg-white"
+              style={{ padding: '3rem 1rem' }}
             >
               {sortedPackages.map((packageData) => (
                 <PackageCard
@@ -2158,12 +2146,12 @@ export const Content: React.FC = () => {
                   loadingButton={loading}
                 />
               ))}
-            </div>
+            </SafeContentFrame>
           );
         })()}
 
         {contentToDisplay?.type === "ChatMessage" && (
-          <div className="flex w-full flex-col items-center justify-center gap-2 p-4" style={{ position: 'relative', zIndex: 0 }}>
+          <SafeContentFrame className="flex w-full flex-col items-center justify-center gap-2 bg-white p-4" style={{ zIndex: 0 }}>
             <div className="w-full max-w-[100%] sm:max-w-[75%] md:max-w-[50%]">
               <ChatBox
                 ref={chatBoxRef}
@@ -2171,7 +2159,7 @@ export const Content: React.FC = () => {
                 sendMessage={sendMessage}
               />
             </div>
-          </div>
+          </SafeContentFrame>
         )}
 
         {contentToDisplay?.type === "Image" && (
@@ -2181,19 +2169,19 @@ export const Content: React.FC = () => {
                 <img
                   src={qrCodeUrl}
                   alt="QR Code"
-                  className="object-cover"
+                  className="object-contain"
                   style={{ width: `${adaptiveQrSize}px`, height: `${adaptiveQrSize}px` }}
                 />
               </Card>
             ) : (
-              <div className="relative flex h-[100dvh] w-[100dvw] items-center justify-center overflow-hidden bg-black">
+              <SafeContentFrame className="relative flex items-center justify-center bg-black">
                   <img
                     key={messageStore.receivedContent?.id ?? ""}
                     alt="template_image"
-                    style={getFullscreenMediaStyle(activeMediaFit)}
+                    style={getContainMediaStyle()}
                     src={messageStore.receivedContent?.content ?? ""}
                   />
-                </div>
+                </SafeContentFrame>
               )}
           </>
         )}
@@ -2247,7 +2235,7 @@ export const Content: React.FC = () => {
                 case 'xlsx':
                 case 'csv':
                   return (
-                    <div className="w-full h-[100dvh] border rounded-lg overflow-hidden relative">
+                    <div className="w-full h-full overflow-hidden relative">
                       {isLoading && (
                         <div className="absolute inset-0 flex items-center justify-center bg-gray-50 z-10">
                           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
@@ -2277,7 +2265,7 @@ export const Content: React.FC = () => {
                   } else {
                     // Desktop - keep existing code
                     return (
-                      <div className="w-full h-[100dvh] border rounded-lg overflow-hidden relative">
+                      <div className="w-full h-full overflow-hidden relative">
                         {isLoading && (
                           <div className="absolute inset-0 flex items-center justify-center bg-gray-50 z-10">
                             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
@@ -2304,7 +2292,7 @@ export const Content: React.FC = () => {
                 case 'docx':
                   if (isMobile || isTablet) {
                     return (
-                      <div className="w-full h-[100dvh] flex flex-col overflow-hidden">
+                      <div className="w-full h-full flex flex-col overflow-hidden">
                         <div className="flex-1 relative">
                           {isLoading && (
                             <div className="absolute inset-0 flex items-center justify-center bg-gray-50 z-10">
@@ -2358,7 +2346,7 @@ export const Content: React.FC = () => {
                   } else {
                     // Desktop Word viewer
                     return (
-                      <div className="w-full h-[100dvh] border rounded-lg overflow-hidden relative">
+                      <div className="w-full h-full overflow-hidden relative">
                         {isLoading && (
                           <div className="absolute inset-0 flex items-center justify-center bg-gray-50 z-10">
                             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
@@ -2397,14 +2385,14 @@ export const Content: React.FC = () => {
                     <img
                       src={qrCodeUrl}
                       alt="QR Code"
-                      className="object-cover"
+                      className="object-contain"
                       style={{ width: `${adaptiveQrSize}px`, height: `${adaptiveQrSize}px` }}
                     />
                   </Card>
                 ) : (
-              <div className={`w-full ${isMobile ? 'p-2' : 'p-5'}`}>
+              <SafeContentFrame className="bg-white">
                 {renderDocumentViewer()}
-              </div>
+              </SafeContentFrame>
                 )}
               </>
             );
@@ -2416,7 +2404,7 @@ export const Content: React.FC = () => {
               <img
                 src={qrCodeUrl}
                 alt="QR Code"
-                className="object-cover"
+                className="object-contain"
                 style={{ width: `${adaptiveQrSize}px`, height: `${adaptiveQrSize}px` }}
               />
             </Card>
@@ -2435,12 +2423,6 @@ export const Content: React.FC = () => {
 
         .video-container {
           position: fixed;
-          top: 0;
-          left: 0;
-          width: 100vw;
-          width: 100dvw;
-          height: 100vh;
-          height: 100dvh;
           overflow: hidden;
           z-index: 9;
           background-color: black;
@@ -2454,7 +2436,7 @@ export const Content: React.FC = () => {
         }
       `}</style>
 
-              <div className="video-container">
+              <SafeContentFrame className="video-container">
                 <video
                   ref={videoElement}
                   autoPlay
@@ -2464,7 +2446,7 @@ export const Content: React.FC = () => {
                   preload="auto"
                   className="fullscreen-video"
                   key={messageStore.receivedContent?.content ?? ""}
-                  style={getFullscreenMediaStyle(activeMediaFit)}
+                  style={getContainMediaStyle()}
                   onLoadedData={() => {
                     if (videoElement.current) {
                       videoElement.current.muted = isMuted;
@@ -2554,7 +2536,7 @@ export const Content: React.FC = () => {
                     {isMuted ? '🔇' : '🔊'}
                   </button>
                 )}
-              </div>
+              </SafeContentFrame>
             </>
           )
         )}
@@ -2610,9 +2592,9 @@ export const Content: React.FC = () => {
 
           if (scrollItems.length === 0) {
             return (
-              <div className="w-full h-[100dvh] flex items-center justify-center bg-gray-100">
+              <SafeContentFrame className="w-full flex items-center justify-center bg-gray-100">
                 <p className="text-gray-500">No scroll content available</p>
-              </div>
+              </SafeContentFrame>
             );
           }
 
@@ -2636,9 +2618,9 @@ export const Content: React.FC = () => {
 
           if (screensItems.length === 0) {
             return (
-              <div className="w-full h-[100dvh] flex items-center justify-center bg-gray-100">
+              <SafeContentFrame className="w-full flex items-center justify-center bg-gray-100">
                 <p className="text-gray-500">No screens content available</p>
-              </div>
+              </SafeContentFrame>
             );
           }
 
@@ -2653,7 +2635,7 @@ export const Content: React.FC = () => {
             <div className="w-full h-full">
               {/* QR version */}
               {["MapTemplateQr", "WebsiteTemplateQr"].includes(contentToDisplay?.type) ? (
-                <div className="flex justify-center items-center h-[100dvh] bg-gray-50">
+                <SafeContentFrame className="flex justify-center items-center bg-gray-50">
                   <Card>
                     <img
                       src={qrCodeUrl}
@@ -2662,7 +2644,7 @@ export const Content: React.FC = () => {
                       style={{ width: `${adaptiveQrSize}px`, height: `${adaptiveQrSize}px` }}
                     />
                   </Card>
-                </div>
+                </SafeContentFrame>
               ) : (
                 /* Normal interactive map */
                 <SimpleMap
@@ -2791,7 +2773,7 @@ export const Content: React.FC = () => {
         }
       `}</style>
 
-      <div className="surveyWrapper w-[100dvw] h-[100dvh] flex flex-col bg-gray-100 relative">
+      <SafeContentFrame className="surveyWrapper flex flex-col bg-gray-100">
 
               {showQR && (
                 <div
@@ -2832,7 +2814,7 @@ export const Content: React.FC = () => {
                   prefillData={prefillData}
                 />
               </div>
-            </div>
+            </SafeContentFrame>
           </>
         )}
 
@@ -2851,10 +2833,12 @@ export const Content: React.FC = () => {
                 />
               </Card>
             ) : (
-              <iframe
-                className="h-full w-full"
-                src={messageStore.receivedContent?.content ?? ""}
-              />
+              <SafeContentFrame className="bg-white">
+                <iframe
+                  className="h-full w-full"
+                  src={messageStore.receivedContent?.content ?? ""}
+                />
+              </SafeContentFrame>
             )
           )}
       </>

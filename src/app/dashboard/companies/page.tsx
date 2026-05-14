@@ -466,42 +466,39 @@ const CompaniesManagement: React.FC = () => {
     const hasActiveFilters = searchTerm || selectedLangCode;
 
     return (
-        <div className="mx-auto mt-2 p-6 bg-white shadow-lg rounded-lg">
-            <Card className="p-2 mb-6" bordered={false}>
-                <Space direction="vertical" size="large" style={{ width: '100%' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div>
-                            <Title level={2} style={{ marginBottom: 8, color: '#374151' }}>
-                                <BankOutlined style={{ marginRight: 12 }} />
-                                Company Management
-                            </Title>
-                            <Text type="secondary">
-                                Manage all companies in the system
-                            </Text>
-                        </div>
-                        <Button
-                            type="primary"
-                            icon={<PlusOutlined />}
-                            size="large"
-                            onClick={handleCreateCompany}
-                            className="primaryButton"
-                        >
-                            Create New Company
-                        </Button>
-                    </div>
+        <div className="p-6 bg-gray-50 min-h-screen">
+            <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                    <Title level={2} className="!mb-1" style={{ color: '#374151' }}>
+                        <BankOutlined style={{ marginRight: 12 }} />
+                        Company Management
+                    </Title>
+                    <Text className="text-gray-500">Manage all companies in the system</Text>
+                </div>
+                <Button
+                    type="primary"
+                    icon={<PlusOutlined />}
+                    size="large"
+                    onClick={handleCreateCompany}
+                    className="primaryButton"
+                >
+                    Create New Company
+                </Button>
+            </div>
 
-                    <hr style={{ margin: '16px 0', border: 'none', borderTop: '1px solid #e5e7eb' }} />
+            <Space direction="vertical" size="large" style={{ width: '100%' }}>
 
-                    {/* Filters Section */}
-                    <Card
-                        size="small"
-                        style={{ backgroundColor: '#f9fafb' }}
-                        title={
-                            <Space>
-                                <FilterOutlined />
-                                <span>Filters & Search</span>
-                            </Space>
-                        }
+                <Card
+                    size="small"
+                    bordered={false}
+                    className="shadow-sm"
+                    style={{ backgroundColor: '#ffffff' }}
+                    title={
+                        <Space>
+                            <FilterOutlined />
+                            <span>Filters & Search</span>
+                        </Space>
+                    }
                         extra={
                             hasActiveFilters && (
                                 <Button
@@ -557,6 +554,7 @@ const CompaniesManagement: React.FC = () => {
                         )}
                     </Card>
 
+                <Card bordered={false} className="shadow-sm">
                     <Table
                         columns={columns}
                         dataSource={companies}
@@ -573,8 +571,8 @@ const CompaniesManagement: React.FC = () => {
                         onChange={handleTableChange}
                         scroll={{ x: 1200 }}
                     />
-                </Space>
-            </Card>
+                </Card>
+            </Space>
 
             {/* Create/Edit Modal */}
             <Modal
