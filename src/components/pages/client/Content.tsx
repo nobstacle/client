@@ -1917,6 +1917,7 @@ export const Content: React.FC = () => {
 
     return (
       <SafeContentFrame
+        isMedia
         ref={containerRef}
         allowScroll
         className="w-full snap-y snap-mandatory bg-black no-scrollbar"
@@ -2025,7 +2026,7 @@ export const Content: React.FC = () => {
     }
 
     return (
-      <SafeContentFrame className="relative w-full overflow-hidden bg-black">
+      <SafeContentFrame isMedia className="relative w-full overflow-hidden bg-black">
         <AnimatePresence mode="wait">
           <motion.div
             key={`${activeItems[activeIndex]?.url || activeItems[activeIndex]?.signedUrl || activeIndex}`}
@@ -2174,7 +2175,7 @@ export const Content: React.FC = () => {
                 />
               </Card>
             ) : (
-              <SafeContentFrame className="relative flex items-center justify-center bg-black">
+              <SafeContentFrame isMedia className="relative flex items-center justify-center bg-black">
                   <img
                     key={messageStore.receivedContent?.id ?? ""}
                     alt="template_image"
@@ -2436,7 +2437,7 @@ export const Content: React.FC = () => {
         }
       `}</style>
 
-              <SafeContentFrame className="video-container">
+              <SafeContentFrame isMedia className="video-container">
                 <video
                   ref={videoElement}
                   autoPlay
