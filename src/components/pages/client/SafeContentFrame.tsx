@@ -21,21 +21,34 @@ export const SafeContentFrame = React.forwardRef<HTMLDivElement, SafeContentFram
 }, ref) => {
   const rect = useSafeViewportRect();
   
-  const finalRect = isMedia ? {
-    ...rect,
-    topOffset: 0,
-    bottomOffset: 0,
-    leftOffset: 0,
-    rightOffset: 0,
-    width: typeof window !== 'undefined' ? window.innerWidth : rect.width,
-    height: typeof window !== 'undefined' ? window.innerHeight : rect.height,
-  } : rect;
+  if (isMedia) {
+    return (
+      <div
+        ref={ref}
+        className={className}
+        style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          width: "100dvw",
+          height: "100dvh",
+          maxWidth: "100dvw",
+          maxHeight: "100dvh",
+          overflowX: "hidden",
+          overflowY: allowScroll ? "auto" : "hidden",
+          ...style,
+        }}
+      >
+        {children}
+      </div>
+    );
+  }
 
   return (
     <div
       ref={ref}
       className={className}
-      style={getSafeViewportStyle(finalRect, {
+      style={getSafeViewportStyle(rect, {
         // The safe frame subtracts device notches and configured kiosk bars.
         // Template media is positioned inside this box, never against the raw screen.
         overflowX: "hidden",

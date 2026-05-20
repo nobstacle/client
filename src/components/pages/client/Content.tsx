@@ -1049,54 +1049,7 @@ export const Content: React.FC = () => {
     }
   }, [messageStore.receivedType]);
 
-  useEffect(() => {
-    const updateVideoStyles = () => {
-      if (!videoElement.current) return;
 
-      const video = videoElement.current;
-
-      const handleLoadedMetadata = () => {
-        video.style.width = 'auto';
-        video.style.height = 'auto';
-        video.style.maxWidth = '100%';
-        video.style.maxHeight = '100%';
-        video.style.objectFit = 'contain';
-        video.style.position = 'static';
-        video.style.top = '';
-        video.style.left = '';
-      };
-
-      if (video.readyState >= 1) {
-        handleLoadedMetadata();
-      } else {
-        video.addEventListener('loadedmetadata', handleLoadedMetadata);
-      }
-
-      return () => {
-        video.removeEventListener('loadedmetadata', handleLoadedMetadata);
-      };
-    };
-
-    const handleResize = () => {
-      if (videoElement.current) {
-        videoElement.current.style.width = 'auto';
-        videoElement.current.style.height = 'auto';
-        videoElement.current.style.maxWidth = '100%';
-        videoElement.current.style.maxHeight = '100%';
-        videoElement.current.style.objectFit = 'contain';
-      }
-    };
-
-    updateVideoStyles();
-
-    window.addEventListener("resize", handleResize);
-    window.addEventListener("orientationchange", handleResize);
-
-    return () => {
-      window.removeEventListener("resize", handleResize);
-      window.removeEventListener("orientationchange", handleResize);
-    };
-  }, [messageStore.receivedContent?.content]);
 
   useEffect(() => {
     const generateQR = async () => {
