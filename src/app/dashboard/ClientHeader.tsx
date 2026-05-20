@@ -2943,11 +2943,20 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                     border: 'none'
                                 }}
                             />
-                            <div className="flex items-center gap-2">
-                                <div className="customLogoutMobile" onClick={() => handleLogout()}>
-                                    <LogoutIcon />
-                                    <Logout />
-                                </div>
+                            <div className="flex items-center gap-4">
+                                <button
+                                    onClick={() => handleLogout()}
+                                    className="flex items-center gap-1.5 px-3 py-1.5 text-white hover:bg-white/10 active:bg-white/20 transition-all duration-200 rounded-lg border border-white/20"
+                                    style={{
+                                        background: 'transparent',
+                                        fontSize: '13px',
+                                        fontWeight: 500,
+                                        cursor: 'pointer',
+                                    }}
+                                >
+                                    <RiLogoutBoxLine style={{ fontSize: '18px' }} />
+                                    <span>Logout</span>
+                                </button>
                                 <div ref={dropdownMenuRef} style={{ position: 'relative' }}>
                                     <Button
                                         type="text"
@@ -3142,12 +3151,6 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                                                     </div>
                                                                 </div>
 
-                                                                <div>
-                                                                    <PairUrlButton
-                                                                        stationNo={Number(currentStation)}
-                                                                        backendToken={data?.user?.backendTokens?.at}
-                                                                    />
-                                                                </div>
                                                                 {/* Station */}
                                                                 <div>
                                                                     <label className="block text-xs font-medium text-gray-600 mb-1.5">
@@ -3158,6 +3161,14 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                                                     </div>
                                                                 </div>
                                                             </div>
+                                                        </div>
+
+                                                        {/* Guest Pairing Section */}
+                                                        <div className="bg-gray-50/80 border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+                                                            <PairUrlButton
+                                                                stationNo={Number(currentStation)}
+                                                                backendToken={data?.user?.backendTokens?.at}
+                                                            />
                                                         </div>
 
                                                         <div className="bg-gray-50/80 border border-gray-200 rounded-xl p-4 shadow-sm">
