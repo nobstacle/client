@@ -6,6 +6,7 @@ export async function middleware(req: NextRequest) {
   const url = req.nextUrl.clone();
   const pathname = req.nextUrl.pathname;
 
+  
   // ── MUST be first — before ANY other check including getToken() ────────────
   // These paths are fully public and must never require authentication.
   if (
