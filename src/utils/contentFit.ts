@@ -54,7 +54,7 @@ const readCssPx = (propertyName: string): number => {
 };
 
 export const getConfiguredSafeAreaInsets = (): SafeAreaInsets => ({
-  top: readCssPx("--safe-area-inset-top"),
+  top: Math.max(24, readCssPx("--safe-area-inset-top")), // Enforce minimum 24px header
   right: readCssPx("--safe-area-inset-right"),
   bottom: readCssPx("--safe-area-inset-bottom"),
   left: readCssPx("--safe-area-inset-left"),
@@ -186,6 +186,9 @@ export const getSafeViewportStyle = (
 export const getContainMediaStyle = (
   extraStyles: CSSProperties = {},
 ): CSSProperties => ({
+  position: "absolute",
+  top: 0,
+  left: 0,
   width: "100%",
   height: "100%",
   maxWidth: "100%",

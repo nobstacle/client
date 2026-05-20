@@ -48,7 +48,7 @@ body.client-fullscreen {
 
 html.client-fullscreen #app-shell,
 body.client-fullscreen #app-shell {
-  background: #000;
+  background: #000 !important;
   height: 100vh;
   height: 100dvh;
   min-height: 100vh;

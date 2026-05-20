@@ -264,7 +264,7 @@ export const Slideshow: React.FC<{
   // ── Loading screen ──────────────────────────────────────────────────────────
   if (activeMediaItems.length === 0) {
     return (
-      <SafeContentFrame className="relative flex items-center justify-center bg-black">
+      <SafeContentFrame isMedia className="relative flex items-center justify-center bg-black">
         <p
           style={{
             color: "rgba(255,255,255,0.75)",
@@ -282,7 +282,7 @@ export const Slideshow: React.FC<{
   if (!ready) {
     const firstImage = activeMediaItems.find((item) => item.mediaType === "image")?.url;
     return (
-      <SafeContentFrame className="relative flex items-center justify-center bg-black">
+      <SafeContentFrame isMedia className="relative flex items-center justify-center bg-black">
         {/* First image preview stays contained so loading never crops branded artwork. */}
         {firstImage && (
           <img
@@ -375,7 +375,7 @@ export const Slideshow: React.FC<{
 
   // ── Slideshow (only mounts after all images are ready) ──────────────────────
   return (
-    <SafeContentFrame className="overflow-hidden bg-black">
+    <SafeContentFrame isMedia className="overflow-hidden bg-black">
       <div className="relative h-full w-full overflow-hidden bg-black">
         {activeMediaItems.map((item, index) => (
           <FullscreenMediaLayer
