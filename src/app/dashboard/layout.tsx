@@ -12,14 +12,18 @@ import DashboardFeatureGate from "../../components/pages/dashboard/DashboardFeat
 
 function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div id="parent" className="flex h-dvh w-full min-w-0 flex-col overflow-hidden bg-white">
+    <div
+      id="parent"
+      className="box-border flex h-dvh w-full min-w-0 flex-col overflow-hidden bg-[#3b5998]"
+      style={{ paddingTop: "var(--safe-area-inset-top)" }}
+    >
       <CompanyContextProvider>
         <SocketContextProvider>
           <TemplateContextProvider>
             <ShortcutsProvider> {/* ← Add this wrapper */}
               <ServerHeaderWrapper />
               <TrialDashboardNotice />
-              <div className="flex flex-1 min-h-0 min-w-0 flex-row overflow-hidden">
+              <div className="flex flex-1 min-h-0 min-w-0 flex-row overflow-hidden bg-white">
                 <ServerSidebarWrapper />
                 <Body>
                   <DashboardFeatureGate>{children}</DashboardFeatureGate>

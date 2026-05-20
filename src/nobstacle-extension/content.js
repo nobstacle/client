@@ -4,6 +4,7 @@ const HEADER_URL = Isproduction
   ? 'https://nobstacle.com/header-only'
   : 'http://localhost:3000/header-only';
 const HEADER_HEIGHT = '56px';
+const HEADER_SAFE_AREA_TOP = 'env(safe-area-inset-top, 0px)';
 const DEBUG_MODE = false;
 const STATION_STORAGE_KEY = 'nobstacle_selected_station';
 
@@ -139,7 +140,7 @@ function showLoader() {
     top: 0 !important;
     left: 0 !important;
     right: 0 !important;
-    height: 56px !important;
+    height: calc(${HEADER_HEIGHT} + ${HEADER_SAFE_AREA_TOP}) !important;
     background: #3b5998 !important;
     display: flex !important;
     align-items: center !important;
@@ -147,7 +148,8 @@ function showLoader() {
     z-index: 2147483647 !important;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
     margin: 0 !important;
-    padding: 0 !important;
+    padding: ${HEADER_SAFE_AREA_TOP} 0 0 0 !important;
+    box-sizing: border-box !important;
     border: none !important;
   `;
 
@@ -638,13 +640,14 @@ function injectStyles() {
       left: 0 !important;
       right: 0 !important;
       width: 100% !important;
-      height: ${HEADER_HEIGHT} !important;
+      height: calc(${HEADER_HEIGHT} + ${HEADER_SAFE_AREA_TOP}) !important;
       z-index: 2147483647 !important;
-      background: transparent !important;
+      background: #3b5998 !important;
       box-shadow: none !important;
       overflow: visible !important;
       margin: 0 !important;
-      padding: 0 !important;
+      padding: ${HEADER_SAFE_AREA_TOP} 0 0 0 !important;
+      box-sizing: border-box !important;
     }
     
     #nobstacle-header-iframe {
@@ -659,9 +662,9 @@ function injectStyles() {
       pointer-events: auto !important;
     }
     
-    /* Keep the host page edge-to-edge; the header now floats transparently above it. */
+    /* Reserve top space so tablet content starts below the injected header. */
     body.nobstacle-active {
-      padding-top: 0 !important;
+      padding-top: calc(${HEADER_HEIGHT} + ${HEADER_SAFE_AREA_TOP}) !important;
       box-sizing: border-box !important;
     }
     

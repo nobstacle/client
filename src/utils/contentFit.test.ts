@@ -51,3 +51,27 @@ assert.deepStrictEqual(
   },
 );
 
+const androidVisualViewportRect = calculateSafeViewportRect({
+  viewportWidth: 800,
+  viewportHeight: 600,
+  viewportTopOffset: 24,
+  viewportLeftOffset: 8,
+  topMenuBarHeight: 56,
+  leftPadding: 4,
+  rightPadding: 4,
+});
+
+assert.deepStrictEqual(
+  {
+    width: androidVisualViewportRect.width,
+    height: androidVisualViewportRect.height,
+    topOffset: androidVisualViewportRect.topOffset,
+    leftOffset: androidVisualViewportRect.leftOffset,
+  },
+  {
+    width: 792,
+    height: 544,
+    topOffset: 80,
+    leftOffset: 12,
+  },
+);

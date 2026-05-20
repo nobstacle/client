@@ -2892,8 +2892,14 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         <>
             <style jsx global>{`
     html, body {
-        background: transparent !important;
+        background: #3b5998 !important;
     }
+
+    html.client-fullscreen,
+    body.client-fullscreen {
+        background: #000 !important;
+    }
+
     @keyframes slideDown {
         from {
             opacity: 0;
@@ -2919,10 +2925,13 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
             <div style={{
                 width: '100%',
                 position: 'relative',
+                zIndex: 20,
+                flex: '0 0 auto',
+                backgroundColor: '#3b5998',
             }}>
                 {/* Mobile Header */}
                 <div className="block lg:hidden" style={{ backgroundColor: '#3b5998' }}>
-                    <nav className="h-14 w-full border-b border-transparent px-4" style={{ backgroundColor: '#3b5998', boxShadow: 'none' }}>
+                    <nav className="h-14 w-full border-b border-transparent px-4" style={{ backgroundColor: '#3b5998', boxShadow: 'none', minHeight: '3.5rem' }}>
                         <div className="flex h-full w-full items-center justify-between">
                             <Button
                                 type="text"
@@ -3519,8 +3528,10 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                     style={{
                         backgroundColor:'#3b5998',
                         height: isCompactDesktop ? 'auto' : (isInIframe ? '3.5rem' : '4.09rem'),
+                        minHeight: '3.5rem',
                         position: 'relative',
-                        zIndex: 1,
+                        zIndex: 50,
+                        overflow: 'visible',
                         boxShadow: 'none'
                     }}
                 >

@@ -14,6 +14,8 @@ export const useSafeViewportRect = (options: SafeViewportOptions = {}) => {
         bottomMenuBarHeight: options.bottomMenuBarHeight,
         leftPadding: options.leftPadding,
         rightPadding: options.rightPadding,
+        viewportTopOffset: options.viewportTopOffset,
+        viewportLeftOffset: options.viewportLeftOffset,
         safeAreaInsets: options.safeAreaInsets,
       }),
     [
@@ -21,6 +23,8 @@ export const useSafeViewportRect = (options: SafeViewportOptions = {}) => {
       options.bottomMenuBarHeight,
       options.leftPadding,
       options.rightPadding,
+      options.viewportTopOffset,
+      options.viewportLeftOffset,
       options.safeAreaInsets,
     ],
   );
@@ -49,4 +53,3 @@ export const useSafeViewportRect = (options: SafeViewportOptions = {}) => {
 
   return rect;
 };
-

@@ -21,6 +21,8 @@ export type SafeViewportRect = {
 export type SafeViewportOptions = {
   viewportWidth?: number;
   viewportHeight?: number;
+  viewportTopOffset?: number;
+  viewportLeftOffset?: number;
   topMenuBarHeight?: number;
   bottomMenuBarHeight?: number;
   leftPadding?: number;
@@ -65,9 +67,9 @@ export const getConfiguredMenuBarHeights = () => ({
   rightPadding: readCssPx("--kiosk-safe-right-padding"),
 });
 
-export const getViewportSize = () => {
+const getViewportMetrics = () => {
   if (typeof window === "undefined") {
-    return { width: 0, height: 0 };
+    return { width: 0, height: 0, offsetTop: 0, offsetLeft: 0 };
   }
 
   const visualViewport = window.visualViewport;
@@ -75,13 +77,20 @@ export const getViewportSize = () => {
   return {
     width: Math.round(visualViewport?.width || window.innerWidth),
     height: Math.round(visualViewport?.height || window.innerHeight),
+    offsetTop: clampNonNegative(visualViewport?.offsetTop || 0),
+    offsetLeft: clampNonNegative(visualViewport?.offsetLeft || 0),
   };
+};
+
+export const getViewportSize = () => {
+  const { width, height } = getViewportMetrics();
+  return { width, height };
 };
 
 export const calculateSafeViewportRect = (
   options: SafeViewportOptions = {},
 ): SafeViewportRect => {
-  const viewport = getViewportSize();
+  const viewport = getViewportMetrics();
   const configuredSafeInsets = getConfiguredSafeAreaInsets();
   const configuredMenuBars = getConfiguredMenuBarHeights();
   const safeAreaInsets = {
@@ -104,13 +113,15 @@ export const calculateSafeViewportRect = (
 
   const viewportWidth = clampNonNegative(options.viewportWidth ?? viewport.width);
   const viewportHeight = clampNonNegative(options.viewportHeight ?? viewport.height);
+  const viewportTopOffset = clampNonNegative(options.viewportTopOffset ?? viewport.offsetTop);
+  const viewportLeftOffset = clampNonNegative(options.viewportLeftOffset ?? viewport.offsetLeft);
 
   return {
     width: clampNonNegative(viewportWidth - leftOffset - rightOffset),
     height: clampNonNegative(viewportHeight - topOffset - bottomOffset),
-    topOffset,
+    topOffset: viewportTopOffset + topOffset,
     bottomOffset,
-    leftOffset,
+    leftOffset: viewportLeftOffset + leftOffset,
     rightOffset,
   };
 };
