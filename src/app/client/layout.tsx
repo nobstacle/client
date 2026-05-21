@@ -38,7 +38,18 @@ function Layout({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <main className="flex h-[100dvh] w-[100dvw] items-stretch justify-stretch overflow-hidden bg-black">
+    <main
+      className="flex w-[100dvw] items-stretch justify-stretch overflow-hidden bg-black"
+      style={{
+        // Use dynamic viewport height and extend behind the iOS home indicator
+        // bar (safe-area-inset-bottom) so the black background fills the full
+        // screen in PWA / standalone mode on newer iPads.
+        minHeight: "100dvh",
+        height: "calc(100dvh + env(safe-area-inset-bottom, 0px))",
+        paddingBottom: "env(safe-area-inset-bottom, 0px)",
+        boxSizing: "border-box",
+      }}
+    >
       <SocketContextProvider>{children}</SocketContextProvider>
     </main>
   );

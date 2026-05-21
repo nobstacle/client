@@ -19,11 +19,13 @@ body {
   min-height: 100%;
   padding: 0;
   width: 100%;
+  /* Prevent white bleed behind iOS home indicator / safe area in PWA/standalone mode */
+  background-color: #000;
 }
 
 body {
   color: rgb(var(--foreground-rgb));
-  background: transparent;
+  background-color: #000;
   box-sizing: border-box;
   overflow-x: hidden;
 }
@@ -50,10 +52,18 @@ body.client-fullscreen {
 html.client-fullscreen #app-shell,
 body.client-fullscreen #app-shell {
   background: #000 !important;
-  height: 100vh;
+  /* Use dvh so the height adapts to the dynamic viewport (avoids iOS toolbar shifts).
+     Add env(safe-area-inset-bottom) so the black background bleeds behind the
+     home indicator bar on newer iPads in PWA / standalone mode, eliminating the
+     white strip at the bottom of the screen. */
   height: 100dvh;
-  min-height: 100vh;
+  /* Fallback for browsers that don't support dvh */
+  height: calc(100vh + env(safe-area-inset-bottom, 0px));
+  height: calc(100dvh + env(safe-area-inset-bottom, 0px));
   min-height: 100dvh;
+  min-height: calc(100dvh + env(safe-area-inset-bottom, 0px));
+  /* Push any inline content above the home indicator but let the background bleed through */
+  padding-bottom: env(safe-area-inset-bottom, 0px);
   overflow: hidden;
   width: 100vw;
 }

@@ -21,6 +21,13 @@ export const viewport: Viewport = {
   themeColor: "#000000",
   width: "device-width",
   initialScale: 1,
+  // maximumScale prevents iOS from zooming in when inputs are focused (which
+  // can temporarily reveal white bars at the bottom of the screen on iPad).
+  maximumScale: 1,
+  minimumScale: 1,
+  // viewport-fit=cover extends the viewport to fill the full screen including
+  // safe areas (notch, home indicator), which is required for proper
+  // env(safe-area-inset-*) measurements in PWA / standalone mode.
   viewportFit: "cover",
 };
 

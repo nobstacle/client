@@ -525,7 +525,9 @@ button {
   top: 0;
   left: 0;
   width: 100vw;
-  height: 100vh;
+  /* Use dvh and extend to cover the iOS home-indicator safe area in PWA mode */
+  height: 100dvh;
+  height: calc(100dvh + env(safe-area-inset-bottom, 0px));
   overflow: hidden;
   z-index: -1;
   pointer-events: none;

@@ -30,12 +30,24 @@ export const SafeContentFrame = React.forwardRef<HTMLDivElement, SafeContentFram
           position: "fixed",
           top: 0,
           left: 0,
+          // Extend beyond the safe viewport so the black background fills behind
+          // the iOS home indicator bar on newer iPads in PWA / standalone mode.
+          // env(safe-area-inset-*) resolves to 0px on non-notched devices.
           width: "100dvw",
+          // Layer the height declarations: plain dvh → dvh+safe-area (the winning one
+          // on supporting browsers). Using multiple properties lets CSS cascade pick
+          // the last supported value, so older browsers fall back gracefully.
           height: "100dvh",
+          // @ts-ignore — CSS custom properties work fine at runtime
+          ["--sai-bottom" as string]: "env(safe-area-inset-bottom, 0px)",
           maxWidth: "100dvw",
           maxHeight: "100dvh",
+          // Extend the background behind the home indicator
+          paddingBottom: "env(safe-area-inset-bottom, 0px)",
+          boxSizing: "border-box" as const,
           overflowX: "hidden",
           overflowY: allowScroll ? "auto" : "hidden",
+          backgroundColor: "transparent",
           ...style,
         }}
       >
