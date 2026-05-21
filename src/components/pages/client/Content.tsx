@@ -1919,6 +1919,7 @@ export const Content: React.FC = () => {
           navigate("next");
         } else {
           // Dragged downwards -> show previous screen
+          navigate("prev");
         }
       };
 
