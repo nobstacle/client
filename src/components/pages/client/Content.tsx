@@ -1812,8 +1812,16 @@ export const Content: React.FC = () => {
 
   const ScrollViewer: React.FC<{ items: any[] }> = ({ items }) => {
     const [now, setNow] = useState(Date.now());
+    const [activeIndex, setActiveIndex] = useState(0);
     const containerRef = useRef<HTMLDivElement>(null);
-    const [visibleIndices, setVisibleIndices] = useState<Set<number>>(new Set([0]));
+    
+    // Lock states to absorb touchpad momentum scrolling and touchscreen swipe inertia
+    const isTransitioningRef = useRef(false);
+    const lastTransitionTimeRef = useRef(0);
+    const touchStartYRef = useRef(0);
+    const LOCK_DURATION = 1000; // 1 second cooldown lock
+    const WHEEL_THRESHOLD = 15; // Minimum scroll delta
+    const SWIPE_THRESHOLD = 50; // Minimum drag gesture swipe distance in pixels
 
     const activeItems = React.useMemo(() => {
       return (Array.isArray(items) ? items : []).filter((item) => {
@@ -1831,34 +1839,99 @@ export const Content: React.FC = () => {
       return () => window.clearInterval(timer);
     }, []);
 
-    useEffect(() => {
-      if (activeItems.length === 0) return;
+    const navigate = useCallback((direction: "next" | "prev") => {
+      if (activeItems.length <= 1) return;
+      
+      const currentTime = Date.now();
+      const timeSinceLast = currentTime - lastTransitionTimeRef.current;
+      
+      // Safety lock: prevent fast, duplicate inputs during transition animation or momentum decays
+      if (isTransitioningRef.current || timeSinceLast < LOCK_DURATION) {
+        return;
+      }
+      
+      isTransitioningRef.current = true;
+      lastTransitionTimeRef.current = currentTime;
 
-      const observer = new IntersectionObserver(
-        (entries) => {
-          setVisibleIndices((prev) => {
-            const next = new Set(prev);
-            entries.forEach((entry) => {
-              const index = parseInt(entry.target.getAttribute("data-index") || "0", 10);
-              if (entry.isIntersecting) {
-                next.add(index);
-              } else {
-                next.delete(index);
-              }
-            });
-            return next;
-          });
-        },
-        {
-          threshold: 0.6,
+      setActiveIndex((prev) => {
+        if (direction === "next") {
+          return Math.min(prev + 1, activeItems.length - 1);
+        } else {
+          return Math.max(prev - 1, 0);
         }
-      );
+      });
 
-      const elements = containerRef.current?.querySelectorAll("[data-index]");
-      elements?.forEach((el) => observer.observe(el));
+      // Release lock after transition duration completes
+      setTimeout(() => {
+        isTransitioningRef.current = false;
+      }, LOCK_DURATION);
+    }, [activeItems.length]);
 
-      return () => observer.disconnect();
-    }, [activeItems]);
+    // Track mouse wheel and trackpad/touchpad scrolling
+    useEffect(() => {
+      const container = containerRef.current;
+      if (!container) return;
+
+      const handleWheel = (e: WheelEvent) => {
+        // Prevent browser's native scroll action to block multi-slide skipping
+        e.preventDefault();
+        
+        if (Math.abs(e.deltaY) < WHEEL_THRESHOLD) return;
+
+        if (e.deltaY > 0) {
+          navigate("next");
+        } else {
+          navigate("prev");
+        }
+      };
+
+      // Non-passive listener is required to allow preventDefault()
+      container.addEventListener("wheel", handleWheel, { passive: false });
+      return () => {
+        container.removeEventListener("wheel", handleWheel);
+      };
+    }, [navigate]);
+
+    // Track touchscreen swipe gestures
+    useEffect(() => {
+      const container = containerRef.current;
+      if (!container) return;
+
+      const handleTouchStart = (e: TouchEvent) => {
+        touchStartYRef.current = e.touches[0].clientY;
+      };
+
+      const handleTouchMove = (e: TouchEvent) => {
+        // Block default browser scrolling actions on touch devices
+        if (e.cancelable) {
+          e.preventDefault();
+        }
+      };
+
+      const handleTouchEnd = (e: TouchEvent) => {
+        const touchEndY = e.changedTouches[0].clientY;
+        const swipeDelta = touchEndY - touchStartYRef.current;
+
+        if (Math.abs(swipeDelta) < SWIPE_THRESHOLD) return;
+
+        if (swipeDelta < 0) {
+          // Dragged upwards -> show next screen
+          navigate("next");
+        } else {
+          // Dragged downwards -> show previous screen
+        }
+      };
+
+      container.addEventListener("touchstart", handleTouchStart, { passive: true });
+      container.addEventListener("touchmove", handleTouchMove, { passive: false });
+      container.addEventListener("touchend", handleTouchEnd, { passive: true });
+
+      return () => {
+        container.removeEventListener("touchstart", handleTouchStart);
+        container.removeEventListener("touchmove", handleTouchMove);
+        container.removeEventListener("touchend", handleTouchEnd);
+      };
+    }, [navigate]);
 
     if (activeItems.length === 0) {
       return (
@@ -1872,24 +1945,35 @@ export const Content: React.FC = () => {
       <SafeContentFrame
         isMedia
         ref={containerRef}
-        allowScroll
-        className="w-full snap-y snap-mandatory bg-black no-scrollbar"
+        className="w-full h-full bg-black overflow-hidden select-none touch-none relative"
+        style={{ touchAction: "none" }}
       >
-        {activeItems.map((item, index) => (
-          <div key={`${item.url || index}`} data-index={index} className="snap-start h-full w-full">
-            <ScrollSection
-              item={item}
-              index={index}
-              isActive={visibleIndices.has(index)}
-              onEnded={() => {}} 
-              isMuted={isMuted}
-              toggleMute={toggleMute}
-            />
-          </div>
-        ))}
+        {/* Controlled Vertical Sliding Layer container */}
+        <div
+          className="w-full h-full"
+          style={{
+            transform: `translateY(-${activeIndex * 100}%)`,
+            transition: "transform 0.8s cubic-bezier(0.16, 1, 0.3, 1)",
+            height: "100%",
+            width: "100%"
+          }}
+        >
+          {activeItems.map((item, index) => (
+            <div key={`${item.url || index}`} className="h-full w-full">
+              <ScrollSection
+                item={item}
+                index={index}
+                isActive={index === activeIndex}
+                onEnded={() => {}} 
+                isMuted={isMuted}
+                toggleMute={toggleMute}
+              />
+            </div>
+          ))}
+        </div>
 
         {/* Scroll indicator for multiple items */}
-        {activeItems.length > 1 && !visibleIndices.has(activeItems.length - 1) && (
+        {activeItems.length > 1 && activeIndex < activeItems.length - 1 && (
           <div className="fixed bottom-12 left-1/2 -translate-x-1/2 flex flex-col items-center gap-3 animate-bounce z-50 pointer-events-none">
             <span className="text-white/70 text-xs font-bold tracking-[0.3em] uppercase drop-shadow-lg">
               Scroll
