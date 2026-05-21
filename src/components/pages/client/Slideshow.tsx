@@ -24,60 +24,107 @@ const isVideoSource = (src: string): boolean => {
   return VIDEO_EXTENSIONS.some((ext) => normalized.endsWith(`.${ext}`));
 };
 
-const preloadMedia = (src: string, onSettled: () => void) => {
-  let settled = false;
-  const settleOnce = () => {
-    if (settled) return;
-    settled = true;
-    onSettled();
+const preloadMediaWithRetry = (
+  src: string,
+  onProgress: (success: boolean) => void,
+  maxRetries = 3,
+  retryDelayMs = 1000
+): (() => void) => {
+  let cancelled = false;
+  let attempt = 0;
+  let cleanupFunc: (() => void) | null = null;
+
+  const startPreload = () => {
+    if (cancelled) return;
+    attempt++;
+
+    let settled = false;
+    const handleSuccess = () => {
+      if (settled || cancelled) return;
+      settled = true;
+      onProgress(true);
+    };
+
+    const handleFailure = () => {
+      if (settled || cancelled) return;
+      settled = true;
+      if (attempt < maxRetries) {
+        const backoffDelay = retryDelayMs * attempt;
+        setTimeout(startPreload, backoffDelay);
+      } else {
+        // All retries failed
+        onProgress(false);
+      }
+    };
+
+    if (isVideoSource(src)) {
+      const video = document.createElement("video");
+      // Safety timeout of 8 seconds per video preloading attempt under slow network
+      const timeout = window.setTimeout(handleFailure, 8000);
+
+      const settleVideo = () => {
+        window.clearTimeout(timeout);
+        handleSuccess();
+      };
+
+      video.preload = "auto";
+      video.muted = true;
+      video.playsInline = true;
+      video.setAttribute("playsinline", "true");
+      video.setAttribute("webkit-playsinline", "true");
+      video.onloadedmetadata = settleVideo;
+      video.onloadeddata = settleVideo;
+      video.oncanplay = settleVideo;
+      video.oncanplaythrough = settleVideo;
+      video.onerror = handleFailure;
+      video.src = src;
+      video.load();
+
+      cleanupFunc = () => {
+        window.clearTimeout(timeout);
+        video.onloadedmetadata = null;
+        video.onloadeddata = null;
+        video.oncanplay = null;
+        video.oncanplaythrough = null;
+        video.onerror = null;
+        video.removeAttribute("src");
+        video.load();
+      };
+    } else {
+      const img = new Image();
+      img.onload = handleSuccess;
+      img.onerror = handleFailure;
+      img.src = src;
+
+      cleanupFunc = () => {
+        img.onload = null;
+        img.onerror = null;
+      };
+    }
   };
 
-  if (isVideoSource(src)) {
-    const video = document.createElement("video");
-    const timeout = window.setTimeout(settleOnce, 3000);
-
-    const settleVideo = () => {
-      window.clearTimeout(timeout);
-      settleOnce();
-    };
-
-    video.preload = "metadata";
-    video.muted = true;
-    video.playsInline = true;
-    video.setAttribute("playsinline", "true");
-    video.setAttribute("webkit-playsinline", "true");
-    video.onloadedmetadata = settleVideo;
-    video.onloadeddata = settleVideo;
-    video.oncanplay = settleVideo;
-    video.onerror = settleVideo;
-    video.src = src;
-    video.load();
-
-    return () => {
-      window.clearTimeout(timeout);
-      video.onloadedmetadata = null;
-      video.onloadeddata = null;
-      video.oncanplay = null;
-      video.onerror = null;
-      video.removeAttribute("src");
-      video.load();
-    };
-  }
-
-  const img = new Image();
-  img.onload = settleOnce;
-  img.onerror = settleOnce;
-  img.src = src;
+  startPreload();
 
   return () => {
-    img.onload = null;
-    img.onerror = null;
+    cancelled = true;
+    if (cleanupFunc) cleanupFunc();
   };
 };
 
-function usePreloadMedia(urls: string[], maxWaitMs = 10000) {
+function usePreloadMedia(urls: string[], slideshowKey: string, maxWaitMs = 20000) {
   const [ready, setReady] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [successfulUrls, setSuccessfulUrls] = useState<string[]>([]);
+  const [failedUrls, setFailedUrls] = useState<string[]>([]);
+  const [prevKey, setPrevKey] = useState(slideshowKey);
+
+  if (slideshowKey !== prevKey) {
+    setPrevKey(slideshowKey);
+    setReady(false);
+    setProgress(0);
+    setSuccessfulUrls([]);
+    setFailedUrls([]);
+  }
 
   useEffect(() => {
     if (urls.length === 0) {
@@ -86,21 +133,11 @@ function usePreloadMedia(urls: string[], maxWaitMs = 10000) {
       return;
     }
 
-    setReady(false);
-    setProgress(0);
-
-    let settled = 0;
+    let settledCount = 0;
     let cancelled = false;
-
-    const onSettled = () => {
-      if (cancelled) return;
-      settled += 1;
-      setProgress(Math.round((settled / urls.length) * 100));
-      if (settled >= urls.length) {
-        clearTimeout(timeout);
-        setReady(true);
-      }
-    };
+    const totalCount = urls.length;
+    const successList: string[] = [];
+    const failureList: string[] = [];
 
     // Safety valve — never block longer than maxWaitMs
     const timeout = setTimeout(() => {
@@ -109,10 +146,31 @@ function usePreloadMedia(urls: string[], maxWaitMs = 10000) {
 
     const cleanups = urls.map((src) => {
       if (!src) {
-        onSettled();
+        settledCount++;
+        setProgress(Math.round((settledCount / totalCount) * 100));
+        if (settledCount >= totalCount) {
+          clearTimeout(timeout);
+          setReady(true);
+        }
         return undefined;
       }
-      return preloadMedia(src, onSettled);
+      return preloadMediaWithRetry(src, (success) => {
+        if (cancelled) return;
+        settledCount++;
+        if (success) {
+          successList.push(src);
+        } else {
+          failureList.push(src);
+        }
+
+        setProgress(Math.round((settledCount / totalCount) * 100));
+        if (settledCount >= totalCount) {
+          clearTimeout(timeout);
+          setSuccessfulUrls([...successList]);
+          setFailedUrls([...failureList]);
+          setReady(true);
+        }
+      });
     });
 
     return () => {
@@ -120,9 +178,9 @@ function usePreloadMedia(urls: string[], maxWaitMs = 10000) {
       clearTimeout(timeout);
       cleanups.forEach((cleanup) => cleanup?.());
     };
-  }, [urls.join(",")]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [slideshowKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  return { ready, progress };
+  return { ready, progress, successfulUrls, failedUrls };
 }
 
 const isNotExpired = (expiresAt?: string): boolean => {
@@ -138,7 +196,33 @@ const FullscreenMediaLayer: React.FC<{
   isActive: boolean;
   onEnded: () => void;
   videoRef: React.RefObject<HTMLVideoElement | null>;
-}> = ({ item, index, isActive, onEnded, videoRef }) => {
+  onMediaLoaded?: () => void;
+}> = ({ item, index, isActive, onEnded, videoRef, onMediaLoaded }) => {
+  const imgRef = useRef<HTMLImageElement | null>(null);
+  const localVideoRef = useRef<HTMLVideoElement | null>(null);
+
+  // Safeguard: Check if the media has already loaded or is cached when component mounts/updates
+  useEffect(() => {
+    if (!onMediaLoaded) return;
+
+    if (item.mediaType === "image" && imgRef.current) {
+      if (imgRef.current.complete) {
+        onMediaLoaded();
+      }
+    } else if (item.mediaType === "video" && localVideoRef.current) {
+      if (localVideoRef.current.readyState >= 3) {
+        onMediaLoaded();
+      }
+    }
+  }, [item.mediaType, onMediaLoaded]);
+
+  // Synchronize active video ref to the parent ref
+  useEffect(() => {
+    if (isActive && localVideoRef.current && videoRef) {
+      (videoRef as React.MutableRefObject<HTMLVideoElement | null>).current = localVideoRef.current;
+    }
+  }, [isActive, videoRef]);
+
   return (
     <div
       className={`absolute inset-0 flex h-full w-full items-center justify-center overflow-hidden bg-black transition-opacity duration-500 ${
@@ -148,7 +232,12 @@ const FullscreenMediaLayer: React.FC<{
     >
       {item.mediaType === "video" ? (
         <video
-          ref={isActive ? videoRef : null}
+          ref={(el) => {
+            localVideoRef.current = el;
+            if (isActive && videoRef) {
+              (videoRef as React.MutableRefObject<HTMLVideoElement | null>).current = el;
+            }
+          }}
           key={`${item.url}-${index}`}
           src={item.url}
           muted
@@ -156,13 +245,21 @@ const FullscreenMediaLayer: React.FC<{
           playsInline
           preload="auto"
           onEnded={onEnded}
-          onError={onEnded}
+          onError={() => {
+            onEnded();
+            if (onMediaLoaded) onMediaLoaded();
+          }}
+          onLoadedData={onMediaLoaded}
+          onCanPlay={onMediaLoaded}
           style={getContainMediaStyle()}
         />
       ) : (
         <img
+          ref={imgRef}
           alt="template_image"
           src={item.url ?? ""}
+          onLoad={onMediaLoaded}
+          onError={onMediaLoaded}
           style={getContainMediaStyle()}
         />
       )}
@@ -177,6 +274,25 @@ export const Slideshow: React.FC<{
 }> = ({ contents, metadata = [] }) => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [firstSlideMediaLoaded, setFirstSlideMediaLoaded] = useState(false);
+  const [isFullyReady, setIsFullyReady] = useState(false);
+  const [showLoader, setShowLoader] = useState(true);
+
+  // Generate a stable key to represent the actual slideshow data to avoid reference-comparison updates
+  const slideshowKey = useMemo(() => {
+    return JSON.stringify({ contents, metadata });
+  }, [contents, metadata]);
+
+  // Synchronous State Resetting during render phase when slideshow content changes.
+  // This prevents any race conditions or intermediate flickering renders.
+  const [prevKey, setPrevKey] = useState(slideshowKey);
+  if (slideshowKey !== prevKey) {
+    setPrevKey(slideshowKey);
+    setFirstSlideMediaLoaded(false);
+    setIsFullyReady(false);
+    setShowLoader(true);
+    setActiveIndex(0);
+  }
 
   const mediaItems = useMemo<ResolvedSlideshowMediaItem[]>(() => {
     return contents.map((url, index) => {
@@ -193,17 +309,27 @@ export const Slideshow: React.FC<{
           mediaType === "image" ? itemMetadata?.durationSeconds : undefined,
       };
     });
-  }, [contents, metadata]);
+  }, [slideshowKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const activeMediaItems = useMemo(
+  const preloadedMediaItems = useMemo(
     () => mediaItems.filter((item) => isNotExpired(item.expiresAt)),
     [mediaItems],
   );
 
-  const { ready, progress } = usePreloadMedia(
-    activeMediaItems.map((item) => item.url),
-    10000,
+  const { ready, progress, successfulUrls, failedUrls } = usePreloadMedia(
+    preloadedMediaItems.map((item) => item.url),
+    slideshowKey,
+    20000,
   );
+
+  // Filter out any failed media items so only working/loaded assets are rendered and played
+  const activeMediaItems = useMemo(() => {
+    if (!ready) {
+      return preloadedMediaItems;
+    }
+    return preloadedMediaItems.filter((item) => !failedUrls.includes(item.url));
+  }, [preloadedMediaItems, ready, failedUrls]);
+
   const activeMediaIsVideo = activeMediaItems[activeIndex]?.mediaType === "video";
   const activeMediaUrl = activeMediaItems[activeIndex]?.url ?? "";
   const activeMediaDurationMs = useMemo(() => {
@@ -222,8 +348,25 @@ export const Slideshow: React.FC<{
     return 6000;
   }, [activeMediaItems, activeIndex]);
 
+  // Synchronize loading, preloading, and initialization states.
+  // The slideshow is only "fully ready" when the preloading is done AND the active first slide is mounted & loaded in DOM.
   useEffect(() => {
-    if (!ready || activeMediaItems.length === 0 || activeMediaDurationMs === null) return;
+    if (ready && firstSlideMediaLoaded) {
+      setIsFullyReady(true);
+      // Wait for the fade-out CSS opacity transition to complete before unmounting loader overlay completely
+      const timer = setTimeout(() => {
+        setShowLoader(false);
+      }, 500);
+      return () => clearTimeout(timer);
+    } else {
+      setIsFullyReady(false);
+      setShowLoader(true);
+    }
+  }, [ready, firstSlideMediaLoaded]);
+
+  // Handle slide transitions / autoplay timer (disabled until fully ready)
+  useEffect(() => {
+    if (!isFullyReady || activeMediaItems.length === 0 || activeMediaDurationMs === null) return;
 
     const timer = window.setTimeout(() => {
       const video = videoRef.current;
@@ -234,11 +377,12 @@ export const Slideshow: React.FC<{
     }, activeMediaDurationMs);
 
     return () => window.clearTimeout(timer);
-  }, [ready, activeMediaItems.length, activeMediaDurationMs, activeIndex]);
+  }, [isFullyReady, activeMediaItems.length, activeMediaDurationMs, activeIndex]);
 
+  // Handle active video playback (disabled until fully ready)
   useEffect(() => {
     const video = videoRef.current;
-    if (!video || !activeMediaIsVideo) return;
+    if (!video || !activeMediaIsVideo || !isFullyReady) return;
 
     video.muted = true;
     video.playsInline = true;
@@ -250,18 +394,14 @@ export const Slideshow: React.FC<{
     return () => {
       video.pause();
     };
-  }, [activeMediaIsVideo, activeIndex, activeMediaUrl]);
-
-  useEffect(() => {
-    setActiveIndex(0);
-  }, [activeMediaItems]);
+  }, [activeMediaIsVideo, activeIndex, activeMediaUrl, isFullyReady]);
 
   const handleVideoEnded = () => {
     if (activeMediaItems[activeIndex]?.mediaType !== "video") return;
     setActiveIndex((current) => (current + 1) % activeMediaItems.length);
   };
 
-  // ── Loading screen ──────────────────────────────────────────────────────────
+  // Immediate empty state
   if (activeMediaItems.length === 0) {
     return (
       <SafeContentFrame isMedia className="relative flex items-center justify-center bg-black">
@@ -279,104 +419,19 @@ export const Slideshow: React.FC<{
     );
   }
 
-  if (!ready) {
-    const firstImage = activeMediaItems.find((item) => item.mediaType === "image")?.url;
-    return (
-      <SafeContentFrame isMedia className="relative flex items-center justify-center bg-black">
-        {/* First image preview stays contained so loading never crops branded artwork. */}
-        {firstImage && (
-          <img
-            src={firstImage}
-            alt=""
-            aria-hidden="true"
-            style={{
-              position: "absolute",
-              inset: 0,
-              width: "100%",
-              height: "100%",
-              objectFit: "contain",
-              filter: "blur(16px) brightness(0.4)",
-            }}
-          />
-        )}
+  const firstImage = activeMediaItems.find((item) => item.mediaType === "image")?.url;
 
-        {/* Progress indicator */}
-        <div
-          style={{
-            position: "relative",
-            zIndex: 10,
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: "16px",
-          }}
-        >
-          {/* Circular progress ring */}
-          <div style={{ position: "relative", width: 80, height: 80 }}>
-            <svg
-              width="80"
-              height="80"
-              viewBox="0 0 80 80"
-              style={{ transform: "rotate(-90deg)" }}
-            >
-              {/* Track */}
-              <circle
-                cx="40"
-                cy="40"
-                r="34"
-                fill="none"
-                stroke="rgba(255,255,255,0.15)"
-                strokeWidth="6"
-              />
-              {/* Progress */}
-              <circle
-                cx="40"
-                cy="40"
-                r="34"
-                fill="none"
-                stroke="white"
-                strokeWidth="6"
-                strokeLinecap="round"
-                strokeDasharray={`${2 * Math.PI * 34}`}
-                strokeDashoffset={`${2 * Math.PI * 34 * (1 - progress / 100)}`}
-                style={{ transition: "stroke-dashoffset 0.3s ease" }}
-              />
-            </svg>
-            <span
-              style={{
-                position: "absolute",
-                inset: 0,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "white",
-                fontSize: 14,
-                fontWeight: 600,
-              }}
-            >
-              {progress}%
-            </span>
-          </div>
-
-          <p
-            style={{
-              color: "rgba(255,255,255,0.75)",
-              fontSize: 14,
-              letterSpacing: "0.05em",
-              margin: 0,
-            }}
-          >
-            Loading slideshow…
-          </p>
-        </div>
-      </SafeContentFrame>
-    );
-  }
-
-  // ── Slideshow (only mounts after all images are ready) ──────────────────────
   return (
-    <SafeContentFrame isMedia className="overflow-hidden bg-black">
-      <div className="relative h-full w-full overflow-hidden bg-black">
+    <SafeContentFrame isMedia className="relative overflow-hidden bg-black h-full w-full">
+      {/* Slideshow Content: Rendered concurrently in the background so layout and rendering are prepared */}
+      <div 
+        className="relative h-full w-full overflow-hidden bg-black"
+        style={{
+          opacity: isFullyReady ? 1 : 0,
+          pointerEvents: isFullyReady ? "auto" : "none",
+          transition: "opacity 0.5s ease-in-out",
+        }}
+      >
         {activeMediaItems.map((item, index) => (
           <FullscreenMediaLayer
             key={`${item.url}-${index}`}
@@ -385,9 +440,116 @@ export const Slideshow: React.FC<{
             isActive={index === activeIndex}
             onEnded={handleVideoEnded}
             videoRef={videoRef}
+            onMediaLoaded={index === 0 ? () => setFirstSlideMediaLoaded(true) : undefined}
           />
         ))}
       </div>
+
+      {/* Loader Overlay: Fades out smoothly once preloading is done and the first slide is ready */}
+      {showLoader && (
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            zIndex: 50,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: "#000",
+            opacity: isFullyReady ? 0 : 1,
+            pointerEvents: isFullyReady ? "none" : "auto",
+            transition: "opacity 0.5s ease-out",
+          }}
+        >
+          {/* First image preview: cross-fades into view once preloaded */}
+          {ready && firstImage && (
+            <img
+              src={firstImage}
+              alt=""
+              aria-hidden="true"
+              style={{
+                position: "absolute",
+                inset: 0,
+                width: "100%",
+                height: "100%",
+                objectFit: "contain",
+                filter: "blur(16px) brightness(0.4)",
+              }}
+            />
+          )}
+
+          {/* Progress Indicator overlay */}
+          <div
+            style={{
+              position: "relative",
+              zIndex: 10,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: "16px",
+            }}
+          >
+            {/* Circular progress ring */}
+            <div style={{ position: "relative", width: 80, height: 80 }}>
+              <svg
+                width="80"
+                height="80"
+                viewBox="0 0 80 80"
+                style={{ transform: "rotate(-90deg)" }}
+              >
+                {/* Track */}
+                <circle
+                  cx="40"
+                  cy="40"
+                  r="34"
+                  fill="none"
+                  stroke="rgba(255,255,255,0.15)"
+                  strokeWidth="6"
+                />
+                {/* Progress */}
+                <circle
+                  cx="40"
+                  cy="40"
+                  r="34"
+                  fill="none"
+                  stroke="white"
+                  strokeWidth="6"
+                  strokeLinecap="round"
+                  strokeDasharray={`${2 * Math.PI * 34}`}
+                  strokeDashoffset={`${2 * Math.PI * 34 * (1 - progress / 100)}`}
+                  style={{ transition: "stroke-dashoffset 0.3s ease" }}
+                />
+              </svg>
+              <span
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "white",
+                  fontSize: 14,
+                  fontWeight: 600,
+                }}
+              >
+                {progress}%
+              </span>
+            </div>
+
+            <p
+              style={{
+                color: "rgba(255,255,255,0.75)",
+                fontSize: 14,
+                letterSpacing: "0.05em",
+                margin: 0,
+              }}
+            >
+              Loading slideshow…
+            </p>
+          </div>
+        </div>
+      )}
     </SafeContentFrame>
   );
 };

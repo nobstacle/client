@@ -122,34 +122,74 @@ export const SocketContextProvider = ({
   const session = useSession();
   const params = useSearchParams();
 
-useEffect(() => {
-    if (!session.data?.user.backendTokens.at) return;
-    
-    // Don't recreate if already connected
-    if (socketClient?.connected) return;
+  // Initialize the socket once a token is available, and clean it up when the token goes away (logout)
+  useEffect(() => {
+    if (!session.data?.user.backendTokens.at) {
+      setSocketClient(undefined);
+      setSocketConnected(false);
+      return;
+    }
 
-    const socketC = socket(session.data?.user.backendTokens.at ?? "");
+    const socketC = socket(session.data?.user.backendTokens.at);
     setSocketClient(socketC);
     socketC.connect();
 
     socketC.on("connect", () => {
-        setSocketConnected(true);
+      setSocketConnected(true);
     });
 
     socketC.on("disconnect", (reason) => {
-        setSocketConnected(false);
-        // Auto reconnect unless server explicitly closed it
-        if (reason === "io server disconnect") {
-            socketC.connect();
-        }
+      setSocketConnected(false);
+      // Auto reconnect unless server explicitly closed it
+      if (reason === "io server disconnect") {
+        socketC.connect();
+      }
     });
 
-    // Cleanup only on unmount, not on token change
     return () => {
-        socketC.removeAllListeners();
-        socketC.disconnect();
+      socketC.removeAllListeners();
+      socketC.disconnect();
     };
-}, [session.data?.user.backendTokens.at]);
+  }, [!!session.data?.user.backendTokens.at]);
+
+  // Keep token up-to-date and reconnect if token changes/refreshes
+  useEffect(() => {
+    const token = session.data?.user.backendTokens.at;
+    if (socketClient && token) {
+      socketClient.auth = { token };
+      if (!socketClient.connected) {
+        console.log("🔌 Reconnecting socket with updated token...");
+        socketClient.connect();
+      }
+    }
+  }, [session.data?.user.backendTokens.at, socketClient]);
+
+  // Handle visibility and focus changes (e.g. tablet waking up from sleep)
+  useEffect(() => {
+    if (!socketClient) return;
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible" && !socketClient.connected) {
+        console.log("🔌 Visibility change to visible, reconnecting socket...");
+        socketClient.connect();
+      }
+    };
+
+    const handleFocus = () => {
+      if (!socketClient.connected) {
+        console.log("🔌 Window focused, reconnecting socket...");
+        socketClient.connect();
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("focus", handleFocus);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("focus", handleFocus);
+    };
+  }, [socketClient]);
 
   // Socket event handlers
   const onConnect = () => {

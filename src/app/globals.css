@@ -44,6 +44,7 @@ body.client-fullscreen {
   overscroll-behavior: none;
   overflow: hidden;
   touch-action: manipulation;
+  background-color: #000 !important;
 }
 
 html.client-fullscreen #app-shell,
