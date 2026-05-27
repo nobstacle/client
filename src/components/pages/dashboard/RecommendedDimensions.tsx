@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Button, Modal, Select, Space, Table, Tooltip, Typography } from "antd";
+import { Button, Modal, Select, Table, Tooltip, Typography } from "antd";
 import { QuestionCircleOutlined } from "@ant-design/icons";
 import { useSession } from "next-auth/react";
 
@@ -95,14 +95,37 @@ export const RecommendedDimensions: React.FC = () => {
   }));
 
   return (
-    <div className="my-2">
-      <Space.Compact className="w-full">
+    <div className="my-2 p-3 bg-gray-50 border border-gray-100 rounded-lg flex flex-col gap-2 w-full">
+      <div className="flex items-center justify-between gap-2 w-full">
+        <Text className="text-xs font-semibold text-gray-600 uppercase tracking-wider">
+          Target Device Guidance (Optional)
+        </Text>
+        <Tooltip
+          title="Show device dimensions table"
+          zIndex={DEVICE_LIBRARY_MODAL_Z_INDEX + 1}
+          getPopupContainer={() => document.body}
+        >
+          <Button
+            type="text"
+            size="small"
+            icon={<QuestionCircleOutlined />}
+            onClick={() => setIsOpen(true)}
+            className="text-gray-400 hover:text-gray-600 flex items-center justify-center p-1"
+          />
+        </Tooltip>
+      </div>
+
+      <Text className="text-[11px] text-gray-500 -mt-1 leading-normal">
+        Select a device to view its recommended image/video dimensions.
+      </Text>
+
+      <div className="w-full">
         <Select
           loading={isLoading}
           allowClear
           value={selectedDeviceId}
           onChange={setSelectedDeviceId}
-          placeholder="Target device"
+          placeholder="Select target device for size advice..."
           options={options}
           style={{ width: "100%" }}
           popupClassName="modal-select-dropdown"
@@ -110,25 +133,25 @@ export const RecommendedDimensions: React.FC = () => {
           getPopupContainer={(trigger) => trigger.parentElement ?? document.body}
           notFoundContent={isLoading ? "Loading devices..." : "No devices found"}
         />
-        <Tooltip
-          title="Recommended dimensions"
-          zIndex={DEVICE_LIBRARY_MODAL_Z_INDEX + 1}
-          getPopupContainer={() => document.body}
-        >
-          <Button
-            type="default"
-            aria-label="Show recommended dimensions"
-            icon={<QuestionCircleOutlined />}
-            onClick={() => setIsOpen(true)}
-          />
-        </Tooltip>
-      </Space.Compact>
+      </div>
 
       {selectedDevice && (
-        <Text className="mt-1 block text-xs text-gray-500">
-          Recommended: {selectedDevice.widthPx}x{selectedDevice.heightPx} (
-          {getRatio(selectedDevice.widthPx, selectedDevice.heightPx)})
-        </Text>
+        <div className="mt-1 p-2 bg-blue-50 border border-blue-100 rounded flex flex-col gap-0.5 animate-slide-down">
+          <Text className="text-[11px] font-medium text-blue-700">
+            Advice: Upload matching size for best display quality.
+          </Text>
+          <Text className="text-xs font-bold text-blue-900">
+            Recommended: {selectedDevice.widthPx}x{selectedDevice.heightPx} px &nbsp;
+            <span className="text-[11px] font-normal text-blue-600">
+              ({getRatio(selectedDevice.widthPx, selectedDevice.heightPx)})
+            </span>
+          </Text>
+          {selectedDevice.notes && (
+            <Text className="text-[10px] text-gray-500 italic mt-0.5 leading-snug">
+              Note: {selectedDevice.notes}
+            </Text>
+          )}
+        </div>
       )}
 
       <Modal
