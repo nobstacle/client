@@ -95,7 +95,7 @@ export const ChatBox = React.forwardRef<HTMLDivElement, ChatBoxProps>(
         className="density-chatbox relative flex w-full flex-col"
         style={{
           minHeight: 280,
-          maxHeight: viewportHeight ? Math.max(320, viewportHeight - 180) : undefined,
+          maxHeight: viewportHeight ? Math.max(400, viewportHeight - 140) : undefined,
         }}
       >
         {children}

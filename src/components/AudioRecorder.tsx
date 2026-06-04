@@ -173,8 +173,16 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({ mode = "header" }) => {
       "[Mic] Sending audio to backend. Size:",
       audioBlob.size,
       "Type:",
-      audioBlob.type
+      audioBlob.type,
+      "Lang:",
+      langCode
     );
+
+    if (audioBlob.size === 0) {
+      console.warn("[Mic] Audio blob is empty");
+      antMessage.warning("No audio was recorded. Please try again.");
+      return;
+    }
 
     try {
       speechToTextFileMutation.mutate(
@@ -182,11 +190,29 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({ mode = "header" }) => {
         {
           onSuccess: (res) => {
             console.log("[Mic] Transcription received:", res.transcription);
-            sendMessage(res.transcription, langCode);
+            if (res?.transcription) {
+              sendMessage(res.transcription, langCode);
+            } else {
+              antMessage.warning("No speech detected. Please try again.");
+            }
           },
           onError: (error: any) => {
-            console.error("[Mic] Speech-to-text error:", error);
-            antMessage.error("Failed to process audio. Check your connection.");
+            console.error("[Mic] Speech-to-text error details:", {
+              message: error?.message,
+              status: error?.response?.status,
+              statusText: error?.response?.statusText,
+              data: error?.response?.data,
+            });
+
+            if (error?.response?.status === 401) {
+              antMessage.error("Session expired. Please refresh the page.");
+            } else if (error?.response?.status === 400) {
+              antMessage.error("Invalid audio format. Please try again.");
+            } else if (error?.response?.status >= 500) {
+              antMessage.error("Server error. Please try again later.");
+            } else {
+              antMessage.error("Failed to process audio. Please try again.");
+            }
           },
         }
       );
