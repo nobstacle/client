@@ -11,29 +11,9 @@ function Layout({ children }: { children: React.ReactNode }) {
     root.classList.add("client-fullscreen");
     body.classList.add("client-fullscreen");
 
-    const enterFullscreen = async () => {
-      if (document.fullscreenElement) return;
-
-      try {
-        await root.requestFullscreen?.({ navigationUI: "hide" } as FullscreenOptions);
-      } catch {
-        // Browsers may require a user gesture; the interaction fallback below retries.
-      }
-    };
-
-    const retryFullscreen = () => {
-      void enterFullscreen();
-    };
-
-    void enterFullscreen();
-    document.addEventListener("pointerdown", retryFullscreen, { passive: true });
-    document.addEventListener("keydown", retryFullscreen);
-
     return () => {
       root.classList.remove("client-fullscreen");
       body.classList.remove("client-fullscreen");
-      document.removeEventListener("pointerdown", retryFullscreen);
-      document.removeEventListener("keydown", retryFullscreen);
     };
   }, []);
 

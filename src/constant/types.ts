@@ -68,6 +68,8 @@ export type ReceivedMessageContent = {
   station: number;
   message: string;
   originalMessage: string;
+  adminMessage?: string;
+  clientMessage?: string;
   role: "User" | "Admin" | "Staff";
   type: ReceivedType;
 };

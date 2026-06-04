@@ -39,29 +39,15 @@ export const ChatBox = React.forwardRef<HTMLDivElement, ChatBoxProps>(
 
     // Function to determine which message to display based on current user's role
     const getDisplayMessage = (messageObj: ReceivedMessageContent) => {
-      const { message, originalMessage, role } = messageObj;
+      const { message, originalMessage, role, adminMessage, clientMessage } = messageObj;
 
       // If current user is Admin
       if (userRole === 'Admin') {
-
-        // Show own messages in English (originalMessage)
-        if (role === 'Admin') {
-          return originalMessage || message;
-        }
-        else {
-          return message;
-        }
+        return adminMessage || (role === 'Admin' ? originalMessage : message);
       }
       // If current user is Guest/User
       else {
-        // Show own messages in their language (originalMessage)
-        if (role === 'User') {
-          return originalMessage || message;
-        }
-        // Show admin messages in their language (translated to their language)
-        else {
-          return message;
-        }
+        return clientMessage || (role === 'User' ? originalMessage : message);
       }
     };
 

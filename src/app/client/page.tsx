@@ -130,6 +130,9 @@ const ClientStationPicker = () => {
   const { emitLeaveChat, socketConnected } = useSocketContext();
   const searchParams = useSearchParams();
   const { isOpen, handleOpen, handleClose } = useDisclousure();
+  const fullscreenHoldTimerRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
+  const fullscreenHoldStartRef = useRef<number | null>(null);
+  const fullscreenHoldReadyRef = useRef(false);
 
   const handleLogout = async () => {
     localStorage.clear();
@@ -139,14 +142,77 @@ const ClientStationPicker = () => {
     });
   };
 
+  const clearFullscreenHold = () => {
+    if (fullscreenHoldTimerRef.current) {
+      window.clearTimeout(fullscreenHoldTimerRef.current);
+      fullscreenHoldTimerRef.current = null;
+    }
+
+    fullscreenHoldStartRef.current = null;
+    fullscreenHoldReadyRef.current = false;
+  };
+
+  useEffect(() => {
+    return () => {
+      if (fullscreenHoldTimerRef.current) {
+        window.clearTimeout(fullscreenHoldTimerRef.current);
+      }
+    };
+  }, []);
+
+  const requestClientFullscreen = async () => {
+    if (document.fullscreenElement) return;
+
+    try {
+      await document.documentElement.requestFullscreen?.({
+        navigationUI: "hide",
+      } as FullscreenOptions);
+    } catch (error) {
+      console.error("Failed to enter fullscreen:", error);
+    }
+  };
+
+  const handleFullscreenHoldStart = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (event.button !== 0) return;
+
+    clearFullscreenHold();
+    fullscreenHoldStartRef.current = Date.now();
+    fullscreenHoldTimerRef.current = window.setTimeout(() => {
+      fullscreenHoldReadyRef.current = true;
+      void requestClientFullscreen();
+    }, 2000);
+  };
+
+  const handleFullscreenHoldEnd = () => {
+    const holdStart = fullscreenHoldStartRef.current;
+    const heldLongEnough =
+      fullscreenHoldReadyRef.current ||
+      (holdStart !== null && Date.now() - holdStart >= 2000);
+
+    clearFullscreenHold();
+
+    if (heldLongEnough) {
+      void requestClientFullscreen();
+    }
+  };
+
   return (
     <>
       <div
         onClick={handleOpen}
-        className="fixed"
+        className="fixed z-[9998]"
         style={{ left: '0.5rem', bottom: '0.5rem', height: '4rem', width: '8rem' }}
       >
       </div>
+      <div
+        className="fixed z-[9998] select-none touch-none"
+        onContextMenu={(event) => event.preventDefault()}
+        onPointerCancel={clearFullscreenHold}
+        onPointerDown={handleFullscreenHoldStart}
+        onPointerLeave={clearFullscreenHold}
+        onPointerUp={handleFullscreenHoldEnd}
+        style={{ right: '0.5rem', bottom: '0.5rem', height: '4rem', width: '8rem' }}
+      />
       <Modal title="" isOpen={isOpen} closeModal={handleClose}>
         <div className="mb-4 flex w-full justify-end ">
           {socketConnected ? (

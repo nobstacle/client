@@ -1789,20 +1789,12 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
 
         // Helper to get display message based on role
         const getDisplayMessage = (messageObj) => {
-            const { message, originalMessage, role } = messageObj;
+            const { message, originalMessage, role, adminMessage, clientMessage } = messageObj;
 
             if (userRole === 'Admin') {
-                if (role === 'Admin') {
-                    return originalMessage || message;
-                } else {
-                    return message;
-                }
+                return adminMessage || (role === 'Admin' ? originalMessage : message);
             } else {
-                if (role === 'User') {
-                    return originalMessage || message;
-                } else {
-                    return message;
-                }
+                return clientMessage || (role === 'User' ? originalMessage : message);
             }
         };
 

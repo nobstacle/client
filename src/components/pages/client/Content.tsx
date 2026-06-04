@@ -983,8 +983,38 @@ export const Content: React.FC = () => {
         type: "Slideshow",
         content: defaultSlideshowContent.data,
       });
+    } else if (defaultSlideshowContent.isError || (defaultSlideshowContent.isFetched && !defaultSlideshowContent.data)) {
+      // Try fallback slideshow if default fails
+      fetchFallbackSlideshow();
     }
-  }, [defaultSlideshowContent.data, contentToDisplay, hasHydrated]);
+  }, [defaultSlideshowContent.data, defaultSlideshowContent.isError, defaultSlideshowContent.isFetched, contentToDisplay, hasHydrated]);
+
+  const fetchFallbackSlideshow = useCallback(async () => {
+    try {
+      const token = data?.user?.backendTokens?.at;
+      
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/v1/fallback-slideshow`,
+        {
+          headers: {
+            'Authorization': `Bearer ${token || ''}`,
+          },
+        }
+      );
+      
+      if (response.ok) {
+        const fallbackContent = await response.json();
+        setContentToDisplay({
+          type: "Slideshow",
+          content: fallbackContent,
+        });
+      }
+    } catch (error) {
+      console.error("Failed to fetch fallback slideshow:", error);
+      // If fallback fails, just show nothing
+      setContentToDisplay(null);
+    }
+  }, [data?.user?.backendTokens?.at]);
 
   useEffect(() => {
     if (messageStore.receivedType === "Recording") {
@@ -1673,11 +1703,13 @@ export const Content: React.FC = () => {
   const { emitSendMessage } = useSocketContext();
 
   const sendMessage = (message: string) => {
+    const langCode = localStorage.getItem("lang-code") || company.data?.defaultLangCode || "en";
+
     emitSendMessage({
       message: message,
       station: Number(params.get("station") ?? 1),
       refType: "ChatMessage",
-      langCode: company.data?.defaultLangCode ?? "en",
+      langCode,
     });
   };
 
