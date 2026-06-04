@@ -2236,8 +2236,8 @@ export const Content: React.FC = () => {
         })()}
 
         {contentToDisplay?.type === "ChatMessage" && (
-          <SafeContentFrame className="flex w-full flex-col items-center justify-center gap-2 bg-white p-4" style={{ zIndex: 0 }}>
-            <div className="w-full max-w-[100%] sm:max-w-[75%] md:max-w-[50%]">
+          <SafeContentFrame className="flex w-full flex-col items-center justify-center bg-white p-4" style={{ zIndex: 0 }}>
+            <div className="h-full w-full max-w-6xl">
               <ChatBox
                 ref={chatBoxRef}
                 messages={messageStore.receivedMessage}

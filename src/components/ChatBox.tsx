@@ -92,10 +92,9 @@ export const ChatBox = React.forwardRef<HTMLDivElement, ChatBoxProps>(
 
     return (
       <div
-        className="density-chatbox relative flex w-full flex-col"
+        className="density-chatbox relative flex h-full min-h-[360px] w-full flex-col"
         style={{
-          minHeight: 280,
-          maxHeight: viewportHeight ? Math.max(400, viewportHeight - 140) : undefined,
+          maxHeight: viewportHeight ? Math.max(360, viewportHeight - 48) : undefined,
         }}
       >
         {children}
@@ -124,7 +123,7 @@ export const ChatBox = React.forwardRef<HTMLDivElement, ChatBoxProps>(
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               onFocus={() => textareaRef.current?.scrollIntoView({ block: "center" })}
-              className="density-chatbox-input h-[40px] w-full resize-none overflow-y-auto rounded-md px-3 py-2 text-sm leading-5"
+              className="density-chatbox-input h-[44px] w-full resize-none overflow-y-auto rounded-md px-3 py-2 text-sm leading-5"
               placeholder="Message"
               style={{
                 scrollbarWidth: 'thin',
@@ -132,9 +131,9 @@ export const ChatBox = React.forwardRef<HTMLDivElement, ChatBoxProps>(
               }}
             />
 
-            <div className="flex gap-2">
+            <div className="flex shrink-0 gap-2">
               <Button
-                className="border-1 flex justify-center rounded-md border-black  p-2 px-6 text-center text-white"
+                className="border-1 flex min-h-[44px] min-w-[56px] justify-center rounded-md border-black p-2 text-center text-white"
                 type="button"
                 onClick={handleSendMessage}
               >

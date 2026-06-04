@@ -1446,7 +1446,8 @@ body.nobstacle-active {
   }
 
   .density-chatbox {
-    height: 440px !important;
+    height: 100% !important;
+    min-height: min(560px, calc(100dvh - 4rem)) !important;
   }
 
   .density-chatbox-messages {
