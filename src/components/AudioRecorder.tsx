@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   useCompanyControllerGetCompany,
   useUploadControllerUploadSpeechToTextFile,
@@ -16,11 +16,28 @@ type AudioRecorderProps = {
 const AudioRecorder: React.FC<AudioRecorderProps> = ({ mode = "header" }) => {
   const [recording, setRecording] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
   const audioChunks = useRef<Blob[]>([]);
   const speechToTextFileMutation = useUploadControllerUploadSpeechToTextFile();
-  const { emitSendMessage } = useSocketContext();
+  const { emitSendMessage, socketConnected } = useSocketContext();
   const params = useSearchParams();
   const { data: companyData } = useCompanyControllerGetCompany();
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  // Check browser support on mount
+  useEffect(() => {
+    const hasSupport =
+      typeof window !== "undefined" &&
+      navigator.mediaDevices &&
+      navigator.mediaDevices.getUserMedia &&
+      typeof MediaRecorder !== "undefined";
+
+    setIsInitialized(hasSupport);
+    
+    if (!hasSupport) {
+      console.warn("Browser does not support required audio APIs");
+    }
+  }, []);
 
   function getSupportedMimeTypes() {
     const possibleTypes = [
@@ -42,38 +59,44 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({ mode = "header" }) => {
     return supported;
   }
 
+  const cleanupStream = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => {
+        track.stop();
+      });
+      streamRef.current = null;
+    }
+  };
+
   const startRecording = async () => {
     try {
-      // Check browser support for getUserMedia
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      if (!isInitialized) {
         antMessage.error(
-          "Your browser does not support microphone access. Please use a modern browser like Chrome, Firefox, or Safari."
+          "Your browser does not support microphone access. Please use Chrome, Firefox, or Safari."
         );
-        console.error("getUserMedia not supported");
         return;
       }
 
-      console.log("Requesting microphone access...");
-      
-      const stream = await navigator.mediaDevices.getUserMedia({ 
+      if (recording) {
+        return; // Already recording
+      }
+
+      console.log("[Mic] Requesting microphone access...");
+
+      const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
           echoCancellation: true,
           noiseSuppression: true,
           autoGainControl: true,
-        }
+        },
       });
 
+      streamRef.current = stream;
       const supportedMimeTypes = getSupportedMimeTypes();
       const mimeType = supportedMimeTypes[0];
 
-      console.log("Supported MIME types:", supportedMimeTypes);
-      console.log("Using MIME type:", mimeType);
-
-      if (!MediaRecorder) {
-        antMessage.error("MediaRecorder is not available in your browser");
-        stream.getTracks().forEach((track) => track.stop());
-        return;
-      }
+      console.log("[Mic] Supported MIME types:", supportedMimeTypes);
+      console.log("[Mic] Using MIME type:", mimeType);
 
       mediaRecorderRef.current = new MediaRecorder(stream, {
         mimeType: mimeType || undefined,
@@ -86,85 +109,90 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({ mode = "header" }) => {
       };
 
       mediaRecorderRef.current.onstop = async () => {
-        const audioBlob = new Blob(audioChunks.current, {
-          type: mimeType || "audio/webm",
-        });
-        audioChunks.current = []; // Clear recorded chunks
-        
-        // Stop all audio tracks
-        stream.getTracks().forEach((track) => track.stop());
+        try {
+          const audioBlob = new Blob(audioChunks.current, {
+            type: mimeType || "audio/webm",
+          });
+          audioChunks.current = [];
 
-        if (audioBlob.size === 0) {
-          antMessage.warning("No audio recorded. Please try again.");
-          return;
+          cleanupStream();
+
+          if (audioBlob.size === 0) {
+            antMessage.warning("No audio recorded. Please try again.");
+            return;
+          }
+
+          console.log("[Mic] Audio recorded, size:", audioBlob.size);
+          await sendAudioToBackend(audioBlob);
+        } catch (error) {
+          console.error("[Mic] Error in onstop:", error);
+          cleanupStream();
         }
-
-        await sendAudioToBackend(audioBlob);
       };
 
       mediaRecorderRef.current.onerror = (event) => {
-        console.error("MediaRecorder error:", event.error);
+        console.error("[Mic] MediaRecorder error:", event.error);
         antMessage.error(`Recording failed: ${event.error}`);
         setRecording(false);
+        cleanupStream();
       };
 
       mediaRecorderRef.current.start();
       setRecording(true);
-      console.log("Recording started");
+      console.log("[Mic] Recording started");
     } catch (error: any) {
-      console.error("Error accessing microphone:", error);
-      
-      // Handle specific permission errors
+      console.error("[Mic] Error accessing microphone:", error);
+      cleanupStream();
+
       if (error.name === "NotAllowedError" || error.name === "PermissionDeniedError") {
         antMessage.error(
-          "Microphone permission denied. Please allow microphone access in your browser settings and try again."
+          "Microphone permission denied. Please allow access in your browser settings."
         );
       } else if (error.name === "NotFoundError" || error.name === "DevicesNotFoundError") {
-        antMessage.error(
-          "No microphone device found. Please connect a microphone and try again."
-        );
+        antMessage.error("No microphone found. Please connect one.");
       } else if (error.name === "NotReadableError" || error.name === "SecurityError") {
-        antMessage.error(
-          "Could not access your microphone. Please check your browser settings and try again."
-        );
+        antMessage.error("Could not access microphone. Check browser settings.");
       } else {
-        antMessage.error(
-          "Failed to access microphone. Please try again or use a different browser."
-        );
+        antMessage.error("Microphone access failed. Try a different browser.");
       }
     }
   };
 
   const stopRecording = () => {
-    mediaRecorderRef.current?.stop();
-    setRecording(false);
-    console.log("Recording stopped");
+    if (mediaRecorderRef.current && recording) {
+      mediaRecorderRef.current.stop();
+      setRecording(false);
+      console.log("[Mic] Recording stopped");
+    }
   };
 
   const sendAudioToBackend = async (audioBlob: Blob) => {
     const langCode = getActiveLangCode();
 
-    console.log("Sending audio to backend. Blob size:", audioBlob.size, "MIME type:", audioBlob.type);
+    console.log(
+      "[Mic] Sending audio to backend. Size:",
+      audioBlob.size,
+      "Type:",
+      audioBlob.type
+    );
 
     try {
       speechToTextFileMutation.mutate(
         { data: { file: audioBlob, langCode } },
         {
           onSuccess: (res) => {
-            console.log("Speech-to-text successful:", res.transcription);
+            console.log("[Mic] Transcription received:", res.transcription);
             sendMessage(res.transcription, langCode);
           },
           onError: (error: any) => {
-            console.error("Speech-to-text error:", error);
-            antMessage.error(
-              "Failed to process audio. Please try again."
-            );
+            console.error("[Mic] Speech-to-text error:", error);
+            antMessage.error("Failed to process audio. Check your connection.");
           },
-        },
+        }
       );
     } catch (error) {
-      console.error("Error sending audio:", error);
-      antMessage.error("Failed to send audio to server. Please try again.");
+      console.error("[Mic] Error in sendAudioToBackend:", error);
+      antMessage.error("Failed to send audio. Please try again.");
     }
   };
 
@@ -172,15 +200,21 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({ mode = "header" }) => {
     if (mode === "client") {
       return localStorage.getItem("lang-code") || companyData?.defaultLangCode || "en";
     }
-
     return params.get("lang") || companyData?.defaultLangCode || "en";
   };
 
   const sendMessage = (message: string, langCode = getActiveLangCode()) => {
     if (!message.trim()) {
-      antMessage.warning("No text was recognized. Please try again.");
+      antMessage.warning("No speech detected. Please try again.");
       return;
     }
+
+    if (!socketConnected) {
+      antMessage.error("Not connected. Please try again.");
+      return;
+    }
+
+    console.log("[Mic] Sending message via socket:", message);
 
     emitSendMessage({
       message: message,
@@ -190,13 +224,33 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({ mode = "header" }) => {
     });
   };
 
+  if (!isInitialized) {
+    return (
+      <Button
+        className="border-1 relative flex flex-col items-center justify-center rounded-md border-black px-3 text-center text-white opacity-50 cursor-not-allowed"
+        type="button"
+        disabled
+        title="Microphone not supported in this browser"
+      >
+        <AnimatedMicIcon loading={false} />
+      </Button>
+    );
+  }
+
   return (
     <Button
-      className="border-1 relative flex flex-col items-center justify-center rounded-md  border-black  px-3  text-center text-white"
+      className="border-1 relative flex flex-col items-center justify-center rounded-md border-black px-3 text-center text-white"
       type="button"
       onClick={recording ? stopRecording : startRecording}
       isLoading={speechToTextFileMutation.status === "pending"}
-      title={recording ? "Click to stop recording" : "Click to start recording"}
+      disabled={!socketConnected && mode === "client"}
+      title={
+        !socketConnected && mode === "client"
+          ? "Waiting for connection..."
+          : recording
+          ? "Click to stop recording"
+          : "Click to start recording"
+      }
     >
       <AnimatedMicIcon loading={recording} />
     </Button>

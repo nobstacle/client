@@ -969,35 +969,21 @@ export const Content: React.FC = () => {
     setIsIPad(isIPadDevice); // Add new state for iPad
   }, []);
 
-  useEffect(() => {
-    if (!hasHydrated || contentToDisplay !== null) return;
-
-    const restoredPublic = getStoredPublicDisplay();
-    if (restoredPublic) {
-      setContentToDisplay(restoredPublic);
-      return;
-    }
-
-    if (defaultSlideshowContent.data) {
-      setContentToDisplay({
-        type: "Slideshow",
-        content: defaultSlideshowContent.data,
-      });
-    } else if (defaultSlideshowContent.isError || (defaultSlideshowContent.isFetched && !defaultSlideshowContent.data)) {
-      // Try fallback slideshow if default fails
-      fetchFallbackSlideshow();
-    }
-  }, [defaultSlideshowContent.data, defaultSlideshowContent.isError, defaultSlideshowContent.isFetched, contentToDisplay, hasHydrated]);
-
   const fetchFallbackSlideshow = useCallback(async () => {
     try {
       const token = data?.user?.backendTokens?.at;
       
+      if (!token) {
+        console.warn("No auth token available for fallback slideshow fetch");
+        setContentToDisplay(null);
+        return;
+      }
+
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_BACKEND_URL}/v1/fallback-slideshow`,
         {
           headers: {
-            'Authorization': `Bearer ${token || ''}`,
+            'Authorization': `Bearer ${token}`,
           },
         }
       );
@@ -1008,6 +994,9 @@ export const Content: React.FC = () => {
           type: "Slideshow",
           content: fallbackContent,
         });
+      } else {
+        console.warn(`Fallback slideshow fetch failed with status ${response.status}`);
+        setContentToDisplay(null);
       }
     } catch (error) {
       console.error("Failed to fetch fallback slideshow:", error);
@@ -1015,6 +1004,31 @@ export const Content: React.FC = () => {
       setContentToDisplay(null);
     }
   }, [data?.user?.backendTokens?.at]);
+
+  useEffect(() => {
+    if (!hasHydrated || contentToDisplay !== null) return;
+
+    const restoredPublic = getStoredPublicDisplay();
+    if (restoredPublic) {
+      setContentToDisplay(restoredPublic);
+      return;
+    }
+
+    // Only proceed if default slideshow query has finished loading
+    if (!defaultSlideshowContent.isFetched) {
+      return;
+    }
+
+    if (defaultSlideshowContent.data) {
+      setContentToDisplay({
+        type: "Slideshow",
+        content: defaultSlideshowContent.data,
+      });
+    } else {
+      // Default slideshow failed or doesn't exist - try fallback
+      fetchFallbackSlideshow();
+    }
+  }, [defaultSlideshowContent.data, defaultSlideshowContent.isFetched, contentToDisplay, hasHydrated, fetchFallbackSlideshow])
 
   useEffect(() => {
     if (messageStore.receivedType === "Recording") {

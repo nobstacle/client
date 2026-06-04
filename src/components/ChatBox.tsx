@@ -22,6 +22,7 @@ interface ChatBoxProps {
 
 export const ChatBox = React.forwardRef<HTMLDivElement, ChatBoxProps>(
   ({ messages, sendMessage, children }, ref) => {
+    const [viewportHeight, setViewportHeight] = useState<number>(0);
     const params = useSearchParams();
     const [message, setMessage] = useState("");
     const { data } = useSession();
@@ -71,8 +72,32 @@ export const ChatBox = React.forwardRef<HTMLDivElement, ChatBoxProps>(
       }
     };
 
+    useEffect(() => {
+      const updateViewportHeight = () => {
+        const height = window.visualViewport?.height || window.innerHeight;
+        setViewportHeight(height);
+      };
+
+      updateViewportHeight();
+      window.addEventListener("resize", updateViewportHeight);
+      window.visualViewport?.addEventListener("resize", updateViewportHeight);
+      window.visualViewport?.addEventListener("scroll", updateViewportHeight);
+
+      return () => {
+        window.removeEventListener("resize", updateViewportHeight);
+        window.visualViewport?.removeEventListener("resize", updateViewportHeight);
+        window.visualViewport?.removeEventListener("scroll", updateViewportHeight);
+      };
+    }, []);
+
     return (
-      <div className="density-chatbox relative flex h-[500px] w-full flex-col ">
+      <div
+        className="density-chatbox relative flex w-full flex-col"
+        style={{
+          minHeight: 280,
+          maxHeight: viewportHeight ? Math.max(320, viewportHeight - 180) : undefined,
+        }}
+      >
         {children}
         <div className="flex w-full flex-grow flex-col overflow-hidden rounded-md bg-primary shadow-xl">
           <div
@@ -98,6 +123,7 @@ export const ChatBox = React.forwardRef<HTMLDivElement, ChatBoxProps>(
               onKeyDown={handleKeyDown}
               value={message}
               onChange={(e) => setMessage(e.target.value)}
+              onFocus={() => textareaRef.current?.scrollIntoView({ block: "center" })}
               className="density-chatbox-input h-[40px] w-full resize-none overflow-y-auto rounded-md px-3 py-2 text-sm leading-5"
               placeholder="Message"
               style={{
