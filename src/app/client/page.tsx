@@ -161,6 +161,8 @@ const ClientStationPicker = () => {
   }, []);
 
   const requestClientFullscreen = async () => {
+    // Disabled fullscreen mode for now as it causes layout issues with the keyboard on iOS/tablets
+    /*
     if (document.fullscreenElement) return;
 
     try {
@@ -170,6 +172,7 @@ const ClientStationPicker = () => {
     } catch (error) {
       console.error("Failed to enter fullscreen:", error);
     }
+    */
   };
 
   const handleFullscreenHoldStart = (event: React.PointerEvent<HTMLDivElement>) => {
@@ -204,7 +207,8 @@ const ClientStationPicker = () => {
         style={{ left: '0.5rem', bottom: '0.5rem', height: '4rem', width: '8rem' }}
       >
       </div>
-      <div
+      {/* Fullscreen hold mode disabled for now to prevent keyboard-related layout issues on tablet devices */}
+      {/* <div
         className="fixed z-[9998] select-none touch-none"
         onContextMenu={(event) => event.preventDefault()}
         onPointerCancel={clearFullscreenHold}
@@ -212,7 +216,7 @@ const ClientStationPicker = () => {
         onPointerLeave={clearFullscreenHold}
         onPointerUp={handleFullscreenHoldEnd}
         style={{ right: '0.5rem', bottom: '0.5rem', height: '4rem', width: '8rem' }}
-      />
+      /> */}
       <Modal title="" isOpen={isOpen} closeModal={handleClose}>
         <div className="mb-4 flex w-full justify-end ">
           {socketConnected ? (

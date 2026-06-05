@@ -123,6 +123,14 @@ export const ChatBox = React.forwardRef<HTMLDivElement, ChatBoxProps>(
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               onFocus={() => textareaRef.current?.scrollIntoView({ block: "center" })}
+              onBlur={() => {
+                window.scrollTo(0, 0);
+                document.body.scrollTop = 0;
+                setTimeout(() => {
+                  window.scrollTo(0, 0);
+                  document.body.scrollTop = 0;
+                }, 100);
+              }}
               className="density-chatbox-input h-[44px] w-full resize-none overflow-y-auto rounded-md px-3 py-2 text-sm leading-5"
               placeholder="Message"
               style={{
