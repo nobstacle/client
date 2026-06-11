@@ -110,8 +110,9 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({ mode = "header" }) => {
 
       mediaRecorderRef.current.onstop = async () => {
         try {
+          const actualMimeType = mediaRecorderRef.current?.mimeType || mimeType || "audio/webm";
           const audioBlob = new Blob(audioChunks.current, {
-            type: mimeType || "audio/webm",
+            type: actualMimeType,
           });
           audioChunks.current = [];
 
@@ -122,7 +123,7 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({ mode = "header" }) => {
             return;
           }
 
-          console.log("[Mic] Audio recorded, size:", audioBlob.size);
+          console.log("[Mic] Audio recorded, size:", audioBlob.size, "MIME:", actualMimeType);
           await sendAudioToBackend(audioBlob);
         } catch (error) {
           console.error("[Mic] Error in onstop:", error);
