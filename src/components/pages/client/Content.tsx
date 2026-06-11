@@ -873,6 +873,12 @@ export const Content: React.FC = () => {
   const company = useCompanyControllerGetCompany();
   const params = useSearchParams();
   const messageStore = useMessageStore();
+  const [activeLangCode, setActiveLangCode] = useState<string>("en");
+
+  useEffect(() => {
+    const currentLang = messageStore.receivedLangCode || (typeof window !== "undefined" ? localStorage.getItem("lang-code") : null) || company.data?.defaultLangCode || "en";
+    setActiveLangCode(currentLang);
+  }, [messageStore.receivedLangCode, company.data?.defaultLangCode]);
   const hasHydrated = useHasHydrated();
   const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
   const [showQR, setShowQR] = useState(false);
@@ -1717,7 +1723,7 @@ export const Content: React.FC = () => {
   const { emitSendMessage } = useSocketContext();
 
   const sendMessage = (message: string) => {
-    const langCode = localStorage.getItem("lang-code") || company.data?.defaultLangCode || "en";
+    const langCode = activeLangCode;
 
     emitSendMessage({
       message: message,
@@ -2182,7 +2188,7 @@ export const Content: React.FC = () => {
             );
           }
 
-          const currentLangCode = messageStore.receivedContent?.langCode || 'en';
+          const currentLangCode = activeLangCode || messageStore.receivedContent?.langCode || 'en';
 
           // Helper function to merge category images with package images
           const mergeImages = (packageImages, toCategory) => {
@@ -2737,7 +2743,7 @@ export const Content: React.FC = () => {
                     contentToDisplay?.content?.extraContent ?? ""}
                   origin={messageStore.receivedContent?.content ??
                     contentToDisplay?.content?.content ?? ""}
-                  languageCode={messageStore.receivedContent?.langCode ?? "en"}
+                  languageCode={activeLangCode || messageStore.receivedContent?.langCode || "en"}
                 />
               )}
             </div>
