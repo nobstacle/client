@@ -6,14 +6,13 @@ import {
   useUserControllerCreate,
 } from "../../../lib/client/api";
 import { signIn } from "next-auth/react";
-import Input from "../../Input";
 
 const schema = yup
   .object({
     firstName: yup.string().optional(),
     lastName: yup.string().optional(),
-    email: yup.string().required(),
-    password: yup.string().required().min(8),
+    email: yup.string().email("Invalid email format").required("Email is required"),
+    password: yup.string().required("Password is required").min(8, "Password must be at least 8 characters"),
   })
   .required();
 
@@ -58,70 +57,128 @@ export const RegisterForm: React.FC = () => {
 
   const onSubmit: SubmitHandler<FormValues> = (data) => handleRegister(data);
 
+  const { errors } = formState;
+
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-2">
+    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-6">
+      {/* Header */}
       <div className="mb-2">
-        <h1 className="text-2xl font-semibold text-slate-900">Start your 30-day trial</h1>
-        <p className="text-sm text-slate-500">
-          We’ll create your admin account first, then you can finish your company setup right away.
+        <h1 className="text-3xl font-bold text-gray-900">Start your 30-day trial</h1>
+        <p className="mt-2 text-sm text-gray-600">
+          We'll create your admin account first, then you can finish your company setup right away.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-        <Input
-          register={register}
-          label="First Name"
-          name="firstName"
-          type="text"
-          required={false}
-        />
-        <Input
-          register={register}
-          label="Last Name"
-          name="lastName"
-          type="text"
-          required={false}
-        />
+      {/* Name Fields */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="space-y-2">
+          <label htmlFor="firstName" className="text-sm font-medium text-gray-700">
+            First Name
+          </label>
+          <input
+            id="firstName"
+            {...register("firstName")}
+            type="text"
+            placeholder="John"
+            className="w-full rounded-lg border border-gray-300 px-4 py-3 text-gray-900 placeholder-gray-400 transition-all focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+          />
+          {errors.firstName && (
+            <p className="text-xs text-rose-600">{errors.firstName.message}</p>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <label htmlFor="lastName" className="text-sm font-medium text-gray-700">
+            Last Name
+          </label>
+          <input
+            id="lastName"
+            {...register("lastName")}
+            type="text"
+            placeholder="Doe"
+            className="w-full rounded-lg border border-gray-300 px-4 py-3 text-gray-900 placeholder-gray-400 transition-all focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+          />
+          {errors.lastName && (
+            <p className="text-xs text-rose-600">{errors.lastName.message}</p>
+          )}
+        </div>
       </div>
 
-      <Input
-        register={register}
-        label="Email"
-        name="email"
-        type="email"
-        required
-      />
-      {formState.errors.email && (
-        <p className="text-xs text-rose-600">Email is required</p>
-      )}
+      {/* Email Field */}
+      <div className="space-y-2">
+        <label htmlFor="email" className="text-sm font-medium text-gray-700">
+          Email
+        </label>
+        <div className="relative">
+          <svg className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+          </svg>
+          <input
+            id="email"
+            {...register("email")}
+            type="email"
+            placeholder="you@company.com"
+            className="w-full rounded-lg border border-gray-300 py-3 pl-10 pr-4 text-gray-900 placeholder-gray-400 transition-all focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+          />
+        </div>
+        {errors.email && (
+          <p className="text-xs text-rose-600">{errors.email.message}</p>
+        )}
+      </div>
 
-      <Input
-        register={register}
-        label="Password"
-        name="password"
-        type="password"
-        required
-      />
-      {formState.errors.password && (
-        <p className="text-xs text-rose-600">Password must be at least 8 characters</p>
-      )}
+      {/* Password Field */}
+      <div className="space-y-2">
+        <label htmlFor="password" className="text-sm font-medium text-gray-700">
+          Password
+        </label>
+        <div className="relative">
+          <svg className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+          </svg>
+          <input
+            id="password"
+            {...register("password")}
+            type="password"
+            placeholder="Minimum 8 characters"
+            className="w-full rounded-lg border border-gray-300 py-3 pl-10 pr-4 text-gray-900 placeholder-gray-400 transition-all focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+          />
+        </div>
+        {errors.password && (
+          <p className="text-xs text-rose-600">{errors.password.message}</p>
+        )}
+      </div>
 
+      {/* Submit Button */}
       <button
         type="submit"
-        className="mt-4 rounded-xl border-2 border-black bg-primary p-2 text-white"
         disabled={createUser.status === "pending"}
+        className="mt-4 w-full rounded-lg bg-primary py-3 px-4 text-white font-semibold shadow-md transition-all hover:bg-primary-dark hover:shadow-lg hover:translate-y-[-2px] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
       >
-        Start Free Trial
+        {createUser.status === "pending" ? (
+          <span className="flex items-center justify-center gap-2">
+            <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+            </svg>
+            Creating account...
+          </span>
+        ) : (
+          "Start Free Trial"
+        )}
       </button>
 
+      {/* Error Message */}
       {createUser.error?.response?.data.message && (
-        <p className="text-center text-xs text-rose-600">
-          {createUser.error.response.data.message.charAt(0).toUpperCase() +
-            createUser.error.response.data.message.slice(1)}
-        </p>
+        <div className="rounded-lg bg-rose-50 border border-rose-200 p-3">
+          <p className="text-sm text-rose-700 text-center">
+            {createUser.error.response.data.message.charAt(0).toUpperCase() +
+              createUser.error.response.data.message.slice(1)}
+          </p>
+        </div>
       )}
 
-      <p className="mt-1 text-center text-xs text-slate-500">
+      {/* Footer Note */}
+      <p className="text-center text-xs text-gray-500">
         Your access stays active for 30 days from registration.
       </p>
     </form>
