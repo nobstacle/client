@@ -41,6 +41,7 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true, isMob
 
   const userRole = session?.user?.Roles?.[0];
   const currentUserDefaultLang = companyData?.defaultLangCode || 'en';
+  const selectedLang = params.get("lang") || currentUserDefaultLang;
   const currentStation = Number(params.get("station") ?? 1);
 
   const stationMessages = messageStore.receivedMessage.filter(
@@ -142,11 +143,12 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true, isMob
 
   const getDisplayMessage = (messageObj: any) => {
     const { message, originalMessage, role, adminMessage, clientMessage } = messageObj;
+    const isViewerAdmin = ['Admin', 'Staff', 'SAdmin'].includes(userRole);
 
-    if (userRole === 'Admin') {
-      return adminMessage || (role === 'Admin' ? originalMessage : message);
+    if (isViewerAdmin) {
+      return adminMessage || originalMessage || message;
     } else {
-      return clientMessage || (role === 'User' ? originalMessage : message);
+      return clientMessage || originalMessage || message;
     }
   };
 
@@ -676,7 +678,7 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true, isMob
                     </svg>
                   </button>
 
-                  <AudioRecorder mode="header" />
+                  <AudioRecorder mode="header" activeLangCode={selectedLang} />
                 </div>
 
                 <button

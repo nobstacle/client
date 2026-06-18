@@ -18,10 +18,11 @@ interface ChatBoxProps {
   sendMessage: (value: string) => void;
   messages: ReceivedMessageContent[];
   children?: React.ReactNode;
+  activeLangCode?: string;
 }
 
 export const ChatBox = React.forwardRef<HTMLDivElement, ChatBoxProps>(
-  ({ messages, sendMessage, children }, ref) => {
+  ({ messages, sendMessage, children, activeLangCode }, ref) => {
     const [viewportHeight, setViewportHeight] = useState<number>(0);
     const params = useSearchParams();
     const [message, setMessage] = useState("");
@@ -41,21 +42,14 @@ export const ChatBox = React.forwardRef<HTMLDivElement, ChatBoxProps>(
     // Function to determine which message to display based on current user's role and translation rules
     const getDisplayMessage = (messageObj: ReceivedMessageContent) => {
       const { message, originalMessage, role, adminMessage, clientMessage } = messageObj;
-      const isViewerAdmin = userRole === 'Admin' || userRole === 'Staff';
-      const isSenderAdmin = role === 'Admin' || role === 'Staff';
+      const isViewerAdmin = ['Admin', 'Staff', 'SAdmin'].includes(userRole);
 
       if (isViewerAdmin) {
         // Rule 1: Always render adminMessage for Admin/Staff viewer
         return adminMessage || originalMessage || message;
       } else {
         // Customer Viewer
-        if (isSenderAdmin) {
-          // Rule 2: Always render clientMessage for admin-originated messages viewed by Customer
-          return clientMessage || originalMessage || message;
-        } else {
-          // Customer-originated messages viewed by Customer: show clientMessage or originalMessage
-          return clientMessage || originalMessage || message;
-        }
+        return clientMessage || originalMessage || message;
       }
     };
 
@@ -154,7 +148,7 @@ export const ChatBox = React.forwardRef<HTMLDivElement, ChatBoxProps>(
               >
                 <SendIcon />
               </Button>
-              <AudioRecorder mode="client" />
+              <AudioRecorder mode="client" activeLangCode={activeLangCode} />
             </div>
           </div>
         </div>

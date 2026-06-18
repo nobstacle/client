@@ -11,14 +11,21 @@ import { message as antMessage } from "antd";
 
 type AudioRecorderProps = {
   mode?: "client" | "header";
+  activeLangCode?: string;
 };
 
-const AudioRecorder: React.FC<AudioRecorderProps> = ({ mode = "header" }) => {
+const AudioRecorder: React.FC<AudioRecorderProps> = ({ mode = "header", activeLangCode }) => {
   const [recording, setRecording] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const audioChunks = useRef<Blob[]>([]);
-  const speechToTextFileMutation = useUploadControllerUploadSpeechToTextFile();
+  const speechToTextFileMutation = useUploadControllerUploadSpeechToTextFile({
+    request: {
+      params: {
+        mode,
+      },
+    },
+  });
   const { emitSendMessage, socketConnected } = useSocketContext();
   const params = useSearchParams();
   const { data: companyData } = useCompanyControllerGetCompany();
@@ -224,6 +231,9 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({ mode = "header" }) => {
   };
 
   const getActiveLangCode = () => {
+    if (activeLangCode) {
+      return activeLangCode;
+    }
     if (mode === "client") {
       return localStorage.getItem("lang-code") || companyData?.defaultLangCode || "en";
     }

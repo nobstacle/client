@@ -2248,6 +2248,7 @@ export const Content: React.FC = () => {
                 ref={chatBoxRef}
                 messages={messageStore.receivedMessage}
                 sendMessage={sendMessage}
+                activeLangCode={activeLangCode}
               />
             </div>
           </SafeContentFrame>

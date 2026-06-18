@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { languages } from "../../../../constant/languages";
 import { useCompanyControllerGetCompany } from "../../../../lib/client/api";
@@ -83,13 +83,23 @@ export const HeaderLanguagePicker = ({
   const params = useSearchParams();
   const { data } = useCompanyControllerGetCompany();
   const isHydrated = useHasHydrated();
-  const { emitSendLangCode } = useSocketContext();
+  const { emitSendLangCode, socketConnected } = useSocketContext();
 
   // Get language shortcuts to check if selected language exists
   const { languageShortcuts, addLanguageShortcut } = useShortcuts();
 
   const headerLangaugePickerDefault =
     params.get("lang") || data?.defaultLangCode || "en";
+
+  // Automatically sync language code to the client on mount or socket reconnection
+  useEffect(() => {
+    if (isHydrated && socketConnected && headerLangaugePickerDefault) {
+      emitSendLangCode({
+        langCode: headerLangaugePickerDefault,
+        station: Number(params.get("station") ?? 1),
+      });
+    }
+  }, [isHydrated, socketConnected, headerLangaugePickerDefault, params, emitSendLangCode]);
 
   const handleLanguageChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newLang = e.currentTarget.value;
