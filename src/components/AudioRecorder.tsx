@@ -16,9 +16,18 @@ type AudioRecorderProps = {
 
 const AudioRecorder: React.FC<AudioRecorderProps> = ({ mode = "header", activeLangCode }) => {
   const [recording, setRecording] = useState(false);
+  const [audioLevel, setAudioLevel] = useState(0);
+  const [canStop, setCanStop] = useState(false);
+  const [countdown, setCountdown] = useState(0);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const audioChunks = useRef<Blob[]>([]);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
+  const recordingStartTimeRef = useRef<number>(0);
+  const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const MIN_RECORDING_DURATION_MS = 2000; // Minimum 2 seconds
   const speechToTextFileMutation = useUploadControllerUploadSpeechToTextFile({
     request: {
       params: {
@@ -73,6 +82,63 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({ mode = "header", activeLa
       });
       streamRef.current = null;
     }
+    
+    // Clean up audio context and monitoring
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+      animationFrameRef.current = null;
+    }
+    
+    if (countdownIntervalRef.current) {
+      clearInterval(countdownIntervalRef.current);
+      countdownIntervalRef.current = null;
+    }
+    
+    if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+      audioContextRef.current.close();
+      audioContextRef.current = null;
+    }
+    
+    analyserRef.current = null;
+    setAudioLevel(0);
+    setCountdown(0);
+  };
+
+  const monitorAudioLevel = (stream: MediaStream) => {
+    try {
+      const audioContext = new AudioContext();
+      audioContextRef.current = audioContext;
+      
+      const analyser = audioContext.createAnalyser();
+      analyser.fftSize = 512;
+      analyserRef.current = analyser;
+      
+      const source = audioContext.createMediaStreamSource(stream);
+      source.connect(analyser);
+      
+      const dataArray = new Uint8Array(analyser.frequencyBinCount);
+      
+      const updateLevel = () => {
+        if (!analyserRef.current) return;
+        
+        analyserRef.current.getByteFrequencyData(dataArray);
+        
+        // Calculate average audio level (0-100)
+        let sum = 0;
+        for (let i = 0; i < dataArray.length; i++) {
+          sum += dataArray[i];
+        }
+        const average = sum / dataArray.length;
+        const normalizedLevel = Math.min(100, (average / 128) * 100);
+        
+        setAudioLevel(normalizedLevel);
+        animationFrameRef.current = requestAnimationFrame(updateLevel);
+      };
+      
+      updateLevel();
+    } catch (error) {
+      console.warn('[Mic] Audio monitoring failed:', error);
+    }
   };
 
   const startRecording = async () => {
@@ -99,6 +165,10 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({ mode = "header", activeLa
       });
 
       streamRef.current = stream;
+      
+      // Start audio level monitoring
+      monitorAudioLevel(stream);
+      
       const supportedMimeTypes = getSupportedMimeTypes();
       const mimeType = supportedMimeTypes[0];
 
@@ -142,12 +212,34 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({ mode = "header", activeLa
         console.error("[Mic] MediaRecorder error:", event.error);
         antMessage.error(`Recording failed: ${event.error}`);
         setRecording(false);
+        setCanStop(false);
         cleanupStream();
       };
 
       mediaRecorderRef.current.start();
       setRecording(true);
-      console.log("[Mic] Recording started");
+      setCanStop(false);
+      recordingStartTimeRef.current = Date.now();
+      setCountdown(Math.ceil(MIN_RECORDING_DURATION_MS / 1000));
+      
+      // Update countdown every second
+      countdownIntervalRef.current = setInterval(() => {
+        const elapsed = Date.now() - recordingStartTimeRef.current;
+        const remaining = Math.ceil((MIN_RECORDING_DURATION_MS - elapsed) / 1000);
+        
+        if (remaining <= 0) {
+          setCountdown(0);
+          setCanStop(true);
+          if (countdownIntervalRef.current) {
+            clearInterval(countdownIntervalRef.current);
+            countdownIntervalRef.current = null;
+          }
+        } else {
+          setCountdown(remaining);
+        }
+      }, 200);
+      
+      console.log("[Mic] Recording started - speak clearly");
     } catch (error: any) {
       console.error("[Mic] Error accessing microphone:", error);
       cleanupStream();
@@ -167,10 +259,27 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({ mode = "header", activeLa
   };
 
   const stopRecording = () => {
+    const elapsed = Date.now() - recordingStartTimeRef.current;
+    
+    if (elapsed < MIN_RECORDING_DURATION_MS) {
+      const remaining = Math.ceil((MIN_RECORDING_DURATION_MS - elapsed) / 1000);
+      antMessage.info(`Please speak for at least ${remaining} more second${remaining > 1 ? 's' : ''}`);
+      return;
+    }
+    
+    if (audioLevel < 5) {
+      antMessage.warning("No speech detected. Please speak clearly into your microphone.");
+      cleanupStream();
+      setRecording(false);
+      setCanStop(false);
+      return;
+    }
+    
     if (mediaRecorderRef.current && recording) {
       mediaRecorderRef.current.stop();
       setRecording(false);
-      console.log("[Mic] Recording stopped");
+      setCanStop(false);
+      console.log("[Mic] Recording stopped after", elapsed, "ms, audio level:", audioLevel);
     }
   };
 
@@ -285,11 +394,29 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({ mode = "header", activeLa
         !socketConnected && mode === "client"
           ? "Waiting for connection..."
           : recording
-          ? "Click to stop recording"
+          ? canStop
+            ? "Click to stop recording"
+            : `Speak clearly... (${countdown}s)`
           : "Click to start recording"
       }
     >
-      <AnimatedMicIcon loading={recording} />
+      <div className="relative">
+        <AnimatedMicIcon loading={recording} />
+        {recording && (
+          <div className="absolute -top-1 -right-1 flex h-3 w-3">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75"></span>
+            <span className="relative inline-flex h-3 w-3 rounded-full bg-red-500"></span>
+          </div>
+        )}
+      </div>
+      {recording && (
+        <div className="absolute -bottom-1 left-0 right-0 h-1 bg-gray-600 rounded-full overflow-hidden">
+          <div 
+            className="h-full bg-green-400 transition-all duration-150 ease-out"
+            style={{ width: `${audioLevel}%` }}
+          />
+        </div>
+      )}
     </Button>
   );
 };
