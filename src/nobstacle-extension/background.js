@@ -74,6 +74,23 @@ async function getCookiesDirectly() {
   try {
     console.log('[Background] 🍪 Fetching cookies directly...');
 
+    // Check if we just logged out
+    const logoutCheck = await chrome.storage.local.get(['justLoggedOut', 'justLoggedOutTime']);
+    if (logoutCheck.justLoggedOut && logoutCheck.justLoggedOutTime) {
+      const elapsed = Date.now() - logoutCheck.justLoggedOutTime;
+      if (elapsed < 8000) {
+        console.log(`[Background] 🕒 Ignoring getCookiesDirectly (cooldown active: ${elapsed}ms ago)`);
+        return {
+          sessionToken: null,
+          cookies: [],
+          isAuthenticated: false
+        };
+      } else {
+        // Cooldown expired, clean it up
+        await chrome.storage.local.remove(['justLoggedOut', 'justLoggedOutTime']);
+      }
+    }
+
     // Try multiple domain variations
     const domains = [
       'nobstacle.com',
@@ -352,6 +369,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           companyId: user.companyId
         };
 
+        // Clear cooldown upon successful new login
+        await chrome.storage.local.remove(['justLoggedOut', 'justLoggedOutTime']);
         await chrome.storage.local.set(authData);
         console.log('[Background] ✅ Auth data cached in storage');
 
@@ -387,7 +406,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           authSessionToken: null,
           authCookies: [],
           sessionData: null,
-          user: null
+          user: null,
+          justLoggedOut: true,
+          justLoggedOutTime: Date.now()
         });
 
         // Notify tabs of logout
@@ -414,6 +435,24 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     console.log('[Background] 🔄 Force auth check - fetching fresh cookies...');
 
     (async () => {
+      // Check if we just logged out
+      const logoutCheck = await chrome.storage.local.get(['justLoggedOut', 'justLoggedOutTime']);
+      if (logoutCheck.justLoggedOut && logoutCheck.justLoggedOutTime) {
+        const elapsed = Date.now() - logoutCheck.justLoggedOutTime;
+        if (elapsed < 8000) {
+          console.log(`[Background] 🕒 Ignoring forceAuthCheck (cooldown active: ${elapsed}ms ago)`);
+          sendResponse({
+            sessionToken: null,
+            cookies: [],
+            isAuthenticated: false
+          });
+          return;
+        } else {
+          // Cooldown expired, clean it up
+          await chrome.storage.local.remove(['justLoggedOut', 'justLoggedOutTime']);
+        }
+      }
+
       // FIRST: Try to get cookies directly (most reliable)
       let authData = await getCookiesDirectly();
 

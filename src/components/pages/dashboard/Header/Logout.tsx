@@ -14,8 +14,16 @@ export const Logout: React.FC = () => {
         localStorage.clear();
         sessionStorage.clear();
         console.log('✓ Local storage cleared');
+      }
 
-        // Notify extension regardless of iframe status
+      // 1. Wait for NextAuth signOut to complete clearing NextAuth cookies/session
+      await signOut({
+        redirect: false
+      });
+      console.log('✓ NextAuth signOut completed');
+
+      // 2. Notify extension
+      if (typeof window !== 'undefined') {
         window.postMessage({ type: 'LOGOUT_REQUEST' }, '*');
         if (window.parent !== window) {
           window.parent.postMessage({ type: 'LOGOUT_REQUEST' }, '*');
@@ -23,10 +31,7 @@ export const Logout: React.FC = () => {
         console.log('✓ Extension logout request sent');
       }
 
-      await signOut({
-        redirect: false,
-        callbackUrl: '/'
-      });
+      // 3. Redirect manually
       window.location.href = '/';
 
     } catch (error) {

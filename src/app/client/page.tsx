@@ -172,16 +172,16 @@ const ClientStationPicker = () => {
 
   const handleLogout = async () => {
     localStorage.clear();
+    await signOut({
+      redirect: false
+    });
     if (typeof window !== "undefined") {
       window.postMessage({ type: "LOGOUT_REQUEST" }, "*");
       if (window.parent !== window) {
         window.parent.postMessage({ type: "LOGOUT_REQUEST" }, "*");
       }
     }
-    await signOut({
-      redirect: true,
-      callbackUrl: "/"
-    });
+    window.location.href = "/";
   };
 
   const clearFullscreenHold = () => {
