@@ -159,6 +159,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 	const fetchControllerRef = useRef<AbortController | null>(null);
 	const currentFormIdRef = useRef<string | null>(null);
 	const { receivedResponse } = useMessageStore();
+	const tableClosureRef = useRef<any>({});
 
 	useEffect(() => {
 		const handleResize = () => {
@@ -364,17 +365,18 @@ useEffect(() => {
 	};
 
 
-	const TableComponent = React.memo<TableComponentProps>(({
-		tableData,
-		uniqueKeys,
-		currentPage,
-		totalItems,
-		totalPages,
-		setCurrentPage,
-		selectedFormFields,
-		onUpdateField,
-		listableFields,
-	}) => {
+	const TableComponent = useMemo(() => {
+		const Comp = React.memo<TableComponentProps>(({
+			tableData,
+			uniqueKeys,
+			currentPage,
+			totalItems,
+			totalPages,
+			setCurrentPage,
+			selectedFormFields,
+			onUpdateField,
+			listableFields,
+		}) => {
 		const [downloadingPDF, setDownloadingPDF] = useState<number | null>(null);
 		const [editingCell, setEditingCell] = useState<{
 			recordId: string;
@@ -401,9 +403,9 @@ useEffect(() => {
 		}, []);
 
 		const handlePageChange = (page: number, size?: number) => {
-			setLoader(true);
-			if (size && size !== pageSize) {
-				setPageSize(size);
+			tableClosureRef.current.setLoader(true);
+			if (size && size !== tableClosureRef.current.pageSize) {
+				tableClosureRef.current.setPageSize(size);
 				page = 1;
 			}
 			setCurrentPage(page);
@@ -659,8 +661,8 @@ useEffect(() => {
 				}
 			});
 
-			const dynamicUrl = buildUrlFromFormData(selectedForm, result, UUID, listableFields);
-			sendJotFormMessage(dynamicUrl, data?.formData?.uuid);
+			const dynamicUrl = buildUrlFromFormData(tableClosureRef.current.selectedForm, result, UUID, listableFields);
+			tableClosureRef.current.sendJotFormMessage(dynamicUrl, data?.formData?.uuid);
 
 			toast.success('Form sent!', {
 				position: "bottom-right",
@@ -673,10 +675,10 @@ useEffect(() => {
 				theme: "colored",
 				transition: Bounce,
 			});
-			closeModal();
-			closeSendModal();
-			reset();
-			setManualInputValues({});
+			tableClosureRef.current.closeModal();
+			tableClosureRef.current.closeSendModal();
+			tableClosureRef.current.reset();
+			tableClosureRef.current.setManualInputValues({});
 		};
 
 		const copyFormUrl = (data: any) => {
@@ -698,7 +700,7 @@ useEffect(() => {
 				});
 
 				url = buildUrlFromFormData(
-					selectedForm,
+					tableClosureRef.current.selectedForm,
 					data,
 					data?.formData?.uuid,
 					listableFields
@@ -1020,7 +1022,7 @@ useEffect(() => {
 						<Pagination
 							current={currentPage}
 							total={totalItems}
-							pageSize={pageSize}
+							pageSize={tableClosureRef.current.pageSize}
 							onChange={handlePageChange}
 							showSizeChanger={false}
 							size="small"
@@ -1048,7 +1050,7 @@ useEffect(() => {
 					<Pagination
 						current={currentPage}
 						total={totalItems}
-						pageSize={pageSize}
+						pageSize={tableClosureRef.current.pageSize}
 						onChange={handlePageChange}
 						showSizeChanger
 						pageSizeOptions={['10', '20', '50', '100']}
@@ -1057,6 +1059,9 @@ useEffect(() => {
 			</div>
 		);
 	});
+	Comp.displayName = "TableComponent";
+	return Comp;
+	}, []);
 
 	const handleChange = (name: string, value: any) => {
 		setInputValues((prev: any) => ({
@@ -1260,6 +1265,18 @@ useEffect(() => {
 				alert(response?.success ? "JotForm message sent!" : "Failed to send JotForm message.");
 			}
 		);
+	};
+
+	tableClosureRef.current = {
+		selectedForm,
+		sendJotFormMessage,
+		closeModal,
+		closeSendModal,
+		reset,
+		setManualInputValues,
+		pageSize,
+		setPageSize,
+		setLoader
 	};
 
 	// const buildUrl = (formId: string, inputValues: any, UUID?: string) => {
@@ -1649,8 +1666,6 @@ useEffect(() => {
 				}
 			}
 		});
-
-	TableComponent.displayName = "TableComponent";
 
 		const searchParams = formattedData.length > 0
 			? JSON.stringify(formattedData)
