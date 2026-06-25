@@ -1295,7 +1295,7 @@ export default function Upsell() {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-6">
+        <div className="h-full w-full overflow-y-auto bg-gradient-to-br from-gray-50 to-gray-100 p-6">
             <div className="mx-auto space-y-6 upsellMainWrapper">
                 {/* Controls Section */}
                 <Card className="shadow-sm">
