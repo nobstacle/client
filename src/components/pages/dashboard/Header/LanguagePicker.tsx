@@ -43,7 +43,7 @@ export const LanguagePicker: React.FC<LanguagePickerPropsI> = ({
 
   return (
     <select
-      className={isMobile ? 'w-full rounded-md' : `rounded-md truncate ${dense ? 'text-xs' : ''}`}
+      className={isMobile ? 'w-full rounded-md border border-gray-300 p-1' : `rounded-md border border-gray-300 p-1 truncate ${dense ? 'text-xs' : ''}`}
       onChange={onChange}
       value={defaultValue}
       name={name}
@@ -51,7 +51,9 @@ export const LanguagePicker: React.FC<LanguagePickerPropsI> = ({
         maxWidth: isMobile ? '' : dense ? '112px' : '145px',
         textOverflow: 'ellipsis',
         overflow: 'hidden',
-        whiteSpace: 'nowrap'
+        whiteSpace: 'nowrap',
+        color: '#1f2937',
+        backgroundColor: '#ffffff',
       }}
       {...registerActive}
     >
@@ -62,7 +64,9 @@ export const LanguagePicker: React.FC<LanguagePickerPropsI> = ({
           style={{
             textOverflow: 'ellipsis',
             overflow: 'hidden',
-            whiteSpace: 'nowrap'
+            whiteSpace: 'nowrap',
+            color: '#1f2937',
+            backgroundColor: '#ffffff',
           }}
         >
           {name}

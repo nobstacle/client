@@ -214,15 +214,26 @@ export const StationPicker: React.FC<{ cb?: () => void }> = ({ cb }) => {
 
   return (
     <select
-      className="w-full min-w-[80px] rounded-md"
+      className="w-full min-w-[80px] rounded-md border border-gray-300 p-1"
       onChange={(e) => handleStationChange(e.currentTarget.value)}
       value={currentStation}
+      style={{
+        color: '#1f2937',
+        backgroundColor: '#ffffff',
+      }}
     >
       {Array(data?.stationCount || 10)
         .fill(1)
         .map((x, y) => x + y)
         .map((val) => (
-          <option value={String(val)} key={`station-${val}`}>
+          <option 
+            value={String(val)} 
+            key={`station-${val}`}
+            style={{
+              color: '#1f2937',
+              backgroundColor: '#ffffff',
+            }}
+          >
             Station {val}
           </option>
         ))}

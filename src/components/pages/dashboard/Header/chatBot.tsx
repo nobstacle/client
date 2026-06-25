@@ -42,7 +42,46 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true, isMob
   const userRole = session?.user?.Roles?.[0];
   const currentUserDefaultLang = companyData?.defaultLangCode || 'en';
   const selectedLang = params.get("lang") || currentUserDefaultLang;
-  const currentStation = Number(params.get("station") ?? 1);
+  const [currentStation, setCurrentStation] = useState<number>(1);
+
+  // Sync station from URL or localStorage initially and when search params change
+  useEffect(() => {
+    const getInitialStation = () => {
+      const urlStation = params.get("station");
+      if (urlStation) return Number(urlStation);
+      
+      const localStation = typeof window !== 'undefined' ? localStorage.getItem('nobstacle_selected_station') : null;
+      if (localStation) return Number(localStation);
+      
+      return 1;
+    };
+    setCurrentStation(getInitialStation());
+  }, [params]);
+
+  // Sync station from events or other tabs/storage updates reactively
+  useEffect(() => {
+    const handleStationChange = (event: CustomEvent) => {
+      const newStation = Number(event.detail.station);
+      console.log('[ChatBot] 📡 Station changed via event:', newStation);
+      setCurrentStation(newStation);
+    };
+
+    window.addEventListener('stationChanged', handleStationChange as EventListener);
+
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'nobstacle_selected_station' && e.newValue) {
+        const newStation = Number(e.newValue);
+        console.log('[ChatBot] 📡 Station changed via storage:', newStation);
+        setCurrentStation(newStation);
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+
+    return () => {
+      window.removeEventListener('stationChanged', handleStationChange as EventListener);
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, []);
 
   const stationMessages = messageStore.receivedMessage.filter(
     (msg) => msg.station === currentStation
@@ -132,10 +171,10 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true, isMob
 
   // Update iframe popup messages
   useEffect(() => {
-    if (isInIframe && stationMessages.length > 0) {
+    if (isInIframe) {
       updateChatPopupMessages();
     }
-  }, [stationMessages.length, isInIframe]);
+  }, [stationMessages.length, isInIframe, currentStation]);
 
   const isCurrentUserMessage = (messageRole: string) => {
     return messageRole === userRole;
@@ -204,7 +243,7 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true, isMob
 
     try {
       emitClearMessage({
-        station: Number(params.get("station") ?? 1),
+        station: currentStation,
       });
 
       setInputValue("");

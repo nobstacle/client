@@ -38,6 +38,11 @@ export default function HeaderOnlyPage() {
           setUser(sessionData.user);
           setLoading(false);
 
+          if (authTimeoutRef.current) {
+            clearTimeout(authTimeoutRef.current);
+            authTimeoutRef.current = null;
+          }
+
           window.parent.postMessage({
             type: 'AUTH_STATUS_UPDATE',
             isAuthenticated: true,
@@ -104,42 +109,48 @@ export default function HeaderOnlyPage() {
 
     window.addEventListener('message', handler);
 
-    // Request auth from extension (multiple times for reliability)
+    // Request auth from extension
     const requestAuth = () => {
       console.log('[HeaderOnly] 📨 Requesting auth from extension...');
       window.parent.postMessage({ type: 'REQUEST_AUTH' }, '*');
     };
 
-    // More aggressive auth requests
+    // Request auth once on mount
     requestAuth();
-    setTimeout(requestAuth, 200);  
-    setTimeout(requestAuth, 500);  
-    setTimeout(requestAuth, 800); 
-    setTimeout(requestAuth, 1200);
-    setTimeout(requestAuth, 1600); 
-    setTimeout(requestAuth, 2200); 
-    setTimeout(requestAuth, 3000); 
 
-  authTimeoutRef.current = setTimeout(async () => {
-    if (!authReceived) {
-      console.log('[HeaderOnly] ⏱️ Auth timeout - checking session with retries');
+    // Throttled fallbacks to avoid flooding messages/chrome storage calls
+    const retry1 = setTimeout(() => {
+      if (!authReceived && !user) requestAuth();
+    }, 500);
 
-      // Try multiple times with shorter delays
-      for (let i = 0; i < 7; i++) { // Increased from 5 to 7
-        const success = await checkSession();
-        if (success) {
-          console.log('[HeaderOnly] ✅ Session found on retry', i + 1);
-          break;
-        }
-        if (i < 6) {
-          await new Promise(resolve => setTimeout(resolve, 800)); // Reduced from 1000ms
+    const retry2 = setTimeout(() => {
+      if (!authReceived && !user) requestAuth();
+    }, 1500);
+
+    authTimeoutRef.current = setTimeout(async () => {
+      if (!authReceived && !user) {
+        console.log('[HeaderOnly] ⏱️ Auth timeout - checking session with retries');
+
+        // Try multiple times with shorter delays
+        for (let i = 0; i < 7; i++) {
+          if (authReceived || user) break;
+
+          const success = await checkSession();
+          if (success) {
+            console.log('[HeaderOnly] ✅ Session found on retry', i + 1);
+            break;
+          }
+          if (i < 6) {
+            await new Promise(resolve => setTimeout(resolve, 800));
+          }
         }
       }
-    }
-  }, 10000); 
+    }, 10000);
 
     return () => {
       window.removeEventListener('message', handler);
+      clearTimeout(retry1);
+      clearTimeout(retry2);
       if (authTimeoutRef.current) {
         clearTimeout(authTimeoutRef.current);
       }
