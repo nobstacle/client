@@ -147,6 +147,7 @@ export default function InformationNotes() {
                                                 </div>
                                             )
                                         }}
+                                        fallback="/placeholder-image.svg"
                                     />
                                 </div>
                             )}
@@ -235,12 +236,18 @@ export default function InformationNotes() {
             const result: PaginationResponse = await response.json();
             const newData = result.data || [];
 
+            // Normalize image URLs - backend returns imageUrl, frontend expects signedImageUrl
+            const normalizedData = newData.map(item => ({
+                ...item,
+                signedImageUrl: item.signedImageUrl || item.imageUrl || null
+            }));
+
             if (reset || page === 1) {
-                setInformationList(newData);
-                setOriginalInformationList(newData);
+                setInformationList(normalizedData);
+                setOriginalInformationList(normalizedData);
             } else {
-                setInformationList(prev => [...prev, ...newData]);
-                setOriginalInformationList(prev => [...prev, ...newData]);
+                setInformationList(prev => [...prev, ...normalizedData]);
+                setOriginalInformationList(prev => [...prev, ...normalizedData]);
             }
 
             setHasMore(result.hasMore || (newData.length === ITEMS_PER_PAGE));
@@ -548,7 +555,11 @@ export default function InformationNotes() {
                                     style={{
                                         objectFit: 'cover',
                                         borderRadius: '8px',
-                                        border: '1px solid #d9d9d9'
+                                        border: '1px solid #d9d9d9',
+                                        // Prevent flickering on mobile
+                                        willChange: 'auto',
+                                        transform: 'translateZ(0)',
+                                        backfaceVisibility: 'hidden'
                                     }}
                                     preview={{
                                         mask: (
@@ -565,6 +576,7 @@ export default function InformationNotes() {
                                             </div>
                                         )
                                     }}
+                                    fallback="/placeholder-image.svg"
                                 />
                             </div>
                         )}
@@ -877,6 +889,19 @@ export default function InformationNotes() {
                     
                     .ant-form-item-label > label {
                         height: auto !important;
+                    }
+                    
+                    /* Mobile image optimization - prevent flickering */
+                    .ant-image {
+                        -webkit-backface-visibility: hidden !important;
+                        -webkit-transform: translateZ(0) !important;
+                        -webkit-perspective: 1000 !important;
+                        -webkit-transform-style: preserve-3d !important;
+                    }
+                    
+                    .ant-image-img {
+                        -webkit-backface-visibility: hidden !important;
+                        -webkit-transform: translateZ(0) !important;
                     }
                 }
             `}</style>

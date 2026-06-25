@@ -1485,3 +1485,37 @@ body.nobstacle-active {
   backface-visibility: hidden !important;
   will-change: transform !important;
 }
+
+/* Fix Information page image flickering on mobile */
+img,
+.ant-image,
+.ant-image img {
+  -webkit-backface-visibility: hidden !important;
+  backface-visibility: hidden !important;
+  -webkit-transform: translateZ(0) !important;
+  transform: translateZ(0) !important;
+  -webkit-perspective: 1000 !important;
+  perspective: 1000;
+  -webkit-transform-style: preserve-3d !important;
+  transform-style: preserve-3d;
+}
+
+/* Additional mobile-specific fixes for image rendering */
+@media screen and (max-width: 768px) {
+  img,
+  .ant-image,
+  .ant-image img {
+    -webkit-backface-visibility: hidden !important;
+    backface-visibility: hidden !important;
+    -webkit-transform: translate3d(0, 0, 0) !important;
+    transform: translate3d(0, 0, 0) !important;
+    image-rendering: -webkit-optimize-contrast !important;
+    image-rendering: crisp-edges !important;
+  }
+  
+  /* Prevent layout shift during image loading */
+  .ant-image {
+    position: relative !important;
+    overflow: hidden !important;
+  }
+}

@@ -221,8 +221,16 @@ export default function ImageDashboard() {
                       objectFit: "cover",
                       width: "100%",
                       height: "100%",
+                      // Prevent flickering on mobile
+                      willChange: 'auto',
+                      transform: 'translateZ(0)',
+                      backfaceVisibility: 'hidden',
+                      WebkitBackfaceVisibility: 'hidden',
+                      WebkitTransform: 'translateZ(0)'
                     }}
                     src={val.url}
+                    loading="lazy"
+                    decoding="async"
                   />
                 </DraggableCardItem>
               ))}
