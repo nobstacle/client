@@ -2460,8 +2460,8 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                     // Create blob from binary data
                     const audioBlob = new Blob([bytes], { type: mimeType });
 
-                    // ALWAYS use English for speech recognition
-                    const recognitionLangCode = "en";
+                    // Use active language for speech recognition (fallback to "en")
+                    const recognitionLangCode = selectedLang || "en";
 
                     speechToTextMutation.mutate(
                         {

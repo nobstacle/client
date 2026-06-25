@@ -196,6 +196,34 @@ async function handleAuthCookiesReceived(cookies) {
   }
 }
 
+async function clearSessionCookies() {
+  try {
+    console.log('[Background] 🧹 Removing session cookies from browser...');
+    const domains = ['nobstacle.com', '.nobstacle.com', 'www.nobstacle.com', 'localhost', '127.0.0.1'];
+    const cookieNames = ['__Secure-next-auth.session-token', 'next-auth.session-token'];
+    
+    for (const domain of domains) {
+      const cookies = await chrome.cookies.getAll({ domain });
+      for (const cookie of cookies) {
+        if (cookieNames.includes(cookie.name)) {
+          const prefix = cookie.secure ? 'https://' : 'http://';
+          const cookieDomain = cookie.domain.startsWith('.') ? cookie.domain.substring(1) : cookie.domain;
+          const url = `${prefix}${cookieDomain}${cookie.path}`;
+          
+          await chrome.cookies.remove({
+            url: url,
+            name: cookie.name,
+            storeId: cookie.storeId
+          });
+          console.log(`[Background]   ✓ Removed cookie: ${cookie.name} from ${url}`);
+        }
+      }
+    }
+  } catch (error) {
+    console.error('[Background] ❌ Error removing cookies:', error);
+  }
+}
+
 // NEW: Monitor login tab for completion
 async function startLoginMonitoring(tabId) {
   console.log('[Background] 🔍 Starting login monitoring for tab:', tabId);
@@ -350,6 +378,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         sendResponse({ success: true });
       } else {
         console.log('[Background] ⚠️ No valid session - user logged out');
+
+        await clearSessionCookies();
 
         await chrome.storage.local.set({
           isAuthenticated: false,
