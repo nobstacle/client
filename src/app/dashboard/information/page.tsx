@@ -52,8 +52,9 @@ export default function InformationNotes() {
     const [currentPage, setCurrentPage] = useState(1);
     const [totalRecords, setTotalRecords] = useState(0);
     const observerRef = useRef<IntersectionObserver | null>(null);
-    const loadingRef = useRef<HTMLDivElement>(null);
     const debounceRef = useRef<NodeJS.Timeout>();
+    const isFetchingRef = useRef(false);
+    const loadMoreRef = useRef<() => void>(() => {});
     const { socket } = useSocketContext();
     const { emitUpdateInformation } = useSocketContext();
     const params = useSearchParams();
@@ -209,6 +210,7 @@ export default function InformationNotes() {
         }
 
         try {
+            isFetchingRef.current = true;
             const isFirstLoad = page === 1 && !search;
             if (isFirstLoad) {
                 setLoadingData(true);
@@ -251,6 +253,7 @@ export default function InformationNotes() {
         } finally {
             setLoadingData(false);
             setLoadingMore(false);
+            isFetchingRef.current = false;
         }
     }, [data?.user?.backendTokens?.at, Url]);
 
@@ -269,39 +272,44 @@ export default function InformationNotes() {
 
     // Load more data when intersection observer triggers
     const loadMore = useCallback(() => {
-        if (!loadingMore && hasMore && !searchTerm) {
+        if (!loadingMore && hasMore && !searchTerm && !isFetchingRef.current) {
             const nextPage = currentPage + 1;
             fetchInformation(nextPage, searchTerm);
         }
     }, [loadingMore, hasMore, currentPage, searchTerm, fetchInformation]);
 
-    // Set up intersection observer
+    // Keep loadMoreRef updated
     useEffect(() => {
-        if (loadingRef.current) {
+        loadMoreRef.current = loadMore;
+    }, [loadMore]);
+
+    // Set up stable callback ref for IntersectionObserver
+    const loadingRefCallback = useCallback((node: HTMLDivElement | null) => {
+        if (observerRef.current) {
+            observerRef.current.disconnect();
+            observerRef.current = null;
+        }
+
+        if (node) {
             observerRef.current = new IntersectionObserver(
                 (entries) => {
                     if (entries[0].isIntersecting) {
-                        loadMore();
+                        loadMoreRef.current();
                     }
                 },
                 { threshold: 0.1 }
             );
-            observerRef.current.observe(loadingRef.current);
+            observerRef.current.observe(node);
         }
-
-        return () => {
-            if (observerRef.current) {
-                observerRef.current.disconnect();
-            }
-        };
-    }, [loadMore]);
+    }, []);
 
     // Initial data fetch
+    const userToken = data?.user?.backendTokens?.at;
     useEffect(() => {
-        if (data?.user !== undefined) {
+        if (userToken) {
             fetchInformation(1, '', true);
         }
-    }, [data]);
+    }, [userToken, fetchInformation]);
 
     // Cleanup debounce on unmount
     useEffect(() => {
@@ -617,7 +625,7 @@ export default function InformationNotes() {
                                     {/* Loading indicator for mobile */}
                                     {(loadingMore || hasMore) && (
                                         <div
-                                            ref={loadingRef}
+                                            ref={loadingRefCallback}
                                             style={{
                                                 textAlign: 'center',
                                                 padding: '20px',
@@ -649,7 +657,7 @@ export default function InformationNotes() {
                                     {/* Loading indicator for desktop */}
                                     {(loadingMore || hasMore) && (
                                         <div
-                                            ref={loadingRef}
+                                            ref={loadingRefCallback}
                                             style={{
                                                 textAlign: 'center',
                                                 padding: '20px',

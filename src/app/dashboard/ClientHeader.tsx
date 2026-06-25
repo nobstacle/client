@@ -1406,6 +1406,12 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
 
     const handleLogout = async () => {
         localStorage.clear();
+        if (typeof window !== 'undefined') {
+            window.postMessage({ type: 'LOGOUT_REQUEST' }, '*');
+            if (window.parent !== window) {
+                window.parent.postMessage({ type: 'LOGOUT_REQUEST' }, '*');
+            }
+        }
         await signOut({
             redirect: true,
             callbackUrl: "/"
@@ -2914,6 +2920,14 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
             transform: translateY(0);
         }
     }
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+        }
+        to {
+            opacity: 1;
+        }
+    }
 `}</style>
             <div style={{
                 width: '100%',
@@ -2965,6 +2979,23 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                     {/* Dropdown Menu */}
                                     {dropdownMenuOpen && (
                                         <>
+                                            {!isInIframe && (
+                                                <div
+                                                    onClick={() => setDropdownMenuOpen(false)}
+                                                    style={{
+                                                        position: 'fixed',
+                                                        top: 0,
+                                                        left: 0,
+                                                        width: '100vw',
+                                                        height: '100vh',
+                                                        backgroundColor: 'rgba(15, 23, 42, 0.3)',
+                                                        backdropFilter: 'blur(8px)',
+                                                        WebkitBackdropFilter: 'blur(8px)',
+                                                        zIndex: 999,
+                                                        animation: 'fadeIn 0.25s ease-out',
+                                                    }}
+                                                />
+                                            )}
                                             {isInIframe ? (
                                                 (() => {
                                                     const iframeRect = dropdownMenuRef.current?.getBoundingClientRect();
@@ -3105,19 +3136,17 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                                 <div
                                                     style={{
                                                         position: 'fixed',
-                                                        top: '3.5rem',
-                                                        left: '3%',
-                                                        right: '3%',
-                                                        backgroundColor: 'rgba(255, 255, 255, 0.7)',
-                                                        backdropFilter: 'blur(10px)',
-                                                        WebkitBackdropFilter: 'blur(10px)',
-                                                        boxShadow: '0 10px 25px -5px rgba(0,0,0,0.2), 0 10px 10px -5px rgba(0,0,0,0.1)',
+                                                        top: '4rem',
+                                                        left: '4%',
+                                                        right: '4%',
+                                                        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                                                        boxShadow: '0 20px 25px -5px rgba(0,0,0,0.15), 0 10px 10px -5px rgba(0,0,0,0.05)',
                                                         zIndex: 1000,
-                                                        maxHeight: 'calc(100vh - 3.5rem - 6%)',
+                                                        maxHeight: 'calc(100vh - 4.5rem - 8%)',
                                                         overflowY: 'auto',
-                                                        borderRadius: '12px',
-                                                        border: '1px solid rgba(59, 89, 152, 0.3)',
-                                                        animation: 'slideDown 0.3s ease-out',
+                                                        borderRadius: '20px',
+                                                        border: '1px solid rgba(255, 255, 255, 0.6)',
+                                                        animation: 'slideDown 0.35s cubic-bezier(0.16, 1, 0.3, 1)',
                                                     }}
                                                 >
                                                     <div className="p-5 space-y-6 max-w-screen-sm mx-auto">
@@ -4340,6 +4369,11 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                 open={drawerOpen}
                 height="auto"
                 className="block lg:hidden"
+                maskStyle={{
+                    backdropFilter: 'blur(8px)',
+                    WebkitBackdropFilter: 'blur(8px)',
+                    backgroundColor: 'rgba(15, 23, 42, 0.3)'
+                }}
                 bodyStyle={{
                     padding: '24px',
                     backgroundColor: '#f8fafc',

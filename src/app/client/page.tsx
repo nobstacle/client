@@ -127,15 +127,57 @@ const NetworkStatusIndicator = () => {
 
 const ClientStationPicker = () => {
   const { clearReceivedContent } = useMessageStore();
-  const { emitLeaveChat, socketConnected } = useSocketContext();
+  const { emitLeaveChat, socketConnected, socket } = useSocketContext();
   const searchParams = useSearchParams();
   const { isOpen, handleOpen, handleClose } = useDisclousure();
+  const [testingConnection, setTestingConnection] = useState(false);
+  const [testResult, setTestResult] = useState<string | null>(null);
   const fullscreenHoldTimerRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
   const fullscreenHoldStartRef = useRef<number | null>(null);
   const fullscreenHoldReadyRef = useRef(false);
 
+  const handleTestConnection = () => {
+    if (!socket || !socket.connected) {
+      setTestResult("Offline");
+      return;
+    }
+
+    setTestingConnection(true);
+    setTestResult(null);
+
+    const station = Number(searchParams.get("station") ?? 1);
+
+    // Force re-join room
+    socket.emit("join-chat", { station });
+
+    const startTime = Date.now();
+
+    // Listen for pong response once
+    socket.once("pong-test", (data: any) => {
+      const latency = Date.now() - startTime;
+      setTestingConnection(false);
+      setTestResult(`Verified: ${latency}ms latency, Station ${station} Room Active`);
+      setTimeout(() => setTestResult(null), 5000);
+    });
+
+    // Send ping
+    socket.emit("ping-test", { station });
+
+    // Timeout after 3 seconds
+    setTimeout(() => {
+      setTestingConnection(false);
+      setTestResult((prev) => (prev && prev.startsWith("Verified") ? prev : "Ping timeout. Check backend."));
+    }, 3000);
+  };
+
   const handleLogout = async () => {
     localStorage.clear();
+    if (typeof window !== "undefined") {
+      window.postMessage({ type: "LOGOUT_REQUEST" }, "*");
+      if (window.parent !== window) {
+        window.parent.postMessage({ type: "LOGOUT_REQUEST" }, "*");
+      }
+    }
     await signOut({
       redirect: true,
       callbackUrl: "/"
@@ -218,17 +260,33 @@ const ClientStationPicker = () => {
         style={{ right: '0.5rem', bottom: '0.5rem', height: '4rem', width: '8rem' }}
       /> */}
       <Modal title="" isOpen={isOpen} closeModal={handleClose}>
-        <div className="mb-4 flex w-full justify-end ">
+        <div className="mb-4 flex w-full flex-col items-end gap-2">
           {socketConnected ? (
             <div className="flex items-center gap-2">
               <p className="text-xs text-gray-400">Status: </p>
               <span className="block h-[10px] w-[10px] rounded-full bg-green-600" />
+              <p className="text-xs text-green-600 font-medium">Connected</p>
             </div>
           ) : (
             <div className="flex items-center gap-2">
               <p className="text-xs text-gray-400">Status: </p>
               <span className="block h-[10px] w-[10px] rounded-full bg-danger-dark" />
+              <p className="text-xs text-red-600 font-medium">Disconnected</p>
             </div>
+          )}
+
+          <button 
+            onClick={handleTestConnection}
+            disabled={testingConnection}
+            className="text-[10px] px-2 py-1 bg-gray-100 hover:bg-gray-200 disabled:opacity-50 text-gray-600 rounded border border-gray-200 transition-colors"
+          >
+            {testingConnection ? "Syncing..." : "Sync & Test Connection"}
+          </button>
+
+          {testResult && (
+            <p className={`text-[10px] font-medium ${testResult.startsWith("Verified") ? "text-green-600" : "text-red-500"}`}>
+              {testResult}
+            </p>
           )}
         </div>
         <div className="flex w-full flex-col justify-center">

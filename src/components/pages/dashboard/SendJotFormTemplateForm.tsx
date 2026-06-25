@@ -735,6 +735,7 @@ useEffect(() => {
 				title: field.text,
 				dataIndex: field.text,
 				key: field.text,
+				width: 200,
 				render: (text: any, record: any) => {
 					let value = text || record[field.text] || record[field.name] || '-';
 
@@ -774,8 +775,8 @@ useEffect(() => {
 					}
 
 					return (
-						<div className="flex items-center gap-2 group">
-							<div className="max-w-[200px] overflow-hidden text-ellipsis whitespace-nowrap min-w-[160px]">
+						<div className="relative group pr-7 w-full flex items-center justify-between">
+							<div className="overflow-hidden text-ellipsis whitespace-nowrap mr-2">
 								{value}
 							</div>
 							{isEditable && (
@@ -784,12 +785,13 @@ useEffect(() => {
 									size="small"
 									icon={<FaEdit size={10} />}
 									onClick={() => handleEditStart(recordId, field.text, value, field)}
-									className="min-w-[24px] h-6 hidden md:block opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+									className="min-w-[24px] h-6 hidden md:flex opacity-0 group-hover:opacity-100 transition-opacity duration-200 absolute right-0 top-1/2 -translate-y-1/2 items-center justify-center"
 									title="Edit this field"
 									style={{
 										backgroundColor: '#3b5998',
 										borderColor: '#3b5998',
-										color: 'white'
+										color: 'white',
+										padding: 0
 									}}
 								/>
 							)}

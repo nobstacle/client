@@ -9,28 +9,18 @@ export const Logout: React.FC = () => {
   const handleLogout = async () => {
     try {
       setIsLoggingOut(true);
-      const response = await fetch('/api/auth/logout', {
-        method: 'POST',
-        credentials: 'include',
-      });
-
-      if (response.ok) {
-        console.log('✓ Server cookies cleared');
-      } else {
-        console.warn('⚠ Logout API failed, continuing anyway...');
-      }
 
       if (typeof window !== 'undefined') {
         localStorage.clear();
         sessionStorage.clear();
         console.log('✓ Local storage cleared');
-      }
 
-      if (window.parent !== window) {
-        window.parent.postMessage({
-          type: 'LOGOUT_REQUEST'
-        }, '*');
-        console.log('✓ Extension notified');
+        // Notify extension regardless of iframe status
+        window.postMessage({ type: 'LOGOUT_REQUEST' }, '*');
+        if (window.parent !== window) {
+          window.parent.postMessage({ type: 'LOGOUT_REQUEST' }, '*');
+        }
+        console.log('✓ Extension logout request sent');
       }
 
       await signOut({
@@ -40,7 +30,11 @@ export const Logout: React.FC = () => {
       window.location.href = '/';
 
     } catch (error) {
-      await signOut({ redirect: false });
+      try {
+        await signOut({ redirect: false });
+      } catch (e) {
+        console.error('NextAuth signOut error:', e);
+      }
       window.location.href = '/';
     } finally {
       setIsLoggingOut(false);

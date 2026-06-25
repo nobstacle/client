@@ -65,7 +65,7 @@ export const RegisterForm: React.FC = () => {
       <div className="mb-2">
         <h1 className="text-3xl font-bold text-gray-900">Start your 30-day trial</h1>
         <p className="mt-2 text-sm text-gray-600">
-          We'll create your admin account first, then you can finish your company setup right away.
+          {"We'll create your admin account first, then you can finish your company setup right away."}
         </p>
       </div>
 

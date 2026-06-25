@@ -68,6 +68,15 @@ if (isNobstacleWebsite) {
           });
 
           return true;
+        } else {
+          console.log('[Nobstacle Content] ⚠️ User logged out or no session');
+          chrome.runtime.sendMessage({
+            action: 'authCookiesFromNobstacle',
+            cookies: [],
+            sessionData: null,
+            user: null,
+            timestamp: Date.now()
+          });
         }
       }
     } catch (error) {
@@ -2385,9 +2394,27 @@ async function injectHeader() {
     function createThreeDotsDropdown(content) {
       // Remove existing
       document.getElementById('nobstacle-threedots-dropdown')?.remove();
+      document.getElementById('nobstacle-threedots-overlay')?.remove();
 
       const iframe = document.getElementById('nobstacle-header-iframe');
       if (!iframe) return;
+
+      const overlay = document.createElement('div');
+      overlay.id = 'nobstacle-threedots-overlay';
+      overlay.style.cssText = `
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        background: rgba(0, 0, 0, 0.4) !important;
+        backdrop-filter: blur(4px) !important;
+        -webkit-backdrop-filter: blur(4px) !important;
+        z-index: 2147483646 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+      `;
+      document.body.appendChild(overlay);
 
       const dropdown = document.createElement('div');
       dropdown.id = 'nobstacle-threedots-dropdown';
@@ -2420,6 +2447,7 @@ async function injectHeader() {
         if (collapseBtn) {
           collapseBtn.addEventListener('click', () => {
             dropdown.remove();
+            overlay.remove();
             iframe.contentWindow.postMessage({
               type: 'THREE_DOTS_DROPDOWN_CLOSED'
             }, '*');
@@ -2459,18 +2487,25 @@ async function injectHeader() {
         }
       }, 100);
 
-      // Close on outside click
+      // Close on backdrop overlay click or outside click
+      const closeHandler = () => {
+        dropdown.remove();
+        overlay.remove();
+        iframe.contentWindow.postMessage({
+          type: 'THREE_DOTS_DROPDOWN_CLOSED'
+        }, '*');
+      };
+
+      overlay.addEventListener('click', closeHandler);
+
       setTimeout(() => {
-        const closeHandler = (e) => {
-          if (!dropdown.contains(e.target) && e.target !== iframe) {
-            dropdown.remove();
-            iframe.contentWindow.postMessage({
-              type: 'THREE_DOTS_DROPDOWN_CLOSED'
-            }, '*');
-            document.removeEventListener('mousedown', closeHandler);
+        const outsideClickHandler = (e) => {
+          if (!dropdown.contains(e.target) && e.target !== iframe && e.target !== overlay) {
+            closeHandler();
+            document.removeEventListener('mousedown', outsideClickHandler);
           }
         };
-        document.addEventListener('mousedown', closeHandler);
+        document.addEventListener('mousedown', outsideClickHandler);
       }, 200);
 
       addDebugLog('✓ Three dots dropdown created');
@@ -2480,6 +2515,18 @@ async function injectHeader() {
     const handler = async (event) => {
       if (!ALLOWED_IFRAME_ORIGINS.includes(event.origin)) {
         return;
+      }
+
+      // LOGOUT_REQUEST or LOGOUT
+      if (event.data.type === 'LOGOUT_REQUEST' || event.data.type === 'LOGOUT') {
+        console.log('[Content Script] 🔔 Logout request from iframe');
+        chrome.runtime.sendMessage({
+          action: 'authCookiesFromNobstacle',
+          cookies: [],
+          sessionData: null,
+          user: null,
+          timestamp: Date.now()
+        });
       }
 
       // REQUEST_AUTH
