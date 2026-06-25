@@ -1474,3 +1474,14 @@ body.nobstacle-active {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* Fix Safari/iOS image trembling and blinking bug on iPhone/iPad */
+.HandoverMainWrapper img,
+.HandoverMainWrapper .ant-image,
+.HandoverMainWrapper .ant-image img {
+  -webkit-transform: translate3d(0, 0, 0) !important;
+  transform: translate3d(0, 0, 0) !important;
+  -webkit-backface-visibility: hidden !important;
+  backface-visibility: hidden !important;
+  will-change: transform !important;
+}
