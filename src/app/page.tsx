@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import Header from '@/components/home/Header';
 import Hero from '@/components/home/Hero';
 import WhatIsNobstacle from '@/components/home/WhatIsNobstacle';
@@ -15,13 +15,10 @@ import Process from '@/components/home/Process';
 import FAQ from '@/components/home/Faq';
 import Contact from '@/components/home/Contact';
 import Footer from '@/components/home/Footer';
-import Modal from '@/components/home/Modal';
 import ScrollToTop from '@/components/home/ScrollToTop';
 import "@/styles/home.css";
 
 export default function Home() {
-  const [privacyModalOpen, setPrivacyModalOpen] = useState(false);
-  const [termsModalOpen, setTermsModalOpen] = useState(false);
 
   // Scroll to top on mount
   useEffect(() => {
@@ -122,26 +119,7 @@ export default function Home() {
       <Contact />
 
       {/* Footer */}
-      <Footer
-        onPrivacyClick={() => setPrivacyModalOpen(true)}
-        onTermsClick={() => setTermsModalOpen(true)}
-      />
-
-      <Modal
-        isOpen={privacyModalOpen}
-        onClose={() => setPrivacyModalOpen(false)}
-        title="Privacy Policy"
-      >
-        <p>Content...</p>
-      </Modal>
-
-      <Modal
-        isOpen={termsModalOpen}
-        onClose={() => setTermsModalOpen(false)}
-        title="Terms of Service"
-      >
-        <p>Content...</p>
-      </Modal>
+      <Footer />
 
       <ScrollToTop />
     </main>

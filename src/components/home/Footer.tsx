@@ -1,11 +1,6 @@
 import { FaLinkedin, FaFacebook, FaYoutube, FaInstagram } from 'react-icons/fa';
 
-interface FooterProps {
-  onPrivacyClick: () => void;
-  onTermsClick: () => void;
-}
-
-export default function Footer({ onPrivacyClick, onTermsClick }: FooterProps) {
+export default function Footer() {
   return (
     <footer className="site-footer">
       <div className="container">
@@ -32,7 +27,7 @@ export default function Footer({ onPrivacyClick, onTermsClick }: FooterProps) {
             <h4>Legal</h4>
             <ul>
               <li><a href="/privacy">Privacy Policy</a></li>
-              <li><a onClick={onTermsClick}>Terms of Service</a></li>
+              <li><a href="/terms">Terms of Service</a></li>
             </ul>
           </div>
           <div className="footer-col">

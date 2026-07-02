@@ -81,7 +81,14 @@ export default function RegisterPage() {
           </p>
           
           <p className="mt-4 text-center text-xs text-gray-500">
-            By registering, you agree to our Terms of Service and Privacy Policy.
+            By registering, you agree to our{" "}
+            <Link href="/terms" target="_blank" className="underline hover:text-gray-700 transition-colors">
+              Terms of Service
+            </Link>{" "}
+            and{" "}
+            <Link href="/privacy" target="_blank" className="underline hover:text-gray-700 transition-colors">
+              Privacy Policy
+            </Link>.
           </p>
         </div>
       </div>
