@@ -10,39 +10,28 @@ export const Logout: React.FC = () => {
     try {
       setIsLoggingOut(true);
 
+      // Clear client-side storage
       if (typeof window !== 'undefined') {
         localStorage.clear();
         sessionStorage.clear();
-        console.log('✓ Local storage cleared');
       }
 
-      // 1. Wait for NextAuth signOut to complete clearing NextAuth cookies/session
-      await signOut({
-        redirect: false
-      });
-      console.log('✓ NextAuth signOut completed');
-
-      // 2. Notify extension
+      // Notify extension before signOut
       if (typeof window !== 'undefined') {
         window.postMessage({ type: 'LOGOUT_REQUEST' }, '*');
         if (window.parent !== window) {
           window.parent.postMessage({ type: 'LOGOUT_REQUEST' }, '*');
         }
-        console.log('✓ Extension logout request sent');
       }
 
-      // 3. Redirect manually
-      window.location.href = '/';
+      // Use redirect: true so the server handles cookie clearing via Set-Cookie
+      // headers (httpOnly cookies cannot be cleared via document.cookie)
+      await signOut({ redirect: true, callbackUrl: '/' });
 
     } catch (error) {
-      try {
-        await signOut({ redirect: false });
-      } catch (e) {
-        console.error('NextAuth signOut error:', e);
-      }
-      window.location.href = '/';
-    } finally {
-      setIsLoggingOut(false);
+      console.error('Logout error:', error);
+      // Fallback: navigate to NextAuth signout endpoint directly
+      window.location.href = '/api/auth/signout?callbackUrl=%2F';
     }
   };
 

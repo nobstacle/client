@@ -132,7 +132,7 @@ const ClientStationPicker = () => {
   const { isOpen, handleOpen, handleClose } = useDisclousure();
   const [testingConnection, setTestingConnection] = useState(false);
   const [testResult, setTestResult] = useState<string | null>(null);
-  const fullscreenHoldTimerRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
+  const fullscreenHoldTimerRef = useRef<number | null>(null);
   const fullscreenHoldStartRef = useRef<number | null>(null);
   const fullscreenHoldReadyRef = useRef(false);
 
@@ -172,16 +172,14 @@ const ClientStationPicker = () => {
 
   const handleLogout = async () => {
     localStorage.clear();
-    await signOut({
-      redirect: false
-    });
     if (typeof window !== "undefined") {
       window.postMessage({ type: "LOGOUT_REQUEST" }, "*");
       if (window.parent !== window) {
         window.parent.postMessage({ type: "LOGOUT_REQUEST" }, "*");
       }
     }
-    window.location.href = "/";
+    // Use redirect: true so the server handles httpOnly cookie clearing
+    await signOut({ redirect: true, callbackUrl: "/" });
   };
 
   const clearFullscreenHold = () => {

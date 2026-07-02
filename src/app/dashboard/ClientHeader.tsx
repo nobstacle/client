@@ -1,6 +1,6 @@
 'use client';
 // import ReactDOM from 'react-dom';
-import { useCallback, useEffect, useRef, useMemo } from "react";
+import { useCallback, useEffect, useRef, useMemo, useState } from "react";
 
 declare global {
     interface Window {
@@ -15,7 +15,8 @@ declare global {
     }
 }
 
-import { useState } from "react";
+const STATION_STORAGE_KEY = 'nobstacle_selected_station';
+
 import { Drawer, Button, List, Tag, Spin, Empty, message, Modal, Form, Input, Alert } from "antd";
 import { MenuOutlined, CloseOutlined, SettingOutlined, MoreOutlined } from "@ant-design/icons";
 import { HeaderLanguagePicker } from "../../components/pages/dashboard/Header/LanguagePicker";
@@ -50,8 +51,6 @@ import {
     IoMap,
     IoQrCode
 } from 'react-icons/io5';
-import { Logout } from "../../components/pages/dashboard/Header/Logout";
-import { LogoutIcon } from "../../components/icons/sidebar/LogoutIcon";
 import { Session } from 'next-auth';
 import { CompanyLogo } from "../../components/pages/dashboard/Header/CompanyLogo";
 import { GiHamburgerMenu } from "react-icons/gi";
@@ -170,7 +169,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
     const { emitSendMessage, emitClearMessage, emitLeaveChat } = useSocketContext();
     const speechToTextMutation = useUploadControllerUploadSpeechToTextFile();
     const [allPackages, setAllPackages] = useState([]);
-    let Url = process.env.NEXT_PUBLIC_BACKEND_URL;
+    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
     const { data } = useSession();
     const [selectedCategories, setSelectedCategories] = useState(null);
     const [selectedPackages, setSelectedPackages] = useState([]);
@@ -329,14 +328,12 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         }
     }, [data?.user?.backendTokens?.at, categoriesFetched]);
 
-    const STATION_STORAGE_KEY = 'nobstacle_selected_station';
-
     useEffect(() => {
         const fetchPackages = async () => {
             if (allPackages.length > 0) return;
 
             try {
-                const response = await fetch(`${Url}/api/v1/uploads/get-all-packages?limit=9999`, {
+                const response = await fetch(`${backendUrl}/api/v1/uploads/get-all-packages?limit=9999`, {
                     method: 'GET',
                     headers: {
                         Authorization: `Bearer ${data?.user?.backendTokens?.at}`,
@@ -358,139 +355,9 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         if (data?.user?.backendTokens?.at && allPackages.length === 0) {
             fetchPackages();
         }
-    }, [data?.user?.backendTokens?.at, allPackages.length, Url]);
+    }, [data?.user?.backendTokens?.at, allPackages.length, backendUrl]);
 
     const selectedLang = params.get("lang") || companyData?.defaultLangCode || "en";
-
-    useEffect(() => {
-        if (!isInIframe) return;
-
-        const handleMessage = (event: MessageEvent) => {
-            // When iframe loads, ask extension for station
-            if (event.data.type === 'INITIAL_STATION') {
-                const station = String(event.data.station);
-                console.log('[ClientHeader] 📍 Initial station from extension:', station);
-
-                // Update states
-                setCurrentStation(station);
-                setDisplayStation(station);
-
-                // Update localStorage
-                localStorage.setItem(STATION_STORAGE_KEY, station);
-
-                // Update URL if different
-                const urlStation = params.get("station");
-                if (urlStation !== station) {
-                    const currentUrl = new URL(window.location.href);
-                    currentUrl.searchParams.set('station', station);
-                    window.history.replaceState({}, '', currentUrl.toString());
-                }
-            }
-
-            if (event.data.type === 'STATION_CHANGE') {
-                const newStation = String(event.data.station);
-                console.log('[ClientHeader] 🔄 Station change request:', newStation);
-
-                // Update states immediately
-                setCurrentStation(newStation);
-                setDisplayStation(newStation);
-
-                // Save to localStorage (iframe CAN do this)
-                localStorage.setItem(STATION_STORAGE_KEY, newStation);
-                console.log('[ClientHeader] ✅ Saved to localStorage:', newStation);
-
-                // Update URL
-                const currentUrl = new URL(window.location.href);
-                currentUrl.searchParams.set('station', newStation);
-                window.history.pushState({}, '', currentUrl.toString());
-                console.log('[ClientHeader] ✅ Updated URL with station:', newStation);
-
-                // Dispatch event for other listeners
-                const stationEvent = new CustomEvent('stationChanged', {
-                    detail: { station: newStation }
-                });
-                window.dispatchEvent(stationEvent);
-                console.log('[ClientHeader] ✅ Dispatched stationChanged event');
-
-                if (isInIframe) {
-                    console.log('[ClientHeader] 📤 Sending SAVE_STATION_TO_STORAGE to parent...');
-                    window.parent.postMessage({
-                        type: 'SAVE_STATION_TO_STORAGE',
-                        station: newStation
-                    }, '*');
-                    console.log('[ClientHeader] ✅ Message sent to parent for chrome.storage save');
-                }
-
-                // Show success message
-                message.success(`Switched to Station ${newStation}`);
-            }
-
-            if (event.data.type === 'THREE_DOTS_DROPDOWN_CLOSED') {
-                setDropdownMenuOpen(false);
-            }
-
-            if (event.data.type === 'HAMBURGER_DROPDOWN_CLOSED') {
-                setIsHamburgerMenuOpen(false);
-            }
-
-            if (event.data.type === 'COLLAPSE_MENU') {
-                setDropdownMenuOpen(false);
-            }
-
-        };
-
-        window.addEventListener('message', handleMessage);
-        return () => window.removeEventListener('message', handleMessage);
-    }, [isInIframe]);
-
-    useEffect(() => {
-        if (!isInIframe) return;
-
-        const handleStationChange = (event: MessageEvent) => {
-
-            if (event.data.type === 'STATION_CHANGE') {
-                const newStation = String(event.data.station);
-                console.log('[ClientHeader] 🔄 Station change request:', newStation);
-
-                // Update states immediately
-                setCurrentStation(newStation);
-                setDisplayStation(newStation);
-
-                // Save to localStorage (iframe CAN do this)
-                localStorage.setItem(STATION_STORAGE_KEY, newStation);
-                console.log('[ClientHeader] ✅ Saved to localStorage:', newStation);
-
-                // Update URL
-                const currentUrl = new URL(window.location.href);
-                currentUrl.searchParams.set('station', newStation);
-                window.history.pushState({}, '', currentUrl.toString());
-                console.log('[ClientHeader] ✅ Updated URL with station:', newStation);
-
-                // Dispatch event for other listeners
-                const stationEvent = new CustomEvent('stationChanged', {
-                    detail: { station: newStation }
-                });
-                window.dispatchEvent(stationEvent);
-                console.log('[ClientHeader] ✅ Dispatched stationChanged event');
-
-                if (isInIframe) {
-                    console.log('[ClientHeader] 📤 Sending SAVE_STATION_TO_STORAGE to parent...');
-                    window.parent.postMessage({
-                        type: 'SAVE_STATION_TO_STORAGE',
-                        station: newStation
-                    }, '*');
-                    console.log('[ClientHeader] ✅ Message sent to parent for chrome.storage save');
-                }
-
-                // Show success message
-                message.success(`Switched to Station ${newStation}`);
-            }
-
-        };
-
-        window.addEventListener('message', handleStationChange);
-        return () => window.removeEventListener('message', handleStationChange);
-    }, [isInIframe]);
 
     const getAssignedForms = async () => {
         const Url = process.env.NEXT_PUBLIC_BACKEND_URL;
@@ -527,8 +394,8 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
             });
 
             if (response.ok) {
-                const data = await response.json();
-                return data?.formId || null;
+                const result = await response.json();
+                return result?.formId || null;
             }
         } catch (error) {
             console.error('Error fetching default form:', error);
@@ -548,7 +415,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         }
 
         try {
-            const response = await fetch(`${Url}/api/v1/uploads/get-all-categories?fetchAll=true&limit=100`, {
+            const response = await fetch(`${backendUrl}/api/v1/uploads/get-all-categories?fetchAll=true&limit=100`, {
                 headers: {
                     Authorization: `Bearer ${data?.user?.backendTokens?.at}`,
                     'Cache-Control': 'no-cache'
@@ -745,7 +612,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
             } else {
                 // Tag+type exists, update if we found a better match for selected or default language
                 const existing = templateMap.get(mapKey);
-                
+
                 // If this version is in the selected language and we haven't found one yet
                 if (isSelected && !existing.availableInSelectedLang) {
                     templateMap.set(mapKey, {
@@ -756,8 +623,8 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                         availableInSelectedLang: true,
                         ...extraData
                     });
-                } 
-                
+                }
+
                 // If this version is the default language, store it as the fallback
                 if (isDefault) {
                     const currentMapEntry = templateMap.get(mapKey) || existing;
@@ -765,15 +632,15 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                         ...currentMapEntry,
                         defaultLangData: template
                     });
-                    
+
                     // If we still don't have a template in the selected language, use the default language template as primary
                     if (!templateMap.get(mapKey).availableInSelectedLang) {
-                         templateMap.set(mapKey, {
+                        templateMap.set(mapKey, {
                             ...templateMap.get(mapKey),
                             id: template.id,
                             templateData: template,
                             ...extraData
-                         });
+                        });
                     }
                 }
             }
@@ -990,7 +857,6 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         }
 
 
-        console.info("ffffffcontentExtracontentExtraffffgdgd", contentExtra);
         emitSendTemplate({
             refId: templateToSend?.id,
             langCode: langToSend,
@@ -1087,14 +953,14 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
             const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.nobstacle.com';
             const url = `${baseUrl}/forms/${uuid}`;
 
-            const params = new URLSearchParams(window.location.search);
-            const langCode = params.get("lang") || companyData?.defaultLangCode || "en";
+            const urlParams = new URLSearchParams(window.location.search);
+            const langCode = urlParams.get("lang") || companyData?.defaultLangCode || "en";
 
             emitSendJotForm({
                 refId: 1,
                 langCode: langCode,
                 refType: "TextTemplateMessage",
-                station: Number(params.get("station") ?? 1),
+                station: Number(urlParams.get("station") ?? 1),
                 directContent: url,
                 uuid: uuid,
             },
@@ -1110,7 +976,6 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
     useEffect(() => {
         if (isHamburgerMenuOpen && hamburgerMenuRef.current) {
             const rect = hamburgerMenuRef.current.getBoundingClientRect();
-            const isInIframe = window.self !== window.top;
 
             if (isMobileView) {
                 setHamburgerPosition({
@@ -1272,35 +1137,6 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
     `;
     }, []);
 
-    useEffect(() => {
-        if (!isInIframe) return;
-
-        const handleInitialStation = (event: MessageEvent) => {
-            if (event.data.type === 'INITIAL_STATION') {
-                const station = String(event.data.station);
-                console.log('[ClientHeader] 📍 Initial station from extension:', station);
-
-                // Update states
-                setCurrentStation(station);
-                setDisplayStation(station);
-
-                // Update localStorage
-                localStorage.setItem(STATION_STORAGE_KEY, station);
-
-                // Update URL if different
-                const urlStation = params.get("station");
-                if (urlStation !== station) {
-                    const currentUrl = new URL(window.location.href);
-                    currentUrl.searchParams.set('station', station);
-                    window.history.replaceState({}, '', currentUrl.toString());
-                }
-            }
-        };
-
-        window.addEventListener('message', handleInitialStation);
-        return () => window.removeEventListener('message', handleInitialStation);
-    }, [isInIframe]);
-
     const handleQRCodeClick = useCallback((template) => {
         justSelectedRef.current = true;
         setSearchValue(template.type === 'scroll' || template.type === 'Scroll'
@@ -1406,16 +1242,14 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
 
     const handleLogout = async () => {
         localStorage.clear();
-        await signOut({
-            redirect: false
-        });
         if (typeof window !== 'undefined') {
             window.postMessage({ type: 'LOGOUT_REQUEST' }, '*');
             if (window.parent !== window) {
                 window.parent.postMessage({ type: 'LOGOUT_REQUEST' }, '*');
             }
         }
-        window.location.href = "/";
+        // Use redirect: true so the server handles httpOnly cookie clearing
+        await signOut({ redirect: true, callbackUrl: '/' });
     };
 
     const generateSearchDropdownHTML = useCallback((templates, categories, isLoading, searchVal) => {
@@ -2097,7 +1931,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
 
         const handler = (event: MessageEvent) => {
 
-            if (event.data.type === 'HAMBURGER_CLOSED') {
+            if (event.data.type === 'HAMBURGER_CLOSED' || event.data.type === 'HAMBURGER_DROPDOWN_CLOSED') {
                 setIsHamburgerMenuOpen(false);
             }
 
@@ -3478,11 +3312,11 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                                     dataSource={filteredTemplates}
                                                     renderItem={(template) => {
                                                         const config = templateConfig[template.type];
-                                                return (
-                                                    <List.Item
-                                                        style={{
-                                                            cursor: 'pointer',
-                                                            padding: '16px',
+                                                        return (
+                                                            <List.Item
+                                                                style={{
+                                                                    cursor: 'pointer',
+                                                                    padding: '16px',
                                                                     borderBottom: '1px solid #f0f0f0',
                                                                 }}
                                                             >
@@ -3505,11 +3339,11 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                                                                 {config.icon}
                                                                             </div>
                                                                         }
-                                                                    title={
-                                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '15px' }}>
-                                                                            <span>{template.type === 'scroll' || template.type === 'Scroll'
-                                                                                ? toDisplayScrollTag(template.tag)
-                                                                                : template.tag}</span>
+                                                                        title={
+                                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '15px' }}>
+                                                                                <span>{template.type === 'scroll' || template.type === 'Scroll'
+                                                                                    ? toDisplayScrollTag(template.tag)
+                                                                                    : template.tag}</span>
                                                                             </div>
                                                                         }
                                                                     />
@@ -3559,7 +3393,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                 <nav
                     className={`w-full hidden lg:block ${isCompactDesktop ? 'px-2 py-1.5' : 'px-6'}`}
                     style={{
-                        backgroundColor:'#3b5998',
+                        backgroundColor: '#3b5998',
                         height: isCompactDesktop ? 'auto' : (isInIframe ? '3.5rem' : '4.09rem'),
                         minHeight: '3.5rem',
                         position: 'relative',
