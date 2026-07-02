@@ -13,10 +13,9 @@ export async function middleware(req: NextRequest) {
     pathname === "/pair" ||
     pathname.startsWith("/forms/") ||
     pathname === "/forms" ||
-    pathname.startsWith("/api/pairing") ||  // catches /api/pairing/login and /api/pairing/login/
-    pathname.includes("/api/pairing")        // extra safety net
+    pathname.startsWith("/api/pairing")   // catches /api/pairing/login and /api/pairing/login/
   ) {
-    console.log("✅ PAIRING PATH — bypassing auth:", pathname);
+    if (process.env.DEBUG_MIDDLEWARE) console.log("✅ PAIRING PATH — bypassing auth:", pathname);
     const response = NextResponse.next();
     response.headers.delete("X-Frame-Options");
     return response;
@@ -61,7 +60,6 @@ export async function middleware(req: NextRequest) {
   const publicPaths = [
     "/",
     "/home",
-    "/welcome",
     "/privacy",
     "/terms",
     "/login",
@@ -100,7 +98,7 @@ export async function middleware(req: NextRequest) {
 
   // ── Require auth ───────────────────────────────────────────────────────────
   if (!isPublicPath && !isAuthenticated) {
-    console.log("❌ Unauthenticated, redirecting to /:", pathname);
+    if (process.env.DEBUG_MIDDLEWARE) console.log("❌ Unauthenticated, redirecting to /:", pathname);
     url.pathname = "/";
     return NextResponse.redirect(url);
   }
