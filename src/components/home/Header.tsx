@@ -61,8 +61,8 @@ export default function Header() {
                 </div>
               </li>
               <li><a href="#features" onClick={closeNav}>Features</a></li>
-              <li><a href="#pricing" onClick={closeNav}>Pricing</a></li>
               <li><a href="#faq" onClick={closeNav}>FAQ</a></li>
+
               <li><a href="#contact" onClick={closeNav}>Contact</a></li>
 
               {/* Mobile-only */}

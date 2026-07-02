@@ -24,8 +24,8 @@ export default function Footer({ onPrivacyClick, onTermsClick }: FooterProps) {
             <h4>Quick Links</h4>
             <ul>
               <li><a href="#features">Features</a></li>
-              <li><a href="#pricing">Pricing</a></li>
               <li><a href="#contact">Book a Demo</a></li>
+
             </ul>
           </div>
           <div className="footer-col">

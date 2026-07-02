@@ -16,15 +16,24 @@ export default function Industries() {
   ];
 
   return (
-    <section id="industries">
-      <div className="container section-header">
-        <h3>Industries We Click</h3>
+    <section id="industries" aria-labelledby="industries-heading">
+      <div className="container section-header animate-on-scroll">
+        <h2 id="industries-heading">Industries We Serve</h2>
+        <p>
+          From hospitality to healthcare, Nobstacle adapts to any customer-facing environment.
+        </p>
       </div>
-      <div className="industry-scroller">
+      <div className="industry-scroller" role="region" aria-label="Industries served by Nobstacle">
         <div className="scroller-track">
           {[...industries, ...industries].map((industry, index) => (
             <div key={index} className="industry-card">
-              <Image src={industry.image} alt={industry.name} width={175} height={200} />
+              <Image
+                src={industry.image}
+                alt={`Nobstacle in the ${industry.name} industry`}
+                width={175}
+                height={200}
+                loading="lazy"
+              />
               <h3>{industry.name}</h3>
             </div>
           ))}
