@@ -99,17 +99,50 @@ export default function Dashboard() {
     const oldIndex = websites.findIndex((item) => item.id === item1);
     const newIndex = websites.findIndex((item) => item.id === item2);
 
-    let shallow = [...websites];
-    shallow = arrayMove(websites, oldIndex, newIndex);
+    if (oldIndex === -1 || newIndex === -1) {
+      console.error('Could not find items for sorting');
+      return;
+    }
 
-    shallow.forEach(({ id }, index) => {
+    // Create a shallow copy and move the item
+    let reorderedWebsites = arrayMove(websites, oldIndex, newIndex);
+
+    // Group by tag to update order properly
+    const groupedByTag = reorderedWebsites.reduce((acc, website) => {
+      if (!acc[website.tag]) {
+        acc[website.tag] = [];
+      }
+      acc[website.tag].push(website);
+      return acc;
+    }, {} as Record<string, GetWebsiteTemplateRes[]>);
+
+    // Get unique tags in the new order
+    const uniqueTags = reorderedWebsites
+      .map(w => w.tag)
+      .filter((tag, index, self) => self.indexOf(tag) === index);
+
+    // Rebuild the array with all language variants maintaining the new tag order
+    const finalOrderedWebsites: GetWebsiteTemplateRes[] = [];
+    let orderCounter = 1;
+
+    uniqueTags.forEach(tag => {
+      const tagWebsites = groupedByTag[tag];
+      tagWebsites.forEach(w => {
+        finalOrderedWebsites.push({ ...w, order: orderCounter });
+      });
+      orderCounter++;
+    });
+
+    // Update the order in the backend
+    finalOrderedWebsites.forEach(({ id, order }) => {
       updateTextTemplateOrder.mutate({
-        data: { order: index + 1 },
+        data: { order },
         id,
       });
     });
 
-    setWebsites(shallow);
+    // Update the state
+    setWebsites(finalOrderedWebsites);
   };
 
   const sendWebsiteTemplateMessage = (url: string) => {

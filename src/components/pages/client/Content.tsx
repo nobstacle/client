@@ -2929,6 +2929,7 @@ export const Content: React.FC = () => {
                 <iframe
                   className="h-full w-full"
                   src={messageStore.receivedContent?.content ?? ""}
+                  sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
                 />
               </SafeContentFrame>
             )

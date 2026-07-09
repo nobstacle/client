@@ -105,17 +105,50 @@ export default function Dashboard() {
     const oldIndex = texts.findIndex((item) => item.id === item1);
     const newIndex = texts.findIndex((item) => item.id === item2);
 
-    let shallow = [...texts];
-    shallow = arrayMove(texts, oldIndex, newIndex);
+    if (oldIndex === -1 || newIndex === -1) {
+      console.error('Could not find items for sorting');
+      return;
+    }
 
-    shallow.forEach(({ id }, index) => {
+    // Create a shallow copy and move the item
+    let reorderedTexts = arrayMove(texts, oldIndex, newIndex);
+
+    // Group by tag to update order properly
+    const groupedByTag = reorderedTexts.reduce((acc, text) => {
+      if (!acc[text.tag]) {
+        acc[text.tag] = [];
+      }
+      acc[text.tag].push(text);
+      return acc;
+    }, {} as Record<string, GetTextTemplateRes[]>);
+
+    // Get unique tags in the new order
+    const uniqueTags = reorderedTexts
+      .map(t => t.tag)
+      .filter((tag, index, self) => self.indexOf(tag) === index);
+
+    // Rebuild the array with all language variants maintaining the new tag order
+    const finalOrderedTexts: GetTextTemplateRes[] = [];
+    let orderCounter = 1;
+
+    uniqueTags.forEach(tag => {
+      const tagTexts = groupedByTag[tag];
+      tagTexts.forEach(t => {
+        finalOrderedTexts.push({ ...t, order: orderCounter });
+      });
+      orderCounter++;
+    });
+
+    // Update the order in the backend
+    finalOrderedTexts.forEach(({ id, order }) => {
       updateTextTemplateOrder.mutate({
-        data: { order: index + 1 },
+        data: { order },
         id,
       });
     });
 
-    setTexts(shallow);
+    // Update the state
+    setTexts(finalOrderedTexts);
   };
 
   const textsSource = searchTexts.length > 0 ? searchTexts : texts;

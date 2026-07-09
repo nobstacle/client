@@ -96,17 +96,50 @@ export default function MapsDashboard() {
     const oldIndex = maps.findIndex((item) => item.id === item1);
     const newIndex = maps.findIndex((item) => item.id === item2);
 
-    let shallow = [...maps];
-    shallow = arrayMove(maps, oldIndex, newIndex);
+    if (oldIndex === -1 || newIndex === -1) {
+      console.error('Could not find items for sorting');
+      return;
+    }
 
-    shallow.forEach(({ id }, index) => {
+    // Create a shallow copy and move the item
+    let reorderedMaps = arrayMove(maps, oldIndex, newIndex);
+
+    // Group by tag to update order properly
+    const groupedByTag = reorderedMaps.reduce((acc, map) => {
+      if (!acc[map.tag]) {
+        acc[map.tag] = [];
+      }
+      acc[map.tag].push(map);
+      return acc;
+    }, {} as Record<string, GetMapTemplateRes[]>);
+
+    // Get unique tags in the new order
+    const uniqueTags = reorderedMaps
+      .map(m => m.tag)
+      .filter((tag, index, self) => self.indexOf(tag) === index);
+
+    // Rebuild the array with all language variants maintaining the new tag order
+    const finalOrderedMaps: GetMapTemplateRes[] = [];
+    let orderCounter = 1;
+
+    uniqueTags.forEach(tag => {
+      const tagMaps = groupedByTag[tag];
+      tagMaps.forEach(m => {
+        finalOrderedMaps.push({ ...m, order: orderCounter });
+      });
+      orderCounter++;
+    });
+
+    // Update the order in the backend
+    finalOrderedMaps.forEach(({ id, order }) => {
       updateMapTemplateOrder.mutate({
-        data: { order: index + 1 },
+        data: { order },
         id,
       });
     });
 
-    setMaps(shallow);
+    // Update the state
+    setMaps(finalOrderedMaps);
   };
 
   const sendMapTemplateMessage = (origin: string, destination: string) => {
