@@ -1,8 +1,6 @@
 "use client";
-import { createContext, useContext } from "react";
+import { createContext, useContext, type ReactNode } from "react";
 import { useFetchCompany } from "../hooks/useFetchCompany";
-import { useFetchShortcut } from "../hooks/useFetchShortcut";
-
 export const CompanyContext = createContext<null>(null);
 
 export const useCompanyContext = () => {
@@ -20,10 +18,9 @@ export const useCompanyContext = () => {
 export const CompanyContextProvider = ({
   children,
 }: {
-  children: React.ReactNode;
+  children: ReactNode;
 }) => {
   useFetchCompany();
-  useFetchShortcut();
 
   return (
     <CompanyContext.Provider value={null}>{children}</CompanyContext.Provider>

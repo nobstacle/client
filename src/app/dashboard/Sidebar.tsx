@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { Session } from 'next-auth';
 import { ClientLink } from "../../components/pages/dashboard/Sidebar/ClientLink";
+import { GetUserResRolesItem } from "../../lib/client/model";
 import useCompanyStore from "../../lib/zustand/store/companyStore";
 import {
     IoImage,
@@ -250,10 +251,12 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
     const [displayExpanded, setDisplayExpanded] = useState(false);
     const [mounted, setMounted] = useState(false);
     const pathname = usePathname();
+    const searchParams = useSearchParams();
+    const searchParamsString = searchParams.toString();
     const company = useCompanyStore((state) => state.company);
 
     // Check if user is SAdmin
-    const isSAdmin = user?.user?.Roles?.includes("SAdmin");
+    const isSAdmin = user?.user?.Roles?.includes("SAdmin" as GetUserResRolesItem);
     const featureFlags = {
         display: company?.displayEnabled ?? true,
         screens: company?.screensEnabled ?? true,
@@ -341,7 +344,7 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
 
     const hasAccess = (roles?: string[]) => {
         if (!roles) return true;
-        return roles.some(role => user?.user.Roles?.includes(role));
+        return roles.some(role => user?.user.Roles?.includes(role as GetUserResRolesItem));
     };
 
     const isFeatureEnabled = (featureKey?: FeatureKey) => {
@@ -357,8 +360,12 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
         const isDisabled = !isFeatureEnabled(item.featureKey);
 
         return (
-            <li key={item.title} className="w-full" onClick={isDisabled ? undefined : closeSidebar}>
-                <div
+            <li key={item.title} className="w-full">
+                <ClientLink
+                    href={item.href}
+                    searchParamsString={searchParamsString}
+                    onClick={!isDisabled ? closeSidebar : undefined}
+                    disabled={isDisabled}
                     className={`
                         flex items-center gap-3 px-6 py-3 transition-colors duration-200
                         ${isCompactDesktop ? 'px-4 py-2.5 gap-2.5' : ''}
@@ -370,6 +377,7 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
                             ? 'bg-white/10 border-l-4 border-white'
                             : !isDisabled ? 'hover:bg-white/5 border-l-4 border-transparent' : 'border-l-4 border-transparent'
                         }
+                        ${isCompactDesktop ? 'text-xs' : 'text-sm'} font-normal flex-1
                     `}
                     style={{ color: isDisabled ? 'rgba(255,255,255,0.45)' : (item.textColor || '#fff') }}
                 >
@@ -378,14 +386,8 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
                             {item.icon}
                         </span>
                     )}
-                    <ClientLink
-                        href={item.href}
-                        title={item.title}
-                        className={`flex-1 font-normal ${isCompactDesktop ? 'text-xs' : 'text-sm'}`}
-                        style={{ color: isDisabled ? 'rgba(255,255,255,0.45)' : item.textColor }}
-                        disabled={isDisabled}
-                    />
-                </div>
+                    {item.title}
+                </ClientLink>
             </li>
         );
     };
@@ -397,8 +399,12 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
         const isDisabled = !isFeatureEnabled(item.featureKey);
 
         return (
-            <li key={item.title} className="w-full" onClick={isDisabled ? undefined : closeSidebar}>
-                <div
+            <li key={item.title} className="w-full">
+                <ClientLink
+                    href={item.href}
+                    searchParamsString={searchParamsString}
+                    onClick={!isDisabled ? closeSidebar : undefined}
+                    disabled={isDisabled}
                     className={`
                     flex items-center pl-10 pr-0 py-2.5 pr-2 transition-colors duration-200
                     ${isCompactDesktop ? 'pl-8 py-2' : ''}
@@ -410,15 +416,11 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
                             ? 'bg-white/10 text-white border-l-4 border-white'
                             : !isDisabled ? 'text-white/80 hover:bg-white/5 hover:text-white border-l-4 border-transparent' : 'text-white/80 border-l-4 border-transparent'
                         }
-                `}
+                    ${isCompactDesktop ? 'text-xs' : 'text-sm'} font-normal flex-1
+                    `}
                 >
-                    <ClientLink
-                        href={item.href}
-                        title={item.title}
-                        className={`flex-1 font-normal ${isCompactDesktop ? 'text-xs' : 'text-sm'}`}
-                        disabled={isDisabled}
-                    />
-                </div>
+                    {item.title}
+                </ClientLink>
             </li>
         );
     };
@@ -430,8 +432,12 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
         const isDisabled = !isFeatureEnabled(item.featureKey);
 
         return (
-            <li key={item.title} className="w-full" onClick={isDisabled ? undefined : closeSidebar}>
-                <div
+            <li key={item.title} className="w-full">
+                <ClientLink
+                    href={item.href}
+                    searchParamsString={searchParamsString}
+                    onClick={!isDisabled ? closeSidebar : undefined}
+                    disabled={isDisabled}
                     className={`
                         flex items-center pl-10 pr-0 py-2.5 transition-colors duration-200
                         ${isCompactDesktop ? 'pl-8 py-2' : ''}
@@ -443,6 +449,7 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
                             ? 'bg-white/10 text-white border-l-4 border-white'
                             : !isDisabled ? 'text-white/80 hover:bg-white/5 hover:text-white border-l-4 border-transparent' : 'text-white/80 border-l-4 border-transparent'
                         }
+                        ${isCompactDesktop ? 'text-xs' : 'text-sm'} font-normal flex-1
                     `}
                 >
                     {item.icon && (
@@ -450,13 +457,8 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
                             {React.cloneElement(item.icon as React.ReactElement, { size: 14 })}
                         </span>
                     )}
-                    <ClientLink
-                        href={item.href}
-                        title={item.title}
-                        className={`flex-1 font-normal ${isCompactDesktop ? 'text-xs' : 'text-sm'}`}
-                        disabled={isDisabled}
-                    />
-                </div>
+                    {item.title}
+                </ClientLink>
             </li>
         );
     };
@@ -468,8 +470,12 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
         const isDisabled = !isFeatureEnabled(item.featureKey);
 
         return (
-            <li key={item.title} className="w-full" onClick={isDisabled ? undefined : closeSidebar}>
-                <div
+            <li key={item.title} className="w-full">
+                <ClientLink
+                    href={item.href}
+                    searchParamsString={searchParamsString}
+                    onClick={!isDisabled ? closeSidebar : undefined}
+                    disabled={isDisabled}
                     className={`
                         flex items-center pl-10 py-2.5 pr-2 transition-colors duration-200
                         ${isCompactDesktop ? 'pl-8 py-2' : ''}
@@ -481,15 +487,11 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
                             ? 'bg-white/10 text-white border-l-4 border-white'
                             : !isDisabled ? 'text-white/80 hover:bg-white/5 hover:text-white border-l-4 border-transparent' : 'text-white/80 border-l-4 border-transparent'
                         }
+                        ${isCompactDesktop ? 'text-xs' : 'text-sm'} font-normal flex-1
                     `}
                 >
-                    <ClientLink
-                        href={item.href}
-                        title={item.title}
-                        className={`flex-1 font-normal ${isCompactDesktop ? 'text-xs' : 'text-sm'}`}
-                        disabled={isDisabled}
-                    />
-                </div>
+                    {item.title}
+                </ClientLink>
             </li>
         );
     };

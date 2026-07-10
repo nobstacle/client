@@ -1,0 +1,59 @@
+"use client";
+
+import Link from "next/link";
+
+/**
+ * ClientLink - Sidebar navigation link.
+ *
+ * Key changes:
+ * - Removed internal useSearchParams() call - now accepts searchParamsString as a prop.
+ *   This prevents ~20 simultaneous useSearchParams hook calls on every sidebar render.
+ * - Makes the link fill the entire row (width:100%) so the full row is clickable.
+ */
+export const ClientLink = ({
+  href,
+  title,
+  className,
+  style,
+  disabled,
+  disabledReason,
+  searchParamsString = "",
+}: {
+  href: string;
+  title: string;
+  className?: string;
+  style?: React.CSSProperties;
+  disabled?: boolean;
+  disabledReason?: string;
+  searchParamsString?: string;
+}) => {
+  if (disabled) {
+    return (
+      <span
+        aria-disabled="true"
+        title={disabledReason || "This feature is disabled for your company."}
+        className={`${className} cursor-not-allowed opacity-50`}
+        style={style}
+      >
+        <span className="flex w-full items-center justify-between gap-2">
+          <span>{title}</span>
+          <span className="rounded-full border border-white/20 bg-white/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white/70">
+            Disabled
+          </span>
+        </span>
+      </span>
+    );
+  }
+
+  const hrefWithParams = searchParamsString ? `${href}?${searchParamsString}` : href;
+
+  return (
+    <Link
+      href={hrefWithParams}
+      className={className}
+      style={style}
+    >
+      <span>{title}</span>
+    </Link>
+  );
+};
