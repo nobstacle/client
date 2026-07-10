@@ -268,11 +268,10 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({ mode = "header", activeLa
     }
     
     if (audioLevel < 5) {
-      antMessage.warning("No speech detected. Please speak clearly into your microphone.");
-      cleanupStream();
-      setRecording(false);
-      setCanStop(false);
-      return;
+      // NOTE: audioLevel is a React state snapshot and can read stale (0) immediately
+      // after the user stops speaking even when audio was captured. Do NOT block
+      // here — let the backend STT decide whether speech was present.
+      console.warn("[Mic] Low audio level at stop:", audioLevel, "— still sending to STT");
     }
     
     if (mediaRecorderRef.current && recording) {
@@ -351,7 +350,8 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({ mode = "header", activeLa
 
   const sendMessage = (message: string, langCode = getActiveLangCode()) => {
     if (!message.trim()) {
-      antMessage.warning("No speech detected. Please try again.");
+      // Empty transcript after trim — STT returned whitespace-only string
+      antMessage.warning("No speech detected. Please speak clearly and try again.");
       return;
     }
 
