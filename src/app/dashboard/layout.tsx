@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { getServerSession } from "next-auth";
 import { PropsWithChildren } from "react";
 import { SocketContextProvider } from "../../context/SocketContextProvider";
@@ -9,6 +10,14 @@ import ClientSidebar from "./Sidebar";
 import ClientHeader from "./ClientHeader";
 import { TrialDashboardNotice } from "../../components/trial/TrialDashboardNotice";
 import DashboardFeatureGate from "../../components/pages/dashboard/DashboardFeatureGate";
+
+/**
+ * React cache() memoizes getServerSession per request so that any other server
+ * component calling getSession() in the same render tree reuses the result
+ * rather than triggering another JWT decode + potential token refresh round-trip.
+ */
+const getSession = cache(() => getServerSession(authOptions));
+
 
 function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -35,11 +44,16 @@ function DashboardLayout({ children }: { children: React.ReactNode }) {
 /**
  * Single async Server Component that fetches the session exactly ONCE per
  * render, then passes it to both ClientHeader and ClientSidebar.
- * Previously two separate async wrappers each called getServerSession(),
- * doubling the session-lookup latency on every route navigation.
+ * Uses the per-request cached getSession() to avoid redundant JWT decodes
+ * if other server components in the same render tree also need the session.
  */
 const ServerLayoutContent = async ({ children }: { children: React.ReactNode }) => {
-  const user = await getServerSession(authOptions);
+  const t0 = Date.now();
+  const user = await getSession();
+  const elapsed = Date.now() - t0;
+  if (elapsed > 500) {
+    console.log(`[Layout] getSession() took ${elapsed}ms`);
+  }
   return (
     <>
       <ClientHeader user={user} />

@@ -2,8 +2,17 @@ import type { AuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import {
   authControllerLogin,
-  authControllerSignAccessToken,
 } from "./client/api";
+import Axios from "axios";
+
+/**
+ * Direct axios instance for server-side token refresh ONLY.
+ * Does NOT call getSession() — avoids the deadlock where the JWT callback
+ * triggers getSession() → /api/auth/session → JWT callback → infinite loop.
+ */
+const refreshAxios = Axios.create({
+  baseURL: process.env.NEXT_PUBLIC_BACKEND_URL,
+});
 
 const getApiErrorMessage = (error: any) => {
   return (
@@ -135,10 +144,12 @@ export const authOptions: AuthOptions = {
         }
 
         try {
-          const refreshUser = await authControllerSignAccessToken({
-            rtc: token.user.backendTokens.rtc,
-          });
-          return { ...token, user: refreshUser };
+          const { data } = await refreshAxios.post(
+            "/api/v1/iam/auth/refresh",
+            { rtc: token.user.backendTokens.rtc },
+            { headers: { Authorization: `Bearer ${token.user.backendTokens.at}` } },
+          );
+          return { ...token, user: data };
         } catch (error) {
           console.error("Token refresh failed:", error);
           return null as any;
@@ -167,21 +178,28 @@ export const authOptions: AuthOptions = {
 
       const now = new Date().getTime();
       const expiresIn = token.user.backendTokens.expiresIn;
+      const remainingMs = expiresIn - now;
 
       if (now >= expiresIn) {
-        console.log("Token expired, attempting refresh...");
+        console.log("[JWT] Token expired, attempting refresh...");
+        const t0 = Date.now();
 
         try {
-          const refreshUser = await authControllerSignAccessToken({
-            rtc: token.user.backendTokens.rtc,
-          });
-          return { ...token, user: refreshUser };
+          const { data } = await refreshAxios.post(
+            "/api/v1/iam/auth/refresh",
+            { rtc: token.user.backendTokens.rtc },
+            { headers: { Authorization: `Bearer ${token.user.backendTokens.at}` } },
+          );
+          console.log(`[JWT] Token refresh succeeded in ${Date.now() - t0}ms`);
+          return { ...token, user: data };
         } catch (error) {
-          console.error("Token refresh failed:", error);
+          console.error(`[JWT] Token refresh FAILED after ${Date.now() - t0}ms:`, error);
           return null as any;
         }
       }
 
+      // Uncomment to verify tokens are NOT expiring on every nav:
+      // console.log(`[JWT] Token valid, ${Math.round(remainingMs / 60000)}min remaining`);
       return token;
     },
 

@@ -21,6 +21,7 @@ export async function middleware(req: NextRequest) {
     return response;
   }
 
+  const t0 = Date.now();
   const token = await getToken({
     req,
     secret: process.env.NEXTAUTH_SECRET || "asdfgh1234",
@@ -29,6 +30,9 @@ export async function middleware(req: NextRequest) {
         ? "__Secure-next-auth.session-token"
         : "next-auth.session-token",
   });
+  if (Date.now() - t0 > 500) {
+    console.log(`[Middleware] getToken() took ${Date.now() - t0}ms for ${pathname}`);
+  }
 
   const isAuthenticated = !!token;
   const isAdmin = token?.user?.Roles?.includes("Admin");
