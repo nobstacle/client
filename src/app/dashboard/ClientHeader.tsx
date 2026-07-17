@@ -437,7 +437,10 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
             }
         } catch (error) {
             return [];
-        }    // ── Read template data directly from Zustand (populated by the global
+        }
+    };
+
+    // ── Read template data directly from Zustand (populated by the global
     // useFetchTemplates hook in TemplateContextProvider — zero extra network
     // requests, data is available the moment the layout mounts) ───────────────
     const {
