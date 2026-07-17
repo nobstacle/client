@@ -133,7 +133,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 	const [selectedForm, setSelectedForm] = useState<string | null>(null)
 	const [inputValues, setInputValues] = useState<InputValues>({});
 	const [isReportModal, setIsReportModal] = useState(false);
-	const [tableResponse, setTableResponse] = useState<{ data: string | any[]; uniqueKeys?: [] } | null>(null);
+	const [tableResponse, setTableResponse] = useState<{ data: any[]; sortColumns?: any[]; uniqueKeys?: string[] } | null>(null);
 	const [form] = Form.useForm();
 	const { data: userData } = useSession();
 	const lastSearchRef = useRef(lastSearchedValue);
@@ -312,8 +312,16 @@ useEffect(() => {
 			lastFetchParams.current.filter !== currentParams.filter;
 
 		if (paramsChanged) {
+			// If only the page/size changed (same form, search and filter) we can
+			// reuse the cached total and tell the backend to skip the count query.
+			const onlyPageOrSizeChanged =
+				lastFetchParams.current.form === currentParams.form &&
+				lastFetchParams.current.search === currentParams.search &&
+				lastFetchParams.current.filter === currentParams.filter &&
+				lastFetchParams.current.form !== '';
+
 			lastFetchParams.current = currentParams;
-			getTableResponse(selectedForm, currentPage, pageSize, lastSearchedValue, selectedFilter);
+			getTableResponse(selectedForm, currentPage, pageSize, lastSearchedValue, selectedFilter, onlyPageOrSizeChanged);
 		}
 	}, [currentPage, pageSize, selectedForm, lastSearchedValue, selectedFilter]);
 
@@ -539,7 +547,6 @@ useEffect(() => {
 						size="small"
 						value={value ? dayjs(value, "DD/MM/YYYY") : null}
 						onChange={(date, dateString) => handleEditInputChange(dateString)}
-						onPressEnter={handleEditSave}
 					/>
 				);
 			}
@@ -554,7 +561,6 @@ useEffect(() => {
 						size="small"
 						placeholder={`Select ${fieldData?.text || 'option'}`}
 						allowClear
-						onPressEnter={handleEditSave}
 					>
 						{fieldOptions.map(option => (
 							<Select.Option key={option} value={option}>
@@ -652,7 +658,7 @@ useEffect(() => {
 			const result = {};
 			let UUID = data?.formData?.uuid;
 
-			listableFields.forEach((field) => {
+			listableFields.forEach((field: any) => {
 				const label = field.text;
 				const key = field.name;
 
@@ -690,7 +696,7 @@ useEffect(() => {
 			} else {
 				const result: Record<string, any> = {};
 
-				listableFields.forEach((field) => {
+				listableFields.forEach((field: any) => {
 					const label = field.text;
 					const key = field.name;
 
@@ -1167,9 +1173,11 @@ useEffect(() => {
 				}
 			}
 
-			const API_KEY = process.env.NEXT_PUBLIC_JOTFORM_API_KEY;
+			// Fetch through our backend proxy so the JotForm API key stays
+			// server-side (and benefits from the server-side questions cache).
+			const Url = getBackendUrl();
 			const response = await fetch(
-				`https://api.jotform.com/form/${form_id}/questions?apiKey=${API_KEY}`,
+				`${Url}/api/jotform/form/${form_id}/questions`,
 				{ signal: fetchControllerRef.current?.signal }
 			);
 
@@ -1304,7 +1312,8 @@ useEffect(() => {
 		page: number,
 		limit: number = 10,
 		search: any = "",
-		filter: string
+		filter: string,
+		skipCount: boolean = false
 	) => {
 		if (form_id !== currentFormIdRef.current) {
 			console.log('Ignoring stale request for form:', form_id);
@@ -1352,6 +1361,12 @@ useEffect(() => {
 			API_URL += `&filter=${filter}`;
 		}
 
+		// On plain page/size changes the total is unchanged, so skip the
+		// server-side count and reuse the value we already have.
+		if (skipCount) {
+			API_URL += `&skipCount=true`;
+		}
+
 		try {
 			const response = await axios.get(API_URL, {
 				signal: abortControllerRef.current.signal
@@ -1365,8 +1380,10 @@ useEffect(() => {
 			if (response.status === 200) {
 				const { items, allFieldNames, totalPages, totalItems } = response.data;
 
-				setTotalPages(totalPages || 1);
-				setTotalItems(totalItems || 0);
+				if (!skipCount) {
+					setTotalPages(totalPages || 1);
+					setTotalItems(totalItems || 0);
+				}
 
 				if (items && items.length > 0) {
 					const tableData = items.map((item: any) => {
@@ -1443,11 +1460,13 @@ useEffect(() => {
 		form.resetFields();
 
 		try {
-			await fetchFormQuestions(value, false);
-
-			if (currentFormIdRef.current === value) {
-				await getTableResponse(value, 1, 10, "", selectedFilter);
-			}
+			// Load the response table and the form questions concurrently.
+			// fetchFormQuestions hits JotForm's external API and is independent of
+			// the table data, so awaiting it first needlessly delayed the table.
+			await Promise.all([
+				fetchFormQuestions(value, false),
+				getTableResponse(value, 1, 10, "", selectedFilter),
+			]);
 		} catch (error) {
 			if (error.name !== 'AbortError') {
 				console.error('Error changing form:', error);

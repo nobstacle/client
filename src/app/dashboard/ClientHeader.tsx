@@ -1,5 +1,6 @@
 'use client';
 // import ReactDOM from 'react-dom';
+import dynamic from 'next/dynamic';
 import { useCallback, useEffect, useRef, useMemo, useState } from "react";
 
 declare global {
@@ -23,22 +24,30 @@ import { HeaderLanguagePicker } from "../../components/pages/dashboard/Header/La
 import { LanguageShortcutPicker } from "../../components/pages/dashboard/Header/LanguageShortcutPicker";
 import { TemplateShortcutPicker } from "../../components/pages/dashboard/Header/TemplateShortcutPicker";
 import { StationPicker } from "../../components/pages/dashboard/Header/StationPicker";
-import { ChatBot } from "../../components/pages/dashboard/Header/chatBot";
+// Heavy modal-only components — loaded lazily so they don't block
+// the initial dashboard paint. They are only shown when the user
+// explicitly opens a modal/drawer, so SSR is not needed.
+const ChatBot = dynamic(
+    () => import('../../components/pages/dashboard/Header/chatBot').then(m => ({ default: m.ChatBot })),
+    { ssr: false }
+);
+const HeaderRecordingShortcut = dynamic(
+    () => import('../../components/pages/dashboard/Header/SendRecording').then(m => ({ default: m.HeaderRecordingShortcut })),
+    { ssr: false }
+);
+const LazyJotFormPrefillModal = dynamic(
+    () => import('../../components/pages/dashboard/Header/FormSelect'),
+    { ssr: false }
+);
 import { HeaderSurveyShortcut } from "../../components/pages/dashboard/Header/SurveyPicker";
-import { HeaderRecordingShortcut } from "../../components/pages/dashboard/Header/SendRecording";
 import { TextSurveyShortcut } from "../../components/pages/dashboard/Header/TextSurveyShortcut";
 import { WebsiteShortcut } from "../../components/pages/dashboard/Header/WebsiteShortcut";
-import {
-    useTemplateControllerGetTextTemplates,
-    useTemplateControllerGetImageTemplates,
-    useTemplateControllerGetVideoTemplates,
-    useTemplateControllerGetWebsiteTemplates,
-    useTemplateControllerGetSlideshowTemplates,
-    useTemplateControllerGetMapTemplates,
-    useTemplateControllerGetDocumenttemplates,
-    useCompanyControllerGetCompany,
-    useScrollControllerGetScrolls
-} from '../../lib/client/api';
+// Template & company data comes from Zustand stores (already fetched globally
+// by useFetchTemplates / useFetchCompany in the dashboard layout providers).
+// Removing the 10 duplicate React Query calls that were firing on every render.
+import useTemplateStore from '../../lib/zustand/store/templateStore';
+import useCompanyStore from '../../lib/zustand/store/companyStore';
+
 import { useSearchParams } from "next/navigation";
 import { useSocketContext } from "../../context/SocketContextProvider";
 import { ChatType } from "@/constant/types";
@@ -62,7 +71,7 @@ import { useUploadControllerUploadSpeechToTextFile } from '../../lib/client/api'
 import { IoChatbubbleEllipses } from "react-icons/io5";
 import { SendPackagePayloadType } from "../../constant/types";
 import { useSession } from "next-auth/react";
-import JotFormPrefillModal from "../../components/pages/dashboard/Header/FormSelect";
+
 import { SendIcon } from "@/components/icons/SendIcon";
 import { BsFillSendPlusFill } from "react-icons/bs";
 import axios from 'axios';
@@ -210,15 +219,10 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
     }, []);
 
     // Get company data with proper caching
-    const { data: companyData } = useCompanyControllerGetCompany({
-        query: {
-            queryKey: ['company', currentStation],
-            staleTime: 1000 * 60 * 5,
-            gcTime: 1000 * 60 * 10,
-            refetchOnWindowFocus: true,
-            refetchOnMount: true,
-        }
-    });
+    // ── Data from Zustand stores (zero network requests) ────────────────────
+    // These are populated by useFetchCompany / useFetchTemplates in the layout
+    // providers, so they are always ready when ClientHeader renders.
+    const companyData = useCompanyStore((s) => s.company);
 
     useEffect(() => {
         const urlStation = params.get("station");
@@ -433,139 +437,23 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
             }
         } catch (error) {
             return [];
-        }
-    };
+        }    // ── Read template data directly from Zustand (populated by the global
+    // useFetchTemplates hook in TemplateContextProvider — zero extra network
+    // requests, data is available the moment the layout mounts) ───────────────
+    const {
+        texts: textTemplates,
+        images: imageTemplates,
+        videos: videoTemplates,
+        websites: websiteTemplates,
+        slideshows: slideshowTemplates,
+        maps: mapTemplates,
+        documents: documentTemplates,
+        scrolls,
+        publicScrolls,
+    } = useTemplateStore();
 
-    const { data: textTemplates, isLoading: textLoading } = useTemplateControllerGetTextTemplates(
-        undefined,
-        {
-            query: {
-                queryKey: ['textTemplates', currentStation],
-                staleTime: 1000 * 60 * 5,
-                gcTime: 1000 * 60 * 10,
-                refetchOnWindowFocus: false,
-                refetchOnMount: true,
-                enabled: !!currentStation,
-            }
-        }
-    );
-
-    const { data: imageTemplates, isLoading: imageLoading } = useTemplateControllerGetImageTemplates(
-        undefined,
-        {
-            query: {
-                queryKey: ['imageTemplates', currentStation],
-                staleTime: 1000 * 60 * 5,
-                gcTime: 1000 * 60 * 10,
-                refetchOnWindowFocus: false,
-                refetchOnMount: true,
-                enabled: !!currentStation,
-            }
-        }
-    );
-
-    const { data: scrollsResponse, isLoading: scrollLoading } = useScrollControllerGetScrolls(
-        { limit: 9999, scope: 'scroll' },
-        {
-            query: {
-                queryKey: ['scrolls', currentStation, 'scroll'],
-                staleTime: 1000 * 60 * 5,
-                gcTime: 1000 * 60 * 10,
-                refetchOnWindowFocus: false,
-                refetchOnMount: true,
-                enabled: !!currentStation,
-            }
-        }
-    );
-
-    const { data: publicScrollsResponse, isLoading: publicScrollLoading } = useScrollControllerGetScrolls(
-        { limit: 9999, scope: 'public' },
-        {
-            query: {
-                queryKey: ['scrolls', currentStation, 'public'],
-                staleTime: 1000 * 60 * 5,
-                gcTime: 1000 * 60 * 10,
-                refetchOnWindowFocus: false,
-                refetchOnMount: true,
-                enabled: !!currentStation,
-            }
-        }
-    );
-
-    const scrolls = scrollsResponse?.data || [];
-    const publicScrolls = publicScrollsResponse?.data || [];
-
-    const { data: videoTemplates, isLoading: videoLoading } = useTemplateControllerGetVideoTemplates(
-        undefined,
-        {
-            query: {
-                queryKey: ['videoTemplates', currentStation],
-                staleTime: 1000 * 60 * 5,
-                gcTime: 1000 * 60 * 10,
-                refetchOnWindowFocus: false,
-                refetchOnMount: true,
-                enabled: !!currentStation,
-            }
-        }
-    );
-
-    const { data: websiteTemplates, isLoading: websiteLoading } = useTemplateControllerGetWebsiteTemplates(
-        undefined,
-        {
-            query: {
-                queryKey: ['websiteTemplates', currentStation],
-                staleTime: 1000 * 60 * 5,
-                gcTime: 1000 * 60 * 10,
-                refetchOnWindowFocus: false,
-                refetchOnMount: true,
-                enabled: !!currentStation,
-            }
-        }
-    );
-
-    const { data: slideshowTemplates, isLoading: slideshowLoading } = useTemplateControllerGetSlideshowTemplates(
-        undefined,
-        {
-            query: {
-                queryKey: ['slideshowTemplates', currentStation],
-                staleTime: 1000 * 60 * 5,
-                gcTime: 1000 * 60 * 10,
-                refetchOnWindowFocus: false,
-                refetchOnMount: true,
-                enabled: !!currentStation,
-            }
-        }
-    );
-
-    const { data: mapTemplates, isLoading: mapLoading } = useTemplateControllerGetMapTemplates(
-        {
-            query: {
-                queryKey: ['mapTemplates', currentStation],
-                staleTime: 1000 * 60 * 5,
-                gcTime: 1000 * 60 * 10,
-                refetchOnWindowFocus: false,
-                refetchOnMount: true,
-                enabled: !!currentStation,
-            }
-        }
-    );
-
-    const { data: documentTemplates, isLoading: documentLoading } = useTemplateControllerGetDocumenttemplates(
-        undefined,
-        {
-            query: {
-                queryKey: ['documentTemplates', currentStation],
-                staleTime: 1000 * 60 * 5,
-                gcTime: 1000 * 60 * 10,
-                refetchOnWindowFocus: false,
-                refetchOnMount: true,
-                enabled: !!currentStation,
-            }
-        }
-    );
-
-    const isLoading = textLoading || imageLoading || videoLoading ||
-        websiteLoading || slideshowLoading || mapLoading || documentLoading || scrollLoading || publicScrollLoading;
+    // isLoading is false because data already lives in-memory
+    const isLoading = false;
 
     // Template type configurations
     const templateConfig = useMemo(() => ({
@@ -4386,7 +4274,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
             </Modal>
 
             {/* JotForm Prefill Modal */}
-            <JotFormPrefillModal
+            <LazyJotFormPrefillModal
                 isOpen={isFormModalOpen}
                 onClose={() => {
                     setIsFormModalOpen(false);

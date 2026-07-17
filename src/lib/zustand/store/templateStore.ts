@@ -139,6 +139,12 @@ const useTemplateStore = create<BearState>()(
     }),
     {
       name: "templates-storage",
+      // ── Exclude heavy template arrays from localStorage ───────────────────
+      // These can be hundreds of KB of JSON. They are always re-populated by
+      // useFetchTemplates on every session, so persisting them only wastes
+      // storage quota and causes a blocking synchronous JSON.parse on load.
+      // Only persist lightweight UI state that survives across sessions.
+      partialize: (_state) => ({}),
     },
   ),
 );
