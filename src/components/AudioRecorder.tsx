@@ -283,6 +283,14 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({ mode = "header", activeLa
   };
 
   const sendAudioToBackend = async (audioBlob: Blob) => {
+    // The guest's selected language. This serves two purposes:
+    //  1) It is the PRIMARY speech-to-text hint. The backend adds the other
+    //     supported languages (English first) as auto-detect candidates, so
+    //     Google STT returns the transcript in whichever language was actually
+    //     spoken — the admin may speak English or the guest's language, and the
+    //     guest may reply in English. Detection is automatic either way.
+    //  2) It is the translation target for how the guest sees the message.
+    // Google Translate auto-detects the source, so admin↔guest works both ways.
     const langCode = getActiveLangCode();
 
     console.log(

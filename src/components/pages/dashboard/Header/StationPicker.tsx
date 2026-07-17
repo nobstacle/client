@@ -17,7 +17,7 @@ const isChromeExtension = (): boolean => {
 };
 
 export const StationPicker: React.FC<{ cb?: () => void }> = ({ cb }) => {
-  const { data, isLoading } = useCompanyControllerGetCompany({
+  const { data } = useCompanyControllerGetCompany({
     query: {
       staleTime: Infinity,
       queryKey: getCompanyControllerGetCompanyQueryKey(),
@@ -204,14 +204,12 @@ export const StationPicker: React.FC<{ cb?: () => void }> = ({ cb }) => {
     if (cb) cb();
   };
 
-  if (isLoading) {
-    return (
-      <div className="w-full min-w-[80px] rounded-md bg-gray-100 px-3 py-1.5">
-        <span className="text-gray-400 text-sm">Loading...</span>
-      </div>
-    );
-  }
-
+  // NOTE: Do NOT gate the whole <select> behind `isLoading`. Previously we
+  // rendered a "Loading..." placeholder while the company request was in
+  // flight, which meant the dropdown appeared late and could not be selected
+  // until the network call resolved. We now always render an interactive
+  // <select> using a sensible default station count (10) and simply refresh
+  // the option count once the real `stationCount` arrives.
   return (
     <select
       className="w-full min-w-[80px] rounded-md border border-gray-300 p-1"
