@@ -32,6 +32,12 @@ interface MessageState {
   reset: () => void;
 }
 
+// Cap the in-memory chat history. Without this the array grows on every
+// incoming socket message for the lifetime of the tab, and because heavy
+// components (ClientHeader, chatBot) filter this array on every render the
+// whole UI gets progressively slower the longer a station stays open.
+const MAX_RECEIVED_MESSAGES = 300;
+
 export const useMessageStore = create<MessageState>((set, get) => ({
   receivedType: null,
   receivedContent: null,
@@ -45,9 +51,15 @@ export const useMessageStore = create<MessageState>((set, get) => ({
     set({ receivedContent, receivedType: receivedContent.type }),
 
   setReceivedMessage: (receivedMessage) =>
-    set({
-      receivedMessage: [...get().receivedMessage, receivedMessage],
-      receivedType: receivedMessage.type,
+    set(() => {
+      const next = [...get().receivedMessage, receivedMessage];
+      return {
+        receivedMessage:
+          next.length > MAX_RECEIVED_MESSAGES
+            ? next.slice(next.length - MAX_RECEIVED_MESSAGES)
+            : next,
+        receivedType: receivedMessage.type,
+      };
     }),
 
   setReceivedSurvey: (receivedSurvey) =>

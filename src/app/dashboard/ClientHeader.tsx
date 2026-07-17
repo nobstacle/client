@@ -174,7 +174,12 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
     const [dropdownPosition, setDropdownPosition] = useState({ top: 0, right: 0, width: 0 });
     const [hamburgerPosition, setHamburgerPosition] = useState({ top: 0, right: 0 });
     const [isInIframe, setIsInIframe] = useState(false);
-    const messageStore = useMessageStore();
+    // Subscribe only to the slices this component actually uses, so it does not
+    // re-render on every unrelated store change (received content, response,
+    // recording, langCode, survey). Without selectors the whole 4000-line header
+    // re-rendered on every socket push.
+    const receivedMessage = useMessageStore((s) => s.receivedMessage);
+    const resetMessages = useMessageStore((s) => s.reset);
     const { emitSendMessage, emitClearMessage, emitLeaveChat } = useSocketContext();
     const speechToTextMutation = useUploadControllerUploadSpeechToTextFile();
     const [allPackages, setAllPackages] = useState([]);
@@ -1509,7 +1514,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         const currentUserDefaultLang = companyData?.defaultLangCode || 'en';
 
         // Get messages for current station
-        const stationMessages = messageStore.receivedMessage.filter(
+        const stationMessages = receivedMessage.filter(
             (msg) => msg.station === Number(params.get("station") ?? 1)
         );
 
@@ -1574,13 +1579,13 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
             type: 'CHAT_UPDATE_MESSAGES',
             html: messagesHTML
         }, '*');
-    }, [isInIframe, messageStore.receivedMessage, params, user, companyData]);
+    }, [isInIframe, receivedMessage, params, user, companyData]);
 
     useEffect(() => {
-        if (isInIframe && messageStore.receivedMessage.length > 0) {
+        if (isInIframe && receivedMessage.length > 0) {
             updateChatPopupMessages();
         }
-    }, [isInIframe, messageStore.receivedMessage.length, updateChatPopupMessages]);
+    }, [isInIframe, receivedMessage.length, updateChatPopupMessages]);
 
     useEffect(() => {
         if (!isInIframe) return;
@@ -2112,7 +2117,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
             if (event.data.type === 'CHAT_CLEAR') {
                 try {
                     // Clear the message store
-                    messageStore.reset();
+                    resetMessages();
                     emitLeaveChat({
                         station: Number(params.get("station") ?? 1),
                     });
@@ -2140,7 +2145,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
             }
 
             if (event.data.type === 'CLEAR_CHAT_MESSAGES') {
-                messageStore.reset();
+                resetMessages();
 
                 // Update the popup to show empty state
                 setTimeout(() => {
@@ -2550,7 +2555,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         companyData,
         user,
         emitSendMessage,
-        messageStore,
+        receivedMessage,
         updateChatPopupMessages,
         allPackages,
         selectedPackages,

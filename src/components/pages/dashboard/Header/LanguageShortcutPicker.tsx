@@ -23,8 +23,16 @@ export const LanguageShortcutPicker = ({
   // Get from shared provider (no API call here!)
   const { languageShortcuts, isLoading, error } = useShortcuts();
 
-  const [checked, setChecked] = useState<string>("");
   const currentLang = params.get("lang") || "en";
+  // `checked` is the optimistic selection so the highlight moves the instant a
+  // user clicks, instead of waiting for the router navigation to update the
+  // `lang` search param (which previously left BOTH languages highlighted for
+  // seconds). It is kept in sync whenever the URL actually changes.
+  const [checked, setChecked] = useState<string>(currentLang);
+
+  useEffect(() => {
+    setChecked(currentLang);
+  }, [currentLang]);
 
   const handleLanguageChange = (value: string) => {
     setChecked(value);
@@ -86,7 +94,7 @@ export const LanguageShortcutPicker = ({
       {/* Desktop: Radio Buttons */}
       <div className={`hidden md:flex items-center ${checkIframe || compactDesktop ? 'gap-1.5' : 'gap-4'}`}>
         {sorted.map((shortcut) => {
-          const isActive = currentLang === shortcut.value || checked === shortcut.value;
+          const isActive = checked === shortcut.value;
           const dense = checkIframe || compactDesktop;
 
           return (

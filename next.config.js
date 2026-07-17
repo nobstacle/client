@@ -50,6 +50,17 @@ const nextConfig = {
       },
     ],
   },
+  // Barrel-file libraries (antd, icon packs) pull in thousands of modules per
+  // import. `optimizePackageImports` rewrites these to import only what is
+  // actually used, which sharply reduces the amount of JS compiled per route
+  // (faster dev compiles) and shipped to the browser (faster navigation).
+  experimental: {
+    optimizePackageImports: [
+      "antd",
+      "@ant-design/icons",
+      "react-icons",
+    ],
+  },
   typescript: {
     ignoreBuildErrors: true,
   },

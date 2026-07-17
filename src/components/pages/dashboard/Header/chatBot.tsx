@@ -30,7 +30,11 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true, isMob
 
   const { emitSendMessage, emitClearMessage, emitLeaveChat, socketConnected } = useSocketContext();
   const params = useSearchParams();
-  const messageStore = useMessageStore();
+  // Subscribe only to the slices used here so the chat panel does not re-render
+  // on every unrelated message-store change.
+  const receivedMessage = useMessageStore((s) => s.receivedMessage);
+  const clearReceivedContent = useMessageStore((s) => s.clearReceivedContent);
+  const resetMessages = useMessageStore((s) => s.reset);
   const { data: session } = useSession();
   const { data: companyData } = useCompanyControllerGetCompany({
     query: {
@@ -83,7 +87,7 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true, isMob
     };
   }, []);
 
-  const stationMessages = messageStore.receivedMessage.filter(
+  const stationMessages = receivedMessage.filter(
     (msg) => msg.station === currentStation
   );
 
@@ -229,7 +233,7 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true, isMob
       emitLeaveChat({
         station: currentStation,
       });
-      messageStore.clearReceivedContent();
+      clearReceivedContent();
       antMessage.success('Session ended successfully');
       handleCancel();
     } catch (error) {
@@ -239,7 +243,7 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true, isMob
   };
 
   const handleClearChat = () => {
-    messageStore.reset();
+    resetMessages();
 
     try {
       emitClearMessage({
