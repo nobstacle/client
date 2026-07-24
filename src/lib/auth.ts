@@ -1,8 +1,5 @@
 import type { AuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-import {
-  authControllerLogin,
-} from "./client/api";
 import Axios from "axios";
 
 /**
@@ -10,8 +7,10 @@ import Axios from "axios";
  * Does NOT call getSession() — avoids the deadlock where the JWT callback
  * triggers getSession() → /api/auth/session → JWT callback → infinite loop.
  */
+const backendBaseUrl = process.env.BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL;
+
 const refreshAxios = Axios.create({
-  baseURL: process.env.NEXT_PUBLIC_BACKEND_URL,
+  baseURL: backendBaseUrl,
 });
 
 const getApiErrorMessage = (error: any) => {
@@ -39,7 +38,14 @@ export const authOptions: AuthOptions = {
         }
 
         try {
-          const res = await authControllerLogin({
+          if (!backendBaseUrl) {
+            throw new Error('Backend URL is not configured');
+          }
+
+          // Do not use the generated API client here: it calls getSession(),
+          // which recursively invokes NextAuth while this credentials session
+          // is still being established.
+          const { data: res } = await refreshAxios.post('/api/v1/iam/auth/signin', {
             emailOrUsername: credentials.email,
             password: credentials.password,
           });
