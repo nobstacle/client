@@ -2,6 +2,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState, useCallback } from "react";
+import dynamic from "next/dynamic";
 import { useMessageStore } from "../../../lib/zustand/store/messageStore";
 import { ChatBox } from "../../ChatBox";
 import { useSocketContext } from "../../../context/SocketContextProvider";
@@ -12,11 +13,8 @@ import {
   useCompanyControllerGetCompany,
   useContentControllerGetDefaultSlideshowContent,
 } from "../../../lib/client/api";
-import Slideshow from "./Slideshow";
 import SafeContentFrame from "./SafeContentFrame";
-import SimpleMap from "./Map";
 import SurveyAnswer from "./SurveyAnswer";
-import QRCode from 'qrcode';
 import "../../../styles/base.css";
 import "antd/dist/reset.css";
 import { motion, AnimatePresence } from "framer-motion";
@@ -28,6 +26,12 @@ import { useViewportScale } from "../../../hooks/useViewportScale";
 import { getContainMediaStyle } from "../../../utils/contentFit";
 
 const { Title, Text } = Typography;
+const DisplayLoading = () => <div className="flex h-full w-full items-center justify-center">Loading…</div>;
+// These modules pull in media preloading and the Google Maps SDK. Loading
+// them only for the matching content type keeps form and lightweight screens
+// responsive on low-powered display devices.
+const Slideshow = dynamic(() => import("./Slideshow"), { ssr: false, loading: DisplayLoading });
+const SimpleMap = dynamic(() => import("./Map"), { ssr: false, loading: DisplayLoading });
 const LAST_DISPLAYED_CONTENT_KEY = "lastDisplayedContent";
 const LAST_PUBLIC_CONTENT_KEY = "lastPublicContent";
 
@@ -269,28 +273,12 @@ const ScreensSection: React.FC<{
   );
 };
 
-const IframeWithPrefill = React.memo(({ src, prefillData }: { src: string, prefillData: Record<string, string> }) => {
+const IframeWithPrefill = React.memo(({ src }: { src: string }) => {
   const iframeRef = useRef<HTMLIFrameElement>(null);
-  const [iframeKey, setIframeKey] = useState(0);
-  const prevSrcRef = useRef(src);
-  const prevPrefillDataRef = useRef(JSON.stringify(prefillData));
-
-  useEffect(() => {
-    const currentPrefillStr = JSON.stringify(prefillData);
-    const srcChanged = prevSrcRef.current !== src;
-    const prefillChanged = prevPrefillDataRef.current !== currentPrefillStr;
-
-    if (srcChanged || prefillChanged) {
-      setIframeKey(prev => prev + 1);
-      prevSrcRef.current = src;
-      prevPrefillDataRef.current = currentPrefillStr;
-    }
-  }, [src, prefillData]);
 
   return (
     <iframe
       ref={iframeRef}
-      key={iframeKey}
       src={src}
       width="100%"
       height="600"
@@ -1145,6 +1133,9 @@ export const Content: React.FC = () => {
 
       if (content) {
         try {
+          // QR generation is only needed for QR content; keep its library out
+          // of the initial display bundle.
+          const { default: QRCode } = await import('qrcode');
           const url = await QRCode.toDataURL(content);
           setQrCodeUrl(url);
           const wdthSize = window.innerWidth;
@@ -2903,7 +2894,6 @@ export const Content: React.FC = () => {
                 className="flex-1 overflow-auto iframe-container" >
                 <IframeWithPrefill
                   src={jotFormUrl}
-                  prefillData={prefillData}
                 />
               </div>
             </SafeContentFrame>

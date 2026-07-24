@@ -16,7 +16,7 @@ import { CreateSlideshowTemplateForm } from "../../../components/pages/dashboard
 import { PlusIcon } from "../../../components/icons/PlusIcon";
 import useTemplateStore from "../../../lib/zustand/store/templateStore";
 import { useHasHydrated } from "../../../hooks/useHydrated";
-import { useTemplateContext } from "../../../context/TemplatesProvider";
+import { TemplateContextProvider, useTemplateContext } from "../../../context/TemplatesProvider";
 import { UpdateSlideshowTemplateForm } from "../../../components/pages/dashboard/UpdateSlideshowTemplateForm";
 import { useState, useMemo } from "react";
 import {
@@ -59,7 +59,7 @@ const isVideoSource = (src?: string | null) => {
   return VIDEO_EXTENSIONS.some((ext) => normalized.endsWith(`.${ext}`));
 };
 
-export default function SlideshowDashboard() {
+function SlideshowDashboardContent() {
   const [editTemplate, setEditTemplate] =
     useState<null | GetSlideshowTemplateRes>(null);
   const isHydrated = useHasHydrated();
@@ -335,4 +335,14 @@ export default function SlideshowDashboard() {
     );
 
   return <div></div>;
+}
+
+// Template data is only needed here. Keeping the provider at route scope
+// prevents every dashboard route from fetching slideshow templates on mount.
+export default function SlideshowDashboard() {
+  return (
+    <TemplateContextProvider>
+      <SlideshowDashboardContent />
+    </TemplateContextProvider>
+  );
 }

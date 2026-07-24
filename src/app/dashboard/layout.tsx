@@ -2,7 +2,6 @@ import { cache } from "react";
 import { getServerSession } from "next-auth";
 import { PropsWithChildren } from "react";
 import { SocketContextProvider } from "../../context/SocketContextProvider";
-import { TemplateContextProvider } from "../../context/TemplatesProvider";
 import { CompanyContextProvider } from "../../context/CompanyProvider";
 import { authOptions } from "../../lib/auth";
 import { ShortcutsProvider } from "./ShortcutProvider";
@@ -28,13 +27,11 @@ function DashboardLayout({ children }: { children: React.ReactNode }) {
     >
       <CompanyContextProvider>
         <SocketContextProvider>
-          <TemplateContextProvider>
-            <ShortcutsProvider>
-              <ServerLayoutContent>
-                {children}
-              </ServerLayoutContent>
-            </ShortcutsProvider>
-          </TemplateContextProvider>
+          <ShortcutsProvider>
+            <ServerLayoutContent>
+              {children}
+            </ServerLayoutContent>
+          </ShortcutsProvider>
         </SocketContextProvider>
       </CompanyContextProvider>
     </div>

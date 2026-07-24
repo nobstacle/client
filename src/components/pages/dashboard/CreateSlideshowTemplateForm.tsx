@@ -7,7 +7,6 @@ import {
   getTemplateControllerGetSlideshowTemplatesQueryKey,
   useCompanyControllerGetCompany,
   useSlideshowTemplateControllerGetTextTags,
-  useUploadControllerUploadCompanyFileMany,
 } from "../../../lib/client/api";
 import { Button, Upload, Select, Typography, Space, Alert, Input, InputNumber } from "antd";
 import { UploadOutlined } from "@ant-design/icons";
@@ -35,6 +34,7 @@ import * as yup from "yup";
 import { languages } from "../../../constant/languages";
 import type { RcFile } from "antd/es/upload/interface";
 import { RecommendedDimensions } from "./RecommendedDimensions";
+import { uploadSlideshowDirect } from "../../../lib/directCompanyUpload";
 
 const { Text } = Typography;
 const { Option } = Select;
@@ -265,9 +265,9 @@ export const CreateSlideshowTemplateForm: React.FC<{
   const [sequence, setSequence] = React.useState<SequenceEntry[]>([]);
   const [sequenceError, setSequenceError] = React.useState<string | null>(null);
 
-  const uploadManyFile = useUploadControllerUploadCompanyFileMany({
-    mutation: { retry: 0 },
-  });
+  const [isUploading, setIsUploading] = React.useState(false);
+  const [uploadProgress, setUploadProgress] = React.useState(0);
+  const uploadAbortRef = React.useRef<AbortController | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -356,7 +356,7 @@ export const CreateSlideshowTemplateForm: React.FC<{
     );
   };
 
-  const onSubmit = (data: CreateSlideshowTemplateFormFieldValues) => {
+  const onSubmit = async (data: CreateSlideshowTemplateFormFieldValues) => {
     if (sequence.length === 0) {
       setSequenceError("Please upload at least one media item.");
       return;
@@ -364,36 +364,25 @@ export const CreateSlideshowTemplateForm: React.FC<{
 
     const ordered = [...sequence].sort((a, b) => a.order - b.order);
 
-    uploadManyFile.mutate(
-      {
-        data: {
-          file: ordered.map((entry) => entry.file),
-          defaultLangCode: company.data?.defaultLangCode ?? "en",
-          langCode: data.langCode,
-          tag: (data.tagCreate as string) || (data.tagSelect as string),
-          itemsMetadata: JSON.stringify(
-            ordered.map((entry) => ({
-              order: entry.order,
-              mediaType: entry.mediaType,
-              expiresAt: entry.expiresAt,
-              durationSeconds:
-                entry.mediaType === "image" ? entry.durationSeconds : undefined,
-            })),
-          ),
-        },
-      },
-      {
-        onSuccess: () => {
-          cb?.();
-          void queryClient.invalidateQueries({
-            queryKey: getTemplateControllerGetSlideshowTemplatesQueryKey(),
-          });
-          void queryClient.invalidateQueries({
-            queryKey: getSlideshowTemplateControllerGetTextTagsQueryKey(),
-          });
-        },
-      },
-    );
+    setIsUploading(true);
+    setSequenceError(null);
+    const abortController = new AbortController();
+    uploadAbortRef.current = abortController;
+    try {
+      await uploadSlideshowDirect(ordered.map((entry) => ({ ...entry, file: entry.file as File })), {
+        defaultLangCode: company.data?.defaultLangCode ?? "en",
+        langCode: data.langCode,
+        tag: (data.tagCreate as string) || (data.tagSelect as string),
+      }, setUploadProgress, abortController.signal);
+      cb?.();
+      void queryClient.invalidateQueries({ queryKey: getTemplateControllerGetSlideshowTemplatesQueryKey() });
+      void queryClient.invalidateQueries({ queryKey: getSlideshowTemplateControllerGetTextTagsQueryKey() });
+    } catch (error: any) {
+      setSequenceError(error.message || "Upload failed");
+    } finally {
+      uploadAbortRef.current = null;
+      setIsUploading(false);
+    }
   };
 
   return (
@@ -569,26 +558,23 @@ export const CreateSlideshowTemplateForm: React.FC<{
             />
           )}
 
-          {uploadManyFile.error?.message && (
-            <Alert
-              message={uploadManyFile.error.response?.data.message}
-              type="error"
-              showIcon
-              style={{ marginBottom: "8px" }}
-            />
-          )}
         </div>
 
         <Button
           type="primary"
           htmlType="submit"
-          loading={uploadManyFile.status === "pending"}
-          disabled={uploadManyFile.status === "pending" || sequence.length === 0}
+          loading={isUploading}
+          disabled={isUploading || sequence.length === 0}
           style={{ width: "100%" }}
           className="create-template-button"
         >
-          Create Template
+          {isUploading ? `Uploading ${uploadProgress}%` : "Create Template"}
         </Button>
+        {isUploading && (
+          <Button className="mt-2" htmlType="button" danger onClick={() => uploadAbortRef.current?.abort()}>
+            Cancel upload
+          </Button>
+        )}
       </Space>
     </form>
   );

@@ -7,7 +7,6 @@ import {
   templateControllerGetImageTemplates,
   useCompanyControllerGetCompany,
   useImageTemplateControllerGetImageTags,
-  useUploadControllerUploadCompanyFile,
 } from "../../../lib/client/api";
 import * as yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
@@ -16,6 +15,7 @@ import { UploadOutlined } from "@ant-design/icons";
 import { languages } from "../../../constant/languages";
 import { GetImageTemplateRes } from "../../../lib/client/model";
 import { RecommendedDimensions } from "./RecommendedDimensions";
+import { uploadCompanyFileDirect } from "../../../lib/directCompanyUpload";
 
 const { Text } = Typography;
 
@@ -65,26 +65,23 @@ export const CreateImageTemplateForm: React.FC<{
     resolver: yupResolver(schema),
   });
 
-  const uploadFile = useUploadControllerUploadCompanyFile({
-    mutation: { retry: 0 },
-  });
+  const [isUploading, setIsUploading] = React.useState(false);
+  const [uploadError, setUploadError] = React.useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = React.useState(0);
 
-  const handleCreateImageTemplateCreate = (
+  const handleCreateImageTemplateCreate = async (
     data: CreateImageTemplateFormFieldValues,
   ) => {
     const file = data.file[0];
 
-    uploadFile.mutate(
-      {
-        data: {
-          ...data,
-          file,
-          tag: (data.tagCreate as string) || (data.tagSelect as string),
-          defaultLangCode: company.data?.defaultLangCode ?? "en",
-        },
-      },
-      {
-        onSuccess: async (res) => {
+    setIsUploading(true);
+    setUploadError(null);
+    try {
+      const res = await uploadCompanyFileDirect(file, {
+        tag: (data.tagCreate as string) || (data.tagSelect as string),
+        langCode: data.langCode,
+        defaultLangCode: company.data?.defaultLangCode ?? "en",
+      }, setUploadProgress);
           if (cb) {
             const template = await templateControllerGetImageTemplates({
               id: res.sourceId,
@@ -103,9 +100,11 @@ export const CreateImageTemplateForm: React.FC<{
               queryKey: getImageTemplateControllerGetImageTagsQueryKey(),
             }),
           ]);
-        },
-      },
-    );
+    } catch (error: any) {
+      setUploadError(error.message || "Upload failed");
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const onSubmit: SubmitHandler<CreateImageTemplateFormFieldValues> = (data) =>
@@ -231,9 +230,9 @@ export const CreateImageTemplateForm: React.FC<{
             <Alert message="Language is required" type="error" showIcon className="mb-2" />
           )}
 
-          {uploadFile.error?.message && (
+          {uploadError && (
             <Alert
-              message={uploadFile.error.response?.data.message}
+              message={uploadError}
               type="error"
               showIcon
               className="mb-2"
@@ -243,13 +242,13 @@ export const CreateImageTemplateForm: React.FC<{
 
         <Button
           type="primary"
-          loading={uploadFile.status === "pending"}
-          disabled={uploadFile.status === "pending"}
+          loading={isUploading}
+          disabled={isUploading}
           htmlType="submit"
           style={{ width: "100%", }}
           className="create-template-button"
         >
-          Create Template
+          {isUploading ? `Uploading ${uploadProgress}%` : "Create Template"}
         </Button>
       </div>
     </form>

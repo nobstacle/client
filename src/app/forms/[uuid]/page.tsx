@@ -5,134 +5,38 @@ import { useEffect, useState } from 'react';
 
 const FormByUUID = () => {
   const { uuid } = useParams();
-  const [formData, setFormData] = useState<any>(null);
-  const [formId, setFormId] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [formUrl, setFormUrl] = useState<string | null>(null);
 
   useEffect(() => {
-    if (uuid) {
-      let baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+    if (!uuid || Array.isArray(uuid)) return;
 
-      fetch(baseUrl + `/api/jotform/get-form-data/${uuid}`)
-        .then((res) => {
-          if (!res.ok) {
-            throw new Error('Form not found');
-          }
-          return res.json();
-        })
-        .then((data) => {
-          setFormData(data);
-          setFormId(data.data.formId);
-          setError(null);
-        })
-        .catch((err) => {
-          setFormData(null);
+    const controller = new AbortController();
+    const baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+    fetch(`${baseUrl}/api/jotform/prefill/${encodeURIComponent(uuid)}`, { signal: controller.signal })
+      .then((res) => {
+        if (!res.ok) throw new Error('Form not found');
+        return res.json();
+      })
+      .then((data) => {
+        setFormUrl(data.data.iframeUrl);
+        setError(null);
+      })
+      .catch((err) => {
+        if (err.name !== 'AbortError') {
+          setFormUrl(null);
           setError(err.message);
-        });
-    }
+        }
+      });
+
+    return () => controller.abort();
   }, [uuid]);
-
-const buildUrl = (
-  inputValues: Record<string, string>
-): string => {
-  const BASE_URL = `https://form.jotform.com/${formId}`;
-  const params = new URLSearchParams();
-
-  // Handle UUID from URL
-  const uuidMatch = window.location.href.match(/forms\/([a-f0-9-]+)/i);
-  if (uuidMatch) {
-    params.append("uuid", uuidMatch[1]);
-  }
-
-  const rawData = formData?.data?.data;
-  const answers: Record<string, any> =
-    typeof rawData === "string" ? JSON.parse(rawData) : rawData || {};
-
-  // Create a mapping from labels to parameter keys
-  const labelToParamKey: Record<string, string> = {};
-  Object.entries(inputValues).forEach(([paramKey, label]) => {
-    if (label && typeof label === 'string') {
-      const normLabel = label.toLowerCase().trim();
-      labelToParamKey[normLabel] = paramKey;
-    }
-  });
-
-  // For each answer in the form data
-  Object.entries(answers).forEach(([answerKey, answerValue]) => {
-    if (answerValue == null) return;
-
-    // Find the matching parameter key from inputValues
-    let paramKey = null;
-    
-    // First, check if the answer key directly matches a key in inputValues
-    if (inputValues[answerKey] !== undefined) {
-      paramKey = answerKey;
-    } else {
-      // Try to match based on the label
-      const normAnswerKey = answerKey.toLowerCase().trim();
-      
-      // Try to find a match by label
-      for (const [key, label] of Object.entries(inputValues)) {
-        const normLabel = label.toLowerCase().trim();
-        if (normLabel === normAnswerKey) {
-          paramKey = key;
-          break;
-        }
-      }
-    }
-
-    // If we found a matching parameter key, add it to the URL params
-    if (paramKey) {
-      params.append(paramKey, String(answerValue));
-    }
-  });
-
-  return `${BASE_URL}?${params.toString()}`;
-};
-  useEffect(() => {
-    const fetchFormFields = async () => {
-      if (!formId) return;
-
-      try {
-        const API_KEY = process.env.NEXT_PUBLIC_JOTFORM_API_KEY;
-        const response = await fetch(
-          `https://api.jotform.com/form/${formId}/questions?apiKey=${API_KEY}`
-        );
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! Status: ${response.status}`);
-        }
-
-        const data = await response.json();
-        const content = data?.content || {};
-
-        const result: Record<string, any> = {};
-
-        Object.values(content).forEach((field: any) => {
-          const label = field.text;
-          const key = field.name;
-
-          if (label && key) {
-            result[key] = label;
-          }
-        });
-
-        let url = buildUrl(result);
-        setFormUrl(url);
-      } catch (error: any) {
-        console.error({ error });
-      }
-    };
-
-    fetchFormFields();
-  }, [formId]);
 
   return (
     <div style={{ background: 'white', height: '100vh', width: '100%' }}>
       {error ? (
         <p style={{ color: 'red' }}>Error: {error}</p>
-      ) : formData ? (
+      ) : formUrl ? (
         <div style={{ width: '100%', height: '100vh' }}>
           {formUrl && (
             <iframe

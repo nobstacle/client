@@ -6,7 +6,6 @@ import {
   getVideoTemplateControllerGetVideoTagsQueryKey,
   templateControllerGetVideoTemplates,
   useCompanyControllerGetCompany,
-  useUploadControllerUploadCompanyFile,
   useVideoTemplateControllerGetVideoTags,
 } from "../../../lib/client/api";
 import * as yup from "yup";
@@ -16,6 +15,7 @@ import { UploadOutlined } from "@ant-design/icons";
 import { languages } from "../../../constant/languages";
 import { GetVideoTemplateRes } from "../../../lib/client/model";
 import { RecommendedDimensions } from "./RecommendedDimensions";
+import { uploadCompanyFileDirect } from "../../../lib/directCompanyUpload";
 
 interface CreateImageTemplateFormFieldValues {
   file: any;
@@ -73,28 +73,25 @@ export const CreateVideoTemplateForm: React.FC<{
     resolver: yupResolver(schema),
   });
 
-  const uploadFile = useUploadControllerUploadCompanyFile({
-    mutation: { retry: 0 },
-  });
+  const [isUploading, setIsUploading] = React.useState(false);
+  const [uploadError, setUploadError] = React.useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = React.useState(0);
 
   const company = useCompanyControllerGetCompany();
 
-  const handleCreateImageTemplateCreate = (
+  const handleCreateImageTemplateCreate = async (
     data: CreateImageTemplateFormFieldValues,
   ) => {
     const file = data.file[0];
 
-    uploadFile.mutate(
-      {
-        data: {
-          ...data,
-          file,
-          tag: (data.tagCreate as string) || (data.tagSelect as string),
-          defaultLangCode: company.data?.defaultLangCode ?? "en",
-        },
-      },
-      {
-        onSuccess: async (res) => {
+    setIsUploading(true);
+    setUploadError(null);
+    try {
+      const res = await uploadCompanyFileDirect(file, {
+        tag: (data.tagCreate as string) || (data.tagSelect as string),
+        langCode: data.langCode,
+        defaultLangCode: company.data?.defaultLangCode ?? "en",
+      }, setUploadProgress);
           if (cb) {
             const template = await templateControllerGetVideoTemplates({
               id: res.sourceId,
@@ -112,9 +109,11 @@ export const CreateVideoTemplateForm: React.FC<{
           void queryClient.invalidateQueries({
             queryKey: getVideoTemplateControllerGetVideoTagsQueryKey(),
           });
-        },
-      },
-    );
+    } catch (error: any) {
+      setUploadError(error.message || "Upload failed");
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const onSubmit: SubmitHandler<CreateImageTemplateFormFieldValues> = (data) =>
@@ -237,9 +236,9 @@ export const CreateVideoTemplateForm: React.FC<{
         </Form.Item>
 
         {/* Error Messages */}
-        {uploadFile.error?.message && (
+        {uploadError && (
           <Alert
-            message={uploadFile.error.response?.data.message}
+            message={uploadError}
             type="error"
             showIcon
           />
@@ -250,12 +249,12 @@ export const CreateVideoTemplateForm: React.FC<{
           <Button
             type="primary"
             htmlType="submit"
-            loading={uploadFile.status === "pending"}
-            disabled={uploadFile.status === "pending"}
+            loading={isUploading}
+            disabled={isUploading}
             style={{ width: "100%", }}
             className="create-template-button"
           >
-            Create Template
+            {isUploading ? `Uploading ${uploadProgress}%` : "Create Template"}
           </Button>
         </Form.Item>
       </Space>

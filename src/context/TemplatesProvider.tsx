@@ -1,12 +1,16 @@
 "use client";
-import { createContext, useContext } from "react";
-import { useFetchTemplates } from "../hooks/useFetchTemplates";
+import { createContext, useContext, useEffect } from "react";
 import { QueryObserverResult, RefetchOptions } from "@tanstack/react-query";
 import {
   GetSlideshowTemplateRes,
   HttpExceptionSchema,
 } from "../lib/client/model";
 import { ErrorType } from "../lib/custom-instance";
+import {
+  getTemplateControllerGetSlideshowTemplatesQueryKey,
+  useTemplateControllerGetSlideshowTemplates,
+} from "../lib/client/api";
+import useTemplateStore from "../lib/zustand/store/templateStore";
 
 export const TemplateContext = createContext<{
   refetchSlideshow: (
@@ -36,9 +40,25 @@ export const TemplateContextProvider = ({
 }: {
   children: React.ReactNode;
 }) => {
-  const { refetchSlideshow } = useFetchTemplates();
+  const slideshow = useTemplateControllerGetSlideshowTemplates(
+    {},
+    {
+      query: {
+        staleTime: Infinity,
+        retry: 0,
+        gcTime: Infinity,
+        queryKey: getTemplateControllerGetSlideshowTemplatesQueryKey(),
+      },
+    },
+  );
+  const setSlideshows = useTemplateStore((state) => state.setSlideshows);
+
+  useEffect(() => {
+    if (slideshow.data) setSlideshows(slideshow.data);
+  }, [slideshow.data, setSlideshows]);
+
   return (
-    <TemplateContext.Provider value={{ refetchSlideshow }}>
+    <TemplateContext.Provider value={{ refetchSlideshow: slideshow.refetch }}>
       {children}
     </TemplateContext.Provider>
   );
