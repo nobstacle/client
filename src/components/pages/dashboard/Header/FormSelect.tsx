@@ -36,9 +36,11 @@ const JotFormPrefillModal = ({
         return;
       }
 
-      const API_KEY = process.env.NEXT_PUBLIC_JOTFORM_API_KEY;
+      // Use the backend proxy so the JotForm API key stays server-side
+      // and benefits from the 5-minute server-side cache.
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
       const response = await fetch(
-        `https://api.jotform.com/form/${formId}/questions?apiKey=${API_KEY}`
+        `${backendUrl}/api/jotform/form/${formId}/questions`
       );
 
       if (!response.ok) {
@@ -249,18 +251,11 @@ const JotFormPrefillModal = ({
         throw new Error('No UUID returned from server');
       }
 
-      // Build prefilled URL
+      // The /forms/[uuid] route calls the backend prefill endpoint which
+      // reads the stored record and builds the JotForm URL server-side.
+      // Any client-side query params here would be ignored by that page.
       const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.nobstacle.com';
-      const params = new URLSearchParams();
-      
-      // Add form values to URL params
-      Object.entries(formValues).forEach(([key, value]) => {
-        if (value) {
-          params.append(key, String(value));
-        }
-      });
-
-      const url = `${baseUrl}/forms/${uuid}?${params.toString()}`;
+      const url = `${baseUrl}/forms/${uuid}`;
 
       // Call the send callback
       if (onSendForm) {
