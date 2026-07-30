@@ -6,6 +6,7 @@ import { ReactQueryContextProvider } from "../context/ReactQueryContextProvider"
 import { SessionContextProvider } from "../context/SessionContextProvider";
 import { ToastContainer, Bounce } from 'react-toastify';
 import { InstallPrompt } from "../components/pwa/InstallPrompt";
+import { VersionChecker } from "../components/VersionChecker";
 
 const inter = Inter({
   subsets: ['latin'],
@@ -253,6 +254,7 @@ function RootLayout({ children, session }: RootLayoutPropsI) {
               transition={Bounce}
               style={{ position: 'fixed' }}
             />
+            <VersionChecker />
           </SessionContextProvider>
         </ReactQueryContextProvider>
       </body>

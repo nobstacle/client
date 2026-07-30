@@ -40,6 +40,16 @@ const nextConfig = {
           },
         ],
       },
+      {
+        // Version checking endpoint to detect new deployments
+        source: "/version.json",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "no-store, no-cache, must-revalidate, proxy-revalidate",
+          },
+        ],
+      },
     ];
   },
   images: {
