@@ -1674,7 +1674,42 @@ export const Content: React.FC = () => {
         return null;
       }
 
-      // Fetch the form data from backend
+      // Try calling the prefill endpoint first which returns the server-assembled prefilled JotForm URL
+      try {
+        const prefillRes = await fetch(`${baseUrl}/api/jotform/prefill/${encodeURIComponent(uuid)}`, {
+          headers: {
+            Authorization: `Bearer ${data?.user.backendTokens.at}`,
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (prefillRes.ok) {
+          const prefillJson = await prefillRes.json();
+          if (prefillJson.success && prefillJson.data?.iframeUrl) {
+            let finalUrl = prefillJson.data.iframeUrl;
+
+            // If there were query params on the incoming URL, merge them in as well
+            if (Object.keys(prefillData).length > 0) {
+              const urlObj = new URL(finalUrl);
+              Object.entries(prefillData).forEach(([key, value]) => {
+                if (!urlObj.searchParams.has(key)) {
+                  urlObj.searchParams.set(key, value);
+                }
+              });
+              finalUrl = urlObj.toString();
+            }
+
+            return {
+              url: finalUrl,
+              prefillData
+            };
+          }
+        }
+      } catch (prefillErr) {
+        console.warn("Failed to fetch prefill form, falling back to assigned-form-by-uuid:", prefillErr);
+      }
+
+      // Fallback: Fetch formId by UUID from backend
       const res = await fetch(`${baseUrl}/api/jotform/get-assigned-form-by-uuid?uuid=${uuid}`, {
         headers: {
           Authorization: `Bearer ${data?.user.backendTokens.at}`,
@@ -1683,6 +1718,17 @@ export const Content: React.FC = () => {
       });
 
       if (!res.ok) {
+        // If uuid looks like a numeric formId itself, use it directly
+        if (/^\d+$/.test(uuid)) {
+          const directUrl = new URL(`https://form.jotform.com/${uuid}`);
+          Object.entries(prefillData).forEach(([key, value]) => {
+            directUrl.searchParams.set(key, value);
+          });
+          return {
+            url: directUrl.toString(),
+            prefillData
+          };
+        }
         throw new Error(`HTTP error! status: ${res.status}`);
       }
 

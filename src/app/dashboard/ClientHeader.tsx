@@ -122,14 +122,13 @@ const buildUrlFromFormData = (
     let baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.nobstacle.com';
 
     if (uuid) {
-        baseUrl = `${baseUrl}/forms/${uuid}`;
+        return `${baseUrl}/forms/${uuid}`;
     }
 
     if (type === "blank") {
-        return baseUrl;
+        return `${baseUrl}/forms/${formId}`;
     }
     const params = new URLSearchParams();
-
 
     if (listableFields && listableFields.length > 0) {
         listableFields.forEach((field: any) => {
