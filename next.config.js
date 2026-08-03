@@ -2,15 +2,68 @@
 
 const withPWA = require("@ducanh2912/next-pwa").default({
   dest: "public",
-  cacheOnFrontEndNav: true,
-  aggressiveFrontEndNavCaching: true,
+  // Never register a SW in local next dev — it fights HMR and serves stale chunks.
+  disable: process.env.NODE_ENV === "development",
+  // Aggressive HTML/nav caching is what left users on deleted _next/static hashes after deploy.
+  cacheOnFrontEndNav: false,
+  aggressiveFrontEndNavCaching: false,
   reloadOnOnline: true,
-  disable: false,
   workboxOptions: {
     disableDevLogs: true,
-    // New SW activates immediately on deployment — no need to close all tabs.
     skipWaiting: true,
     clientsClaim: true,
+    cleanupOutdatedCaches: true,
+    // Hashed Next assets are safe to cache; navigations and APIs must stay network-first.
+    runtimeCaching: [
+      {
+        urlPattern: /^https?:\/\/.*\/(_next\/static\/).*/i,
+        handler: "CacheFirst",
+        options: {
+          cacheName: "next-static-assets",
+          expiration: {
+            maxEntries: 200,
+            maxAgeSeconds: 60 * 60 * 24 * 365,
+          },
+        },
+      },
+      {
+        urlPattern: /^https?:\/\/.*\/(_next\/data\/).*/i,
+        handler: "NetworkFirst",
+        options: {
+          cacheName: "next-data",
+          networkTimeoutSeconds: 10,
+          expiration: {
+            maxEntries: 64,
+            maxAgeSeconds: 60 * 60 * 24,
+          },
+        },
+      },
+      {
+        urlPattern: ({ request }) => request.mode === "navigate",
+        handler: "NetworkFirst",
+        options: {
+          cacheName: "pages",
+          networkTimeoutSeconds: 5,
+          expiration: {
+            maxEntries: 32,
+            maxAgeSeconds: 60 * 60 * 24,
+          },
+        },
+      },
+      // Ads / analytics must never be handled by Workbox (ad blockers → no-response noise).
+      {
+        urlPattern: /^https:\/\/(www\.)?google(ads|tagmanager|syndication)?\.com\/.*/i,
+        handler: "NetworkOnly",
+      },
+      {
+        urlPattern: /^https:\/\/.*\.(doubleclick|googlesyndication)\.net\/.*/i,
+        handler: "NetworkOnly",
+      },
+      {
+        urlPattern: /^https:\/\/.*\/api\/.*/i,
+        handler: "NetworkOnly",
+      },
+    ],
   },
 });
 

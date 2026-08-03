@@ -1,15 +1,33 @@
 'use client';
 import { useEffect } from 'react';
 
+async function clearServiceWorkerState() {
+  if ('caches' in window) {
+    const cacheKeys = await caches.keys();
+    await Promise.all(cacheKeys.map((key) => caches.delete(key)));
+  }
+
+  if ('serviceWorker' in navigator) {
+    const registrations = await navigator.serviceWorker.getRegistrations();
+    await Promise.all(registrations.map((reg) => reg.unregister()));
+  }
+}
+
 export function VersionChecker() {
   useEffect(() => {
     let isRefreshing = false;
+
+    // Dev never uses a SW; kill any leftover registration from a prior prod/build session.
+    if (process.env.NODE_ENV === 'development') {
+      clearServiceWorkerState().catch(() => undefined);
+      return;
+    }
 
     const checkVersion = async () => {
       try {
         const res = await fetch(`/version.json?t=${Date.now()}`, {
           cache: 'no-store',
-          headers: { 'Cache-Control': 'no-cache' }
+          headers: { 'Cache-Control': 'no-cache' },
         });
         if (!res.ok) return;
         const data = await res.json();
@@ -23,38 +41,19 @@ export function VersionChecker() {
 
         if (localBuildId !== serverBuildId && !isRefreshing) {
           isRefreshing = true;
-          console.log('[App Update] New deployment detected. Clearing cache and reloading...');
           localStorage.setItem('app_build_version', serverBuildId);
-
-          // Clear Service Worker Caches & CacheStorage
-          if ('caches' in window) {
-            const cacheKeys = await caches.keys();
-            await Promise.all(cacheKeys.map(key => caches.delete(key)));
-          }
-
-          // Unregister existing Service Workers
-          if ('serviceWorker' in navigator) {
-            const registrations = await navigator.serviceWorker.getRegistrations();
-            for (const reg of registrations) {
-              await reg.unregister();
-            }
-          }
-
-          // Reload page to get fresh bundle
-          window.location.reload();
+          await clearServiceWorkerState();
+          // Hard reload so the browser fetches a fresh document + chunk graph.
+          window.location.replace(window.location.href);
         }
       } catch (err) {
         console.warn('Version check error:', err);
       }
     };
 
-    // Run check on mount
     checkVersion();
 
-    // Check periodically every 2 minutes
     const interval = setInterval(checkVersion, 2 * 60 * 1000);
-    
-    // Check when user focuses tab
     const onFocus = () => checkVersion();
     window.addEventListener('focus', onFocus);
 

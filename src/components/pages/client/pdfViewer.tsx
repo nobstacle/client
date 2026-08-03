@@ -1,17 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
-import * as pdfjsLib from 'pdfjs-dist';
+import { getDocument, GlobalWorkerOptions, version as pdfjsVersion } from 'pdfjs-dist';
 
-// Enhanced worker setup with multiple fallbacks
+// Keep worker version in lockstep with the installed pdfjs-dist package.
 const setupPDFWorker = () => {
-  if (!pdfjsLib.GlobalWorkerOptions.workerSrc) {
-    // Try different worker sources
-    const workerSources = [
-      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js',
-      'https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js',
-      'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js'
-    ];
-
-    pdfjsLib.GlobalWorkerOptions.workerSrc = workerSources[0];
+  if (!GlobalWorkerOptions.workerSrc) {
+    GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsVersion}/build/pdf.worker.min.mjs`;
   }
 };
 
@@ -78,9 +71,9 @@ const PDFViewer = ({ documentUrl, onLoadingChange, onError }) => {
     try {
       console.log('📄 Trying direct PDF.js load...');
 
-      const loadingTask = pdfjsLib.getDocument({
+      const loadingTask = getDocument({
         url: documentUrl,
-        cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/',
+        cMapUrl: `https://unpkg.com/pdfjs-dist@${pdfjsVersion}/cmaps/`,
         cMapPacked: true,
         disableAutoFetch: false,
         disableStream: false,
@@ -131,7 +124,7 @@ const PDFViewer = ({ documentUrl, onLoadingChange, onError }) => {
       const arrayBuffer = await response.arrayBuffer();
       console.log('📊 PDF size:', Math.round(arrayBuffer.byteLength / 1024), 'KB');
 
-      const loadingTask = pdfjsLib.getDocument({
+      const loadingTask = getDocument({
         data: arrayBuffer,
       });
 
@@ -151,7 +144,7 @@ const PDFViewer = ({ documentUrl, onLoadingChange, onError }) => {
     try {
       console.log('📄 Trying simplified options...');
 
-      const loadingTask = pdfjsLib.getDocument({
+      const loadingTask = getDocument({
         url: documentUrl,
         disableStream: true,
         disableRange: true,
