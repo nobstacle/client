@@ -1,6 +1,6 @@
 /* eslint-disable @next/next/no-img-element */
 import React, { useState, useEffect, useMemo, useRef } from "react";
-import Image from "next/image";
+import NextImage from "next/image";
 import SafeContentFrame from "./SafeContentFrame";
 import { getContainMediaStyle } from "../../../utils/contentFit";
 
@@ -92,7 +92,10 @@ const preloadMediaWithRetry = (
         video.load();
       };
     } else {
-      const img = new Image();
+      // Must use the browser HTMLImageElement — importing `Image` from
+      // "next/image" shadows the global and makes `new Image()` throw
+      // "is not a constructor" (prod crash on /client slideshows).
+      const img = new window.Image();
       img.onload = handleSuccess;
       img.onerror = handleFailure;
       img.src = src;
@@ -255,7 +258,7 @@ const FullscreenMediaLayer: React.FC<{
           style={getContainMediaStyle()}
         />
       ) : (
-        <Image
+        <NextImage
           ref={imgRef as any}
           alt="template_image"
           src={item.url ?? ""}
@@ -466,7 +469,7 @@ export const Slideshow: React.FC<{
         >
           {/* First image preview: cross-fades into view once preloaded */}
           {ready && firstImage && (
-            <Image
+            <NextImage
               src={firstImage}
               alt=""
               aria-hidden="true"
