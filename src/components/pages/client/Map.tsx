@@ -51,21 +51,26 @@ const Directions: React.FC<{
   }, [travelMethod]);
 
   async function calculateRoute() {
-    // eslint-disable-next-line no-undef
-    const directionsService = new google.maps.DirectionsService();
-    const results = await directionsService.route({
-      origin,
-      destination,
-      unitSystem: google.maps.UnitSystem.METRIC,
-      // eslint-disable-next-line no-undef
-      travelMode: currTravelMethod ?? google.maps.TravelMode["DRIVING"],
-      language: languageCode,
-      provideRouteAlternatives: true,
-    });
+    if (typeof window === "undefined" || !(window as any).google || !(window as any).google.maps) {
+      return;
+    }
+    try {
+      const directionsService = new (window as any).google.maps.DirectionsService();
+      const results = await directionsService.route({
+        origin,
+        destination,
+        unitSystem: (window as any).google.maps.UnitSystem?.METRIC ?? 0,
+        travelMode: currTravelMethod ?? "DRIVING",
+        language: languageCode,
+        provideRouteAlternatives: true,
+      });
 
-    setDirectionsResponse(results);
-    setDistance(results.routes[0].legs[0].distance?.text ?? "");
-    setDuration(results.routes[0].legs[0].duration?.text ?? "");
+      setDirectionsResponse(results);
+      setDistance(results.routes[0]?.legs[0]?.distance?.text ?? "");
+      setDuration(results.routes[0]?.legs[0]?.duration?.text ?? "");
+    } catch (err) {
+      console.error("[Map] Failed to calculate route:", err);
+    }
   }
   return (
     <SafeContentFrame className="relative flex flex-col items-center overflow-hidden">
@@ -230,7 +235,7 @@ m101 -30 c52 -40 51 -100 -1 -166 -22 -28 -44 -51 -48 -51 -24 0 -92 102 -92
         <div className="mt-4 flex w-full justify-end gap-4">
           <button
             onClick={() => {
-              setCurrTravelMethod(google.maps.TravelMode["TRANSIT"]);
+              setCurrTravelMethod("TRANSIT" as any);
             }}
           >
             <svg
@@ -244,20 +249,20 @@ m101 -30 c52 -40 51 -100 -1 -166 -22 -28 -44 -51 -48 -51 -24 0 -92 102 -92
                 d="M5 6V15.8C5 16.9201 5 17.4802 5.21799 17.908C5.40973 18.2843 5.71569 18.5903 6.09202 18.782C6.51984 19 7.07989 19 8.2 19H15.8C16.9201 19 17.4802 19 17.908 18.782C18.2843 18.5903 18.5903 18.2843 18.782 17.908C19 17.4802 19 16.9201 19 15.8V6M5 6C5 6 5 3 12 3C19 3 19 6 19 6M5 6H19M5 13H19M17 21V19M7 21V19M8 16H8.01M16 16H16.01"
                 style={{
                   stroke:
-                    currTravelMethod === google.maps.TravelMode["TRANSIT"]
+                    (currTravelMethod as any) === "TRANSIT"
                       ? "rgb(59, 89, 152)"
                       : "#000000",
                 }}
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
               />
             </svg>
           </button>
 
           <button
             onClick={() => {
-              setCurrTravelMethod(google.maps.TravelMode["DRIVING"]);
+              setCurrTravelMethod("DRIVING" as any);
             }}
           >
             <svg
@@ -271,20 +276,20 @@ m101 -30 c52 -40 51 -100 -1 -166 -22 -28 -44 -51 -48 -51 -24 0 -92 102 -92
                 d="M3 8L5.72187 10.2682C5.90158 10.418 6.12811 10.5 6.36205 10.5H17.6379C17.8719 10.5 18.0984 10.418 18.2781 10.2682L21 8M6.5 14H6.51M17.5 14H17.51M8.16065 4.5H15.8394C16.5571 4.5 17.2198 4.88457 17.5758 5.50772L20.473 10.5777C20.8183 11.1821 21 11.8661 21 12.5623V18.5C21 19.0523 20.5523 19.5 20 19.5H19C18.4477 19.5 18 19.0523 18 18.5V17.5H6V18.5C6 19.0523 5.55228 19.5 5 19.5H4C3.44772 19.5 3 19.0523 3 18.5V12.5623C3 11.8661 3.18166 11.1821 3.52703 10.5777L6.42416 5.50772C6.78024 4.88457 7.44293 4.5 8.16065 4.5ZM7 14C7 14.2761 6.77614 14.5 6.5 14.5C6.22386 14.5 6 14.2761 6 14C6 13.7239 6.22386 13.5 6.5 13.5C6.77614 13.5 7 13.7239 7 14ZM18 14C18 14.2761 17.7761 14.5 17.5 14.5C17.2239 14.5 17 14.2761 17 14C17 13.7239 17.2239 13.5 17.5 13.5C17.7761 13.5 18 13.7239 18 14Z"
                 style={{
                   stroke:
-                    currTravelMethod === google.maps.TravelMode["DRIVING"]
+                    (currTravelMethod as any) === "DRIVING"
                       ? "rgb(59, 89, 152)"
                       : "#000000",
                 }}
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
               />
             </svg>
           </button>
 
           <button
             onClick={() => {
-              setCurrTravelMethod(google.maps.TravelMode["WALKING"]);
+              setCurrTravelMethod("WALKING" as any);
             }}
           >
             <svg
@@ -298,21 +303,21 @@ m101 -30 c52 -40 51 -100 -1 -166 -22 -28 -44 -51 -48 -51 -24 0 -92 102 -92
                 d="M13.3692 5.13905C13.3692 6.00924 12.6638 6.71466 11.7936 6.71466C10.9234 6.71466 10.218 6.00924 10.218 5.13905C10.218 4.26887 10.9234 3.56345 11.7936 3.56345C12.6638 3.56345 13.3692 4.26887 13.3692 5.13905Z"
                 style={{
                   stroke:
-                    currTravelMethod === google.maps.TravelMode["WALKING"]
+                    (currTravelMethod as any) === "WALKING"
                       ? "rgb(59, 89, 152)"
                       : "#000000",
                   fill:
-                    currTravelMethod === google.maps.TravelMode["WALKING"]
+                    (currTravelMethod as any) === "WALKING"
                       ? "rgb(59, 89, 152)"
                       : "#000000",
                 }}
-                stroke-width="1.35052"
+                strokeWidth="1.35052"
               />
               <path
                 d="M11.7782 14.8313H9.48168C9.94681 12.7756 9.94681 11.0994 9.94681 9.42322L12.1943 9.64358C12.1943 11.2195 11.7782 13.0771 11.7782 14.8313Z"
                 style={{
                   fill:
-                    currTravelMethod === google.maps.TravelMode["WALKING"]
+                    (currTravelMethod as any) === "WALKING"
                       ? "rgb(59, 89, 152)"
                       : "#000000",
                 }}
@@ -321,37 +326,37 @@ m101 -30 c52 -40 51 -100 -1 -166 -22 -28 -44 -51 -48 -51 -24 0 -92 102 -92
                 d="M9.48168 14.8313C8.09375 17.284 6.95068 21.1119 6.95068 21.1119M9.48168 14.8313C10.2219 14.8313 11.038 14.8313 11.7782 14.8313M9.48168 14.8313C9.94681 12.7756 9.94681 11.0994 9.94681 9.42322L12.1943 9.64358C12.1943 11.2195 11.7782 13.0771 11.7782 14.8313M11.7782 14.8313C13.2124 17.284 12.4653 21.1119 12.4653 21.1119"
                 style={{
                   stroke:
-                    currTravelMethod === google.maps.TravelMode["WALKING"]
+                    (currTravelMethod as any) === "WALKING"
                       ? "rgb(59, 89, 152)"
                       : "#000000",
                 }}
-                stroke-width="2.36342"
-                stroke-linecap="round"
-                stroke-linejoin="round"
+                strokeWidth="2.36342"
+                strokeLinecap="round"
+                strokeLinejoin="round"
               />
               <path
                 d="M12.6599 9.42322L14.8501 12.9967L17.5324 11.8874"
                 style={{
                   stroke:
-                    currTravelMethod === google.maps.TravelMode["WALKING"]
+                    (currTravelMethod as any) === "WALKING"
                       ? "rgb(59, 89, 152)"
                       : "#000000",
                 }}
-                stroke-width="1.67621"
-                stroke-linecap="round"
-                stroke-linejoin="round"
+                strokeWidth="1.67621"
+                strokeLinecap="round"
+                strokeLinejoin="round"
               />
               <path
                 d="M9.80518 9.08887L6.53081 10.0556L8.79988 13.627"
                 style={{
                   stroke:
-                    currTravelMethod === google.maps.TravelMode["WALKING"]
+                    (currTravelMethod as any) === "WALKING"
                       ? "rgb(59, 89, 152)"
                       : "#000000",
                 }}
-                stroke-width="1.67621"
-                stroke-linecap="round"
-                stroke-linejoin="round"
+                strokeWidth="1.67621"
+                strokeLinecap="round"
+                strokeLinejoin="round"
               />
             </svg>
           </button>
