@@ -16,12 +16,14 @@ const schema = yup.object().shape({
   destination: yup.string().required("Destination address is required"),
 });
 
+const libraries: any = ["places"];
+
 export const SendDocumentForm: React.FC<{
   onSend: (origin: string, destination: string) => void;
 }> = ({ onSend }) => {
   const { isLoaded } = useJsApiLoader({
     googleMapsApiKey: "AIzaSyBB5xoUCTVJoyYUy-4r7LAySR8SpfaVsHA",
-    libraries: ["places"],
+    libraries: libraries,
     language: "en",
   });
 

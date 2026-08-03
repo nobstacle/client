@@ -109,9 +109,11 @@ export const UpdateMapTemplateForm: React.FC<{
   const onSubmit: SubmitHandler<CreateMapTemplateFormFieldValues> = (data) =>
     handleUpdateMapTemplate(data);
 
+const libraries: any = ["places"];
+
   const { isLoaded } = useJsApiLoader({
     googleMapsApiKey: "AIzaSyBB5xoUCTVJoyYUy-4r7LAySR8SpfaVsHA",
-    libraries: ["places"],
+    libraries: libraries,
     language: "en",
   });
 

@@ -49,13 +49,15 @@ const schema = yup.object().shape(
   [["tagCreate", "tagSelect"]],
 );
 
+const libraries: any = ["places"];
+
 export const CreateMapsTemplateForm: React.FC<{
   cb?: (template: any, isUpdate: boolean) => void;
 }> = ({ cb }) => {
   const queryClient = useQueryClient();
   const { isLoaded } = useJsApiLoader({
     googleMapsApiKey: "AIzaSyBB5xoUCTVJoyYUy-4r7LAySR8SpfaVsHA",
-    libraries: ["places"],
+    libraries: libraries,
     language: "en",
   });
 

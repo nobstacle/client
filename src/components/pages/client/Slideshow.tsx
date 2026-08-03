@@ -1,5 +1,6 @@
 /* eslint-disable @next/next/no-img-element */
 import React, { useState, useEffect, useMemo, useRef } from "react";
+import Image from "next/image";
 import SafeContentFrame from "./SafeContentFrame";
 import { getContainMediaStyle } from "../../../utils/contentFit";
 
@@ -254,13 +255,14 @@ const FullscreenMediaLayer: React.FC<{
           style={getContainMediaStyle()}
         />
       ) : (
-        <img
-          ref={imgRef}
+        <Image
+          ref={imgRef as any}
           alt="template_image"
           src={item.url ?? ""}
           onLoad={onMediaLoaded}
-          onError={onMediaLoaded}
+          onError={() => { if (onMediaLoaded) onMediaLoaded() }}
           style={getContainMediaStyle()}
+          fill
         />
       )}
     </div>
@@ -464,18 +466,15 @@ export const Slideshow: React.FC<{
         >
           {/* First image preview: cross-fades into view once preloaded */}
           {ready && firstImage && (
-            <img
+            <Image
               src={firstImage}
               alt=""
               aria-hidden="true"
               style={{
-                position: "absolute",
-                inset: 0,
-                width: "100%",
-                height: "100%",
                 objectFit: "contain",
                 filter: "blur(16px) brightness(0.4)",
               }}
+              fill
             />
           )}
 

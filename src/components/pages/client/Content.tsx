@@ -2763,7 +2763,7 @@ export const Content: React.FC = () => {
         ) && (
             <div className="w-full h-full">
               {/* QR version */}
-              {["MapTemplateQr", "WebsiteTemplateQr"].includes(contentToDisplay?.type) ? (
+              {["MapTemplateQr", "WebsiteTemplateQr"].includes(contentToDisplay?.type) || messageStore.receivedContent?.directContent === 'QR' ? (
                 <SafeContentFrame className="flex justify-center items-center bg-gray-50">
                   <Card>
                     <img
