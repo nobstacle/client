@@ -21,7 +21,15 @@ export class PWAErrorBoundary extends Component<Props, State> {
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error("[PWAErrorBoundary] Caught a fatal error:", error, errorInfo);
-    this.clearCachesAndReload();
+    
+    // Guard against infinite reload loops
+    const hasReloaded = typeof window !== "undefined" && sessionStorage.getItem("pwa_auto_reloaded");
+    if (!hasReloaded) {
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem("pwa_auto_reloaded", "true");
+      }
+      this.clearCachesAndReload();
+    }
   }
 
   private async clearCachesAndReload() {
@@ -42,24 +50,42 @@ export class PWAErrorBoundary extends Component<Props, State> {
       
       localStorage.removeItem("app_build_version");
       
-      // Add a small delay to ensure unregistration is processed
       setTimeout(() => {
         window.location.reload();
       }, 500);
     } catch (err) {
       console.error("[PWAErrorBoundary] Failed to clear caches:", err);
-      setTimeout(() => {
-        window.location.reload();
-      }, 500);
     }
   }
 
   public render() {
     if (this.state.hasError) {
       return (
-        <div style={{ display: 'flex', height: '100vh', width: '100vw', alignItems: 'center', justifyContent: 'center', backgroundColor: '#000', color: '#fff', flexDirection: 'column' }}>
-          <h2>Updating application...</h2>
-          <p>Clearing old cached data to load the latest version.</p>
+        <div style={{ display: 'flex', height: '100vh', width: '100vw', alignItems: 'center', justifyContent: 'center', backgroundColor: '#0f172a', color: '#fff', flexDirection: 'column', gap: '1rem', padding: '1rem', textAlign: 'center' }}>
+          <h2 style={{ fontSize: '1.25rem', fontWeight: 600 }}>Updating application...</h2>
+          <p style={{ color: '#94a3b8', fontSize: '0.875rem', maxWidth: '400px' }}>
+            We cleared old cached files to load the latest version.
+          </p>
+          <button
+            onClick={() => {
+              if (typeof window !== "undefined") {
+                sessionStorage.removeItem("pwa_auto_reloaded");
+                window.location.reload();
+              }
+            }}
+            style={{
+              padding: '0.5rem 1rem',
+              backgroundColor: '#2563eb',
+              color: '#fff',
+              borderRadius: '0.375rem',
+              border: 'none',
+              cursor: 'pointer',
+              fontWeight: 500,
+              fontSize: '0.875rem'
+            }}
+          >
+            Reload Application
+          </button>
         </div>
       );
     }
