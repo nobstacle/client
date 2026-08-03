@@ -7,6 +7,7 @@ import { SessionContextProvider } from "../context/SessionContextProvider";
 import { ToastContainer, Bounce } from 'react-toastify';
 import { InstallPrompt } from "../components/pwa/InstallPrompt";
 import { VersionChecker } from "../components/VersionChecker";
+import { PWAErrorBoundary } from "../components/client-helpers/PWAErrorBoundary";
 
 const inter = Inter({
   subsets: ['latin'],
@@ -238,7 +239,9 @@ function RootLayout({ children, session }: RootLayoutPropsI) {
 
         <ReactQueryContextProvider>
           <SessionContextProvider session={session}>
-            <div id="app-shell">{children}</div>
+            <div id="app-shell">
+              <PWAErrorBoundary>{children}</PWAErrorBoundary>
+            </div>
             <InstallPrompt />
             <ToastContainer
               position="top-right"
