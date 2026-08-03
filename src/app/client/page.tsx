@@ -28,11 +28,11 @@ export default function Client() {
   }, []);
 
   return (
-    <>
+    <React.Suspense fallback={<div className="flex h-screen w-screen items-center justify-center bg-black text-white">Loading...</div>}>
       <NetworkStatusIndicator />
       <Content />
       <ClientStationPicker />
-    </>
+    </React.Suspense>
   );
 }
 

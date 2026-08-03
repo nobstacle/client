@@ -2497,13 +2497,11 @@ useEffect(() => {
 								placeholder="Select Form"
 								value={selectedForm}
 								size="middle"
-							>
-								{assignedForms.map((assignedForm) => (
-									<Option key={assignedForm?.form_id} value={assignedForm?.form_id}>
-										{assignedForm?.form_name}
-									</Option>
-								))}
-							</Select>
+								options={assignedForms.map((assignedForm) => ({
+									label: assignedForm?.form_name,
+									value: assignedForm?.form_id
+								}))}
+							/>
 						</Col>
 					</Row>
 
@@ -2617,13 +2615,11 @@ useEffect(() => {
 							style={{ minWidth: '30%', maxWidth: '35%' }}
 							placeholder="Select Form"
 							value={selectedForm}
-						>
-							{assignedForms.map((assignedForm) => (
-								<Option key={assignedForm?.form_id} value={assignedForm?.form_id}>
-									{assignedForm?.form_name}
-								</Option>
-							))}
-						</Select>
+							options={assignedForms.map((assignedForm) => ({
+								label: assignedForm?.form_name,
+								value: assignedForm?.form_id
+							}))}
+						/>
 
 						<Tooltip title="Send Form">
 							<Button

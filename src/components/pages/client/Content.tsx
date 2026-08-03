@@ -30,8 +30,8 @@ const DisplayLoading = () => <div className="flex h-full w-full items-center jus
 // These modules pull in media preloading and the Google Maps SDK. Loading
 // them only for the matching content type keeps form and lightweight screens
 // responsive on low-powered display devices.
-const Slideshow = dynamic(() => import("./Slideshow"), { ssr: false, loading: DisplayLoading });
-const SimpleMap = dynamic(() => import("./Map"), { ssr: false, loading: DisplayLoading });
+const Slideshow = dynamic(() => import("./Slideshow"), { ssr: false, loading: () => <DisplayLoading /> });
+const SimpleMap = dynamic(() => import("./Map"), { ssr: false, loading: () => <DisplayLoading /> });
 const LAST_DISPLAYED_CONTENT_KEY = "lastDisplayedContent";
 const LAST_PUBLIC_CONTENT_KEY = "lastPublicContent";
 
