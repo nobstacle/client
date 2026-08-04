@@ -188,8 +188,16 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
     const speechToTextMutation = useUploadControllerUploadSpeechToTextFile();
     const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
     const { data } = useSession();
-    const { allPackages, categoriesData, categoriesFetched, fetchCategories } =
-        useHeaderUploadCatalog();
+    const authToken = user?.user?.backendTokens?.at ?? data?.user?.backendTokens?.at ?? null;
+    const {
+        allPackages,
+        categoriesData,
+        categoriesFetched,
+        isCategoriesLoading,
+        categoriesError,
+        categoriesTokenReady,
+        fetchCategories,
+    } = useHeaderUploadCatalog({ token: authToken });
     const { ensureHeaderTemplates, isHeaderCatalogLoading } = useTemplateLoader();
     const [selectedCategories, setSelectedCategories] = useState(null);
     const [selectedPackages, setSelectedPackages] = useState([]);
@@ -548,6 +556,22 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
             }
         };
     }, [searchValue, allTemplates]);
+
+    // Load upsell categories when user opens the "/" picker
+    useEffect(() => {
+        if (searchValue !== '/') return;
+        if (!authToken) return;
+        if (categoriesData.length > 0) return;
+
+        fetchCategories().then((categories) => {
+            if (isInIframe && categories.length > 0) {
+                window.parent.postMessage({
+                    type: 'CATEGORIES_DATA',
+                    categories,
+                }, '*');
+            }
+        });
+    }, [searchValue, authToken, categoriesData.length, fetchCategories, isInIframe]);
 
     // Confirmation number detection (separate from search)
     useEffect(() => {
@@ -1079,9 +1103,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                 </div>
             `;
             }
-        }
-
-        if (isLoading) {
+        } else if (isLoading) {
             return loadingSpinnerHTML;
         }
 
@@ -1325,7 +1347,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                     </script>
                 `;
                 } else if (searchValue === '/') {
-                    html = generateSearchDropdownHTML([], categoriesData, !categoriesFetched && categoriesData.length === 0, searchValue);
+                    html = generateSearchDropdownHTML([], categoriesData, isCategoriesLoading, searchValue);
                 } else {
                     html = generateSearchDropdownHTML(filteredTemplates, categoriesData, isLoading, searchValue);
                 }
@@ -1377,7 +1399,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
             }
         }
     }, [isDropdownVisible, filteredTemplates, isLoading, isInIframe, generateSearchDropdownHTML,
-        generateFormsDropdownHTML, searchValue, assignedForms, defaultFormId, categoriesData, isMobileView]);
+        generateFormsDropdownHTML, searchValue, assignedForms, defaultFormId, categoriesData, isCategoriesLoading, isMobileView]);
 
     const handlePasswordChange = () => {
         const newPassword = form.getFieldValue('newPassword');
@@ -3048,9 +3070,17 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                                     )}
                                                 />
                                             ) : searchValue === '/' ? (
-                                                !categoriesFetched ? (
+                                                !categoriesTokenReady || isCategoriesLoading ? (
                                                     <div style={{ padding: '20px', textAlign: 'center' }}>
                                                         <Spin />
+                                                    </div>
+                                                ) : !authToken ? (
+                                                    <div style={{ padding: '20px', textAlign: 'center', color: '#999' }}>
+                                                        Unable to load categories. Please sign in again.
+                                                    </div>
+                                                ) : categoriesError ? (
+                                                    <div style={{ padding: '20px', textAlign: 'center', color: '#999' }}>
+                                                        Failed to load categories. Check your connection and try again.
                                                     </div>
                                                 ) : categoriesData.length > 0 ? (
                                                 <>
@@ -3858,9 +3888,17 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                 )}
                             />
                         ) : searchValue === '/' ? (
-                            !categoriesFetched ? (
+                            !categoriesTokenReady || isCategoriesLoading ? (
                                 <div style={{ padding: '20px', textAlign: 'center' }}>
                                     <Spin />
+                                </div>
+                            ) : !authToken ? (
+                                <div style={{ padding: '20px', textAlign: 'center', color: '#999' }}>
+                                    Unable to load categories. Please sign in again.
+                                </div>
+                            ) : categoriesError ? (
+                                <div style={{ padding: '20px', textAlign: 'center', color: '#999' }}>
+                                    Failed to load categories. Check your connection and try again.
                                 </div>
                             ) : categoriesData.length > 0 ? (
                             <List

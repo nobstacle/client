@@ -1,5 +1,8 @@
 // Configuration
 const Isproduction = true;
+const BACKEND_URL = Isproduction
+  ? 'https://nobstacle-production-d145.up.railway.app'
+  : 'http://localhost:3001';
 const HEADER_URL = Isproduction
   ? 'https://nobstacle.com/header-only'
   : 'http://localhost:3000/header-only';
@@ -921,11 +924,7 @@ async function fetchCategories() {
   }
 
   try {
-    const Url = Isproduction
-      ? 'https://nobstacle.com'
-      : 'http://localhost:3000';
-
-    const response = await fetch(`${Url}/api/v1/uploads/get-all-categories?fetchAll=true&limit=100`, {
+    const response = await fetch(`${BACKEND_URL}/api/v1/uploads/get-all-categories?fetchAll=true&limit=100`, {
       headers: {
         Authorization: `Bearer ${cachedAuthData?.sessionToken}`,
         'Cache-Control': 'no-cache'
@@ -939,10 +938,12 @@ async function fetchCategories() {
       return categoriesData;
     } else {
       console.error('[Content Script] Failed to fetch categories:', response.status);
+      categoriesFetched = true;
       return [];
     }
   } catch (error) {
     console.error('[Content Script] Error fetching categories:', error);
+    categoriesFetched = true;
     return [];
   }
 }

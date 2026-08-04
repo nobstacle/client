@@ -75,14 +75,16 @@ async function fetchPackages(token: string) {
 export type HeaderUploadCatalogOptions = {
   /** When true, packages load immediately instead of after idle (e.g. upsell page). */
   eagerPackages?: boolean;
+  /** Pass token from header user prop when useSession() is unavailable (extension iframe). */
+  token?: string | null;
 };
 
 export const useHeaderUploadCatalog = (
   options: HeaderUploadCatalogOptions = {},
 ) => {
-  const { eagerPackages = false } = options;
-  const { data: session } = useSession();
-  const token = session?.user?.backendTokens?.at;
+  const { eagerPackages = false, token: tokenOverride } = options;
+  const { data: session, status: sessionStatus } = useSession();
+  const token = tokenOverride ?? session?.user?.backendTokens?.at ?? null;
   const deferPackages = useDeferredIdle();
   const loadPackages = eagerPackages || deferPackages;
 
@@ -92,7 +94,7 @@ export const useHeaderUploadCatalog = (
     enabled: !!token,
     staleTime: CATALOG_STALE_TIME_MS,
     gcTime: CATALOG_STALE_TIME_MS,
-    retry: 0,
+    retry: 1,
   });
 
   const packagesQuery = useQuery({
@@ -105,11 +107,19 @@ export const useHeaderUploadCatalog = (
   });
 
   const categoriesData = categoriesQuery.data ?? [];
-  const categoriesFetched =
-    categoriesQuery.isSuccess || categoriesQuery.isFetched;
+  const categoriesFetched = categoriesQuery.isFetched;
+  const isCategoriesLoading =
+    !!token &&
+    (categoriesQuery.isLoading || categoriesQuery.isFetching) &&
+    !categoriesFetched;
+  const categoriesError = categoriesQuery.isError;
   const allPackages = packagesQuery.data ?? [];
 
-  const fetchCategories = async () => {
+  const fetchCategoriesManual = async () => {
+    if (!token) {
+      return [];
+    }
+
     if (categoriesData.length > 0) {
       return categoriesData;
     }
@@ -122,6 +132,9 @@ export const useHeaderUploadCatalog = (
     allPackages,
     categoriesData,
     categoriesFetched,
-    fetchCategories,
+    isCategoriesLoading,
+    categoriesError,
+    categoriesTokenReady: !!token || sessionStatus !== "loading",
+    fetchCategories: fetchCategoriesManual,
   };
 };
