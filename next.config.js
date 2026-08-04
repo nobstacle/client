@@ -9,12 +9,12 @@ const withPWA = require("@ducanh2912/next-pwa").default({
   aggressiveFrontEndNavCaching: false,
   reloadOnOnline: true,
   dynamicStartUrl: false,
+  extendDefaultRuntimeCaching: true,
   workboxOptions: {
     disableDevLogs: true,
     skipWaiting: true,
     clientsClaim: true,
     cleanupOutdatedCaches: true,
-    extendDefaultRuntimeCaching: true,
     runtimeCaching: [
       {
         urlPattern: ({ url, sameOrigin }) =>
