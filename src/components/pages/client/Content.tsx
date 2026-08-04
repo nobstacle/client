@@ -1159,6 +1159,7 @@ export const Content: React.FC = () => {
     }
   }, [messageStore.receivedType, messageStore.receivedContent, messageStore.receivedSurvey, messageStore.receivedMessage]);
 
+
   useEffect(() => {
     if (!messageStore.receivedType) {
       if (chatBoxRef.current) {
@@ -2407,6 +2408,7 @@ export const Content: React.FC = () => {
               </Card>
             ) : (
               <SafeContentFrame isMedia className="relative flex items-center justify-center bg-black">
+
                   <img
                     key={activeTemplate?.id ?? ""}
                     alt="template_image"

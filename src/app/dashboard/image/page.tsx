@@ -77,9 +77,10 @@ export default function ImageDashboard() {
     template: LanguageAwareTemplate<GetImageTemplateRes>,
     ext: string,
   ) => {
+
     emitSendTemplate({
-      refId: template.shareTemplate.id,
-      langCode: template.shareLangCode,
+      refId: template.shareTemplate?.id,
+      langCode: template?.shareLangCode,
       refType: ChatType.Image,
       station: Number(params.get("station") ?? 1),
       contentExtra: ext,
