@@ -148,10 +148,13 @@ function usePreloadMedia(urls: string[], slideshowKey: string, maxWaitMs = 20000
       if (!cancelled) setReady(true);
     }, maxWaitMs);
 
-    const cleanups = urls.map((src) => {
+    const cleanups = urls.map((src, urlIndex) => {
       if (!src) {
         settledCount++;
         setProgress(Math.round((settledCount / totalCount) * 100));
+        if (urlIndex === 0) {
+          setReady(true);
+        }
         if (settledCount >= totalCount) {
           clearTimeout(timeout);
           setReady(true);
@@ -168,6 +171,10 @@ function usePreloadMedia(urls: string[], slideshowKey: string, maxWaitMs = 20000
         }
 
         setProgress(Math.round((settledCount / totalCount) * 100));
+        // Show as soon as the first slide finishes preloading — don't wait for all slides
+        if (urlIndex === 0) {
+          setReady(true);
+        }
         if (settledCount >= totalCount) {
           clearTimeout(timeout);
           setSuccessfulUrls([...successList]);
@@ -362,7 +369,7 @@ export const Slideshow: React.FC<{
       // Wait for the fade-out CSS opacity transition to complete before unmounting loader overlay completely
       const timer = setTimeout(() => {
         setShowLoader(false);
-      }, 500);
+      }, 200);
       return () => clearTimeout(timer);
     } else {
       setIsFullyReady(false);

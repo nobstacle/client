@@ -362,7 +362,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
     );
 
     // True while header-search template types are still loading into Zustand.
-    const isLoading = isHeaderCatalogLoading;
+    const isLoading = isHeaderCatalogLoading && searchValue !== '/' && searchValue !== '*';
 
     // Template type configurations
     const templateConfig = useMemo(() => ({
@@ -691,11 +691,12 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         setSearchValue(value);
 
         if (value === '/') {
+            setFilteredTemplates([]);
+            setIsDropdownVisible(true);
+
             if (categoriesData.length === 0 && !categoriesFetched) {
                 fetchCategories().then(categories => {
                     if (categories.length > 0) {
-                        setFilteredTemplates([]);
-
                         window.parent.postMessage({
                             type: 'CATEGORIES_DATA',
                             categories: categories
@@ -705,11 +706,12 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                     }
                 });
             } else if (categoriesData.length > 0) {
-                setFilteredTemplates([]);
                 window.parent.postMessage({
                     type: 'CATEGORIES_DATA',
                     categories: categoriesData
                 }, '*');
+            } else if (categoriesFetched) {
+                message.warning('No categories found.');
             }
         } else if (value === '*') {
             setFilteredTemplates([]);
@@ -1054,8 +1056,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
     };
 
     const generateSearchDropdownHTML = useCallback((templates, categories, isLoading, searchVal) => {
-        if (isLoading) {
-            return `
+        const loadingSpinnerHTML = `
             <div style="padding: 20px; text-align: center;">
                 <div style="display: inline-block; width: 20px; height: 20px; border: 2px solid #f3f3f3; border-top: 2px solid #3b5998; border-radius: 50%; animation: spin 1s linear infinite;"></div>
                 <style>
@@ -1066,6 +1067,22 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                 </style>
             </div>
         `;
+
+        if (searchVal === '/') {
+            if (isLoading) {
+                return loadingSpinnerHTML;
+            }
+            if (categories.length === 0) {
+                return `
+                <div style="padding: 20px; text-align: center; color: #999;">
+                    <div style="font-size: 14px; color: #666;">No categories found</div>
+                </div>
+            `;
+            }
+        }
+
+        if (isLoading) {
+            return loadingSpinnerHTML;
         }
 
         if (searchVal === '/' && categories.length > 0) {
@@ -1307,8 +1324,8 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                         })();
                     </script>
                 `;
-                } else if (searchValue === '/' && categoriesData.length > 0) {
-                    html = generateSearchDropdownHTML([], categoriesData, isLoading, searchValue);
+                } else if (searchValue === '/') {
+                    html = generateSearchDropdownHTML([], categoriesData, !categoriesFetched && categoriesData.length === 0, searchValue);
                 } else {
                     html = generateSearchDropdownHTML(filteredTemplates, categoriesData, isLoading, searchValue);
                 }
@@ -2213,6 +2230,9 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
             }
 
             if (event.data.type === 'SHOW_CATEGORIES') {
+                setSearchValue('/');
+                setIsDropdownVisible(true);
+
                 if (categoriesData.length === 0 && !categoriesFetched) {
                     fetchCategories().then(categories => {
                         if (categories.length > 0) {
@@ -3027,7 +3047,12 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                                         </List.Item>
                                                     )}
                                                 />
-                                            ) : searchValue === '/' && categoriesData.length > 0 ? (
+                                            ) : searchValue === '/' ? (
+                                                !categoriesFetched ? (
+                                                    <div style={{ padding: '20px', textAlign: 'center' }}>
+                                                        <Spin />
+                                                    </div>
+                                                ) : categoriesData.length > 0 ? (
                                                 <>
                                                     <div style={{
                                                         padding: '16px',
@@ -3108,6 +3133,11 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                                         )}
                                                     />
                                                 </>
+                                                ) : (
+                                                    <div style={{ padding: '20px', textAlign: 'center', color: '#999' }}>
+                                                        No categories found
+                                                    </div>
+                                                )
                                             ) : filteredTemplates.length > 0 ? (
                                                 <List
                                                     dataSource={filteredTemplates}
@@ -3827,7 +3857,12 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                     </List.Item>
                                 )}
                             />
-                        ) : searchValue === '/' && categoriesData.length > 0 ? (
+                        ) : searchValue === '/' ? (
+                            !categoriesFetched ? (
+                                <div style={{ padding: '20px', textAlign: 'center' }}>
+                                    <Spin />
+                                </div>
+                            ) : categoriesData.length > 0 ? (
                             <List
                                 dataSource={categoriesData}
                                 renderItem={(category: Category) => (
@@ -3891,6 +3926,11 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                     </List.Item>
                                 )}
                             />
+                            ) : (
+                                <div style={{ padding: '20px', textAlign: 'center', color: '#999' }}>
+                                    No categories found
+                                </div>
+                            )
                         ) : filteredTemplates.length > 0 ? (
                             <List
                                 dataSource={filteredTemplates}

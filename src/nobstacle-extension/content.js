@@ -3036,6 +3036,9 @@ async function injectHeader() {
       if (event.data.type === 'CATEGORIES_DATA') {
         categoriesData = event.data.categories;
         categoriesFetched = true;
+        if (categoriesData.length > 0) {
+          createCategoryDropdown(categoriesData);
+        }
       }
 
       // CATEGORY_SELECT

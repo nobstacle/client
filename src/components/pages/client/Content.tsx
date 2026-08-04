@@ -28,6 +28,23 @@ import { generateQrCodeDataUrl } from "../../../utils/generateQrCode";
 
 const { Title, Text } = Typography;
 const DisplayLoading = () => <div className="flex h-full w-full items-center justify-center">Loading…</div>;
+
+const QrCodeDisplay: React.FC<{ qrCodeUrl: string | null; size: number }> = ({ qrCodeUrl, size }) => (
+  <SafeContentFrame isMedia className="flex items-center justify-center bg-black">
+    <Card>
+      {qrCodeUrl ? (
+        <img
+          src={qrCodeUrl}
+          alt="QR Code"
+          className="object-contain"
+          style={{ width: `${size}px`, height: `${size}px` }}
+        />
+      ) : (
+        <p className="text-gray-500">Generating QR code...</p>
+      )}
+    </Card>
+  </SafeContentFrame>
+);
 // These modules pull in media preloading and the Google Maps SDK. Loading
 // them only for the matching content type keeps form and lightweight screens
 // responsive on low-powered display devices.
@@ -2398,14 +2415,7 @@ export const Content: React.FC = () => {
         {contentToDisplay?.type === "Image" && (
           <>
             {activeTemplate?.directContent === 'QR' ? (
-              <Card>
-                <img
-                  src={qrCodeUrl}
-                  alt="QR Code"
-                  className="object-contain"
-                  style={{ width: `${adaptiveQrSize}px`, height: `${adaptiveQrSize}px` }}
-                />
-              </Card>
+              <QrCodeDisplay qrCodeUrl={qrCodeUrl} size={adaptiveQrSize} />
             ) : (
               <SafeContentFrame isMedia className="relative flex items-center justify-center bg-black">
 
@@ -2615,14 +2625,7 @@ export const Content: React.FC = () => {
             return (
               <>
                 {messageStore.receivedContent?.directContent === 'QR' ? (
-                  <Card>
-                    <img
-                      src={qrCodeUrl}
-                      alt="QR Code"
-                      className="object-contain"
-                      style={{ width: `${adaptiveQrSize}px`, height: `${adaptiveQrSize}px` }}
-                    />
-                  </Card>
+                  <QrCodeDisplay qrCodeUrl={qrCodeUrl} size={adaptiveQrSize} />
                 ) : (
               <SafeContentFrame className="bg-white">
                 {renderDocumentViewer()}
@@ -2634,14 +2637,7 @@ export const Content: React.FC = () => {
 
         {contentToDisplay?.type === "Video" && (
           activeTemplate?.directContent === 'QR' ? (
-            <Card>
-              <img
-                src={qrCodeUrl}
-                alt="QR Code"
-                className="object-contain"
-                style={{ width: `${adaptiveQrSize}px`, height: `${adaptiveQrSize}px` }}
-              />
-            </Card>
+            <QrCodeDisplay qrCodeUrl={qrCodeUrl} size={adaptiveQrSize} />
           ) : (
             <>
               <style jsx>{`
@@ -2777,14 +2773,7 @@ export const Content: React.FC = () => {
 
         {contentToDisplay?.type === "Slideshow" && (
           activeTemplate?.directContent === 'QR' ? (
-            <Card>
-              <img
-                src={qrCodeUrl}
-                alt="QR Code"
-                className="object-contain"
-                style={{ width: `${adaptiveQrSize}px`, height: `${adaptiveQrSize}px` }}
-              />
-            </Card>
+            <QrCodeDisplay qrCodeUrl={qrCodeUrl} size={adaptiveQrSize} />
           ) : (
             <>
               <Slideshow
@@ -2869,7 +2858,7 @@ export const Content: React.FC = () => {
         ) && (
             <div className="w-full h-full">
               {showMapAsQr && (
-                <SafeContentFrame className="flex justify-center items-center bg-gray-50">
+                <SafeContentFrame isMedia className="flex justify-center items-center bg-black">
                   <Card>
                     {qrCodeUrl ? (
                       <img
@@ -3063,14 +3052,7 @@ export const Content: React.FC = () => {
           contentToDisplay?.type === "WebsiteTemplateMessage"
         ) && (
             contentToDisplay?.type === 'WebsiteTemplateQr' || activeTemplate?.directContent === 'QR' ? (
-              <Card>
-                <img
-                  src={qrCodeUrl}
-                  alt="QR Code"
-                  className="object-contain"
-                  style={{ width: `${adaptiveQrSize}px`, height: `${adaptiveQrSize}px` }}
-                />
-              </Card>
+              <QrCodeDisplay qrCodeUrl={qrCodeUrl} size={adaptiveQrSize} />
             ) : (
               <SafeContentFrame className="bg-white">
                 <iframe
