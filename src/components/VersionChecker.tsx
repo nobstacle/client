@@ -8,6 +8,7 @@ import {
 } from '../utils/deployClientPurge';
 
 const VERSION_POLL_MS = 30_000;
+const ROUTE_CHECK_DEBOUNCE_MS = 2_000;
 
 const shouldSignOutOnDeploy = () =>
   process.env.NEXT_PUBLIC_DEPLOY_SIGN_OUT === 'true';
@@ -15,46 +16,58 @@ const shouldSignOutOnDeploy = () =>
 export function VersionChecker() {
   const pathname = usePathname();
   const isRefreshingRef = useRef(false);
+  const checkInFlightRef = useRef<Promise<void> | null>(null);
+  const lastCheckedAtRef = useRef(0);
+  const routeDebounceRef = useRef<number | null>(null);
 
   const checkVersion = useCallback(async (updateRegistration = false) => {
     if (isRefreshingRef.current) return;
+    if (checkInFlightRef.current) return checkInFlightRef.current;
 
-    try {
-      if (updateRegistration && 'serviceWorker' in navigator) {
-        const registration = await navigator.serviceWorker.getRegistration();
-        await registration?.update();
-      }
+    const run = (async () => {
+      try {
+        if (updateRegistration && 'serviceWorker' in navigator) {
+          const registration = await navigator.serviceWorker.getRegistration();
+          await registration?.update();
+        }
 
-      const res = await fetch(`/version.json?t=${Date.now()}`, {
-        cache: 'no-store',
-        headers: { 'Cache-Control': 'no-cache' },
-      });
-      if (!res.ok) return;
-
-      const data = await res.json();
-      const serverBuildId = String(data.buildId ?? '');
-      if (!serverBuildId) return;
-
-      const localBuildId = localStorage.getItem(BUILD_VERSION_KEY);
-
-      if (!localBuildId) {
-        localStorage.setItem(BUILD_VERSION_KEY, serverBuildId);
-        return;
-      }
-
-      if (localBuildId !== serverBuildId) {
-        isRefreshingRef.current = true;
-        console.info(
-          `[VersionChecker] New deployment ${serverBuildId} (was ${localBuildId}) — purging client storage and caches`,
-        );
-        await purgeClientStateForDeploy({
-          newBuildId: serverBuildId,
-          signOut: shouldSignOutOnDeploy(),
+        const res = await fetch(`/version.json?t=${Date.now()}`, {
+          cache: 'no-store',
+          headers: { 'Cache-Control': 'no-cache' },
         });
+        if (!res.ok) return;
+
+        const data = await res.json();
+        const serverBuildId = String(data.buildId ?? '');
+        if (!serverBuildId) return;
+
+        const localBuildId = localStorage.getItem(BUILD_VERSION_KEY);
+
+        if (!localBuildId) {
+          localStorage.setItem(BUILD_VERSION_KEY, serverBuildId);
+          return;
+        }
+
+        if (localBuildId !== serverBuildId) {
+          isRefreshingRef.current = true;
+          console.info(
+            `[VersionChecker] New deployment ${serverBuildId} (was ${localBuildId}) — purging client storage and caches`,
+          );
+          await purgeClientStateForDeploy({
+            newBuildId: serverBuildId,
+            signOut: shouldSignOutOnDeploy(),
+          });
+        }
+      } catch (err) {
+        console.warn('Version check error:', err);
+      } finally {
+        lastCheckedAtRef.current = Date.now();
+        checkInFlightRef.current = null;
       }
-    } catch (err) {
-      console.warn('Version check error:', err);
-    }
+    })();
+
+    checkInFlightRef.current = run;
+    return run;
   }, []);
 
   useEffect(() => {
@@ -96,7 +109,24 @@ export function VersionChecker() {
 
   useEffect(() => {
     if (process.env.NODE_ENV === 'development') return;
-    checkVersion(false);
+
+    if (routeDebounceRef.current) {
+      window.clearTimeout(routeDebounceRef.current);
+    }
+
+    routeDebounceRef.current = window.setTimeout(() => {
+      const elapsed = Date.now() - lastCheckedAtRef.current;
+      if (elapsed < VERSION_POLL_MS) {
+        return;
+      }
+      checkVersion(false);
+    }, ROUTE_CHECK_DEBOUNCE_MS);
+
+    return () => {
+      if (routeDebounceRef.current) {
+        window.clearTimeout(routeDebounceRef.current);
+      }
+    };
   }, [pathname, checkVersion]);
 
   return null;

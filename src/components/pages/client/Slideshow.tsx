@@ -369,6 +369,17 @@ export const Slideshow: React.FC<{
     }
   }, [ready, firstSlideMediaLoaded]);
 
+  // Never leave the display stuck on a black loader if the first slide load event is missed.
+  useEffect(() => {
+    if (!ready || firstSlideMediaLoaded || activeMediaItems.length === 0) return;
+
+    const forceReadyTimer = window.setTimeout(() => {
+      setFirstSlideMediaLoaded(true);
+    }, 8000);
+
+    return () => window.clearTimeout(forceReadyTimer);
+  }, [ready, firstSlideMediaLoaded, slideshowKey, activeMediaItems.length]);
+
   // Handle slide transitions / autoplay timer (disabled until fully ready)
   useEffect(() => {
     if (!isFullyReady || activeMediaItems.length === 0 || activeMediaDurationMs === null) return;

@@ -98,6 +98,20 @@ const normalizePublicContentPayload = (content: any, type?: string) => {
   };
 };
 
+const getStoredLastDisplayedContent = () => {
+  if (typeof window === "undefined") return null;
+  const raw = localStorage.getItem(LAST_DISPLAYED_CONTENT_KEY);
+  if (!raw) return null;
+
+  try {
+    const parsed = JSON.parse(raw);
+    if (!parsed?.type || !parsed?.content) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+};
+
 const getStoredPublicDisplay = () => {
   if (typeof window === "undefined") return null;
   const raw = localStorage.getItem(LAST_PUBLIC_CONTENT_KEY);
@@ -913,6 +927,7 @@ export const Content: React.FC = () => {
     });
 
   const chatBoxRef = useRef<HTMLDivElement | null>(null);
+  const activeTemplate = contentToDisplay?.content ?? messageStore.receivedContent;
 
   useEffect(() => {
     if (contentToDisplay?.type?.includes("Document") ||
@@ -1036,10 +1051,10 @@ export const Content: React.FC = () => {
           message.info("This conversation is recorded for quality and training purposes");
         } catch (error) {
           console.error("Failed to parse last content:", error);
-          setContentToDisplay(null);
+          setContentToDisplay(getStoredLastDisplayedContent() ?? getStoredPublicDisplay());
         }
       }
-    } else if (messageStore.receivedType) {
+    } else if (messageStore.receivedType && messageStore.receivedContent) {
       if (messageStore.receivedType === "Scroll" || messageStore.receivedType === "Slideshow" || messageStore.receivedType === "Screens") {
         const normalizedPublicContent = normalizePublicContentPayload(
           messageStore.receivedContent,
@@ -1054,7 +1069,12 @@ export const Content: React.FC = () => {
             messages: messageStore.receivedMessage,
           });
         } else {
-          setContentToDisplay(null);
+          console.warn(
+            `[Content] ${messageStore.receivedType} payload had no active items — keeping previous display`,
+          );
+          setContentToDisplay((prev) =>
+            prev ?? getStoredLastDisplayedContent() ?? getStoredPublicDisplay(),
+          );
         }
         return;
       }
@@ -1065,9 +1085,12 @@ export const Content: React.FC = () => {
         survey: messageStore.receivedSurvey,
         messages: messageStore.receivedMessage
       });
+    } else if (messageStore.receivedType && !messageStore.receivedContent) {
+      // Partial store state (e.g. clearReceivedContent before fix) — do not blank the screen.
+      return;
     } else {
       const restoredPublic = getStoredPublicDisplay();
-      setContentToDisplay(restoredPublic ?? null);
+      setContentToDisplay(restoredPublic ?? getStoredLastDisplayedContent());
     }
   }, [messageStore.receivedType, messageStore.receivedContent, messageStore.receivedSurvey, messageStore.receivedMessage]);
 
@@ -2222,7 +2245,7 @@ export const Content: React.FC = () => {
                   maxWidth: "92vw",
                 }}
               >
-                {messageStore.receivedContent?.content ?? ""}
+                {activeTemplate?.content ?? ""}
               </p>
             </SafeContentFrame>
           )}
@@ -2230,7 +2253,7 @@ export const Content: React.FC = () => {
         {contentToDisplay?.type === 'Packages' && (() => {
           let parseData;
           try {
-            parseData = JSON.parse(messageStore.receivedContent?.extraContent ?? '[]');
+            parseData = JSON.parse(activeTemplate?.extraContent ?? '[]');
           } catch (error) {
             console.error("Error parsing package data:", error);
             return (
@@ -2240,7 +2263,7 @@ export const Content: React.FC = () => {
             );
           }
 
-          const currentLangCode = activeLangCode || messageStore.receivedContent?.langCode || 'en';
+          const currentLangCode = activeLangCode || activeTemplate?.langCode || 'en';
 
           // Helper function to merge category images with package images
           const mergeImages = (packageImages, toCategory) => {
@@ -2308,7 +2331,7 @@ export const Content: React.FC = () => {
 
         {contentToDisplay?.type === "Image" && (
           <>
-            {messageStore.receivedContent?.directContent === 'QR' ? (
+            {activeTemplate?.directContent === 'QR' ? (
               <Card>
                 <img
                   src={qrCodeUrl}
@@ -2320,10 +2343,10 @@ export const Content: React.FC = () => {
             ) : (
               <SafeContentFrame isMedia className="relative flex items-center justify-center bg-black">
                   <img
-                    key={messageStore.receivedContent?.id ?? ""}
+                    key={activeTemplate?.id ?? ""}
                     alt="template_image"
                     style={getContainMediaStyle()}
-                    src={messageStore.receivedContent?.content ?? ""}
+                    src={activeTemplate?.content ?? ""}
                   />
                 </SafeContentFrame>
               )}
@@ -2339,8 +2362,8 @@ export const Content: React.FC = () => {
           contentToDisplay?.type === "PowerPointDocument" ||
           contentToDisplay?.type === "CsvDocument") && (() => {
 
-            const documentUrl = messageStore.receivedContent?.content ?? "";
-            const fileType = messageStore.receivedContent?.extraContent?.toLowerCase() ?? "";
+            const documentUrl = activeTemplate?.content ?? "";
+            const fileType = activeTemplate?.extraContent?.toLowerCase() ?? "";
 
             const handleIframeError = () => {
               setLoadError(true);
@@ -2543,7 +2566,7 @@ export const Content: React.FC = () => {
           })()}
 
         {contentToDisplay?.type === "Video" && (
-          messageStore.receivedContent?.directContent === 'QR' ? (
+          activeTemplate?.directContent === 'QR' ? (
             <Card>
               <img
                 src={qrCodeUrl}
@@ -2589,7 +2612,7 @@ export const Content: React.FC = () => {
                   playsInline
                   preload="auto"
                   className="fullscreen-video"
-                  key={messageStore.receivedContent?.content ?? ""}
+                  key={activeTemplate?.content ?? ""}
                   style={getContainMediaStyle()}
                   onLoadedData={() => {
                     if (videoElement.current) {
@@ -2601,7 +2624,7 @@ export const Content: React.FC = () => {
                   }}
                 >
                   <source
-                    src={messageStore.receivedContent?.content ?? ""}
+                    src={activeTemplate?.content ?? ""}
                     type="video/mp4"
                   />
                 </video>
@@ -2686,7 +2709,7 @@ export const Content: React.FC = () => {
         )}
 
         {contentToDisplay?.type === "Slideshow" && (
-          messageStore.receivedContent?.directContent === 'QR' ? (
+          activeTemplate?.directContent === 'QR' ? (
             <Card>
               <img
                 src={qrCodeUrl}
@@ -2699,19 +2722,19 @@ export const Content: React.FC = () => {
             <>
               <Slideshow
                 contents={
-                  messageStore.receivedContent?.contents &&
-                    messageStore.receivedContent?.contents[0] !== null
-                    ? messageStore.receivedContent?.contents
-                    : contentToDisplay?.contents
-                      ? contentToDisplay?.contents
+                  activeTemplate?.contents &&
+                    activeTemplate?.contents[0] !== null
+                    ? activeTemplate.contents
+                    : contentToDisplay?.content?.contents
+                      ? contentToDisplay.content.contents
                       : defaultSlideshowContent.data?.contents ?? []
                 }
                 metadata={parseSlideshowItemsMetadata(
-                  messageStore.receivedContent?.contents &&
-                    messageStore.receivedContent?.contents[0] !== null
-                    ? messageStore.receivedContent?.extraContent
-                    : contentToDisplay?.contents
-                      ? contentToDisplay?.extraContent
+                  activeTemplate?.contents &&
+                    activeTemplate?.contents[0] !== null
+                    ? activeTemplate.extraContent
+                    : contentToDisplay?.content?.contents
+                      ? contentToDisplay.content.extraContent
                       : defaultSlideshowContent.data?.extraContent,
                 )}
               />
@@ -2971,7 +2994,7 @@ export const Content: React.FC = () => {
           contentToDisplay?.type === "WebsiteTemplateQr" ||
           contentToDisplay?.type === "WebsiteTemplateMessage"
         ) && (
-            contentToDisplay?.type === 'WebsiteTemplateQr' || messageStore.receivedContent?.directContent === 'QR' ? (
+            contentToDisplay?.type === 'WebsiteTemplateQr' || activeTemplate?.directContent === 'QR' ? (
               <Card>
                 <img
                   src={qrCodeUrl}
@@ -2984,26 +3007,38 @@ export const Content: React.FC = () => {
               <SafeContentFrame className="bg-white">
                 <iframe
                   className="h-full w-full"
-                  src={messageStore.receivedContent?.content ?? ""}
+                  src={activeTemplate?.content ?? ""}
                   sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
                 />
               </SafeContentFrame>
             )
           )}
+
+        {!contentToDisplay?.type && defaultSlideshowContent.data && (
+          <>
+            <TrialWatermark trial={company.data ?? data?.user} />
+            <Slideshow
+              contents={defaultSlideshowContent.data?.contents ?? []}
+              metadata={parseSlideshowItemsMetadata(
+                defaultSlideshowContent.data?.extraContent,
+              )}
+            />
+          </>
+        )}
       </>
     );
   }
 
-  if (isFirstTimeOpen && defaultSlideshowContent.data)
+  if (defaultSlideshowContent.data)
     return (
       <>
         <TrialWatermark trial={company.data ?? data?.user} />
         <Slideshow
-          contents={defaultSlideshowContent.data?.contents ?? contentToDisplay?.contents ?? []}
+          contents={defaultSlideshowContent.data?.contents ?? []}
           metadata={parseSlideshowItemsMetadata(defaultSlideshowContent.data?.extraContent)}
         />
       </>
     );
 
-  return <div></div>;
+  return <DisplayLoading />;
 };

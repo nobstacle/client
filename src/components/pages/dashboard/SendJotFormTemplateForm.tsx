@@ -21,6 +21,14 @@ import { debounce } from 'lodash';
 import { HiRefresh } from "react-icons/hi";
 import { useMessageStore } from "../../../lib/zustand/store/messageStore";
 import { useAssignedFormsData } from "../../../hooks/useAssignedFormsData";
+import { useQueryClient } from "@tanstack/react-query";
+import {
+	buildJotformResponsesUrl,
+	JOTFORM_RESPONSES_QUERY_KEY,
+	JOTFORM_STALE_TIME_MS,
+	serializeJotformTableParams,
+	type JotformTableResult,
+} from "../../../hooks/jotformResponsesQuery";
 
 const { Option } = Select;
 
@@ -114,6 +122,7 @@ const buildUrlFromFormData = (
 };
 
 export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => void }) => {
+	const queryClient = useQueryClient();
 	const [isModalOpen, setIsModalOpen] = useState(false);
 	const [isSendModalOpen, setIsSendModalOpen] = useState(false);
 	const [manualInputValues, setManualInputValues] = useState<ManualInputValues>({});
@@ -1321,74 +1330,80 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 			setPageSize(10);
 		}
 
-		const apiPage = actualPage;
-		let API_URL = `${Url}/api/jotform/responses/${form_id}?page=${apiPage}&limit=${limit}`;
+		const tableParams = {
+			formId: form_id,
+			page: actualPage,
+			limit,
+			search: hasSearch ? search : "",
+			filter,
+			skipCount,
+		};
+		const queryKey = [
+			JOTFORM_RESPONSES_QUERY_KEY,
+			serializeJotformTableParams(tableParams),
+		];
 
-		if (hasSearch) {
-			let searchArray = search;
-			if (typeof search === 'string') {
-				searchArray = [{ label: "", value: search }];
-			} else if (!Array.isArray(search) && typeof search === 'object') {
-				searchArray = [search];
-			}
-			const encodedSearch = encodeURIComponent(JSON.stringify(searchArray));
-			API_URL += `&search=${encodedSearch}`;
-		}
-
-		if (filter) {
-			API_URL += `&filter=${filter}`;
-		}
-
-		// On plain page/size changes the total is unchanged, so skip the
-		// server-side count and reuse the value we already have.
-		if (skipCount) {
-			API_URL += `&skipCount=true`;
-		}
-
-		try {
-			const response = await axios.get(API_URL, {
-				signal: abortControllerRef.current.signal,
-				timeout: 30_000,
-			});
-
+		const applyTableResult = (
+			result: JotformTableResult,
+			shouldSkipCount: boolean,
+		) => {
 			if (form_id !== currentFormIdRef.current) {
-				console.log('Discarding response for old form:', form_id);
 				return;
 			}
 
-			if (response.status === 200) {
-				const { items, allFieldNames, totalPages, totalItems } = response.data;
+			const { items, allFieldNames, totalPages, totalItems } = result;
 
-				if (!skipCount) {
-					setTotalPages(totalPages || 1);
-					setTotalItems(totalItems || 0);
-				}
-
-				if (items && items.length > 0) {
-					const tableData = items.map((item: any) => {
-						const prettyData: Record<string, any> = { ...item.formData };
-						prettyData.formData = {
-							submission_id: item.submissionId,
-							form_id: item.formId,
-							uuid: item.uuid,
-							id: item.id,
-							created_at: item.createdAt,
-							updated_at: item.updatedAt
-						};
-						return prettyData;
-					});
-
-					let sortColumns = allFieldNames?.sort((a: string, b: string) => {
-						return a.localeCompare(b);
-					}) || [];
-
-					setTableResponse({ data: tableData, sortColumns });
-					setLoader(false);
-				} else {
-					setTableResponse({ data: [], sortColumns: [] });
-					setLoader(false);
-				}
+			if (!shouldSkipCount) {
+				setTotalPages(totalPages || 1);
+				setTotalItems(totalItems || 0);
 			}
+
+			if (items && items.length > 0) {
+				const tableData = items.map((item: any) => {
+					const prettyData: Record<string, any> = { ...item.formData };
+					prettyData.formData = {
+						submission_id: item.submissionId,
+						form_id: item.formId,
+						uuid: item.uuid,
+						id: item.id,
+						created_at: item.createdAt,
+						updated_at: item.updatedAt,
+					};
+					return prettyData;
+				});
+
+				const sortColumns =
+					allFieldNames?.sort((a: string, b: string) => a.localeCompare(b)) ||
+					[];
+
+				setTableResponse({ data: tableData, sortColumns });
+			} else {
+				setTableResponse({ data: [], sortColumns: [] });
+			}
+			setLoader(false);
+		};
+
+		const cached = queryClient.getQueryData<JotformTableResult>(queryKey);
+		if (cached) {
+			applyTableResult(cached, skipCount);
+			return;
+		}
+
+		try {
+			const result = await queryClient.fetchQuery({
+				queryKey,
+				queryFn: async () => {
+					const apiUrl = buildJotformResponsesUrl(tableParams, Url);
+					const response = await axios.get(apiUrl, {
+						signal: abortControllerRef.current?.signal,
+						timeout: 30_000,
+					});
+					return response.data as JotformTableResult;
+				},
+				staleTime: JOTFORM_STALE_TIME_MS,
+			});
+
+			applyTableResult(result, skipCount);
 		} catch (error: any) {
 			if (axios.isCancel(error) || error.name === 'AbortError') {
 				console.log('Request cancelled');

@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { Table, Tag, Card, Pagination, Input, message, Button, Space, Spin, Select, InputNumber, DatePicker, Tooltip, Row, Col, Modal, Divider } from "antd";
 import { SearchOutlined, UserOutlined, CalendarOutlined, EditOutlined, SaveOutlined, CloseOutlined, FilterOutlined } from "@ant-design/icons";
 import "../../../styles/base.css";
@@ -7,6 +7,7 @@ import { useSession } from "next-auth/react";
 import "../../../styles/base.css";
 import { useSocketContext } from "../../../context/SocketContextProvider";
 import { useSearchParams } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import {
     useCompanyControllerGetCompany,
 } from "../../../lib/client/api";
@@ -16,6 +17,15 @@ import { SendIcon } from "../../../components/icons/SendIcon";
 import { MdDelete } from "react-icons/md";
 import { useHeaderUploadCatalog } from "../../../hooks/useHeaderUploadCatalog";
 import { useMessageStore } from "../../../lib/zustand/store/messageStore";
+import {
+    UPSELL_TRANSACTIONS_QUERY_KEY,
+    useUpsellTransactions,
+} from "../../../hooks/useUpsellTransactions";
+import {
+    EMPTY_DASHBOARD,
+    UPSELL_DASHBOARD_QUERY_KEY,
+    useUpsellDashboard,
+} from "../../../hooks/useUpsellDashboard";
 import { FaFileDownload } from "react-icons/fa";
 import dayjs from 'dayjs';
 import { LeftOutlined, RightOutlined, TrophyOutlined, RiseOutlined } from "@ant-design/icons";
@@ -44,11 +54,10 @@ interface DashboardData {
 }
 
 export default function Upsell() {
-    const [loadingData, setLoadingData] = useState(false);
-    const [totalItems, setTotalItems] = useState(0);
+    const queryClient = useQueryClient();
     const [currentPage, setCurrentPage] = useState(1);
-    const [transactions, setTransactions] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
+    const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
     const [editingRecord, setEditingRecord] = useState<string | null>(null);
     const [editingData, setEditingData] = useState<any>({});
     const [selectedCategories, setSelectedCategories] = useState(null);
@@ -56,7 +65,6 @@ export default function Upsell() {
     const { allPackages, categoriesData: categoryData } = useHeaderUploadCatalog({
         eagerPackages: true,
     });
-    const [dataLoaded, setDataLoaded] = useState(false);
     const pageSize = 10;
     const { data } = useSession();
     let Url = process.env.NEXT_PUBLIC_BACKEND_URL;
@@ -72,20 +80,45 @@ export default function Upsell() {
     const [dateRange, setDateRange] = useState([dayjs().startOf('month'), dayjs().endOf('month')]);
     const [selectedPackage, setSelectedPackage] = useState(undefined);
     const [selectedStatus, setSelectedStatus] = useState(undefined);
-    const [dashboardLoading, setDashboardLoading] = useState(false);
-    const [dashboardData, setDashboardData] = useState({
-        personalPerformance: [],
-        topSellingProducts: [],
-        topSellers: [],
-        topIncentives: [],
-        pendingApprovals: [],
-        stats: {
-            totalTransactions: 0,
-            totalRevenue: '0.00',
-            totalIncentives: '0.00',
-            pendingCount: 0,
-        },
-    });
+    const [socketTransactions, setSocketTransactions] = useState<unknown[] | null>(null);
+
+    const transactionFilters = useMemo(
+        () => ({
+            search: debouncedSearchTerm,
+            selectedPackage: selectedPackage as number[] | undefined,
+            selectedStatus,
+            dateRange: dateRange as [dayjs.Dayjs, dayjs.Dayjs],
+            page: currentPage,
+            limit: pageSize,
+        }),
+        [debouncedSearchTerm, selectedPackage, selectedStatus, dateRange, currentPage, pageSize],
+    );
+
+    const dashboardFilters = useMemo(
+        () => ({
+            dateRange: dateRange as [dayjs.Dayjs, dayjs.Dayjs],
+            selectedPackage: selectedPackage as number[] | undefined,
+            selectedStatus,
+            companyId: companyData?.id,
+        }),
+        [dateRange, selectedPackage, selectedStatus, companyData?.id],
+    );
+
+    const transactionsQuery = useUpsellTransactions(transactionFilters);
+    const dashboardQuery = useUpsellDashboard(dashboardFilters);
+
+    const transactions = socketTransactions ?? transactionsQuery.data?.transactions ?? [];
+    const totalItemsFromQuery = transactionsQuery.data?.totalCount ?? 0;
+    const loadingData = transactionsQuery.isFetching && !transactionsQuery.data;
+    const dashboardData = dashboardQuery.data ?? EMPTY_DASHBOARD;
+    const dashboardLoading = dashboardQuery.isFetching && !dashboardQuery.data;
+
+    const invalidateUpsellData = useCallback(async () => {
+        await Promise.all([
+            queryClient.invalidateQueries({ queryKey: [UPSELL_TRANSACTIONS_QUERY_KEY] }),
+            queryClient.invalidateQueries({ queryKey: [UPSELL_DASHBOARD_QUERY_KEY] }),
+        ]);
+    }, [queryClient]);
 
     // Keep only the beforeunload handler for preventing accidental reloads
     useEffect(() => {
@@ -106,92 +139,15 @@ export default function Upsell() {
 
     const handlePageChange = (page: number, pageSize: number) => {
         setCurrentPage(page);
+        setSocketTransactions(null);
     };
-
-    const fetchDashboardData = useCallback(async () => {
-        setDashboardLoading(true);
-        try {
-            const queryParams = new URLSearchParams();
-
-            if (dateRange && dateRange[0] && dateRange[1]) {
-                queryParams.append('startDate', dateRange[0].toISOString());
-                queryParams.append('endDate', dateRange[1].toISOString());
-            }
-
-            if (selectedPackage && Array.isArray(selectedPackage) && selectedPackage.length > 0) {
-                selectedPackage.forEach(id => queryParams.append('packageId', id.toString()));
-            }
-
-            if (selectedStatus) {
-                queryParams.append('status', selectedStatus);
-            }
-
-            if (companyData?.id) {
-                queryParams.append('companyId', companyData.id.toString());
-            }
-
-            const url = `${Url}/api/v1/uploads/get-dashboard-data?${queryParams.toString()}`;
-
-            const response = await fetch(url, {
-                headers: {
-                    Authorization: `Bearer ${data?.user?.backendTokens?.at}`,
-                    'Cache-Control': 'no-cache',
-                },
-            });
-
-            if (response.ok) {
-                const result = await response.json();
-                if (result.success && result.data) {
-                    setDashboardData(result.data);
-                }
-            } else {
-                message.error('Failed to fetch dashboard data');
-            }
-        } catch (error) {
-            console.error('Error fetching dashboard data:', error);
-            message.error('Error loading dashboard data');
-        } finally {
-            setDashboardLoading(false);
-        }
-    }, [dateRange, selectedPackage, selectedStatus, companyData?.id, data?.user?.backendTokens?.at, Url]);
 
     const dropdownPackages = allPackages.filter(pkg => pkg?.roomUpgrade === false);
 
-    const fetchTransactions = useCallback((searchValue: string = "") => {
-        setLoadingData(true);
-        fetch(`${Url}/api/v1/uploads/get-al-upsell-transactions`, {
-            headers: {
-                Authorization: `Bearer ${data?.user?.backendTokens?.at}`,
-                'Cache-Control': 'no-cache'
-            },
-        })
-            .then(async (response) => {
-                const text = await response.text();
-                const json = JSON.parse(text);
-                const responseData = json.data || json;
-                setTransactions(responseData);
-                setTotalItems(json.pagination?.totalCount || 0);
-            })
-            .catch((error) => {
-                console.warn("Error fetching data:", error);
-                message.error("Failed to fetch transactions");
-            })
-            .finally(() => {
-                setLoadingData(false);
-            });
-    }, [data?.user?.backendTokens?.at, Url]);
-
     const refreshTransactions = async () => {
-        await fetchTransactions();
-        await fetchDashboardData();
-    }
-
-    useEffect(() => {
-        if (data?.user?.backendTokens?.at && !dataLoaded) {
-            fetchTransactions();
-            setDataLoaded(true);
-        }
-    }, [data?.user?.backendTokens?.at, dataLoaded, fetchTransactions]);
+        setSocketTransactions(null);
+        await invalidateUpsellData();
+    };
 
     const getSalesTypeColor = (type: string) => {
         switch (type) {
@@ -228,11 +184,8 @@ export default function Upsell() {
 
             message.success('Transaction updated');
 
-            // Refresh both transactions and dashboard data
-            await Promise.all([
-                fetchTransactionsWithSearch(searchTerm),
-                fetchDashboardData()
-            ]);
+            setSocketTransactions(null);
+            await invalidateUpsellData();
 
             return true;
         } catch (error) {
@@ -310,8 +263,6 @@ export default function Upsell() {
             cancelButtonText: 'Cancel'
         }).then((result) => {
             if (result.isConfirmed) {
-                setLoadingData(true);
-
                 fetch(`${Url}/api/v1/uploads/delete-upsell/${record.id}`, {
                     method: 'DELETE',
                     headers: {
@@ -331,7 +282,7 @@ export default function Upsell() {
                             timer: 2000,
                             showConfirmButton: false
                         });
-                        fetchTransactions();
+                        invalidateUpsellData();
                     })
                     .catch((error) => {
                         Swal.fire({
@@ -341,9 +292,6 @@ export default function Upsell() {
                             confirmButtonText: 'OK'
                         });
                         console.error('Delete error:', error);
-                    })
-                    .finally(() => {
-                        setLoadingData(false);
                     });
             }
         });
@@ -377,7 +325,6 @@ export default function Upsell() {
             if (success) {
                 setEditingRecord(null);
                 setEditingData({});
-                await fetchDashboardData();
             }
         } else {
             message.info('No changes detected');
@@ -853,67 +800,16 @@ export default function Upsell() {
         );
     };
 
-    const fetchTransactionsWithSearch = useCallback((searchValue: string = "") => {
-        setLoadingData(true);
-        const url = new URL(`${Url}/api/v1/uploads/get-al-upsell-transactions`);
-
-        if (searchValue) {
-            url.searchParams.append('search', searchValue);
-        }
-
-        if (selectedPackage && Array.isArray(selectedPackage) && selectedPackage.length > 0) {
-            selectedPackage.forEach(id => url.searchParams.append('packageId', id.toString()));
-        }
-
-        if (selectedStatus) {
-            url.searchParams.append('approved', selectedStatus.toUpperCase());
-        }
-
-        if (dateRange && dateRange[0] && dateRange[1]) {
-            url.searchParams.append('startDate', dateRange[0].toISOString());
-            url.searchParams.append('endDate', dateRange[1].toISOString());
-        }
-
-        url.searchParams.append('page', currentPage.toString());
-        url.searchParams.append('limit', pageSize.toString());
-
-        fetch(url.toString(), {
-            headers: {
-                Authorization: `Bearer ${data?.user?.backendTokens?.at}`,
-                'Cache-Control': 'no-cache'
-            },
-        })
-            .then(async (response) => {
-                const text = await response.text();
-                const json = JSON.parse(text);
-                const responseData = json.data || json;
-                setTransactions(responseData);
-                setTotalItems(json.pagination?.totalCount || responseData.length);
-            })
-            .catch((error) => {
-                console.warn("Error fetching data:", error);
-                message.error("Failed to fetch transactions");
-            })
-            .finally(() => {
-                setLoadingData(false);
-            });
-    }, [data?.user?.backendTokens?.at, Url, selectedPackage, selectedStatus, dateRange, currentPage, pageSize]);
-
-    useEffect(() => {
-        if (data?.user?.backendTokens?.at && dataLoaded) {
-            fetchTransactionsWithSearch(searchTerm);
-        }
-    }, [selectedPackage, selectedStatus, dateRange, currentPage, data?.user?.backendTokens?.at, dataLoaded, fetchTransactionsWithSearch, searchTerm]);
-
     const debouncedSearch = useCallback((searchValue: string) => {
         if (debounceRef.current) {
             clearTimeout(debounceRef.current);
         }
 
         debounceRef.current = setTimeout(() => {
-            fetchTransactionsWithSearch(searchValue);
+            setDebouncedSearchTerm(searchValue);
+            setSocketTransactions(null);
         }, 500);
-    }, [fetchTransactionsWithSearch]);
+    }, []);
 
     const searchTransactions = (e: any) => {
         const searchValue = e.target.value.trim();
@@ -975,12 +871,9 @@ export default function Upsell() {
         } else {
             message.warning("No packages available on selected language.");
         }
-        fetchDashboardData();
     };
 
     const handlePackageSend = () => {
-        setLoadingData(true);
-
         const categoryId = selectedCategories !== null ? selectedCategories : null;
 
         try {
@@ -988,16 +881,8 @@ export default function Upsell() {
         } catch (error) {
             console.error("Error sending packages:", error);
             message.error("Failed to send packages. Please try again.");
-        } finally {
-            setLoadingData(false);
         }
     };
-
-    useEffect(() => {
-        if (data?.user?.backendTokens?.at && dataLoaded) {
-            fetchDashboardData();
-        }
-    }, [data?.user?.backendTokens?.at, dataLoaded, fetchDashboardData]);
 
     const handleCategoryChange = (value) => {
         setSelectedCategories(value);
@@ -1016,13 +901,10 @@ export default function Upsell() {
     };
 
     useEffect(() => {
-        if (receivedContent) {
-
-            if (dataLoaded && receivedContent && receivedContent?.length > 0) {
-                setTransactions(receivedContent);
-            }
+        if (receivedContent && receivedContent.length > 0) {
+            setSocketTransactions(receivedContent);
         }
-    }, [receivedContent, data?.user, dataLoaded, fetchTransactions]);
+    }, [receivedContent]);
 
     const viewDetails = (title) => {
         setDetailModal(true);
@@ -1464,7 +1346,7 @@ export default function Upsell() {
                             <h2 className="text-xl font-semibold text-gray-800">Transactions List</h2>
 
                             {/* Export Button - Top Right */}
-                            {totalItems > 0 && (
+                            {totalItemsFromQuery > 0 && (
                                 <Button
                                     type="default"
                                     icon={<FaFileDownload />}
@@ -1491,11 +1373,11 @@ export default function Upsell() {
                         />
 
                         {/* Pagination Container - Centered */}
-                        {totalItems > 0 && (
+                        {totalItemsFromQuery > 0 && (
                             <div className="flex justify-center items-center mt-6 pt-4 border-t border-gray-100">
                                 <Pagination
                                     current={currentPage}
-                                    total={totalItems}
+                                    total={totalItemsFromQuery}
                                     pageSize={pageSize}
                                     onChange={handlePageChange}
                                     showSizeChanger
