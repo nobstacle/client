@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { usePathname, useSearchParams } from 'next/navigation';
+import { usePathname, useSearchParams, useRouter } from 'next/navigation';
 import { Session } from 'next-auth';
 import { ClientLink } from "../../components/pages/dashboard/Sidebar/ClientLink";
 import { GetUserResRolesItem } from "../../lib/client/model";
@@ -252,6 +252,7 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
     const [mounted, setMounted] = useState(false);
     const pathname = usePathname();
     const searchParams = useSearchParams();
+    const router = useRouter();
     const searchParamsString = searchParams.toString();
     const company = useCompanyStore((state) => state.company);
 
@@ -305,6 +306,15 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
 
         return () => window.removeEventListener('resize', checkScreenSize);
     }, [pathname]);
+
+    // Warm JS chunks for the heaviest dashboard routes so sidebar clicks feel instant.
+    useEffect(() => {
+        const query = searchParamsString ? `?${searchParamsString}` : "";
+        const heavyRoutes = ["/dashboard/form", "/dashboard/upsell"];
+        heavyRoutes.forEach((route) => {
+            router.prefetch(`${route}${query}`);
+        });
+    }, [router, searchParamsString]);
 
     const isCompactDesktop = windowWidth >= 1024 && windowWidth < 1350;
 

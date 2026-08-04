@@ -14,7 +14,6 @@ import { SendPackagePayloadType } from "../../../constant/types";
 import { UpsellStatusCell } from "../../../components/UpdateStatusCell";
 import { SendIcon } from "../../../components/icons/SendIcon";
 import { MdDelete } from "react-icons/md";
-import Swal from "sweetalert2";
 import { useHeaderUploadCatalog } from "../../../hooks/useHeaderUploadCatalog";
 import { useMessageStore } from "../../../lib/zustand/store/messageStore";
 import { FaFileDownload } from "react-icons/fa";
@@ -23,6 +22,8 @@ import { LeftOutlined, RightOutlined, TrophyOutlined, RiseOutlined } from "@ant-
 
 const { RangePicker } = DatePicker;
 const { Option } = Select;
+
+const loadSwal = () => import("sweetalert2").then((m) => m.default);
 
 interface DashboardData {
     personalPerformance: any;
@@ -296,7 +297,8 @@ export default function Upsell() {
         });
     };
 
-    const handleDelete = (record) => {
+    const handleDelete = async (record) => {
+        const Swal = await loadSwal();
         Swal.fire({
             title: 'Are you sure?',
             text: `You are about to delete the transaction "${record.packageName}". This action cannot be undone!`,
