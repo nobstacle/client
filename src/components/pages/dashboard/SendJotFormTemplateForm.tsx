@@ -173,17 +173,17 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 		}
 	}, []);
 
-useEffect(() => {
-    if (!receivedResponse || !selectedForm) return;
+	useEffect(() => {
+		if (!receivedResponse || !selectedForm) return;
 
-    getTableResponse(
-        selectedForm,
-        currentPage,
-        pageSize,
-        lastSearchedValue,
-        selectedFilter
-    );
-}, [receivedResponse]);
+		getTableResponse(
+			selectedForm,
+			currentPage,
+			pageSize,
+			lastSearchedValue,
+			selectedFilter,
+		);
+	}, [receivedResponse, selectedForm]);
 
 	const getUrlParams = () => {
 		if (typeof window !== 'undefined') {

@@ -1,21 +1,9 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import { useCompanyControllerGetCompany } from "../../../lib/client/api";
 import { useSearchParams } from "next/navigation";
 import { useSocketContext } from "../../../context/SocketContextProvider";
-import { DashboardPageSkeleton } from "../../../components/DashboardPageSkeleton";
-
-const SendJotFormTemplateForm = dynamic(
-  () =>
-    import("../../../components/pages/dashboard/SendJotFormTemplateForm").then(
-      (m) => ({ default: m.SendJotFormTemplateForm }),
-    ),
-  {
-    ssr: false,
-    loading: () => <DashboardPageSkeleton />,
-  },
-);
+import { SendJotFormTemplateForm } from "../../../components/pages/dashboard/SendJotFormTemplateForm";
 
 export default function Dashboard() {
   const params = useSearchParams();
