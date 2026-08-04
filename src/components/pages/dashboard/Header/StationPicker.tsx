@@ -102,6 +102,14 @@ export const StationPicker: React.FC<{ cb?: () => void }> = ({ cb }) => {
     setTimeout(loadStation, 50);
   }, []);
 
+  // Keep station state in sync with URL search parameter
+  const urlStation = searchParams.get('station');
+  useEffect(() => {
+    if (urlStation && urlStation !== currentStation && !isUpdatingRef.current) {
+      setCurrentStation(urlStation);
+    }
+  }, [urlStation, currentStation]);
+
   // Listen for station changes from other sources
   useEffect(() => {
     const handleStationChange = (event: CustomEvent) => {

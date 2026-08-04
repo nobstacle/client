@@ -95,12 +95,19 @@ export const HeaderLanguagePicker = ({
   const headerLangaugePickerDefault =
     params.get("lang") || data?.defaultLangCode || "en";
 
+  const lastEmittedRef = React.useRef<string | null>(null);
+
   // Automatically sync language code to the client on mount or socket reconnection
   useEffect(() => {
     if (isHydrated && socketConnected && headerLangaugePickerDefault) {
+      const stationNo = Number(params.get("station") ?? 1);
+      const emitKey = `${headerLangaugePickerDefault}-${stationNo}`;
+      if (lastEmittedRef.current === emitKey) return;
+      lastEmittedRef.current = emitKey;
+
       emitSendLangCode({
         langCode: headerLangaugePickerDefault,
-        station: Number(params.get("station") ?? 1),
+        station: stationNo,
       });
     }
   }, [isHydrated, socketConnected, headerLangaugePickerDefault, params, emitSendLangCode]);

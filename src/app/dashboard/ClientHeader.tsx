@@ -174,6 +174,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
     const isSAdmin = user?.user.Roles?.includes("SAdmin");
     const [isHamburgerMenuOpen, setIsHamburgerMenuOpen] = useState(false);
     const hamburgerMenuRef = useRef(null);
+    const hamburgerDropdownRef = useRef(null);
     const [dropdownPosition, setDropdownPosition] = useState({ top: 0, right: 0, width: 0 });
     const [hamburgerPosition, setHamburgerPosition] = useState({ top: 0, right: 0 });
     const [isInIframe, setIsInIframe] = useState(false);
@@ -587,7 +588,9 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
 
     useEffect(() => {
         const handleClickOutside = (event) => {
-            if (hamburgerMenuRef.current && !hamburgerMenuRef.current.contains(event.target)) {
+            const isTrigger = hamburgerMenuRef.current && hamburgerMenuRef.current.contains(event.target);
+            const isDropdown = hamburgerDropdownRef.current && hamburgerDropdownRef.current.contains(event.target);
+            if (!isTrigger && !isDropdown) {
                 setIsHamburgerMenuOpen(false);
             }
         };
@@ -3485,7 +3488,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
 
                                     {/* Dropdown Menu - Non-iframe version */}
                                     {isHamburgerMenuOpen && !isInIframe && (
-                                        <div style={{
+                                        <div ref={hamburgerDropdownRef} style={{
                                             position: 'fixed',
                                             top: `${hamburgerPosition.top}px`,
                                             ...(isMobileView ? {
@@ -3542,7 +3545,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                                             textOverflow: 'ellipsis',
                                                             whiteSpace: 'nowrap'
                                                         }}>
-                                                            <StationPicker />
+                                                            <StationPicker cb={() => setIsHamburgerMenuOpen(false)} />
                                                         </div>
                                                     </div>
                                                 </div>

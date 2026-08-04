@@ -1,7 +1,7 @@
 "use client";
 import { useSession } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Socket } from "socket.io-client";
 import socket from "../lib/socket/init";
@@ -104,16 +104,13 @@ export const SocketContextProvider = ({
 }) => {
   const [socketClient, setSocketClient] = useState<Socket<any, any>>();
   const [socketConnected, setSocketConnected] = useState(false);
-  const {
-    setReceivedContent,
-    setReceivedMessage,
-    clearReceivedMessage,
-    setReceivedSurvey,
-    setReceivedLangCode,
-    setReceivedRecording,
-    setReceivedResponse,
-
-  } = useMessageStore();
+  const setReceivedContent = useMessageStore((s) => s.setReceivedContent);
+  const setReceivedMessage = useMessageStore((s) => s.setReceivedMessage);
+  const clearReceivedMessage = useMessageStore((s) => s.clearReceivedMessage);
+  const setReceivedSurvey = useMessageStore((s) => s.setReceivedSurvey);
+  const setReceivedLangCode = useMessageStore((s) => s.setReceivedLangCode);
+  const setReceivedRecording = useMessageStore((s) => s.setReceivedRecording);
+  const setReceivedResponse = useMessageStore((s) => s.setReceivedResponse);
 
   const { addSurveyAnswer } = useTemplateStore();
   const { setCompany } = useCompanyStore();
@@ -525,9 +522,7 @@ const onDataSubmitted = (data: any) => {
   }, [socketClient, params]);
 
   // Emit functions
-  // In SocketContextProvider.tsx
-  const emitSendTemplate = (data: SendTemplatePayloadType) => {
-
+  const emitSendTemplate = useCallback((data: SendTemplatePayloadType) => {
     if (!socketClient) {
       console.error("❌ Socket client not initialized!");
       return;
@@ -544,7 +539,7 @@ const onDataSubmitted = (data: any) => {
     }
 
     socketClient.emit("send-template", data);
-  };
+  }, [socketClient]);
 
   const onReceivedPackages = (data: any) => {
     try {
@@ -584,7 +579,7 @@ const onDataSubmitted = (data: any) => {
     }
   };
 
-  const emitSendDocument = (data: SendDocumentPayloadType, callback?: (response: any) => void) => {
+  const emitSendDocument = useCallback((data: SendDocumentPayloadType, callback?: (response: any) => void) => {
     if (!socketClient || !socketClient.connected) {
       console.error("❌ Socket is not connected!");
       return;
@@ -595,9 +590,9 @@ const onDataSubmitted = (data: any) => {
     } else {
       socketClient.emit("send-document", data);
     }
-  };
+  }, [socketClient]);
 
-  const emitSendTeamDocument = (data: SendDocumentPayloadType, callback?: (response: any) => void) => {
+  const emitSendTeamDocument = useCallback((data: SendDocumentPayloadType, callback?: (response: any) => void) => {
     if (!socketClient || !socketClient.connected) {
       console.error("❌ Socket is not connected!");
       return;
@@ -608,9 +603,9 @@ const onDataSubmitted = (data: any) => {
     } else {
       socketClient.emit("send-team-document", data);
     }
-  };
+  }, [socketClient]);
 
-  const emitSendJotForm = (data: SendJotFormTemplate, callback?: (response: any) => void) => {
+  const emitSendJotForm = useCallback((data: SendJotFormTemplate, callback?: (response: any) => void) => {
     if (!socketClient || !socketClient.connected) {
       console.error("❌ Socket is not connected!");
       return;
@@ -619,9 +614,9 @@ const onDataSubmitted = (data: any) => {
     socketClient.emit("send-jotForm", data, (response: any) => {
       if (callback) callback(response);
     });
-  };
+  }, [socketClient]);
 
-  const emitSendPackages = (
+  const emitSendPackages = useCallback((
     data: SendPackagePayloadType,
     callback?: (response: any) => void
   ) => {
@@ -635,10 +630,10 @@ const onDataSubmitted = (data: any) => {
     } else {
       socketClient.emit("send-packages", data);
     }
-  };
+  }, [socketClient]);
 
 
-  const emitUpdateInformation = (data: SendInformationUpdatePayloadType, callback?: (response: any) => void) => {
+  const emitUpdateInformation = useCallback((data: SendInformationUpdatePayloadType, callback?: (response: any) => void) => {
     if (!socketClient || !socketClient.connected) {
       console.error("❌ Socket is not connected!");
       return;
@@ -649,65 +644,64 @@ const onDataSubmitted = (data: any) => {
     } else {
       socketClient.emit("update-information", data);
     }
-  };
+  }, [socketClient]);
 
-  const emitSendMessage = (data: SendMessagePayloadType) => {
+  const emitSendMessage = useCallback((data: SendMessagePayloadType) => {
     if (!socketClient || !socketClient.connected) {
       console.error("❌ Socket is not connected!");
       return;
     }
     socketClient.emit("send-message", data);
-  };
+  }, [socketClient]);
 
-  const emitSendSurvey = (data: SendSurveyPayloadType) => {
+  const emitSendSurvey = useCallback((data: SendSurveyPayloadType) => {
     if (!socketClient || !socketClient.connected) {
       console.error("❌ Socket is not connected!");
       return;
     }
     socketClient.emit("send-survey", data);
-  };
+  }, [socketClient]);
 
 
-  const emitSendRecording = (data: SendSurveyPayloadType) => {
+  const emitSendRecording = useCallback((data: SendSurveyPayloadType) => {
     if (!socketClient || !socketClient.connected) {
       console.error("❌ Socket is not connected!");
       return;
     }
     socketClient.emit("send-recording", data);
-  };
+  }, [socketClient]);
 
-  const emitSendSurveyAnswer = (data: SendSurveyMessagePayloadType) => {
-
+  const emitSendSurveyAnswer = useCallback((data: SendSurveyMessagePayloadType) => {
     if (!socketClient || !socketClient.connected) {
       console.error("❌ Socket is not connected!");
       return;
     }
     socketClient.emit("send-survey-answer", data);
-  };
+  }, [socketClient]);
 
-  const emitSendLangCode = (data: SendLangCodeMessagePayloadType) => {
+  const emitSendLangCode = useCallback((data: SendLangCodeMessagePayloadType) => {
     if (!socketClient || !socketClient.connected) {
       console.error("❌ Socket is not connected!");
       return;
     }
     socketClient.emit("send-lang-code", data);
-  };
+  }, [socketClient]);
 
-  const emitClearMessage = (data: CleanMessagesPayloadType) => {
+  const emitClearMessage = useCallback((data: CleanMessagesPayloadType) => {
     if (!socketClient || !socketClient.connected) {
       console.error("❌ Socket is not connected!");
       return;
     }
     socketClient.emit("clear-messages", data);
-  };
+  }, [socketClient]);
 
-  const emitLeaveChat = (data: CleanMessagesPayloadType) => {
+  const emitLeaveChat = useCallback((data: CleanMessagesPayloadType) => {
     if (!socketClient || !socketClient.connected) {
       console.error("❌ Socket is not connected!");
       return;
     }
     socketClient.emit("leave-chat", data);
-  };
+  }, [socketClient]);
 
   return (
     <SocketContext.Provider
