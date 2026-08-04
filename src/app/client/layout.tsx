@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import React, {  useEffect  } from "react";
 import { SocketContextProvider } from "../../context/SocketContextProvider";
 
 function Layout({ children }: { children: React.ReactNode }) {

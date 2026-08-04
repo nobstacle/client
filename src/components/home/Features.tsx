@@ -1,3 +1,4 @@
+import React from "react";
 
 // components/Features.tsx
 declare global {

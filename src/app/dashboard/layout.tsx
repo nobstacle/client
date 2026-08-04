@@ -1,4 +1,4 @@
-import { PropsWithChildren } from "react";
+import React, {  PropsWithChildren  } from "react";
 import { SocketContextProvider } from "../../context/SocketContextProvider";
 import { CompanyContextProvider } from "../../context/CompanyProvider";
 import { ShortcutsProvider } from "./ShortcutProvider";

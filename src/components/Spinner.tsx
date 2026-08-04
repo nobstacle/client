@@ -1,3 +1,4 @@
+import React from "react";
 export const Spinner: React.FC<{ color?: string }> = ({ color }) => {
   const currentColor = !color ? "fill-blue-600" : "fill-white";
 

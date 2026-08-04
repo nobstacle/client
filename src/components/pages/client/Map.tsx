@@ -3,7 +3,7 @@ import {
   DirectionsRenderer,
   useJsApiLoader,
 } from "@react-google-maps/api";
-import { useEffect, useState } from "react";
+import React, {  useEffect, useState  } from "react";
 import SafeContentFrame from "./SafeContentFrame";
 
 const center = { lat: 45.90458978842966, lng: -103.64974223855128 };

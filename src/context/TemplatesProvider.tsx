@@ -1,5 +1,5 @@
 "use client";
-import { createContext, useContext, useEffect } from "react";
+import React, {  createContext, useContext, useEffect  } from "react";
 import { QueryObserverResult, RefetchOptions } from "@tanstack/react-query";
 import {
   GetSlideshowTemplateRes,

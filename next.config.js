@@ -52,14 +52,20 @@ const withPWA = require("@ducanh2912/next-pwa").default({
           },
         },
       },
-      // Ads / analytics must never be handled by Workbox (ad blockers → no-response noise).
+      // Ads / analytics must never produce uncaught Workbox no-response errors when blocked by ad blockers.
       {
-        urlPattern: /^https:\/\/(www\.)?google(ads|tagmanager|syndication)?\.com\/.*/i,
+        urlPattern: /^https:\/\/(.*\.)?(google|googleadservices|googlesyndication|doubleclick|googletagmanager|google-analytics)\.(com|net)\/.*/i,
         handler: "NetworkOnly",
-      },
-      {
-        urlPattern: /^https:\/\/.*\.(doubleclick|googlesyndication)\.net\/.*/i,
-        handler: "NetworkOnly",
+        options: {
+          plugins: [
+            {
+              fetchDidFail: async () => {
+                // Return empty 204 response when ad/tracking requests are blocked by client
+                return new Response("", { status: 204, statusText: "No Content" });
+              },
+            },
+          ],
+        },
       },
       {
         urlPattern: /^https:\/\/.*\/api\/.*/i,

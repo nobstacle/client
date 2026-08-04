@@ -1,3 +1,4 @@
+import React from "react";
 export const MicIcon: React.FC<{ fill?: string }> = ({ fill = "#000000" }) => {
   return (
     <svg

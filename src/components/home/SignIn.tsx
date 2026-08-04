@@ -2,7 +2,7 @@
 'use client';
 
 
-import { useState, useEffect } from "react";
+import React, {  useState, useEffect  } from "react";
 import Link from "next/link";
 import { signIn, useSession } from "next-auth/react";
 import { Modal } from "antd";

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import React, {  useState, useEffect, useMemo  } from "react";
 import { useSearchParams } from "next/navigation";
 import { useHasHydrated } from "../../../../hooks/useHydrated";
 import useCompanyStore from "../../../../lib/zustand/store/companyStore";

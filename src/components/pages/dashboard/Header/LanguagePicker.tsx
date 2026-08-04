@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useEffect } from "react";
+import React, {  useMemo, useEffect  } from "react";
 import { useSearchParams } from "next/navigation";
 import { languages } from "../../../../constant/languages";
 import { useCompanyControllerGetCompany } from "../../../../lib/client/api";

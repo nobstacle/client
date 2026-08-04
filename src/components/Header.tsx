@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import React, {  useEffect, useMemo, useState  } from "react";
 // import { showDefaultSlideshow } from "../../services/company"
 import EditSvg from "../../svg/edit.svg";
 import AllLanguagesDropdown, { Dropdown } from "./Dropdown";

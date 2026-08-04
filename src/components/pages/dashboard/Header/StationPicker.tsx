@@ -6,7 +6,7 @@ import {
 } from "../../../../lib/client/api";
 import { useRouterWithQueryParams } from "../../../../hooks/useRouterWithQueryParams";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useState, useRef } from "react";
+import React, {  useEffect, useState, useRef  } from "react";
 
 const STATION_STORAGE_KEY = 'nobstacle_selected_station';
 
