@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from 'react';
 import ClientHeader from "../dashboard/ClientHeader";
 import { SocketContextProvider } from '@/context/SocketContextProvider';
+import { CompanyContextProvider } from '@/context/CompanyProvider';
 
 export default function HeaderOnlyPage() {
   const [mounted, setMounted] = useState(false);
@@ -239,8 +240,10 @@ export default function HeaderOnlyPage() {
   };
 
   return (
-    <SocketContextProvider>
-      <ClientHeader user={mockSession} />
-    </SocketContextProvider>
+    <CompanyContextProvider>
+      <SocketContextProvider>
+        <ClientHeader user={mockSession} />
+      </SocketContextProvider>
+    </CompanyContextProvider>
   );
 }

@@ -1,20 +1,28 @@
 "use client";
 
-import {
-  useCompanyControllerGetCompany,
-} from "../../../lib/client/api";
+import dynamic from "next/dynamic";
+import { useCompanyControllerGetCompany } from "../../../lib/client/api";
 import { useSearchParams } from "next/navigation";
 import { useSocketContext } from "../../../context/SocketContextProvider";
-import { useHasHydrated } from "../../../hooks/useHydrated";
-import { SendJotFormTemplateForm } from "../../../components/pages/dashboard/SendJotFormTemplateForm";
+import { DashboardPageSkeleton } from "../../../components/DashboardPageSkeleton";
+
+const SendJotFormTemplateForm = dynamic(
+  () =>
+    import("../../../components/pages/dashboard/SendJotFormTemplateForm").then(
+      (m) => ({ default: m.SendJotFormTemplateForm }),
+    ),
+  {
+    ssr: false,
+    loading: () => <DashboardPageSkeleton />,
+  },
+);
 
 export default function Dashboard() {
-
-  const hasHydrated = useHasHydrated();
   const params = useSearchParams();
   const { emitSendTemplate } = useSocketContext();
   const { data: companyData } = useCompanyControllerGetCompany();
-  let isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
+  const isMobile =
+    typeof window !== "undefined" && window.innerWidth <= 768;
 
   const sendJotFormTemplateMessage = (url: string) => {
     emitSendTemplate({
@@ -26,16 +34,15 @@ export default function Dashboard() {
     });
   };
 
-  if (hasHydrated)
-    return (
-      <div className={`flex h-full w-full flex-col justify-start gap-4 overflow-y-auto ${isMobile ? 'p-4' : 'p-6'}`}>
-        <div className="flex w-full flex-col gap-4">
-          <div className="flex w-full flex-col items-end gap-4 ">
-            <SendJotFormTemplateForm onSend={sendJotFormTemplateMessage} />
-          </div>
+  return (
+    <div
+      className={`flex h-full w-full flex-col justify-start gap-4 overflow-y-auto ${isMobile ? "p-4" : "p-6"}`}
+    >
+      <div className="flex w-full flex-col gap-4">
+        <div className="flex w-full flex-col items-end gap-4 ">
+          <SendJotFormTemplateForm onSend={sendJotFormTemplateMessage} />
         </div>
       </div>
-    );
-
-  return <div></div>;
+    </div>
+  );
 }

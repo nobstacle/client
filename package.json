@@ -8,6 +8,7 @@
     "build": "node scripts/generate-version.js && next build",
     "start": "next start",
     "lint": "next lint",
+    "test:templates": "npx tsx src/hooks/templateKinds.test.ts",
     "extension:check": "node scripts/check-extension-version.mjs",
     "extension:bump": "node scripts/bump-extension-version.mjs"
   },

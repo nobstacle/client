@@ -21,6 +21,35 @@ export async function middleware(req: NextRequest) {
     return response;
   }
 
+  // NextAuth internal routes — no role checks needed; skipping getToken() avoids
+  // a JWT decode on every /api/auth/session poll (called by many parallel hooks).
+  if (
+    pathname === "/api/auth/session" ||
+    pathname === "/api/auth/csrf" ||
+    pathname === "/api/auth/signin" ||
+    pathname === "/api/auth/signout" ||
+    pathname === "/api/auth/providers" ||
+    pathname.startsWith("/api/auth/callback/")
+  ) {
+    return NextResponse.next();
+  }
+
+  // Fully public pages that never use token data for redirects or role checks.
+  const publicNoAuthPaths = new Set([
+    "/privacy",
+    "/terms",
+    "/display",
+    "/registeration",
+    "/Upselling",
+    "/Screens",
+    "/Whatsapp",
+    "/home",
+    "/login",
+  ]);
+  if (publicNoAuthPaths.has(pathname)) {
+    return NextResponse.next();
+  }
+
   const t0 = Date.now();
   const token = await getToken({
     req,

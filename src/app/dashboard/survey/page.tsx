@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import useTemplateStore from "../../../lib/zustand/store/templateStore";
 import { useHasHydrated } from "../../../hooks/useHydrated";
+import { DashboardPageSkeleton } from "../../../components/DashboardPageSkeleton";
 import { surveyAnswerValToColor } from "../../../utils";
 import { CreateSurveyTemplate } from "../../../components/pages/dashboard/CreateSurveyTemplate";
 import { useSession } from "next-auth/react";
@@ -14,7 +15,7 @@ import Swal from "sweetalert2";
 function Page() {
   const isHydrated = useHasHydrated();
 
-  if (!isHydrated) return <div></div>;
+  if (!isHydrated) return <DashboardPageSkeleton />;
 
   return (
     <div className="h-full overflow-y-auto p-4 ">

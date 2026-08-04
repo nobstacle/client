@@ -16,6 +16,7 @@ import { CreateSlideshowTemplateForm } from "../../../components/pages/dashboard
 import { PlusIcon } from "../../../components/icons/PlusIcon";
 import useTemplateStore from "../../../lib/zustand/store/templateStore";
 import { useHasHydrated } from "../../../hooks/useHydrated";
+import { DashboardPageSkeleton } from "../../../components/DashboardPageSkeleton";
 import { TemplateContextProvider, useTemplateContext } from "../../../context/TemplatesProvider";
 import { UpdateSlideshowTemplateForm } from "../../../components/pages/dashboard/UpdateSlideshowTemplateForm";
 import { useState, useMemo } from "react";
@@ -334,7 +335,7 @@ function SlideshowDashboardContent() {
       </div>
     );
 
-  return <div></div>;
+  return <DashboardPageSkeleton />;
 }
 
 // Template data is only needed here. Keeping the provider at route scope

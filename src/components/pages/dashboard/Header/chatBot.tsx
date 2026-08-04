@@ -6,7 +6,7 @@ import { IoChatbubbles, IoMicOutline, IoMicOffOutline } from "react-icons/io5";
 import { useSocketContext } from "../../../../context/SocketContextProvider";
 import { useSearchParams } from "next/navigation";
 import { useMessageStore } from "../../../../lib/zustand/store/messageStore";
-import { useCompanyControllerGetCompany } from '../../../../lib/client/api';
+import { useCompanyControllerGetCompany, getCompanyControllerGetCompanyQueryKey } from '../../../../lib/client/api';
 import { useSession } from "next-auth/react";
 import AudioRecorder from "../../../../components/AudioRecorder";
 
@@ -38,8 +38,9 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true, isMob
   const { data: session } = useSession();
   const { data: companyData } = useCompanyControllerGetCompany({
     query: {
-      queryKey: ['company'],
-      staleTime: 1000 * 60 * 5,
+      queryKey: getCompanyControllerGetCompanyQueryKey(),
+      staleTime: Infinity,
+      gcTime: Infinity,
     }
   });
 

@@ -42,11 +42,15 @@ const LazyJotFormPrefillModal = dynamic(
 import { HeaderSurveyShortcut } from "../../components/pages/dashboard/Header/SurveyPicker";
 import { TextSurveyShortcut } from "../../components/pages/dashboard/Header/TextSurveyShortcut";
 import { WebsiteShortcut } from "../../components/pages/dashboard/Header/WebsiteShortcut";
+import { useAssignedFormsData } from "../../hooks/useAssignedFormsData";
+import { useHeaderUploadCatalog } from "../../hooks/useHeaderUploadCatalog";
+import { useTemplateLoader } from "../../context/TemplateLoaderProvider";
 // Template & company data comes from Zustand stores (already fetched globally
 // by useFetchTemplates / useFetchCompany in the dashboard layout providers).
 // Removing the 10 duplicate React Query calls that were firing on every render.
 import useTemplateStore from '../../lib/zustand/store/templateStore';
 import useCompanyStore from '../../lib/zustand/store/companyStore';
+import { useShallow } from "zustand/react/shallow";
 
 import { useSearchParams } from "next/navigation";
 import { useSocketContext } from "../../context/SocketContextProvider";
@@ -181,15 +185,14 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
     const resetMessages = useMessageStore((s) => s.reset);
     const { emitSendMessage, emitClearMessage, emitLeaveChat } = useSocketContext();
     const speechToTextMutation = useUploadControllerUploadSpeechToTextFile();
-    const [allPackages, setAllPackages] = useState([]);
     const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
     const { data } = useSession();
+    const { allPackages, categoriesData, categoriesFetched, fetchCategories } =
+        useHeaderUploadCatalog();
+    const { ensureHeaderTemplates, isHeaderCatalogLoading } = useTemplateLoader();
     const [selectedCategories, setSelectedCategories] = useState(null);
     const [selectedPackages, setSelectedPackages] = useState([]);
-    const [categoriesData, setCategoriesData] = useState([]);
-    const [categoriesFetched, setCategoriesFetched] = useState(false);
-    const [assignedForms, setAssignedForms] = useState<any[]>([]);
-    const [defaultFormId, setDefaultFormId] = useState<string | null>(null);
+    const { assignedForms, defaultFormId } = useAssignedFormsData();
     const [isFormModalOpen, setIsFormModalOpen] = useState(false);
     const [selectedFormFields, setSelectedFormFields] = useState<FormFields | null>(null);
     const [selectedFormForPrefill, setSelectedFormForPrefill] = useState<any>(null);
@@ -329,121 +332,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         }
     }, []);
 
-    useEffect(() => {
-        // Prefetch categories on mount
-        if (data?.user?.backendTokens?.at && !categoriesFetched) {
-            fetchCategories();
-        }
-    }, [data?.user?.backendTokens?.at, categoriesFetched]);
-
-    useEffect(() => {
-        const fetchPackages = async () => {
-            if (allPackages.length > 0) return;
-
-            try {
-                const response = await fetch(`${backendUrl}/api/v1/uploads/get-all-packages?limit=9999`, {
-                    method: 'GET',
-                    headers: {
-                        Authorization: `Bearer ${data?.user?.backendTokens?.at}`,
-                        'Cache-Control': 'no-cache'
-                    },
-                });
-                if (response.ok) {
-                    const packageData = await response.json();
-                    const filterPackages = packageData.data?.filter((item) => {
-                        return item?.active === true
-                    });
-                    setAllPackages(filterPackages);
-                }
-            } catch (error) {
-                console.error('Error fetching packages:', error);
-            }
-        };
-
-        if (data?.user?.backendTokens?.at && allPackages.length === 0) {
-            fetchPackages();
-        }
-    }, [data?.user?.backendTokens?.at, allPackages.length, backendUrl]);
-
     const selectedLang = params.get("lang") || companyData?.defaultLangCode || "en";
-
-    const getAssignedForms = async () => {
-        const Url = process.env.NEXT_PUBLIC_BACKEND_URL;
-        const companyId = user?.user?.companyId;
-
-        if (!companyId) return;
-
-        try {
-            const response = await fetch(`${Url}/api/assigned-form/${companyId}`);
-            if (response.ok) {
-                const forms = await response.json();
-                setAssignedForms(forms);
-
-                // Get default form
-                const defaultForm = await getDefaultCompanyForm();
-                setDefaultFormId(defaultForm);
-            }
-        } catch (error) {
-            console.error('Error fetching assigned forms:', error);
-        }
-    };
-
-    const getDefaultCompanyForm = async () => {
-        const Url = process.env.NEXT_PUBLIC_BACKEND_URL;
-        const API_URL = `${Url}/api/v1/shortcut/default-company-form`;
-
-        try {
-            const response = await fetch(API_URL, {
-                method: 'GET',
-                headers: {
-                    Authorization: `Bearer ${data?.user?.backendTokens?.at}`,
-                    'Content-Type': 'application/json',
-                },
-            });
-
-            if (response.ok) {
-                const result = await response.json();
-                return result?.formId || null;
-            }
-        } catch (error) {
-            console.error('Error fetching default form:', error);
-        }
-        return null;
-    };
-
-    useEffect(() => {
-        if (user?.user?.companyId && data?.user?.backendTokens?.at) {
-            getAssignedForms();
-        }
-    }, [user?.user?.companyId, data?.user?.backendTokens?.at]);
-
-    const fetchCategories = async () => {
-        if (categoriesFetched && categoriesData.length > 0) {
-            return categoriesData;
-        }
-
-        try {
-            const response = await fetch(`${backendUrl}/api/v1/uploads/get-all-categories?fetchAll=true&limit=100`, {
-                headers: {
-                    Authorization: `Bearer ${data?.user?.backendTokens?.at}`,
-                    'Cache-Control': 'no-cache'
-                },
-            });
-            if (response.ok) {
-                const json = await response.json();
-                const categories = json.data || json;
-
-                setCategoriesData(categories);
-                setCategoriesFetched(true);
-                return categories;
-            } else {
-                return [];
-            }
-        } catch (error) {
-            return [];
-        }
-    };
-
     // ── Read template data directly from Zustand (populated by the global
     // useFetchTemplates hook in TemplateContextProvider — zero extra network
     // requests, data is available the moment the layout mounts) ───────────────
@@ -457,10 +346,22 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
         documents: documentTemplates,
         scrolls,
         publicScrolls,
-    } = useTemplateStore();
+    } = useTemplateStore(
+        useShallow((state) => ({
+            texts: state.texts,
+            images: state.images,
+            videos: state.videos,
+            websites: state.websites,
+            slideshows: state.slideshows,
+            maps: state.maps,
+            documents: state.documents,
+            scrolls: state.scrolls,
+            publicScrolls: state.publicScrolls,
+        })),
+    );
 
-    // isLoading is false because data already lives in-memory
-    const isLoading = false;
+    // True while header-search template types are still loading into Zustand.
+    const isLoading = isHeaderCatalogLoading;
 
     // Template type configurations
     const templateConfig = useMemo(() => ({
@@ -818,8 +719,10 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                     defaultFormId: defaultFormId
                 }, '*');
             }
+        } else if (value.trim()) {
+            ensureHeaderTemplates();
         }
-    }, [categoriesData, categoriesFetched, fetchCategories, assignedForms, defaultFormId, isInIframe]);
+    }, [categoriesData, categoriesFetched, fetchCategories, assignedForms, defaultFormId, isInIframe, ensureHeaderTemplates]);
 
     const handleSendBlankForm = async (formId) => {
         try {
@@ -2933,8 +2836,8 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                                                 <input
                                                                     readOnly
                                                                     onFocus={(e) => {
-                                                                        e.target.removeAttribute('readonly'); // Remove on focus
-                                                                        // your existing focus logic...
+                                                                        e.target.removeAttribute('readonly');
+                                                                        ensureHeaderTemplates();
                                                                     }}
                                                                     ref={inputRef}
                                                                     autoComplete="off"
@@ -3416,6 +3319,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                                             onChange={handleSearchChange}
                                             onFocus={(e) => {
                                                 e.target.removeAttribute('readonly');
+                                                ensureHeaderTemplates();
                                                 if (justSelectedRef.current) return;
                                                 if (searchValue.trim() && filteredTemplates.length > 0) {
                                                     setIsDropdownVisible(true);

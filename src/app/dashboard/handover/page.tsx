@@ -5,6 +5,7 @@ import { Table, Button, Space, Card, Modal, Form, Input, Pagination, DatePicker,
 import { EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useSearchParams } from "next/navigation";
 import { useHasHydrated } from "../../../hooks/useHydrated";
+import { DashboardPageSkeleton } from "../../../components/DashboardPageSkeleton";
 import "../../../styles/base.css";
 import dayjs from 'dayjs';
 import { UploadOutlined, FileTextOutlined, CalendarOutlined, PictureOutlined } from '@ant-design/icons';
@@ -913,5 +914,5 @@ export default function Handover() {
             </>
         );
 
-    return <div></div>;
+    return <DashboardPageSkeleton />;
 }

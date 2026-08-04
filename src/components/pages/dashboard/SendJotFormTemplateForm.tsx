@@ -12,16 +12,15 @@ import { BsFillSendPlusFill } from "react-icons/bs";
 import { RiUploadCloudFill } from "react-icons/ri";
 import { Table, Button, Pagination, Row, Col, Modal, Select, Tooltip, Radio, Skeleton } from 'antd';
 import { FiSend } from "react-icons/fi";
-import Swal from 'sweetalert2';
 import { SendIcon } from "../../icons/SendIcon";
 import { FaChartBar } from "react-icons/fa";
 import { DatePicker, Input, Form } from 'antd';
 import dayjs from 'dayjs';
 import { IoQrCode } from "react-icons/io5";
-import Papa from 'papaparse';
 import { debounce } from 'lodash';
 import { HiRefresh } from "react-icons/hi";
 import { useMessageStore } from "../../../lib/zustand/store/messageStore";
+import { useAssignedFormsData } from "../../../hooks/useAssignedFormsData";
 
 const { Option } = Select;
 
@@ -30,6 +29,9 @@ const getBackendUrl = () => {
 		? process.env.NEXT_PUBLIC_BACKEND_URL
 		: process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
 };
+
+const loadSwal = () => import('sweetalert2').then((m) => m.default);
+const loadPapa = () => import('papaparse').then((m) => m.default);
 
 const schema = yup
 	.object({
@@ -128,7 +130,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 	const { emitSendJotForm } = useSocketContext();
 	const params = new URLSearchParams(window.location.search);
 	const companyData = { defaultLangCode: "en" };
-	const [assignedForms, setAssignedForms] = useState<AssignedForm[]>([]);
+	const { assignedForms, defaultFormId, isLoading: assignedFormsLoading } = useAssignedFormsData();
 	const [selectedForm, setSelectedForm] = useState<string | null>(null)
 	const [inputValues, setInputValues] = useState<InputValues>({});
 	const [isReportModal, setIsReportModal] = useState(false);
@@ -154,7 +156,6 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 	const [isSyncing, setIsSyncing] = useState(false);
 	const lastFetchParams = useRef({ page: 0, size: 0, form: '', search: '', filter: '' });
 	const hasFetchedOnMount = useRef(false);
-	const hasLoadedUserData = useRef(false);
 	const fetchControllerRef = useRef<AbortController | null>(null);
 	const currentFormIdRef = useRef<string | null>(null);
 	const { receivedResponse } = useMessageStore();
@@ -338,6 +339,7 @@ useEffect(() => {
 	}
 
 	const deleteRecord = async (data: any) => {
+		const Swal = await loadSwal();
 		Swal.fire({
 			title: "Are you sure?",
 			text: "You won't be able to revert this!",
@@ -1084,43 +1086,6 @@ useEffect(() => {
 			.sort((a: any, b: any) => a.name.localeCompare(b.name));
 	}, [selectedFormFields?.content, selectedForm]);
 
-	const getAssignedFormByID = async (company_id: number) => {
-		const Url = getBackendUrl();
-		const API_URL = `${Url}/api/assigned-form/${company_id}`;
-
-		try {
-			const response = await axios.get(API_URL);
-			if (response.status === 200) {
-				setAssignedForms(response?.data);
-
-				const defaultFormId = await getDefaultCompanyForm();
-
-				const sortedForms = [...response?.data].sort((a, b) =>
-					a.form_name.localeCompare(b.form_name)
-				);
-
-				const defaultFormExists = defaultFormId &&
-					response?.data.some(form => form.form_id === defaultFormId);
-
-				if (selectedForm === null) {
-					const formToSelect = defaultFormExists
-						? defaultFormId
-						: sortedForms[0]?.form_id || null;
-
-					setSelectedForm(formToSelect);
-					setLoader(false);
-				}
-				setLoader(false);
-			} else {
-				setLoader(false);
-				console.error('Unexpected response status:', response.status);
-			}
-		} catch (error) {
-			setLoader(false);
-			console.error('Error fetching assigned form data:', error);
-		}
-	};
-
 	const handleSyncFormFields = async () => {
 		if (!selectedForm) {
 			toast.warning('Please select a form first');
@@ -1220,13 +1185,27 @@ useEffect(() => {
 	}, [selectedForm]);
 
 	useEffect(() => {
-		if (userData?.user?.id && !hasLoadedUserData.current) {
-			hasLoadedUserData.current = true;
-			setLoader(true);
-			getAssignedFormByID(userData?.user?.companyId);
+		if (!assignedForms.length || selectedForm !== null) return;
+
+		const sortedForms = [...assignedForms].sort((a, b) =>
+			a.form_name.localeCompare(b.form_name)
+		);
+		const defaultFormExists =
+			defaultFormId && assignedForms.some((form) => form.form_id === defaultFormId);
+		const formToSelect = defaultFormExists
+			? defaultFormId
+			: sortedForms[0]?.form_id || null;
+
+		if (formToSelect) {
+			setSelectedForm(formToSelect);
+		}
+	}, [assignedForms, defaultFormId, selectedForm]);
+
+	useEffect(() => {
+		if (userData?.user?.companyId) {
 			setPageSize(10);
 		}
-	}, [userData?.user?.id, userData?.user?.companyId]);
+	}, [userData?.user?.companyId]);
 
 	type FormValues = {
 		url?: string;
@@ -1368,7 +1347,8 @@ useEffect(() => {
 
 		try {
 			const response = await axios.get(API_URL, {
-				signal: abortControllerRef.current.signal
+				signal: abortControllerRef.current.signal,
+				timeout: 30_000,
 			});
 
 			if (form_id !== currentFormIdRef.current) {
@@ -1770,6 +1750,7 @@ useEffect(() => {
 			return;
 		}
 
+		const Papa = await loadPapa();
 		Papa.parse(file, {
 			header: true,
 			skipEmptyLines: true,
@@ -1926,29 +1907,6 @@ useEffect(() => {
 			}
 		}
 	}
-
-	const getDefaultCompanyForm = async () => {
-		const Url = getBackendUrl();
-		const API_URL = `${Url}/api/v1/shortcut/default-company-form`;
-
-		try {
-			const response = await fetch(API_URL, {
-				method: 'GET',
-				headers: {
-					Authorization: `Bearer ${userData?.user?.backendTokens?.at}`,
-					'Content-Type': 'application/json',
-				},
-			});
-
-			if (response.ok) {
-				const data = await response.json();
-				return data?.data?.formId || null;
-			}
-		} catch (error) {
-			console.error('Error fetching default form:', error);
-		}
-		return null;
-	};
 
 	const parseOptions = (optionsString) => {
 		if (!optionsString) return [];
@@ -2243,7 +2201,8 @@ useEffect(() => {
 
 			// Make the API call
 			const response = await axios.get(API_URL, {
-				responseType: 'blob'
+				responseType: 'blob',
+				timeout: 30_000,
 			});
 
 			// Create download link
@@ -2786,7 +2745,7 @@ useEffect(() => {
 						</Tooltip>
 					</div>
 				</div>
-				{loader || !tableResponse || !selectedFormFields?.content ? (
+				{loader || assignedFormsLoading || !tableResponse ? (
 					<div className="p-4 bg-white shadow-md rounded-lg customTableWrapper">
 						<Skeleton active paragraph={{ rows: 10 }} />
 					</div>

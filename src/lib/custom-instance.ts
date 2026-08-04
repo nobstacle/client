@@ -3,6 +3,7 @@ import { getSession } from "next-auth/react";
 
 export const AXIOS_INSTANCE = Axios.create({
   baseURL: process.env.NEXT_PUBLIC_BACKEND_URL,
+  timeout: 30_000,
 });
 
 // ─── Session cache singleton ───────────────────────────────────────────────

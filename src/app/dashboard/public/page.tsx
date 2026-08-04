@@ -16,6 +16,7 @@ import { ChatType } from "../../../constant/types";
 import { useSession } from "next-auth/react";
 import { PlusIcon } from "../../../components/icons/PlusIcon";
 import { useHasHydrated } from "../../../hooks/useHydrated";
+import { DashboardPageSkeleton } from "../../../components/DashboardPageSkeleton";
 import { useState, useMemo, useRef } from "react";
 import { Card, Tooltip, message } from "antd";
 import { FaPlay, FaImage, FaFilm } from "react-icons/fa";
@@ -115,12 +116,12 @@ export default function ScreensDashboard() {
   // ── Data fetching via React Query ────────────────────────────────────────────
   // enabled only after hydration so we never fetch before the session is ready
   const { data: scrollsData, isLoading, refetch: refetchScrolls } = useScrollControllerGetScrolls(
-    { limit: 100, langCode: currentLang, scope: "public" },
+    { limit: 9999, langCode: currentLang, scope: "public" },
     {
       query: {
         enabled: isHydrated,
         queryKey: getScrollControllerGetScrollsQueryKey({
-          limit: 100,
+          limit: 9999,
           langCode: currentLang,
           scope: "public",
         }),
@@ -142,7 +143,7 @@ export default function ScreensDashboard() {
   const invalidateScrolls = () =>
     queryClient.invalidateQueries({
       queryKey: getScrollControllerGetScrollsQueryKey({
-        limit: 100,
+        limit: 9999,
         langCode: currentLang,
         scope: "public",
       }),
@@ -290,7 +291,7 @@ export default function ScreensDashboard() {
   const goPrev = () => setPreviewIndex((i) => Math.max(i - 1, 0));
 
   // ── Render ───────────────────────────────────────────────────────────────────
-  if (!isHydrated) return <div />;
+  if (!isHydrated) return <DashboardPageSkeleton />;
 
   if (isLoading && scrolls.length === 0) {
     return (

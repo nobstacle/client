@@ -15,6 +15,7 @@ import { useSession } from "next-auth/react";
 import { PlusIcon } from "../../../components/icons/PlusIcon";
 import useTemplateStore from "../../../lib/zustand/store/templateStore";
 import { useHasHydrated } from "../../../hooks/useHydrated";
+import { DashboardPageSkeleton } from "../../../components/DashboardPageSkeleton";
 import { useState, useMemo } from "react";
 import { GetVideoTemplateRes } from "../../../lib/client/model";
 import { UpdateVideoTemplateForm } from "../../../components/pages/dashboard/UpdateVideoTemplateForm";
@@ -327,5 +328,5 @@ export default function VideoDashboard() {
       </div>
     );
 
-  return <div></div>;
+  return <DashboardPageSkeleton />;
 }

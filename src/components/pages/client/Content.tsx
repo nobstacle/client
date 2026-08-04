@@ -24,6 +24,7 @@ import { LeftOutlined, RightOutlined, ExpandAltOutlined } from '@ant-design/icon
 import { TrialWatermark } from "../../trial/TrialWatermark";
 import { useViewportScale } from "../../../hooks/useViewportScale";
 import { getContainMediaStyle } from "../../../utils/contentFit";
+import { generateQrCodeDataUrl } from "../../../utils/generateQrCode";
 
 const { Title, Text } = Typography;
 const DisplayLoading = () => <div className="flex h-full w-full items-center justify-center">Loading…</div>;
@@ -869,6 +870,7 @@ export const Content: React.FC = () => {
   }, [messageStore.receivedLangCode, company.data?.defaultLangCode]);
   const hasHydrated = useHasHydrated();
   const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
+  const [keepMapMounted, setKeepMapMounted] = useState(false);
   const [showQR, setShowQR] = useState(false);
   const [timer, setTimer] = useState(20);
   const [isClosing, setIsClosing] = useState(false);
@@ -1135,8 +1137,7 @@ export const Content: React.FC = () => {
         try {
           // QR generation is only needed for QR content; keep its library out
           // of the initial display bundle.
-          const { default: QRCode } = await import('qrcode');
-          const url = await QRCode.toDataURL(content);
+          const url = await generateQrCodeDataUrl(content);
           setQrCodeUrl(url);
           const wdthSize = window.innerWidth;
           if (wdthSize > 650) {
@@ -1162,6 +1163,20 @@ export const Content: React.FC = () => {
     }
 
   }, [messageStore.receivedContent?.content, messageStore.receivedContent?.extraContent, messageStore.receivedContent?.directContent]);
+
+  const showMapAsQr =
+    ["MapTemplateQr", "WebsiteTemplateQr"].includes(contentToDisplay?.type) ||
+    messageStore.receivedContent?.directContent === "QR";
+
+  useEffect(() => {
+    setKeepMapMounted(false);
+  }, [messageStore.receivedContent?.id, messageStore.receivedType]);
+
+  useEffect(() => {
+    if (!showMapAsQr) {
+      setKeepMapMounted(true);
+    }
+  }, [showMapAsQr]);
 
   useEffect(() => {
     if (messageStore.receivedType && messageStore.receivedType !== "Recording") {
@@ -2762,27 +2777,32 @@ export const Content: React.FC = () => {
           messageStore.receivedType?.includes("Map")
         ) && (
             <div className="w-full h-full">
-              {/* QR version */}
-              {["MapTemplateQr", "WebsiteTemplateQr"].includes(contentToDisplay?.type) || messageStore.receivedContent?.directContent === 'QR' ? (
+              {showMapAsQr && (
                 <SafeContentFrame className="flex justify-center items-center bg-gray-50">
                   <Card>
-                    <img
-                      src={qrCodeUrl}
-                      alt="QR Code"
-                      className="object-contain"
-                      style={{ width: `${adaptiveQrSize}px`, height: `${adaptiveQrSize}px` }}
-                    />
+                    {qrCodeUrl ? (
+                      <img
+                        src={qrCodeUrl}
+                        alt="QR Code"
+                        className="object-contain"
+                        style={{ width: `${adaptiveQrSize}px`, height: `${adaptiveQrSize}px` }}
+                      />
+                    ) : (
+                      <p className="text-gray-500">Generating QR code...</p>
+                    )}
                   </Card>
                 </SafeContentFrame>
-              ) : (
-                /* Normal interactive map */
-                <SimpleMap
-                  destination={messageStore.receivedContent?.extraContent ??
-                    contentToDisplay?.content?.extraContent ?? ""}
-                  origin={messageStore.receivedContent?.content ??
-                    contentToDisplay?.content?.content ?? ""}
-                  languageCode={activeLangCode || messageStore.receivedContent?.langCode || "en"}
-                />
+              )}
+              {(keepMapMounted || !showMapAsQr) && (
+                <div className={showMapAsQr ? "hidden" : "w-full h-full"}>
+                  <SimpleMap
+                    destination={messageStore.receivedContent?.extraContent ??
+                      contentToDisplay?.content?.extraContent ?? ""}
+                    origin={messageStore.receivedContent?.content ??
+                      contentToDisplay?.content?.content ?? ""}
+                    languageCode={activeLangCode || messageStore.receivedContent?.langCode || "en"}
+                  />
+                </div>
               )}
             </div>
           )}

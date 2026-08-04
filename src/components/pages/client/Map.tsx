@@ -1,32 +1,47 @@
 import {
   GoogleMap,
   DirectionsRenderer,
-  LoadScript,
+  useJsApiLoader,
 } from "@react-google-maps/api";
 import { useEffect, useState } from "react";
 import SafeContentFrame from "./SafeContentFrame";
 
 const center = { lat: 45.90458978842966, lng: -103.64974223855128 };
+const GOOGLE_MAPS_API_KEY = "AIzaSyBB5xoUCTVJoyYUy-4r7LAySR8SpfaVsHA";
 
 const SimpleMap: React.FC<{
   origin: string;
   destination: string;
   languageCode: string;
 }> = ({ origin, destination, languageCode }) => {
+  const { isLoaded, loadError } = useJsApiLoader({
+    googleMapsApiKey: GOOGLE_MAPS_API_KEY,
+    language: languageCode,
+  });
+
+  if (loadError) {
+    return (
+      <SafeContentFrame className="flex items-center justify-center">
+        <p>Failed to load map</p>
+      </SafeContentFrame>
+    );
+  }
+
+  if (!isLoaded) {
+    return (
+      <SafeContentFrame className="flex items-center justify-center">
+        <p>Loading map...</p>
+      </SafeContentFrame>
+    );
+  }
 
   return (
-    <LoadScript
-      googleMapsApiKey="AIzaSyBB5xoUCTVJoyYUy-4r7LAySR8SpfaVsHA"
-      libraries={["places"]}
-      language={languageCode}
-    >
-      <Directions
-        destination={destination}
-        origin={origin}
-        travelMethod={"DRIVING" as any}
-        languageCode={languageCode}
-      />
-    </LoadScript>
+    <Directions
+      destination={destination}
+      origin={origin}
+      travelMethod={"DRIVING" as any}
+      languageCode={languageCode}
+    />
   );
 };
 const Directions: React.FC<{

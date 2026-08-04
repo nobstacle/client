@@ -1,67 +1,103 @@
 'use client';
-import { useEffect } from 'react';
 
-async function clearServiceWorkerState() {
-  if ('caches' in window) {
-    const cacheKeys = await caches.keys();
-    await Promise.all(cacheKeys.map((key) => caches.delete(key)));
-  }
+import { useCallback, useEffect, useRef } from 'react';
+import { usePathname } from 'next/navigation';
+import {
+  BUILD_VERSION_KEY,
+  purgeClientStateForDeploy,
+} from '../utils/deployClientPurge';
 
-  if ('serviceWorker' in navigator) {
-    const registrations = await navigator.serviceWorker.getRegistrations();
-    await Promise.all(registrations.map((reg) => reg.unregister()));
-  }
-}
+const VERSION_POLL_MS = 30_000;
+
+const shouldSignOutOnDeploy = () =>
+  process.env.NEXT_PUBLIC_DEPLOY_SIGN_OUT === 'true';
 
 export function VersionChecker() {
-  useEffect(() => {
-    let isRefreshing = false;
+  const pathname = usePathname();
+  const isRefreshingRef = useRef(false);
 
-    // Dev never uses a SW; kill any leftover registration from a prior prod/build session.
+  const checkVersion = useCallback(async (updateRegistration = false) => {
+    if (isRefreshingRef.current) return;
+
+    try {
+      if (updateRegistration && 'serviceWorker' in navigator) {
+        const registration = await navigator.serviceWorker.getRegistration();
+        await registration?.update();
+      }
+
+      const res = await fetch(`/version.json?t=${Date.now()}`, {
+        cache: 'no-store',
+        headers: { 'Cache-Control': 'no-cache' },
+      });
+      if (!res.ok) return;
+
+      const data = await res.json();
+      const serverBuildId = String(data.buildId ?? '');
+      if (!serverBuildId) return;
+
+      const localBuildId = localStorage.getItem(BUILD_VERSION_KEY);
+
+      if (!localBuildId) {
+        localStorage.setItem(BUILD_VERSION_KEY, serverBuildId);
+        return;
+      }
+
+      if (localBuildId !== serverBuildId) {
+        isRefreshingRef.current = true;
+        console.info(
+          `[VersionChecker] New deployment ${serverBuildId} (was ${localBuildId}) — purging client storage and caches`,
+        );
+        await purgeClientStateForDeploy({
+          newBuildId: serverBuildId,
+          signOut: shouldSignOutOnDeploy(),
+        });
+      }
+    } catch (err) {
+      console.warn('Version check error:', err);
+    }
+  }, []);
+
+  useEffect(() => {
     if (process.env.NODE_ENV === 'development') {
-      clearServiceWorkerState().catch(() => undefined);
       return;
     }
 
-    const checkVersion = async () => {
-      try {
-        const res = await fetch(`/version.json?t=${Date.now()}`, {
-          cache: 'no-store',
-          headers: { 'Cache-Control': 'no-cache' },
-        });
-        if (!res.ok) return;
-        const data = await res.json();
-        const serverBuildId = data.buildId;
-        const localBuildId = localStorage.getItem('app_build_version');
+    const url = new URL(window.location.href);
+    if (url.searchParams.has('__deploy')) {
+      url.searchParams.delete('__deploy');
+      window.history.replaceState({}, '', url.toString());
+    }
+  }, []);
 
-        if (!localBuildId) {
-          localStorage.setItem('app_build_version', serverBuildId);
-          return;
-        }
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      return;
+    }
 
-        if (localBuildId !== serverBuildId && !isRefreshing) {
-          isRefreshing = true;
-          localStorage.setItem('app_build_version', serverBuildId);
-          await clearServiceWorkerState();
-          // Hard reload so the browser fetches a fresh document + chunk graph.
-          window.location.replace(window.location.href);
-        }
-      } catch (err) {
-        console.warn('Version check error:', err);
+    checkVersion(true);
+
+    const interval = window.setInterval(() => checkVersion(true), VERSION_POLL_MS);
+    const onFocus = () => checkVersion(true);
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        checkVersion(true);
       }
     };
 
-    checkVersion();
-
-    const interval = setInterval(checkVersion, 2 * 60 * 1000);
-    const onFocus = () => checkVersion();
     window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', onVisibilityChange);
 
     return () => {
-      clearInterval(interval);
+      window.clearInterval(interval);
       window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
     };
-  }, []);
+  }, [checkVersion]);
+
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development') return;
+    checkVersion(false);
+  }, [pathname, checkVersion]);
 
   return null;
 }

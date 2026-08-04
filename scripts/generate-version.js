@@ -10,6 +10,8 @@ if (!fs.existsSync(publicDir)) {
 const versionData = {
   buildId: Date.now().toString(),
   timestamp: new Date().toISOString(),
+  /** Clients compare buildId; on change they purge storage, caches, and service workers. */
+  purgeClientStorage: true,
 };
 
 fs.writeFileSync(

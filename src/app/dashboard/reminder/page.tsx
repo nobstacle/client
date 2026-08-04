@@ -4,6 +4,7 @@ import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { Select, Table, Button, Space, Checkbox, Tag, InputNumber, Typography, Radio, Spin, Card, Modal, Form, Input, Upload, Row, Col, Image, message, Pagination } from 'antd';
 import { EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useHasHydrated } from "../../../hooks/useHydrated";
+import { DashboardPageSkeleton } from "../../../components/DashboardPageSkeleton";
 import "../../../styles/base.css";
 import dayjs from 'dayjs';
 import { UploadOutlined, FileTextOutlined, PictureOutlined, BellOutlined } from '@ant-design/icons';
@@ -1760,5 +1761,5 @@ export default function Reminder() {
             </>
         );
 
-    return <div></div>;
+    return <DashboardPageSkeleton />;
 }

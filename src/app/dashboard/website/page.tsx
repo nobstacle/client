@@ -17,6 +17,7 @@ import { ChatType } from "../../../constant/types";
 import { useSession } from "next-auth/react";
 import { PlusIcon } from "../../../components/icons/PlusIcon";
 import { useHasHydrated } from "../../../hooks/useHydrated";
+import { DashboardPageSkeleton } from "../../../components/DashboardPageSkeleton";
 import { UpdateWebsiteTemplateForm } from "../../../components/pages/dashboard/UpdateWebsiteTemplateForm";
 import { GetWebsiteTemplateRes } from "../../../lib/client/model";
 import { useSearchTemplate } from "../../../hooks/useSearchTemplate";
@@ -317,5 +318,5 @@ export default function Dashboard() {
       </div>
     );
 
-  return <div></div>;
+  return <DashboardPageSkeleton />;
 }

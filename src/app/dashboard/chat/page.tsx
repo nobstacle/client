@@ -6,6 +6,7 @@ import { useMessageStore } from "../../../lib/zustand/store/messageStore";
 import { useSearchParams } from "next/navigation";
 import { ChatBox } from "../../../components/ChatBox";
 import { useHasHydrated } from "../../../hooks/useHydrated";
+import { DashboardPageSkeleton } from "../../../components/DashboardPageSkeleton";
 import { useCompanyControllerGetCompany } from "../../../lib/client/api";
 import { EndChatIcon } from "../../../components/icons/EndChatIcon";
 import AudioRecorder from "../../../components/AudioRecorder";
@@ -68,5 +69,5 @@ export default function Dashboard() {
     );
   }
 
-  return <div></div>;
+  return <DashboardPageSkeleton />;
 }

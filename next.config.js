@@ -8,33 +8,35 @@ const withPWA = require("@ducanh2912/next-pwa").default({
   cacheOnFrontEndNav: false,
   aggressiveFrontEndNavCaching: false,
   reloadOnOnline: true,
+  dynamicStartUrl: false,
   workboxOptions: {
     disableDevLogs: true,
     skipWaiting: true,
     clientsClaim: true,
     cleanupOutdatedCaches: true,
-    // Hashed Next assets are safe to cache; navigations and APIs must stay network-first.
+    extendDefaultRuntimeCaching: true,
     runtimeCaching: [
       {
-        urlPattern: /^https?:\/\/.*\/(_next\/static\/).*/i,
-        handler: "CacheFirst",
+        urlPattern: ({ url, sameOrigin }) =>
+          sameOrigin && (url.pathname === "/" || url.pathname === ""),
+        handler: "NetworkFirst",
         options: {
-          cacheName: "next-static-assets",
+          cacheName: "start-url",
+          networkTimeoutSeconds: 3,
           expiration: {
-            maxEntries: 200,
-            maxAgeSeconds: 60 * 60 * 24 * 365,
+            maxEntries: 1,
+            maxAgeSeconds: 60 * 60 * 24,
           },
         },
       },
       {
-        urlPattern: /^https?:\/\/.*\/(_next\/data\/).*/i,
-        handler: "NetworkFirst",
+        urlPattern: /^https?:\/\/.*\/(_next\/static\/).*/i,
+        handler: "StaleWhileRevalidate",
         options: {
-          cacheName: "next-data",
-          networkTimeoutSeconds: 10,
+          cacheName: "next-static-assets",
           expiration: {
-            maxEntries: 64,
-            maxAgeSeconds: 60 * 60 * 24,
+            maxEntries: 200,
+            maxAgeSeconds: 60 * 60 * 24 * 7,
           },
         },
       },
@@ -43,7 +45,7 @@ const withPWA = require("@ducanh2912/next-pwa").default({
         handler: "NetworkFirst",
         options: {
           cacheName: "pages",
-          networkTimeoutSeconds: 5,
+          networkTimeoutSeconds: 3,
           expiration: {
             maxEntries: 32,
             maxAgeSeconds: 60 * 60 * 24,

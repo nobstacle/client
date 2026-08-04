@@ -15,7 +15,7 @@ import { UpsellStatusCell } from "../../../components/UpdateStatusCell";
 import { SendIcon } from "../../../components/icons/SendIcon";
 import { MdDelete } from "react-icons/md";
 import Swal from "sweetalert2";
-import { useMessageStore } from "../../../lib/zustand/store/messageStore";
+import { useHeaderUploadCatalog } from "../../../hooks/useHeaderUploadCatalog";
 import { FaFileDownload } from "react-icons/fa";
 import dayjs from 'dayjs';
 import { LeftOutlined, RightOutlined, TrophyOutlined, RiseOutlined } from "@ant-design/icons";
@@ -49,10 +49,11 @@ export default function Upsell() {
     const [searchTerm, setSearchTerm] = useState('');
     const [editingRecord, setEditingRecord] = useState<string | null>(null);
     const [editingData, setEditingData] = useState<any>({});
-    const [categoryData, setCategoryData] = useState([]);
     const [selectedCategories, setSelectedCategories] = useState(null);
     const [selectedPackages, setSelectedPackages] = useState([]);
-    const [allPackages, setAllPackages] = useState([]);
+    const { allPackages, categoriesData: categoryData } = useHeaderUploadCatalog({
+        eagerPackages: true,
+    });
     const [dataLoaded, setDataLoaded] = useState(false);
     const pageSize = 10;
     const { data } = useSession();
@@ -151,35 +152,6 @@ export default function Upsell() {
             setDashboardLoading(false);
         }
     }, [dateRange, selectedPackage, selectedStatus, companyData?.id, data?.user?.backendTokens?.at, Url]);
-
-    useEffect(() => {
-        const fetchPackages = async () => {
-            if (allPackages.length > 0) return;
-
-            try {
-                const response = await fetch(`${Url}/api/v1/uploads/get-all-packages?limit=9999`, {
-                    method: 'GET',
-                    headers: {
-                        Authorization: `Bearer ${data?.user?.backendTokens?.at}`,
-                        'Cache-Control': 'no-cache'
-                    },
-                });
-                if (response.ok) {
-                    const packageData = await response.json();
-                    const filterPackages = packageData.data?.filter((item) => {
-                        return item?.active === true
-                    });
-                    setAllPackages(filterPackages);
-                }
-            } catch (error) {
-                console.error('Error fetching packages:', error);
-            }
-        };
-
-        if (data?.user?.backendTokens?.at && allPackages.length === 0) {
-            fetchPackages();
-        }
-    }, [data?.user?.backendTokens?.at, allPackages.length, Url]);
 
     const dropdownPackages = allPackages.filter(pkg => pkg?.roomUpgrade === false);
 
@@ -1017,38 +989,6 @@ export default function Upsell() {
             setLoadingData(false);
         }
     };
-
-    // Modified fetchCategories with caching
-    const fetchCategories = useCallback(() => {
-        if (categoryData.length > 0) return;
-
-        setLoadingData(true);
-
-        fetch(`${Url}/api/v1/uploads/get-all-categories?fetchAll=true&limit=100`, {
-            headers: {
-                Authorization: `Bearer ${data?.user?.backendTokens?.at}`,
-                'Cache-Control': 'no-cache'
-            },
-        })
-            .then(async (response) => {
-                const text = await response.text();
-                const json = JSON.parse(text);
-                const responseData = json.data || json;
-                setCategoryData(responseData);
-            })
-            .catch((error) => {
-                console.warn("Error fetching data:", error);
-            })
-            .finally(() => {
-                setLoadingData(false);
-            });
-    }, [data?.user?.backendTokens?.at, Url, categoryData.length]);
-
-    useEffect(() => {
-        if (data?.user?.backendTokens?.at && categoryData.length === 0) {
-            fetchCategories();
-        }
-    }, [data?.user?.backendTokens?.at, categoryData.length, fetchCategories]);
 
     useEffect(() => {
         if (data?.user?.backendTokens?.at && dataLoaded) {

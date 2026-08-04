@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import useTemplateStore from "../../../lib/zustand/store/templateStore";
 import { useHasHydrated } from "../../../hooks/useHydrated";
+import { DashboardPageSkeleton } from "../../../components/DashboardPageSkeleton";
 import { useSession } from "next-auth/react";
 import {
   useRecordingControllerDelete,
@@ -17,7 +18,7 @@ import { useMessageStore } from '../../../lib/zustand/store/messageStore';
 function Page() {
   const isHydrated = useHasHydrated();
 
-  if (!isHydrated) return <div></div>;
+  if (!isHydrated) return <DashboardPageSkeleton />;
 
   return (
     <div className="h-full overflow-y-auto p-4">

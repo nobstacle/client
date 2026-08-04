@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   getTemplateControllerGetImageTemplatesQueryKey,
@@ -16,17 +16,28 @@ import {
   getSurveyAnswerControllerGetSurveyAnswersQueryKey,
   useTemplateControllerGetWebsiteTemplates,
   getTemplateControllerGetWebsiteTemplatesQueryKey,
-  useTemplateControllerGetJotformTemplates,
-  getTemplateControllerGetJotformTemplatesQueryKey,
   useTemplateControllerGetDocumenttemplates,
   getTemplateControllerGetDocumentTemplatesQueryKey,
   useScrollControllerGetScrolls,
 } from "../lib/client/api";
 import useTemplateStore from "../lib/zustand/store/templateStore";
+import {
+  HEADER_CATALOG_KINDS,
+  isHeaderCatalogKind,
+  type TemplateKind,
+} from "./templateKinds";
 
-export const useFetchTemplates = () => {
+const templateQueryDefaults = {
+  staleTime: Infinity,
+  retry: 0,
+  gcTime: Infinity,
+} as const;
+
+export const useFetchTemplates = (enabledKinds: Set<TemplateKind>) => {
   const searchParams = useSearchParams();
   const currentLang = searchParams.get("lang") || undefined;
+  const isEnabled = (kind: TemplateKind) => enabledKinds.has(kind);
+
   const {
     setTexts,
     setSlideshows,
@@ -39,14 +50,14 @@ export const useFetchTemplates = () => {
     setScrolls,
     setPublicScrolls,
   } = useTemplateStore();
+
   const textTemplates = useTemplateControllerGetTextTemplates(
     {},
     {
       query: {
-        staleTime: Infinity,
-        retry: 0,
+        ...templateQueryDefaults,
+        enabled: isEnabled("text"),
         queryKey: getTemplateControllerGetTextTemplatesQueryKey(),
-        gcTime: Infinity,
       },
     },
   );
@@ -55,21 +66,20 @@ export const useFetchTemplates = () => {
     {},
     {
       query: {
-        staleTime: Infinity,
-        retry: 0,
+        ...templateQueryDefaults,
+        enabled: isEnabled("image"),
         queryKey: getTemplateControllerGetImageTemplatesQueryKey(),
-        gcTime: Infinity,
       },
     },
   );
+
   const videoTemplates = useTemplateControllerGetVideoTemplates(
     {},
     {
       query: {
-        staleTime: Infinity,
-        retry: 0,
+        ...templateQueryDefaults,
+        enabled: isEnabled("video"),
         queryKey: getTemplateControllerGetVideoTemplatesQueryKey(),
-        gcTime: Infinity,
       },
     },
   );
@@ -78,29 +88,26 @@ export const useFetchTemplates = () => {
     {},
     {
       query: {
-        staleTime: Infinity,
-        retry: 0,
+        ...templateQueryDefaults,
+        enabled: isEnabled("slideshow"),
         queryKey: getTemplateControllerGetSlideshowTemplatesQueryKey(),
-        gcTime: Infinity,
       },
     },
   );
 
   const mapTemplates = useTemplateControllerGetMapTemplates({
     query: {
-      staleTime: Infinity,
-      retry: 0,
+      ...templateQueryDefaults,
+      enabled: isEnabled("map"),
       queryKey: getTemplateControllerGetMapTemplatesQueryKey(),
-      gcTime: Infinity,
     },
   });
 
   const surveyAnswers = useSurveyAnswerControllerGetSurveyAnswers({
     query: {
-      staleTime: Infinity,
-      retry: 0,
+      ...templateQueryDefaults,
+      enabled: isEnabled("survey"),
       queryKey: getSurveyAnswerControllerGetSurveyAnswersQueryKey(),
-      gcTime: Infinity,
     },
   });
 
@@ -108,33 +115,20 @@ export const useFetchTemplates = () => {
     {},
     {
       query: {
-        staleTime: Infinity,
-        retry: 0,
+        ...templateQueryDefaults,
+        enabled: isEnabled("website"),
         queryKey: getTemplateControllerGetWebsiteTemplatesQueryKey(),
-        gcTime: Infinity,
       },
     },
   );
 
-  const jotformTemplates = useTemplateControllerGetJotformTemplates(
-    {},
-    {
-      query: {
-        staleTime: Infinity,
-        retry: 0,
-        queryKey: getTemplateControllerGetJotformTemplatesQueryKey(),
-        gcTime: Infinity,
-      },
-    },
-  );
   const documentTemplates = useTemplateControllerGetDocumenttemplates(
     {},
     {
       query: {
-        staleTime: Infinity,
-        retry: 0,
+        ...templateQueryDefaults,
+        enabled: isEnabled("document"),
         queryKey: getTemplateControllerGetDocumentTemplatesQueryKey(),
-        gcTime: Infinity,
       },
     },
   );
@@ -143,10 +137,13 @@ export const useFetchTemplates = () => {
     { limit: 9999, langCode: currentLang, scope: "scroll" },
     {
       query: {
-        staleTime: Infinity,
-        retry: 0,
-        queryKey: getScrollControllerGetScrollsQueryKey({ limit: 9999, langCode: currentLang, scope: "scroll" }),
-        gcTime: Infinity,
+        ...templateQueryDefaults,
+        enabled: isEnabled("scroll"),
+        queryKey: getScrollControllerGetScrollsQueryKey({
+          limit: 9999,
+          langCode: currentLang,
+          scope: "scroll",
+        }),
       },
     },
   );
@@ -155,10 +152,13 @@ export const useFetchTemplates = () => {
     { limit: 9999, langCode: currentLang, scope: "public" },
     {
       query: {
-        staleTime: Infinity,
-        retry: 0,
-        queryKey: getScrollControllerGetScrollsQueryKey({ limit: 9999, langCode: currentLang, scope: "public" }),
-        gcTime: Infinity,
+        ...templateQueryDefaults,
+        enabled: isEnabled("publicScroll"),
+        queryKey: getScrollControllerGetScrollsQueryKey({
+          limit: 9999,
+          langCode: currentLang,
+          scope: "public",
+        }),
       },
     },
   );
@@ -206,12 +206,6 @@ export const useFetchTemplates = () => {
   }, [websiteTemplates.data, setWebsites]);
 
   useEffect(() => {
-    if (jotformTemplates.data) {
-      setWebsites(jotformTemplates.data);
-    }
-  }, [jotformTemplates.data, setWebsites]);
-
-  useEffect(() => {
     if (documentTemplates.data) {
       setDocuments(documentTemplates.data);
     }
@@ -229,6 +223,46 @@ export const useFetchTemplates = () => {
     }
   }, [publicScrollTemplates.data, setPublicScrolls]);
 
+  const queriesByKind = useMemo(
+    (): Record<TemplateKind, { isLoading: boolean; isFetched: boolean }> => ({
+      text: textTemplates,
+      image: imageTemplates,
+      video: videoTemplates,
+      slideshow: slideshowTemplates,
+      map: mapTemplates,
+      website: websiteTemplates,
+      document: documentTemplates,
+      scroll: scrollTemplates,
+      publicScroll: publicScrollTemplates,
+      survey: surveyAnswers,
+    }),
+    [
+      textTemplates,
+      imageTemplates,
+      videoTemplates,
+      slideshowTemplates,
+      mapTemplates,
+      websiteTemplates,
+      documentTemplates,
+      scrollTemplates,
+      publicScrollTemplates,
+      surveyAnswers,
+    ],
+  );
+
+  const activeHeaderKinds = useMemo(
+    () => HEADER_CATALOG_KINDS.filter((kind) => enabledKinds.has(kind)),
+    [enabledKinds],
+  );
+
+  const isHeaderCatalogLoading =
+    activeHeaderKinds.length > 0 &&
+    activeHeaderKinds.some((kind) => queriesByKind[kind].isLoading);
+
+  const isHeaderCatalogReady =
+    activeHeaderKinds.length === 0 ||
+    activeHeaderKinds.every((kind) => queriesByKind[kind].isFetched);
+
   return {
     isTextTemplatesLoading: textTemplates.isLoading,
     isImageTemplatesLoading: imageTemplates.isLoading,
@@ -236,6 +270,10 @@ export const useFetchTemplates = () => {
     isSlideshowTemplatesLoading: slideshowTemplates.isLoading,
     isDocumentsTemplatesLoading: documentTemplates.isLoading,
     isScrollTemplatesLoading: scrollTemplates.isLoading,
+    isHeaderCatalogLoading,
+    isHeaderCatalogReady,
     refetchSlideshow: slideshowTemplates.refetch,
   };
 };
+
+export { isHeaderCatalogKind, HEADER_CATALOG_KINDS };

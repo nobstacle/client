@@ -48,9 +48,10 @@ export const CompanyLogo: React.FC = () => {
         }}
         src="/Icon2.png"
         style={{
-          cursor: template ? "pointer" : "default",
+          // cursor: template ? "pointer" : "default",
           height: "100%",
           objectFit: "cover",
+          cursor: 'pointer'
         }}
       />
     );

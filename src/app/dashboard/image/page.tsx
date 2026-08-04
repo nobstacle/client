@@ -15,6 +15,7 @@ import { useSession } from "next-auth/react";
 import { PlusIcon } from "../../../components/icons/PlusIcon";
 import useTemplateStore from "../../../lib/zustand/store/templateStore";
 import { useHasHydrated } from "../../../hooks/useHydrated";
+import { DashboardPageSkeleton } from "../../../components/DashboardPageSkeleton";
 import { useState, useMemo } from "react";
 import { GetImageTemplateRes } from "../../../lib/client/model";
 import { UpdateImageTemplateForm } from "../../../components/pages/dashboard/UpdateImageTemplateForm";
@@ -283,5 +284,5 @@ export default function ImageDashboard() {
       </div>
     );
 
-  return <div></div>;
+  return <DashboardPageSkeleton />;
 }

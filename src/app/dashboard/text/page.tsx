@@ -18,6 +18,7 @@ import { SendTextTemplateForm } from "../../../components/pages/dashboard/SendTe
 import { useSession } from "next-auth/react";
 import { PlusIcon } from "../../../components/icons/PlusIcon";
 import { useHasHydrated } from "../../../hooks/useHydrated";
+import { DashboardPageSkeleton } from "../../../components/DashboardPageSkeleton";
 import { UpdateTextTemplateForm } from "../../../components/pages/dashboard/UpdateTextTemplateForm";
 import { GetTextTemplateRes } from "../../../lib/client/model";
 import { useSearchTemplate } from "../../../hooks/useSearchTemplate";
@@ -272,5 +273,5 @@ export default function Dashboard() {
       </div>
     );
 
-  return <div></div>;
+  return <DashboardPageSkeleton />;
 }

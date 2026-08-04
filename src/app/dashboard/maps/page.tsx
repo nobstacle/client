@@ -16,6 +16,7 @@ import { ChatType } from "../../../constant/types";
 import { useSession } from "next-auth/react";
 import { PlusIcon } from "../../../components/icons/PlusIcon";
 import { useHasHydrated } from "../../../hooks/useHydrated";
+import { DashboardPageSkeleton } from "../../../components/DashboardPageSkeleton";
 import { GetMapTemplateRes } from "../../../lib/client/model";
 import { useSearchTemplate } from "../../../hooks/useSearchTemplate";
 import { CreateMapsTemplateForm } from "../../../components/pages/dashboard/CreateMapTemplateForm";
@@ -298,5 +299,5 @@ export default function MapsDashboard() {
       </div>
     );
 
-  return <div></div>;
+  return <DashboardPageSkeleton />;
 }

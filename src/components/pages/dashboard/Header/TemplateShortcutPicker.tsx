@@ -8,6 +8,7 @@ import { useSocketContext } from "../../../../context/SocketContextProvider";
 import useTemplateStore from "../../../../lib/zustand/store/templateStore";
 import * as Io5Icons from "react-icons/io5";
 import { useShortcuts } from "../../../../app/dashboard/ShortcutProvider";
+import { useTemplateLoader } from "../../../../context/TemplateLoaderProvider";
 import {
   GetDocumentTemplateRes,
   GetImageTemplateRes,
@@ -35,6 +36,11 @@ export const TemplateShortcutPicker: React.FC<{ checkIframe?: boolean; isMobile?
 
   // Get from shared provider (no API call here!)
   const { templateShortcuts, isLoading, error } = useShortcuts();
+  const { ensureHeaderTemplates } = useTemplateLoader();
+
+  useEffect(() => {
+    ensureHeaderTemplates();
+  }, [ensureHeaderTemplates]);
 
   useEffect(() => {
     if (checkIframe) {
