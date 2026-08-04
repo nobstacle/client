@@ -70,21 +70,61 @@ const getActiveScrollItems = (extraContent: any): any[] => {
   });
 };
 
+/**
+ * Checks whether a GCS signed URL is still valid by reading the
+ * X-Goog-Date + X-Goog-Expires query params that GCS embeds in every
+ * V4 signed URL.  Returns false if the URL has expired or cannot be parsed.
+ */
+const isGcsSignedUrlStillValid = (url: string): boolean => {
+  try {
+    const parsed = new URL(url);
+    const xGoogDate = parsed.searchParams.get('X-Goog-Date');
+    const xGoogExpires = parsed.searchParams.get('X-Goog-Expires');
+    if (!xGoogDate || !xGoogExpires) return true; // not a signed URL — assume valid
+    const year = parseInt(xGoogDate.slice(0, 4));
+    const month = parseInt(xGoogDate.slice(4, 6)) - 1;
+    const day = parseInt(xGoogDate.slice(6, 8));
+    const hour = parseInt(xGoogDate.slice(9, 11));
+    const min = parseInt(xGoogDate.slice(11, 13));
+    const sec = parseInt(xGoogDate.slice(13, 15));
+    const signedAt = Date.UTC(year, month, day, hour, min, sec);
+    const expiresAt = signedAt + parseInt(xGoogExpires) * 1000;
+    return Date.now() < expiresAt;
+  } catch {
+    return true; // If we can't parse, don't block — let the preloader handle errors
+  }
+};
+
+/**
+ * Returns true if a Slideshow content object has at least one URL
+ * that appears to still be valid (not expired).  If ALL signed URLs
+ * are expired we should not restore this from localStorage.
+ */
+const hasSlideshowValidUrls = (content: any): boolean => {
+  if (!content?.contents || !Array.isArray(content.contents)) return false;
+  const urls: string[] = content.contents.filter((u: any): u is string => typeof u === 'string' && u.length > 0);
+  if (urls.length === 0) return false;
+  return urls.some(isGcsSignedUrlStillValid);
+};
+
 const normalizePublicContentPayload = (content: any, type?: string) => {
   if (!content) return null;
   const contentType = content.type || type || "Scroll";
+
+  // For Slideshow content, check if the signed URLs are still valid.
+  // If all URLs have expired, don't return this content so the caller
+  // falls back to the default slideshow instead of showing a blank screen.
+  if (contentType === "Slideshow") {
+    if (!hasSlideshowValidUrls(content)) return null;
+    return {
+      ...content,
+      type: contentType,
+    };
+  }
   
   const activeItems = getActiveScrollItems(content.extraContent);
   
   if (activeItems.length === 0) {
-    // If it's a Slideshow and we have contents but no extraContent metadata,
-    // we should still allow it (Slideshow component handles its own filtering/defaults)
-    if (contentType === "Slideshow" && content.contents && content.contents.length > 0) {
-      return {
-        ...content,
-        type: contentType,
-      };
-    }
     return null;
   }
 
@@ -120,7 +160,11 @@ const getStoredPublicDisplay = () => {
   try {
     const parsed = JSON.parse(raw);
     const normalizedContent = normalizePublicContentPayload(parsed?.content, parsed?.type);
-    if (!normalizedContent) return null;
+    if (!normalizedContent) {
+      // Clear stale entry so we don't keep retrying it on every load
+      localStorage.removeItem(LAST_PUBLIC_CONTENT_KEY);
+      return null;
+    }
 
     return {
       ...parsed,
@@ -980,6 +1024,26 @@ export const Content: React.FC = () => {
     setIsIPad(isIPadDevice); // Add new state for iPad
   }, []);
 
+  // Called by the Slideshow component when every media URL fails to preload
+  // (i.e., all GCS signed URLs in the stored content have expired).
+  // Clear stale localStorage + fall back to the default slideshow so the
+  // display shows something rather than a blank/black screen.
+  const handleSlideshowAllMediaFailed = useCallback(() => {
+    // Clear the stale public display entry
+    try {
+      localStorage.removeItem(LAST_PUBLIC_CONTENT_KEY);
+    } catch {}
+    // Fall back to the default slideshow data if available, otherwise clear
+    if (defaultSlideshowContent.data) {
+      setContentToDisplay({
+        type: "Slideshow",
+        content: defaultSlideshowContent.data,
+      });
+    } else {
+      setContentToDisplay(null);
+    }
+  }, [defaultSlideshowContent.data]);
+
   const fetchFallbackSlideshow = useCallback(async () => {
     try {
       const token = data?.user?.backendTokens?.at;
@@ -1015,6 +1079,7 @@ export const Content: React.FC = () => {
       setContentToDisplay(null);
     }
   }, [data?.user?.backendTokens?.at]);
+
 
   useEffect(() => {
     if (!hasHydrated || contentToDisplay !== null) return;
@@ -2737,6 +2802,7 @@ export const Content: React.FC = () => {
                       ? contentToDisplay.content.extraContent
                       : defaultSlideshowContent.data?.extraContent,
                 )}
+                onAllMediaFailed={handleSlideshowAllMediaFailed}
               />
             </>
           )

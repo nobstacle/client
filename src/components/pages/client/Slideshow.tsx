@@ -276,7 +276,8 @@ const FullscreenMediaLayer: React.FC<{
 export const Slideshow: React.FC<{
   contents: string[];
   metadata?: SlideshowMediaMetadata[];
-}> = ({ contents, metadata = [] }) => {
+  onAllMediaFailed?: () => void;
+}> = ({ contents, metadata = [], onAllMediaFailed }) => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const [firstSlideMediaLoaded, setFirstSlideMediaLoaded] = useState(false);
@@ -417,8 +418,15 @@ export const Slideshow: React.FC<{
     setActiveIndex((current) => (current + 1) % activeMediaItems.length);
   };
 
-  // Immediate empty state
-  if (activeMediaItems.length === 0) {
+  // Immediate empty state — only trigger after preloading is complete.
+  // While still preloading (ready === false), the loader overlay covers the
+  // black background so we don't need to render anything special yet.
+  if (ready && activeMediaItems.length === 0) {
+    // All URLs failed to load (e.g., GCS signed URLs have expired).
+    // Notify the parent so it can clear stale data and fall back to the default slideshow.
+    if (onAllMediaFailed) {
+      onAllMediaFailed();
+    }
     return (
       <SafeContentFrame isMedia className="relative flex items-center justify-center bg-black">
         <p
@@ -429,7 +437,7 @@ export const Slideshow: React.FC<{
             margin: 0,
           }}
         >
-          No active slideshow media
+          Loading slideshow…
         </p>
       </SafeContentFrame>
     );
