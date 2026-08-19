@@ -60,8 +60,9 @@ const preloadMediaWithRetry = (
 
     if (isVideoSource(src)) {
       const video = document.createElement("video");
-      // Safety timeout of 8 seconds per video preloading attempt under slow network
-      const timeout = window.setTimeout(handleFailure, 8000);
+      // Safety timeout: 4 seconds per video preloading attempt.
+      // Reduced from 8s — slow networks still get 3 retries (4+8+12s = 24s total).
+      const timeout = window.setTimeout(handleFailure, 4000);
 
       const settleVideo = () => {
         window.clearTimeout(timeout);
@@ -115,7 +116,7 @@ const preloadMediaWithRetry = (
   };
 };
 
-function usePreloadMedia(urls: string[], slideshowKey: string, maxWaitMs = 20000) {
+function usePreloadMedia(urls: string[], slideshowKey: string, maxWaitMs = 8000) {
   const [ready, setReady] = useState(false);
   const [progress, setProgress] = useState(0);
   const [successfulUrls, setSuccessfulUrls] = useState<string[]>([]);
@@ -152,7 +153,9 @@ function usePreloadMedia(urls: string[], slideshowKey: string, maxWaitMs = 20000
       if (!src) {
         settledCount++;
         setProgress(Math.round((settledCount / totalCount) * 100));
+        // First slide ready — show immediately even if others are still loading
         if (urlIndex === 0) {
+          clearTimeout(timeout);
           setReady(true);
         }
         if (settledCount >= totalCount) {
@@ -173,6 +176,7 @@ function usePreloadMedia(urls: string[], slideshowKey: string, maxWaitMs = 20000
         setProgress(Math.round((settledCount / totalCount) * 100));
         // Show as soon as the first slide finishes preloading — don't wait for all slides
         if (urlIndex === 0) {
+          clearTimeout(timeout);
           setReady(true);
         }
         if (settledCount >= totalCount) {
@@ -211,21 +215,48 @@ const FullscreenMediaLayer: React.FC<{
 }> = ({ item, index, isActive, onEnded, videoRef, onMediaLoaded }) => {
   const imgRef = useRef<HTMLImageElement | null>(null);
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
+  // Track if we have already fired onMediaLoaded to avoid double-calls
+  const firedRef = useRef(false);
 
-  // Safeguard: Check if the media has already loaded or is cached when component mounts/updates
+  const fireOnce = () => {
+    if (!firedRef.current && onMediaLoaded) {
+      firedRef.current = true;
+      onMediaLoaded();
+    }
+  };
+
+  // Safeguard: For images already loaded from browser cache, img.complete is true
+  // immediately after the element is created, BEFORE the React onLoad event fires.
+  // We use a callback ref to catch this synchronously on DOM insertion.
+  const handleImgRef = (el: HTMLImageElement | null) => {
+    (imgRef as React.MutableRefObject<HTMLImageElement | null>).current = el;
+    if (el && el.complete) {
+      // Already cached — fire immediately so we don't wait for the 2.5s fallback timer
+      fireOnce();
+    }
+  };
+
+  // Also fire via useEffect as a safety net for the case where
+  // the ref callback runs before the image fully decodes
   useEffect(() => {
     if (!onMediaLoaded) return;
 
     if (item.mediaType === "image" && imgRef.current) {
       if (imgRef.current.complete) {
-        onMediaLoaded();
+        fireOnce();
       }
     } else if (item.mediaType === "video" && localVideoRef.current) {
       if (localVideoRef.current.readyState >= 3) {
-        onMediaLoaded();
+        fireOnce();
       }
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [item.mediaType, onMediaLoaded]);
+
+  // Reset fired state when the item changes
+  useEffect(() => {
+    firedRef.current = false;
+  }, [item.url]);
 
   // Synchronize active video ref to the parent ref
   useEffect(() => {
@@ -258,19 +289,19 @@ const FullscreenMediaLayer: React.FC<{
           onEnded={onEnded}
           onError={() => {
             onEnded();
-            if (onMediaLoaded) onMediaLoaded();
+            fireOnce();
           }}
-          onLoadedData={onMediaLoaded}
-          onCanPlay={onMediaLoaded}
+          onLoadedData={fireOnce}
+          onCanPlay={fireOnce}
           style={getContainMediaStyle()}
         />
       ) : (
         <NextImage
-          ref={imgRef as any}
+          ref={handleImgRef as any}
           alt="template_image"
           src={item.url ?? ""}
-          onLoad={onMediaLoaded}
-          onError={() => { if (onMediaLoaded) onMediaLoaded() }}
+          onLoad={fireOnce}
+          onError={() => { fireOnce(); }}
           style={getContainMediaStyle()}
           fill
         />
@@ -332,7 +363,7 @@ export const Slideshow: React.FC<{
   const { ready, progress, successfulUrls, failedUrls } = usePreloadMedia(
     preloadedMediaItems.map((item) => item.url),
     slideshowKey,
-    20000,
+    8000, // Reduced from 20s: show first slide as soon as item[0] resolves
   );
 
   // Filter out any failed media items so only working/loaded assets are rendered and played
@@ -377,13 +408,16 @@ export const Slideshow: React.FC<{
     }
   }, [ready, firstSlideMediaLoaded]);
 
-  // Never leave the display stuck on a black loader if the first slide load event is missed.
+  // Never leave the display stuck on a black loader if the first slide load event is missed
+  // (e.g. browser cached the image so onLoad never fires).
+  // Reduced from 8s — cached images should fire their onLoad via callback ref, but 2.5s
+  // covers any edge case where the DOM event is still delayed.
   useEffect(() => {
     if (!ready || firstSlideMediaLoaded || activeMediaItems.length === 0) return;
 
     const forceReadyTimer = window.setTimeout(() => {
       setFirstSlideMediaLoaded(true);
-    }, 8000);
+    }, 2500);
 
     return () => window.clearTimeout(forceReadyTimer);
   }, [ready, firstSlideMediaLoaded, slideshowKey, activeMediaItems.length]);

@@ -471,6 +471,8 @@ const PackageCard = ({ packageData, handleClick, loadingButton, langCode = 'en' 
   const [isModalOpen, setisIsModalOpen] = useState(false);
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
   const [selectedVideo, setSelectedVideo] = useState(null);
+  // Track which image indexes have failed to load (null/expired signed URLs)
+  const [brokenImages, setBrokenImages] = useState<Record<number, boolean>>({});
 
   const formatCurrency = (price, currency = 'AED') => {
     return `${currency} ${price}`;
@@ -538,6 +540,8 @@ const PackageCard = ({ packageData, handleClick, loadingButton, langCode = 'en' 
 
   useEffect(() => {
     setCurrentSlide(0);
+    // Reset broken image tracking when the image set changes
+    setBrokenImages({});
   }, [imageArray.length]);
 
   // Carousel change handler
@@ -660,18 +664,32 @@ const PackageCard = ({ packageData, handleClick, loadingButton, langCode = 'en' 
                       key={`${packageData.id}-${index}`}
                       className="w-full h-full flex items-center justify-center relative"
                     >
-                      <img
-                        src={item.url}
-                        alt={item.alt}
-                        className="w-full h-full object-contain object-center"
-                        style={{
-                          borderRadius: '8px',
-                          height: '100%',
-                          maxHeight: '35vh',
-                          minHeight: '35vh',
-                          filter: isSoldOut ? 'grayscale(100%) brightness(0.7)' : 'none'
-                        }}
-                      />
+                      {brokenImages[index] ? (
+                        <div className="w-full flex items-center justify-center bg-gray-100" style={{ minHeight: '35vh', borderRadius: '8px' }}>
+                          <div className="flex flex-col items-center gap-2 text-gray-400">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                              <circle cx="8.5" cy="8.5" r="1.5"/>
+                              <polyline points="21 15 16 10 5 21"/>
+                            </svg>
+                            <span className="text-xs">Image unavailable</span>
+                          </div>
+                        </div>
+                      ) : (
+                        <img
+                          src={item.url}
+                          alt={item.alt}
+                          className="w-full h-full object-contain object-center"
+                          style={{
+                            borderRadius: '8px',
+                            height: '100%',
+                            maxHeight: '35vh',
+                            minHeight: '35vh',
+                            filter: isSoldOut ? 'grayscale(100%) brightness(0.7)' : 'none'
+                          }}
+                          onError={() => setBrokenImages(prev => ({ ...prev, [index]: true }))}
+                        />
+                      )}
 
                       {/* Expand Icon Top Right */}
                       <div
