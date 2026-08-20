@@ -67,43 +67,53 @@ export default function BlogIndexPage() {
   const regularPosts = filteredPosts.length > 1 ? filteredPosts.slice(1) : [];
 
   return (
-    <main className="min-h-screen bg-[#F8FAFC] text-slate-900 flex flex-col justify-between">
+    <main className="min-h-screen bg-[#f8f9fa] text-[#121212] flex flex-col justify-between" style={{ fontFamily: 'var(--font-sans)' }}>
       <ScrollObserver />
-      <Header theme="dark" />
+      <Header theme="light" />
 
-      {/* Top Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-b from-[#0B1528] via-[#0F1C36] to-[#F8FAFC] pt-36 pb-24 text-white">
-        {/* Subtle grid background */}
-        <div className="absolute inset-0 opacity-[0.07] bg-[radial-gradient(#ffffff_1.5px,transparent_1.5px)] [background-size:24px_24px] pointer-events-none" />
+      {/* Top Hero Section — Clean, bright homepage palette */}
+      <section className="relative overflow-hidden bg-gradient-to-b from-white via-[#f0f3f9] to-[#f8f9fa] pt-32 pb-16 border-b border-[#edf0f4]">
+        {/* Subtle grid pattern matching homepage accent */}
+        <div className="absolute inset-0 opacity-[0.035] bg-[radial-gradient(#3b5998_1.5px,transparent_1.5px)] [background-size:24px_24px] pointer-events-none" />
         
-        {/* Ambient glow */}
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] bg-blue-600/20 blur-[120px] rounded-full pointer-events-none" />
+        {/* Soft brand glow */}
+        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[550px] h-[260px] bg-[#3b5998]/8 blur-[100px] rounded-full pointer-events-none" />
 
-        <div className="container mx-auto px-4 sm:px-6 max-w-6xl relative z-10 text-center">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-wider uppercase bg-blue-500/15 text-blue-300 border border-blue-400/25 mb-6 shadow-sm">
-            <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
+        <div className="container mx-auto px-4 sm:px-6 max-w-5xl relative z-10 text-center">
+          <div
+            className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-wider uppercase mb-5 shadow-sm"
+            style={{
+              backgroundColor: "rgba(59, 89, 152, 0.08)",
+              color: "var(--color-accent)",
+              border: "1px solid rgba(59, 89, 152, 0.2)",
+            }}
+          >
+            <span className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: "var(--color-accent)" }} />
             Nobstacle Insights & Guides
           </div>
 
           <h1
-            className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight text-white mb-6 leading-[1.15]"
-            style={{ color: "#ffffff" }}
+            className="text-3xl sm:text-5xl lg:text-6xl font-bold tracking-tight mb-5 leading-[1.2]"
+            style={{ fontFamily: "var(--font-display)", color: "var(--color-text-primary)" }}
           >
             Ideas & Strategies for Modern{" "}
-            <span className="bg-gradient-to-r from-blue-400 via-indigo-300 to-sky-300 bg-clip-text text-transparent">
+            <span style={{ color: "var(--color-accent)" }}>
               Guest Experiences
             </span>
           </h1>
 
-          <p className="text-base sm:text-lg lg:text-xl text-slate-300 max-w-2xl mx-auto leading-relaxed mb-10 font-normal">
+          <p
+            className="text-base sm:text-lg lg:text-xl max-w-2xl mx-auto leading-relaxed mb-8 font-normal"
+            style={{ color: "var(--color-text-secondary)" }}
+          >
             Actionable playbooks on multilingual customer screens, countertop revenue growth, and frictionless digital check-in.
           </p>
 
           {/* Search Bar & Filter Controls */}
-          <div className="max-w-2xl mx-auto mb-4">
-            <div className="relative flex items-center bg-white/95 backdrop-blur-md rounded-2xl shadow-xl border border-white/20 p-2 text-slate-800 transition-all focus-within:ring-2 focus-within:ring-blue-400 focus-within:border-transparent">
+          <div className="max-w-xl mx-auto mb-6">
+            <div className="relative flex items-center bg-white rounded-2xl shadow-sm border border-[#dee2e6] p-1.5 text-slate-800 transition-all focus-within:ring-2 focus-within:ring-[#3b5998] focus-within:border-transparent">
               <svg
-                className="w-5 h-5 ml-3 text-slate-400"
+                className="w-5 h-5 ml-3 text-[#8a94a0]"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -120,12 +130,12 @@ export default function BlogIndexPage() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search topics, keywords, guides..."
-                className="w-full px-3 py-2.5 bg-transparent text-sm sm:text-base text-slate-800 placeholder-slate-400 focus:outline-none"
+                className="w-full px-3 py-2 bg-transparent text-sm sm:text-base text-[#121212] placeholder-[#8a94a0] focus:outline-none"
               />
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery("")}
-                  className="mr-2 px-2.5 py-1 text-xs font-semibold text-slate-500 hover:text-slate-700 bg-slate-100 rounded-lg transition-colors"
+                  className="mr-2 px-2.5 py-1 text-xs font-semibold text-[#5a6472] hover:text-[#121212] bg-[#f0f3f9] rounded-lg transition-colors"
                 >
                   Clear
                 </button>
@@ -134,7 +144,7 @@ export default function BlogIndexPage() {
           </div>
 
           {/* Category Filter Pills */}
-          <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
+          <div className="flex flex-wrap items-center justify-center gap-2">
             {BLOG_CATEGORIES.map((category) => {
               const isActive = selectedCategory === category;
               return (
@@ -143,8 +153,8 @@ export default function BlogIndexPage() {
                   onClick={() => setSelectedCategory(category)}
                   className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 ${
                     isActive
-                      ? "bg-blue-600 text-white shadow-md shadow-blue-500/25 scale-105"
-                      : "bg-white/10 text-slate-300 hover:bg-white/20 hover:text-white border border-white/10"
+                      ? "bg-[#3b5998] text-white shadow-sm shadow-[#3b5998]/30 scale-105"
+                      : "bg-white text-[#5a6472] hover:bg-[#f0f3f9] hover:text-[#3b5998] border border-[#dee2e6]"
                   }`}
                 >
                   {category}
@@ -156,12 +166,14 @@ export default function BlogIndexPage() {
       </section>
 
       {/* Main Content Body */}
-      <section className="container mx-auto px-4 sm:px-6 max-w-6xl py-12 -mt-10 relative z-20">
+      <section className="container mx-auto px-4 sm:px-6 max-w-6xl py-12 relative z-20">
         {/* No results message */}
         {filteredPosts.length === 0 && (
-          <div className="text-center py-20 bg-white rounded-3xl border border-slate-200 shadow-sm">
-            <p className="text-xl font-bold text-slate-800 mb-2">No articles found</p>
-            <p className="text-sm text-slate-500 mb-6">
+          <div className="text-center py-16 bg-white rounded-2xl border border-[#dee2e6] shadow-sm">
+            <p className="text-lg font-bold text-[#121212] mb-2" style={{ fontFamily: "var(--font-display)" }}>
+              No articles found
+            </p>
+            <p className="text-sm text-[#5a6472] mb-6">
               Try adjusting your search query or switching to another category.
             </p>
             <button
@@ -169,7 +181,7 @@ export default function BlogIndexPage() {
                 setSelectedCategory("All");
                 setSearchQuery("");
               }}
-              className="px-5 py-2.5 rounded-xl text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+              className="cta-button text-sm"
             >
               Reset Filters
             </button>
@@ -178,23 +190,23 @@ export default function BlogIndexPage() {
 
         {/* Featured Story Section */}
         {featuredPost && (
-          <div className="mb-16">
+          <div className="mb-14">
             <div className="flex items-center justify-between mb-4">
-              <span className="text-xs font-bold uppercase tracking-widest text-blue-600 flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-blue-600" />
+              <span className="text-xs font-bold uppercase tracking-widest text-[#3b5998] flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-[#3b5998]" />
                 Featured Story
               </span>
-              <span className="text-xs font-medium text-slate-500">
+              <span className="text-xs font-medium text-[#8a94a0]">
                 {filteredPosts.length} {filteredPosts.length === 1 ? "article" : "articles"} available
               </span>
             </div>
 
             <Link
               href={`/blog/${featuredPost.slug}`}
-              className="group block bg-white rounded-3xl overflow-hidden border border-slate-200/80 shadow-md hover:shadow-2xl transition-all duration-300 hover:-translate-y-1"
+              className="group block bg-white rounded-2xl overflow-hidden border border-[#edf0f4] shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1"
             >
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-0">
-                <div className="relative lg:col-span-7 h-64 sm:h-80 lg:h-auto min-h-[320px] bg-slate-900 overflow-hidden">
+                <div className="relative lg:col-span-7 h-64 sm:h-80 lg:h-auto min-h-[300px] bg-[#f0f3f9] overflow-hidden">
                   <Image
                     src={featuredPost.coverImage}
                     alt={featuredPost.title}
@@ -202,35 +214,37 @@ export default function BlogIndexPage() {
                     className="object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
                     priority
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-transparent to-transparent lg:hidden" />
                   <div className="absolute top-4 left-4">
-                    <span className="px-3.5 py-1.5 text-xs font-bold rounded-full bg-blue-600 text-white shadow-lg backdrop-blur-md">
+                    <span className="px-3.5 py-1.5 text-xs font-bold rounded-full bg-[#3b5998] text-white shadow-md">
                       {featuredPost.category}
                     </span>
                   </div>
                 </div>
 
-                <div className="lg:col-span-5 p-6 sm:p-10 flex flex-col justify-between bg-white">
+                <div className="lg:col-span-5 p-6 sm:p-8 flex flex-col justify-between bg-white">
                   <div>
-                    <div className="flex items-center gap-3 text-xs font-semibold text-slate-400 mb-4">
+                    <div className="flex items-center gap-3 text-xs font-semibold text-[#8a94a0] mb-3">
                       <span>{new Date(featuredPost.publishedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
                       <span>•</span>
                       <span>{featuredPost.readTime}</span>
                     </div>
 
-                    <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 group-hover:text-blue-600 transition-colors mb-4 leading-snug">
+                    <h2
+                      className="text-2xl sm:text-3xl font-bold text-[#121212] group-hover:text-[#3b5998] transition-colors mb-3 leading-snug"
+                      style={{ fontFamily: "var(--font-display)" }}
+                    >
                       {featuredPost.title}
                     </h2>
 
-                    <p className="text-slate-600 text-sm sm:text-base line-clamp-3 leading-relaxed mb-6">
+                    <p className="text-[#5a6472] text-sm sm:text-base line-clamp-3 leading-relaxed mb-5">
                       {featuredPost.excerpt}
                     </p>
 
-                    <div className="flex flex-wrap gap-1.5 mb-6">
+                    <div className="flex flex-wrap gap-1.5 mb-5">
                       {featuredPost.tags.slice(0, 3).map((tag) => (
                         <span
                           key={tag}
-                          className="px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-100 text-slate-600"
+                          className="px-2.5 py-1 rounded-lg text-xs font-medium bg-[#f0f3f9] text-[#5a6472]"
                         >
                           #{tag}
                         </span>
@@ -238,20 +252,20 @@ export default function BlogIndexPage() {
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between pt-6 border-t border-slate-100">
+                  <div className="flex items-center justify-between pt-5 border-t border-[#edf0f4]">
                     <div className="flex items-center gap-3">
                       <img
                         src={featuredPost.author.avatar}
                         alt={featuredPost.author.name}
-                        className="w-10 h-10 rounded-full object-cover border-2 border-slate-200"
+                        className="w-9 h-9 rounded-full object-cover border border-[#dee2e6]"
                       />
                       <div>
-                        <p className="text-xs font-bold text-slate-900">{featuredPost.author.name}</p>
-                        <p className="text-[11px] text-slate-500">{featuredPost.author.role}</p>
+                        <p className="text-xs font-bold text-[#121212]">{featuredPost.author.name}</p>
+                        <p className="text-[11px] text-[#8a94a0]">{featuredPost.author.role}</p>
                       </div>
                     </div>
 
-                    <span className="inline-flex items-center gap-1.5 text-sm font-bold text-blue-600 group-hover:text-blue-700 group-hover:translate-x-1 transition-all">
+                    <span className="inline-flex items-center gap-1 text-sm font-semibold text-[#3b5998] group-hover:translate-x-1 transition-all">
                       Read Story &rarr;
                     </span>
                   </div>
@@ -263,21 +277,24 @@ export default function BlogIndexPage() {
 
         {/* Regular Posts Grid */}
         {regularPosts.length > 0 && (
-          <div className="mb-20">
-            <h3 className="text-xl sm:text-2xl font-black text-slate-900 mb-8 flex items-center gap-2">
+          <div className="mb-16">
+            <h3
+              className="text-xl sm:text-2xl font-bold text-[#121212] mb-6 flex items-center gap-2"
+              style={{ fontFamily: "var(--font-display)" }}
+            >
               Explore More Articles
             </h3>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {regularPosts.map((post) => (
                 <article
                   key={post.id}
-                  className="group bg-white rounded-2xl overflow-hidden border border-slate-200/90 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col justify-between hover:-translate-y-1.5"
+                  className="group bg-white rounded-2xl overflow-hidden border border-[#edf0f4] shadow-sm hover:shadow-md transition-all duration-300 flex flex-col justify-between hover:-translate-y-1"
                 >
                   <div>
                     <Link
                       href={`/blog/${post.slug}`}
-                      className="block relative h-52 bg-slate-900 overflow-hidden"
+                      className="block relative h-48 bg-[#f0f3f9] overflow-hidden"
                     >
                       <Image
                         src={post.coverImage}
@@ -285,27 +302,30 @@ export default function BlogIndexPage() {
                         fill
                         className="object-cover group-hover:scale-105 transition-transform duration-500"
                       />
-                      <div className="absolute top-3.5 left-3.5">
-                        <span className="px-3 py-1 text-xs font-bold rounded-full bg-slate-900/85 text-white backdrop-blur-md shadow">
+                      <div className="absolute top-3 left-3">
+                        <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-[#121212]/80 text-white backdrop-blur-sm shadow">
                           {post.category}
                         </span>
                       </div>
                     </Link>
 
-                    <div className="p-6">
-                      <div className="flex items-center gap-2 text-xs font-semibold text-slate-400 mb-3">
+                    <div className="p-5">
+                      <div className="flex items-center gap-2 text-xs font-semibold text-[#8a94a0] mb-2.5">
                         <span>{new Date(post.publishedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
                         <span>•</span>
                         <span>{post.readTime}</span>
                       </div>
 
-                      <h4 className="text-lg font-bold text-slate-900 group-hover:text-blue-600 transition-colors mb-2.5 leading-snug">
+                      <h4
+                        className="text-lg font-bold text-[#121212] group-hover:text-[#3b5998] transition-colors mb-2 leading-snug"
+                        style={{ fontFamily: "var(--font-display)" }}
+                      >
                         <Link href={`/blog/${post.slug}`}>
                           {post.title}
                         </Link>
                       </h4>
 
-                      <p className="text-slate-600 text-xs sm:text-sm line-clamp-2 leading-relaxed mb-4">
+                      <p className="text-[#5a6472] text-xs sm:text-sm line-clamp-2 leading-relaxed mb-4">
                         {post.excerpt}
                       </p>
 
@@ -313,7 +333,7 @@ export default function BlogIndexPage() {
                         {post.tags.slice(0, 2).map((tag) => (
                           <span
                             key={tag}
-                            className="px-2 py-0.5 rounded-md text-[11px] font-medium bg-slate-100 text-slate-600"
+                            className="px-2 py-0.5 rounded-md text-[11px] font-medium bg-[#f0f3f9] text-[#5a6472]"
                           >
                             #{tag}
                           </span>
@@ -322,19 +342,19 @@ export default function BlogIndexPage() {
                     </div>
                   </div>
 
-                  <div className="px-6 pb-6 pt-3 border-t border-slate-100 flex items-center justify-between">
+                  <div className="px-5 pb-5 pt-3 border-t border-[#edf0f4] flex items-center justify-between">
                     <div className="flex items-center gap-2.5">
                       <img
                         src={post.author.avatar}
                         alt={post.author.name}
-                        className="w-7 h-7 rounded-full object-cover border border-slate-200"
+                        className="w-7 h-7 rounded-full object-cover border border-[#dee2e6]"
                       />
-                      <span className="text-xs font-semibold text-slate-700">{post.author.name}</span>
+                      <span className="text-xs font-semibold text-[#5a6472]">{post.author.name}</span>
                     </div>
 
                     <Link
                       href={`/blog/${post.slug}`}
-                      className="text-xs font-bold text-blue-600 hover:text-blue-800 group-hover:translate-x-1 transition-transform inline-flex items-center gap-1"
+                      className="text-xs font-bold text-[#3b5998] hover:text-[#2f477a] group-hover:translate-x-1 transition-transform inline-flex items-center gap-1"
                     >
                       Read &rarr;
                     </Link>
@@ -344,42 +364,25 @@ export default function BlogIndexPage() {
             </div>
           </div>
         )}
+      </section>
 
-        {/* High-Converting CTA Banner */}
-        <div className="bg-gradient-to-r from-blue-950 via-indigo-950 to-slate-950 text-white rounded-3xl p-8 sm:p-14 text-center relative overflow-hidden shadow-2xl border border-blue-900/40">
-          <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/10 blur-3xl rounded-full pointer-events-none" />
-          <div className="absolute bottom-0 left-0 w-96 h-96 bg-indigo-500/10 blur-3xl rounded-full pointer-events-none" />
-
-          <div className="max-w-2xl mx-auto relative z-10">
-            <span className="inline-block px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider bg-blue-500/20 text-blue-300 border border-blue-400/30 mb-4">
-              Get Started Today
-            </span>
-            <h3
-              className="text-2xl sm:text-3xl lg:text-4xl font-extrabold mb-4 tracking-tight leading-tight"
-              style={{ color: "#ffffff" }}
-            >
-              Ready to modernize your frontline customer displays?
+      {/* Brand CTA Banner — Exactly matching homepage identity */}
+      <div className="cta-banner animate-on-scroll">
+        <div className="container cta-banner-inner">
+          <div className="cta-banner-text">
+            <h3 style={{ fontFamily: "var(--font-display)" }}>
+              Ready to Transform Your Customer Experience?
             </h3>
-            <p className="text-slate-300 text-sm sm:text-base mb-8 leading-relaxed font-normal max-w-xl mx-auto">
+            <p style={{ fontFamily: "var(--font-sans)" }}>
               Deliver seamless multilingual communication, elevate check-in CSAT scores, and maximize countertop upselling conversion with Nobstacle.
             </p>
-            <div className="flex flex-col sm:flex-row gap-3.5 justify-center items-center">
-              <a
-                href="/#contact"
-                className="w-full sm:w-auto px-7 py-3.5 rounded-xl font-bold bg-blue-600 hover:bg-blue-500 text-white transition-all shadow-lg hover:shadow-blue-500/30 text-sm"
-              >
-                Schedule 1-on-1 Consultation
-              </a>
-              <a
-                href="/register"
-                className="w-full sm:w-auto px-7 py-3.5 rounded-xl font-bold bg-white/10 hover:bg-white/20 text-white transition-all border border-white/20 text-sm backdrop-blur-sm"
-              >
-                Start Free Trial
-              </a>
-            </div>
+          </div>
+          <div className="cta-banner-actions">
+            <a href="/#contact" className="cta-button">Schedule a Consultation</a>
+            <a href="/register" className="cta-button cta-button-secondary cta-button-light">Start Free Trial</a>
           </div>
         </div>
-      </section>
+      </div>
 
       <Footer />
     </main>

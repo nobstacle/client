@@ -134,9 +134,9 @@ export default async function BlogPostPage({ params }: Props) {
   };
 
   return (
-    <main className="min-h-screen bg-[#F8FAFC] text-slate-900 flex flex-col justify-between">
+    <main className="min-h-screen bg-[#f8f9fa] text-[#121212] flex flex-col justify-between" style={{ fontFamily: 'var(--font-sans)' }}>
       <ScrollObserver />
-      <Header theme="dark" />
+      <Header theme="light" />
 
       {/* JSON-LD for Search Engines */}
       <script
@@ -145,49 +145,59 @@ export default async function BlogPostPage({ params }: Props) {
       />
 
       {/* Article Header */}
-      <article className="pb-24">
-        <header className="relative overflow-hidden bg-gradient-to-b from-[#0B1528] via-[#0F1C36] to-[#1E293B] text-white pt-36 pb-20 px-4 sm:px-6">
-          <div className="absolute inset-0 opacity-[0.08] bg-[radial-gradient(#ffffff_1.5px,transparent_1.5px)] [background-size:24px_24px] pointer-events-none" />
+      <article className="pb-20">
+        <header className="relative overflow-hidden bg-gradient-to-b from-white via-[#f0f3f9] to-[#f8f9fa] pt-32 pb-16 px-4 sm:px-6 border-b border-[#edf0f4]">
+          <div className="absolute inset-0 opacity-[0.035] bg-[radial-gradient(#3b5998_1.5px,transparent_1.5px)] [background-size:24px_24px] pointer-events-none" />
 
           <div className="container mx-auto max-w-4xl relative z-10">
             {/* Breadcrumbs */}
-            <nav className="flex items-center gap-2 text-xs font-semibold text-slate-400 mb-6">
-              <Link href="/" className="hover:text-blue-300 transition-colors">Home</Link>
+            <nav className="flex items-center gap-2 text-xs font-semibold text-[#8a94a0] mb-5">
+              <Link href="/" className="hover:text-[#3b5998] transition-colors">Home</Link>
               <span>/</span>
-              <Link href="/blog" className="hover:text-blue-300 transition-colors">Blog</Link>
+              <Link href="/blog" className="hover:text-[#3b5998] transition-colors">Blog</Link>
               <span>/</span>
-              <span className="text-blue-400 truncate max-w-xs">{post.category}</span>
+              <span className="text-[#3b5998] truncate max-w-xs">{post.category}</span>
             </nav>
 
-            <span className="inline-block px-3.5 py-1.5 text-xs font-bold rounded-full bg-blue-500/20 text-blue-300 border border-blue-400/30 mb-5 shadow-sm">
+            <span
+              className="inline-block px-3.5 py-1.5 text-xs font-semibold rounded-full mb-4 shadow-sm"
+              style={{
+                backgroundColor: "rgba(59, 89, 152, 0.08)",
+                color: "var(--color-accent)",
+                border: "1px solid rgba(59, 89, 152, 0.2)",
+              }}
+            >
               {post.category}
             </span>
 
             <h1
-              className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight text-white mb-6 leading-[1.2]"
-              style={{ color: "#ffffff" }}
+              className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight mb-5 leading-[1.2]"
+              style={{ fontFamily: "var(--font-display)", color: "var(--color-text-primary)" }}
             >
               {post.title}
             </h1>
 
-            <p className="text-base sm:text-lg text-slate-300 mb-8 leading-relaxed max-w-3xl">
+            <p
+              className="text-base sm:text-lg mb-6 leading-relaxed max-w-3xl"
+              style={{ color: "var(--color-text-secondary)" }}
+            >
               {post.excerpt}
             </p>
 
             {/* Author Meta */}
-            <div className="flex flex-wrap items-center justify-between gap-4 pt-6 border-t border-slate-700/60">
+            <div className="flex flex-wrap items-center justify-between gap-4 pt-5 border-t border-[#dee2e6]">
               <div className="flex items-center gap-3">
                 <img
                   src={post.author.avatar}
                   alt={post.author.name}
-                  className="w-11 h-11 rounded-full object-cover border-2 border-blue-400/40"
+                  className="w-10 h-10 rounded-full object-cover border border-[#dee2e6]"
                 />
                 <div>
-                  <p className="text-sm font-bold text-white">{post.author.name}</p>
-                  <p className="text-xs text-slate-400">{post.author.role}</p>
+                  <p className="text-sm font-bold text-[#121212]">{post.author.name}</p>
+                  <p className="text-xs text-[#8a94a0]">{post.author.role}</p>
                 </div>
               </div>
-              <div className="flex items-center gap-4 text-xs font-medium text-slate-400">
+              <div className="flex items-center gap-3 text-xs font-medium text-[#8a94a0]">
                 <span>Published {new Date(post.publishedAt).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</span>
                 <span>•</span>
                 <span>{post.readTime}</span>
@@ -197,8 +207,8 @@ export default async function BlogPostPage({ params }: Props) {
         </header>
 
         {/* Featured Cover Image */}
-        <div className="container mx-auto max-w-4xl px-4 sm:px-6 -mt-10 mb-14 relative z-20">
-          <div className="relative h-72 sm:h-96 lg:h-[440px] rounded-3xl overflow-hidden shadow-2xl border border-slate-200 bg-slate-900">
+        <div className="container mx-auto max-w-4xl px-4 sm:px-6 -mt-8 mb-12 relative z-20">
+          <div className="relative h-72 sm:h-96 lg:h-[420px] rounded-2xl overflow-hidden shadow-lg border border-[#edf0f4] bg-[#f0f3f9]">
             <Image
               src={post.coverImage}
               alt={post.title}
@@ -211,20 +221,28 @@ export default async function BlogPostPage({ params }: Props) {
 
         {/* Article Body Content */}
         <div className="container mx-auto max-w-3xl px-4 sm:px-6">
-          <div className="bg-white rounded-3xl p-6 sm:p-12 border border-slate-200/90 shadow-sm">
-            <div className="prose prose-slate prose-lg max-w-none prose-headings:font-black prose-h2:text-2xl sm:prose-h2:text-3xl prose-h2:mt-10 prose-h2:mb-4 prose-h2:text-slate-900 prose-p:leading-relaxed prose-p:text-slate-700 prose-li:my-1.5 prose-li:text-slate-700">
+          <div className="bg-white rounded-2xl p-6 sm:p-12 border border-[#edf0f4] shadow-sm">
+            <div className="prose prose-slate prose-lg max-w-none prose-headings:font-bold prose-h2:text-2xl sm:prose-h2:text-3xl prose-h2:mt-10 prose-h2:mb-4 prose-h2:text-[#121212] prose-p:leading-relaxed prose-p:text-[#374151] prose-li:my-1.5 prose-li:text-[#374151]">
               {post.content.split("\n\n").map((paragraph, index) => {
                 const trimmed = paragraph.trim();
                 if (trimmed.startsWith("## ")) {
                   return (
-                    <h2 key={index} className="text-2xl sm:text-3xl font-black text-slate-900 mt-10 mb-4 border-b border-slate-100 pb-3">
+                    <h2
+                      key={index}
+                      className="text-2xl sm:text-3xl font-bold text-[#121212] mt-10 mb-4 border-b border-[#edf0f4] pb-3"
+                      style={{ fontFamily: "var(--font-display)" }}
+                    >
                       {trimmed.replace("## ", "")}
                     </h2>
                   );
                 }
                 if (trimmed.startsWith("### ")) {
                   return (
-                    <h3 key={index} className="text-xl font-bold text-slate-800 mt-7 mb-3">
+                    <h3
+                      key={index}
+                      className="text-xl font-bold text-[#121212] mt-7 mb-3"
+                      style={{ fontFamily: "var(--font-display)" }}
+                    >
                       {trimmed.replace("### ", "")}
                     </h3>
                   );
@@ -232,7 +250,7 @@ export default async function BlogPostPage({ params }: Props) {
                 if (trimmed.startsWith("- ")) {
                   const items = trimmed.split("\n").map((line) => line.replace(/^- /, ""));
                   return (
-                    <ul key={index} className="list-disc pl-6 my-4 space-y-2 text-slate-700">
+                    <ul key={index} className="list-disc pl-6 my-4 space-y-2 text-[#374151]">
                       {items.map((item, i) => (
                         <li key={i}>{item}</li>
                       ))}
@@ -240,10 +258,10 @@ export default async function BlogPostPage({ params }: Props) {
                   );
                 }
                 if (trimmed === "---") {
-                  return <hr key={index} className="my-10 border-slate-200" />;
+                  return <hr key={index} className="my-10 border-[#edf0f4]" />;
                 }
                 return (
-                  <p key={index} className="text-slate-700 leading-relaxed mb-5 text-base sm:text-lg">
+                  <p key={index} className="text-[#374151] leading-relaxed mb-5 text-base sm:text-lg">
                     {trimmed}
                   </p>
                 );
@@ -251,12 +269,12 @@ export default async function BlogPostPage({ params }: Props) {
             </div>
 
             {/* Tags */}
-            <div className="mt-12 pt-6 border-t border-slate-200 flex flex-wrap items-center gap-2">
-              <span className="text-xs font-bold uppercase text-slate-400 mr-2">Tags:</span>
+            <div className="mt-12 pt-6 border-t border-[#edf0f4] flex flex-wrap items-center gap-2">
+              <span className="text-xs font-bold uppercase text-[#8a94a0] mr-2">Tags:</span>
               {post.tags.map((tag) => (
                 <span
                   key={tag}
-                  className="px-3 py-1 rounded-xl text-xs font-semibold bg-slate-100 text-slate-700"
+                  className="px-3 py-1 rounded-xl text-xs font-semibold bg-[#f0f3f9] text-[#5a6472]"
                 >
                   #{tag}
                 </span>
@@ -266,20 +284,28 @@ export default async function BlogPostPage({ params }: Props) {
 
           {/* Related Articles */}
           {relatedPosts.length > 0 && (
-            <div className="mt-16">
-              <h3 className="text-2xl font-black text-slate-900 mb-6">Related Insights</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+            <div className="mt-14">
+              <h3
+                className="text-2xl font-bold text-[#121212] mb-6"
+                style={{ fontFamily: "var(--font-display)" }}
+              >
+                Related Insights
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
                 {relatedPosts.map((related) => (
                   <Link
                     key={related.id}
                     href={`/blog/${related.slug}`}
-                    className="group block bg-white rounded-2xl overflow-hidden border border-slate-200 p-5 shadow-sm hover:shadow-lg transition-all hover:-translate-y-1"
+                    className="group block bg-white rounded-2xl overflow-hidden border border-[#edf0f4] p-5 shadow-sm hover:shadow-md transition-all hover:-translate-y-1"
                   >
-                    <span className="text-xs font-bold text-blue-600 mb-2 block">{related.category}</span>
-                    <h4 className="font-bold text-slate-900 group-hover:text-blue-600 transition-colors text-sm mb-2 line-clamp-2 leading-snug">
+                    <span className="text-xs font-semibold text-[#3b5998] mb-2 block">{related.category}</span>
+                    <h4
+                      className="font-bold text-[#121212] group-hover:text-[#3b5998] transition-colors text-sm mb-2 line-clamp-2 leading-snug"
+                      style={{ fontFamily: "var(--font-display)" }}
+                    >
                       {related.title}
                     </h4>
-                    <p className="text-slate-500 text-xs line-clamp-2 leading-relaxed">{related.excerpt}</p>
+                    <p className="text-[#5a6472] text-xs line-clamp-2 leading-relaxed">{related.excerpt}</p>
                   </Link>
                 ))}
               </div>
@@ -290,7 +316,7 @@ export default async function BlogPostPage({ params }: Props) {
           <div className="mt-12 text-center">
             <Link
               href="/blog"
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-800 text-sm font-bold shadow-sm transition-all hover:-translate-y-0.5"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-white border border-[#dee2e6] hover:bg-[#f0f3f9] text-[#121212] text-sm font-semibold shadow-sm transition-all hover:-translate-y-0.5"
             >
               &larr; Back to all guides & articles
             </Link>
