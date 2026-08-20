@@ -92,45 +92,51 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true, isMob
     (msg) => msg.station === currentStation
   );
 
-  // Initialize speech recognition for iframe - ALWAYS use English
+  // Initialize speech recognition - ALWAYS use English
   useEffect(() => {
-    if (typeof window !== 'undefined' && isInIframe) {
+    if (typeof window !== 'undefined') {
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
       if (SpeechRecognition) {
-        recognitionRef.current = new SpeechRecognition();
-        recognitionRef.current.continuous = false;
-        recognitionRef.current.interimResults = false;
-        // ALWAYS use English for speech recognition
-        recognitionRef.current.lang = 'en-US';
+        try {
+          recognitionRef.current = new SpeechRecognition();
+          recognitionRef.current.continuous = false;
+          recognitionRef.current.interimResults = false;
+          // ALWAYS use English for speech recognition
+          recognitionRef.current.lang = 'en-US';
 
-        recognitionRef.current.onresult = async (event: any) => {
-          const transcript = event.results[0][0].transcript;
-          setInputValue(transcript);
-          setIsRecording(false);
+          recognitionRef.current.onresult = async (event: any) => {
+            const transcript = event.results[0][0].transcript;
+            setInputValue(transcript);
+            setIsRecording(false);
 
-          // Send the English transcription back to extension
-          window.parent.postMessage({
-            type: 'CHAT_RECORDING_RESULT',
-            text: transcript
-          }, '*');
+            if (isInIframe) {
+              // Send the English transcription back to extension
+              window.parent.postMessage({
+                type: 'CHAT_RECORDING_RESULT',
+                text: transcript
+              }, '*');
+            }
 
-          // Send English message - backend handles translation
-          await handleSendMessage(transcript);
-        };
+            // Send English message - backend handles translation
+            await handleSendMessage(transcript);
+          };
 
-        recognitionRef.current.onerror = (event: any) => {
-          console.error('Speech recognition error:', event.error);
-          antMessage.error('Speech recognition failed. Please try again.');
-          setIsRecording(false);
-        };
+          recognitionRef.current.onerror = (event: any) => {
+            console.error('Speech recognition error:', event.error);
+            antMessage.error('Speech recognition failed. Please try again.');
+            setIsRecording(false);
+          };
 
-        recognitionRef.current.onend = () => {
-          setIsRecording(false);
-        };
+          recognitionRef.current.onend = () => {
+            setIsRecording(false);
+          };
+        } catch (e) {
+          console.warn('SpeechRecognition initialization error:', e);
+        }
       }
     }
-  }, [isInIframe]); // Removed currentUserDefaultLang dependency
+  }, [isInIframe]);
 
   useEffect(() => {
     setIsInIframe(window.self !== window.top);
@@ -722,7 +728,12 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true, isMob
                     </svg>
                   </button>
 
-                  <AudioRecorder mode="header" activeLangCode={selectedLang} />
+                  <AudioRecorder
+                    mode="header"
+                    activeLangCode={selectedLang}
+                    station={currentStation}
+                    onTranscription={(text) => setInputValue(text)}
+                  />
                 </div>
 
                 <button

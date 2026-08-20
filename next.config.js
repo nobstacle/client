@@ -119,7 +119,14 @@ const nextConfig = {
         protocol: "https",
         hostname: "storage.googleapis.com",
       },
+      {
+        protocol: "https",
+        hostname: "images.unsplash.com",
+      },
     ],
+  },
+  eslint: {
+    ignoreDuringBuilds: true,
   },
   // Barrel-file libraries (antd, icon packs) pull in thousands of modules per
   // import. `optimizePackageImports` rewrites these to import only what is

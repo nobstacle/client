@@ -12,9 +12,16 @@ import { message as antMessage } from "antd";
 type AudioRecorderProps = {
   mode?: "client" | "header";
   activeLangCode?: string;
+  station?: number;
+  onTranscription?: (text: string) => void;
 };
 
-const AudioRecorder: React.FC<AudioRecorderProps> = ({ mode = "header", activeLangCode }) => {
+const AudioRecorder: React.FC<AudioRecorderProps> = ({
+  mode = "header",
+  activeLangCode,
+  station,
+  onTranscription,
+}) => {
   const [recording, setRecording] = useState(false);
   const [audioLevel, setAudioLevel] = useState(0);
   const [canStop, setCanStop] = useState(false);
@@ -315,6 +322,9 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({ mode = "header", activeLa
           onSuccess: (res) => {
             console.log("[Mic] Transcription received:", res.transcription);
             if (res?.transcription) {
+              if (onTranscription) {
+                onTranscription(res.transcription);
+              }
               sendMessage(res.transcription, langCode);
             } else {
               antMessage.warning("No speech detected. Please try again.");
@@ -370,9 +380,11 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({ mode = "header", activeLa
 
     console.log("[Mic] Sending message via socket:", message);
 
+    const targetStation = station !== undefined ? station : Number(params.get("station") ?? 1);
+
     emitSendMessage({
       message: message,
-      station: Number(params.get("station") ?? 1),
+      station: targetStation,
       refType: "ChatMessage",
       langCode,
     });

@@ -223,9 +223,12 @@ function SlideshowDashboardContent() {
             panelStyleClass="max-w-2xl"
           >
             <CreateSlideshowTemplateForm
-              cb={() => {
+              cb={async () => {
                 handleClose();
-                refetchSlideshow();
+                const res = await refetchSlideshow();
+                if (res?.data) {
+                  setSlideshows(res.data);
+                }
               }}
             />
           </Modal>
@@ -239,9 +242,12 @@ function SlideshowDashboardContent() {
             <UpdateSlideshowTemplateForm
               tag={editTemplate.tag}
               langCode={editTemplateLangCode}
-              cb={() => {
+              cb={async () => {
                 updateHandleClose();
-                refetchSlideshow();
+                const res = await refetchSlideshow();
+                if (res?.data) {
+                  setSlideshows(res.data);
+                }
               }}
               sourceId={editTemplate.id}
             />

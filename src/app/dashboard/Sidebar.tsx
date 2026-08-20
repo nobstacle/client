@@ -22,7 +22,8 @@ import {
     IoLogoWhatsapp,
     IoHome,
     IoMegaphone,
-    IoDesktop
+    IoDesktop,
+    IoNewspaper
 } from 'react-icons/io5';
 // import { IoRecordingSharp } from "react-icons/io5";
 import { IoChatbubbleEllipses } from "react-icons/io5";
@@ -104,6 +105,13 @@ const sAdminMenuItems: MenuItem[] = [
         href: "/dashboard/device-library",
         roles: ["SAdmin"],
         icon: <IoDesktop size={18} />,
+        iconColor: "white"
+    },
+    {
+        title: "Blog Posts",
+        href: "/dashboard/blogs",
+        roles: ["SAdmin"],
+        icon: <IoNewspaper size={18} />,
         iconColor: "white"
     },
 ];

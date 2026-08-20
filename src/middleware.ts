@@ -13,9 +13,10 @@ export async function middleware(req: NextRequest) {
     pathname === "/pair" ||
     pathname.startsWith("/forms/") ||
     pathname === "/forms" ||
+    pathname.startsWith("/blog") ||
     pathname.startsWith("/api/pairing")   // catches /api/pairing/login and /api/pairing/login/
   ) {
-    if (process.env.DEBUG_MIDDLEWARE) console.log("✅ PAIRING PATH — bypassing auth:", pathname);
+    if (process.env.DEBUG_MIDDLEWARE) console.log("✅ PUBLIC / BLOG / PAIRING PATH — bypassing auth:", pathname);
     const response = NextResponse.next();
     response.headers.delete("X-Frame-Options");
     return response;
@@ -45,8 +46,9 @@ export async function middleware(req: NextRequest) {
     "/Whatsapp",
     "/home",
     "/login",
+    "/blog",
   ]);
-  if (publicNoAuthPaths.has(pathname)) {
+  if (publicNoAuthPaths.has(pathname) || pathname.startsWith("/blog/")) {
     return NextResponse.next();
   }
 
@@ -102,8 +104,9 @@ export async function middleware(req: NextRequest) {
     "/Upselling",
     "/Screens",
     "/Whatsapp",
+    "/blog",
   ];
-  const isPublicPath = publicPaths.includes(pathname);
+  const isPublicPath = publicPaths.includes(pathname) || pathname.startsWith("/blog");
 
   // ── /api/auth/register — SAdmin only ──────────────────────────────────────
   if (pathname === "/api/auth/register") {
@@ -195,7 +198,8 @@ export async function middleware(req: NextRequest) {
       pathname.startsWith("/dashboard/register") ||
       pathname.startsWith("/dashboard/companies") ||
       pathname.startsWith("/dashboard/whatsappMetaAccounts") ||
-      pathname.startsWith("/dashboard/device-library")
+      pathname.startsWith("/dashboard/device-library") ||
+      pathname.startsWith("/dashboard/blogs")
     ) {
       if (!isAuthenticated || !isSAdmin) {
         url.pathname = isUser ? "/client" : "/dashboard/text";

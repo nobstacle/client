@@ -18,9 +18,9 @@ export default function Footer() {
           <div className="footer-col">
             <h4>Quick Links</h4>
             <ul>
-              <li><a href="#features">Features</a></li>
-              <li><a href="#contact">Book a Demo</a></li>
-
+              <li><a href="/#features">Features</a></li>
+              <li><a href="/blog">Blog</a></li>
+              <li><a href="/#contact">Book a Demo</a></li>
             </ul>
           </div>
           <div className="footer-col">

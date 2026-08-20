@@ -57,8 +57,16 @@ export const TemplateContextProvider = ({
     if (slideshow.data) setSlideshows(slideshow.data);
   }, [slideshow.data, setSlideshows]);
 
+  const handleRefetch = async (options?: RefetchOptions) => {
+    const result = await slideshow.refetch(options);
+    if (result.data) {
+      setSlideshows(result.data);
+    }
+    return result;
+  };
+
   return (
-    <TemplateContext.Provider value={{ refetchSlideshow: slideshow.refetch }}>
+    <TemplateContext.Provider value={{ refetchSlideshow: handleRefetch }}>
       {children}
     </TemplateContext.Provider>
   );

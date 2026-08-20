@@ -186,6 +186,35 @@ section {
   box-shadow: var(--header-shadow);
 }
 
+/* Dark theme header (for dark hero sections when not scrolled) */
+.site-header.theme-dark:not(.scrolled) .main-nav a {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.site-header.theme-dark:not(.scrolled) .main-nav a:hover {
+  color: #ffffff;
+}
+
+.site-header.theme-dark:not(.scrolled) .main-nav a::after {
+  background-color: #60a5fa;
+}
+
+.site-header.theme-dark:not(.scrolled) .signin-link {
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.35);
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+.site-header.theme-dark:not(.scrolled) .signin-link:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.6);
+  color: #ffffff;
+}
+
+.site-header.theme-dark:not(.scrolled) .mobile-nav-toggle {
+  color: #ffffff;
+}
+
 .header-container {
   display: flex;
   justify-content: space-between;

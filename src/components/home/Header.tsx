@@ -13,7 +13,11 @@ declare global {
 }
 
 
-export default function Header() {
+interface HeaderProps {
+  theme?: 'light' | 'dark';
+}
+
+export default function Header({ theme = 'light' }: HeaderProps) {
   const [scrolled, setScrolled] = useState(false);
   const [navVisible, setNavVisible] = useState(false);
   const [signInOpen, setSignInOpen] = useState(false);
@@ -27,6 +31,8 @@ export default function Header() {
   const toggleNav = () => setNavVisible(!navVisible);
   const closeNav = () => setNavVisible(false);
 
+  const isDark = theme === 'dark' && !scrolled;
+
   const handleBookDemoClick = () => {
     // Fire Google Ads conversion tag
     if (typeof window !== "undefined" && typeof window.gtag !== "undefined") {
@@ -38,10 +44,14 @@ export default function Header() {
 
   return (
     <>
-      <header className={`site-header ${scrolled ? 'scrolled' : ''}`}>
+      <header className={`site-header ${theme === 'dark' ? 'theme-dark' : ''} ${scrolled ? 'scrolled' : ''}`}>
         <div className="container header-container">
           <Link href="/" className="logo" aria-label="Nobstacle homepage">
-            <Image src="/Logo_Light.png" alt="Nobstacle Logo" width={150} height={36} />
+            {isDark ? (
+              <Image src="/Logo_Dark.svg" alt="Nobstacle Logo" width={150} height={36} priority />
+            ) : (
+              <Image src="/Logo_Light.png" alt="Nobstacle Logo" width={150} height={36} priority />
+            )}
           </Link>
 
           <nav className="main-nav" data-visible={navVisible}>
@@ -60,10 +70,11 @@ export default function Header() {
                   </div>
                 </div>
               </li>
-              <li><a href="#features" onClick={closeNav}>Features</a></li>
-              <li><a href="#faq" onClick={closeNav}>FAQ</a></li>
+              <li><a href="/#features" onClick={closeNav}>Features</a></li>
+              <li><a href="/blog" onClick={closeNav}>Blog</a></li>
+              <li><a href="/#faq" onClick={closeNav}>FAQ</a></li>
 
-              <li><a href="#contact" onClick={closeNav}>Contact</a></li>
+              <li><a href="/#contact" onClick={closeNav}>Contact</a></li>
 
               {/* Mobile-only */}
               <li className="mobile-only">
