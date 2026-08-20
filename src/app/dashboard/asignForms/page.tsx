@@ -189,7 +189,7 @@ const AsignForms: React.FC = () => {
 	}
 
 	return (
-		<div className="p-6 bg-gray-50 min-h-screen">
+		<div className="p-6 bg-gray-50 w-full min-h-full">
 			<div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 				<div>
 					<Title level={3} className="!mb-1">Assign Forms</Title>

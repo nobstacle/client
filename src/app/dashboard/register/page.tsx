@@ -88,11 +88,18 @@ const RegisterUsers: React.FC = () => {
         return () => clearTimeout(timer);
     }, [searchTerm]);
 
+    const abortControllerRef = React.useRef<AbortController | null>(null);
+
     // Fetch users when filters, pagination, or search changes
     useEffect(() => {
         if (session?.user?.backendTokens?.at) {
             fetchUsers();
         }
+        return () => {
+            if (abortControllerRef.current) {
+                abortControllerRef.current.abort();
+            }
+        };
     }, [
         pagination.current,
         pagination.pageSize,
@@ -110,6 +117,12 @@ const RegisterUsers: React.FC = () => {
     }, [session?.user?.backendTokens?.at]);
 
     const fetchUsers = async () => {
+        if (abortControllerRef.current) {
+            abortControllerRef.current.abort();
+        }
+        const abortController = new AbortController();
+        abortControllerRef.current = abortController;
+
         setTableLoading(true);
         try {
             const skip = (pagination.current - 1) * pagination.pageSize;
@@ -136,6 +149,7 @@ const RegisterUsers: React.FC = () => {
             const response = await fetch(
                 `${API_URL}/superAdmin/users?${params.toString()}`,
                 {
+                    signal: abortController.signal,
                     credentials: 'include',
                     headers: {
                         'Authorization': `Bearer ${session?.user?.backendTokens?.at}`
@@ -153,11 +167,16 @@ const RegisterUsers: React.FC = () => {
             } else {
                 message.error('Failed to fetch users');
             }
-        } catch (error) {
+        } catch (error: any) {
+            if (error?.name === 'AbortError') {
+                return;
+            }
             message.error('Error fetching users');
             console.error(error);
         } finally {
-            setTableLoading(false);
+            if (abortControllerRef.current === abortController) {
+                setTableLoading(false);
+            }
         }
     };
 
@@ -415,7 +434,7 @@ const RegisterUsers: React.FC = () => {
     const hasActiveFilters = searchTerm || selectedRole || selectedCompany;
 
     return (
-        <div className="p-6 bg-gray-50 min-h-screen">
+        <div className="p-6 bg-gray-50 w-full min-h-full">
             <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                     <Title level={2} className="!mb-1" style={{ color: '#374151' }}>

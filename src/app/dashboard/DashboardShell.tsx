@@ -31,7 +31,7 @@ function DashboardContentArea({ children }: { children: React.ReactNode }) {
   return (
     <div
       id="child3"
-      className="relative flex h-full min-h-0 w-full min-w-0 flex-col items-stretch justify-stretch overflow-hidden bg-white"
+      className="relative flex h-full min-h-0 w-full min-w-0 flex-col items-stretch justify-stretch overflow-y-auto overflow-x-hidden bg-white"
     >
       {/* Lightweight top progress bar — replaces the full white overlay which
           was blocking content view for the entire navigation duration */}

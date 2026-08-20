@@ -466,7 +466,7 @@ const CompaniesManagement: React.FC = () => {
     const hasActiveFilters = searchTerm || selectedLangCode;
 
     return (
-        <div className="p-6 bg-gray-50 min-h-screen">
+        <div className="p-6 bg-gray-50 w-full min-h-full">
             <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                     <Title level={2} className="!mb-1" style={{ color: '#374151' }}>
