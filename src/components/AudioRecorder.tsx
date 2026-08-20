@@ -34,7 +34,7 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
   const animationFrameRef = useRef<number | null>(null);
   const recordingStartTimeRef = useRef<number>(0);
   const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const MIN_RECORDING_DURATION_MS = 2000; // Minimum 2 seconds
+  const MIN_RECORDING_DURATION_MS = 600; // Minimum 0.6 seconds for natural short phrases
   const speechToTextFileMutation = useUploadControllerUploadSpeechToTextFile({
     request: {
       params: {
@@ -161,6 +161,7 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
         return; // Already recording
       }
 
+      audioChunks.current = [];
       console.log("[Mic] Requesting microphone access...");
 
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -187,7 +188,7 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
       });
 
       mediaRecorderRef.current.ondataavailable = (event) => {
-        if (event.data.size > 0) {
+        if (event.data && event.data.size > 0) {
           audioChunks.current.push(event.data);
         }
       };
@@ -223,28 +224,10 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
         cleanupStream();
       };
 
-      mediaRecorderRef.current.start();
+      mediaRecorderRef.current.start(250);
       setRecording(true);
-      setCanStop(false);
+      setCanStop(true);
       recordingStartTimeRef.current = Date.now();
-      setCountdown(Math.ceil(MIN_RECORDING_DURATION_MS / 1000));
-      
-      // Update countdown every second
-      countdownIntervalRef.current = setInterval(() => {
-        const elapsed = Date.now() - recordingStartTimeRef.current;
-        const remaining = Math.ceil((MIN_RECORDING_DURATION_MS - elapsed) / 1000);
-        
-        if (remaining <= 0) {
-          setCountdown(0);
-          setCanStop(true);
-          if (countdownIntervalRef.current) {
-            clearInterval(countdownIntervalRef.current);
-            countdownIntervalRef.current = null;
-          }
-        } else {
-          setCountdown(remaining);
-        }
-      }, 200);
       
       console.log("[Mic] Recording started - speak clearly");
     } catch (error: any) {
@@ -269,19 +252,19 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
     const elapsed = Date.now() - recordingStartTimeRef.current;
     
     if (elapsed < MIN_RECORDING_DURATION_MS) {
-      const remaining = Math.ceil((MIN_RECORDING_DURATION_MS - elapsed) / 1000);
-      antMessage.info(`Please speak for at least ${remaining} more second${remaining > 1 ? 's' : ''}`);
+      const remaining = ((MIN_RECORDING_DURATION_MS - elapsed) / 1000).toFixed(1);
+      antMessage.info(`Please speak for at least ${remaining}s`);
       return;
     }
     
-    if (audioLevel < 5) {
-      // NOTE: audioLevel is a React state snapshot and can read stale (0) immediately
-      // after the user stops speaking even when audio was captured. Do NOT block
-      // here — let the backend STT decide whether speech was present.
-      console.warn("[Mic] Low audio level at stop:", audioLevel, "— still sending to STT");
-    }
-    
     if (mediaRecorderRef.current && recording) {
+      try {
+        if (mediaRecorderRef.current.state === "recording") {
+          mediaRecorderRef.current.requestData();
+        }
+      } catch (e) {
+        console.warn("[Mic] requestData error:", e);
+      }
       mediaRecorderRef.current.stop();
       setRecording(false);
       setCanStop(false);
@@ -290,14 +273,6 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
   };
 
   const sendAudioToBackend = async (audioBlob: Blob) => {
-    // The guest's selected language. This serves two purposes:
-    //  1) It is the PRIMARY speech-to-text hint. The backend adds the other
-    //     supported languages (English first) as auto-detect candidates, so
-    //     Google STT returns the transcript in whichever language was actually
-    //     spoken — the admin may speak English or the guest's language, and the
-    //     guest may reply in English. Detection is automatic either way.
-    //  2) It is the translation target for how the guest sees the message.
-    // Google Translate auto-detects the source, so admin↔guest works both ways.
     const langCode = getActiveLangCode();
 
     console.log(
@@ -321,7 +296,7 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
         {
           onSuccess: (res) => {
             console.log("[Mic] Transcription received:", res.transcription);
-            if (res?.transcription) {
+            if (res?.transcription && res.transcription.trim()) {
               if (onTranscription) {
                 onTranscription(res.transcription);
               }
@@ -360,10 +335,15 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
     if (activeLangCode) {
       return activeLangCode;
     }
-    if (mode === "client") {
-      return localStorage.getItem("lang-code") || companyData?.defaultLangCode || "en";
+    const fromParams = params?.get("lang");
+    if (fromParams) {
+      return fromParams;
     }
-    return params.get("lang") || companyData?.defaultLangCode || "en";
+    if (mode === "client") {
+      const fromLocal = typeof window !== "undefined" ? localStorage.getItem("lang-code") : null;
+      if (fromLocal) return fromLocal;
+    }
+    return companyData?.defaultLangCode || "en";
   };
 
   const sendMessage = (message: string, langCode = getActiveLangCode()) => {

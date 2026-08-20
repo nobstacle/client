@@ -19,10 +19,12 @@ interface ChatBoxProps {
   messages: ReceivedMessageContent[];
   children?: React.ReactNode;
   activeLangCode?: string;
+  station?: number;
+  mode?: "client" | "header";
 }
 
 export const ChatBox = React.forwardRef<HTMLDivElement, ChatBoxProps>(
-  ({ messages, sendMessage, children, activeLangCode }, ref) => {
+  ({ messages, sendMessage, children, activeLangCode, station, mode }, ref) => {
     const [viewportHeight, setViewportHeight] = useState<number>(0);
     const params = useSearchParams();
     const [message, setMessage] = useState("");
@@ -148,7 +150,11 @@ export const ChatBox = React.forwardRef<HTMLDivElement, ChatBoxProps>(
               >
                 <SendIcon />
               </Button>
-              <AudioRecorder mode="client" activeLangCode={activeLangCode} />
+              <AudioRecorder
+                mode={mode || "client"}
+                activeLangCode={activeLangCode}
+                station={station}
+              />
             </div>
           </div>
         </div>

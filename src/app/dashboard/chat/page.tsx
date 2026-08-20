@@ -48,6 +48,9 @@ export default function Dashboard() {
             ref={chatBoxRef}
             messages={receivedMessage}
             sendMessage={sendMessage}
+            activeLangCode={params.get("lang") || companyData?.defaultLangCode || "en"}
+            station={Number(params.get("station") ?? 1)}
+            mode="header"
           >
             <div className="absolute right-0">
               <button
