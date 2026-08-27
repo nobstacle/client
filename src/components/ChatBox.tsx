@@ -13,6 +13,7 @@ import { SendIcon } from "./icons/SendIcon";
 import { useSearchParams } from "next/navigation";
 import AudioRecorder from "./AudioRecorder";
 import { useSession } from "next-auth/react";
+import { resolveActiveStation } from "../utils/station";
 
 interface ChatBoxProps {
   sendMessage: (value: string) => void;
@@ -108,8 +109,8 @@ export const ChatBox = React.forwardRef<HTMLDivElement, ChatBoxProps>(
           >
             {messages
               .filter(({ station: msgStation }) => {
-                const targetStation = station ?? Number(params.get("station") || (typeof window !== "undefined" ? localStorage.getItem("nobstacle_selected_station") : null) || 1);
-                return !msgStation || msgStation === targetStation;
+                const targetStation = station ?? resolveActiveStation({ searchParams: params });
+                return Number(msgStation) === Number(targetStation);
               })
               .map((messageObj) => (
                 <ChatMessage

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { encode } from "next-auth/jwt";
+import { buildSessionCookie } from "../../../../lib/session-cookies";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl;
@@ -97,31 +98,13 @@ export async function GET(req: NextRequest) {
     };
 
     const secret = process.env.NEXTAUTH_SECRET || "asdfgh1234";
+    const secret = process.env.NEXTAUTH_SECRET || "asdfgh1234";
     const encodedToken = await encode({ token: nextAuthToken, secret, maxAge: expiresInSeconds });
     console.log("[PairingLogin] Step 3 OK — encoded length:", encodedToken?.length);
 
-    // ── Step 4: Serve HTML that commits cookie THEN navigates ────────────────
-    // Using HTML + setTimeout instead of NextResponse.redirect() because browsers
-    // sometimes process the 302 before committing Set-Cookie headers, causing
-    // middleware to see no session and redirect back to /.
-    const isProduction = process.env.NODE_ENV === "production";
-    const cookieName = isProduction
-      ? "__Secure-next-auth.session-token"
-      : "next-auth.session-token";
     const stationNo = Number(session.stationNo);
     const destination = `/client?station=${stationNo}`;
-
-    const cookieParts = [
-      `${cookieName}=${encodedToken}`,
-      `Path=/`,
-      `Max-Age=${expiresInSeconds}`,
-      `HttpOnly`,
-      isProduction ? `Secure` : null,
-      isProduction ? `SameSite=None` : `SameSite=Lax`,
-      isProduction ? `Domain=.nobstacle.com` : null,
-    ]
-      .filter(Boolean)
-      .join("; ");
+    const cookieParts = buildSessionCookie(encodedToken, expiresInSeconds);
 
     const html = `<!DOCTYPE html>
 <html lang="en">

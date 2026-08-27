@@ -61,6 +61,8 @@ export type ReceivedTemplateContent = {
   contents?: string[];
   langCode: string;
   type: ReceivedType;
+  station?: number;
+  sentBy?: string;
 };
 
 export type ReceivedMessageContent = {

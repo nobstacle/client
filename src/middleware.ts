@@ -1,6 +1,7 @@
 import { getToken } from "next-auth/jwt";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { applyExpiredAuthCookies } from "./lib/session-cookies";
 
 export async function middleware(req: NextRequest) {
   const url = req.nextUrl.clone();
@@ -29,6 +30,7 @@ export async function middleware(req: NextRequest) {
     pathname === "/api/auth/csrf" ||
     pathname === "/api/auth/signin" ||
     pathname === "/api/auth/signout" ||
+    pathname === "/api/auth/clear-session" ||
     pathname === "/api/auth/providers" ||
     pathname.startsWith("/api/auth/callback/")
   ) {
@@ -161,6 +163,12 @@ export async function middleware(req: NextRequest) {
 
   // ── Homepage redirects ─────────────────────────────────────────────────────
   if (pathname === "/") {
+    if (url.searchParams.get("loggedOut")) {
+      const response = NextResponse.next();
+      applyExpiredAuthCookies(response.headers);
+      response.headers.set("Cache-Control", "no-store");
+      return response;
+    }
     if (!isAuthenticated) return NextResponse.next();
     if (!isCompanyExist) {
       url.pathname = "/onboard/create-company";
@@ -236,7 +244,12 @@ export async function middleware(req: NextRequest) {
         url.pathname = "/dashboard/text";
         return NextResponse.redirect(url);
       }
-      // isUser and isGuest both allowed through
+      // isUser and isGuest both allowed through — always pin station so
+      // client screens never default to station 1 after pairing to 2/3.
+      if ((isUser || isGuest) && !url.searchParams.get("station")) {
+        url.searchParams.set("station", String(token?.user?.stationNo ?? "1"));
+        return NextResponse.redirect(url);
+      }
     }
   }
 

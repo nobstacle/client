@@ -9,6 +9,7 @@ import { useMessageStore } from "../../../../lib/zustand/store/messageStore";
 import { useCompanyControllerGetCompany, getCompanyControllerGetCompanyQueryKey } from '../../../../lib/client/api';
 import { useSession } from "next-auth/react";
 import AudioRecorder from "../../../../components/AudioRecorder";
+import { resolveActiveStation } from "../../../../utils/station";
 
 interface ChatBotProps {
   cb?: () => void;
@@ -51,15 +52,8 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true, isMob
 
   // Sync station from URL or localStorage initially and when search params change
   useEffect(() => {
-    const getInitialStation = () => {
-      const urlStation = params.get("station");
-      if (urlStation) return Number(urlStation);
-      
-      const localStation = typeof window !== 'undefined' ? localStorage.getItem('nobstacle_selected_station') : null;
-      if (localStation) return Number(localStation);
-      
-      return 1;
-    };
+    const getInitialStation = () =>
+      resolveActiveStation({ searchParams: params });
     setCurrentStation(getInitialStation());
   }, [params]);
 
@@ -89,7 +83,7 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true, isMob
   }, []);
 
   const stationMessages = receivedMessage.filter(
-    (msg) => msg.station === currentStation
+    (msg) => Number(msg.station) === Number(currentStation)
   );
 
   // Initialize speech recognition - ALWAYS use English

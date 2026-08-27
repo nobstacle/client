@@ -7,8 +7,7 @@ import {
 import { useRouterWithQueryParams } from "../../../../hooks/useRouterWithQueryParams";
 import { useSearchParams } from "next/navigation";
 import React, {  useEffect, useState, useRef  } from "react";
-
-const STATION_STORAGE_KEY = 'nobstacle_selected_station';
+import { dispatchStationChanged, persistActiveStation, STATION_STORAGE_KEY } from "../../../../utils/station";
 
 const isChromeExtension = (): boolean => {
   return typeof window !== 'undefined' &&
@@ -158,7 +157,7 @@ export const StationPicker: React.FC<{ cb?: () => void }> = ({ cb }) => {
     setCurrentStation(newStation);
     
     // Save to localStorage first (synchronous)
-    localStorage.setItem(STATION_STORAGE_KEY, newStation);
+    persistActiveStation(Number(newStation));
     
     if (isChromeExtension()) {
       // Save to chrome.storage.local directly
@@ -204,10 +203,7 @@ export const StationPicker: React.FC<{ cb?: () => void }> = ({ cb }) => {
     }
     
     // Dispatch event for other components
-    const event = new CustomEvent('stationChanged', {
-      detail: { station: newStation }
-    });
-    window.dispatchEvent(event);
+    dispatchStationChanged(Number(newStation));
     
     if (cb) cb();
   };

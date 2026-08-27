@@ -25,6 +25,11 @@ import { TrialWatermark } from "../../trial/TrialWatermark";
 import { useViewportScale } from "../../../hooks/useViewportScale";
 import { getContainMediaStyle } from "../../../utils/contentFit";
 import { generateQrCodeDataUrl } from "../../../utils/generateQrCode";
+import {
+  lastDisplayedContentKey,
+  lastPublicContentKey,
+  resolveActiveStation,
+} from "../../../utils/station";
 
 const { Title, Text } = Typography;
 const DisplayLoading = () => <div className="flex h-full w-full items-center justify-center">Loading…</div>;
@@ -50,8 +55,8 @@ const QrCodeDisplay: React.FC<{ qrCodeUrl: string | null; size: number }> = ({ q
 // responsive on low-powered display devices.
 const Slideshow = dynamic(() => import("./Slideshow"), { ssr: false, loading: () => <DisplayLoading /> });
 const SimpleMap = dynamic(() => import("./Map"), { ssr: false, loading: () => <DisplayLoading /> });
-const LAST_DISPLAYED_CONTENT_KEY = "lastDisplayedContent";
-const LAST_PUBLIC_CONTENT_KEY = "lastPublicContent";
+const LAST_DISPLAYED_CONTENT_LEGACY_KEY = "lastDisplayedContent";
+const LAST_PUBLIC_CONTENT_LEGACY_KEY = "lastPublicContent";
 
 const parseScrollItems = (extraContent: any): any[] => {
   if (Array.isArray(extraContent)) return extraContent;
@@ -155,31 +160,36 @@ const normalizePublicContentPayload = (content: any, type?: string) => {
   };
 };
 
-const getStoredLastDisplayedContent = () => {
+const getStoredLastDisplayedContent = (station: number) => {
   if (typeof window === "undefined") return null;
-  const raw = localStorage.getItem(LAST_DISPLAYED_CONTENT_KEY);
+  const keyed = localStorage.getItem(lastDisplayedContentKey(station));
+  const raw = keyed ?? (station === 1 ? localStorage.getItem(LAST_DISPLAYED_CONTENT_LEGACY_KEY) : null);
   if (!raw) return null;
 
   try {
     const parsed = JSON.parse(raw);
     if (!parsed?.type || !parsed?.content) return null;
+    const contentStation = Number(parsed?.content?.station ?? parsed?.station);
+    if (Number.isFinite(contentStation) && contentStation > 0 && contentStation !== station) {
+      return null;
+    }
     return parsed;
   } catch {
     return null;
   }
 };
 
-const getStoredPublicDisplay = () => {
+const getStoredPublicDisplay = (station: number) => {
   if (typeof window === "undefined") return null;
-  const raw = localStorage.getItem(LAST_PUBLIC_CONTENT_KEY);
+  const keyed = localStorage.getItem(lastPublicContentKey(station));
+  const raw = keyed ?? (station === 1 ? localStorage.getItem(LAST_PUBLIC_CONTENT_LEGACY_KEY) : null);
   if (!raw) return null;
 
   try {
     const parsed = JSON.parse(raw);
     const normalizedContent = normalizePublicContentPayload(parsed?.content, parsed?.type);
     if (!normalizedContent) {
-      // Clear stale entry so we don't keep retrying it on every load
-      localStorage.removeItem(LAST_PUBLIC_CONTENT_KEY);
+      localStorage.removeItem(lastPublicContentKey(station));
       return null;
     }
 
@@ -955,6 +965,11 @@ export const Content: React.FC = () => {
   const company = useCompanyControllerGetCompany();
   const params = useSearchParams();
   const messageStore = useMessageStore();
+  const { data } = useSession();
+  const activeStation = resolveActiveStation({
+    searchParams: params,
+    sessionStation: data?.user?.stationNo,
+  });
   const [activeLangCode, setActiveLangCode] = useState<string>("en");
 
   useEffect(() => {
@@ -974,7 +989,6 @@ export const Content: React.FC = () => {
   const [isAndroid, setIsAndroid] = useState(false);
   const [loadingTimeout, setLoadingTimeout] = useState<NodeJS.Timeout | null>(null);
   const [isTablet, setIsTablet] = useState(false);
-  const { data } = useSession();
   let baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
   const [jotFormUrl, setJotFormUrl] = useState<string | null>(null);
   const [prefillData, setPrefillData] = useState<Record<string, string>>({});
@@ -1066,7 +1080,7 @@ export const Content: React.FC = () => {
   const handleSlideshowAllMediaFailed = useCallback(() => {
     // Clear the stale public display entry
     try {
-      localStorage.removeItem(LAST_PUBLIC_CONTENT_KEY);
+      localStorage.removeItem(lastPublicContentKey(activeStation));
     } catch {}
     // Fall back to the default slideshow data if available, otherwise clear
     if (defaultSlideshowContent.data) {
@@ -1077,7 +1091,7 @@ export const Content: React.FC = () => {
     } else {
       setContentToDisplay(null);
     }
-  }, [defaultSlideshowContent.data]);
+  }, [defaultSlideshowContent.data, activeStation]);
 
   const fetchFallbackSlideshow = useCallback(async () => {
     try {
@@ -1119,7 +1133,7 @@ export const Content: React.FC = () => {
   useEffect(() => {
     if (!hasHydrated || contentToDisplay !== null) return;
 
-    const restoredPublic = getStoredPublicDisplay();
+    const restoredPublic = getStoredPublicDisplay(activeStation);
     if (restoredPublic) {
       setContentToDisplay(restoredPublic);
       return;
@@ -1139,11 +1153,43 @@ export const Content: React.FC = () => {
       // Default slideshow failed or doesn't exist - try fallback
       fetchFallbackSlideshow();
     }
-  }, [defaultSlideshowContent.data, defaultSlideshowContent.isFetched, contentToDisplay, hasHydrated, fetchFallbackSlideshow])
+  }, [defaultSlideshowContent.data, defaultSlideshowContent.isFetched, contentToDisplay, hasHydrated, fetchFallbackSlideshow, activeStation])
 
   useEffect(() => {
+    const storeStation = Number(
+      (messageStore.receivedContent as { station?: number } | null)?.station,
+    );
+    if (
+      messageStore.receivedContent &&
+      (!Number.isFinite(storeStation) || storeStation === activeStation)
+    ) {
+      return;
+    }
+
+    const restored =
+      getStoredLastDisplayedContent(activeStation) ??
+      getStoredPublicDisplay(activeStation);
+    setContentToDisplay(restored);
+  }, [activeStation]);
+
+  useEffect(() => {
+    const incomingStation = Number(
+      (messageStore.receivedContent as { station?: number } | null)?.station
+      ?? messageStore.receivedSurvey?.station,
+    );
+    if (
+      Number.isFinite(incomingStation) &&
+      incomingStation > 0 &&
+      incomingStation !== activeStation &&
+      messageStore.receivedType &&
+      messageStore.receivedType !== "ChatMessage"
+    ) {
+      return;
+    }
+
     if (messageStore.receivedType === "Recording") {
-      const lastContent = localStorage.getItem(LAST_DISPLAYED_CONTENT_KEY);
+      const lastContent = localStorage.getItem(lastDisplayedContentKey(activeStation))
+        ?? (activeStation === 1 ? localStorage.getItem(LAST_DISPLAYED_CONTENT_LEGACY_KEY) : null);
       if (lastContent) {
         try {
           const parsed = JSON.parse(lastContent);
@@ -1151,7 +1197,7 @@ export const Content: React.FC = () => {
           message.info("This conversation is recorded for quality and training purposes");
         } catch (error) {
           console.error("Failed to parse last content:", error);
-          setContentToDisplay(getStoredLastDisplayedContent() ?? getStoredPublicDisplay());
+          setContentToDisplay(getStoredLastDisplayedContent(activeStation) ?? getStoredPublicDisplay(activeStation));
         }
       }
     } else if (messageStore.receivedType === "ChatMessage") {
@@ -1187,7 +1233,7 @@ export const Content: React.FC = () => {
             `[Content] ${messageStore.receivedType} payload had no active items — keeping previous display`,
           );
           setContentToDisplay((prev) =>
-            prev ?? getStoredLastDisplayedContent() ?? getStoredPublicDisplay(),
+            prev ?? getStoredLastDisplayedContent(activeStation) ?? getStoredPublicDisplay(activeStation),
           );
         }
         return;
@@ -1203,10 +1249,10 @@ export const Content: React.FC = () => {
       // Partial store state (e.g. clearReceivedContent before fix) — do not blank the screen.
       return;
     } else {
-      const restoredPublic = getStoredPublicDisplay();
-      setContentToDisplay(restoredPublic ?? getStoredLastDisplayedContent());
+      const restoredPublic = getStoredPublicDisplay(activeStation);
+      setContentToDisplay(restoredPublic ?? getStoredLastDisplayedContent(activeStation));
     }
-  }, [messageStore.receivedType, messageStore.receivedContent, messageStore.receivedSurvey, messageStore.receivedMessage]);
+  }, [messageStore.receivedType, messageStore.receivedContent, messageStore.receivedSurvey, messageStore.receivedMessage, activeStation]);
 
 
   useEffect(() => {
@@ -1326,7 +1372,7 @@ export const Content: React.FC = () => {
         timestamp: Date.now()
       };
 
-      localStorage.setItem(LAST_DISPLAYED_CONTENT_KEY, JSON.stringify(contentToStore));
+      localStorage.setItem(lastDisplayedContentKey(activeStation), JSON.stringify(contentToStore));
 
       if (messageStore.receivedType === "Scroll" || messageStore.receivedType === "Slideshow" || messageStore.receivedType === "Screens") {
         const normalizedPublicContent = normalizePublicContentPayload(
@@ -1336,7 +1382,7 @@ export const Content: React.FC = () => {
 
         if (normalizedPublicContent) {
           localStorage.setItem(
-            LAST_PUBLIC_CONTENT_KEY,
+            lastPublicContentKey(activeStation),
             JSON.stringify({
               ...contentToStore,
               type: messageStore.receivedType,
@@ -1344,11 +1390,11 @@ export const Content: React.FC = () => {
             }),
           );
         } else {
-          localStorage.removeItem(LAST_PUBLIC_CONTENT_KEY);
+          localStorage.removeItem(lastPublicContentKey(activeStation));
         }
       }
     }
-  }, [messageStore.receivedType, messageStore.receivedContent, messageStore.receivedSurvey, messageStore.receivedMessage]);
+  }, [messageStore.receivedType, messageStore.receivedContent, messageStore.receivedSurvey, messageStore.receivedMessage, activeStation]);
 
   const handleCloseQR = useCallback(() => {
     setIsClosing(true);
@@ -1917,7 +1963,7 @@ export const Content: React.FC = () => {
 
     emitSendMessage({
       message: message,
-      station: Number(params.get("station") ?? 1),
+      station: activeStation,
       refType: "ChatMessage",
       langCode,
     });
@@ -1988,7 +2034,7 @@ export const Content: React.FC = () => {
         numberOfAdults: 2,
         numberOfChildren: 0,
         soldBy: sellingPerson.id,
-        station: parseInt(params.get("station"))
+        station: activeStation
       };
 
       await createUpsellTransaction(upsellData);

@@ -116,7 +116,7 @@ export const authOptions: AuthOptions = {
         sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
         path: "/",
         secure: process.env.NODE_ENV === "production",
-        domain: process.env.COOKIE_DOMAIN || undefined,
+        domain: process.env.COOKIE_DOMAIN || (process.env.NODE_ENV === "production" ? ".nobstacle.com" : undefined),
       },
     },
     callbackUrl: {
@@ -225,7 +225,6 @@ export const authOptions: AuthOptions = {
 
   pages: {
     signIn: "/login",
-    signOut: "/",
     error: "/",
   },
 

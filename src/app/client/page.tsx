@@ -3,15 +3,15 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Content } from "../../components/pages/client/Content";
 import { StationPicker } from "../../components/pages/dashboard/Header/StationPicker";
-import { useMessageStore } from "../../lib/zustand/store/messageStore";
 import { useSocketContext } from "../../context/SocketContextProvider";
 import { useSearchParams } from "next/navigation";
 import Modal from "../../components/Modal";
 import { useDisclousure } from "../../hooks/useDisclosure";
 import { LogoutIcon } from "../../components/icons/sidebar/LogoutIcon";
-import { signOut } from "next-auth/react";
+import { logoutClientSession } from "../../lib/logout";
 import { ErudaContainer } from "../../components/containers/ErudaContainer";
 import TestAudioRecorder from "../../components/TestAudioRecorder";
+import { resolveActiveStation } from "../../utils/station";
 
 export default function Client() {
   useEffect(() => {
@@ -126,8 +126,7 @@ const NetworkStatusIndicator = () => {
 };
 
 const ClientStationPicker = () => {
-  const { clearReceivedContent } = useMessageStore();
-  const { emitLeaveChat, socketConnected, socket } = useSocketContext();
+  const { socketConnected, socket } = useSocketContext();
   const searchParams = useSearchParams();
   const { isOpen, handleOpen, handleClose } = useDisclousure();
   const [testingConnection, setTestingConnection] = useState(false);
@@ -145,7 +144,7 @@ const ClientStationPicker = () => {
     setTestingConnection(true);
     setTestResult(null);
 
-    const station = Number(searchParams.get("station") ?? 1);
+    const station = resolveActiveStation({ searchParams });
 
     // Force re-join room
     socket.emit("join-chat", { station });
@@ -171,15 +170,7 @@ const ClientStationPicker = () => {
   };
 
   const handleLogout = async () => {
-    localStorage.clear();
-    if (typeof window !== "undefined") {
-      window.postMessage({ type: "LOGOUT_REQUEST" }, "*");
-      if (window.parent !== window) {
-        window.parent.postMessage({ type: "LOGOUT_REQUEST" }, "*");
-      }
-    }
-    // Use redirect: true so the server handles httpOnly cookie clearing
-    await signOut({ redirect: true, callbackUrl: "/" });
+    await logoutClientSession();
   };
 
   const clearFullscreenHold = () => {
@@ -288,14 +279,7 @@ const ClientStationPicker = () => {
           )}
         </div>
         <div className="flex w-full flex-col justify-center">
-          <StationPicker
-            cb={() => {
-              clearReceivedContent();
-              emitLeaveChat({
-                station: Number(searchParams.get("station")) ?? 1,
-              });
-            }}
-          />
+          <StationPicker />
         </div>
 
         <div className="mt-8 flex w-full justify-end gap-2">

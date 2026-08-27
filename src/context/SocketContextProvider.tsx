@@ -25,6 +25,11 @@ import { SendPackagePayloadType, ReceivedPackageContent, ReceivedUpsellPackageCo
 import { notification } from 'antd';
 import useCompanyStore from "../lib/zustand/store/companyStore";
 import { getCompanyControllerGetCompanyQueryKey } from "../lib/client/api";
+import {
+  persistActiveStation,
+  resolveActiveStation,
+  STATION_CHANGED_EVENT,
+} from "../utils/station";
 
 // Add document-related types
 export interface SendDocumentPayloadType {
@@ -118,6 +123,9 @@ export const SocketContextProvider = ({
 
   const session = useSession();
   const params = useSearchParams();
+  const activateStation = useMessageStore((s) => s.activateStation);
+  const activeStationRef = useRef<number>(1);
+  const lastJoinedStationRef = useRef<number | null>(null);
 
   // Initialize the socket once a token is available, and clean it up when the token goes away (logout)
   useEffect(() => {
@@ -133,6 +141,15 @@ export const SocketContextProvider = ({
 
     socketC.on("connect", () => {
       setSocketConnected(true);
+      const station = resolveActiveStation({
+        searchParams: params,
+        sessionStation: session.data?.user?.stationNo,
+      });
+      activeStationRef.current = station;
+      persistActiveStation(station);
+      socketC.emit("join-chat", { station });
+      lastJoinedStationRef.current = station;
+      activateStation(station);
     });
 
     socketC.on("disconnect", (reason) => {
@@ -189,32 +206,29 @@ export const SocketContextProvider = ({
   }, [socketClient]);
 
   const getActiveStation = useCallback((): number => {
-    const urlStation = params.get("station");
-    if (urlStation) {
-      const parsed = Number(urlStation);
-      if (!isNaN(parsed) && parsed > 0) return parsed;
-    }
-    const sessionStation = session.data?.user?.stationNo;
-    if (sessionStation) {
-      const parsed = Number(sessionStation);
-      if (!isNaN(parsed) && parsed > 0) return parsed;
-    }
-    if (typeof window !== "undefined") {
-      const stored = localStorage.getItem("nobstacle_selected_station");
-      if (stored) {
-        const parsed = Number(stored);
-        if (!isNaN(parsed) && parsed > 0) return parsed;
-      }
-    }
-    return 1;
+    return resolveActiveStation({
+      searchParams: params,
+      sessionStation: session.data?.user?.stationNo,
+    });
   }, [params, session.data?.user?.stationNo]);
 
   const isTargetStation = useCallback((targetStation?: number | string | null): boolean => {
-    if (targetStation === undefined || targetStation === null) return true;
-    const role = session.data?.user?.Roles?.[0];
-    if (role === "Admin" || role === "Staff" || role === "SAdmin") return true;
-    return Number(targetStation) === getActiveStation();
-  }, [session.data?.user?.Roles, getActiveStation]);
+    // Content without a station is not applied to a display — otherwise
+    // station 2/3 would show station 1 leftovers or unscoped payloads.
+    if (targetStation === undefined || targetStation === null || targetStation === "") {
+      return false;
+    }
+    const parsed = Number(targetStation);
+    if (!Number.isFinite(parsed) || parsed < 1) return false;
+    return parsed === activeStationRef.current;
+  }, []);
+
+  const stampStation = useCallback(<T extends { station?: number }>(data: T): T => {
+    return {
+      ...data,
+      station: activeStationRef.current,
+    };
+  }, []);
 
   // Socket event handlers
   const onConnect = () => {
@@ -295,28 +309,15 @@ export const SocketContextProvider = ({
       // Update your state based on the action
       switch (action) {
         case 'created':
-          if (informationData) {
-            setReceivedContent(informationData as ReceivedInformationContent);
-          }
-          break;
-
         case 'updated':
-          if (informationData) {
-            setReceivedContent(informationData as ReceivedInformationContent);
-          }
-          break;
-
         case 'deleted':
+        default:
           if (informationData) {
-            setReceivedContent(informationData as ReceivedInformationContent);
+            const info = informationData as ReceivedInformationContent;
+            if (info.station != null && !isTargetStation(info.station)) return;
+            setReceivedContent(info);
           }
           break;
-
-        default:
-          // Fallback to original behavior
-          if (informationData) {
-            setReceivedContent(informationData as ReceivedInformationContent);
-          }
       }
 
     } catch (error) {
@@ -361,6 +362,8 @@ export const SocketContextProvider = ({
         } | null;
       };
 
+      if (!isTargetStation(parsedData?.stationNo)) return;
+
       addSurveyAnswer(parsedData);
     } catch (error) {
       console.error("❌ Error parsing survey answer response:", error);
@@ -393,7 +396,7 @@ export const SocketContextProvider = ({
       };
       if (!isTargetStation(parsedData?.station)) return;
 
-      setReceivedLangCode(parsedData.langCode);
+      setReceivedLangCode(parsedData.langCode, parsedData.station);
       localStorage.setItem("lang-code", parsedData.langCode);
     } catch (error) {
       console.error("❌ Error parsing lang code response:", error);
@@ -549,22 +552,58 @@ const onDataSubmitted = (data: any) => {
     };
   }, [socketClient]);
 
-  // Join chat when socket connects or station changes, leaving prior room if station changed
-  const lastJoinedStationRef = useRef<number | null>(null);
-  useEffect(() => {
-    if (socketClient?.connected) {
-      const current = getActiveStation();
-      if (lastJoinedStationRef.current !== null && lastJoinedStationRef.current !== current) {
-        socketClient.emit("leave-chat", {
-          station: lastJoinedStationRef.current,
-        });
-      }
-      socketClient.emit("join-chat", {
-        station: current,
+  const joinActiveStation = useCallback(() => {
+    const current = getActiveStation();
+    activeStationRef.current = current;
+    persistActiveStation(current);
+    activateStation(current);
+
+    if (!socketClient?.connected) return;
+
+    if (lastJoinedStationRef.current !== null && lastJoinedStationRef.current !== current) {
+      socketClient.emit("leave-chat", {
+        station: lastJoinedStationRef.current,
       });
-      lastJoinedStationRef.current = current;
     }
-  }, [socketClient, getActiveStation]);
+    socketClient.emit("join-chat", {
+      station: current,
+    });
+    lastJoinedStationRef.current = current;
+  }, [socketClient, getActiveStation, activateStation]);
+
+  useEffect(() => {
+    activeStationRef.current = getActiveStation();
+    persistActiveStation(activeStationRef.current);
+    activateStation(activeStationRef.current);
+  }, [getActiveStation, activateStation]);
+
+  useEffect(() => {
+    joinActiveStation();
+  }, [joinActiveStation]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const onStationChanged = (event: Event) => {
+      const detailStation = Number((event as CustomEvent)?.detail?.station);
+      if (Number.isFinite(detailStation) && detailStation > 0) {
+        activeStationRef.current = detailStation;
+      }
+      joinActiveStation();
+    };
+
+    const onPopState = () => {
+      joinActiveStation();
+    };
+
+    window.addEventListener(STATION_CHANGED_EVENT, onStationChanged as EventListener);
+    window.addEventListener("popstate", onPopState);
+
+    return () => {
+      window.removeEventListener(STATION_CHANGED_EVENT, onStationChanged as EventListener);
+      window.removeEventListener("popstate", onPopState);
+    };
+  }, [joinActiveStation]);
 
   // Emit functions
   const emitSendTemplate = useCallback((data: SendTemplatePayloadType) => {
@@ -576,15 +615,14 @@ const onDataSubmitted = (data: any) => {
     if (!socketClient.connected) {
       socketClient.connect();
 
-      // Wait for connection before emitting
       socketClient.once("connect", () => {
-        socketClient.emit("send-template", data);
+        socketClient.emit("send-template", stampStation(data));
       });
       return;
     }
 
-    socketClient.emit("send-template", data);
-  }, [socketClient]);
+    socketClient.emit("send-template", stampStation(data));
+  }, [socketClient, stampStation]);
 
   const onReceivedPackages = (data: any) => {
     try {
@@ -605,14 +643,14 @@ const onDataSubmitted = (data: any) => {
 
   const onRecievedUpsellPackage = (payload: any) => {
     try {
-      if (Array.isArray(payload.data)) {
-        setReceivedContent(payload.data);
-      } else {
-        console.warn("Expected array but received:", typeof payload.data);
-        setReceivedContent([payload.data]);
-      }
+      const items = Array.isArray(payload.data) ? payload.data : [payload.data];
+      const forStation = items.filter((item: any) =>
+        item?.station == null || isTargetStation(item.station),
+      );
+      if (forStation.length === 0) return;
 
-      // Show notification
+      setReceivedContent(forStation.length === 1 ? forStation[0] : forStation);
+
       notification.info({
         message: 'Upsell Package Selected',
         description: 'A guest has interacted with an upsell package.',
@@ -631,12 +669,13 @@ const onDataSubmitted = (data: any) => {
       return;
     }
 
+    const payload = stampStation(data);
     if (callback) {
-      socketClient.emit("send-document", data, callback);
+      socketClient.emit("send-document", payload, callback);
     } else {
-      socketClient.emit("send-document", data);
+      socketClient.emit("send-document", payload);
     }
-  }, [socketClient]);
+  }, [socketClient, stampStation]);
 
   const emitSendTeamDocument = useCallback((data: SendDocumentPayloadType, callback?: (response: any) => void) => {
     if (!socketClient || !socketClient.connected) {
@@ -644,12 +683,13 @@ const onDataSubmitted = (data: any) => {
       return;
     }
 
+    const payload = stampStation(data);
     if (callback) {
-      socketClient.emit("send-team-document", data, callback);
+      socketClient.emit("send-team-document", payload, callback);
     } else {
-      socketClient.emit("send-team-document", data);
+      socketClient.emit("send-team-document", payload);
     }
-  }, [socketClient]);
+  }, [socketClient, stampStation]);
 
   const emitSendJotForm = useCallback((data: SendJotFormTemplate, callback?: (response: any) => void) => {
     if (!socketClient || !socketClient.connected) {
@@ -657,10 +697,10 @@ const onDataSubmitted = (data: any) => {
       return;
     }
 
-    socketClient.emit("send-jotForm", data, (response: any) => {
+    socketClient.emit("send-jotForm", stampStation(data), (response: any) => {
       if (callback) callback(response);
     });
-  }, [socketClient]);
+  }, [socketClient, stampStation]);
 
   const emitSendPackages = useCallback((
     data: SendPackagePayloadType,
@@ -671,12 +711,13 @@ const onDataSubmitted = (data: any) => {
       return;
     }
 
+    const payload = stampStation(data);
     if (callback) {
-      socketClient.emit("send-packages", data, callback);
+      socketClient.emit("send-packages", payload, callback);
     } else {
-      socketClient.emit("send-packages", data);
+      socketClient.emit("send-packages", payload);
     }
-  }, [socketClient]);
+  }, [socketClient, stampStation]);
 
 
   const emitUpdateInformation = useCallback((data: SendInformationUpdatePayloadType, callback?: (response: any) => void) => {
@@ -685,28 +726,29 @@ const onDataSubmitted = (data: any) => {
       return;
     }
 
+    const payload = stampStation(data);
     if (callback) {
-      socketClient.emit("update-information", data, callback);
+      socketClient.emit("update-information", payload, callback);
     } else {
-      socketClient.emit("update-information", data);
+      socketClient.emit("update-information", payload);
     }
-  }, [socketClient]);
+  }, [socketClient, stampStation]);
 
   const emitSendMessage = useCallback((data: SendMessagePayloadType) => {
     if (!socketClient || !socketClient.connected) {
       console.error("❌ Socket is not connected!");
       return;
     }
-    socketClient.emit("send-message", data);
-  }, [socketClient]);
+    socketClient.emit("send-message", stampStation(data));
+  }, [socketClient, stampStation]);
 
   const emitSendSurvey = useCallback((data: SendSurveyPayloadType) => {
     if (!socketClient || !socketClient.connected) {
       console.error("❌ Socket is not connected!");
       return;
     }
-    socketClient.emit("send-survey", data);
-  }, [socketClient]);
+    socketClient.emit("send-survey", stampStation(data));
+  }, [socketClient, stampStation]);
 
 
   const emitSendRecording = useCallback((data: SendSurveyPayloadType) => {
@@ -714,40 +756,40 @@ const onDataSubmitted = (data: any) => {
       console.error("❌ Socket is not connected!");
       return;
     }
-    socketClient.emit("send-recording", data);
-  }, [socketClient]);
+    socketClient.emit("send-recording", stampStation(data));
+  }, [socketClient, stampStation]);
 
   const emitSendSurveyAnswer = useCallback((data: SendSurveyMessagePayloadType) => {
     if (!socketClient || !socketClient.connected) {
       console.error("❌ Socket is not connected!");
       return;
     }
-    socketClient.emit("send-survey-answer", data);
-  }, [socketClient]);
+    socketClient.emit("send-survey-answer", stampStation(data));
+  }, [socketClient, stampStation]);
 
   const emitSendLangCode = useCallback((data: SendLangCodeMessagePayloadType) => {
     if (!socketClient || !socketClient.connected) {
       console.error("❌ Socket is not connected!");
       return;
     }
-    socketClient.emit("send-lang-code", data);
-  }, [socketClient]);
+    socketClient.emit("send-lang-code", stampStation(data));
+  }, [socketClient, stampStation]);
 
   const emitClearMessage = useCallback((data: CleanMessagesPayloadType) => {
     if (!socketClient || !socketClient.connected) {
       console.error("❌ Socket is not connected!");
       return;
     }
-    socketClient.emit("clear-messages", data);
-  }, [socketClient]);
+    socketClient.emit("clear-messages", stampStation(data));
+  }, [socketClient, stampStation]);
 
   const emitLeaveChat = useCallback((data: CleanMessagesPayloadType) => {
     if (!socketClient || !socketClient.connected) {
       console.error("❌ Socket is not connected!");
       return;
     }
-    socketClient.emit("leave-chat", data);
-  }, [socketClient]);
+    socketClient.emit("leave-chat", stampStation(data));
+  }, [socketClient, stampStation]);
 
   return (
     <SocketContext.Provider

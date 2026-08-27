@@ -69,7 +69,7 @@ import { CompanyLogo } from "../../components/pages/dashboard/Header/CompanyLogo
 import { GiHamburgerMenu } from "react-icons/gi";
 import { RiLockPasswordLine, RiLogoutBoxLine } from 'react-icons/ri';
 import { HiOutlineOfficeBuilding, HiOutlineUser } from 'react-icons/hi';
-import { signOut } from "next-auth/react";
+import { logoutClientSession } from "../../lib/logout";
 import { useMessageStore } from "../../lib/zustand/store/messageStore";
 import { useUploadControllerUploadSpeechToTextFile } from '../../lib/client/api';
 import { IoChatbubbleEllipses } from "react-icons/io5";
@@ -1068,15 +1068,7 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
     }, [isInIframe, isDropdownVisible, assignedForms, handleSendBlankForm]);
 
     const handleLogout = async () => {
-        localStorage.clear();
-        if (typeof window !== 'undefined') {
-            window.postMessage({ type: 'LOGOUT_REQUEST' }, '*');
-            if (window.parent !== window) {
-                window.parent.postMessage({ type: 'LOGOUT_REQUEST' }, '*');
-            }
-        }
-        // Use redirect: true so the server handles httpOnly cookie clearing
-        await signOut({ redirect: true, callbackUrl: '/' });
+        await logoutClientSession();
     };
 
     const generateSearchDropdownHTML = useCallback((templates, categories, isLoading, searchVal) => {
