@@ -98,7 +98,6 @@ export async function GET(req: NextRequest) {
     };
 
     const secret = process.env.NEXTAUTH_SECRET || "asdfgh1234";
-    const secret = process.env.NEXTAUTH_SECRET || "asdfgh1234";
     const encodedToken = await encode({ token: nextAuthToken, secret, maxAge: expiresInSeconds });
     console.log("[PairingLogin] Step 3 OK — encoded length:", encodedToken?.length);
 
