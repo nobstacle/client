@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { applyExpiredAuthCookies } from "../../../lib/session-cookies";
+import { applyExpiredAuthCookies } from "../../../../lib/session-cookies";
 
 function clearedResponse(request: NextRequest, redirect = false) {
   const response = redirect
