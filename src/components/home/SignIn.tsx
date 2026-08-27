@@ -49,6 +49,19 @@ export default function SignInModal({ isOpen, onClose }: SignInModalProps) {
     return decoded;
   };
 
+  const redirectuser = (sessionData: any) => {
+    let userRole = sessionData?.user?.Roles?.[0];
+    if (!sessionData?.user?.companyId && userRole !== "SAdmin") {
+      window.location.href = "/onboard/create-company";
+    } else if (userRole === "SAdmin") {
+      window.location.href = "/dashboard/register";
+    } else if (userRole === "Admin" || userRole === "Staff") {
+      window.location.href = "/dashboard/text";
+    } else {
+      window.location.href = "/client";
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -71,29 +84,15 @@ export default function SignInModal({ isOpen, onClose }: SignInModalProps) {
       setError(message);
       setLoading(false);
     } else if (result?.ok) {
-      onClose();
+      const { getSession } = await import("next-auth/react");
+      const currentSession = await getSession();
+      if (currentSession) {
+        redirectuser(currentSession);
+      } else {
+        window.location.reload();
+      }
     }
   };
-
-  const redirectuser = (session) => {
-    let userRole = session?.user?.Roles[0];
-    if (!session?.user?.companyId && userRole !== "SAdmin") {
-      window.location.href = "/onboard/create-company";
-    } else if (userRole === "SAdmin") {
-      window.location.href = "/dashboard/register";
-    } else if (userRole === "Admin" || userRole === "Staff") {
-      window.location.href = "/dashboard/text";
-    } else {
-      window.location.href = "/client";
-    }
-  }
-
-  useEffect(() => {
-    if (session) {
-      redirectuser(session);
-    }
-  }, [session]);
-
 
   if (!isOpen) return null;
 

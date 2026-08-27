@@ -20,6 +20,8 @@ import {
   AppstoreOutlined,
 } from "@ant-design/icons";
 import { EditorMode, HeadingItem } from "./types";
+import { compressImage } from "@/utils/imageOptimizer";
+import MarkdownRenderer from "@/components/blog/MarkdownRenderer";
 
 const { TextArea } = Input;
 
@@ -247,17 +249,18 @@ export default function ArticleMainCanvas({
                   type="file"
                   accept="image/*"
                   className="hidden"
-                  onChange={(e) => {
+                  onChange={async (e) => {
                     const file = e.target.files?.[0];
                     if (file) {
-                      const reader = new FileReader();
-                      reader.onload = (event) => {
-                        if (event.target?.result) {
-                          const base64Url = event.target.result as string;
-                          insertFormatting(`\n![${file.name.replace(/\.[^/.]+$/, "")}](`, ")\n", base64Url);
-                        }
-                      };
-                      reader.readAsDataURL(file);
+                      const compressedDataUrl = await compressImage(file, {
+                        maxWidth: 1400,
+                        quality: 0.82,
+                      });
+                      if (compressedDataUrl) {
+                        const cleanName = file.name.replace(/\.[^/.]+$/, "");
+                        insertFormatting(`\n![${cleanName}](`, ")\n", compressedDataUrl);
+                      }
+                      e.target.value = "";
                     }
                   }}
                 />
@@ -316,44 +319,9 @@ export default function ArticleMainCanvas({
               rows={22}
               className="font-mono text-sm border-none p-5 text-slate-800 resize-none focus:shadow-none bg-slate-50/40"
             />
-            <div className="p-6 max-h-[600px] overflow-y-auto prose prose-slate max-w-none text-slate-800 text-sm leading-relaxed">
+            <div className="p-6 max-h-[600px] overflow-y-auto">
               {content ? (
-                <div className="space-y-4">
-                  {content.split("\n\n").map((block, i) => {
-                    const t = block.trim();
-                    if (t.startsWith("## ")) {
-                      return <h2 key={i} className="text-xl font-bold text-slate-900 border-b pb-1.5 mt-4">{t.replace("## ", "")}</h2>;
-                    }
-                    if (t.startsWith("### ")) {
-                      return <h3 key={i} className="text-lg font-bold text-slate-800 mt-3">{t.replace("### ", "")}</h3>;
-                    }
-                    if (t.startsWith("> ")) {
-                      return <blockquote key={i} className="border-l-4 border-blue-500 pl-4 italic text-slate-600">{t.replace("> ", "")}</blockquote>;
-                    }
-                    if (t.startsWith("- ")) {
-                      return (
-                        <ul key={i} className="list-disc pl-5 space-y-1">
-                          {t.split("\n").map((line, idx) => (
-                            <li key={idx}>{line.replace(/^- /, "")}</li>
-                          ))}
-                        </ul>
-                      );
-                    }
-                    if (t.startsWith("1. ")) {
-                      return (
-                        <ol key={i} className="list-decimal pl-5 space-y-1">
-                          {t.split("\n").map((line, idx) => (
-                            <li key={idx}>{line.replace(/^\d+\.\s*/, "")}</li>
-                          ))}
-                        </ol>
-                      );
-                    }
-                    if (t === "---") {
-                      return <hr key={i} className="my-6 border-slate-200" />;
-                    }
-                    return <p key={i} className="leading-relaxed">{t}</p>;
-                  })}
-                </div>
+                <MarkdownRenderer content={content} />
               ) : (
                 <div className="text-slate-400 italic">Live preview will render here as you type...</div>
               )}
@@ -362,32 +330,9 @@ export default function ArticleMainCanvas({
         )}
 
         {editorMode === "preview" && (
-          <div className="p-8 max-h-[700px] overflow-y-auto prose prose-slate max-w-none text-slate-800">
+          <div className="p-8 max-h-[700px] overflow-y-auto">
             {content ? (
-              <div className="space-y-5">
-                {content.split("\n\n").map((block, i) => {
-                  const t = block.trim();
-                  if (t.startsWith("## ")) {
-                    return <h2 key={i} className="text-2xl font-black text-slate-900 border-b pb-2">{t.replace("## ", "")}</h2>;
-                  }
-                  if (t.startsWith("### ")) {
-                    return <h3 key={i} className="text-xl font-extrabold text-slate-800">{t.replace("### ", "")}</h3>;
-                  }
-                  if (t.startsWith("> ")) {
-                    return <blockquote key={i} className="border-l-4 border-blue-600 bg-blue-50/50 p-4 rounded-r-xl italic text-slate-700">{t.replace("> ", "")}</blockquote>;
-                  }
-                  if (t.startsWith("- ")) {
-                    return (
-                      <ul key={i} className="list-disc pl-6 space-y-1.5">
-                        {t.split("\n").map((line, idx) => (
-                          <li key={idx}>{line.replace(/^- /, "")}</li>
-                        ))}
-                      </ul>
-                    );
-                  }
-                  return <p key={i} className="leading-relaxed text-base">{t}</p>;
-                })}
-              </div>
+              <MarkdownRenderer content={content} />
             ) : (
               <div className="text-slate-400 italic">No content to preview yet.</div>
             )}

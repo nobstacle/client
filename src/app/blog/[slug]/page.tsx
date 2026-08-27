@@ -5,7 +5,8 @@ import Image from "next/image";
 import Header from "@/components/home/Header";
 import Footer from "@/components/home/Footer";
 import ScrollObserver from "@/components/client-helpers/ScrollObserver";
-import { blogPosts, BlogPost } from "@/data/blogPosts";
+import { BlogPost } from "@/data/blogPosts";
+import MarkdownRenderer from "@/components/blog/MarkdownRenderer";
 import "@/styles/home.css";
 
 interface Props {
@@ -17,20 +18,30 @@ interface Props {
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001";
 const API_URL = `${BACKEND_URL}/api/v1`;
 
+export const dynamicParams = true;
+export const revalidate = 60;
+
 async function fetchPostBySlug(slug: string): Promise<BlogPost | null> {
   try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 3500);
+
     const res = await fetch(`${API_URL}/blog/${slug}`, {
+      signal: controller.signal,
       next: { revalidate: 60 },
     });
+    clearTimeout(timeout);
+
     if (res.ok) {
       const data = await res.json();
+      if (!data || !data.slug) return null;
       return {
         id: String(data.id),
         slug: data.slug,
         title: data.title,
         excerpt: data.excerpt,
-        coverImage: data.coverImage,
-        category: data.category,
+        coverImage: data.coverImage || "https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?w=1200&auto=format&fit=crop&q=80",
+        category: data.category || "General",
         tags: data.tags || [],
         author: {
           name: data.authorName || data.author?.name || "Nobstacle Team",
@@ -43,15 +54,55 @@ async function fetchPostBySlug(slug: string): Promise<BlogPost | null> {
       };
     }
   } catch (e) {
-    console.warn(`Failed to fetch /blog/${slug} from API, using fallback:`, e);
+    // Return null if request fails or times out
   }
-  return blogPosts.find((p) => p.slug === slug) || null;
+  return null;
+}
+
+async function fetchRelatedPosts(currentSlug: string): Promise<BlogPost[]> {
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 3500);
+
+    const res = await fetch(`${API_URL}/blog`, {
+      signal: controller.signal,
+      next: { revalidate: 60 },
+    });
+    clearTimeout(timeout);
+
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        return data
+          .filter((p: any) => p.slug !== currentSlug)
+          .slice(0, 3)
+          .map((p: any) => ({
+            id: String(p.id),
+            slug: p.slug,
+            title: p.title,
+            excerpt: p.excerpt,
+            coverImage: p.coverImage || "https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?w=1200&auto=format&fit=crop&q=80",
+            category: p.category || "General",
+            tags: p.tags || [],
+            author: {
+              name: p.authorName || p.author?.name || "Nobstacle Team",
+              role: p.authorRole || p.author?.role || "Guest Experience Specialist",
+              avatar: p.authorAvatar || p.author?.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
+            },
+            publishedAt: p.publishedAt || p.createdAt,
+            readTime: p.readTime || "5 min read",
+            content: p.content || "",
+          }));
+      }
+    }
+  } catch (e) {
+    // Ignore related fetch failure
+  }
+  return [];
 }
 
 export async function generateStaticParams() {
-  return blogPosts.map((post) => ({
-    slug: post.slug,
-  }));
+  return [];
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -103,7 +154,7 @@ export default async function BlogPostPage({ params }: Props) {
     notFound();
   }
 
-  const relatedPosts = blogPosts.filter((p) => p.slug !== post.slug).slice(0, 3);
+  const relatedPosts = await fetchRelatedPosts(post.slug);
 
   // Schema.org Article Structured Data for SEO
   const jsonLd = {
@@ -215,6 +266,7 @@ export default async function BlogPostPage({ params }: Props) {
               fill
               className="object-cover"
               priority
+              unoptimized={!post.coverImage.startsWith("/")}
             />
           </div>
         </div>
@@ -222,71 +274,29 @@ export default async function BlogPostPage({ params }: Props) {
         {/* Article Body Content */}
         <div className="container mx-auto max-w-3xl px-4 sm:px-6">
           <div className="bg-white rounded-2xl p-6 sm:p-12 border border-[#edf0f4] shadow-sm">
-            <div className="prose prose-slate prose-lg max-w-none prose-headings:font-bold prose-h2:text-2xl sm:prose-h2:text-3xl prose-h2:mt-10 prose-h2:mb-4 prose-h2:text-[#121212] prose-p:leading-relaxed prose-p:text-[#374151] prose-li:my-1.5 prose-li:text-[#374151]">
-              {post.content.split("\n\n").map((paragraph, index) => {
-                const trimmed = paragraph.trim();
-                if (trimmed.startsWith("## ")) {
-                  return (
-                    <h2
-                      key={index}
-                      className="text-2xl sm:text-3xl font-bold text-[#121212] mt-10 mb-4 border-b border-[#edf0f4] pb-3"
-                      style={{ fontFamily: "var(--font-display)" }}
-                    >
-                      {trimmed.replace("## ", "")}
-                    </h2>
-                  );
-                }
-                if (trimmed.startsWith("### ")) {
-                  return (
-                    <h3
-                      key={index}
-                      className="text-xl font-bold text-[#121212] mt-7 mb-3"
-                      style={{ fontFamily: "var(--font-display)" }}
-                    >
-                      {trimmed.replace("### ", "")}
-                    </h3>
-                  );
-                }
-                if (trimmed.startsWith("- ")) {
-                  const items = trimmed.split("\n").map((line) => line.replace(/^- /, ""));
-                  return (
-                    <ul key={index} className="list-disc pl-6 my-4 space-y-2 text-[#374151]">
-                      {items.map((item, i) => (
-                        <li key={i}>{item}</li>
-                      ))}
-                    </ul>
-                  );
-                }
-                if (trimmed === "---") {
-                  return <hr key={index} className="my-10 border-[#edf0f4]" />;
-                }
-                return (
-                  <p key={index} className="text-[#374151] leading-relaxed mb-5 text-base sm:text-lg">
-                    {trimmed}
-                  </p>
-                );
-              })}
-            </div>
+            <MarkdownRenderer content={post.content} />
 
             {/* Tags */}
-            <div className="mt-12 pt-6 border-t border-[#edf0f4] flex flex-wrap items-center gap-2">
-              <span className="text-xs font-bold uppercase text-[#8a94a0] mr-2">Tags:</span>
-              {post.tags.map((tag) => (
-                <span
-                  key={tag}
-                  className="px-3 py-1 rounded-xl text-xs font-semibold bg-[#f0f3f9] text-[#5a6472]"
-                >
-                  #{tag}
-                </span>
-              ))}
-            </div>
+            {post.tags && post.tags.length > 0 && (
+              <div className="mt-12 pt-6 border-t border-[#edf0f4] flex flex-wrap items-center gap-2">
+                <span className="text-xs font-bold uppercase text-[#8a94a0] mr-2">Tags:</span>
+                {post.tags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="px-3 py-1 rounded-xl text-xs font-semibold bg-[#f0f3f9] text-[#5a6472]"
+                  >
+                    #{tag}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Related Articles */}
           {relatedPosts.length > 0 && (
-            <div className="mt-14">
+            <div className="mt-16">
               <h3
-                className="text-2xl font-bold text-[#121212] mb-6"
+                className="text-xl font-bold text-[#121212] mb-6"
                 style={{ fontFamily: "var(--font-display)" }}
               >
                 Related Insights

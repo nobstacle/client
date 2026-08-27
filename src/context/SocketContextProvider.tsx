@@ -1,7 +1,7 @@
 "use client";
 import { useSession } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
-import React, {  createContext, useContext, useEffect, useState, useCallback  } from "react";
+import React, {  createContext, useContext, useEffect, useState, useCallback, useRef  } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Socket } from "socket.io-client";
 import socket from "../lib/socket/init";
@@ -188,10 +188,38 @@ export const SocketContextProvider = ({
     };
   }, [socketClient]);
 
+  const getActiveStation = useCallback((): number => {
+    const urlStation = params.get("station");
+    if (urlStation) {
+      const parsed = Number(urlStation);
+      if (!isNaN(parsed) && parsed > 0) return parsed;
+    }
+    const sessionStation = session.data?.user?.stationNo;
+    if (sessionStation) {
+      const parsed = Number(sessionStation);
+      if (!isNaN(parsed) && parsed > 0) return parsed;
+    }
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("nobstacle_selected_station");
+      if (stored) {
+        const parsed = Number(stored);
+        if (!isNaN(parsed) && parsed > 0) return parsed;
+      }
+    }
+    return 1;
+  }, [params, session.data?.user?.stationNo]);
+
+  const isTargetStation = useCallback((targetStation?: number | string | null): boolean => {
+    if (targetStation === undefined || targetStation === null) return true;
+    const role = session.data?.user?.Roles?.[0];
+    if (role === "Admin" || role === "Staff" || role === "SAdmin") return true;
+    return Number(targetStation) === getActiveStation();
+  }, [session.data?.user?.Roles, getActiveStation]);
+
   // Socket event handlers
   const onConnect = () => {
     socketClient?.emit("join-chat", {
-      station: Number(params.get("station") ?? 1),
+      station: getActiveStation(),
     });
     setSocketConnected(true);
   };
@@ -205,6 +233,7 @@ export const SocketContextProvider = ({
       const parsedRes = JSON.parse(data);
       if (parsedRes.status === 400) return;
       const parsedData = parsedRes.data as ReceivedTemplateContent;
+      if (!isTargetStation(parsedData?.station)) return;
       setReceivedContent(parsedData);
     } catch (error) {
       console.error("❌ Error parsing template response:", error);
@@ -220,6 +249,7 @@ export const SocketContextProvider = ({
       }
 
       const parsedData = parsedRes.data as ReceivedDocumentContent;
+      if (!isTargetStation(parsedData?.station)) return;
       setReceivedContent(parsedData);
 
     } catch (error) {
@@ -236,6 +266,7 @@ export const SocketContextProvider = ({
       }
 
       const parsedData = parsedRes.data as ReceivedDocumentContent;
+      if (!isTargetStation(parsedData?.station)) return;
       setReceivedContent(parsedData);
 
     } catch (error) {
@@ -297,8 +328,9 @@ export const SocketContextProvider = ({
   const onReceivedMessage = (data: any) => {
     try {
       const parsedData = JSON.parse(data).data as ReceivedMessageContent;
+      if (!isTargetStation(parsedData?.station)) return;
 
-      let role = session.data.user.Roles[0];
+      let role = session.data?.user?.Roles?.[0];
 
       if (role === "Admin" || role === "Staff") {
         setReceivedMessage(parsedData);
@@ -343,6 +375,7 @@ export const SocketContextProvider = ({
         tag: string;
         station: number;
       };
+      if (!isTargetStation(parsedData?.station)) return;
 
       setReceivedSurvey(parsedData);
     } catch (error) {
@@ -358,6 +391,7 @@ export const SocketContextProvider = ({
         station: number;
         langCode: string;
       };
+      if (!isTargetStation(parsedData?.station)) return;
 
       setReceivedLangCode(parsedData.langCode);
       localStorage.setItem("lang-code", parsedData.langCode);
@@ -372,6 +406,7 @@ export const SocketContextProvider = ({
         station: number;
         success: true;
       };
+      if (!isTargetStation(parsedData?.station)) return;
 
       clearReceivedMessage(parsedData.station);
     } catch (error) {
@@ -388,6 +423,7 @@ export const SocketContextProvider = ({
       }
 
       const parsedData = parsedRes.data as ReceivedTemplateContent;
+      if (!isTargetStation(parsedData?.station)) return;
 
       setReceivedContent(parsedData);
 
@@ -401,6 +437,7 @@ export const SocketContextProvider = ({
       const parsedRes = JSON.parse(data);
       if (parsedRes.status === 400) return;
       const parsedData = parsedRes.data as SendRecordingPayloadType;
+      if (!isTargetStation(parsedData?.station)) return;
       setReceivedRecording(parsedData);
     } catch (error) {
       console.error("❌ Error parsing template response:", error);
@@ -512,14 +549,22 @@ const onDataSubmitted = (data: any) => {
     };
   }, [socketClient]);
 
-  // Join chat when socket connects or station changes
+  // Join chat when socket connects or station changes, leaving prior room if station changed
+  const lastJoinedStationRef = useRef<number | null>(null);
   useEffect(() => {
     if (socketClient?.connected) {
-      socketClient?.emit("join-chat", {
-        station: Number(params.get("station") ?? 1),
+      const current = getActiveStation();
+      if (lastJoinedStationRef.current !== null && lastJoinedStationRef.current !== current) {
+        socketClient.emit("leave-chat", {
+          station: lastJoinedStationRef.current,
+        });
+      }
+      socketClient.emit("join-chat", {
+        station: current,
       });
+      lastJoinedStationRef.current = current;
     }
-  }, [socketClient, params]);
+  }, [socketClient, getActiveStation]);
 
   // Emit functions
   const emitSendTemplate = useCallback((data: SendTemplatePayloadType) => {
@@ -550,6 +595,7 @@ const onDataSubmitted = (data: any) => {
       }
 
       const parsedData = parsedRes.data as ReceivedPackageContent;
+      if (!isTargetStation(parsedData?.station)) return;
       setReceivedContent(parsedData);
 
     } catch (error) {

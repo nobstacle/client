@@ -11,6 +11,7 @@ import {
   CalendarOutlined,
 } from "@ant-design/icons";
 import { BlogFormData, DeviceView } from "./types";
+import MarkdownRenderer from "@/components/blog/MarkdownRenderer";
 
 interface DevicePreviewModalProps {
   open: boolean;
@@ -113,35 +114,9 @@ export default function DevicePreviewModal({ open, onClose, data }: DevicePrevie
           )}
 
           {/* Article Body */}
-          <div className="p-6 sm:p-12 prose prose-slate max-w-none text-slate-800 leading-relaxed text-base">
+          <div className="p-6 sm:p-12">
             {data.content ? (
-              <div className="space-y-6">
-                {data.content.split("\n\n").map((block, i) => {
-                  const t = block.trim();
-                  if (t.startsWith("## ")) {
-                    return <h2 key={i} className="text-2xl font-black text-slate-900 border-b pb-2 pt-4">{t.replace("## ", "")}</h2>;
-                  }
-                  if (t.startsWith("### ")) {
-                    return <h3 key={i} className="text-xl font-extrabold text-slate-800 pt-2">{t.replace("### ", "")}</h3>;
-                  }
-                  if (t.startsWith("> ")) {
-                    return <blockquote key={i} className="border-l-4 border-blue-600 bg-blue-50/40 p-4 rounded-r-xl italic text-slate-700">{t.replace("> ", "")}</blockquote>;
-                  }
-                  if (t.startsWith("- ")) {
-                    return (
-                      <ul key={i} className="list-disc pl-6 space-y-1.5">
-                        {t.split("\n").map((line, idx) => (
-                          <li key={idx}>{line.replace(/^- /, "")}</li>
-                        ))}
-                      </ul>
-                    );
-                  }
-                  if (t === "---") {
-                    return <hr key={i} className="my-8 border-slate-200" />;
-                  }
-                  return <p key={i} className="leading-relaxed">{t}</p>;
-                })}
-              </div>
+              <MarkdownRenderer content={data.content} />
             ) : (
               <div className="text-slate-400 italic text-center py-12">No article content written yet.</div>
             )}

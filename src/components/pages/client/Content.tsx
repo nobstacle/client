@@ -1154,6 +1154,20 @@ export const Content: React.FC = () => {
           setContentToDisplay(getStoredLastDisplayedContent() ?? getStoredPublicDisplay());
         }
       }
+    } else if (messageStore.receivedType === "ChatMessage") {
+      setContentToDisplay({
+        type: "ChatMessage",
+        content: null,
+        survey: messageStore.receivedSurvey,
+        messages: messageStore.receivedMessage,
+      });
+    } else if (messageStore.receivedType === "Survey") {
+      setContentToDisplay({
+        type: "Survey",
+        content: null,
+        survey: messageStore.receivedSurvey,
+        messages: messageStore.receivedMessage,
+      });
     } else if (messageStore.receivedType && messageStore.receivedContent) {
       if (messageStore.receivedType === "Scroll" || messageStore.receivedType === "Slideshow" || messageStore.receivedType === "Screens") {
         const normalizedPublicContent = normalizePublicContentPayload(

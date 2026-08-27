@@ -27,6 +27,7 @@ import {
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { BlogFormData } from "./types";
+import { compressImage, COVER_OPTIONS, AVATAR_OPTIONS } from "@/utils/imageOptimizer";
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -262,19 +263,14 @@ export default function ArticleSidebar({ data, onChange }: ArticleSidebarProps) 
                 type="file"
                 accept="image/*"
                 className="hidden"
-                onChange={(e) => {
+                onChange={async (e) => {
                   const file = e.target.files?.[0];
                   if (file) {
-                    if (file.size > 10 * 1024 * 1024) {
-                      return;
+                    const compressedDataUrl = await compressImage(file, COVER_OPTIONS);
+                    if (compressedDataUrl) {
+                      onChange({ coverImage: compressedDataUrl });
                     }
-                    const reader = new FileReader();
-                    reader.onload = (event) => {
-                      if (event.target?.result) {
-                        onChange({ coverImage: event.target.result as string });
-                      }
-                    };
-                    reader.readAsDataURL(file);
+                    e.target.value = "";
                   }
                 }}
               />
@@ -289,16 +285,14 @@ export default function ArticleSidebar({ data, onChange }: ArticleSidebarProps) 
                 type="file"
                 accept="image/*"
                 className="hidden"
-                onChange={(e) => {
+                onChange={async (e) => {
                   const file = e.target.files?.[0];
                   if (file) {
-                    const reader = new FileReader();
-                    reader.onload = (event) => {
-                      if (event.target?.result) {
-                        onChange({ coverImage: event.target.result as string });
-                      }
-                    };
-                    reader.readAsDataURL(file);
+                    const compressedDataUrl = await compressImage(file, COVER_OPTIONS);
+                    if (compressedDataUrl) {
+                      onChange({ coverImage: compressedDataUrl });
+                    }
+                    e.target.value = "";
                   }
                 }}
               />
@@ -446,16 +440,14 @@ export default function ArticleSidebar({ data, onChange }: ArticleSidebarProps) 
                   type="file"
                   accept="image/*"
                   className="hidden"
-                  onChange={(e) => {
+                  onChange={async (e) => {
                     const file = e.target.files?.[0];
                     if (file) {
-                      const reader = new FileReader();
-                      reader.onload = (event) => {
-                        if (event.target?.result) {
-                          onChange({ authorAvatar: event.target.result as string });
-                        }
-                      };
-                      reader.readAsDataURL(file);
+                      const compressedDataUrl = await compressImage(file, AVATAR_OPTIONS);
+                      if (compressedDataUrl) {
+                        onChange({ authorAvatar: compressedDataUrl });
+                      }
+                      e.target.value = "";
                     }
                   }}
                 />

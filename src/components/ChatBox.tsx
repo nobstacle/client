@@ -107,9 +107,10 @@ export const ChatBox = React.forwardRef<HTMLDivElement, ChatBoxProps>(
             className="density-chatbox-messages flex h-0 flex-grow flex-col overflow-auto p-4"
           >
             {messages
-              .filter(
-                ({ station }) => station === Number(params.get("station") ?? 1),
-              )
+              .filter(({ station: msgStation }) => {
+                const targetStation = station ?? Number(params.get("station") || (typeof window !== "undefined" ? localStorage.getItem("nobstacle_selected_station") : null) || 1);
+                return !msgStation || msgStation === targetStation;
+              })
               .map((messageObj) => (
                 <ChatMessage
                   key={messageObj.id}

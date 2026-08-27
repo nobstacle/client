@@ -6,7 +6,7 @@ import Image from "next/image";
 import Header from "@/components/home/Header";
 import Footer from "@/components/home/Footer";
 import ScrollObserver from "@/components/client-helpers/ScrollObserver";
-import { blogPosts as fallbackPosts, BLOG_CATEGORIES, BlogPost } from "@/data/blogPosts";
+import { BlogPost } from "@/data/blogPosts";
 import "@/styles/home.css";
 import axios from "axios";
 
@@ -14,23 +14,25 @@ const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:300
 const API_URL = `${BACKEND_URL}/api/v1`;
 
 export default function BlogIndexPage() {
-  const [posts, setPosts] = useState<BlogPost[]>(fallbackPosts);
+  const [posts, setPosts] = useState<BlogPost[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
   const [searchQuery, setSearchQuery] = useState<string>("");
 
   useEffect(() => {
+    let isMounted = true;
     const fetchLivePosts = async () => {
+      setLoading(true);
       try {
-        const res = await axios.get(`${API_URL}/blog`);
-        if (Array.isArray(res.data) && res.data.length > 0) {
-          // Normalize author structure if returned flat from DB
+        const res = await axios.get(`${API_URL}/blog`, { timeout: 10000 });
+        if (isMounted && Array.isArray(res.data)) {
           const mapped: BlogPost[] = res.data.map((p: any) => ({
             id: String(p.id),
             slug: p.slug,
             title: p.title,
             excerpt: p.excerpt,
-            coverImage: p.coverImage,
-            category: p.category,
+            coverImage: p.coverImage || "https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?w=1200&auto=format&fit=crop&q=80",
+            category: p.category || "General",
             tags: p.tags || [],
             author: {
               name: p.authorName || p.author?.name || "Nobstacle Team",
@@ -39,16 +41,31 @@ export default function BlogIndexPage() {
             },
             publishedAt: p.publishedAt || p.createdAt,
             readTime: p.readTime || "5 min read",
-            content: p.content,
+            content: p.content || "",
           }));
           setPosts(mapped);
         }
       } catch (e) {
-        console.warn("Using fallback blog posts:", e);
+        console.warn("Failed to fetch blog posts from API:", e);
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
     fetchLivePosts();
+    return () => {
+      isMounted = false;
+    };
   }, []);
+
+  const categories = useMemo(() => {
+    const set = new Set<string>(["All"]);
+    posts.forEach((p) => {
+      if (p.category) set.add(p.category);
+    });
+    return Array.from(set);
+  }, [posts]);
 
   const filteredPosts = useMemo(() => {
     return posts.filter((post) => {
@@ -144,52 +161,112 @@ export default function BlogIndexPage() {
           </div>
 
           {/* Category Filter Pills */}
-          <div className="flex flex-wrap items-center justify-center gap-2">
-            {BLOG_CATEGORIES.map((category) => {
-              const isActive = selectedCategory === category;
-              return (
-                <button
-                  key={category}
-                  onClick={() => setSelectedCategory(category)}
-                  className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 ${
-                    isActive
-                      ? "bg-[#3b5998] text-white shadow-sm shadow-[#3b5998]/30 scale-105"
-                      : "bg-white text-[#5a6472] hover:bg-[#f0f3f9] hover:text-[#3b5998] border border-[#dee2e6]"
-                  }`}
-                >
-                  {category}
-                </button>
-              );
-            })}
-          </div>
+          {categories.length > 1 && (
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              {categories.map((category) => {
+                const isActive = selectedCategory === category;
+                return (
+                  <button
+                    key={category}
+                    onClick={() => setSelectedCategory(category)}
+                    className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 ${
+                      isActive
+                        ? "bg-[#3b5998] text-white shadow-sm shadow-[#3b5998]/30 scale-105"
+                        : "bg-white text-[#5a6472] hover:bg-[#f0f3f9] hover:text-[#3b5998] border border-[#dee2e6]"
+                    }`}
+                  >
+                    {category}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
       </section>
 
       {/* Main Content Body */}
       <section className="container mx-auto px-4 sm:px-6 max-w-6xl py-12 relative z-20">
+        {/* Loading State Skeleton */}
+        {loading && (
+          <div className="space-y-12">
+            {/* Featured Post Skeleton */}
+            <div className="bg-white rounded-2xl overflow-hidden border border-[#edf0f4] shadow-sm animate-pulse">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-0">
+                <div className="lg:col-span-7 h-64 sm:h-80 lg:h-[360px] bg-slate-200" />
+                <div className="lg:col-span-5 p-6 sm:p-8 flex flex-col justify-between space-y-4">
+                  <div className="space-y-3">
+                    <div className="h-4 w-24 bg-slate-200 rounded" />
+                    <div className="h-7 w-5/6 bg-slate-200 rounded" />
+                    <div className="h-7 w-4/6 bg-slate-200 rounded" />
+                    <div className="h-4 w-full bg-slate-200 rounded mt-4" />
+                    <div className="h-4 w-5/6 bg-slate-200 rounded" />
+                  </div>
+                  <div className="flex items-center gap-3 pt-4 border-t border-slate-100">
+                    <div className="w-9 h-9 rounded-full bg-slate-200" />
+                    <div className="space-y-1.5 flex-1">
+                      <div className="h-3 w-28 bg-slate-200 rounded" />
+                      <div className="h-2.5 w-20 bg-slate-200 rounded" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Grid Skeletons */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[1, 2, 3].map((n) => (
+                <div key={n} className="bg-white rounded-2xl overflow-hidden border border-[#edf0f4] shadow-sm animate-pulse flex flex-col justify-between h-[380px]">
+                  <div>
+                    <div className="h-48 bg-slate-200" />
+                    <div className="p-5 space-y-3">
+                      <div className="h-3 w-20 bg-slate-200 rounded" />
+                      <div className="h-5 w-4/5 bg-slate-200 rounded" />
+                      <div className="h-3 w-full bg-slate-200 rounded" />
+                    </div>
+                  </div>
+                  <div className="px-5 pb-5 pt-3 border-t border-slate-100 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-full bg-slate-200" />
+                      <div className="h-3 w-20 bg-slate-200 rounded" />
+                    </div>
+                    <div className="h-3 w-12 bg-slate-200 rounded" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* No results message */}
-        {filteredPosts.length === 0 && (
+        {!loading && filteredPosts.length === 0 && (
           <div className="text-center py-16 bg-white rounded-2xl border border-[#dee2e6] shadow-sm">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-slate-100 flex items-center justify-center text-2xl text-slate-400">
+              📰
+            </div>
             <p className="text-lg font-bold text-[#121212] mb-2" style={{ fontFamily: "var(--font-display)" }}>
               No articles found
             </p>
             <p className="text-sm text-[#5a6472] mb-6">
-              Try adjusting your search query or switching to another category.
+              {searchQuery || selectedCategory !== "All"
+                ? "Try adjusting your search query or switching to another category."
+                : "No published blog posts are currently available. Check back soon!"}
             </p>
-            <button
-              onClick={() => {
-                setSelectedCategory("All");
-                setSearchQuery("");
-              }}
-              className="cta-button text-sm"
-            >
-              Reset Filters
-            </button>
+            {(searchQuery || selectedCategory !== "All") && (
+              <button
+                onClick={() => {
+                  setSelectedCategory("All");
+                  setSearchQuery("");
+                }}
+                className="cta-button text-sm"
+              >
+                Reset Filters
+              </button>
+            )}
           </div>
         )}
 
         {/* Featured Story Section */}
-        {featuredPost && (
+        {!loading && featuredPost && (
           <div className="mb-14">
             <div className="flex items-center justify-between mb-4">
               <span className="text-xs font-bold uppercase tracking-widest text-[#3b5998] flex items-center gap-1.5">
@@ -213,6 +290,7 @@ export default function BlogIndexPage() {
                     fill
                     className="object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
                     priority
+                    unoptimized={!featuredPost.coverImage.startsWith("/")}
                   />
                   <div className="absolute top-4 left-4">
                     <span className="px-3.5 py-1.5 text-xs font-bold rounded-full bg-[#3b5998] text-white shadow-md">
@@ -276,7 +354,7 @@ export default function BlogIndexPage() {
         )}
 
         {/* Regular Posts Grid */}
-        {regularPosts.length > 0 && (
+        {!loading && regularPosts.length > 0 && (
           <div className="mb-16">
             <h3
               className="text-xl sm:text-2xl font-bold text-[#121212] mb-6 flex items-center gap-2"
@@ -301,6 +379,7 @@ export default function BlogIndexPage() {
                         alt={post.title}
                         fill
                         className="object-cover group-hover:scale-105 transition-transform duration-500"
+                        unoptimized={!post.coverImage.startsWith("/")}
                       />
                       <div className="absolute top-3 left-3">
                         <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-[#121212]/80 text-white backdrop-blur-sm shadow">

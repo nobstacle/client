@@ -114,7 +114,7 @@ export async function middleware(req: NextRequest) {
       if (req.method === "GET") {
         if (isAuthenticated) {
           url.pathname = isUser || isGuest ? "/client" : "/dashboard/text";
-          if (isUser || isGuest) url.searchParams.set("station", "1");
+          if (isUser || isGuest) url.searchParams.set("station", String(token?.user?.stationNo ?? "1"));
         } else {
           url.pathname = "/";
         }
@@ -203,7 +203,7 @@ export async function middleware(req: NextRequest) {
     ) {
       if (!isAuthenticated || !isSAdmin) {
         url.pathname = isUser ? "/client" : "/dashboard/text";
-        if (isUser) url.searchParams.set("station", "1");
+        if (isUser) url.searchParams.set("station", String(token?.user?.stationNo ?? "1"));
         return NextResponse.redirect(url);
       }
     } else if (isSAdmin && isAuthenticated) {
@@ -220,7 +220,7 @@ export async function middleware(req: NextRequest) {
     }
     if (isAuthenticated && isUser) {
       url.pathname = "/client";
-      url.searchParams.set("station", "1");
+      url.searchParams.set("station", String(token?.user?.stationNo ?? "1"));
       return NextResponse.redirect(url);
     }
   }
