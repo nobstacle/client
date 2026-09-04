@@ -29,6 +29,10 @@ const { TextArea } = Input;
 const { Step } = Steps;
 const { Dragger } = Upload;
 const COPY_CODE_MAX_LENGTH = 15;
+const TEMPLATE_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
+const TEMPLATE_VIDEO_MAX_BYTES = 16 * 1024 * 1024;
+const CAMPAIGN_POLL_INTERVAL_MS = 4000;
+const RECENT_DRAFT_CAMPAIGN_MS = 5 * 60 * 1000;
 
 const API_URL = (() => {
     const raw = (process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || "").trim();
@@ -246,6 +250,25 @@ const extractTemplateVariableTokens = (content: string): string[] => {
     return [...new Set(matches.map((match) => match.replace(/\{\{|\}\}/g, "")))];
 };
 
+const extractRawTemplatePlaceholders = (content: string): string[] => {
+    const matches = String(content || "").match(/\{\{([^}]+)\}\}/g) || [];
+    return matches.map((match) => match.slice(2, -2));
+};
+
+const canonicalizeTemplateVariableToken = (value: string): string | null => {
+    const token = String(value || "")
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "_")
+        .replace(/^_+|_+$/g, "");
+
+    if (!token || /^\d+$/.test(token) || token.length > 30 || !/^[a-z][a-z0-9_]*$/.test(token)) {
+        return null;
+    }
+
+    return token;
+};
+
 const normalizeTemplateVariableToken = (value: string): string => (
     String(value || "")
         .trim()
@@ -256,35 +279,152 @@ const normalizeTemplateVariableToken = (value: string): string => (
 const TEMPLATE_VARIABLE_SUGGESTIONS = [
     { token: "name", label: "Contact name" },
     { token: "firstname", label: "First name" },
+    { token: "lastname", label: "Last name" },
     { token: "email", label: "Email" },
     { token: "phone", label: "Phone" },
-    { token: "bookingid", label: "Custom ID example" },
 ] as const;
+
+const SUPPORTED_TEMPLATE_VARIABLE_TOKENS = new Set([
+    "name",
+    "fullname",
+    "full_name",
+    "guestname",
+    "guest_name",
+    "customername",
+    "customer_name",
+    "firstname",
+    "first_name",
+    "givenname",
+    "given_name",
+    "lastname",
+    "last_name",
+    "surname",
+    "familyname",
+    "family_name",
+    "email",
+    "emailaddress",
+    "email_address",
+    "mail",
+    "phone",
+    "phonenumber",
+    "phone_number",
+    "mobile",
+    "mobile_number",
+    "mobilenumber",
+    "whatsapp",
+    "whatsappnumber",
+    "whatsapp_number",
+]);
 
 const getTemplateVariableHelpText = (token: string): string => {
     const normalized = normalizeTemplateVariableToken(token);
 
     if (["name", "fullname", "guestname", "customername"].includes(normalized)) {
-        return "Auto-maps to the contact's saved name. Recommended token: {{name}}.";
+        return "Filled from the contact's saved name when the campaign sends.";
     }
 
     if (["firstname", "givenname"].includes(normalized)) {
-        return "Auto-maps to the first word of the contact name. Recommended token: {{firstname}}.";
+        return "Filled from the first word of the contact name when the campaign sends.";
     }
 
     if (["lastname", "surname", "familyname"].includes(normalized)) {
-        return "Auto-maps to the remaining part of the contact name after the first word.";
+        return "Filled from the remaining part of the contact name after the first word.";
     }
 
     if (["email", "emailaddress", "mail"].includes(normalized)) {
-        return "Auto-maps to the contact email.";
+        return "Filled from the contact email when the campaign sends.";
     }
 
     if (["phone", "phonenumber", "mobile", "whatsapp", "whatsappnumber"].includes(normalized)) {
-        return "Auto-maps to the contact phone/WhatsApp number.";
+        return "Filled from the contact phone/WhatsApp number when the campaign sends.";
     }
 
-    return `Looks for a custom imported field normalized as "${normalized}". Example: "Booking ID" can be used as {{bookingid}} or {{booking_id}}.`;
+    return `Filled from a matching imported custom field. Use lowercase with underscores, e.g. {{booking_id}}.`;
+};
+
+const isSupportedTemplateVariable = (token: string): boolean => {
+    const canonical = canonicalizeTemplateVariableToken(token);
+    if (!canonical) return false;
+
+    return SUPPORTED_TEMPLATE_VARIABLE_TOKENS.has(canonical)
+        || SUPPORTED_TEMPLATE_VARIABLE_TOKENS.has(normalizeTemplateVariableToken(canonical))
+        || /^[a-z][a-z0-9_]*$/.test(canonical);
+};
+
+const getTemplateVariableValidationError = (
+    content: string,
+    extraTexts: string[] = [],
+    options?: { allowBodyVariables?: boolean; staticOnlyLabel?: string },
+): string | null => {
+    const allowBodyVariables = options?.allowBodyVariables !== false;
+    const texts = [content, ...extraTexts];
+    const rawPlaceholders = texts.flatMap((value) => extractRawTemplatePlaceholders(value));
+
+    for (const raw of rawPlaceholders) {
+        const canonical = canonicalizeTemplateVariableToken(raw);
+        if (!canonical) {
+            return `Invalid parameter "{{${String(raw).trim()}}}". Use {{name}}, {{firstname}}, {{lastname}}, {{email}}, or {{phone}}. Custom fields must look like {{booking_id}}.`;
+        }
+        if (!isSupportedTemplateVariable(canonical)) {
+            return `Unsupported parameter {{${canonical}}}. Only contact fields WhatsApp can fill are allowed.`;
+        }
+    }
+
+    if (!allowBodyVariables && rawPlaceholders.length) {
+        return options?.staticOnlyLabel || "This field cannot include template variables.";
+    }
+
+    if (!allowBodyVariables) {
+        return null;
+    }
+
+    if (/\{\{\w+\}\}\{\{\w+\}\}/.test(content)) {
+        return "Variables cannot sit next to each other. Add text or a space between them.";
+    }
+
+    if (extractTemplateVariableTokens(content).length && !content.replace(/\{\{\w+\}\}/g, "").trim()) {
+        return "Message text cannot be only variables. Add surrounding text so Meta can approve the template.";
+    }
+
+    return null;
+};
+
+const getTemplateMediaAccept = (type: "image" | "video" | "carousel"): string => (
+    type === "video" ? "video/mp4,.mp4" : "image/jpeg,image/png,.jpg,.jpeg,.png"
+);
+
+const getTemplateMediaHelpText = (type: "image" | "video" | "carousel"): string => {
+    if (type === "video") return "MP4 only, max 16MB. WhatsApp rejects other video formats.";
+    if (type === "carousel") return "JPG or PNG, max 5MB per card.";
+    return "JPG or PNG only, max 5MB. WhatsApp rejects GIF, WebP, and other formats.";
+};
+
+const getTemplateMediaValidationError = (file: File, type: "image" | "video" | "carousel"): string | null => {
+    const mime = String(file.type || "").toLowerCase();
+    const extension = file.name.split(".").pop()?.toLowerCase() || "";
+    const isJpeg = mime === "image/jpeg" || mime === "image/jpg" || ["jpg", "jpeg"].includes(extension);
+    const isPng = mime === "image/png" || extension === "png";
+    const isMp4 = mime === "video/mp4" || extension === "mp4";
+
+    if (type === "video") {
+        if (!isMp4) return "Video templates must use an MP4 file";
+        if (file.size > TEMPLATE_VIDEO_MAX_BYTES) return "Video templates must be 16MB or smaller";
+        return null;
+    }
+
+    if (!isJpeg && !isPng) {
+        return type === "carousel"
+            ? "Carousel cards must use a JPG or PNG file"
+            : "Image templates must use a JPG or PNG file";
+    }
+
+    if (file.size > TEMPLATE_IMAGE_MAX_BYTES) {
+        return type === "carousel"
+            ? "Carousel images must be 5MB or smaller"
+            : "Image templates must be 5MB or smaller";
+    }
+
+    return null;
 };
 
 const getCopyCodeValidationError = (value?: string): string | null => {
@@ -430,7 +570,7 @@ const MediaPreviewCard = ({
 }) => {
     if (src) {
         return (
-            <div className="rounded-lg mb-2 overflow-hidden" style={{ background: "#d0c8c0", height: 120 }}>
+            <div className="rounded-lg mb-2 overflow-hidden" style={{ background: "#d0c8c0", height: type === "video" ? 168 : 120 }}>
                 {type === "image" ? (
                     <img
                         src={src}
@@ -453,7 +593,7 @@ const MediaPreviewCard = ({
     return (
         <div
             className="rounded-lg mb-2 overflow-hidden"
-            style={{ background: "#d0c8c0", height: 120, display: "flex", alignItems: "center", justifyContent: "center" }}
+            style={{ background: "#d0c8c0", height: type === "video" ? 168 : 120, display: "flex", alignItems: "center", justifyContent: "center" }}
         >
             <div className="text-center px-4">
                 {type === "image" ? (
@@ -636,6 +776,21 @@ export default function WhatsAppPage() {
     const hasPendingSubmittedTemplates = templates.some(
         (template) => template.metaSubmissionStatus === "submitted" && template.status === "pending",
     );
+    const hasActiveCampaigns = campaigns.some((campaign) => {
+        if (campaign.status === "sending" || campaign.status === "scheduled") return true;
+
+        if (
+            campaign.status === "completed"
+            && campaign.stats.sent > campaign.stats.delivered
+        ) {
+            const updatedAt = Date.parse(campaign.updatedAt || campaign.completedAt || campaign.createdAt);
+            return Number.isFinite(updatedAt) && Date.now() - updatedAt < RECENT_DRAFT_CAMPAIGN_MS;
+        }
+
+        if (campaign.status !== "draft") return false;
+        const createdAt = Date.parse(campaign.createdAt);
+        return Number.isFinite(createdAt) && Date.now() - createdAt < RECENT_DRAFT_CAMPAIGN_MS;
+    });
 
     const [contactSearch, setContactSearch] = useState("");
     const [templateSearch, setTemplateSearch] = useState("");
@@ -679,6 +834,11 @@ export default function WhatsAppPage() {
     const [campaignReportCache, setCampaignReportCache] = useState<Record<number, CampaignDetails>>({});
     const hasCopyCodeButton = newTemplate.buttons.some((button) => button.type === "copy_code");
     const extractedTemplateVariables = extractTemplateVariableTokens(newTemplate.content);
+    const invalidTemplatePlaceholders = extractRawTemplatePlaceholders(newTemplate.content)
+        .filter((raw, index, items) => items.indexOf(raw) === index && !canonicalizeTemplateVariableToken(raw));
+    const dynamicUrlSuffixes = newTemplate.buttons
+        .filter((button) => button.type === "url" && button.urlType === "dynamic")
+        .map((button) => button.urlSuffix || "");
     const selectedCampaignContactLists = contactLists.filter((list) => (
         (campaignForm.contactListIds || []).includes(list.id)
     ));
@@ -780,6 +940,42 @@ export default function WhatsAppPage() {
         return () => window.clearInterval(interval);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [token, hasPendingSubmittedTemplates]);
+
+    useEffect(() => {
+        if (!token || !hasActiveCampaigns) return;
+
+        const interval = window.setInterval(() => {
+            Promise.all([loadCampaigns(), loadStats()]).catch((error) => {
+                console.error("Campaign status polling failed:", error);
+            });
+        }, CAMPAIGN_POLL_INTERVAL_MS);
+
+        return () => window.clearInterval(interval);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [token, hasActiveCampaigns]);
+
+    useEffect(() => {
+        if (!token || !campaignReportModal || !selectedCampaignReport) return;
+
+        const shouldPollReport = ["draft", "sending", "scheduled"].includes(selectedCampaignReport.status)
+            || selectedCampaignReport.stats.delivered < selectedCampaignReport.stats.sent;
+
+        if (!shouldPollReport) return;
+
+        const campaignId = selectedCampaignReport.id;
+        const interval = window.setInterval(() => {
+            loadCampaignReport(campaignId)
+                .then((report) => {
+                    setSelectedCampaignReport(report);
+                })
+                .catch((error) => {
+                    console.error("Campaign report polling failed:", error);
+                });
+        }, CAMPAIGN_POLL_INTERVAL_MS);
+
+        return () => window.clearInterval(interval);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [token, campaignReportModal, selectedCampaignReport?.id, selectedCampaignReport?.status, selectedCampaignReport?.stats.sent, selectedCampaignReport?.stats.delivered]);
 
     useEffect(() => {
         if (!newTemplate.mediaFile) {
@@ -1120,15 +1316,54 @@ export default function WhatsAppPage() {
                 return;
             }
 
+            if (newTemplate.category === "authentication" && extractTemplateVariableTokens(newTemplate.content).length) {
+                message.error("Authentication templates cannot include variables like {{name}}. Use Utility or Marketing instead.");
+                return;
+            }
+
+            const bodyVariableError = getTemplateVariableValidationError(
+                newTemplate.content,
+                dynamicUrlSuffixes,
+                { allowBodyVariables: newTemplate.category !== "authentication" },
+            );
+            if (bodyVariableError) {
+                message.error(bodyVariableError);
+                return;
+            }
+
+            if (newTemplate.type === "carousel") {
+                const cardWithVariables = newTemplate.carouselItems.find((item) => extractRawTemplatePlaceholders(item.text).length);
+                if (cardWithVariables) {
+                    message.error("Carousel card text must be static. Put variables like {{name}} in the intro text only.");
+                    return;
+                }
+            }
+
             if ((newTemplate.type === "image" || newTemplate.type === "video") && !newTemplate.mediaFile) {
                 message.error(`Please upload a ${newTemplate.type} file`);
                 return;
+            }
+
+            if (newTemplate.mediaFile && (newTemplate.type === "image" || newTemplate.type === "video")) {
+                const mediaError = getTemplateMediaValidationError(newTemplate.mediaFile, newTemplate.type);
+                if (mediaError) {
+                    message.error(mediaError);
+                    return;
+                }
             }
 
             if (newTemplate.type === "carousel") {
                 const invalidCard = newTemplate.carouselItems.find((item) => !item.text.trim() || !item.file);
                 if (invalidCard) {
                     message.error("Each carousel card needs both text and a file");
+                    return;
+                }
+
+                const invalidMediaCard = newTemplate.carouselItems.find((item) => (
+                    item.file ? getTemplateMediaValidationError(item.file, "carousel") : null
+                ));
+                if (invalidMediaCard?.file) {
+                    message.error(getTemplateMediaValidationError(invalidMediaCard.file, "carousel"));
                     return;
                 }
             }
@@ -1390,8 +1625,7 @@ export default function WhatsAppPage() {
         setNewTemplate((prev) => ({
             ...prev,
             type,
-            content: type === "carousel" ? prev.content : prev.content,
-            mediaFile: type === "image" || type === "video" ? prev.mediaFile : null,
+            mediaFile: null,
             carouselItems: type === "carousel" ? (prev.carouselItems.length ? prev.carouselItems : [createCarouselDraftItem()]) : prev.carouselItems,
             buttons: type === "carousel" ? [] : prev.buttons,
         }));
@@ -1428,6 +1662,11 @@ export default function WhatsAppPage() {
     };
 
     const insertTemplateVariable = (token: string) => {
+        if (newTemplate.category === "authentication") {
+            message.warning("Authentication templates cannot include contact variables");
+            return;
+        }
+
         setNewTemplate((prev) => {
             const nextToken = `{{${token}}}`;
             const needsLeadingSpace = Boolean(prev.content) && !/[\s\n]$/.test(prev.content);
@@ -1665,11 +1904,24 @@ export default function WhatsAppPage() {
         {
             title: "Progress", key: "progress",
             render: (_: any, record: Campaign) => {
-                const pct = record.stats.total > 0 ? Math.round((record.stats.delivered / record.stats.total) * 100) : 0;
+                const total = record.stats.total;
+                const inFlight = record.status === "sending" || record.status === "draft";
+                const numerator = inFlight ? record.stats.sent : record.stats.delivered;
+                const pct = total > 0
+                    ? Math.round((numerator / total) * 100)
+                    : (record.status === "sending" ? 5 : 0);
                 return (
                     <div style={{ minWidth: 120 }}>
-                        <Progress percent={pct} size="small" status={record.status === "failed" ? "exception" : record.status === "completed" ? "success" : "active"} />
-                        <div className="text-xs text-gray-500">{record.stats.delivered}/{record.stats.total} delivered</div>
+                        <Progress
+                            percent={pct}
+                            size="small"
+                            status={record.status === "failed" ? "exception" : record.status === "completed" ? "success" : "active"}
+                        />
+                        <div className="text-xs text-gray-500">
+                            {inFlight
+                                ? `${record.stats.sent}/${total || 0} sent`
+                                : `${record.stats.delivered}/${total || 0} delivered`}
+                        </div>
                     </div>
                 );
             },
@@ -2400,6 +2652,13 @@ export default function WhatsAppPage() {
                                         message={`Copy offer code templates are safest as Marketing. Use a fixed code up to ${COPY_CODE_MAX_LENGTH} characters; WhatsApp controls the button label.`}
                                     />
                                 ) : null}
+                                {newTemplate.category === "authentication" ? (
+                                    <Alert
+                                        showIcon
+                                        type="warning"
+                                        message="Authentication templates cannot include variables like {{name}}. Use Utility or Marketing if you need contact fields."
+                                    />
+                                ) : null}
                                 <Form.Item label="Media Type">
                                     <Select
                                         value={newTemplate.type}
@@ -2412,10 +2671,19 @@ export default function WhatsAppPage() {
                                     </Select>
                                 </Form.Item>
                                 {(newTemplate.type === "image" || newTemplate.type === "video") && (
-                                    <Form.Item label={`Upload ${newTemplate.type === "image" ? "Image" : "Video"}`} required>
+                                    <Form.Item
+                                        label={`Upload ${newTemplate.type === "image" ? "Image" : "Video"}`}
+                                        required
+                                        extra={getTemplateMediaHelpText(newTemplate.type)}
+                                    >
                                         <Upload
-                                            accept={newTemplate.type === "image" ? "image/*" : "video/*"}
+                                            accept={getTemplateMediaAccept(newTemplate.type)}
                                             beforeUpload={(file) => {
+                                                const mediaError = getTemplateMediaValidationError(file as File, newTemplate.type as "image" | "video");
+                                                if (mediaError) {
+                                                    message.error(mediaError);
+                                                    return false;
+                                                }
                                                 setNewTemplate((prev) => ({ ...prev, mediaFile: file as File }));
                                                 return false;
                                             }}
@@ -2434,24 +2702,25 @@ export default function WhatsAppPage() {
                                         <div className="space-y-3">
                                             <TextArea
                                                 rows={5}
-                                                placeholder={"Hi {{name}}, welcome to {{hotel}}!"}
+                                                placeholder={"Hi {{name}}, your booking is confirmed."}
                                                 value={newTemplate.content}
                                                 onChange={(e) => setNewTemplate({ ...newTemplate, content: e.target.value })}
                                             />
                                             <Alert
                                                 showIcon
                                                 type="info"
-                                                message="Use variables in double braces"
+                                                message="Insert only supported contact parameters"
                                                 description={(
                                                     <div className="space-y-3">
                                                         <div>
-                                                            Type values like <code>{"{{name}}"}</code> inside the message. Common contact fields are auto-mapped, and imported custom fields are matched after normalizing spaces, dashes, and underscores.
+                                                            These values are filled from each contact when the campaign sends. Unsupported tokens are blocked so Meta does not reject the template.
                                                         </div>
                                                         <div className="flex flex-wrap gap-2">
                                                             {TEMPLATE_VARIABLE_SUGGESTIONS.map((item) => (
                                                                 <Button
                                                                     key={item.token}
                                                                     size="small"
+                                                                    disabled={newTemplate.category === "authentication"}
                                                                     onClick={() => insertTemplateVariable(item.token)}
                                                                 >
                                                                     Insert {"{{" + item.token + "}}"}
@@ -2459,15 +2728,25 @@ export default function WhatsAppPage() {
                                                             ))}
                                                         </div>
                                                         <div className="text-xs text-gray-600">
-                                                            Recommended: <code>{"{{name}}"}</code> for the contact name, <code>{"{{firstname}}"}</code> for the first name, <code>{"{{email}}"}</code> for email, and <code>{"{{phone}}"}</code> for phone. Example custom field mapping: <code>Booking ID</code> can be used as <code>{"{{bookingid}}"}</code> or <code>{"{{booking_id}}"}</code>.
+                                                            Supported: <code>{"{{name}}"}</code>, <code>{"{{firstname}}"}</code>, <code>{"{{lastname}}"}</code>, <code>{"{{email}}"}</code>, and <code>{"{{phone}}"}</code>. Custom imported fields are allowed if they look like <code>{"{{booking_id}}"}</code>.
                                                         </div>
+                                                        {invalidTemplatePlaceholders.length ? (
+                                                            <div className="space-y-2">
+                                                                <div className="text-xs font-medium text-red-600">These parameters will be rejected</div>
+                                                                <div className="flex flex-wrap gap-2">
+                                                                    {invalidTemplatePlaceholders.map((token) => (
+                                                                        <Tag key={token} color="error">{"{{" + token + "}}"}</Tag>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+                                                        ) : null}
                                                         {extractedTemplateVariables.length ? (
                                                             <div className="space-y-2">
                                                                 <div className="text-xs font-medium text-gray-700">Detected variables</div>
                                                                 <div className="flex flex-wrap gap-2">
                                                                     {extractedTemplateVariables.map((token) => (
                                                                         <Tooltip key={token} title={getTemplateVariableHelpText(token)}>
-                                                                            <Tag color="purple">{"{{" + token + "}}"}</Tag>
+                                                                            <Tag color={canonicalizeTemplateVariableToken(token) ? "purple" : "error"}>{"{{" + token + "}}"}</Tag>
                                                                         </Tooltip>
                                                                     ))}
                                                                 </div>
@@ -2496,13 +2775,14 @@ export default function WhatsAppPage() {
                                                     description={(
                                                         <div className="space-y-2">
                                                             <div>
-                                                                Carousel intro text also supports variables like <code>{"{{name}}"}</code>. Common contact fields map automatically.
+                                                                Carousel intro text supports the same contact variables, such as <code>{"{{name}}"}</code>. Card text must stay static.
                                                             </div>
                                                             <div className="flex flex-wrap gap-2">
-                                                                {TEMPLATE_VARIABLE_SUGGESTIONS.slice(0, 4).map((item) => (
+                                                                {TEMPLATE_VARIABLE_SUGGESTIONS.map((item) => (
                                                                     <Button
                                                                         key={item.token}
                                                                         size="small"
+                                                                        disabled={newTemplate.category === "authentication"}
                                                                         onClick={() => insertTemplateVariable(item.token)}
                                                                     >
                                                                         Insert {"{{" + item.token + "}}"}
@@ -2519,8 +2799,13 @@ export default function WhatsAppPage() {
                                                 <Card key={item.id} size="small" title={`Card ${index + 1}`}>
                                                     <div className="space-y-3">
                                                         <Upload
-                                                            accept="image/*"
+                                                            accept={getTemplateMediaAccept("carousel")}
                                                             beforeUpload={(file) => {
+                                                                const mediaError = getTemplateMediaValidationError(file as File, "carousel");
+                                                                if (mediaError) {
+                                                                    message.error(mediaError);
+                                                                    return false;
+                                                                }
                                                                 updateCarouselItem(item.id, { file: file as File });
                                                                 return false;
                                                             }}

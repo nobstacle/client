@@ -334,7 +334,11 @@ export default function WhatsappMetaAccountsPage() {
                         </Select>
                     </Form.Item>
 
-                    <Form.Item label="Meta App ID (optional)" name="appId">
+                    <Form.Item
+                        label="Meta App ID"
+                        name="appId"
+                        extra="Needed for image and video template uploads. If left blank, we try to resolve it from the access token."
+                    >
                         <Input placeholder="e.g. 1234567890" />
                     </Form.Item>
 
