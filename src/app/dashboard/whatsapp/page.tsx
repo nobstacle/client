@@ -29,6 +29,9 @@ const { TextArea } = Input;
 const { Step } = Steps;
 const { Dragger } = Upload;
 const COPY_CODE_MAX_LENGTH = 15;
+const CAROUSEL_MIN_CARDS = 2;
+const CAROUSEL_MAX_CARDS = 10;
+const CAROUSEL_MAX_BUTTONS = 2;
 const TEMPLATE_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
 const TEMPLATE_VIDEO_MAX_BYTES = 16 * 1024 * 1024;
 const CAMPAIGN_POLL_INTERVAL_MS = 4000;
@@ -83,12 +86,14 @@ interface Template {
 interface CarouselTemplateItem {
     mediaUrl?: string;
     text: string;
+    buttons?: TemplateButtonConfig[] | null;
 }
 
 interface CarouselDraftItem {
     id: string;
     text: string;
     file: File | null;
+    buttons: TemplateButtonDraft[];
 }
 
 interface TemplateButtonConfig {
@@ -218,12 +223,6 @@ const MetaSubmissionTag = ({ status }: { status: Template["metaSubmissionStatus"
     return <Tag color={config.color}>{config.label}</Tag>;
 };
 
-const createCarouselDraftItem = (): CarouselDraftItem => ({
-    id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-    text: "",
-    file: null,
-});
-
 const createTemplateButtonDraft = (): TemplateButtonDraft => ({
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     type: "url",
@@ -235,15 +234,57 @@ const createTemplateButtonDraft = (): TemplateButtonDraft => ({
     offerCode: "",
 });
 
+const createCarouselDraftItem = (buttonBlueprints?: TemplateButtonDraft[]): CarouselDraftItem => ({
+    id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    text: "",
+    file: null,
+    buttons: (buttonBlueprints?.length ? buttonBlueprints : [createTemplateButtonDraft()]).map((button) => ({
+        ...createTemplateButtonDraft(),
+        type: button.type === "copy_code" ? "url" : button.type,
+        urlType: button.urlType || "static",
+    })),
+});
+
 const createEmptyTemplateState = (): TemplateFormState => ({
     name: "",
     category: "marketing",
     type: "text",
     content: "",
     mediaFile: null,
-    carouselItems: [createCarouselDraftItem()],
+    carouselItems: [createCarouselDraftItem(), createCarouselDraftItem()],
     buttons: [],
 });
+
+const serializeTemplateButton = (button: TemplateButtonDraft) => {
+    if (button.type === "phone_number") {
+        return {
+            type: "phone_number" as const,
+            text: button.text?.trim(),
+            phoneNumber: button.phoneNumber?.trim(),
+        };
+    }
+
+    if (button.type === "copy_code") {
+        return {
+            type: "copy_code" as const,
+            offerCode: button.offerCode?.trim(),
+        };
+    }
+
+    return {
+        type: "url" as const,
+        urlType: button.urlType,
+        text: button.text?.trim(),
+        url: button.url?.trim(),
+        urlSuffix: button.urlType === "dynamic" ? button.urlSuffix?.trim() : undefined,
+    };
+};
+
+const getCarouselButtonSignature = (buttons: Array<Pick<TemplateButtonConfig, "type" | "urlType">>): string => (
+    buttons.map((button) => (
+        button.type === "url" ? `url:${button.urlType || "static"}` : button.type
+    )).join("|")
+);
 
 const extractTemplateVariableTokens = (content: string): string[] => {
     const matches = content.match(/\{\{(\w+)\}\}/g) || [];
@@ -836,9 +877,16 @@ export default function WhatsAppPage() {
     const extractedTemplateVariables = extractTemplateVariableTokens(newTemplate.content);
     const invalidTemplatePlaceholders = extractRawTemplatePlaceholders(newTemplate.content)
         .filter((raw, index, items) => items.indexOf(raw) === index && !canonicalizeTemplateVariableToken(raw));
-    const dynamicUrlSuffixes = newTemplate.buttons
-        .filter((button) => button.type === "url" && button.urlType === "dynamic")
-        .map((button) => button.urlSuffix || "");
+    const dynamicUrlSuffixes = [
+        ...newTemplate.buttons
+            .filter((button) => button.type === "url" && button.urlType === "dynamic")
+            .map((button) => button.urlSuffix || ""),
+        ...newTemplate.carouselItems.flatMap((item) => (
+            (item.buttons || [])
+                .filter((button) => button.type === "url" && button.urlType === "dynamic")
+                .map((button) => button.urlSuffix || "")
+        )),
+    ];
     const selectedCampaignContactLists = contactLists.filter((list) => (
         (campaignForm.contactListIds || []).includes(list.id)
     ));
@@ -1337,6 +1385,16 @@ export default function WhatsAppPage() {
                     message.error("Carousel card text must be static. Put variables like {{name}} in the intro text only.");
                     return;
                 }
+
+                if (newTemplate.carouselItems.length < CAROUSEL_MIN_CARDS) {
+                    message.error(`Carousel templates need at least ${CAROUSEL_MIN_CARDS} cards`);
+                    return;
+                }
+
+                if (newTemplate.carouselItems.length > CAROUSEL_MAX_CARDS) {
+                    message.error(`Carousel templates can have at most ${CAROUSEL_MAX_CARDS} cards`);
+                    return;
+                }
             }
 
             if ((newTemplate.type === "image" || newTemplate.type === "video") && !newTemplate.mediaFile) {
@@ -1364,6 +1422,35 @@ export default function WhatsAppPage() {
                 ));
                 if (invalidMediaCard?.file) {
                     message.error(getTemplateMediaValidationError(invalidMediaCard.file, "carousel"));
+                    return;
+                }
+
+                const cardMissingButtons = newTemplate.carouselItems.find((item) => !(item.buttons || []).length);
+                if (cardMissingButtons) {
+                    message.error("Each carousel card needs at least one button. Meta rejects cards without buttons.");
+                    return;
+                }
+
+                const cardWithTooManyButtons = newTemplate.carouselItems.find((item) => (item.buttons || []).length > CAROUSEL_MAX_BUTTONS);
+                if (cardWithTooManyButtons) {
+                    message.error(`Each carousel card can have at most ${CAROUSEL_MAX_BUTTONS} buttons`);
+                    return;
+                }
+
+                const cardWithCopyCode = newTemplate.carouselItems.find((item) => (
+                    (item.buttons || []).some((button) => button.type === "copy_code")
+                ));
+                if (cardWithCopyCode) {
+                    message.error("Carousel cards cannot use copy code buttons. Use a website or phone button.");
+                    return;
+                }
+
+                const expectedButtonSignature = getCarouselButtonSignature(newTemplate.carouselItems[0].buttons || []);
+                const mismatchedCard = newTemplate.carouselItems.find((item) => (
+                    getCarouselButtonSignature(item.buttons || []) !== expectedButtonSignature
+                ));
+                if (mismatchedCard) {
+                    message.error("Every carousel card must use the same button types in the same order");
                     return;
                 }
             }
@@ -1398,7 +1485,7 @@ export default function WhatsAppPage() {
             }
 
             if (newTemplate.type === "carousel" && newTemplate.buttons.length > 0) {
-                message.error("CTA buttons are currently available for text, image, and video templates only");
+                message.error("Add buttons on each carousel card instead of template-level CTA buttons");
                 return;
             }
 
@@ -1427,6 +1514,25 @@ export default function WhatsAppPage() {
                 return;
             }
 
+            if (newTemplate.type === "carousel") {
+                const invalidCarouselButton = newTemplate.carouselItems
+                    .flatMap((item) => item.buttons || [])
+                    .find((button) => {
+                        if (button.type === "phone_number") {
+                            return !button.text?.trim() || !button.phoneNumber?.trim();
+                        }
+
+                        return !button.text?.trim()
+                            || !button.url?.trim()
+                            || (button.urlType === "dynamic" && !button.urlSuffix?.trim());
+                    });
+
+                if (invalidCarouselButton) {
+                    message.error("Please complete all carousel card button fields before submitting");
+                    return;
+                }
+            }
+
             const formData = new FormData();
             formData.append("name", newTemplate.name.trim());
             formData.append("category", newTemplate.category);
@@ -1437,30 +1543,7 @@ export default function WhatsAppPage() {
                 formData.append(
                     "buttons",
                     JSON.stringify(
-                        newTemplate.buttons.map((button) => {
-                            if (button.type === "phone_number") {
-                                return {
-                                    type: "phone_number",
-                                    text: button.text?.trim(),
-                                    phoneNumber: button.phoneNumber?.trim(),
-                                };
-                            }
-
-                            if (button.type === "copy_code") {
-                                return {
-                                    type: "copy_code",
-                                    offerCode: button.offerCode?.trim(),
-                                };
-                            }
-
-                            return {
-                                type: "url",
-                                urlType: button.urlType,
-                                text: button.text?.trim(),
-                                url: button.url?.trim(),
-                                urlSuffix: button.urlType === "dynamic" ? button.urlSuffix?.trim() : undefined,
-                            };
-                        }),
+                        newTemplate.buttons.map(serializeTemplateButton),
                     ),
                 );
             }
@@ -1477,6 +1560,7 @@ export default function WhatsAppPage() {
                     JSON.stringify(
                         newTemplate.carouselItems.map((item) => ({
                             text: item.text.trim(),
+                            buttons: (item.buttons || []).map(serializeTemplateButton),
                         })),
                     ),
                 );
@@ -1622,13 +1706,24 @@ export default function WhatsAppPage() {
     };
 
     const updateTemplateType = (type: TemplateFormState["type"]) => {
-        setNewTemplate((prev) => ({
-            ...prev,
-            type,
-            mediaFile: null,
-            carouselItems: type === "carousel" ? (prev.carouselItems.length ? prev.carouselItems : [createCarouselDraftItem()]) : prev.carouselItems,
-            buttons: type === "carousel" ? [] : prev.buttons,
-        }));
+        setNewTemplate((prev) => {
+            const nextCarouselItems = prev.carouselItems.map((item) => ({
+                ...item,
+                buttons: item.buttons?.length ? item.buttons : [createTemplateButtonDraft()],
+            }));
+
+            while (nextCarouselItems.length < CAROUSEL_MIN_CARDS) {
+                nextCarouselItems.push(createCarouselDraftItem(nextCarouselItems[0]?.buttons));
+            }
+
+            return {
+                ...prev,
+                type,
+                mediaFile: null,
+                carouselItems: type === "carousel" ? nextCarouselItems : prev.carouselItems,
+                buttons: type === "carousel" ? [] : prev.buttons,
+            };
+        });
     };
 
     const updateCarouselItem = (id: string, patch: Partial<CarouselDraftItem>) => {
@@ -1639,19 +1734,98 @@ export default function WhatsAppPage() {
     };
 
     const addCarouselItem = () => {
-        setNewTemplate((prev) => ({
-            ...prev,
-            carouselItems: [...prev.carouselItems, createCarouselDraftItem()],
-        }));
+        setNewTemplate((prev) => {
+            if (prev.carouselItems.length >= CAROUSEL_MAX_CARDS) {
+                message.warning(`A maximum of ${CAROUSEL_MAX_CARDS} carousel cards is allowed`);
+                return prev;
+            }
+
+            return {
+                ...prev,
+                carouselItems: [...prev.carouselItems, createCarouselDraftItem(prev.carouselItems[0]?.buttons)],
+            };
+        });
     };
 
     const removeCarouselItem = (id: string) => {
         setNewTemplate((prev) => ({
             ...prev,
-            carouselItems: prev.carouselItems.length === 1
+            carouselItems: prev.carouselItems.length <= CAROUSEL_MIN_CARDS
                 ? prev.carouselItems
                 : prev.carouselItems.filter((item) => item.id !== id),
         }));
+    };
+
+    const updateCarouselCardButton = (cardId: string, buttonId: string, patch: Partial<TemplateButtonDraft>) => {
+        setNewTemplate((prev) => ({
+            ...prev,
+            carouselItems: prev.carouselItems.map((item) => (
+                item.id === cardId
+                    ? {
+                        ...item,
+                        buttons: (item.buttons || []).map((button) => button.id === buttonId ? { ...button, ...patch } : button),
+                    }
+                    : item
+            )),
+        }));
+    };
+
+    const updateCarouselButtonActionAtIndex = (buttonIndex: number, action: "phone_number" | "url_static" | "url_dynamic") => {
+        setNewTemplate((prev) => ({
+            ...prev,
+            carouselItems: prev.carouselItems.map((item) => ({
+                ...item,
+                buttons: (item.buttons || []).map((button, index) => {
+                    if (index !== buttonIndex) return button;
+
+                    if (action === "phone_number") {
+                        return { ...button, type: "phone_number", urlType: undefined, url: "", urlSuffix: "" };
+                    }
+
+                    return {
+                        ...button,
+                        type: "url",
+                        urlType: action === "url_dynamic" ? "dynamic" : "static",
+                        phoneNumber: "",
+                        urlSuffix: action === "url_dynamic" ? button.urlSuffix : "",
+                    };
+                }),
+            })),
+        }));
+    };
+
+    const addCarouselButtonsToAllCards = () => {
+        setNewTemplate((prev) => {
+            if (prev.carouselItems.some((item) => (item.buttons || []).length >= CAROUSEL_MAX_BUTTONS)) {
+                message.warning(`Each carousel card can have at most ${CAROUSEL_MAX_BUTTONS} buttons`);
+                return prev;
+            }
+
+            return {
+                ...prev,
+                carouselItems: prev.carouselItems.map((item) => ({
+                    ...item,
+                    buttons: [...(item.buttons || []), createTemplateButtonDraft()],
+                })),
+            };
+        });
+    };
+
+    const removeCarouselButtonAtIndex = (buttonIndex: number) => {
+        setNewTemplate((prev) => {
+            if (prev.carouselItems.some((item) => (item.buttons || []).length <= 1)) {
+                message.warning("Each carousel card needs at least one button");
+                return prev;
+            }
+
+            return {
+                ...prev,
+                carouselItems: prev.carouselItems.map((item) => ({
+                    ...item,
+                    buttons: (item.buttons || []).filter((_button, index) => index !== buttonIndex),
+                })),
+            };
+        });
     };
 
     const updateTemplateButton = (id: string, patch: Partial<TemplateButtonDraft>) => {
@@ -2823,11 +2997,76 @@ export default function WhatsAppPage() {
                                                             value={item.text}
                                                             onChange={(e) => updateCarouselItem(item.id, { text: e.target.value })}
                                                         />
+                                                        <div className="space-y-2">
+                                                            <div className="text-xs font-medium text-gray-600">Card buttons</div>
+                                                            {(item.buttons || []).map((button, buttonIndex) => (
+                                                                <div key={button.id} className="space-y-2 rounded-xl border border-gray-200 p-3">
+                                                                    <Select
+                                                                        value={getButtonActionValue(button)}
+                                                                        onChange={(value) => updateCarouselButtonActionAtIndex(buttonIndex, value as "phone_number" | "url_static" | "url_dynamic")}
+                                                                        className="w-full"
+                                                                    >
+                                                                        <Option value="phone_number">Call phone number</Option>
+                                                                        <Option value="url_static">Visit website (static)</Option>
+                                                                        <Option value="url_dynamic">Visit website (dynamic)</Option>
+                                                                    </Select>
+                                                                    {button.type === "phone_number" && (
+                                                                        <Row gutter={12}>
+                                                                            <Col span={12}>
+                                                                                <Input
+                                                                                    placeholder="Button label"
+                                                                                    value={button.text}
+                                                                                    onChange={(e) => updateCarouselCardButton(item.id, button.id, { text: e.target.value })}
+                                                                                />
+                                                                            </Col>
+                                                                            <Col span={12}>
+                                                                                <Input
+                                                                                    placeholder="Phone number"
+                                                                                    value={button.phoneNumber}
+                                                                                    onChange={(e) => updateCarouselCardButton(item.id, button.id, { phoneNumber: e.target.value })}
+                                                                                />
+                                                                            </Col>
+                                                                        </Row>
+                                                                    )}
+                                                                    {button.type === "url" && (
+                                                                        <>
+                                                                            <Input
+                                                                                placeholder="Button label"
+                                                                                value={button.text}
+                                                                                onChange={(e) => updateCarouselCardButton(item.id, button.id, { text: e.target.value })}
+                                                                            />
+                                                                            <Input
+                                                                                placeholder="https://example.com/path"
+                                                                                value={button.url}
+                                                                                onChange={(e) => updateCarouselCardButton(item.id, button.id, { url: e.target.value })}
+                                                                            />
+                                                                            {button.urlType === "dynamic" ? (
+                                                                                <Input
+                                                                                    placeholder="{{booking_id}} or offer/{{promo_code}}"
+                                                                                    value={button.urlSuffix}
+                                                                                    onChange={(e) => updateCarouselCardButton(item.id, button.id, { urlSuffix: e.target.value })}
+                                                                                />
+                                                                            ) : null}
+                                                                        </>
+                                                                    )}
+                                                                    <div className="flex justify-end">
+                                                                        <Button
+                                                                            danger
+                                                                            size="small"
+                                                                            icon={<DeleteOutlined />}
+                                                                            onClick={() => removeCarouselButtonAtIndex(buttonIndex)}
+                                                                        >
+                                                                            Remove from all cards
+                                                                        </Button>
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                        </div>
                                                         <div className="flex justify-end">
                                                             <Button
                                                                 danger
                                                                 icon={<DeleteOutlined />}
-                                                                disabled={newTemplate.carouselItems.length === 1}
+                                                                disabled={newTemplate.carouselItems.length <= CAROUSEL_MIN_CARDS}
                                                                 onClick={() => removeCarouselItem(item.id)}
                                                             >
                                                                 Remove Card
@@ -2836,7 +3075,22 @@ export default function WhatsAppPage() {
                                                     </div>
                                                 </Card>
                                             ))}
-                                            <Button type="dashed" block icon={<PlusOutlined />} onClick={addCarouselItem}>
+                                            <Button
+                                                type="dashed"
+                                                block
+                                                icon={<PlusOutlined />}
+                                                onClick={addCarouselButtonsToAllCards}
+                                                disabled={newTemplate.carouselItems.some((item) => (item.buttons || []).length >= CAROUSEL_MAX_BUTTONS)}
+                                            >
+                                                Add Button To All Cards
+                                            </Button>
+                                            <Button
+                                                type="dashed"
+                                                block
+                                                icon={<PlusOutlined />}
+                                                onClick={addCarouselItem}
+                                                disabled={newTemplate.carouselItems.length >= CAROUSEL_MAX_CARDS}
+                                            >
                                                 Add Carousel Card
                                             </Button>
                                         </div>
@@ -2943,7 +3197,7 @@ export default function WhatsAppPage() {
                                     <Alert
                                         type="info"
                                         showIcon
-                                        message="CTA buttons are currently available for text, image, and video templates."
+                                        message="Each carousel card needs 1-2 buttons (website or phone). All cards must use the same button types in the same order."
                                     />
                                 )}
                             </Form>
@@ -3020,6 +3274,17 @@ export default function WhatsAppPage() {
                                             />
                                         ) : null}
                                         <div className="text-sm text-gray-700">{item.text || "No text"}</div>
+                                        {item.buttons?.length ? (
+                                            <div className="mt-2 flex flex-wrap gap-1">
+                                                {item.buttons.map((button, buttonIndex) => (
+                                                    <Tag key={`${button.type}-${button.text || buttonIndex}`}>
+                                                        {button.type === "phone_number"
+                                                            ? `Call: ${button.text || button.phoneNumber}`
+                                                            : `${button.urlType === "dynamic" ? "Dynamic URL" : "Website"}: ${button.text || "Visit"}`}
+                                                    </Tag>
+                                                ))}
+                                            </div>
+                                        ) : null}
                                     </Card>
                                 ))}
                             </div>
