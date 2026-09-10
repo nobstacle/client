@@ -75,6 +75,8 @@ interface Template {
     status: "pending" | "approved" | "rejected";
     metaSubmissionStatus: "submitted" | "saved_locally_only" | "failed";
     metaSubmissionError?: string;
+    externalId?: string | null;
+    language?: string;
     content: string;
     variables?: string[];
     mediaUrl?: string;
@@ -93,6 +95,7 @@ interface CarouselDraftItem {
     id: string;
     text: string;
     file: File | null;
+    mediaUrl?: string;
     buttons: TemplateButtonDraft[];
 }
 
@@ -288,7 +291,9 @@ const getCarouselButtonSignature = (buttons: Array<Pick<TemplateButtonConfig, "t
 
 const extractTemplateVariableTokens = (content: string): string[] => {
     const matches = content.match(/\{\{(\w+)\}\}/g) || [];
-    return [...new Set(matches.map((match) => match.replace(/\{\{|\}\}/g, "")))];
+    return matches
+        .map((match) => match.replace(/\{\{|\}\}/g, ""))
+        .filter((token, index, list) => list.indexOf(token) === index);
 };
 
 const extractRawTemplatePlaceholders = (content: string): string[] => {
@@ -425,6 +430,25 @@ const getTemplateVariableValidationError = (
 
     if (extractTemplateVariableTokens(content).length && !content.replace(/\{\{\w+\}\}/g, "").trim()) {
         return "Message text cannot be only variables. Add surrounding text so Meta can approve the template.";
+    }
+
+    if (extractTemplateVariableTokens(content).length) {
+        let hasLeadingVar = false;
+        let hasTrailingVar = false;
+        try {
+            hasLeadingVar = new RegExp('^[^\\p{L}\\p{N}]*\\{\\{', 'u').test(content);
+            hasTrailingVar = new RegExp('\\}\\}[^\\p{L}\\p{N}]*$', 'u').test(content);
+        } catch {
+            hasLeadingVar = /^[^a-zA-Z0-9]*\{\{/.test(content);
+            hasTrailingVar = /\}\}[^a-zA-Z0-9]*$/.test(content);
+        }
+
+        if (hasLeadingVar) {
+            return "Variables cannot be at the start of the message text. Meta requires static text (like 'Hi {{name}}') before the first variable.";
+        }
+        if (hasTrailingVar) {
+            return "Variables cannot be at the end of the message text. Meta requires static text after the last variable (for example, 'Choose the best promo for you, {{name}}! Book now to save.').";
+        }
     }
 
     return null;
@@ -685,84 +709,96 @@ const WhatsAppPreview = ({
     type: string;
     mediaSrc?: string;
     mediaLabel?: string;
-    carouselItems?: Array<{ text: string; mediaUrl?: string }>;
+    carouselItems?: Array<{ text: string; mediaUrl?: string; buttons?: TemplateButtonConfig[] | null }>;
     buttons?: TemplateButtonConfig[];
 }) => (
-    <div className="flex justify-center py-4">
+    <div className="flex justify-center py-2">
         <div
-            className="relative rounded-3xl shadow-2xl overflow-hidden"
-            style={{ width: 280, background: "#1a1a2e", border: "8px solid #2d2d44" }}
+            className="relative rounded-3xl shadow-2xl overflow-hidden flex flex-col"
+            style={{ width: 290, maxHeight: 560, background: "#1a1a2e", border: "8px solid #2d2d44" }}
         >
             <div className="flex justify-between items-center px-4 py-1 text-white text-xs" style={{ background: "#128C7E" }}>
                 <span className="font-semibold">9:41</span>
                 <div className="flex gap-1 items-center"><span>●●●</span></div>
             </div>
             <div className="flex items-center gap-3 px-3 py-2" style={{ background: "#128C7E" }}>
-                <Avatar size={36} style={{ background: "#075E54" }} icon={<MdWhatsapp />} />
-                <div>
-                    <div className="text-white text-sm font-semibold">Your Hotel</div>
-                    <div className="text-green-100 text-xs">Business Account</div>
+                <Avatar size={34} style={{ background: "#075E54" }} icon={<MdWhatsapp />} />
+                <div className="min-w-0 flex-1">
+                    <div className="text-white text-xs font-semibold truncate">Nobstacle Business</div>
+                    <div className="text-green-100 text-[10px]">Official Business Account</div>
                 </div>
             </div>
-            <div className="p-3 min-h-40" style={{ background: "#ECE5DD" }}>
+            <div className="p-2.5 flex-1 overflow-y-auto" style={{ background: "#ECE5DD", maxHeight: 440 }}>
                 {type === "image" && (
                     <MediaPreviewCard type="image" src={mediaSrc} label={mediaLabel} />
                 )}
                 {type === "video" && (
                     <MediaPreviewCard type="video" src={mediaSrc} label={mediaLabel} />
                 )}
+                <div className="rounded-lg rounded-tl-none p-2.5 text-xs shadow-sm max-w-full" style={{ background: "#fff", color: "#333" }}>
+                    <p className="m-0 leading-relaxed" style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+                        {content || (type === "carousel" ? "Carousel card previews will appear below..." : "Your message preview will appear here...")}
+                    </p>
+                    <div className="flex justify-end mt-1">
+                        <span className="text-gray-400" style={{ fontSize: 9 }}>{dayjs().format("HH:mm")} ✓✓</span>
+                    </div>
+                </div>
                 {type === "carousel" && (
-                    <div className="grid grid-cols-2 gap-2 mb-2">
-                        {(carouselItems?.length ? carouselItems : [{ text: "" }, { text: "" }]).slice(0, 4).map((item, index) => (
+                    <div className="mt-2 flex gap-2 overflow-x-auto pb-1.5 scrollbar-thin" style={{ scrollSnapType: "x mandatory" }}>
+                        {(carouselItems?.length ? carouselItems : [{ text: "Card 1" }, { text: "Card 2" }]).map((item, index) => (
                             <div
                                 key={`${item.text}-${index}`}
-                                className="rounded-lg overflow-hidden text-xs"
-                                style={{ background: "#d0c8c0", minHeight: 96 }}
+                                className="flex flex-col flex-shrink-0 w-36 rounded-lg overflow-hidden shadow-xs border border-gray-200 bg-white"
+                                style={{ scrollSnapAlign: "start" }}
                             >
                                 {item.mediaUrl ? (
                                     <img
                                         src={item.mediaUrl}
                                         alt={item.text || `Card ${index + 1}`}
-                                        className="h-14 w-full object-cover"
+                                        className="h-20 w-full object-cover"
                                     />
                                 ) : (
-                                    <div className="flex items-center justify-center h-14 text-gray-500">
+                                    <div className="flex items-center justify-center h-20 bg-gray-100 text-gray-400">
                                         <AppstoreOutlined style={{ fontSize: 20 }} />
                                     </div>
                                 )}
-                                <div className="text-[10px] text-gray-600 p-2 text-center" style={{ wordBreak: "break-word" }}>
-                                    {item.text || `Card ${index + 1}`}
+                                <div className="p-1.5 flex-1 flex flex-col justify-between">
+                                    <div className="text-[11px] text-gray-800 font-medium line-clamp-2 leading-tight" style={{ wordBreak: "break-word" }}>
+                                        {item.text || `Card ${index + 1}`}
+                                    </div>
+                                    {item.buttons && item.buttons.length > 0 ? (
+                                        <div className="mt-1.5 pt-1 border-t border-gray-100 space-y-0.5">
+                                            {item.buttons.map((btn, bIdx) => (
+                                                <div key={bIdx} className="text-[10px] font-semibold text-[#00a884] flex items-center justify-center gap-1 py-0.5">
+                                                    {getPreviewButtonIcon(btn)}
+                                                    <span className="truncate">{getPreviewButtonLabel(btn)}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : null}
                                 </div>
                             </div>
                         ))}
                     </div>
                 )}
-                <div className="rounded-lg rounded-tl-none p-3 text-sm shadow-sm max-w-full" style={{ background: "#fff", color: "#333" }}>
-                    <p className="m-0 leading-relaxed" style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
-                        {content || (type === "carousel" ? "Carousel card previews will appear here..." : "Your message preview will appear here...")}
-                    </p>
-                    <div className="flex justify-end mt-1">
-                        <span className="text-gray-400" style={{ fontSize: 10 }}>{dayjs().format("HH:mm")} ✓✓</span>
-                    </div>
-                </div>
                 {buttons?.length ? (
-                    <div className="mt-2 space-y-2">
+                    <div className="mt-2 space-y-1.5">
                         {buttons.map((button, index) => (
                             <div
                                 key={`${button.type}-${button.text || button.offerCode || index}`}
-                                className="flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-medium text-blue-600 shadow-sm"
+                                className="flex items-center justify-center gap-1.5 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-medium text-blue-600 shadow-xs"
                             >
                                 {getPreviewButtonIcon(button)}
-                                <span>{getPreviewButtonLabel(button)}</span>
+                                <span className="truncate">{getPreviewButtonLabel(button)}</span>
                             </div>
                         ))}
                     </div>
                 ) : null}
             </div>
             <div className="flex items-center gap-2 px-3 py-2" style={{ background: "#F0F0F0" }}>
-                <div className="flex-1 rounded-full bg-white px-3 py-1 text-gray-400 text-xs">Type a message</div>
-                <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ background: "#128C7E" }}>
-                    <SendOutlined style={{ color: "white", fontSize: 12 }} />
+                <div className="flex-1 rounded-full bg-white px-3 py-1 text-gray-400 text-[11px]">Type a message</div>
+                <div className="w-7 h-7 rounded-full flex items-center justify-center" style={{ background: "#128C7E" }}>
+                    <SendOutlined style={{ color: "white", fontSize: 11 }} />
                 </div>
             </div>
         </div>
@@ -822,7 +858,7 @@ export default function WhatsAppPage() {
 
         if (
             campaign.status === "completed"
-            && campaign.stats.sent > campaign.stats.delivered
+            && campaign.stats.sent > (campaign.stats.delivered + campaign.stats.failed)
         ) {
             const updatedAt = Date.parse(campaign.updatedAt || campaign.completedAt || campaign.createdAt);
             return Number.isFinite(updatedAt) && Date.now() - updatedAt < RECENT_DRAFT_CAMPAIGN_MS;
@@ -855,6 +891,7 @@ export default function WhatsAppPage() {
     const [templateModal, setTemplateModal] = useState(false);
     const [templatePreviewModal, setTemplatePreviewModal] = useState(false);
     const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
+    const [editingTemplate, setEditingTemplate] = useState<Template | null>(null);
     const [newTemplate, setNewTemplate] = useState<TemplateFormState>(createEmptyTemplateState());
     const [templateMediaPreviewUrl, setTemplateMediaPreviewUrl] = useState<string>();
     const [carouselMediaPreviewUrls, setCarouselMediaPreviewUrls] = useState<Record<string, string>>({});
@@ -1006,14 +1043,18 @@ export default function WhatsAppPage() {
         if (!token || !campaignReportModal || !selectedCampaignReport) return;
 
         const shouldPollReport = ["draft", "sending", "scheduled"].includes(selectedCampaignReport.status)
-            || selectedCampaignReport.stats.delivered < selectedCampaignReport.stats.sent;
+            || (selectedCampaignReport.stats.delivered + selectedCampaignReport.stats.failed < selectedCampaignReport.stats.sent);
 
         if (!shouldPollReport) return;
 
         const campaignId = selectedCampaignReport.id;
         const interval = window.setInterval(() => {
-            loadCampaignReport(campaignId)
-                .then((report) => {
+            Promise.all([
+                loadCampaignReport(campaignId),
+                loadCampaigns(),
+                loadStats(),
+            ])
+                .then(([report]) => {
                     setSelectedCampaignReport(report);
                 })
                 .catch((error) => {
@@ -1023,11 +1064,11 @@ export default function WhatsAppPage() {
 
         return () => window.clearInterval(interval);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [token, campaignReportModal, selectedCampaignReport?.id, selectedCampaignReport?.status, selectedCampaignReport?.stats.sent, selectedCampaignReport?.stats.delivered]);
+    }, [token, campaignReportModal, selectedCampaignReport?.id, selectedCampaignReport?.status, selectedCampaignReport?.stats.sent, selectedCampaignReport?.stats.delivered, selectedCampaignReport?.stats.failed]);
 
     useEffect(() => {
         if (!newTemplate.mediaFile) {
-            setTemplateMediaPreviewUrl(undefined);
+            setTemplateMediaPreviewUrl(editingTemplate?.mediaUrl || undefined);
             return;
         }
 
@@ -1037,7 +1078,7 @@ export default function WhatsAppPage() {
         return () => {
             URL.revokeObjectURL(previewUrl);
         };
-    }, [newTemplate.mediaFile]);
+    }, [newTemplate.mediaFile, editingTemplate?.mediaUrl]);
 
     useEffect(() => {
         const nextPreviewUrls = Object.fromEntries(
@@ -1352,6 +1393,76 @@ export default function WhatsAppPage() {
         }
     };
 
+    const isTemplateEditable = (template: Template): boolean => {
+        if (template.metaSubmissionStatus === "submitted" && template.status === "pending") {
+            return false;
+        }
+        return true;
+    };
+
+    const closeTemplateModal = () => {
+        setTemplateModal(false);
+        setEditingTemplate(null);
+        setNewTemplate(createEmptyTemplateState());
+        setTemplateMediaPreviewUrl(undefined);
+        setCarouselMediaPreviewUrls({});
+    };
+
+    const openEditTemplate = (record: Template) => {
+        setEditingTemplate(record);
+
+        const buttonDrafts: TemplateButtonDraft[] = (record.buttons || []).map((btn) => ({
+            id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+            type: btn.type,
+            urlType: btn.urlType || "static",
+            text: btn.text || "",
+            url: btn.url || "",
+            urlSuffix: btn.urlSuffix || "",
+            phoneNumber: btn.phoneNumber || "",
+            offerCode: btn.offerCode || "",
+        }));
+
+        const initialCarouselMediaUrls: Record<string, string> = {};
+        const carouselDraftItems: CarouselDraftItem[] = record.type === "carousel" && record.carouselItems?.length
+            ? record.carouselItems.map((item) => {
+                const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+                if (item.mediaUrl) {
+                    initialCarouselMediaUrls[id] = item.mediaUrl;
+                }
+                return {
+                    id,
+                    text: item.text || "",
+                    file: null,
+                    mediaUrl: item.mediaUrl,
+                    buttons: (item.buttons || []).map((btn) => ({
+                        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+                        type: btn.type,
+                        urlType: btn.urlType || "static",
+                        text: btn.text || "",
+                        url: btn.url || "",
+                        urlSuffix: btn.urlSuffix || "",
+                        phoneNumber: btn.phoneNumber || "",
+                        offerCode: btn.offerCode || "",
+                    })),
+                };
+            })
+            : [createCarouselDraftItem(), createCarouselDraftItem()];
+
+        setCarouselMediaPreviewUrls(initialCarouselMediaUrls);
+        setNewTemplate({
+            name: record.name,
+            category: record.category,
+            type: record.type,
+            content: record.content || "",
+            mediaFile: null,
+            carouselItems: carouselDraftItems,
+            buttons: buttonDrafts,
+        });
+
+        setTemplateMediaPreviewUrl(record.mediaUrl || undefined);
+        setTemplateModal(true);
+    };
+
     const createTemplate = async () => {
         try {
             if (!newTemplate.name.trim()) {
@@ -1397,7 +1508,7 @@ export default function WhatsAppPage() {
                 }
             }
 
-            if ((newTemplate.type === "image" || newTemplate.type === "video") && !newTemplate.mediaFile) {
+            if ((newTemplate.type === "image" || newTemplate.type === "video") && !newTemplate.mediaFile && !editingTemplate?.mediaUrl) {
                 message.error(`Please upload a ${newTemplate.type} file`);
                 return;
             }
@@ -1411,9 +1522,9 @@ export default function WhatsAppPage() {
             }
 
             if (newTemplate.type === "carousel") {
-                const invalidCard = newTemplate.carouselItems.find((item) => !item.text.trim() || !item.file);
+                const invalidCard = newTemplate.carouselItems.find((item) => !item.text.trim() || (!item.file && !item.mediaUrl));
                 if (invalidCard) {
-                    message.error("Each carousel card needs both text and a file");
+                    message.error("Each carousel card needs both text and a file/image");
                     return;
                 }
 
@@ -1534,9 +1645,11 @@ export default function WhatsAppPage() {
             }
 
             const formData = new FormData();
-            formData.append("name", newTemplate.name.trim());
+            if (!editingTemplate) {
+                formData.append("name", newTemplate.name.trim());
+                formData.append("type", newTemplate.type);
+            }
             formData.append("category", newTemplate.category);
-            formData.append("type", newTemplate.type);
             formData.append("content", newTemplate.content.trim());
 
             if (newTemplate.buttons.length > 0) {
@@ -1555,13 +1668,19 @@ export default function WhatsAppPage() {
             }
 
             if (newTemplate.type === "carousel") {
+                let fileIdx = 0;
                 formData.append(
                     "carouselItems",
                     JSON.stringify(
-                        newTemplate.carouselItems.map((item) => ({
-                            text: item.text.trim(),
-                            buttons: (item.buttons || []).map(serializeTemplateButton),
-                        })),
+                        newTemplate.carouselItems.map((item) => {
+                            const hasNewFile = Boolean(item.file);
+                            return {
+                                mediaUrl: item.mediaUrl,
+                                fileIndex: hasNewFile ? fileIdx++ : undefined,
+                                text: item.text.trim(),
+                                buttons: (item.buttons || []).map(serializeTemplateButton),
+                            };
+                        }),
                     ),
                 );
 
@@ -1572,20 +1691,32 @@ export default function WhatsAppPage() {
                 });
             }
 
-            const createdTemplate = await apiRequest<Template>("/whatsapp/templates", {
-                method: "POST",
-                body: formData,
-            });
+            const savedTemplate = editingTemplate
+                ? await apiRequest<Template>(`/whatsapp/templates/${editingTemplate.id}`, {
+                    method: "PUT",
+                    body: formData,
+                })
+                : await apiRequest<Template>("/whatsapp/templates", {
+                    method: "POST",
+                    body: formData,
+                });
 
-            if (createdTemplate.metaSubmissionStatus === "submitted") {
-                message.success("Template was created and submitted to Meta for approval");
-            } else if (createdTemplate.metaSubmissionError) {
-                message.warning(createdTemplate.metaSubmissionError);
+            if (savedTemplate.metaSubmissionStatus === "submitted") {
+                message.success(
+                    editingTemplate
+                        ? "Template was updated and resubmitted to Meta for approval"
+                        : "Template was created and submitted to Meta for approval"
+                );
+            } else if (savedTemplate.metaSubmissionError) {
+                message.warning(savedTemplate.metaSubmissionError);
             } else {
-                message.warning("Template was saved locally only. Meta submission did not complete.");
+                message.warning(
+                    editingTemplate
+                        ? "Template was updated locally only. Meta update did not complete."
+                        : "Template was saved locally only. Meta submission did not complete."
+                );
             }
-            setTemplateModal(false);
-            setNewTemplate(createEmptyTemplateState());
+            closeTemplateModal();
             await loadTemplates();
         } catch (error) {
             message.error(parseErrorMessage(error));
@@ -1669,6 +1800,7 @@ export default function WhatsAppPage() {
         try {
             const report = await loadCampaignReport(campaign.id);
             setSelectedCampaignReport(report);
+            void loadStats();
         } catch (error) {
             message.error(parseErrorMessage(error));
             if (!cachedReport) {
@@ -1935,7 +2067,8 @@ export default function WhatsAppPage() {
     });
     const liveCarouselPreviewItems = newTemplate.carouselItems.map((item) => ({
         text: item.text,
-        mediaUrl: carouselMediaPreviewUrls[item.id],
+        mediaUrl: carouselMediaPreviewUrls[item.id] || item.mediaUrl,
+        buttons: item.buttons?.map(({ id, ...button }) => button),
     }));
     const liveButtonPreviewItems: TemplateButtonConfig[] = newTemplate.buttons.map(({ id, ...button }) => button);
 
@@ -2053,7 +2186,14 @@ export default function WhatsAppPage() {
                             <Button size="small" icon={<ReloadOutlined />} onClick={() => { void loadTemplates(); }} />
                         </Tooltip>
                     )}
-                    <Button size="small" icon={<EditOutlined />} disabled />
+                    <Tooltip title={isTemplateEditable(record) ? "Edit Template" : "Templates currently in review by Meta cannot be edited"}>
+                        <Button
+                            size="small"
+                            icon={<EditOutlined />}
+                            disabled={!isTemplateEditable(record)}
+                            onClick={() => openEditTemplate(record)}
+                        />
+                    </Tooltip>
                     <Popconfirm title="Delete template?" onConfirm={() => deleteTemplate(record.id)}>
                         <Button size="small" danger icon={<DeleteOutlined />} />
                     </Popconfirm>
@@ -2363,7 +2503,7 @@ export default function WhatsAppPage() {
                                         {stat.prefix}
                                     </div>
                                     <div>
-                                        <div className="text-xl font-bold" style={{ color: stat?.color }}>{stat?.value && stat?.value.toLocaleString()}</div>
+                                        <div className="text-xl font-bold" style={{ color: stat?.color }}>{(stat?.value ?? 0).toLocaleString()}</div>
                                         <div className="text-xs text-gray-500">{stat?.title}</div>
                                     </div>
                                 </div>
@@ -2390,7 +2530,10 @@ export default function WhatsAppPage() {
                                         style={{ backgroundColor: '#3b5998' }}
                                         icon={<PlusOutlined />}
                                         onClick={() => {
+                                            setEditingTemplate(null);
                                             setNewTemplate(createEmptyTemplateState());
+                                            setTemplateMediaPreviewUrl(undefined);
+                                            setCarouselMediaPreviewUrls({});
                                             setTemplateModal(true);
                                         }}
                                     >
@@ -2785,12 +2928,9 @@ export default function WhatsAppPage() {
             </Modal>
 
             <Modal
-                title={<span><FileTextOutlined className="mr-2 text-purple-500" />Create Template</span>}
+                title={<span><FileTextOutlined className="mr-2 text-purple-500" />{editingTemplate ? `Edit Template: ${editingTemplate.name}` : "Create Template"}</span>}
                 open={templateModal}
-                onCancel={() => {
-                    setTemplateModal(false);
-                    setNewTemplate(createEmptyTemplateState());
-                }}
+                onCancel={closeTemplateModal}
                 width="min(1120px, calc(100vw - 24px))"
                 footer={null}
             >
@@ -2801,10 +2941,15 @@ export default function WhatsAppPage() {
                             style={{ maxHeight: "calc(100vh - 220px)", overflowY: "auto" }}
                         >
                             <Form layout="vertical">
-                                <Form.Item label="Template Name" required>
+                                <Form.Item
+                                    label="Template Name"
+                                    required
+                                    extra={editingTemplate ? "Template name cannot be modified after creation" : undefined}
+                                >
                                     <Input
                                         placeholder="E.g. Welcome Message"
                                         value={newTemplate.name}
+                                        disabled={Boolean(editingTemplate)}
                                         onChange={(e) => setNewTemplate({ ...newTemplate, name: e.target.value })}
                                     />
                                 </Form.Item>
@@ -2833,9 +2978,13 @@ export default function WhatsAppPage() {
                                         message="Authentication templates cannot include variables like {{name}}. Use Utility or Marketing if you need contact fields."
                                     />
                                 ) : null}
-                                <Form.Item label="Media Type">
+                                <Form.Item
+                                    label="Media Type"
+                                    extra={editingTemplate ? "Media type cannot be modified after creation" : undefined}
+                                >
                                     <Select
                                         value={newTemplate.type}
+                                        disabled={Boolean(editingTemplate)}
                                         onChange={updateTemplateType}
                                     >
                                         <Option value="text"><FileTextOutlined className="mr-2" />Text</Option>
@@ -2847,9 +2996,14 @@ export default function WhatsAppPage() {
                                 {(newTemplate.type === "image" || newTemplate.type === "video") && (
                                     <Form.Item
                                         label={`Upload ${newTemplate.type === "image" ? "Image" : "Video"}`}
-                                        required
+                                        required={!editingTemplate?.mediaUrl}
                                         extra={getTemplateMediaHelpText(newTemplate.type)}
                                     >
+                                        {editingTemplate?.mediaUrl && !newTemplate.mediaFile && (
+                                            <div className="mb-2 flex items-center gap-2 text-xs text-green-700 bg-green-50 p-2 rounded border border-green-200">
+                                                <CheckCircleOutlined /> Current {newTemplate.type} retained (upload new file to replace)
+                                            </div>
+                                        )}
                                         <Upload
                                             accept={getTemplateMediaAccept(newTemplate.type)}
                                             beforeUpload={(file) => {
@@ -2867,7 +3021,9 @@ export default function WhatsAppPage() {
                                             maxCount={1}
                                             fileList={getUploadFileList(newTemplate.mediaFile)}
                                         >
-                                            <Button icon={<UploadOutlined />}>Choose File</Button>
+                                            <Button icon={<UploadOutlined />}>
+                                                {editingTemplate?.mediaUrl ? "Replace File" : "Choose File"}
+                                            </Button>
                                         </Upload>
                                     </Form.Item>
                                 )}
@@ -2972,6 +3128,11 @@ export default function WhatsAppPage() {
                                             {newTemplate.carouselItems.map((item, index) => (
                                                 <Card key={item.id} size="small" title={`Card ${index + 1}`}>
                                                     <div className="space-y-3">
+                                                        {item.mediaUrl && !item.file && (
+                                                            <div className="flex items-center gap-2 text-xs text-green-700 bg-green-50 p-2 rounded border border-green-200">
+                                                                <CheckCircleOutlined /> Current image retained (upload new file to replace)
+                                                            </div>
+                                                        )}
                                                         <Upload
                                                             accept={getTemplateMediaAccept("carousel")}
                                                             beforeUpload={(file) => {
@@ -2989,7 +3150,9 @@ export default function WhatsAppPage() {
                                                             maxCount={1}
                                                             fileList={getUploadFileList(item.file)}
                                                         >
-                                                            <Button icon={<UploadOutlined />}>Upload Card Image</Button>
+                                                            <Button icon={<UploadOutlined />}>
+                                                                {item.mediaUrl ? "Replace Card Image" : "Upload Card Image"}
+                                                            </Button>
                                                         </Upload>
                                                         <TextArea
                                                             rows={3}
@@ -3203,15 +3366,16 @@ export default function WhatsAppPage() {
                             </Form>
                             <div className="sticky bottom-0 bg-white pt-2">
                                 <div className="flex gap-2 justify-end">
-                                    <Button
-                                        onClick={() => {
-                                            setTemplateModal(false);
-                                            setNewTemplate(createEmptyTemplateState());
-                                        }}
-                                    >
+                                    <Button onClick={closeTemplateModal}>
                                         Cancel
                                     </Button>
-                                    <Button type="primary" style={{ backgroundColor: '#3b5998' }} onClick={createTemplate}>Submit for Approval</Button>
+                                    <Button
+                                        type="primary"
+                                        style={{ backgroundColor: '#3b5998' }}
+                                        onClick={createTemplate}
+                                    >
+                                        {editingTemplate ? "Save & Resubmit to Meta" : "Submit for Approval"}
+                                    </Button>
                                 </div>
                             </div>
                         </div>
@@ -3233,89 +3397,278 @@ export default function WhatsAppPage() {
             </Modal>
 
             <Modal
-                title={<span><EyeOutlined className="mr-2" />{selectedTemplate?.name}</span>}
-                open={templatePreviewModal}
-                onCancel={() => setTemplatePreviewModal(false)}
-                footer={null}
-                width={380}
-            >
-                {selectedTemplate && (
-                    <>
-                        <div className="flex gap-2 mb-3 justify-center">
-                            <StatusTag status={selectedTemplate.status} />
-                            <Tag color="geekblue" className="capitalize">{selectedTemplate.category}</Tag>
-                            <Tag className="capitalize">{selectedTemplate.type}</Tag>
-                        </div>
-                        <div className="mb-3 text-center">
-                            <MetaSubmissionTag status={selectedTemplate.metaSubmissionStatus} />
-                            <div className="text-xs text-gray-500 mt-2">
-                                {selectedTemplate.metaSubmissionStatus === "submitted"
-                                    ? "This template was submitted to WhatsApp Meta for approval."
-                                    : selectedTemplate.metaSubmissionError || "This template is currently saved in your app only and has not been submitted to Meta."}
+                title={
+                    <div className="flex flex-wrap items-center justify-between gap-3 pr-6">
+                        <div className="flex items-center gap-2.5">
+                            <div className="w-8 h-8 rounded-lg bg-emerald-50 text-[#128C7E] flex items-center justify-center text-lg">
+                                <MdWhatsapp />
+                            </div>
+                            <div>
+                                <span className="font-bold text-gray-900 text-base">{selectedTemplate?.name}</span>
+                                <span className="ml-2 text-xs text-gray-400 font-mono">ID: #{selectedTemplate?.id}</span>
                             </div>
                         </div>
-                        <WhatsAppPreview
-                            content={selectedTemplate.content}
-                            type={selectedTemplate.type}
-                            mediaSrc={selectedTemplate.mediaUrl}
-                            mediaLabel={selectedTemplate.mediaUrl ? "Uploaded media attached" : undefined}
-                            carouselItems={selectedTemplate.carouselItems ?? undefined}
-                            buttons={selectedTemplate.buttons ?? undefined}
-                        />
-                        {selectedTemplate.carouselItems && selectedTemplate.carouselItems.length > 0 && (
-                            <div className="mt-3 space-y-2">
-                                {selectedTemplate.carouselItems.map((item, index) => (
-                                    <Card key={`${item.mediaUrl}-${index}`} size="small" title={`Card ${index + 1}`}>
-                                        {item.mediaUrl ? (
-                                            <img
-                                                src={item.mediaUrl}
-                                                alt={item.text || `Card ${index + 1}`}
-                                                className="mb-2 h-28 w-full rounded-lg object-cover"
-                                            />
-                                        ) : null}
-                                        <div className="text-sm text-gray-700">{item.text || "No text"}</div>
-                                        {item.buttons?.length ? (
-                                            <div className="mt-2 flex flex-wrap gap-1">
-                                                {item.buttons.map((button, buttonIndex) => (
-                                                    <Tag key={`${button.type}-${button.text || buttonIndex}`}>
-                                                        {button.type === "phone_number"
-                                                            ? `Call: ${button.text || button.phoneNumber}`
-                                                            : `${button.urlType === "dynamic" ? "Dynamic URL" : "Website"}: ${button.text || "Visit"}`}
+                        <div className="flex flex-wrap items-center gap-1.5">
+                            {selectedTemplate && <StatusTag status={selectedTemplate.status} />}
+                            {selectedTemplate && <Tag color="geekblue" className="capitalize m-0">{selectedTemplate.category}</Tag>}
+                            {selectedTemplate && <Tag className="capitalize m-0">{selectedTemplate.type}</Tag>}
+                            {selectedTemplate?.language && (
+                                <Tag className="m-0 uppercase font-mono text-[11px]">{selectedTemplate.language}</Tag>
+                            )}
+                        </div>
+                    </div>
+                }
+                open={templatePreviewModal}
+                onCancel={() => setTemplatePreviewModal(false)}
+                width="min(1080px, calc(100vw - 32px))"
+                centered
+                footer={
+                    <div className="flex items-center justify-between">
+                        <div className="text-xs text-gray-400">
+                            {selectedTemplate?.createdAt ? `Created ${dayjs(selectedTemplate.createdAt).format("MMM D, YYYY [at] HH:mm")}` : ""}
+                        </div>
+                        <Space>
+                            <Button onClick={() => setTemplatePreviewModal(false)}>Close</Button>
+                            {selectedTemplate && (
+                                <Tooltip title={isTemplateEditable(selectedTemplate) ? "Edit and modify this template" : "Templates currently in review by Meta cannot be modified"}>
+                                    <Button
+                                        type="primary"
+                                        icon={<EditOutlined />}
+                                        disabled={!isTemplateEditable(selectedTemplate)}
+                                        onClick={() => {
+                                            const tmpl = selectedTemplate;
+                                            setTemplatePreviewModal(false);
+                                            openEditTemplate(tmpl);
+                                        }}
+                                    >
+                                        Edit Template
+                                    </Button>
+                                </Tooltip>
+                            )}
+                        </Space>
+                    </div>
+                }
+            >
+                {selectedTemplate && (
+                    <div className="py-1">
+                        <Row gutter={[24, 24]} className="items-start">
+                            {/* Left Column: Details, Status, Message Body, Variables, Cards */}
+                            <Col xs={24} lg={14}>
+                                <div className="space-y-4">
+                                    {/* Meta Submission Status Banner */}
+                                    {selectedTemplate.metaSubmissionStatus === "submitted" ? (
+                                        <div className="rounded-xl border border-blue-200 bg-blue-50/70 p-3.5 flex items-start gap-3">
+                                            <CloudUploadOutlined className="text-blue-600 text-lg mt-0.5" />
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <span className="font-semibold text-blue-900 text-sm">Submitted to WhatsApp Meta for Approval</span>
+                                                    <MetaSubmissionTag status={selectedTemplate.metaSubmissionStatus} />
+                                                </div>
+                                                <div className="mt-1 text-xs text-blue-800 leading-relaxed">
+                                                    {selectedTemplate.externalId ? (
+                                                        <span>Meta Template ID: <code className="bg-blue-100 text-blue-900 px-1.5 py-0.5 rounded font-mono font-semibold">{selectedTemplate.externalId}</code>. </span>
+                                                    ) : null}
+                                                    Meta review is currently pending. Status updates automatically upon approval.
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ) : selectedTemplate.metaSubmissionStatus === "failed" ? (
+                                        <div className="rounded-xl border border-rose-200 bg-rose-50/80 p-3.5 flex items-start gap-3">
+                                            <CloseCircleOutlined className="text-rose-600 text-lg mt-0.5" />
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <span className="font-semibold text-rose-900 text-sm">Meta Submission Failed / Rejected</span>
+                                                    <MetaSubmissionTag status={selectedTemplate.metaSubmissionStatus} />
+                                                </div>
+                                                <div className="mt-1 text-xs text-rose-800 leading-relaxed font-mono bg-white/70 p-2 rounded-lg border border-rose-100">
+                                                    {selectedTemplate.metaSubmissionError || "Meta rejected the template configuration."}
+                                                </div>
+                                                <div className="mt-2 text-xs text-rose-700 font-medium">
+                                                    Click &ldquo;Edit Template&rdquo; below to correct parameters and resubmit to Meta.
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-3 flex items-start gap-3">
+                                            <ClockCircleOutlined className="text-amber-600 text-base mt-0.5" />
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <span className="font-semibold text-amber-900 text-xs">Saved Locally Only</span>
+                                                    <MetaSubmissionTag status={selectedTemplate.metaSubmissionStatus} />
+                                                </div>
+                                                <div className="mt-0.5 text-xs text-amber-700">
+                                                    This template has not been sent to Meta yet. Edit and submit to activate for messaging.
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Message Body Content Card */}
+                                    <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-xs">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <span className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
+                                                <FileTextOutlined className="text-gray-400" />
+                                                Message Content
+                                            </span>
+                                            {selectedTemplate.variables && selectedTemplate.variables.length > 0 && (
+                                                <span className="text-[11px] text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full font-medium">
+                                                    {selectedTemplate.variables.length} Dynamic {selectedTemplate.variables.length === 1 ? "Variable" : "Variables"}
+                                                </span>
+                                            )}
+                                        </div>
+                                        <div className="rounded-lg bg-gray-50/80 border border-gray-100 p-3.5 text-sm text-gray-800 leading-relaxed whitespace-pre-wrap font-sans">
+                                            {selectedTemplate.content ? (
+                                                selectedTemplate.content.split(/(\{\{[a-zA-Z0-9_]+\}\})/g).map((part, i) =>
+                                                    /^\{\{[a-zA-Z0-9_]+\}\}$/.test(part) ? (
+                                                        <span
+                                                            key={i}
+                                                            className="inline-block mx-0.5 px-1.5 py-0.5 rounded bg-purple-100 text-purple-800 font-mono text-xs font-semibold border border-purple-200"
+                                                        >
+                                                            {part}
+                                                        </span>
+                                                    ) : (
+                                                        part
+                                                    )
+                                                )
+                                            ) : (
+                                                <span className="text-gray-400 italic">No text content</span>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Dynamic Variables Pill Box */}
+                                    {selectedTemplate.variables && selectedTemplate.variables.length > 0 && (
+                                        <div className="rounded-xl border border-gray-200 bg-white p-3.5 shadow-xs">
+                                            <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                                                Dynamic Parameters ({selectedTemplate.variables.length})
+                                            </div>
+                                            <div className="flex flex-wrap gap-1.5">
+                                                {selectedTemplate.variables.map((v) => (
+                                                    <Tag key={v} color="purple" className="font-mono text-xs px-2.5 py-1 rounded-md m-0">
+                                                        {"{{" + v + "}}"}
                                                     </Tag>
                                                 ))}
                                             </div>
-                                        ) : null}
-                                    </Card>
-                                ))}
-                            </div>
-                        )}
-                        {selectedTemplate.variables && selectedTemplate.variables.length > 0 && (
-                            <div className="mt-3">
-                                <div className="text-xs text-gray-500 mb-1">Dynamic Variables:</div>
-                                <div className="flex flex-wrap gap-1">
-                                    {selectedTemplate.variables.map(v => (
-                                        <Tag key={v} color="purple">{"{{" + v + "}}"}</Tag>
-                                    ))}
+                                        </div>
+                                    )}
+
+                                    {/* Template-level CTA Buttons */}
+                                    {selectedTemplate.buttons && selectedTemplate.buttons.length > 0 && (
+                                        <div className="rounded-xl border border-gray-200 bg-white p-3.5 shadow-xs">
+                                            <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                                                Template Action Buttons ({selectedTemplate.buttons.length})
+                                            </div>
+                                            <div className="flex flex-wrap gap-2">
+                                                {selectedTemplate.buttons.map((button, index) => (
+                                                    <div
+                                                        key={`${button.type}-${index}`}
+                                                        className="flex items-center gap-2 rounded-lg border border-blue-100 bg-blue-50/50 px-3 py-1.5 text-xs text-blue-700 font-medium"
+                                                    >
+                                                        {getPreviewButtonIcon(button)}
+                                                        <span className="font-semibold">{button.text || (button.type === "copy_code" ? "Copy Code" : "Action")}</span>
+                                                        {button.type === "phone_number" && button.phoneNumber && (
+                                                            <span className="text-gray-500 text-[11px] font-mono">({button.phoneNumber})</span>
+                                                        )}
+                                                        {button.type === "url" && button.url && (
+                                                            <span className="text-gray-500 text-[11px] font-mono truncate max-w-[140px]">({button.url})</span>
+                                                        )}
+                                                        {button.type === "copy_code" && button.offerCode && (
+                                                            <span className="text-purple-600 text-[11px] font-mono font-bold bg-white px-1.5 py-0.5 rounded border border-purple-200">
+                                                                {button.offerCode}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Carousel Cards 2-Column Grid */}
+                                    {selectedTemplate.type === "carousel" && selectedTemplate.carouselItems && selectedTemplate.carouselItems.length > 0 && (
+                                        <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-xs">
+                                            <div className="flex items-center justify-between mb-3">
+                                                <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+                                                    Carousel Cards ({selectedTemplate.carouselItems.length})
+                                                </span>
+                                                <span className="text-[11px] text-gray-400">
+                                                    Swipeable in WhatsApp
+                                                </span>
+                                            </div>
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                                {selectedTemplate.carouselItems.map((item, index) => (
+                                                    <div
+                                                        key={`${item.mediaUrl}-${index}`}
+                                                        className="rounded-xl border border-gray-200 bg-gray-50/50 overflow-hidden shadow-xs flex flex-col hover:border-blue-300 transition-colors"
+                                                    >
+                                                        <div className="relative h-28 w-full bg-gray-200 overflow-hidden">
+                                                            {item.mediaUrl ? (
+                                                                <img
+                                                                    src={item.mediaUrl}
+                                                                    alt={item.text || `Card ${index + 1}`}
+                                                                    className="h-full w-full object-cover"
+                                                                />
+                                                            ) : (
+                                                                <div className="flex h-full w-full items-center justify-center text-gray-400">
+                                                                    <AppstoreOutlined style={{ fontSize: 24 }} />
+                                                                </div>
+                                                            )}
+                                                            <span className="absolute top-2 left-2 rounded-md bg-black/60 backdrop-blur-xs px-2 py-0.5 text-[10px] font-semibold text-white">
+                                                                Card {index + 1}
+                                                            </span>
+                                                        </div>
+                                                        <div className="p-3 flex-1 flex flex-col justify-between">
+                                                            <div className="text-xs font-medium text-gray-800 leading-snug line-clamp-3">
+                                                                {item.text || <span className="text-gray-400 italic">No card text</span>}
+                                                            </div>
+                                                            {item.buttons && item.buttons.length > 0 && (
+                                                                <div className="mt-2.5 pt-2 border-t border-gray-200 space-y-1">
+                                                                    {item.buttons.map((button, buttonIndex) => (
+                                                                        <div
+                                                                            key={`${button.type}-${buttonIndex}`}
+                                                                            className="flex items-center gap-1.5 text-[11px] text-blue-600 bg-white rounded-md px-2 py-1 border border-gray-200 font-medium truncate"
+                                                                        >
+                                                                            {getPreviewButtonIcon(button)}
+                                                                            <span className="font-semibold truncate">{button.text || "Action"}</span>
+                                                                            <span className="text-gray-400 text-[10px] ml-auto truncate max-w-[100px]">
+                                                                                {button.type === "phone_number" ? button.phoneNumber : button.url}
+                                                                            </span>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
-                            </div>
-                        )}
-                        {selectedTemplate.buttons && selectedTemplate.buttons.length > 0 && (
-                            <div className="mt-3">
-                                <div className="text-xs text-gray-500 mb-1">CTA Buttons:</div>
-                                <div className="flex flex-wrap gap-2">
-                                    {selectedTemplate.buttons.map((button, index) => (
-                                        <Tag key={`${button.type}-${index}`} color="blue">
-                                            {button.type === "phone_number"
-                                                ? `Phone: ${button.text || "Call"}`
-                                                : button.type === "copy_code"
-                                                    ? `Copy Code: ${button.offerCode || "Configured"}`
-                                                    : `${button.urlType === "dynamic" ? "Dynamic URL" : "Static URL"}: ${button.text || "Visit"}`}
-                                        </Tag>
-                                    ))}
+                            </Col>
+
+                            {/* Right Column: Sticky WhatsApp Mobile Phone Mockup */}
+                            <Col xs={24} lg={10}>
+                                <div className="lg:sticky lg:top-2 flex flex-col items-center">
+                                    <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                                        <EyeOutlined className="text-green-600" />
+                                        Interactive Phone Preview
+                                    </div>
+                                    <WhatsAppPreview
+                                        content={selectedTemplate.content}
+                                        type={selectedTemplate.type}
+                                        mediaSrc={selectedTemplate.mediaUrl}
+                                        mediaLabel={selectedTemplate.mediaUrl ? "Uploaded media attached" : undefined}
+                                        carouselItems={selectedTemplate.carouselItems ?? undefined}
+                                        buttons={selectedTemplate.buttons ?? undefined}
+                                    />
+                                    <div className="text-[11px] text-gray-400 mt-1 text-center">
+                                        {selectedTemplate.type === "carousel"
+                                            ? "Swipe horizontally across cards to preview"
+                                            : "Realistic WhatsApp message render"}
+                                    </div>
                                 </div>
-                            </div>
-                        )}
-                    </>
+                            </Col>
+                        </Row>
+                    </div>
                 )}
             </Modal>
 
@@ -3332,6 +3685,8 @@ export default function WhatsAppPage() {
                         onClick={() => {
                             if (selectedCampaignReport) {
                                 void openCampaignReport(selectedCampaignReport);
+                                void loadCampaigns();
+                                void loadStats();
                             }
                         }}
                     >
