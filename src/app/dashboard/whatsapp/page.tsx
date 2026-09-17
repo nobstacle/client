@@ -16,12 +16,19 @@ import {
     CloudUploadOutlined, FormOutlined, VideoCameraOutlined, PictureOutlined,
     AppstoreOutlined, CalendarOutlined, ThunderboltOutlined,
     LinkOutlined, PhoneOutlined, CopyOutlined, MailOutlined,
-    DownOutlined, UpOutlined,
+    DownOutlined, UpOutlined, PoweroffOutlined,
 } from "@ant-design/icons";
 import { MdWhatsapp } from "react-icons/md";
 import { FaFileDownload } from "react-icons/fa";
 import dayjs, { Dayjs } from "dayjs";
 import { useSession } from "next-auth/react";
+
+declare global {
+    interface Window {
+        FB?: any;
+        fbAsyncInit?: () => void;
+    }
+}
 
 const { Option } = Select;
 const { TabPane } = Tabs;
@@ -848,6 +855,7 @@ export default function WhatsAppPage() {
         connected: false,
         hasAccessToken: false,
     });
+    const [connectingMeta, setConnectingMeta] = useState(false);
 
     const metaConnected = metaConnection.connected;
     const hasPendingSubmittedTemplates = templates.some(
@@ -993,6 +1001,147 @@ export default function WhatsAppPage() {
     const loadMetaSettings = async () => {
         const response = await apiRequest<MetaConnectionStatus>("/whatsapp/settings");
         setMetaConnection(response);
+    };
+
+    // ── Facebook JavaScript SDK for WhatsApp Embedded Signup ─────────────────
+    useEffect(() => {
+        if (typeof window === "undefined" || window.FB) return;
+
+        window.fbAsyncInit = function () {
+            window.FB.init({
+                appId: process.env.NEXT_PUBLIC_META_APP_ID || "897802113101882",
+                cookie: true,
+                xfbml: true,
+                version: "v19.0",
+            });
+        };
+
+        const existingScript = document.getElementById("facebook-jssdk");
+        if (!existingScript) {
+            const script = document.createElement("script");
+            script.id = "facebook-jssdk";
+            script.src = "https://connect.facebook.net/en_US/sdk.js";
+            script.async = true;
+            script.defer = true;
+            document.body.appendChild(script);
+        }
+    }, []);
+
+    const launchWhatsAppSignup = () => {
+        const configId = process.env.NEXT_PUBLIC_META_EMBEDDED_CONFIG_ID || "2298223317579621";
+        const appId = process.env.NEXT_PUBLIC_META_APP_ID || "897802113101882";
+
+        if (!window.FB) {
+            message.error("Meta SDK is not loaded. Please check if your browser blocked scripts or adblockers.");
+            return;
+        }
+
+        try {
+            window.FB.init({
+                appId,
+                cookie: true,
+                xfbml: true,
+                version: "v19.0",
+            });
+        } catch (e) {
+            console.warn("FB re-init notice:", e);
+        }
+
+        setConnectingMeta(true);
+        let capturedWabaId: string | undefined = undefined;
+        let capturedPhoneNumberId: string | undefined = undefined;
+
+        // Safety timeout so button never hangs indefinitely if popup is blocked
+        const safetyTimer = setTimeout(() => {
+            setConnectingMeta(false);
+        }, 15000);
+
+        const sessionInfoListener = (event: MessageEvent) => {
+            if (!event.origin?.endsWith("facebook.com")) return;
+            try {
+                const data = typeof event.data === "string" ? JSON.parse(event.data) : event.data;
+                console.log("WA_EMBEDDED_SIGNUP event:", data);
+                if (data?.type === "WA_EMBEDDED_SIGNUP") {
+                    if (data.event === "FINISH") {
+                        capturedPhoneNumberId = data.data?.phone_number_id || capturedPhoneNumberId;
+                        capturedWabaId = data.data?.waba_id || capturedWabaId;
+                    } else if (data.event === "CANCEL") {
+                        clearTimeout(safetyTimer);
+                        setConnectingMeta(false);
+                        message.info("WhatsApp setup was cancelled.");
+                    }
+                }
+            } catch {
+                // Ignore non-JSON messages
+            }
+        };
+
+        window.addEventListener("message", sessionInfoListener);
+
+        try {
+            window.FB.login(
+                (response: any) => {
+                    void (async () => {
+                        clearTimeout(safetyTimer);
+                        window.removeEventListener("message", sessionInfoListener);
+                        console.log("FB.login response:", response);
+
+                        if (response?.authResponse?.code) {
+                            const code = response.authResponse.code;
+                            try {
+                                message.loading({ content: "Linking WhatsApp account with Nobstacle...", key: "embedded-signup" });
+                                await apiRequest("/whatsapp/settings/embedded-signup", {
+                                    method: "POST",
+                                    body: {
+                                        code,
+                                        wabaId: capturedWabaId,
+                                        phoneNumberId: capturedPhoneNumberId,
+                                    },
+                                });
+                                message.success({ content: "WhatsApp account linked successfully!", key: "embedded-signup" });
+                                await loadMetaSettings();
+                            } catch (err) {
+                                message.error({ content: parseErrorMessage(err) || "Failed to link WhatsApp account", key: "embedded-signup" });
+                            } finally {
+                                setConnectingMeta(false);
+                            }
+                        } else {
+                            setConnectingMeta(false);
+                            if (response?.status !== "connected") {
+                                message.warning("Meta popup was closed or not completed.");
+                            }
+                        }
+                    })();
+                },
+                {
+                    config_id: configId,
+                    response_type: "code",
+                    override_default_response_type: true,
+                    extras: {
+                        setup: {},
+                        sessionInfoVersion: "3",
+                    },
+                }
+            );
+        } catch (err) {
+            clearTimeout(safetyTimer);
+            setConnectingMeta(false);
+            console.error("Error calling FB.login:", err);
+            message.error("Failed to open Facebook login popup.");
+        }
+    };
+
+    const handleDisconnectMeta = async () => {
+        try {
+            message.loading({ content: "Disconnecting WhatsApp...", key: "disconnect-wa" });
+            await apiRequest("/whatsapp/settings/disconnect", {
+                method: "DELETE",
+            });
+            message.success({ content: "WhatsApp disconnected successfully", key: "disconnect-wa" });
+            await loadMetaSettings();
+        } catch (err) {
+            message.error({ content: parseErrorMessage(err) || "Failed to disconnect WhatsApp", key: "disconnect-wa" });
+        }
     };
 
     const loadAll = async () => {
@@ -2480,14 +2629,58 @@ export default function WhatsAppPage() {
                     </div>
                     <div className="flex items-center gap-2">
                         <Badge dot status={metaConnected ? "success" : "warning"}>
-                            <Tag color={metaConnected ? "green" : "orange"} className="px-3 py-1 text-sm">
+                            <Tag color={metaConnected ? "green" : "orange"} className="px-3 py-1 text-sm font-medium">
                                 {metaConnected ? "Meta Connected" : "Meta Not Connected"}
                             </Tag>
                         </Badge>
-                        {!metaConnected && <Tag color="geekblue">Ask Super Admin to assign</Tag>}
+                        {metaConnected ? (
+                            <Popconfirm
+                                title="Disconnect WhatsApp?"
+                                description="Your WhatsApp campaigns will be paused until you reconnect."
+                                onConfirm={handleDisconnectMeta}
+                                okText="Disconnect"
+                                cancelText="Cancel"
+                            >
+                                <Button size="small" danger icon={<PoweroffOutlined />}>
+                                    Disconnect
+                                </Button>
+                            </Popconfirm>
+                        ) : (
+                            <Button
+                                type="primary"
+                                style={{ backgroundColor: "#25D366", borderColor: "#25D366" }}
+                                icon={<MdWhatsapp size={16} />}
+                                onClick={launchWhatsAppSignup}
+                                loading={connectingMeta}
+                            >
+                                Connect WhatsApp Business
+                            </Button>
+                        )}
                         <Button icon={<ReloadOutlined />} onClick={loadAll} loading={loading} />
                     </div>
                 </div>
+
+                {!metaConnected && (
+                    <Alert
+                        message="Connect your Hotel's WhatsApp Account"
+                        description="Link your WhatsApp Business Account so guests receive messages directly from your hotel's official WhatsApp number and verified profile."
+                        type="info"
+                        showIcon
+                        icon={<MdWhatsapp className="text-2xl" style={{ color: "#25D366" }} />}
+                        action={
+                            <Button
+                                type="primary"
+                                style={{ backgroundColor: "#25D366", borderColor: "#25D366" }}
+                                icon={<MdWhatsapp size={16} />}
+                                onClick={launchWhatsAppSignup}
+                                loading={connectingMeta}
+                            >
+                                Connect WhatsApp
+                            </Button>
+                        }
+                        className="rounded-xl border-green-200 bg-green-50 shadow-sm"
+                    />
+                )}
 
                 <Row gutter={[16, 16]}>
                     {[
