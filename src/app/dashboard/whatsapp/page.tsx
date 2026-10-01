@@ -943,9 +943,14 @@ export default function WhatsAppPage() {
         if (!token) throw new Error("Authentication token missing");
 
         const isFormData = options.body instanceof FormData;
+        const isString = typeof options.body === "string";
+        const serializedBody = isFormData || isString || !options.body
+            ? options.body
+            : JSON.stringify(options.body);
 
         const response = await fetch(`${API_URL}${path}`, {
             ...options,
+            body: serializedBody,
             headers: {
                 Authorization: `Bearer ${token}`,
                 ...(isFormData ? {} : { "Content-Type": "application/json" }),
@@ -1092,11 +1097,11 @@ export default function WhatsAppPage() {
                                 message.loading({ content: "Linking WhatsApp account with Nobstacle...", key: "embedded-signup" });
                                 await apiRequest("/whatsapp/settings/embedded-signup", {
                                     method: "POST",
-                                    body: {
+                                    body: JSON.stringify({
                                         code,
                                         wabaId: capturedWabaId,
                                         phoneNumberId: capturedPhoneNumberId,
-                                    },
+                                    }),
                                 });
                                 message.success({ content: "WhatsApp account linked successfully!", key: "embedded-signup" });
                                 await loadMetaSettings();
