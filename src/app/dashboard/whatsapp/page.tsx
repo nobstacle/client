@@ -1,5 +1,5 @@
 "use client";
-import React, {  useState, useEffect  } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
     Table, Tag, Card, Input, message, Button, Space, Select, Modal,
     Tabs, Upload, Steps, Form, Progress, Badge, Tooltip,
@@ -13,10 +13,12 @@ import {
     DeleteOutlined, TeamOutlined,
     BarChartOutlined,
     ReloadOutlined,
+    SyncOutlined,
     CloudUploadOutlined, FormOutlined, VideoCameraOutlined, PictureOutlined,
     AppstoreOutlined, CalendarOutlined, ThunderboltOutlined,
     LinkOutlined, PhoneOutlined, CopyOutlined, MailOutlined,
     DownOutlined, UpOutlined, PoweroffOutlined,
+    InfoCircleOutlined, SafetyCertificateOutlined,
 } from "@ant-design/icons";
 import { MdWhatsapp } from "react-icons/md";
 import { FaFileDownload } from "react-icons/fa";
@@ -87,6 +89,9 @@ interface Template {
     content: string;
     variables?: string[];
     mediaUrl?: string;
+    headerText?: string | null;
+    headerType?: string | null;
+    footerText?: string | null;
     carouselItems?: CarouselTemplateItem[] | null;
     buttons?: TemplateButtonConfig[] | null;
     createdAt: string;
@@ -125,6 +130,9 @@ interface TemplateFormState {
     category: "utility" | "marketing" | "authentication" | "service";
     type: "text" | "image" | "video" | "carousel";
     content: string;
+    headerText: string;
+    headerType: "none" | "text" | "image" | "video";
+    footerText: string;
     mediaFile: File | null;
     carouselItems: CarouselDraftItem[];
     buttons: TemplateButtonDraft[];
@@ -177,6 +185,20 @@ interface CampaignStats {
     deliveryRate: string;
 }
 
+interface MetaPhoneDetails {
+    id: string;
+    displayPhoneNumber?: string;
+    verifiedName?: string;
+    nameStatus?: string;
+    status?: string;
+    qualityRating?: string;
+    accountMode?: string;
+    codeVerificationStatus?: string;
+    isTestNumber: boolean;
+    canSendMessages: boolean;
+    warning?: string;
+}
+
 interface MetaConnectionStatus {
     connected: boolean;
     appId?: string;
@@ -184,6 +206,7 @@ interface MetaConnectionStatus {
     phoneNumberId?: string;
     hasAccessToken: boolean;
     webhookVerifyToken?: string;
+    phoneDetails?: MetaPhoneDetails;
 }
 
 const defaultCampaignStats: CampaignStats = {
@@ -260,6 +283,9 @@ const createEmptyTemplateState = (): TemplateFormState => ({
     category: "marketing",
     type: "text",
     content: "",
+    headerText: "",
+    headerType: "none",
+    footerText: "",
     mediaFile: null,
     carouselItems: [createCarouselDraftItem(), createCarouselDraftItem()],
     buttons: [],
@@ -707,6 +733,8 @@ const getPreviewButtonIcon = (button: TemplateButtonConfig) => {
 const WhatsAppPreview = ({
     content,
     type,
+    headerText,
+    footerText,
     mediaSrc,
     mediaLabel,
     carouselItems,
@@ -714,6 +742,8 @@ const WhatsAppPreview = ({
 }: {
     content: string;
     type: string;
+    headerText?: string;
+    footerText?: string;
     mediaSrc?: string;
     mediaLabel?: string;
     carouselItems?: Array<{ text: string; mediaUrl?: string; buttons?: TemplateButtonConfig[] | null }>;
@@ -743,9 +773,19 @@ const WhatsAppPreview = ({
                     <MediaPreviewCard type="video" src={mediaSrc} label={mediaLabel} />
                 )}
                 <div className="rounded-lg rounded-tl-none p-2.5 text-xs shadow-sm max-w-full" style={{ background: "#fff", color: "#333" }}>
+                    {headerText ? (
+                        <div className="font-bold text-[13px] text-gray-900 pb-1 border-b border-gray-100 mb-1.5 leading-snug">
+                            {headerText}
+                        </div>
+                    ) : null}
                     <p className="m-0 leading-relaxed" style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
                         {content || (type === "carousel" ? "Carousel card previews will appear below..." : "Your message preview will appear here...")}
                     </p>
+                    {footerText ? (
+                        <div className="text-[10px] text-gray-400 mt-1.5 pt-1 border-t border-gray-50 italic">
+                            {footerText}
+                        </div>
+                    ) : null}
                     <div className="flex justify-end mt-1">
                         <span className="text-gray-400" style={{ fontSize: 9 }}>{dayjs().format("HH:mm")} ✓✓</span>
                     </div>
@@ -856,8 +896,15 @@ export default function WhatsAppPage() {
         hasAccessToken: false,
     });
     const [connectingMeta, setConnectingMeta] = useState(false);
+    const [checkingMetaStatus, setCheckingMetaStatus] = useState(false);
 
     const metaConnected = metaConnection.connected;
+    const isDisplayNamePending = Boolean(
+        metaConnected
+        && metaConnection.phoneDetails
+        && !metaConnection.phoneDetails.canSendMessages
+        && metaConnection.phoneDetails.nameStatus === "PENDING_REVIEW"
+    );
     const hasPendingSubmittedTemplates = templates.some(
         (template) => template.metaSubmissionStatus === "submitted" && template.status === "pending",
     );
@@ -918,6 +965,19 @@ export default function WhatsAppPage() {
     const [campaignReportLoading, setCampaignReportLoading] = useState(false);
     const [selectedCampaignReport, setSelectedCampaignReport] = useState<CampaignDetails | null>(null);
     const [campaignReportCache, setCampaignReportCache] = useState<Record<number, CampaignDetails>>({});
+    const [submittingTemplate, setSubmittingTemplate] = useState(false);
+
+    const hasTrailingVariable = useMemo(() => {
+        if (newTemplate.type === "carousel") return false;
+        const content = newTemplate.content || "";
+        if (!extractTemplateVariableTokens(content).length) return false;
+        try {
+            return new RegExp('\\}\\}[^\\p{L}\\p{N}]*$', 'u').test(content);
+        } catch {
+            return /\}\}[^a-zA-Z0-9]*$/.test(content);
+        }
+    }, [newTemplate.content, newTemplate.type]);
+
     const hasCopyCodeButton = newTemplate.buttons.some((button) => button.type === "copy_code");
     const extractedTemplateVariables = extractTemplateVariableTokens(newTemplate.content);
     const invalidTemplatePlaceholders = extractRawTemplatePlaceholders(newTemplate.content)
@@ -1006,6 +1066,25 @@ export default function WhatsAppPage() {
     const loadMetaSettings = async () => {
         const response = await apiRequest<MetaConnectionStatus>("/whatsapp/settings");
         setMetaConnection(response);
+        return response;
+    };
+
+    const handleManualCheckStatus = async () => {
+        setCheckingMetaStatus(true);
+        try {
+            const res = await apiRequest<MetaConnectionStatus>("/whatsapp/settings");
+            setMetaConnection(res);
+            if (res.phoneDetails?.canSendMessages) {
+                message.success("Meta display name has been approved! WhatsApp messaging is now ready.");
+                void loadAll();
+            } else {
+                message.info("Meta is still reviewing your display name. The system will continue checking automatically.");
+            }
+        } catch {
+            message.error("Could not check Meta status. Please try again.");
+        } finally {
+            setCheckingMetaStatus(false);
+        }
     };
 
     // ── Facebook JavaScript SDK for WhatsApp Embedded Signup ─────────────────
@@ -1179,6 +1258,26 @@ export default function WhatsAppPage() {
         return () => window.clearInterval(interval);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [token, hasPendingSubmittedTemplates]);
+
+    useEffect(() => {
+        if (!token || !isDisplayNamePending) return;
+
+        const interval = window.setInterval(() => {
+            loadMetaSettings()
+                .then((res) => {
+                    if (res?.phoneDetails?.canSendMessages) {
+                        message.success("Meta display name has been approved! WhatsApp messaging is ready.");
+                        void loadAll();
+                    }
+                })
+                .catch((error) => {
+                    console.error("Meta status polling failed:", error);
+                });
+        }, 30000);
+
+        return () => window.clearInterval(interval);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [token, isDisplayNamePending]);
 
     useEffect(() => {
         if (!token || !hasActiveCampaigns) return;
@@ -1608,6 +1707,9 @@ export default function WhatsAppPage() {
             category: record.category,
             type: record.type,
             content: record.content || "",
+            headerText: record.headerText || "",
+            headerType: (record.headerType as any) || (record.type === "image" || record.type === "video" ? record.type : record.headerText ? "text" : "none"),
+            footerText: record.footerText || "",
             mediaFile: null,
             carouselItems: carouselDraftItems,
             buttons: buttonDrafts,
@@ -1619,6 +1721,7 @@ export default function WhatsAppPage() {
 
     const createTemplate = async () => {
         try {
+            setSubmittingTemplate(true);
             if (!newTemplate.name.trim()) {
                 message.error("Template name is required");
                 return;
@@ -1626,6 +1729,11 @@ export default function WhatsAppPage() {
 
             if (newTemplate.type !== "carousel" && !newTemplate.content.trim()) {
                 message.error("Template content is required");
+                return;
+            }
+
+            if (hasTrailingVariable) {
+                message.error("Variables cannot be at the end of the message text. Meta requires static text after the last variable (for example, 'Choose the best promo for you, {{name}}! Book now to save.').");
                 return;
             }
 
@@ -1806,6 +1914,15 @@ export default function WhatsAppPage() {
             formData.append("category", newTemplate.category);
             formData.append("content", newTemplate.content.trim());
 
+            if (newTemplate.type === "text" && newTemplate.headerText?.trim()) {
+                formData.append("headerText", newTemplate.headerText.trim());
+                formData.append("headerType", "text");
+            }
+
+            if (newTemplate.type !== "carousel" && newTemplate.footerText?.trim()) {
+                formData.append("footerText", newTemplate.footerText.trim());
+            }
+
             if (newTemplate.buttons.length > 0) {
                 formData.append(
                     "buttons",
@@ -1874,6 +1991,8 @@ export default function WhatsAppPage() {
             await loadTemplates();
         } catch (error) {
             message.error(parseErrorMessage(error));
+        } finally {
+            setSubmittingTemplate(false);
         }
     };
 
@@ -2368,27 +2487,53 @@ export default function WhatsAppPage() {
                 </div>
             ),
         },
-        { title: "Status", dataIndex: "status", key: "status", render: (s: string) => <StatusTag status={s} /> },
+        {
+            title: "Status",
+            dataIndex: "status",
+            key: "status",
+            render: (s: string, record: Campaign) => {
+                if (record.status === "completed" && record.stats.delivered === 0 && record.stats.sent > 0) {
+                    return (
+                        <Tooltip title="Dispatched to Meta Cloud API. Awaiting delivery confirmation from recipient device.">
+                            <Tag color="cyan" icon={<SendOutlined />}>Sent (Pending Delivery)</Tag>
+                        </Tooltip>
+                    );
+                }
+                return <StatusTag status={s} />;
+            },
+        },
         {
             title: "Progress", key: "progress",
             render: (_: any, record: Campaign) => {
                 const total = record.stats.total;
                 const inFlight = record.status === "sending" || record.status === "draft";
-                const numerator = inFlight ? record.stats.sent : record.stats.delivered;
+                const isSentPendingDelivery = record.status === "completed" && record.stats.delivered === 0 && record.stats.sent > 0;
+                const isFullyDelivered = total > 0 && record.stats.delivered >= total;
+
+                const numerator = inFlight || isSentPendingDelivery ? record.stats.sent : record.stats.delivered;
                 const pct = total > 0
                     ? Math.round((numerator / total) * 100)
                     : (record.status === "sending" ? 5 : 0);
+
+                const progressStatus = record.status === "failed" || record.stats.failed > 0
+                    ? "exception"
+                    : isFullyDelivered
+                        ? "success"
+                        : (inFlight ? "active" : "normal");
+
                 return (
-                    <div style={{ minWidth: 120 }}>
+                    <div style={{ minWidth: 140 }}>
                         <Progress
                             percent={pct}
                             size="small"
-                            status={record.status === "failed" ? "exception" : record.status === "completed" ? "success" : "active"}
+                            status={progressStatus}
                         />
                         <div className="text-xs text-gray-500">
                             {inFlight
                                 ? `${record.stats.sent}/${total || 0} sent`
-                                : `${record.stats.delivered}/${total || 0} delivered`}
+                                : isSentPendingDelivery
+                                    ? `${record.stats.sent}/${total || 0} sent · 0 delivered`
+                                    : `${record.stats.delivered}/${total || 0} delivered`}
                         </div>
                     </div>
                 );
@@ -2442,6 +2587,15 @@ export default function WhatsAppPage() {
 
     const renderCampaignSteps = () => (
         <div>
+            {metaConnection.phoneDetails && !metaConnection.phoneDetails.canSendMessages && (
+                <div className="mb-4 rounded-xl border border-blue-200 bg-blue-50/80 p-3.5 flex items-start gap-3">
+                    <InfoCircleOutlined className="text-blue-600 text-base mt-0.5 flex-shrink-0" />
+                    <div className="text-xs text-blue-900 leading-relaxed">
+                        <span className="font-semibold block text-sm text-blue-950 mb-0.5">Meta Display Name Review in Progress</span>
+                        Meta is currently reviewing your WhatsApp business display name <strong>&quot;{metaConnection.phoneDetails.verifiedName}&quot;</strong>. You can configure and save your campaign now. Outbound delivery will automatically activate as soon as Meta completes verification.
+                    </div>
+                </div>
+            )}
             <Steps current={campaignStep} size="small" className="mb-6">
                 <Step title="Contact Lists" icon={<TeamOutlined />} />
                 <Step title="Template" icon={<FileTextOutlined />} />
@@ -2558,7 +2712,18 @@ export default function WhatsAppPage() {
                 <Button disabled={campaignStep === 0} onClick={() => setCampaignStep(s => s - 1)}>Back</Button>
                 {campaignStep < 3
                     ? <Button type="primary" onClick={() => setCampaignStep(s => s + 1)}>Next</Button>
-                    : <Button type="primary" icon={<SendOutlined />} onClick={launchCampaign}>Launch Campaign</Button>
+                    : (
+                        <Tooltip title={metaConnection.phoneDetails && !metaConnection.phoneDetails.canSendMessages ? "Outbound delivery is temporarily paused while Meta completes display name review. The campaign can be launched once approved." : undefined}>
+                            <Button
+                                type="primary"
+                                icon={<SendOutlined />}
+                                onClick={launchCampaign}
+                                disabled={Boolean(metaConnection.phoneDetails && !metaConnection.phoneDetails.canSendMessages)}
+                            >
+                                Launch Campaign
+                            </Button>
+                        </Tooltip>
+                    )
                 }
             </div>
         </div>
@@ -2633,11 +2798,35 @@ export default function WhatsAppPage() {
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
-                        <Badge dot status={metaConnected ? "success" : "warning"}>
-                            <Tag color={metaConnected ? "green" : "orange"} className="px-3 py-1 text-sm font-medium">
-                                {metaConnected ? "Meta Connected" : "Meta Not Connected"}
-                            </Tag>
-                        </Badge>
+                        {!metaConnected ? (
+                            <Badge status="warning">
+                                <Tag color="orange" className="px-3 py-1 text-sm font-medium">
+                                    Meta Not Connected
+                                </Tag>
+                            </Badge>
+                        ) : isDisplayNamePending ? (
+                            <Badge status="processing">
+                                <Tag
+                                    color="blue"
+                                    className="px-3 py-1 text-sm font-medium border-blue-200 bg-blue-50 text-blue-700 inline-flex items-center gap-1.5"
+                                >
+                                    <SyncOutlined spin className="text-blue-500 text-xs" />
+                                    Meta Connected (Review in Progress)
+                                </Tag>
+                            </Badge>
+                        ) : metaConnection.phoneDetails && !metaConnection.phoneDetails.canSendMessages ? (
+                            <Badge status="warning">
+                                <Tag color="orange" className="px-3 py-1 text-sm font-medium">
+                                    Meta Verification Pending
+                                </Tag>
+                            </Badge>
+                        ) : (
+                            <Badge status="success">
+                                <Tag color="green" className="px-3 py-1 text-sm font-medium">
+                                    Meta Connected
+                                </Tag>
+                            </Badge>
+                        )}
                         {metaConnected ? (
                             <Popconfirm
                                 title="Disconnect WhatsApp?"
@@ -2685,6 +2874,69 @@ export default function WhatsAppPage() {
                         }
                         className="rounded-xl border-green-200 bg-green-50 shadow-sm"
                     />
+                )}
+
+                {metaConnected && metaConnection.phoneDetails && !metaConnection.phoneDetails.canSendMessages && (
+                    isDisplayNamePending ? (
+                        <div className="rounded-2xl border border-blue-200/90 bg-gradient-to-r from-blue-50/90 via-indigo-50/40 to-white p-5 shadow-sm transition-all">
+                            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                                <div className="flex items-start gap-3.5">
+                                    <div className="w-10 h-10 rounded-xl bg-blue-100/90 text-blue-600 flex items-center justify-center flex-shrink-0 mt-0.5 shadow-sm">
+                                        <SafetyCertificateOutlined className="text-xl" />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            <h3 className="text-base font-semibold text-gray-800 m-0">
+                                                WhatsApp Display Name Verification in Progress
+                                            </h3>
+                                            <Tag color="blue" className="text-xs font-medium rounded-full px-2.5 py-0.5 border-blue-200 bg-blue-100/60 text-blue-700">
+                                                Meta Reviewing
+                                            </Tag>
+                                        </div>
+                                        <p className="text-sm text-gray-600 m-0 leading-relaxed max-w-3xl">
+                                            Meta is reviewing your official business display name <strong>&quot;{metaConnection.phoneDetails.verifiedName}&quot;</strong> for number <strong>{metaConnection.phoneDetails.displayPhoneNumber || metaConnection.phoneNumberId}</strong>. This standard verification typically completes in a few hours.
+                                        </p>
+                                        <p className="text-xs text-gray-500 m-0 leading-relaxed">
+                                            Your contacts, templates, and campaign drafts are fully saved. Outbound messaging will automatically activate the moment Meta approves the display name.
+                                        </p>
+                                        {metaConnection.phoneDetails.isTestNumber && (
+                                            <div className="mt-2 inline-flex items-center gap-1.5 text-xs text-amber-800 bg-amber-50/90 border border-amber-200/80 px-3 py-1 rounded-lg">
+                                                <span>ℹ️ Sandbox Testing: <strong>{metaConnection.phoneDetails.displayPhoneNumber}</strong> is in Meta test mode. Messages can be delivered to test numbers added in your Meta Developer setup.</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                                <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-start gap-2.5 flex-shrink-0 pt-1">
+                                    <Button
+                                        type="primary"
+                                        size="middle"
+                                        icon={<SyncOutlined spin={checkingMetaStatus} />}
+                                        onClick={handleManualCheckStatus}
+                                        loading={checkingMetaStatus}
+                                        className="rounded-xl shadow-sm font-medium"
+                                        style={{ backgroundColor: "#1677ff" }}
+                                    >
+                                        Check Status Now
+                                    </Button>
+                                    <div className="inline-flex items-center gap-1.5 text-xs text-blue-600 font-medium">
+                                        <span className="relative flex h-2 w-2">
+                                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                                            <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+                                        </span>
+                                        Auto-sync active (30s)
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    ) : (
+                        <Alert
+                            message="WhatsApp Verification Notice"
+                            description={metaConnection.phoneDetails.warning || "Your WhatsApp phone number is awaiting verification."}
+                            type="info"
+                            showIcon
+                            className="rounded-xl border-blue-200 bg-blue-50/70 shadow-sm"
+                        />
+                    )
                 )}
 
                 <Row gutter={[16, 16]}>
@@ -3129,6 +3381,8 @@ export default function WhatsAppPage() {
                 title={<span><FileTextOutlined className="mr-2 text-purple-500" />{editingTemplate ? `Edit Template: ${editingTemplate.name}` : "Create Template"}</span>}
                 open={templateModal}
                 onCancel={closeTemplateModal}
+                closable={!submittingTemplate}
+                maskClosable={!submittingTemplate}
                 width="min(1120px, calc(100vw - 24px))"
                 footer={null}
             >
@@ -3225,6 +3479,20 @@ export default function WhatsAppPage() {
                                         </Upload>
                                     </Form.Item>
                                 )}
+                                {newTemplate.type === "text" && (
+                                    <Form.Item
+                                        label="Header (Optional)"
+                                        extra="Optional text headline shown at the top of your message in bold (max 60 characters)."
+                                    >
+                                        <Input
+                                            maxLength={60}
+                                            showCount
+                                            placeholder="e.g. Special Announcement or Welcome"
+                                            value={newTemplate.headerText}
+                                            onChange={(e) => setNewTemplate({ ...newTemplate, headerText: e.target.value })}
+                                        />
+                                    </Form.Item>
+                                )}
                                 {newTemplate.type !== "carousel" && (
                                     <Form.Item label="Message Content" required>
                                         <div className="space-y-3">
@@ -3234,6 +3502,23 @@ export default function WhatsAppPage() {
                                                 value={newTemplate.content}
                                                 onChange={(e) => setNewTemplate({ ...newTemplate, content: e.target.value })}
                                             />
+                                            {hasTrailingVariable && (
+                                                <Alert
+                                                    showIcon
+                                                    type="warning"
+                                                    message="Meta WhatsApp Restriction: Trailing Variable Detected"
+                                                    description={(
+                                                        <div className="space-y-1 text-xs">
+                                                            <div>
+                                                                WhatsApp Meta requires closing static text after the last variable. Templates ending with a variable like <code>{"{{name}}"}</code> will be rejected by Meta.
+                                                            </div>
+                                                            <div>
+                                                                <strong>Fix:</strong> Add closing static words after the variable, e.g. <code>{"{{name}}, thank you for reaching out!"}</code> instead of <code>{"{{name}}"}</code>.
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                />
+                                            )}
                                             <Alert
                                                 showIcon
                                                 type="info"
@@ -3284,6 +3569,20 @@ export default function WhatsAppPage() {
                                                 )}
                                             />
                                         </div>
+                                    </Form.Item>
+                                )}
+                                {newTemplate.type !== "carousel" && (
+                                    <Form.Item
+                                        label="Footer (Optional)"
+                                        extra="Optional short, muted text shown at the bottom of the message bubble (max 60 characters)."
+                                    >
+                                        <Input
+                                            maxLength={60}
+                                            showCount
+                                            placeholder="e.g. Reply STOP to opt out"
+                                            value={newTemplate.footerText}
+                                            onChange={(e) => setNewTemplate({ ...newTemplate, footerText: e.target.value })}
+                                        />
                                     </Form.Item>
                                 )}
                                 {newTemplate.type === "carousel" && (
@@ -3564,15 +3863,21 @@ export default function WhatsAppPage() {
                             </Form>
                             <div className="sticky bottom-0 bg-white pt-2">
                                 <div className="flex gap-2 justify-end">
-                                    <Button onClick={closeTemplateModal}>
+                                    <Button onClick={closeTemplateModal} disabled={submittingTemplate}>
                                         Cancel
                                     </Button>
                                     <Button
                                         type="primary"
                                         style={{ backgroundColor: '#3b5998' }}
+                                        loading={submittingTemplate}
+                                        disabled={submittingTemplate}
                                         onClick={createTemplate}
                                     >
-                                        {editingTemplate ? "Save & Resubmit to Meta" : "Submit for Approval"}
+                                        {submittingTemplate
+                                            ? "Submitting to Meta..."
+                                            : editingTemplate
+                                                ? "Save & Resubmit to Meta"
+                                                : "Submit for Approval"}
                                     </Button>
                                 </div>
                             </div>
@@ -3584,6 +3889,8 @@ export default function WhatsAppPage() {
                             <WhatsAppPreview
                                 content={newTemplate.content}
                                 type={newTemplate.type}
+                                headerText={newTemplate.type === "text" ? newTemplate.headerText : undefined}
+                                footerText={newTemplate.footerText}
                                 mediaSrc={templateMediaPreviewUrl}
                                 mediaLabel={newTemplate.mediaFile?.name}
                                 carouselItems={liveCarouselPreviewItems}
@@ -3701,6 +4008,15 @@ export default function WhatsAppPage() {
                                         </div>
                                     )}
 
+                                    {selectedTemplate.headerText && (
+                                        <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-xs">
+                                            <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">
+                                                Header
+                                            </div>
+                                            <div className="font-semibold text-gray-900 text-sm">{selectedTemplate.headerText}</div>
+                                        </div>
+                                    )}
+
                                     {/* Message Body Content Card */}
                                     <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-xs">
                                         <div className="flex items-center justify-between mb-2">
@@ -3733,6 +4049,15 @@ export default function WhatsAppPage() {
                                             )}
                                         </div>
                                     </div>
+
+                                    {selectedTemplate.footerText && (
+                                        <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-xs">
+                                            <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">
+                                                Footer
+                                            </div>
+                                            <div className="text-xs text-gray-600 italic">{selectedTemplate.footerText}</div>
+                                        </div>
+                                    )}
 
                                     {/* Dynamic Variables Pill Box */}
                                     {selectedTemplate.variables && selectedTemplate.variables.length > 0 && (
@@ -3853,6 +4178,8 @@ export default function WhatsAppPage() {
                                     <WhatsAppPreview
                                         content={selectedTemplate.content}
                                         type={selectedTemplate.type}
+                                        headerText={selectedTemplate.headerText ?? undefined}
+                                        footerText={selectedTemplate.footerText ?? undefined}
                                         mediaSrc={selectedTemplate.mediaUrl}
                                         mediaLabel={selectedTemplate.mediaUrl ? "Uploaded media attached" : undefined}
                                         carouselItems={selectedTemplate.carouselItems ?? undefined}
@@ -3950,13 +4277,21 @@ export default function WhatsAppPage() {
                                         ))}
                                     </div>
                                 </div>
+                            ) : selectedCampaignReport.stats.sent > 0 && selectedCampaignReport.stats.delivered === 0 ? (
+                                <Alert
+                                    className="mt-4"
+                                    type="info"
+                                    showIcon
+                                    message="Messages Dispatched to Meta (Awaiting Delivery Confirmation)"
+                                    description="Meta Cloud API accepted these messages. Delivery confirmation webhooks from the recipient devices have not been received yet. Note: If using a Meta test number (+1 555...), ensure recipient phone numbers are in your sandbox 'To' list, and that your display name review is approved by Meta."
+                                />
                             ) : (
                                 <Alert
                                     className="mt-4"
                                     type="success"
                                     showIcon
                                     message="No failed deliveries in this campaign"
-                                    description="If a message fails later, the exact Meta or WhatsApp reason will show up here."
+                                    description="All processed messages were delivered successfully or are awaiting final delivery confirmation."
                                 />
                             )}
                         </div>

@@ -1,7 +1,8 @@
 import * as React from "react";
-import { Button, Select, Input, Tag, Row, Col, Card, Space, Popover, Alert, Tooltip } from "antd";
+import { Button, Select, Input, Tag, Row, Col, Card, Space, Popover, Alert, Tooltip, message } from "antd";
 import { PlusOutlined, DeleteOutlined, SearchOutlined, InfoCircleOutlined } from "@ant-design/icons";
 import * as Io5Icons from "react-icons/io5";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   useImageTemplateControllerGetImageTags,
   useMapTemplateControllerGetMapTags,
@@ -17,6 +18,7 @@ import useShortcutStore from "../../../../lib/zustand/store/shortcutStore";
 import useCompanyStore from "../../../../lib/zustand/store/companyStore";
 
 export const ColorShortcutForm: React.FC = () => {
+  const queryClient = useQueryClient();
   const { company } = useCompanyStore();
   const { templatesShortcuts, setTemplatesShortcuts } = useShortcutStore();
   const [currShortcuts, setCurrShortcuts] = React.useState<
@@ -119,6 +121,8 @@ export const ColorShortcutForm: React.FC = () => {
       {
         onSuccess: (data) => {
           setTemplatesShortcuts(data);
+          queryClient.invalidateQueries({ queryKey: ["shortcuts", "all"] });
+          message.success("Template shortcuts saved successfully");
         },
       }
     );

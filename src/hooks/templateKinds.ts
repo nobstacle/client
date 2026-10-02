@@ -38,6 +38,7 @@ const ROUTE_TEMPLATE_MAP: ReadonlyArray<{
   { prefix: "/dashboard/scroll", kinds: ["scroll"] },
   { prefix: "/dashboard/public", kinds: ["publicScroll"] },
   { prefix: "/dashboard/survey", kinds: ["survey"] },
+  { prefix: "/dashboard/settings", kinds: ["text", "slideshow"] },
 ];
 
 export function getRouteTemplateKinds(pathname: string): TemplateKind[] {

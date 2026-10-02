@@ -57,6 +57,8 @@ interface Company {
     formsEnabled?: boolean;
     whatsappEnabled?: boolean;
     teamEnabled?: boolean;
+    trialStartedAt?: string | null;
+    trialEndsAt?: string | null;
     createdAt?: string;
     updatedAt?: string;
     _count?: {
@@ -188,7 +190,11 @@ const CompaniesManagement: React.FC = () => {
         setModalMode('create');
         setEditingCompany(null);
         form.resetFields();
-        form.setFieldsValue(DEFAULT_FEATURE_ACCESS);
+        form.setFieldsValue({
+            ...DEFAULT_FEATURE_ACCESS,
+            isTrial: false,
+            trialDays: 30,
+        });
         setFileList([]);
         setIsModalOpen(true);
     };
@@ -196,10 +202,19 @@ const CompaniesManagement: React.FC = () => {
     const handleEditCompany = (company: Company) => {
         setModalMode('edit');
         setEditingCompany(company);
+        const hasTrial = Boolean(company.trialEndsAt);
+        let daysLeft = 30;
+        if (company.trialEndsAt) {
+            const diff = new Date(company.trialEndsAt).getTime() - Date.now();
+            if (diff > 0) daysLeft = Math.max(1, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+        }
+
         form.setFieldsValue({
             name: company.name,
             stationCount: company.stationCount,
             defaultLangCode: company.defaultLangCode || 'en',
+            isTrial: hasTrial,
+            trialDays: daysLeft,
             ...getFeatureAccessValues(company),
         });
 
@@ -265,6 +280,8 @@ const CompaniesManagement: React.FC = () => {
                 formsEnabled: values.formsEnabled ?? true,
                 whatsappEnabled: values.whatsappEnabled ?? true,
                 teamEnabled: values.teamEnabled ?? true,
+                isTrial: values.isTrial ?? false,
+                trialDays: values.trialDays ? Number(values.trialDays) : 30,
             };
 
             if (modalMode === 'create') {
@@ -411,6 +428,24 @@ const CompaniesManagement: React.FC = () => {
                     {record._count?.Employees || 0}
                 </Tag>
             ),
+        },
+        {
+            title: 'Account Type',
+            key: 'trialStatus',
+            width: 160,
+            align: 'center',
+            render: (_, record) => {
+                if (!record.trialEndsAt) {
+                    return <Tag color="blue">Standard</Tag>;
+                }
+                const endsAt = new Date(record.trialEndsAt).getTime();
+                const now = Date.now();
+                if (endsAt > now) {
+                    const daysLeft = Math.max(1, Math.ceil((endsAt - now) / (1000 * 60 * 60 * 24)));
+                    return <Tag color="gold">Trial ({daysLeft}d left)</Tag>;
+                }
+                return <Tag color="red">Trial Expired</Tag>;
+            },
         },
         {
             title: 'Actions',
@@ -653,6 +688,44 @@ const CompaniesManagement: React.FC = () => {
                             </Form.Item>
                         </Col>
                     </Row>
+
+                    <Card
+                        size="small"
+                        title="Trial Provisioning (Superadmin)"
+                        style={{ marginTop: 8, backgroundColor: '#fafafa' }}
+                    >
+                        <Row gutter={[16, 12]} align="middle">
+                            <Col xs={24} sm={12}>
+                                <Form.Item
+                                    name="isTrial"
+                                    valuePropName="checked"
+                                    style={{ marginBottom: 0 }}
+                                >
+                                    <Checkbox>
+                                        <span className="font-medium">Provision Trial Account</span>
+                                    </Checkbox>
+                                </Form.Item>
+                            </Col>
+                            <Col xs={24} sm={12}>
+                                <Form.Item
+                                    noStyle
+                                    shouldUpdate={(prev, cur) => prev.isTrial !== cur.isTrial}
+                                >
+                                    {({ getFieldValue }) =>
+                                        getFieldValue("isTrial") ? (
+                                            <Form.Item
+                                                name="trialDays"
+                                                label="Duration (Days)"
+                                                style={{ marginBottom: 0 }}
+                                            >
+                                                <InputNumber min={1} max={365} style={{ width: '100%' }} />
+                                            </Form.Item>
+                                        ) : null
+                                    }
+                                </Form.Item>
+                            </Col>
+                        </Row>
+                    </Card>
 
                     <Card
                         size="small"

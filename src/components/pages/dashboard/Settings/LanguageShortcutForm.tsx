@@ -9,15 +9,18 @@ import {
   Spin,
   Card,
   Divider,
-  Tooltip
+  Tooltip,
+  message
 } from "antd";
 import { PlusOutlined, DeleteOutlined, InfoCircleOutlined } from "@ant-design/icons";
+import { useQueryClient } from "@tanstack/react-query";
 import { languages } from "../../../../constant/languages";
 import { useShortcutControllerCreateShortcutMany } from "../../../../lib/client/api";
 import { PostShortcutReq } from "../../../../lib/client/model";
 import useShortcutStore from "../../../../lib/zustand/store/shortcutStore";
 
 export const LanguageShortcutForm: React.FC = () => {
+  const queryClient = useQueryClient();
   const { languagesShortcuts, setLanguagesShortcuts } = useShortcutStore();
   const [form] = Form.useForm();
   const [currLanguages, setCurrLanguages] = React.useState<
@@ -80,6 +83,8 @@ export const LanguageShortcutForm: React.FC = () => {
       {
         onSuccess: (data) => {
           setLanguagesShortcuts(data);
+          queryClient.invalidateQueries({ queryKey: ["shortcuts", "all"] });
+          message.success("Language shortcuts saved successfully");
           setError("");
           form.setFieldValue("language", undefined);
         },

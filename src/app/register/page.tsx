@@ -23,7 +23,7 @@ export default function RegisterPage() {
           />
           
           <h1 className="text-4xl font-bold leading-tight">
-            Start your 30-day free trial
+            Create your account
           </h1>
           <p className="mt-4 text-lg text-white/80">
             Transform your customer experience with powerful display and upselling tools.

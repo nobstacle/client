@@ -433,11 +433,17 @@ button {
   @apply h-10 w-10 flex items-center justify-center rounded-md text-white text-sm;
 }
 
+.ant-btn-primary:hover,
+.ant-btn-primary:focus,
+.ant-btn-primary:active {
+  color: white;
+  border-color: inherit;
+  box-shadow: none !important;
+}
+
 .ant-btn:hover,
 .ant-btn:focus,
 .ant-btn:active {
-  color: white;
-  border-color: inherit;
   box-shadow: none !important;
 }
 

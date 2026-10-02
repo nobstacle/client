@@ -19,6 +19,7 @@ import {
     useSurveyHeaderControllerCreateSurveyHeader,
     useSurveyHeaderControllerPatchSurveyHeader,
     useSurveyHeaderControllerGetSurveyHeaders,
+    useTemplateControllerGetTextTemplates,
 } from "../../../../lib/client/api";
 
 interface SurveyHeader {
@@ -38,25 +39,50 @@ export const TemplateMergerForm: React.FC = () => {
     const [form] = Form.useForm();
     const { texts } = useTemplateStore();
 
-    // API hooks - now fetching single survey header
+    // Text templates fallback in case store has not yet loaded
+    const textTemplatesQuery = useTemplateControllerGetTextTemplates(
+        {},
+        {
+            query: {
+                staleTime: 60 * 1000,
+            },
+        }
+    );
+
+    const availableTexts = React.useMemo(() => {
+        if (texts && texts.length > 0) return texts;
+        return (textTemplatesQuery.data as any) || [];
+    }, [texts, textTemplatesQuery.data]);
+
+    // API hooks - fetching survey headers
     const { data: surveyHeader, isLoading, refetch } = useSurveyHeaderControllerGetSurveyHeaders();
     const createMutation = useSurveyHeaderControllerCreateSurveyHeader();
     const updateMutation = useSurveyHeaderControllerPatchSurveyHeader();
 
+    const surveyHeaderList = React.useMemo(() => {
+        if (Array.isArray(surveyHeader)) return surveyHeader;
+        if (Array.isArray((surveyHeader as any)?.items)) return (surveyHeader as any).items;
+        if (surveyHeader && typeof surveyHeader === "object" && (surveyHeader as any).textId) return [surveyHeader];
+        return [];
+    }, [surveyHeader]);
+
+    const activeSurveyHeader = surveyHeaderList[0] || null;
+    const activeTextId = activeSurveyHeader?.textId;
+
     // Set initial form value when data loads
     React.useEffect(() => {
-        if (surveyHeader) {
+        if (activeTextId) {
             form.setFieldsValue({
-                textId: surveyHeader.items[0]?.textId,
+                textId: activeTextId,
             });
         }
-    }, [surveyHeader, form]);
+    }, [activeTextId, form]);
 
     const handleSubmit = (values: any) => {
-        if (surveyHeader !== undefined && surveyHeader?.items?.length > 0) {
+        if (activeSurveyHeader) {
             updateMutation.mutate(
                 {
-                    id: "",
+                    id: String(activeSurveyHeader.id || ""),
                     data: {
                         textId: values.textId,
                     }
@@ -94,15 +120,15 @@ export const TemplateMergerForm: React.FC = () => {
     // Get unique templates by tag
     const uniqueTemplates = React.useMemo(() => {
         const templateMap = new Map();
-        texts.forEach((template) => {
+        availableTexts.forEach((template: any) => {
             if (template.tag && !templateMap.has(template.tag)) {
                 templateMap.set(template.tag, template);
             }
         });
         return Array.from(templateMap.values());
-    }, [texts]);
+    }, [availableTexts]);
 
-    const currentTemplate = texts.find((t) => t.id === surveyHeader?.textId);
+    const currentTemplate = availableTexts.find((t: any) => t.id === activeTextId);
 
     return (
         <div style={{ padding: "8px" }}>
@@ -189,7 +215,7 @@ export const TemplateMergerForm: React.FC = () => {
                                 block
                                 className="customBtn"
                             >
-                                {surveyHeader ? "Update Template" : "Assign Template"}
+                                {activeSurveyHeader ? "Update Template" : "Assign Template"}
                             </Button>
                         </Form.Item>
                     </Form>

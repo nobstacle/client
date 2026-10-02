@@ -5126,7 +5126,7 @@ export const surveyHeaderControllerGetSurveyHeaders = (
 ) => {
 	return nobstacleBackendApiInstance<GetSurveyHeaderRes[]>(
 		{
-			url: `/api/v1/shortcut/`,
+			url: `/api/v1/shortcut/getmanySurveyHeaders`,
 			method: 'GET',
 			params,
 			signal

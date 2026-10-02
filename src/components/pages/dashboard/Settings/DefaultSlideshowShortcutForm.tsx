@@ -2,6 +2,7 @@ import * as React from "react";
 import { SubmitHandler, useForm, Controller } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   useShortcutControllerCreateShortcutMany,
   useShortcutControllerPatchShortcut,
@@ -31,6 +32,7 @@ type FormValues = {
 };
 
 export const DefaultSlideshowShortcutForm: React.FC = () => {
+  const queryClient = useQueryClient();
   const { defaulSlideshowShortcut, setDefaultSlideshowShortcut } =
     useShortcutStore();
 
@@ -64,6 +66,7 @@ export const DefaultSlideshowShortcutForm: React.FC = () => {
         {
           onSuccess: (res) => {
             setDefaultSlideshowShortcut(res[0]);
+            queryClient.invalidateQueries({ queryKey: ["shortcuts", "all"] });
           },
         }
       );
@@ -79,6 +82,7 @@ export const DefaultSlideshowShortcutForm: React.FC = () => {
         {
           onSuccess: (res) => {
             setDefaultSlideshowShortcut(res);
+            queryClient.invalidateQueries({ queryKey: ["shortcuts", "all"] });
           },
         }
       );
@@ -86,15 +90,15 @@ export const DefaultSlideshowShortcutForm: React.FC = () => {
   };
 
   React.useEffect(() => {
-    if (slideshowTags.isSuccess && defaulSlideshowShortcut?.value) {
+    if (defaulSlideshowShortcut?.value) {
       setValue("tag", defaulSlideshowShortcut.value);
     }
-  }, [defaulSlideshowShortcut?.value, slideshowTags.isSuccess, setValue]);
+  }, [defaulSlideshowShortcut?.value, setValue]);
 
   const onSubmit: SubmitHandler<FormValues> = (data) =>
     handleDefaultSlideshow(data);
 
-  if (slideshowTags.data?.length === 0) return null;
+  const hasNoTags = Boolean(slideshowTags.isSuccess && slideshowTags.data?.length === 0);
 
   const isLoading =
     shortcutCreate.status === "pending" ||
@@ -126,6 +130,15 @@ export const DefaultSlideshowShortcutForm: React.FC = () => {
         <Space direction="vertical" style={{ width: "100%" }} size="large">
 
           <div style={{ width: "100%" }}>
+            {hasNoTags && (
+              <Alert
+                message="No slideshow tags available"
+                description="Please create a slideshow template and assign a tag to it before configuring the default slideshow shortcut."
+                type="info"
+                showIcon
+                className="mb-4"
+              />
+            )}
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Slideshow Tag <span className="text-red-500">*</span>
@@ -136,7 +149,8 @@ export const DefaultSlideshowShortcutForm: React.FC = () => {
                 render={({ field }) => (
                   <>
                     <Select
-                      placeholder="Select tag..."
+                      placeholder={hasNoTags ? "No slideshow tags found" : "Select tag..."}
+                      disabled={hasNoTags || isLoading}
                       value={field.value || undefined}
                       onChange={(value) => field.onChange(value)}
                       options={
@@ -195,7 +209,7 @@ export const DefaultSlideshowShortcutForm: React.FC = () => {
               type="primary"
               size="large"
               loading={isLoading}
-              disabled={isLoading}
+              disabled={isLoading || hasNoTags}
               block
               onClick={handleSubmit(onSubmit)}
               className="h-10 font-semibold customBtn"

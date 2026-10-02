@@ -67,32 +67,20 @@ export const useFetchShortcut = () => {
   } = useShortcutStore();
 
   useEffect(() => {
-    if (defaultSlideshowShortcut.isSuccess) {
-      if (defaultSlideshowShortcut.data) {
-        setDefaultSlideshowShortcut(defaultSlideshowShortcut.data);
-      }
-    } else {
-      setDefaultSlideshowShortcut(null);
+    if (defaultSlideshowShortcut.isSuccess && defaultSlideshowShortcut.data) {
+      setDefaultSlideshowShortcut(defaultSlideshowShortcut.data);
     }
-  }, [defaultSlideshowShortcut.isSuccess]);
+  }, [defaultSlideshowShortcut.isSuccess, defaultSlideshowShortcut.data, setDefaultSlideshowShortcut]);
 
   useEffect(() => {
-    if (langaugeShortcuts.isSuccess) {
-      if (langaugeShortcuts.data) {
-        setLanguagesShortcuts(langaugeShortcuts.data);
-      }
-    } else {
-      setLanguagesShortcuts([]);
+    if (langaugeShortcuts.isSuccess && langaugeShortcuts.data) {
+      setLanguagesShortcuts(langaugeShortcuts.data);
     }
-  }, [langaugeShortcuts.isSuccess]);
+  }, [langaugeShortcuts.isSuccess, langaugeShortcuts.data, setLanguagesShortcuts]);
 
   useEffect(() => {
-    if (templateShortcuts.isSuccess) {
-      if (templateShortcuts.data) {
-        setTemplatesShortcuts(templateShortcuts.data);
-      }
-    } else {
-      setTemplatesShortcuts([]);
+    if (templateShortcuts.isSuccess && templateShortcuts.data) {
+      setTemplatesShortcuts(templateShortcuts.data);
     }
-  }, [templateShortcuts.isSuccess]);
+  }, [templateShortcuts.isSuccess, templateShortcuts.data, setTemplatesShortcuts]);
 };

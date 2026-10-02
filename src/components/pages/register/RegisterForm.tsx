@@ -63,7 +63,7 @@ export const RegisterForm: React.FC = () => {
     <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-6">
       {/* Header */}
       <div className="mb-2">
-        <h1 className="text-3xl font-bold text-gray-900">Start your 30-day trial</h1>
+        <h1 className="text-3xl font-bold text-gray-900">Create your account</h1>
         <p className="mt-2 text-sm text-gray-600">
           {"We'll create your admin account first, then you can finish your company setup right away."}
         </p>
@@ -163,7 +163,7 @@ export const RegisterForm: React.FC = () => {
             Creating account...
           </span>
         ) : (
-          "Start Free Trial"
+          "Create Account"
         )}
       </button>
 
@@ -179,7 +179,7 @@ export const RegisterForm: React.FC = () => {
 
       {/* Footer Note */}
       <p className="text-center text-xs text-gray-500">
-        Your access stays active for 30 days from registration.
+        By registering, you can set up your company and access the platform.
       </p>
     </form>
   );

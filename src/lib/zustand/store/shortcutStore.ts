@@ -20,16 +20,30 @@ const useShortcutStore = create<ShortcutState>()(
   persist(
     (set, get) => ({
       shortcuts: [],
-      setShortcuts: (shortcuts) => set(() => ({ shortcuts })),
-      setDefaultSlideshowShortcut: (defaulSlideshowShortcut) =>
-        set(() => ({ defaulSlideshowShortcut })),
+      setShortcuts: (shortcuts) => {
+        const current = get().shortcuts;
+        if (current === shortcuts) return;
+        set({ shortcuts: shortcuts || [] });
+      },
+      setDefaultSlideshowShortcut: (defaulSlideshowShortcut) => {
+        const current = get().defaulSlideshowShortcut;
+        if (current === defaulSlideshowShortcut) return;
+        if (current?.id === defaulSlideshowShortcut?.id && current?.value === defaulSlideshowShortcut?.value) return;
+        set({ defaulSlideshowShortcut: defaulSlideshowShortcut || null });
+      },
       defaulSlideshowShortcut: null,
       languagesShortcuts: [],
-      setLanguagesShortcuts: (languagesShortcuts) =>
-        set(() => ({ languagesShortcuts })),
+      setLanguagesShortcuts: (languagesShortcuts) => {
+        const current = get().languagesShortcuts;
+        if (current === languagesShortcuts) return;
+        set({ languagesShortcuts: languagesShortcuts || [] });
+      },
       templatesShortcuts: [],
-      setTemplatesShortcuts: (templatesShortcuts) =>
-        set(() => ({ templatesShortcuts })),
+      setTemplatesShortcuts: (templatesShortcuts) => {
+        const current = get().templatesShortcuts;
+        if (current === templatesShortcuts) return;
+        set({ templatesShortcuts: templatesShortcuts || [] });
+      },
     }),
     {
       name: "shortcut-storage", // name of the item in the storage (must be unique)

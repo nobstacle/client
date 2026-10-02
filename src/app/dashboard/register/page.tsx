@@ -14,7 +14,9 @@ import {
     Popconfirm,
     Tag,
     Row,
-    Col
+    Col,
+    Checkbox,
+    InputNumber
 } from 'antd';
 import {
     MailOutlined,
@@ -46,6 +48,11 @@ interface User {
     companyId?: number;
     companyName?: string;
     Roles: string[];
+    trialStartedAt?: string | null;
+    trialEndsAt?: string | null;
+    isTrialAccount?: boolean;
+    isTrialActive?: boolean;
+    trialDaysLeft?: number | null;
 }
 
 interface Company {
@@ -202,18 +209,31 @@ const RegisterUsers: React.FC = () => {
         setModalMode('create');
         setEditingUser(null);
         form.resetFields();
+        form.setFieldsValue({
+            isTrial: false,
+            trialDays: 30,
+        });
         setIsModalOpen(true);
     };
 
     const handleEditUser = (user: User) => {
         setModalMode('edit');
         setEditingUser(user);
+        const hasTrial = Boolean(user.trialEndsAt);
+        let daysLeft = 30;
+        if (user.trialEndsAt) {
+            const diff = new Date(user.trialEndsAt).getTime() - Date.now();
+            if (diff > 0) daysLeft = Math.max(1, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+        }
+
         form.setFieldsValue({
             email: user.email,
             firstName: user.firstName,
             lastName: user.lastName,
             companyId: user.companyId,
             Roles: user.Roles?.[0],
+            isTrial: hasTrial,
+            trialDays: daysLeft,
         });
         setIsModalOpen(true);
     };
@@ -252,6 +272,8 @@ const RegisterUsers: React.FC = () => {
                 lastName: values.lastName,
                 Roles: values.Roles,
                 companyId: values.companyId ? parseInt(values.companyId) : undefined,
+                isTrial: values.isTrial ?? false,
+                trialDays: values.trialDays ? Number(values.trialDays) : 30,
             };
 
             if (modalMode === 'create') {
@@ -394,6 +416,23 @@ const RegisterUsers: React.FC = () => {
                     })}
                 </>
             ),
+        },
+        {
+            title: 'Account Type',
+            key: 'trialStatus',
+            width: 160,
+            render: (_, record) => {
+                if (!record.trialEndsAt) {
+                    return <Tag color="blue">Standard</Tag>;
+                }
+                const endsAt = new Date(record.trialEndsAt).getTime();
+                const now = Date.now();
+                if (endsAt > now) {
+                    const daysLeft = Math.max(1, Math.ceil((endsAt - now) / (1000 * 60 * 60 * 24)));
+                    return <Tag color="gold">Trial ({daysLeft}d left)</Tag>;
+                }
+                return <Tag color="red">Trial Expired</Tag>;
+            },
         },
         {
             title: 'Actions',
@@ -684,6 +723,44 @@ const RegisterUsers: React.FC = () => {
                             ]}
                         />
                     </Form.Item>
+
+                    <Card
+                        size="small"
+                        title="Trial Provisioning (Superadmin)"
+                        style={{ marginTop: 16, backgroundColor: '#fafafa' }}
+                    >
+                        <Row gutter={[16, 12]} align="middle">
+                            <Col xs={24} sm={12}>
+                                <Form.Item
+                                    name="isTrial"
+                                    valuePropName="checked"
+                                    style={{ marginBottom: 0 }}
+                                >
+                                    <Checkbox>
+                                        <span className="font-medium">Provision Trial Account</span>
+                                    </Checkbox>
+                                </Form.Item>
+                            </Col>
+                            <Col xs={24} sm={12}>
+                                <Form.Item
+                                    noStyle
+                                    shouldUpdate={(prev, cur) => prev.isTrial !== cur.isTrial}
+                                >
+                                    {({ getFieldValue }) =>
+                                        getFieldValue("isTrial") ? (
+                                            <Form.Item
+                                                name="trialDays"
+                                                label="Duration (Days)"
+                                                style={{ marginBottom: 0 }}
+                                            >
+                                                <InputNumber min={1} max={365} style={{ width: '100%' }} />
+                                            </Form.Item>
+                                        ) : null
+                                    }
+                                </Form.Item>
+                            </Col>
+                        </Row>
+                    </Card>
                 </Form>
             </Modal>
         </div>

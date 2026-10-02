@@ -149,7 +149,7 @@ export default function SignInModal({ isOpen, onClose }: SignInModalProps) {
             className="font-semibold text-blue-600 hover:text-blue-700"
             onClick={onClose}
           >
-            Start your 30-day trial
+            Create an account
           </Link>
         </p>
       </div>
