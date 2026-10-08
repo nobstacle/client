@@ -14,6 +14,8 @@ import {
     Modal,
     Select,
     message,
+    Image,
+    Popconfirm,
 } from "antd";
 import {
     SearchOutlined,
@@ -32,9 +34,16 @@ import {
     CloseCircleOutlined,
     PlusOutlined,
     ThunderboltOutlined,
+    DeleteOutlined,
+    FileTextOutlined,
+    LoadingOutlined,
+    SettingOutlined,
+    PictureOutlined,
+    VideoCameraOutlined,
+    FileOutlined,
 } from "@ant-design/icons";
 import { MdWhatsapp } from "react-icons/md";
-import { FaAt } from "react-icons/fa";
+import { FaAt, FaFileDownload } from "react-icons/fa";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 
@@ -63,10 +72,32 @@ export const OUTLOOK_COLORS: OutlookColor[] = [
     { name: "Emerald", bg: "#ECFDF5", border: "#6EE7B7", text: "#065F46", bar: "#059669", swatch: "#059669" }, // Inquiries
 ];
 
-export const getCategoryOutlookColor = (id?: number | null): OutlookColor => {
-    if (!id) {
+export interface InboxCategory {
+    id: number;
+    name: string;
+    color?: string | null;
+}
+
+export const getCategoryOutlookColor = (cat?: InboxCategory | null | number): OutlookColor => {
+    if (!cat) {
         return { name: "Default", bg: "#F3F4F6", border: "#D1D5DB", text: "#374151", bar: "#9CA3AF", swatch: "#9CA3AF" };
     }
+    if (typeof cat === "object") {
+        if (cat.color) {
+            const matched = OUTLOOK_COLORS.find(c => c.bar.toLowerCase() === cat.color?.toLowerCase());
+            if (matched) return { ...matched, name: cat.name || matched.name };
+            return {
+                name: cat.name || "Category",
+                bg: `${cat.color}15`,
+                border: `${cat.color}40`,
+                text: cat.color,
+                bar: cat.color,
+                swatch: cat.color,
+            };
+        }
+        return getCategoryOutlookColor(cat.id);
+    }
+    const id = cat;
     const index = Math.abs(id) % OUTLOOK_COLORS.length;
     return OUTLOOK_COLORS[index];
 };
@@ -76,11 +107,6 @@ export interface InboxUser {
     firstName?: string | null;
     lastName?: string | null;
     email: string;
-}
-
-export interface InboxCategory {
-    id: number;
-    name: string;
 }
 
 export interface ConversationMessage {
@@ -112,6 +138,12 @@ export interface Conversation {
     updatedAt: string;
     assignedUser?: InboxUser | null;
     category?: InboxCategory | null;
+}
+
+interface AttachmentFile {
+    file: File;
+    previewUrl?: string;
+    mediaType: "image" | "video" | "audio" | "document";
 }
 
 interface WhatsappInboxProps {
@@ -148,17 +180,38 @@ export const WhatsappInbox: React.FC<WhatsappInboxProps> = ({
     const [statusFilter, setStatusFilter] = useState<"open" | "resolved" | undefined>("open");
     const [searchQuery, setSearchQuery] = useState("");
 
+    // Search filters within dropdown menus
+    const [categorySearchText, setCategorySearchText] = useState("");
+    const [assigneeSearchText, setAssigneeSearchText] = useState("");
+
+    // Data lists
     const [categories, setCategories] = useState<InboxCategory[]>([]);
     const [teamUsers, setTeamUsers] = useState<InboxUser[]>([]);
 
-    // New Chat & Sync States
+    // Category Management Modal
+    const [categoryModalOpen, setCategoryModalOpen] = useState(false);
+    const [newCategoryName, setNewCategoryName] = useState("");
+    const [newCategoryColor, setNewCategoryColor] = useState(OUTLOOK_COLORS[0].bar);
+    const [creatingCategory, setCreatingCategory] = useState(false);
+    const [deletingCategoryId, setDeletingCategoryId] = useState<number | null>(null);
+
+    // Reply bar media attachment
+    const [replyAttachment, setReplyAttachment] = useState<AttachmentFile | null>(null);
+    const [uploadingReplyAttachment, setUploadingReplyAttachment] = useState(false);
+    const replyFileInputRef = useRef<HTMLInputElement>(null);
+
+    // New Chat Modal & Attachment States
     const [newChatModalOpen, setNewChatModalOpen] = useState(false);
     const [newChatPhone, setNewChatPhone] = useState("");
     const [newChatName, setNewChatName] = useState("");
     const [newChatCategoryId, setNewChatCategoryId] = useState<number | null>(null);
     const [newChatUserId, setNewChatUserId] = useState<number | null>(null);
     const [newChatInitialMessage, setNewChatInitialMessage] = useState("");
+    const [newChatAttachment, setNewChatAttachment] = useState<AttachmentFile | null>(null);
     const [creatingChat, setCreatingChat] = useState(false);
+    const newChatFileInputRef = useRef<HTMLInputElement>(null);
+
+    // Sync & simulate states
     const [syncingContacts, setSyncingContacts] = useState(false);
     const [simulatingInbound, setSimulatingInbound] = useState(false);
 
@@ -193,38 +246,88 @@ export const WhatsappInbox: React.FC<WhatsappInboxProps> = ({
         [apiUrl, token]
     );
 
-    // ── Fetch Categories & Team Users ───────────────────────────────────────
-    useEffect(() => {
+    // ── File Upload Helper ──────────────────────────────────────────────────
+    const uploadFile = async (
+        file: File
+    ): Promise<{ url: string; filename: string; mediaType: "image" | "video" | "audio" | "document" }> => {
+        if (!apiUrl || !token) throw new Error("API or authorization token missing");
+
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("tag", "whatsapp_inbox");
+        formData.append("langCode", "en");
+        formData.append("defaultLangCode", "en");
+
+        const res = await fetch(`${apiUrl}/uploads/company-file`, {
+            method: "POST",
+            headers: {
+                Authorization: `Bearer ${token}`,
+            },
+            body: formData,
+        });
+
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err?.message || "File upload failed");
+        }
+
+        const data = await res.json();
+        const url = data?.url || data?.signedUrl;
+        if (!url) throw new Error("Did not receive URL from file upload");
+
+        let mediaType: "image" | "video" | "audio" | "document" = "document";
+        if (file.type.startsWith("image/")) {
+            mediaType = "image";
+        } else if (file.type.startsWith("video/")) {
+            mediaType = "video";
+        } else if (file.type.startsWith("audio/")) {
+            mediaType = "audio";
+        }
+
+        return { url, filename: file.name, mediaType };
+    };
+
+    // ── Fetch WhatsApp Categories ───────────────────────────────────────────
+    const loadCategories = useCallback(async () => {
         if (!token || !apiUrl) return;
-
-        // Fetch company categories
-        authFetch<{ data?: any[] } | any[]>("/uploads/get-all-categories")
-            .then((res: any) => {
-                const rawList = Array.isArray(res) ? res : res?.data || [];
-                setCategories(
-                    rawList.map((c: any) => ({
-                        id: c.id,
-                        name: c.name,
-                    }))
-                );
-            })
-            .catch(() => {});
-
-        // Fetch company users
-        authFetch<any>("/iam/user?take=100")
-            .then((res: any) => {
-                const rawUsers = Array.isArray(res) ? res : res?.data || res?.users || [];
-                setTeamUsers(
-                    rawUsers.map((u: any) => ({
-                        id: u.id,
-                        firstName: u.firstName,
-                        lastName: u.lastName,
-                        email: u.email,
-                    }))
-                );
-            })
-            .catch(() => {});
+        try {
+            const res: any = await authFetch("/whatsapp/inbox/categories");
+            const list = Array.isArray(res) ? res : res?.categories || res?.data || [];
+            setCategories(list);
+        } catch (err) {
+            console.error("Failed to load WhatsApp categories", err);
+        }
     }, [token, apiUrl, authFetch]);
+
+    // ── Fetch Team Users ────────────────────────────────────────────────────
+    const loadTeamUsers = useCallback(async () => {
+        if (!token || !apiUrl) return;
+        try {
+            const res: any = await authFetch("/iam/user?take=100");
+            const rawUsers = Array.isArray(res) ? res : res?.data || res?.users || [];
+            setTeamUsers(
+                rawUsers.map((u: any) => ({
+                    id: u.id,
+                    firstName: u.firstName,
+                    lastName: u.lastName,
+                    email: u.email,
+                }))
+            );
+        } catch (err) {
+            console.error("Failed to load team users", err);
+        }
+    }, [token, apiUrl, authFetch]);
+
+    useEffect(() => {
+        loadCategories();
+        loadTeamUsers();
+    }, [loadCategories, loadTeamUsers]);
+
+    useEffect(() => {
+        if (categoryModalOpen) {
+            loadCategories();
+        }
+    }, [categoryModalOpen, loadCategories]);
 
     // ── Fetch Conversations ─────────────────────────────────────────────────
     const loadConversations = useCallback(
@@ -317,29 +420,69 @@ export const WhatsappInbox: React.FC<WhatsappInboxProps> = ({
         };
     }, [metaConnected, token, activeConversationId, loadConversations, loadMessages]);
 
-    // ── Send Reply ──────────────────────────────────────────────────────────
+    // ── Send Reply (with Media Attachment support) ──────────────────────────
     const handleSendReply = async () => {
-        if (!replyText.trim() || !activeConversationId) return;
+        if ((!replyText.trim() && !replyAttachment) || !activeConversationId) return;
         setSendingReply(true);
 
         try {
+            let mediaUrl: string | undefined;
+            let mediaType: string | undefined;
+            let filename: string | undefined;
+
+            if (replyAttachment) {
+                setUploadingReplyAttachment(true);
+                const uploaded = await uploadFile(replyAttachment.file);
+                mediaUrl = uploaded.url;
+                mediaType = uploaded.mediaType;
+                filename = uploaded.filename;
+            }
+
             await authFetch(`/whatsapp/inbox/conversations/${activeConversationId}/reply`, {
                 method: "POST",
-                body: JSON.stringify({ text: replyText.trim() }),
+                body: JSON.stringify({
+                    text: replyText.trim() || undefined,
+                    mediaUrl,
+                    mediaType,
+                    filename,
+                }),
             });
 
             setReplyText("");
+            setReplyAttachment(null);
+            if (replyFileInputRef.current) replyFileInputRef.current.value = "";
             await loadMessages(activeConversationId, true);
             await loadConversations(true);
-            message.success("Reply sent");
+            message.success("Message sent");
         } catch (err: any) {
             message.error(err?.message || "Failed to send reply");
         } finally {
             setSendingReply(false);
+            setUploadingReplyAttachment(false);
         }
     };
 
-    // ── Start New Chat ──────────────────────────────────────────────────────
+    // ── Handle File Selection for Reply Bar ─────────────────────────────────
+    const handleSelectReplyFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        let mediaType: "image" | "video" | "audio" | "document" = "document";
+        let previewUrl: string | undefined;
+
+        if (file.type.startsWith("image/")) {
+            mediaType = "image";
+            previewUrl = URL.createObjectURL(file);
+        } else if (file.type.startsWith("video/")) {
+            mediaType = "video";
+        } else if (file.type.startsWith("audio/")) {
+            mediaType = "audio";
+        }
+
+        setReplyAttachment({ file, previewUrl, mediaType });
+    };
+
+    // ── Start New Chat (with optional initial media attachment) ─────────────
     const handleStartNewChat = async () => {
         if (!newChatPhone.trim()) {
             message.error("Please enter a phone number");
@@ -348,6 +491,17 @@ export const WhatsappInbox: React.FC<WhatsappInboxProps> = ({
 
         setCreatingChat(true);
         try {
+            let mediaUrl: string | undefined;
+            let mediaType: string | undefined;
+            let filename: string | undefined;
+
+            if (newChatAttachment) {
+                const uploaded = await uploadFile(newChatAttachment.file);
+                mediaUrl = uploaded.url;
+                mediaType = uploaded.mediaType;
+                filename = uploaded.filename;
+            }
+
             const newConv: any = await authFetch("/whatsapp/inbox/conversations", {
                 method: "POST",
                 body: JSON.stringify({
@@ -356,6 +510,9 @@ export const WhatsappInbox: React.FC<WhatsappInboxProps> = ({
                     categoryId: newChatCategoryId || undefined,
                     assignedUserId: newChatUserId || undefined,
                     initialMessage: newChatInitialMessage.trim() || undefined,
+                    mediaUrl,
+                    mediaType,
+                    filename,
                 }),
             });
 
@@ -366,6 +523,8 @@ export const WhatsappInbox: React.FC<WhatsappInboxProps> = ({
             setNewChatInitialMessage("");
             setNewChatCategoryId(null);
             setNewChatUserId(null);
+            setNewChatAttachment(null);
+            if (newChatFileInputRef.current) newChatFileInputRef.current.value = "";
 
             await loadConversations(false);
             if (newConv?.id) {
@@ -375,6 +534,70 @@ export const WhatsappInbox: React.FC<WhatsappInboxProps> = ({
             message.error(err?.message || "Failed to start chat");
         } finally {
             setCreatingChat(false);
+        }
+    };
+
+    // ── Handle File Selection for New Chat Modal ────────────────────────────
+    const handleSelectNewChatFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        let mediaType: "image" | "video" | "audio" | "document" = "document";
+        let previewUrl: string | undefined;
+
+        if (file.type.startsWith("image/")) {
+            mediaType = "image";
+            previewUrl = URL.createObjectURL(file);
+        } else if (file.type.startsWith("video/")) {
+            mediaType = "video";
+        } else if (file.type.startsWith("audio/")) {
+            mediaType = "audio";
+        }
+
+        setNewChatAttachment({ file, previewUrl, mediaType });
+    };
+
+    // ── Create New Dedicated WhatsApp Category ──────────────────────────────
+    const handleCreateCategory = async () => {
+        if (!newCategoryName.trim()) {
+            message.error("Please enter a category name");
+            return;
+        }
+
+        setCreatingCategory(true);
+        try {
+            await authFetch("/whatsapp/inbox/categories", {
+                method: "POST",
+                body: JSON.stringify({
+                    name: newCategoryName.trim(),
+                    color: newCategoryColor,
+                }),
+            });
+            message.success(`Category "${newCategoryName.trim()}" created`);
+            setNewCategoryName("");
+            await loadCategories();
+        } catch (err: any) {
+            message.error(err?.message || "Failed to create category");
+        } finally {
+            setCreatingCategory(false);
+        }
+    };
+
+    // ── Delete Category ─────────────────────────────────────────────────────
+    const handleDeleteCategory = async (id: number) => {
+        setDeletingCategoryId(id);
+        try {
+            await authFetch(`/whatsapp/inbox/categories/${id}`, {
+                method: "DELETE",
+            });
+            message.success("Category deleted");
+            if (selectedCategoryId === id) setSelectedCategoryId(null);
+            await loadCategories();
+            await loadConversations(true);
+        } catch (err: any) {
+            message.error(err?.message || "Failed to delete category");
+        } finally {
+            setDeletingCategoryId(null);
         }
     };
 
@@ -430,7 +653,11 @@ export const WhatsappInbox: React.FC<WhatsappInboxProps> = ({
             );
 
             setConversations((prev) =>
-                prev.map((c) => (c.id === activeConversationId ? { ...c, assignedUser: updated.assignedUser, assignedUserId: userId } : c))
+                prev.map((c) =>
+                    c.id === activeConversationId
+                        ? { ...c, assignedUser: updated.assignedUser, assignedUserId: userId }
+                        : c
+                )
             );
             const assignedName = getUserDisplayName(updated.assignedUser);
             message.success(userId ? `Assigned to @${assignedName}` : "Conversation unassigned");
@@ -453,7 +680,11 @@ export const WhatsappInbox: React.FC<WhatsappInboxProps> = ({
             );
 
             setConversations((prev) =>
-                prev.map((c) => (c.id === activeConversationId ? { ...c, category: updated.category, categoryId } : c))
+                prev.map((c) =>
+                    c.id === activeConversationId
+                        ? { ...c, category: updated.category, categoryId }
+                        : c
+                )
             );
             message.success(categoryId ? `Category set to "${updated.category?.name}"` : "Category removed");
         } catch (err: any) {
@@ -501,81 +732,135 @@ export const WhatsappInbox: React.FC<WhatsappInboxProps> = ({
     };
 
     // Active conversation color & assignee
-    const activeOutlookColor = getCategoryOutlookColor(activeConversation?.categoryId);
+    const activeOutlookColor = getCategoryOutlookColor(activeConversation?.category || activeConversation?.categoryId);
     const activeAssigneeName = getUserDisplayName(activeConversation?.assignedUser);
 
-    // ── Outlook Category Dropdown Menu ──────────────────────────────────────
+    // ── Filtered Categories for Outlook Category Menu ───────────────────────
+    const filteredCategories = categories.filter((c) => {
+        const q = categorySearchText.toLowerCase().trim();
+        if (!q) return true;
+        return c.name.toLowerCase().includes(q);
+    });
+
     const outlookCategoryMenu = (
-        <Menu className="p-1 rounded-xl shadow-lg border border-gray-100 min-w-[210px]">
-            <div className="px-3 py-1.5 text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
-                Outlook Categories
+        <Menu className="p-1 rounded-xl shadow-lg border border-gray-100 min-w-[240px]">
+            <div className="p-2 border-b border-gray-100" onClick={(e) => e.stopPropagation()}>
+                <Input
+                    size="small"
+                    placeholder="Search categories..."
+                    prefix={<SearchOutlined className="text-gray-400 text-xs" />}
+                    value={categorySearchText}
+                    onChange={(e) => setCategorySearchText(e.target.value)}
+                    allowClear
+                    className="rounded-lg text-xs"
+                />
             </div>
-            {categories.map((cat) => {
-                const color = getCategoryOutlookColor(cat.id);
-                const isSelected = activeConversation?.categoryId === cat.id;
-                return (
-                    <Menu.Item
-                        key={cat.id}
-                        onClick={() => handleAssignCategory(cat.id)}
-                        className="rounded-lg my-0.5"
-                    >
-                        <div className="flex items-center justify-between py-0.5">
-                            <div className="flex items-center gap-2.5">
-                                <span
-                                    className="w-3.5 h-3.5 rounded-sm flex-shrink-0 shadow-xs"
-                                    style={{ backgroundColor: color.swatch }}
-                                />
-                                <span className={`text-xs ${isSelected ? "font-bold text-gray-900" : "text-gray-700"}`}>
-                                    {cat.name}
-                                </span>
-                            </div>
-                            {isSelected && <CheckOutlined className="text-xs text-green-600" />}
-                        </div>
-                    </Menu.Item>
-                );
-            })}
+            <div className="px-3 py-1.5 text-[11px] font-semibold text-gray-400 uppercase tracking-wider flex items-center justify-between">
+                <span>Outlook Categories</span>
+                <span className="text-[10px] text-gray-400 font-normal">({filteredCategories.length})</span>
+            </div>
+            <div className="max-h-56 overflow-y-auto">
+                {filteredCategories.length === 0 ? (
+                    <div className="px-3 py-2 text-xs text-gray-400 text-center">No categories found</div>
+                ) : (
+                    filteredCategories.map((cat) => {
+                        const color = getCategoryOutlookColor(cat);
+                        const isSelected = activeConversation?.categoryId === cat.id;
+                        return (
+                            <Menu.Item
+                                key={cat.id}
+                                onClick={() => handleAssignCategory(cat.id)}
+                                className="rounded-lg my-0.5"
+                            >
+                                <div className="flex items-center justify-between py-0.5">
+                                    <div className="flex items-center gap-2.5">
+                                        <span
+                                            className="w-3.5 h-3.5 rounded-sm flex-shrink-0 shadow-xs"
+                                            style={{ backgroundColor: color.swatch }}
+                                        />
+                                        <span className={`text-xs ${isSelected ? "font-bold text-gray-900" : "text-gray-700"}`}>
+                                            {cat.name}
+                                        </span>
+                                    </div>
+                                    {isSelected && <CheckOutlined className="text-xs text-green-600" />}
+                                </div>
+                            </Menu.Item>
+                        );
+                    })
+                )}
+            </div>
+            <Menu.Divider />
+            <Menu.Item
+                key="manage-categories"
+                onClick={() => setCategoryModalOpen(true)}
+                className="text-[#00a884] font-semibold rounded-lg text-xs"
+            >
+                <SettingOutlined className="mr-1.5" /> Manage Categories (Settings)
+            </Menu.Item>
             {activeConversation?.categoryId && (
-                <>
-                    <Menu.Divider />
-                    <Menu.Item
-                        key="clear"
-                        onClick={() => handleAssignCategory(null)}
-                        className="text-red-500 rounded-lg text-xs"
-                    >
-                        <CloseCircleOutlined className="mr-1.5" /> Clear Category
-                    </Menu.Item>
-                </>
+                <Menu.Item
+                    key="clear"
+                    onClick={() => handleAssignCategory(null)}
+                    className="text-red-500 rounded-lg text-xs"
+                >
+                    <CloseCircleOutlined className="mr-1.5" /> Clear Category
+                </Menu.Item>
             )}
         </Menu>
     );
 
-    // ── Assignee (@ Mention) Dropdown Menu ──────────────────────────────────
+    // ── Filtered Assignees for Assignee Dropdown Menu ────────────────────────
+    const filteredUsers = teamUsers.filter((u) => {
+        const q = assigneeSearchText.toLowerCase().trim();
+        if (!q) return true;
+        const name = getUserDisplayName(u).toLowerCase();
+        return name.includes(q) || u.email.toLowerCase().includes(q);
+    });
+
     const assigneeMenu = (
-        <Menu className="p-1 rounded-xl shadow-lg border border-gray-100 min-w-[210px] max-h-72 overflow-y-auto">
-            <div className="px-3 py-1.5 text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
-                Assign with @
+        <Menu className="p-1 rounded-xl shadow-lg border border-gray-100 min-w-[240px]">
+            <div className="p-2 border-b border-gray-100" onClick={(e) => e.stopPropagation()}>
+                <Input
+                    size="small"
+                    placeholder="Search user..."
+                    prefix={<SearchOutlined className="text-gray-400 text-xs" />}
+                    value={assigneeSearchText}
+                    onChange={(e) => setAssigneeSearchText(e.target.value)}
+                    allowClear
+                    className="rounded-lg text-xs"
+                />
             </div>
-            {teamUsers.map((u) => {
-                const name = getUserDisplayName(u);
-                const isSelected = activeConversation?.assignedUserId === u.id;
-                return (
-                    <Menu.Item
-                        key={u.id}
-                        onClick={() => handleAssignUser(u.id)}
-                        className="rounded-lg my-0.5"
-                    >
-                        <div className="flex items-center justify-between py-0.5">
-                            <div className="flex items-center gap-2">
-                                <Avatar size={22} style={{ backgroundColor: "#2563EB" }} icon={<UserOutlined />} />
-                                <span className={`text-xs ${isSelected ? "font-bold text-gray-900" : "text-gray-700"}`}>
-                                    @{name}
-                                </span>
-                            </div>
-                            {isSelected && <CheckOutlined className="text-xs text-blue-600" />}
-                        </div>
-                    </Menu.Item>
-                );
-            })}
+            <div className="px-3 py-1.5 text-[11px] font-semibold text-gray-400 uppercase tracking-wider flex items-center justify-between">
+                <span>Assign with @</span>
+                <span className="text-[10px] text-gray-400 font-normal">({filteredUsers.length})</span>
+            </div>
+            <div className="max-h-56 overflow-y-auto">
+                {filteredUsers.length === 0 ? (
+                    <div className="px-3 py-2 text-xs text-gray-400 text-center">No users found</div>
+                ) : (
+                    filteredUsers.map((u) => {
+                        const name = getUserDisplayName(u);
+                        const isSelected = activeConversation?.assignedUserId === u.id;
+                        return (
+                            <Menu.Item
+                                key={u.id}
+                                onClick={() => handleAssignUser(u.id)}
+                                className="rounded-lg my-0.5"
+                            >
+                                <div className="flex items-center justify-between py-0.5">
+                                    <div className="flex items-center gap-2">
+                                        <Avatar size={22} style={{ backgroundColor: "#2563EB" }} icon={<UserOutlined />} />
+                                        <span className={`text-xs ${isSelected ? "font-bold text-gray-900" : "text-gray-700"}`}>
+                                            @{name}
+                                        </span>
+                                    </div>
+                                    {isSelected && <CheckOutlined className="text-xs text-blue-600" />}
+                                </div>
+                            </Menu.Item>
+                        );
+                    })
+                )}
+            </div>
             {activeConversation?.assignedUserId && (
                 <>
                     <Menu.Divider />
@@ -626,6 +911,16 @@ export const WhatsappInbox: React.FC<WhatsappInboxProps> = ({
                         </div>
                     </div>
                     <div className="flex items-center gap-1.5">
+                        {/* Manage Categories Setting Button */}
+                        <Tooltip title="Manage WhatsApp Categories (Company Settings)">
+                            <Button
+                                type="text"
+                                shape="circle"
+                                icon={<SettingOutlined className="text-[#54656f]" />}
+                                onClick={() => setCategoryModalOpen(true)}
+                            />
+                        </Tooltip>
+
                         {/* New Chat Button */}
                         <Tooltip title="Start a new chat with a contact">
                             <Button
@@ -708,50 +1003,56 @@ export const WhatsappInbox: React.FC<WhatsappInboxProps> = ({
                         </button>
                     </div>
 
-                    {/* 4. Outlook Color-Coded Categories Quick Filter Chips */}
-                    {categories.length > 0 && (
-                        <div className="flex items-center gap-1.5 overflow-x-auto py-1 scrollbar-none">
-                            <span className="text-[11px] font-semibold text-[#8696a0] flex-shrink-0 flex items-center gap-1 mr-0.5">
-                                <TagOutlined className="text-xs" /> Categories:
-                            </span>
+                    {/* 4. Dedicated Outlook Color-Coded Categories Quick Filter Chips */}
+                    <div className="flex items-center gap-1.5 overflow-x-auto py-1 scrollbar-none">
+                        <span className="text-[11px] font-semibold text-[#8696a0] flex-shrink-0 flex items-center gap-1 mr-0.5">
+                            <TagOutlined className="text-xs" /> Categories:
+                        </span>
 
-                            {/* Clear category filter pill */}
-                            {selectedCategoryId !== null && (
+                        {/* Clear category filter pill */}
+                        {selectedCategoryId !== null && (
+                            <button
+                                onClick={() => setSelectedCategoryId(null)}
+                                className="px-2 py-0.5 text-[11px] rounded-md bg-gray-200 text-gray-700 font-semibold hover:bg-gray-300 flex-shrink-0"
+                            >
+                                ✕ Clear
+                            </button>
+                        )}
+
+                        {/* Category pills with Outlook colors */}
+                        {categories.map((cat) => {
+                            const color = getCategoryOutlookColor(cat);
+                            const isSelected = selectedCategoryId === cat.id;
+                            return (
                                 <button
-                                    onClick={() => setSelectedCategoryId(null)}
-                                    className="px-2 py-0.5 text-[11px] rounded-md bg-gray-200 text-gray-700 font-semibold hover:bg-gray-300 flex-shrink-0"
+                                    key={cat.id}
+                                    onClick={() => setSelectedCategoryId(isSelected ? null : cat.id)}
+                                    style={{
+                                        backgroundColor: isSelected ? color.bar : color.bg,
+                                        color: isSelected ? "#ffffff" : color.text,
+                                        borderColor: color.border,
+                                    }}
+                                    className={`px-2.5 py-0.5 text-[11px] rounded-md font-medium border flex items-center gap-1.5 flex-shrink-0 transition-all ${
+                                        isSelected ? "shadow-xs ring-1 ring-offset-1 ring-gray-400" : "hover:opacity-90"
+                                    }`}
                                 >
-                                    ✕ Clear
+                                    <span
+                                        className="w-2 h-2 rounded-full flex-shrink-0"
+                                        style={{ backgroundColor: isSelected ? "#ffffff" : color.swatch }}
+                                    />
+                                    <span>{cat.name}</span>
                                 </button>
-                            )}
+                            );
+                        })}
 
-                            {/* Category pills with Outlook colors */}
-                            {categories.map((cat) => {
-                                const color = getCategoryOutlookColor(cat.id);
-                                const isSelected = selectedCategoryId === cat.id;
-                                return (
-                                    <button
-                                        key={cat.id}
-                                        onClick={() => setSelectedCategoryId(isSelected ? null : cat.id)}
-                                        style={{
-                                            backgroundColor: isSelected ? color.bar : color.bg,
-                                            color: isSelected ? "#ffffff" : color.text,
-                                            borderColor: color.border,
-                                        }}
-                                        className={`px-2.5 py-0.5 text-[11px] rounded-md font-medium border flex items-center gap-1.5 flex-shrink-0 transition-all ${
-                                            isSelected ? "shadow-xs ring-1 ring-offset-1 ring-gray-400" : "hover:opacity-90"
-                                        }`}
-                                    >
-                                        <span
-                                            className="w-2 h-2 rounded-full flex-shrink-0"
-                                            style={{ backgroundColor: isSelected ? "#ffffff" : color.swatch }}
-                                        />
-                                        <span>{cat.name}</span>
-                                    </button>
-                                );
-                            })}
-                        </div>
-                    )}
+                        {/* Add/Manage Categories pill */}
+                        <button
+                            onClick={() => setCategoryModalOpen(true)}
+                            className="px-2 py-0.5 text-[11px] rounded-md border border-dashed border-gray-300 text-gray-500 hover:border-[#00a884] hover:text-[#00a884] flex items-center gap-1 flex-shrink-0 transition-colors"
+                        >
+                            <PlusOutlined className="text-[10px]" /> Manage
+                        </button>
+                    </div>
                 </div>
 
                 {/* 5. Chat List (WhatsApp Desktop Layout + Outlook Color Bar) */}
@@ -807,7 +1108,7 @@ export const WhatsappInbox: React.FC<WhatsappInboxProps> = ({
                     ) : (
                         conversations.map((c) => {
                             const isSelected = c.id === activeConversationId;
-                            const color = getCategoryOutlookColor(c.categoryId);
+                            const color = getCategoryOutlookColor(c.category || c.categoryId);
                             const hasCategory = Boolean(c.category);
 
                             return (
@@ -940,7 +1241,7 @@ export const WhatsappInbox: React.FC<WhatsappInboxProps> = ({
                                 </Tooltip>
                             )}
 
-                            {/* 1. Outlook-Style Categorize Dropdown */}
+                            {/* 1. Outlook-Style Categorize Dropdown (Searchable) */}
                             <Dropdown overlay={outlookCategoryMenu} trigger={["click"]} placement="bottomRight">
                                 <Button
                                     size="small"
@@ -960,7 +1261,7 @@ export const WhatsappInbox: React.FC<WhatsappInboxProps> = ({
                                 </Button>
                             </Dropdown>
 
-                            {/* 2. @ Assign to User Dropdown */}
+                            {/* 2. @ Assign to User Dropdown (Searchable) */}
                             <Dropdown overlay={assigneeMenu} trigger={["click"]} placement="bottomRight">
                                 <Button
                                     size="small"
@@ -1000,7 +1301,7 @@ export const WhatsappInbox: React.FC<WhatsappInboxProps> = ({
                         </div>
                     </div>
 
-                    {/* 2. Chat Bubble Stream (Authentic WhatsApp Desktop Chat Wallpaper & Bubbles) */}
+                    {/* 2. Chat Bubble Stream (WhatsApp Desktop Chat Wallpaper & Bubbles) */}
                     <div
                         className="flex-1 p-5 overflow-y-auto space-y-3"
                         style={{
@@ -1044,9 +1345,51 @@ export const WhatsappInbox: React.FC<WhatsappInboxProps> = ({
                                             }}
                                             className="max-w-[75%] px-3.5 py-2 text-sm relative"
                                         >
-                                            <p className="m-0 whitespace-pre-wrap leading-relaxed text-[#111b21]">
-                                                {m.content}
-                                            </p>
+                                            {/* Media Attachment Rendering */}
+                                            {m.mediaUrl && (
+                                                <div className="mb-1.5 rounded-lg overflow-hidden">
+                                                    {m.messageType === "image" ? (
+                                                        <Image
+                                                            src={m.mediaUrl}
+                                                            alt="WhatsApp Attachment"
+                                                            className="max-h-64 object-cover rounded-lg"
+                                                            fallback="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' fill='%23cccccc'><rect width='100' height='100'/></svg>"
+                                                        />
+                                                    ) : m.messageType === "video" ? (
+                                                        <video
+                                                            src={m.mediaUrl}
+                                                            controls
+                                                            className="max-h-64 rounded-lg w-full bg-black"
+                                                        />
+                                                    ) : m.messageType === "audio" ? (
+                                                        <audio src={m.mediaUrl} controls className="w-full my-1" />
+                                                    ) : (
+                                                        <a
+                                                            href={m.mediaUrl}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="flex items-center gap-2.5 p-2.5 bg-black/5 hover:bg-black/10 rounded-lg text-[#111b21] transition-colors no-underline"
+                                                        >
+                                                            <FaFileDownload className="text-xl text-[#00a884] flex-shrink-0" />
+                                                            <div className="min-w-0 flex-1">
+                                                                <div className="text-xs font-semibold truncate text-[#111b21]">
+                                                                    {m.content || "Document"}
+                                                                </div>
+                                                                <div className="text-[10px] text-[#667781] uppercase font-mono">
+                                                                    Click to view / download
+                                                                </div>
+                                                            </div>
+                                                        </a>
+                                                    )}
+                                                </div>
+                                            )}
+
+                                            {/* Text Content (if not redundant attachment placeholder) */}
+                                            {m.content && (!m.mediaUrl || (m.content !== m.mediaUrl && !m.content.startsWith("Attachment ("))) && (
+                                                <p className="m-0 whitespace-pre-wrap leading-relaxed text-[#111b21]">
+                                                    {m.content}
+                                                </p>
+                                            )}
 
                                             {/* Timestamp + WhatsApp Blue Checks */}
                                             <div className="flex items-center justify-end gap-1 text-[10px] text-[#667781] mt-1">
@@ -1090,57 +1433,120 @@ export const WhatsappInbox: React.FC<WhatsappInboxProps> = ({
                         </div>
                     )}
 
-                    {/* 4. WhatsApp Desktop Bottom Input Bar */}
-                    <div className="p-3 bg-[#f0f2f5] border-t border-[#e9edef] flex items-center gap-2.5 z-10">
-                        {/* Emoji & Paperclip Tools */}
-                        <Tooltip title="Emoji">
-                            <Button
-                                type="text"
-                                shape="circle"
-                                icon={<SmileOutlined className="text-xl text-[#54656f]" />}
-                            />
-                        </Tooltip>
-                        <Tooltip title="Attach media">
-                            <Button
-                                type="text"
-                                shape="circle"
-                                icon={<PaperClipOutlined className="text-xl text-[#54656f]" />}
-                            />
-                        </Tooltip>
+                    {/* 4. WhatsApp Desktop Bottom Input Bar & Media Attachment */}
+                    <div className="p-3 bg-[#f0f2f5] border-t border-[#e9edef] flex flex-col gap-2 z-10">
+                        {/* Hidden File Input */}
+                        <input
+                            type="file"
+                            ref={replyFileInputRef}
+                            style={{ display: "none" }}
+                            accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.txt"
+                            onChange={handleSelectReplyFile}
+                        />
 
-                        {/* Input Box */}
-                        <div className="flex-1 bg-white rounded-lg px-3 py-1.5 shadow-xs flex items-center">
-                            <input
-                                type="text"
-                                placeholder={
-                                    isWindowOpen
-                                        ? "Type a message (Press Enter to send)"
-                                        : "24h window closed. Use an approved template."
-                                }
-                                value={replyText}
-                                onChange={(e) => setReplyText(e.target.value)}
-                                onKeyDown={(e) => {
-                                    if (e.key === "Enter" && !e.shiftKey) {
-                                        e.preventDefault();
-                                        handleSendReply();
+                        {/* Selected Media Attachment Preview Pill */}
+                        {replyAttachment && (
+                            <div className="px-3 py-2 bg-white rounded-xl border border-gray-200 flex items-center justify-between gap-3 shadow-xs">
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                    {replyAttachment.mediaType === "image" && replyAttachment.previewUrl ? (
+                                        <img
+                                            src={replyAttachment.previewUrl}
+                                            alt="Preview"
+                                            className="w-10 h-10 object-cover rounded-lg flex-shrink-0"
+                                        />
+                                    ) : replyAttachment.mediaType === "video" ? (
+                                        <div className="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center text-lg flex-shrink-0">
+                                            <VideoCameraOutlined />
+                                        </div>
+                                    ) : (
+                                        <div className="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center text-lg flex-shrink-0">
+                                            <FileOutlined />
+                                        </div>
+                                    )}
+                                    <div className="min-w-0">
+                                        <div className="text-xs font-semibold text-gray-800 truncate">
+                                            {replyAttachment.file.name}
+                                        </div>
+                                        <div className="text-[11px] text-gray-400">
+                                            {(replyAttachment.file.size / 1024 / 1024).toFixed(2)} MB • {replyAttachment.mediaType.toUpperCase()}
+                                        </div>
+                                    </div>
+                                </div>
+                                <Button
+                                    type="text"
+                                    size="small"
+                                    shape="circle"
+                                    icon={<CloseCircleOutlined className="text-gray-400 hover:text-red-500" />}
+                                    onClick={() => {
+                                        setReplyAttachment(null);
+                                        if (replyFileInputRef.current) replyFileInputRef.current.value = "";
+                                    }}
+                                />
+                            </div>
+                        )}
+
+                        <div className="flex items-center gap-2.5">
+                            {/* Emoji Tools */}
+                            <Tooltip title="Emoji">
+                                <Button
+                                    type="text"
+                                    shape="circle"
+                                    icon={<SmileOutlined className="text-xl text-[#54656f]" />}
+                                />
+                            </Tooltip>
+
+                            {/* Attach Media Tool (📎) */}
+                            <Tooltip title="Attach image, video or document">
+                                <Button
+                                    type="text"
+                                    shape="circle"
+                                    icon={<PaperClipOutlined className="text-xl text-[#54656f]" />}
+                                    onClick={() => replyFileInputRef.current?.click()}
+                                />
+                            </Tooltip>
+
+                            {/* Input Box */}
+                            <div className="flex-1 bg-white rounded-lg px-3 py-1.5 shadow-xs flex items-center">
+                                <input
+                                    type="text"
+                                    placeholder={
+                                        replyAttachment
+                                            ? `Add caption for ${replyAttachment.file.name}...`
+                                            : isWindowOpen
+                                            ? "Type a message (Press Enter to send)"
+                                            : "24h window closed. Use an approved template."
                                     }
-                                }}
-                                disabled={sendingReply}
-                                className="w-full bg-transparent border-none outline-none text-sm text-[#111b21] placeholder-[#667781]"
+                                    value={replyText}
+                                    onChange={(e) => setReplyText(e.target.value)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === "Enter" && !e.shiftKey) {
+                                            e.preventDefault();
+                                            handleSendReply();
+                                        }
+                                    }}
+                                    disabled={sendingReply}
+                                    className="w-full bg-transparent border-none outline-none text-sm text-[#111b21] placeholder-[#667781]"
+                                />
+                            </div>
+
+                            {/* WhatsApp Green Send Button */}
+                            <Button
+                                type="primary"
+                                shape="circle"
+                                icon={
+                                    sendingReply || uploadingReplyAttachment ? (
+                                        <LoadingOutlined className="text-white text-base" />
+                                    ) : (
+                                        <SendOutlined className="text-white text-base" />
+                                    )
+                                }
+                                onClick={handleSendReply}
+                                loading={sendingReply || uploadingReplyAttachment}
+                                disabled={!replyText.trim() && !replyAttachment}
+                                style={{ backgroundColor: "#00a884", borderColor: "#00a884" }}
+                                className="w-10 h-10 flex items-center justify-center flex-shrink-0 shadow-xs"
                             />
                         </div>
-
-                        {/* WhatsApp Green Send Button */}
-                        <Button
-                            type="primary"
-                            shape="circle"
-                            icon={<SendOutlined className="text-white text-base" />}
-                            onClick={handleSendReply}
-                            loading={sendingReply}
-                            disabled={!replyText.trim()}
-                            style={{ backgroundColor: "#00a884", borderColor: "#00a884" }}
-                            className="w-10 h-10 flex items-center justify-center flex-shrink-0 shadow-xs"
-                        />
                     </div>
                 </div>
             ) : (
@@ -1168,7 +1574,7 @@ export const WhatsappInbox: React.FC<WhatsappInboxProps> = ({
             )}
 
             {/* ══════════════════════════════════════════════════════════════════
-                MODAL: START NEW WHATSAPP CHAT
+                MODAL: START NEW WHATSAPP CHAT (SEARCHABLE CATEGORIES + USERS + MEDIA)
             ══════════════════════════════════════════════════════════════════ */}
             <Modal
                 title={<span className="font-bold text-gray-800 flex items-center gap-2"><MdWhatsapp className="text-green-500 text-xl" /> Start New WhatsApp Chat</span>}
@@ -1201,44 +1607,73 @@ export const WhatsappInbox: React.FC<WhatsappInboxProps> = ({
                     </div>
 
                     <div className="grid grid-cols-2 gap-3">
+                        {/* Searchable WhatsApp Category */}
                         <div>
-                            <label className="text-xs font-semibold text-gray-600 mb-1 block">Category</label>
+                            <div className="flex items-center justify-between mb-1">
+                                <label className="text-xs font-semibold text-gray-600">Category</label>
+                                <button
+                                    type="button"
+                                    onClick={() => setCategoryModalOpen(true)}
+                                    className="text-[11px] text-[#00a884] hover:underline flex items-center gap-0.5"
+                                >
+                                    + Add New
+                                </button>
+                            </div>
                             <Select
-                                placeholder="Choose category"
+                                showSearch
+                                placeholder="Search category..."
+                                optionFilterProp="label"
+                                filterOption={(input, option) =>
+                                    String(option?.label || "")
+                                        .toLowerCase()
+                                        .includes(input.toLowerCase())
+                                }
                                 value={newChatCategoryId || undefined}
                                 onChange={(val) => setNewChatCategoryId(val || null)}
                                 allowClear
                                 className="w-full"
-                            >
-                                {categories.map((c) => (
-                                    <Select.Option key={c.id} value={c.id}>
-                                        <div className="flex items-center gap-1.5">
-                                            <span className="w-2.5 h-2.5 rounded-xs" style={{ backgroundColor: getCategoryOutlookColor(c.id).swatch }} />
-                                            <span>{c.name}</span>
-                                        </div>
-                                    </Select.Option>
-                                ))}
-                            </Select>
+                                options={categories.map((c) => {
+                                    const col = getCategoryOutlookColor(c);
+                                    return {
+                                        value: c.id,
+                                        label: c.name,
+                                        renderLabel: (
+                                            <div className="flex items-center gap-1.5">
+                                                <span className="w-2.5 h-2.5 rounded-xs" style={{ backgroundColor: col.swatch }} />
+                                                <span>{c.name}</span>
+                                            </div>
+                                        ),
+                                    };
+                                })}
+                                optionRender={(opt) => (opt.data as any).renderLabel}
+                            />
                         </div>
 
+                        {/* Searchable Assignee (@) */}
                         <div>
                             <label className="text-xs font-semibold text-gray-600 mb-1 block">Assign to (@)</label>
                             <Select
-                                placeholder="Assign to..."
+                                showSearch
+                                placeholder="Search team member..."
+                                optionFilterProp="label"
+                                filterOption={(input, option) =>
+                                    String(option?.label || "")
+                                        .toLowerCase()
+                                        .includes(input.toLowerCase())
+                                }
                                 value={newChatUserId || undefined}
                                 onChange={(val) => setNewChatUserId(val || null)}
                                 allowClear
                                 className="w-full"
-                            >
-                                {teamUsers.map((u) => (
-                                    <Select.Option key={u.id} value={u.id}>
-                                        @{getUserDisplayName(u)}
-                                    </Select.Option>
-                                ))}
-                            </Select>
+                                options={teamUsers.map((u) => ({
+                                    value: u.id,
+                                    label: `@${getUserDisplayName(u)}`,
+                                }))}
+                            />
                         </div>
                     </div>
 
+                    {/* First Message */}
                     <div>
                         <label className="text-xs font-semibold text-gray-600 mb-1 block">First Message (Optional)</label>
                         <Input.TextArea
@@ -1248,6 +1683,66 @@ export const WhatsappInbox: React.FC<WhatsappInboxProps> = ({
                             onChange={(e) => setNewChatInitialMessage(e.target.value)}
                             className="rounded-xl resize-none text-sm"
                         />
+                    </div>
+
+                    {/* Media Attachment in New Chat */}
+                    <div>
+                        <label className="text-xs font-semibold text-gray-600 mb-1 block">Attach Media (Image, Video, Document)</label>
+                        <input
+                            type="file"
+                            ref={newChatFileInputRef}
+                            style={{ display: "none" }}
+                            accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.txt"
+                            onChange={handleSelectNewChatFile}
+                        />
+
+                        {newChatAttachment ? (
+                            <div className="p-2.5 bg-gray-50 rounded-xl border border-gray-200 flex items-center justify-between gap-3">
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                    {newChatAttachment.mediaType === "image" && newChatAttachment.previewUrl ? (
+                                        <img
+                                            src={newChatAttachment.previewUrl}
+                                            alt="Preview"
+                                            className="w-10 h-10 object-cover rounded-lg flex-shrink-0"
+                                        />
+                                    ) : newChatAttachment.mediaType === "video" ? (
+                                        <div className="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center text-lg flex-shrink-0">
+                                            <VideoCameraOutlined />
+                                        </div>
+                                    ) : (
+                                        <div className="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center text-lg flex-shrink-0">
+                                            <FileOutlined />
+                                        </div>
+                                    )}
+                                    <div className="min-w-0">
+                                        <div className="text-xs font-semibold text-gray-800 truncate">
+                                            {newChatAttachment.file.name}
+                                        </div>
+                                        <div className="text-[11px] text-gray-400">
+                                            {(newChatAttachment.file.size / 1024 / 1024).toFixed(2)} MB • {newChatAttachment.mediaType.toUpperCase()}
+                                        </div>
+                                    </div>
+                                </div>
+                                <Button
+                                    type="text"
+                                    size="small"
+                                    shape="circle"
+                                    icon={<CloseCircleOutlined className="text-gray-400 hover:text-red-500" />}
+                                    onClick={() => {
+                                        setNewChatAttachment(null);
+                                        if (newChatFileInputRef.current) newChatFileInputRef.current.value = "";
+                                    }}
+                                />
+                            </div>
+                        ) : (
+                            <Button
+                                icon={<PaperClipOutlined />}
+                                onClick={() => newChatFileInputRef.current?.click()}
+                                className="rounded-xl text-xs w-full text-gray-600"
+                            >
+                                Choose File (Image, Video, Document)
+                            </Button>
+                        )}
                     </div>
 
                     <div className="flex items-center justify-end gap-2 pt-2 border-t">
@@ -1262,6 +1757,144 @@ export const WhatsappInbox: React.FC<WhatsappInboxProps> = ({
                             className="rounded-xl shadow-xs font-semibold"
                         >
                             Start Chat
+                        </Button>
+                    </div>
+                </div>
+            </Modal>
+
+            {/* ══════════════════════════════════════════════════════════════════
+                MODAL: MANAGE WHATSAPP CATEGORIES (COMPANY SETTINGS)
+            ══════════════════════════════════════════════════════════════════ */}
+            <Modal
+                title={
+                    <span className="font-bold text-gray-800 flex items-center gap-2">
+                        <SettingOutlined className="text-[#00a884] text-lg" />
+                        Manage WhatsApp Inbox Categories
+                    </span>
+                }
+                open={categoryModalOpen}
+                onCancel={() => setCategoryModalOpen(false)}
+                footer={null}
+                className="rounded-2xl"
+                centered
+                width={520}
+            >
+                <div className="space-y-5 pt-2">
+                    <p className="text-xs text-gray-500 m-0 leading-relaxed">
+                        Create dedicated Outlook color-coded categories for your team inbox (e.g. <strong>SPA Services</strong>, <strong>Front Desk</strong>, <strong>Concierge</strong>, <strong>VIP Guests</strong>, <strong>Complaints</strong>). These are dedicated to WhatsApp and completely separate from room upsell categories.
+                    </p>
+
+                    {/* Add Category Section */}
+                    <div className="bg-gray-50 p-3.5 rounded-xl border border-gray-200/80 space-y-3">
+                        <div className="text-xs font-bold text-gray-700">Add New Category</div>
+                        <div>
+                            <label className="text-[11px] font-semibold text-gray-500 mb-1 block">Category Name</label>
+                            <Input
+                                placeholder="e.g. Concierge, Valet, VIP Guests"
+                                value={newCategoryName}
+                                onChange={(e) => setNewCategoryName(e.target.value)}
+                                className="rounded-lg text-xs"
+                                onPressEnter={handleCreateCategory}
+                            />
+                        </div>
+
+                        <div>
+                            <label className="text-[11px] font-semibold text-gray-500 mb-1.5 block">Outlook Color Theme</label>
+                            <div className="flex items-center gap-2 flex-wrap">
+                                {OUTLOOK_COLORS.map((col) => {
+                                    const isChosen = newCategoryColor.toLowerCase() === col.bar.toLowerCase();
+                                    return (
+                                        <button
+                                            key={col.name}
+                                            type="button"
+                                            onClick={() => setNewCategoryColor(col.bar)}
+                                            style={{ backgroundColor: col.bar }}
+                                            title={col.name}
+                                            className={`w-6 h-6 rounded-md flex items-center justify-center transition-all ${
+                                                isChosen ? "ring-2 ring-offset-2 ring-gray-900 scale-110 shadow-xs" : "hover:opacity-85"
+                                            }`}
+                                        >
+                                            {isChosen && <CheckOutlined className="text-white text-[11px]" />}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        <Button
+                            type="primary"
+                            icon={<PlusOutlined />}
+                            onClick={handleCreateCategory}
+                            loading={creatingCategory}
+                            style={{ backgroundColor: "#00a884", borderColor: "#00a884" }}
+                            className="rounded-lg text-xs font-semibold shadow-xs"
+                        >
+                            Add Category
+                        </Button>
+                    </div>
+
+                    {/* Existing Categories List */}
+                    <div className="space-y-2">
+                        <div className="flex items-center justify-between text-xs font-bold text-gray-700">
+                            <span>Active Categories</span>
+                            <span className="text-gray-400 font-normal">({categories.length})</span>
+                        </div>
+
+                        <div className="max-h-60 overflow-y-auto divide-y divide-gray-100 border border-gray-200 rounded-xl bg-white">
+                            {categories.length === 0 ? (
+                                <div className="p-4 text-center text-xs text-gray-400">
+                                    No categories yet. Add your first category above.
+                                </div>
+                            ) : (
+                                categories.map((cat) => {
+                                    const col = getCategoryOutlookColor(cat);
+                                    return (
+                                        <div
+                                            key={cat.id}
+                                            className="px-3.5 py-2.5 flex items-center justify-between gap-3 hover:bg-gray-50 transition-colors"
+                                        >
+                                            <div className="flex items-center gap-2.5 min-w-0">
+                                                <span
+                                                    className="w-3.5 h-3.5 rounded-sm flex-shrink-0 shadow-xs"
+                                                    style={{ backgroundColor: col.swatch }}
+                                                />
+                                                <span className="text-xs font-semibold text-gray-800 truncate">
+                                                    {cat.name}
+                                                </span>
+                                            </div>
+
+                                            <Popconfirm
+                                                title="Delete this category?"
+                                                description="Existing conversations with this category will have it cleared."
+                                                onConfirm={() => handleDeleteCategory(cat.id)}
+                                                okText="Delete"
+                                                cancelText="Cancel"
+                                                okButtonProps={{ danger: true }}
+                                            >
+                                                <Button
+                                                    type="text"
+                                                    size="small"
+                                                    danger
+                                                    icon={<DeleteOutlined />}
+                                                    loading={deletingCategoryId === cat.id}
+                                                    className="rounded-lg text-xs"
+                                                />
+                                            </Popconfirm>
+                                        </div>
+                                    );
+                                })
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="flex justify-end pt-2 border-t">
+                        <Button
+                            type="primary"
+                            onClick={() => setCategoryModalOpen(false)}
+                            style={{ backgroundColor: "#00a884", borderColor: "#00a884" }}
+                            className="rounded-xl shadow-xs"
+                        >
+                            Done
                         </Button>
                     </div>
                 </div>

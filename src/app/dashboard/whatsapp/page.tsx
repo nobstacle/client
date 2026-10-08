@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import {
     Table, Tag, Card, Input, message, Button, Space, Select, Modal,
     Tabs, Upload, Steps, Form, Progress, Badge, Tooltip,
-    Row, Col, Avatar, Popconfirm, DatePicker, Alert, Empty
+    Row, Col, Avatar, Popconfirm, DatePicker, Alert, Empty, Popover
 } from "antd";
 import type { UploadFile } from "antd/es/upload/interface";
 import {
@@ -19,7 +19,7 @@ import {
     LinkOutlined, PhoneOutlined, CopyOutlined, MailOutlined,
     DownOutlined, UpOutlined, PoweroffOutlined,
     InfoCircleOutlined, SafetyCertificateOutlined,
-    MessageOutlined,
+    MessageOutlined, ExclamationCircleOutlined,
 } from "@ant-design/icons";
 import { MdWhatsapp } from "react-icons/md";
 import { FaFileDownload } from "react-icons/fa";
@@ -2817,11 +2817,44 @@ export default function WhatsAppPage() {
                                 </Tag>
                             </Badge>
                         ) : metaConnection.phoneDetails && !metaConnection.phoneDetails.canSendMessages ? (
-                            <Badge status="warning">
-                                <Tag color="orange" className="px-3 py-1 text-sm font-medium">
-                                    Meta Verification Pending
-                                </Tag>
-                            </Badge>
+                            <Popover
+                                placement="bottomRight"
+                                trigger={["hover", "click"]}
+                                content={
+                                    <div className="max-w-sm p-1.5 space-y-2">
+                                        <div className="flex items-center gap-2 text-amber-700 font-semibold text-xs">
+                                            <ExclamationCircleOutlined className="text-amber-500" />
+                                            <span>WhatsApp Verification Notice</span>
+                                        </div>
+                                        <p className="text-xs text-gray-600 m-0 leading-relaxed">
+                                            {metaConnection.phoneDetails.warning || "Your WhatsApp phone number is awaiting verification."}
+                                        </p>
+                                        <div className="pt-1 flex items-center justify-between border-t border-gray-100">
+                                            <span className="text-[11px] text-gray-400">Meta Business Manager</span>
+                                            <Button
+                                                size="small"
+                                                type="primary"
+                                                onClick={handleManualCheckStatus}
+                                                loading={checkingMetaStatus}
+                                                className="text-xs rounded-lg"
+                                            >
+                                                Check Status
+                                            </Button>
+                                        </div>
+                                    </div>
+                                }
+                            >
+                                <Badge status="warning">
+                                    <Tag
+                                        color="orange"
+                                        className="px-3 py-1 text-sm font-medium cursor-pointer inline-flex items-center gap-1.5 border-orange-200 bg-orange-50/90 text-orange-800 hover:bg-orange-100 transition-colors"
+                                    >
+                                        <ExclamationCircleOutlined className="text-orange-500" />
+                                        <span>Meta Verification Pending</span>
+                                        <InfoCircleOutlined className="text-xs text-orange-400 ml-0.5" />
+                                    </Tag>
+                                </Badge>
+                            </Popover>
                         ) : (
                             <Badge status="success">
                                 <Tag color="green" className="px-3 py-1 text-sm font-medium">
@@ -2930,15 +2963,7 @@ export default function WhatsAppPage() {
                                 </div>
                             </div>
                         </div>
-                    ) : (
-                        <Alert
-                            message="WhatsApp Verification Notice"
-                            description={metaConnection.phoneDetails.warning || "Your WhatsApp phone number is awaiting verification."}
-                            type="info"
-                            showIcon
-                            className="rounded-xl border-blue-200 bg-blue-50/70 shadow-sm"
-                        />
-                    )
+                    ) : null
                 )}
 
                 <Row gutter={[16, 16]}>
