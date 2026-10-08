@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import {
     Input,
     Button,
@@ -16,6 +16,7 @@ import {
     message,
     Image,
     Popconfirm,
+    Popover,
 } from "antd";
 import {
     SearchOutlined,
@@ -147,6 +148,89 @@ interface AttachmentFile {
     mediaType: "image" | "video" | "audio" | "document";
 }
 
+export const EMOJI_CATEGORIES = [
+    {
+        name: "Smileys",
+        icon: "😊",
+        emojis: [
+            "😀", "😃", "😄", "😁", "😆", "😅", "😂", "🤣", "🥲", "🥹",
+            "😊", "😇", "🙂", "🙃", "😉", "😌", "😍", "🥰", "😘", "😗",
+            "😋", "😛", "😜", "🤪", "😝", "🤑", "🤗", "🤭", "🤫", "🤔",
+            "🫡", "🤐", "🤨", "😐", "😑", "😶", "🫥", "😏", "😒", "🙄",
+            "😬", "🤥", "😌", "😔", "😪", "🤤", "😴", "😷", "🤒", "🤕",
+            "🤢", "🤮", "🤧", "🥵", "🥶", "🥴", "😵", "🤯", "🤠", "🥳",
+            "🥸", "😎", "🤓", "🧐", "😕", "🫤", "😟", "🙁", "😮", "😯",
+            "😲", "😳", "🥺", "😦", "😧", "😨", "😰", "😥", "😢", "😭",
+            "😱", "😖", "😣", "😞", "😓", "😩", "😫", "🥱", "😤", "😡",
+        ],
+    },
+    {
+        name: "Gestures",
+        icon: "👍",
+        emojis: [
+            "👍", "👎", "👌", "🤌", "🤏", "✌️", "🤞", "🫰", "🤟", "🤘",
+            "🤙", "👈", "👉", "👆", "👇", "☝️", "🫵", "👋", "🤚", "🖐️",
+            "✋", "🖖", "🫱", "🫲", "👏", "🙌", "👐", "🤲", "🤝", "🙏",
+            "✍️", "💅", "🤳", "💪", "🦾", "🦵", "🦶", "👂", "👃", "🧠",
+            "👀", "👁️", "👅", "👄", "💋", "🫂", "👤", "👥", "🗣️", "👣",
+        ],
+    },
+    {
+        name: "Hearts & Joy",
+        icon: "❤️",
+        emojis: [
+            "❤️", "🧡", "💛", "💚", "💙", "💜", "🖤", "🤍", "🤎", "💔",
+            "❤️‍🔥", "❤️‍🩹", "❣️", "💕", "💞", "💓", "💗", "💖", "💘", "💝",
+            "💟", "🎉", "🎊", "🎈", "🎂", "🎁", "✨", "⭐", "🌟", "💫",
+            "💥", "🔥", "💯", "🏆", "🥇", "🥈", "🥉", "👑", "💎", "💐",
+            "🌹", "🥀", "🌺", "🌸", "🌼", "🌻", "☀️", "🌙", "⭐", "🌈",
+        ],
+    },
+    {
+        name: "Work & Tech",
+        icon: "💼",
+        emojis: [
+            "💼", "📁", "📂", "📄", "📃", "📑", "📊", "📈", "📉", "📜",
+            "📝", "📆", "📅", "📇", "📋", "📌", "📍", "📎", "🖇️", "📏",
+            "🔒", "🔓", "🔑", "🗝️", "💡", "🔦", "📱", "📲", "☎️", "📞",
+            "💻", "🖥️", "🖨️", "⌨️", "🖱️", "💽", "💾", "💿", "📀", "🛎️",
+            "🏨", "🏢", "🚗", "🚕", "✈️", "🚀", "🕒", "⏰", "⏱️", "🧭",
+        ],
+    },
+    {
+        name: "Food & Drinks",
+        icon: "☕",
+        emojis: [
+            "☕", "🍵", "🧃", "🥤", "🧋", "🍾", "🍷", "🍸", "🍹", "🍺",
+            "🍻", "🥂", "🥃", "🧊", "🍽️", "🍴", "🥄", "🍕", "🍔", "🍟",
+            "🌭", "🍿", "🥞", "🧇", "🧀", "🥗", "🥪", "🍝", "🍜", "🍲",
+            "🍣", "🍱", "🥟", "🍧", "🍨", "🍦", "🎂", "🍰", "🧁", "🍫",
+        ],
+    },
+];
+
+export const EMOJI_KEYWORD_MAP: Record<string, string[]> = {
+    smile: ["😀", "😃", "😄", "😁", "😆", "😅", "😂", "🤣", "😊", "😇", "🙂"],
+    happy: ["😀", "😃", "😄", "😁", "😆", "😊", "🥳", "🎉"],
+    laugh: ["😆", "😅", "😂", "🤣"],
+    love: ["😍", "🥰", "😘", "❤️", "🧡", "💛", "💚", "💙", "💜", "🖤", "🤍", "🤎", "💔", "❣️", "💕", "💞", "💓", "💗", "💖"],
+    heart: ["❤️", "🧡", "💛", "💚", "💙", "💜", "🖤", "🤍", "🤎", "💔", "❣️", "💕", "💞", "💓", "💗", "💖", "💘", "💝"],
+    thumbs: ["👍", "👎"],
+    ok: ["👌", "👍", "✅"],
+    yes: ["👍", "✅", "🙌"],
+    no: ["👎", "❌", "🚫"],
+    clap: ["👏", "🙌"],
+    fire: ["🔥", "💥"],
+    check: ["✅", "✔️"],
+    party: ["🎉", "🎊", "🥳", "🎈", "🎂"],
+    star: ["⭐", "🌟", "✨"],
+    coffee: ["☕", "🍵"],
+    food: ["🍕", "🍔", "🍟", "🥗", "🥪", "🍣", "🍱", "🍰", "🍦"],
+    hotel: ["🛎️", "🏨"],
+    call: ["📞", "📱", "📲", "☎️"],
+    car: ["🚗", "🚕"],
+};
+
 interface WhatsappInboxProps {
     token?: string;
     apiUrl?: string;
@@ -204,10 +288,13 @@ export const WhatsappInbox: React.FC<WhatsappInboxProps> = ({
     const [creatingCategory, setCreatingCategory] = useState(false);
     const [deletingCategoryId, setDeletingCategoryId] = useState<number | null>(null);
 
-    // Reply bar media attachment
+    // Reply bar media attachment & emoji picker
     const [replyAttachment, setReplyAttachment] = useState<AttachmentFile | null>(null);
     const [uploadingReplyAttachment, setUploadingReplyAttachment] = useState(false);
     const replyFileInputRef = useRef<HTMLInputElement>(null);
+    const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
+    const [activeEmojiCategory, setActiveEmojiCategory] = useState(0);
+    const [emojiSearch, setEmojiSearch] = useState("");
 
     // New Chat Modal & Attachment States
     const [newChatModalOpen, setNewChatModalOpen] = useState(false);
@@ -909,6 +996,90 @@ export const WhatsappInbox: React.FC<WhatsappInboxProps> = ({
         </Menu>
     );
 
+    // ── Emoji Picker Popover Content ─────────────────────────────────────────
+    const filteredEmojis = useMemo(() => {
+        if (!emojiSearch.trim()) {
+            return EMOJI_CATEGORIES[activeEmojiCategory]?.emojis || [];
+        }
+        const term = emojiSearch.trim().toLowerCase();
+        const matches: string[] = [];
+        for (const [kw, list] of Object.entries(EMOJI_KEYWORD_MAP)) {
+            if (kw.includes(term) || term.includes(kw)) {
+                matches.push(...list);
+            }
+        }
+        if (matches.length > 0) {
+            return Array.from(new Set(matches));
+        }
+        return EMOJI_CATEGORIES.flatMap((c) => c.emojis);
+    }, [emojiSearch, activeEmojiCategory]);
+
+    const emojiPickerContent = (
+        <div className="w-72 sm:w-80 p-2.5 bg-white rounded-2xl shadow-xl border border-gray-100 select-none">
+            {/* Search Input */}
+            <div className="mb-2">
+                <Input
+                    size="small"
+                    prefix={<SearchOutlined className="text-gray-400 text-xs" />}
+                    placeholder="Search emojis (smile, heart, ok...)"
+                    value={emojiSearch}
+                    onChange={(e) => setEmojiSearch(e.target.value)}
+                    allowClear
+                    className="rounded-lg text-xs bg-gray-50 border-gray-200"
+                />
+            </div>
+
+            {/* Category Navigation Tabs */}
+            {!emojiSearch.trim() && (
+                <div className="flex items-center justify-between border-b border-gray-100 pb-1.5 mb-2 px-1">
+                    {EMOJI_CATEGORIES.map((cat, idx) => (
+                        <button
+                            key={cat.name}
+                            type="button"
+                            onClick={() => setActiveEmojiCategory(idx)}
+                            className={`p-1.5 rounded-lg text-base transition-all flex items-center justify-center ${
+                                activeEmojiCategory === idx
+                                    ? "bg-green-50 text-[#00a884] shadow-xs scale-110"
+                                    : "hover:bg-gray-100 text-gray-500 opacity-60 hover:opacity-100"
+                            }`}
+                            title={cat.name}
+                        >
+                            <span>{cat.icon}</span>
+                        </button>
+                    ))}
+                </div>
+            )}
+
+            {/* Emoji Grid */}
+            <div className="h-52 overflow-y-auto pr-1 grid grid-cols-8 gap-1 scrollbar-thin">
+                {filteredEmojis.map((emoji, i) => (
+                    <button
+                        key={`${emoji}-${i}`}
+                        type="button"
+                        onClick={() => {
+                            setReplyText((prev) => prev + emoji);
+                        }}
+                        className="w-8 h-8 rounded-lg hover:bg-gray-100 active:bg-gray-200 flex items-center justify-center text-lg transition-transform hover:scale-125 cursor-pointer border-0 bg-transparent p-0"
+                    >
+                        {emoji}
+                    </button>
+                ))}
+            </div>
+
+            {/* Footer */}
+            <div className="pt-2 mt-1 border-t border-gray-100 flex items-center justify-between text-[11px] text-gray-400 px-1">
+                <span>{emojiSearch.trim() ? "Search results" : EMOJI_CATEGORIES[activeEmojiCategory]?.name}</span>
+                <button
+                    type="button"
+                    onClick={() => setEmojiPickerOpen(false)}
+                    className="text-[#00a884] hover:underline font-semibold"
+                >
+                    Done
+                </button>
+            </div>
+        </div>
+    );
+
     // ── Not Connected Warning ───────────────────────────────────────────────
     if (!metaConnected) {
         return (
@@ -1009,9 +1180,14 @@ export const WhatsappInbox: React.FC<WhatsappInboxProps> = ({
                         >
                             <span>Open</span>
                             {counts.open > 0 ? (
-                                <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded-full min-w-[18px] text-center leading-tight ${
-                                    statusFilter === "open" ? "bg-[#f5222d] text-white" : "bg-red-100 text-[#f5222d]"
-                                }`}>
+                                <span
+                                    style={{ height: 18, minWidth: 18, lineHeight: "18px" }}
+                                    className={`text-[10px] font-bold rounded-full inline-flex items-center justify-center text-center flex-shrink-0 ${
+                                        counts.open < 10 ? "w-[18px] h-[18px] p-0" : "px-1"
+                                    } ${
+                                        statusFilter === "open" ? "bg-[#f5222d] text-white" : "bg-red-100 text-[#f5222d]"
+                                    }`}
+                                >
                                     {counts.open}
                                 </span>
                             ) : (
@@ -1635,13 +1811,23 @@ export const WhatsappInbox: React.FC<WhatsappInboxProps> = ({
 
                         <div className="flex items-center gap-2.5">
                             {/* Emoji Tools */}
-                            <Tooltip title="Emoji">
-                                <Button
-                                    type="text"
-                                    shape="circle"
-                                    icon={<SmileOutlined className="text-xl text-[#54656f]" />}
-                                />
-                            </Tooltip>
+                            <Popover
+                                content={emojiPickerContent}
+                                trigger="click"
+                                open={emojiPickerOpen}
+                                onOpenChange={setEmojiPickerOpen}
+                                placement="topLeft"
+                                arrow={false}
+                            >
+                                <Tooltip title="Emoji">
+                                    <Button
+                                        type="text"
+                                        shape="circle"
+                                        icon={<SmileOutlined className={`text-xl ${emojiPickerOpen ? "text-[#00a884]" : "text-[#54656f]"}`} />}
+                                        className="flex-shrink-0"
+                                    />
+                                </Tooltip>
+                            </Popover>
 
                             {/* Attach Media Tool (📎) */}
                             <Tooltip title="Attach image, video or document">
@@ -1650,6 +1836,7 @@ export const WhatsappInbox: React.FC<WhatsappInboxProps> = ({
                                     shape="circle"
                                     icon={<PaperClipOutlined className="text-xl text-[#54656f]" />}
                                     onClick={() => replyFileInputRef.current?.click()}
+                                    className="flex-shrink-0"
                                 />
                             </Tooltip>
 
@@ -1678,22 +1865,29 @@ export const WhatsappInbox: React.FC<WhatsappInboxProps> = ({
                             </div>
 
                             {/* WhatsApp Green Send Button */}
-                            <Button
-                                type="primary"
-                                shape="circle"
-                                icon={
-                                    sendingReply || uploadingReplyAttachment ? (
-                                        <LoadingOutlined className="text-white text-base" />
-                                    ) : (
-                                        <SendOutlined className="text-white text-base" />
-                                    )
-                                }
+                            <button
+                                type="button"
                                 onClick={handleSendReply}
-                                loading={sendingReply || uploadingReplyAttachment}
-                                disabled={!replyText.trim() && !replyAttachment}
-                                style={{ backgroundColor: "#00a884", borderColor: "#00a884" }}
-                                className="w-10 h-10 flex items-center justify-center flex-shrink-0 shadow-xs"
-                            />
+                                disabled={(!replyText.trim() && !replyAttachment) || sendingReply || uploadingReplyAttachment}
+                                style={{
+                                    width: 40,
+                                    height: 40,
+                                    minWidth: 40,
+                                    minHeight: 40,
+                                    maxWidth: 40,
+                                    maxHeight: 40,
+                                    borderRadius: "50%",
+                                    backgroundColor: (!replyText.trim() && !replyAttachment) ? "#a0dfd2" : "#00a884",
+                                }}
+                                className="aspect-square rounded-full text-white flex items-center justify-center flex-shrink-0 shadow-xs transition-transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer p-0 border-0 outline-none"
+                                title="Send message"
+                            >
+                                {sendingReply || uploadingReplyAttachment ? (
+                                    <LoadingOutlined className="text-white text-base" />
+                                ) : (
+                                    <SendOutlined className="text-white text-base ml-0.5" />
+                                )}
+                            </button>
                         </div>
                     </div>
                 </div>

@@ -448,8 +448,17 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
                     )}
                     <span className="flex-1">{item.title}</span>
                     {item.title === "WhatsApp" && whatsappUnresolvedCount > 0 && (
-                        <span className="bg-[#f5222d] text-white text-[11px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center leading-none shadow-xs">
-                            {whatsappUnresolvedCount}
+                        <span
+                            style={{
+                                height: "20px",
+                                minWidth: "20px",
+                                lineHeight: "20px",
+                            }}
+                            className={`bg-[#f5222d] text-white text-[11px] font-bold rounded-full inline-flex items-center justify-center text-center flex-shrink-0 shadow-xs ${
+                                whatsappUnresolvedCount < 10 ? "w-5 h-5 p-0" : "px-1.5"
+                            }`}
+                        >
+                            {whatsappUnresolvedCount > 99 ? "99+" : whatsappUnresolvedCount}
                         </span>
                     )}
                 </ClientLink>
