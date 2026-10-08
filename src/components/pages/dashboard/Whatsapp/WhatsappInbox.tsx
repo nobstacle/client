@@ -27,6 +27,7 @@ import {
     CheckCircleTwoTone,
     SmileOutlined,
     CheckCircleOutlined,
+    UndoOutlined,
     TagOutlined,
     MessageOutlined,
     PaperClipOutlined,
@@ -152,6 +153,7 @@ interface WhatsappInboxProps {
     currentUserId?: number;
     metaConnected: boolean;
     onNavigateToTemplates?: () => void;
+    onUnresolvedCountChange?: (count: number) => void;
 }
 
 export const WhatsappInbox: React.FC<WhatsappInboxProps> = ({
@@ -160,10 +162,17 @@ export const WhatsappInbox: React.FC<WhatsappInboxProps> = ({
     currentUserId,
     metaConnected,
     onNavigateToTemplates,
+    onUnresolvedCountChange,
 }) => {
     // ── States ──────────────────────────────────────────────────────────────
     const [conversations, setConversations] = useState<Conversation[]>([]);
-    const [counts, setCounts] = useState({ all: 0, mine: 0, unassigned: 0 });
+    const [counts, setCounts] = useState<{
+        all: number;
+        mine: number;
+        unassigned: number;
+        open: number;
+        resolved: number;
+    }>({ all: 0, mine: 0, unassigned: 0, open: 0, resolved: 0 });
     const [activeConversationId, setActiveConversationId] = useState<number | null>(null);
     const [messages, setMessages] = useState<ConversationMessage[]>([]);
     const [isWindowOpen, setIsWindowOpen] = useState(false);
@@ -346,12 +355,31 @@ export const WhatsappInbox: React.FC<WhatsappInboxProps> = ({
                 const items: Conversation[] = res?.items || [];
                 setConversations(items);
                 if (res?.counts) {
-                    setCounts(res.counts);
+                    setCounts({
+                        all: res.counts.all ?? 0,
+                        mine: res.counts.mine ?? 0,
+                        unassigned: res.counts.unassigned ?? 0,
+                        open: res.counts.open ?? 0,
+                        resolved: res.counts.resolved ?? 0,
+                    });
+                    const unresolved = res.counts.open ?? 0;
+                    onUnresolvedCountChange?.(unresolved);
+                    if (typeof window !== "undefined") {
+                        window.dispatchEvent(
+                            new CustomEvent("whatsapp_unresolved_count_updated", {
+                                detail: { count: unresolved },
+                            })
+                        );
+                    }
                 }
 
-                // Auto-select first conversation if none selected
-                if (!activeConversationId && items.length > 0) {
-                    setActiveConversationId(items[0].id);
+                // Auto-select conversation if none selected or if previously active is no longer in view
+                if (items.length > 0) {
+                    if (!activeConversationId || !items.some((it) => it.id === activeConversationId)) {
+                        setActiveConversationId(items[0].id);
+                    }
+                } else {
+                    setActiveConversationId(null);
                 }
             } catch (err: any) {
                 if (!silent) message.error(err?.message || "Failed to load conversations");
@@ -359,7 +387,7 @@ export const WhatsappInbox: React.FC<WhatsappInboxProps> = ({
                 if (!silent) setLoadingConversations(false);
             }
         },
-        [token, apiUrl, scope, statusFilter, selectedCategoryId, searchQuery, activeConversationId, authFetch]
+        [token, apiUrl, scope, statusFilter, selectedCategoryId, searchQuery, activeConversationId, authFetch, onUnresolvedCountChange]
     );
 
     useEffect(() => {
@@ -705,7 +733,12 @@ export const WhatsappInbox: React.FC<WhatsappInboxProps> = ({
             setConversations((prev) =>
                 prev.map((c) => (c.id === activeConversationId ? { ...c, status: newStatus } : c))
             );
-            message.success(`Conversation marked as ${newStatus}`);
+            message.success(
+                newStatus === "resolved"
+                    ? "Conversation marked as Resolved"
+                    : "Conversation unresolved (moved to Open inbox)"
+            );
+            await loadConversations(true);
         } catch (err: any) {
             message.error(err?.message || "Failed to update status");
         }
@@ -962,6 +995,63 @@ export const WhatsappInbox: React.FC<WhatsappInboxProps> = ({
                     </div>
                 </div>
 
+                {/* 2.5 Status Tabs: Open (Unresolved) vs Resolved vs All */}
+                <div className="px-3 pt-2 pb-1.5 bg-white border-b border-[#f0f2f5]">
+                    <div className="bg-[#f0f2f5] p-1 rounded-lg flex items-center gap-1 text-xs">
+                        <button
+                            type="button"
+                            onClick={() => setStatusFilter("open")}
+                            className={`flex-1 py-1 px-2 rounded-md transition-all flex items-center justify-center gap-1.5 font-medium ${
+                                statusFilter === "open"
+                                    ? "bg-white text-[#111b21] shadow-xs font-semibold"
+                                    : "text-[#54656f] hover:text-[#111b21]"
+                            }`}
+                        >
+                            <span>Open</span>
+                            {counts.open > 0 ? (
+                                <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded-full min-w-[18px] text-center leading-tight ${
+                                    statusFilter === "open" ? "bg-[#f5222d] text-white" : "bg-red-100 text-[#f5222d]"
+                                }`}>
+                                    {counts.open}
+                                </span>
+                            ) : (
+                                <span className="text-[10px] text-[#8696a0]">0</span>
+                            )}
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={() => setStatusFilter("resolved")}
+                            className={`flex-1 py-1 px-2 rounded-md transition-all flex items-center justify-center gap-1.5 font-medium ${
+                                statusFilter === "resolved"
+                                    ? "bg-white text-[#111b21] shadow-xs font-semibold"
+                                    : "text-[#54656f] hover:text-[#111b21]"
+                            }`}
+                        >
+                            <CheckCircleOutlined className={statusFilter === "resolved" ? "text-green-600 text-xs" : "text-gray-400 text-xs"} />
+                            <span>Resolved</span>
+                            <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded-full ${
+                                statusFilter === "resolved" ? "bg-gray-200 text-gray-800" : "text-[#8696a0]"
+                            }`}>
+                                {counts.resolved}
+                            </span>
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={() => setStatusFilter(undefined)}
+                            className={`py-1 px-2.5 rounded-md transition-all flex items-center justify-center gap-1 font-medium ${
+                                statusFilter === undefined
+                                    ? "bg-white text-[#111b21] shadow-xs font-semibold"
+                                    : "text-[#54656f] hover:text-[#111b21]"
+                            }`}
+                        >
+                            <span>All</span>
+                            <span className="text-[10px] text-[#8696a0] font-bold">{counts.all}</span>
+                        </button>
+                    </div>
+                </div>
+
                 {/* 3. Filter Chips (All, Assigned to me, Unassigned) */}
                 <div className="px-3 pt-2.5 pb-2 bg-white border-b border-[#f0f2f5] space-y-2">
                     <div className="flex items-center gap-1.5">
@@ -1065,45 +1155,60 @@ export const WhatsappInbox: React.FC<WhatsappInboxProps> = ({
                     ) : conversations.length === 0 ? (
                         <div className="p-6 text-center text-[#667781] space-y-3">
                             <div className="w-12 h-12 rounded-full bg-green-50 text-[#00a884] mx-auto flex items-center justify-center text-2xl shadow-xs">
-                                <MessageOutlined />
+                                {statusFilter === "resolved" ? <CheckCircleOutlined className="text-gray-500" /> : <MessageOutlined />}
                             </div>
                             <div>
-                                <div className="text-sm font-bold text-[#111b21]">No chats yet</div>
+                                <div className="text-sm font-bold text-[#111b21]">
+                                    {statusFilter === "resolved" ? "No resolved chats" : "No chats yet"}
+                                </div>
                                 <p className="text-xs text-[#8696a0] max-w-xs mx-auto m-0 mt-1 leading-relaxed">
-                                    Inbound messages will automatically appear when guests text your WhatsApp number. You can also start a chat or sync existing contacts.
+                                    {statusFilter === "resolved"
+                                        ? "Conversations marked as resolved will appear here for reference. You can reopen any resolved chat at any time."
+                                        : "Inbound messages will automatically appear when guests text your WhatsApp number. You can also start a chat or sync existing contacts."}
                                 </p>
                             </div>
 
-                            <div className="flex flex-col gap-2 pt-2 max-w-[260px] mx-auto">
-                                <Button
-                                    type="primary"
-                                    icon={<PlusOutlined />}
-                                    style={{ backgroundColor: "#00a884", borderColor: "#00a884" }}
-                                    onClick={() => setNewChatModalOpen(true)}
-                                    className="rounded-xl shadow-xs text-xs font-semibold h-9"
-                                >
-                                    Start New Chat
-                                </Button>
+                            {statusFilter === "resolved" ? (
+                                <div className="pt-2">
+                                    <Button
+                                        onClick={() => setStatusFilter("open")}
+                                        className="rounded-xl text-xs font-medium h-9"
+                                    >
+                                        View Open Inbox ({counts.open})
+                                    </Button>
+                                </div>
+                            ) : (
+                                <div className="flex flex-col gap-2 pt-2 max-w-[260px] mx-auto">
+                                    <Button
+                                        type="primary"
+                                        icon={<PlusOutlined />}
+                                        style={{ backgroundColor: "#00a884", borderColor: "#00a884" }}
+                                        onClick={() => setNewChatModalOpen(true)}
+                                        className="rounded-xl shadow-xs text-xs font-semibold h-9"
+                                    >
+                                        Start New Chat
+                                    </Button>
 
-                                <Button
-                                    icon={<SyncOutlined spin={syncingContacts} />}
-                                    onClick={handleSyncContacts}
-                                    loading={syncingContacts}
-                                    className="rounded-xl text-xs font-medium h-9"
-                                >
-                                    Sync Existing Contacts
-                                </Button>
+                                    <Button
+                                        icon={<SyncOutlined spin={syncingContacts} />}
+                                        onClick={handleSyncContacts}
+                                        loading={syncingContacts}
+                                        className="rounded-xl text-xs font-medium h-9"
+                                    >
+                                        Sync Existing Contacts
+                                    </Button>
 
-                                <Button
-                                    type="dashed"
-                                    icon={<ThunderboltOutlined />}
-                                    onClick={handleSimulateInbound}
-                                    loading={simulatingInbound}
-                                    className="rounded-xl text-xs text-blue-600 border-blue-200 h-9"
-                                >
-                                    Test Inbound Message
-                                </Button>
-                            </div>
+                                    <Button
+                                        type="dashed"
+                                        icon={<ThunderboltOutlined />}
+                                        onClick={handleSimulateInbound}
+                                        loading={simulatingInbound}
+                                        className="rounded-xl text-xs text-blue-600 border-blue-200 h-9"
+                                    >
+                                        Test Inbound Message
+                                    </Button>
+                                </div>
+                            )}
                         </div>
                     ) : (
                         conversations.map((c) => {
@@ -1185,6 +1290,19 @@ export const WhatsappInbox: React.FC<WhatsappInboxProps> = ({
                                                     Unassigned
                                                 </span>
                                             )}
+
+                                            {/* Status Badge */}
+                                            {c.status === "resolved" ? (
+                                                <span className="text-[10px] text-gray-600 bg-gray-100 px-1.5 py-0.5 rounded border border-gray-200 font-medium flex items-center gap-1">
+                                                    <CheckCircleOutlined className="text-gray-500 text-[10px]" />
+                                                    <span>Resolved</span>
+                                                </span>
+                                            ) : statusFilter === undefined ? (
+                                                <span className="text-[10px] text-green-700 bg-green-50 px-1.5 py-0.5 rounded border border-green-200 font-medium flex items-center gap-1">
+                                                    <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                                                    <span>Open</span>
+                                                </span>
+                                            ) : null}
                                         </div>
                                     </div>
                                 </div>
@@ -1215,9 +1333,13 @@ export const WhatsappInbox: React.FC<WhatsappInboxProps> = ({
                                         {activeConversation.contactName || activeConversation.contactPhone}
                                     </h3>
                                     {activeConversation.status === "resolved" ? (
-                                        <Tag color="default" className="text-[10px] m-0 px-1.5 py-0">Resolved</Tag>
+                                        <Tag color="default" className="text-[10px] m-0 px-1.5 py-0 border-gray-300 font-medium">
+                                            ✓ Resolved
+                                        </Tag>
                                     ) : (
-                                        <Tag color="green" className="text-[10px] m-0 px-1.5 py-0">Open</Tag>
+                                        <Tag color="green" className="text-[10px] m-0 px-1.5 py-0 font-medium">
+                                            ● Open
+                                        </Tag>
                                     )}
                                 </div>
                                 <div className="text-[11px] text-[#667781] font-mono mt-0.5">
@@ -1278,28 +1400,54 @@ export const WhatsappInbox: React.FC<WhatsappInboxProps> = ({
                                 </Button>
                             </Dropdown>
 
-                            {/* 3. Resolve / Re-open Button */}
+                            {/* 3. Resolve / Unresolve (Re-open) Button */}
                             {activeConversation.status === "open" ? (
-                                <Button
-                                    size="small"
-                                    icon={<CheckCircleOutlined />}
-                                    onClick={() => handleToggleStatus("resolved")}
-                                    className="rounded-lg text-xs"
-                                >
-                                    Resolve
-                                </Button>
+                                <Tooltip title="Mark this conversation as resolved">
+                                    <Button
+                                        size="small"
+                                        icon={<CheckCircleOutlined className="text-green-600" />}
+                                        onClick={() => handleToggleStatus("resolved")}
+                                        className="rounded-lg text-xs font-medium hover:border-green-600 hover:text-green-600 shadow-xs"
+                                    >
+                                        Resolve
+                                    </Button>
+                                </Tooltip>
                             ) : (
-                                <Button
-                                    size="small"
-                                    icon={<SyncOutlined />}
-                                    onClick={() => handleToggleStatus("open")}
-                                    className="rounded-lg text-xs"
-                                >
-                                    Re-open
-                                </Button>
+                                <Tooltip title="Unresolve this conversation and return it to the active Open inbox">
+                                    <Button
+                                        size="small"
+                                        type="primary"
+                                        icon={<UndoOutlined />}
+                                        style={{ backgroundColor: "#00a884", borderColor: "#00a884" }}
+                                        onClick={() => handleToggleStatus("open")}
+                                        className="rounded-lg text-xs font-semibold shadow-xs"
+                                    >
+                                        Unresolve
+                                    </Button>
+                                </Tooltip>
                             )}
                         </div>
                     </div>
+
+                    {/* Resolved Status Notification Banner */}
+                    {activeConversation.status === "resolved" && (
+                        <div className="bg-amber-50/95 border-b border-amber-200 px-4 py-2 flex items-center justify-between text-xs text-amber-900 shadow-xs z-10">
+                            <div className="flex items-center gap-2">
+                                <CheckCircleOutlined className="text-amber-600 text-sm flex-shrink-0" />
+                                <span>
+                                    <strong>This conversation is resolved.</strong> It is archived from the active Open inbox.
+                                </span>
+                            </div>
+                            <Button
+                                size="small"
+                                icon={<UndoOutlined />}
+                                onClick={() => handleToggleStatus("open")}
+                                className="rounded-md text-xs font-semibold text-[#00a884] border-[#00a884] hover:bg-green-50 shadow-xs"
+                            >
+                                Unresolve & Reopen
+                            </Button>
+                        </div>
+                    )}
 
                     {/* 2. Chat Bubble Stream (WhatsApp Desktop Chat Wallpaper & Bubbles) */}
                     <div

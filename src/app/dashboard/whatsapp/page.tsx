@@ -899,6 +899,7 @@ export default function WhatsAppPage() {
     });
     const [connectingMeta, setConnectingMeta] = useState(false);
     const [checkingMetaStatus, setCheckingMetaStatus] = useState(false);
+    const [unresolvedCount, setUnresolvedCount] = useState<number>(0);
 
     const metaConnected = metaConnection.connected;
     const isDisplayNamePending = Boolean(
@@ -1280,6 +1281,42 @@ export default function WhatsAppPage() {
         return () => window.clearInterval(interval);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [token, isDisplayNamePending]);
+
+    useEffect(() => {
+        if (!token || !API_URL) return;
+
+        const fetchInboxStats = async () => {
+            try {
+                const res = await fetch(`${API_URL}/whatsapp/inbox/stats`, {
+                    headers: { Authorization: `Bearer ${token}` },
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (typeof data.unresolvedCount === "number") {
+                        setUnresolvedCount(data.unresolvedCount);
+                    }
+                }
+            } catch {
+                // silent
+            }
+        };
+
+        fetchInboxStats();
+        const interval = window.setInterval(fetchInboxStats, 10000);
+
+        const handleCountEvent = (e: any) => {
+            if (typeof e.detail?.count === "number") {
+                setUnresolvedCount(e.detail.count);
+            }
+        };
+
+        window.addEventListener("whatsapp_unresolved_count_updated", handleCountEvent);
+
+        return () => {
+            window.clearInterval(interval);
+            window.removeEventListener("whatsapp_unresolved_count_updated", handleCountEvent);
+        };
+    }, [token]);
 
     useEffect(() => {
         if (!token || !hasActiveCampaigns) return;
@@ -3031,7 +3068,24 @@ export default function WhatsAppPage() {
                             </div>
                         }
                     >
-                        <TabPane tab={<span><MessageOutlined />Inbox</span>} key="inbox">
+                        <TabPane
+                            tab={
+                                <span>
+                                    <MessageOutlined />
+                                    Inbox
+                                    {unresolvedCount > 0 && (
+                                        <Badge
+                                            count={unresolvedCount}
+                                            style={{
+                                                marginLeft: 6,
+                                                backgroundColor: "#f5222d",
+                                            }}
+                                        />
+                                    )}
+                                </span>
+                            }
+                            key="inbox"
+                        >
                             <div className="p-6">
                                 <WhatsappInbox
                                     token={token}
@@ -3039,6 +3093,7 @@ export default function WhatsAppPage() {
                                     currentUserId={session?.user?.id ? Number(session.user.id) : undefined}
                                     metaConnected={metaConnected}
                                     onNavigateToTemplates={() => setActiveTab("templates")}
+                                    onUnresolvedCountChange={(count) => setUnresolvedCount(count)}
                                 />
                             </div>
                         </TabPane>

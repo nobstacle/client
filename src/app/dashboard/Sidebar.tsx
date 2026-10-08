@@ -324,6 +324,48 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
         });
     }, [router, searchParamsString]);
 
+    // Track unresolved WhatsApp conversations count for red notification badge
+    const [whatsappUnresolvedCount, setWhatsappUnresolvedCount] = useState<number>(0);
+
+    useEffect(() => {
+        const token = (user as any)?.user?.backendTokens?.at;
+        if (!token || !featureFlags.whatsapp) return;
+
+        const fetchWhatsAppStats = async () => {
+            try {
+                const apiBase = (process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || "").trim().replace(/\/+$/, "");
+                const prefix = apiBase.endsWith("/api/v1") ? apiBase : `${apiBase}/api/v1`;
+                const res = await fetch(`${prefix}/whatsapp/inbox/stats`, {
+                    headers: { Authorization: `Bearer ${token}` },
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (typeof data.unresolvedCount === "number") {
+                        setWhatsappUnresolvedCount(data.unresolvedCount);
+                    }
+                }
+            } catch {
+                // silent
+            }
+        };
+
+        fetchWhatsAppStats();
+        const timer = setInterval(fetchWhatsAppStats, 10000);
+
+        const handleCountEvent = (e: any) => {
+            if (typeof e.detail?.count === "number") {
+                setWhatsappUnresolvedCount(e.detail.count);
+            }
+        };
+
+        window.addEventListener("whatsapp_unresolved_count_updated", handleCountEvent);
+
+        return () => {
+            clearInterval(timer);
+            window.removeEventListener("whatsapp_unresolved_count_updated", handleCountEvent);
+        };
+    }, [user, featureFlags.whatsapp]);
+
     const isCompactDesktop = windowWidth >= 1024 && windowWidth < 1350;
 
     const toggleSidebar = () => {
@@ -404,7 +446,12 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
                             {item.icon}
                         </span>
                     )}
-                    {item.title}
+                    <span className="flex-1">{item.title}</span>
+                    {item.title === "WhatsApp" && whatsappUnresolvedCount > 0 && (
+                        <span className="bg-[#f5222d] text-white text-[11px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center leading-none shadow-xs">
+                            {whatsappUnresolvedCount}
+                        </span>
+                    )}
                 </ClientLink>
             </li>
         );
