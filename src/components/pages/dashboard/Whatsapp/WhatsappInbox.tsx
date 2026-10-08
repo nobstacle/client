@@ -43,9 +43,11 @@ import {
     PictureOutlined,
     VideoCameraOutlined,
     FileOutlined,
+    ExclamationCircleOutlined,
 } from "@ant-design/icons";
 import { MdWhatsapp } from "react-icons/md";
 import { FaAt, FaFileDownload } from "react-icons/fa";
+import { BsCheck2, BsCheck2All } from "react-icons/bs";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 
@@ -828,6 +830,39 @@ export const WhatsappInbox: React.FC<WhatsappInboxProps> = ({
             await loadConversations(true);
         } catch (err: any) {
             message.error(err?.message || "Failed to update status");
+        }
+    };
+
+    // ── Cycle Message Delivery / Read Receipt (sent -> delivered -> read) ────
+    const handleCycleMessageStatus = async (messageId: number, currentStatus: string) => {
+        const nextStatusMap: Record<string, "sent" | "delivered" | "read"> = {
+            pending: "sent",
+            sent: "delivered",
+            delivered: "read",
+            read: "sent",
+            failed: "sent",
+        };
+        const nextStatus = nextStatusMap[currentStatus] || "sent";
+
+        // Optimistically update message in active view
+        setMessages((prev) =>
+            prev.map((msg) => (msg.id === messageId ? { ...msg, status: nextStatus } : msg))
+        );
+
+        try {
+            await authFetch(`/whatsapp/inbox/messages/${messageId}/status`, {
+                method: "PUT",
+                body: JSON.stringify({ status: nextStatus }),
+            });
+            message.info(
+                nextStatus === "read"
+                    ? "Receipt: Double Blue Tick (Read)"
+                    : nextStatus === "delivered"
+                    ? "Receipt: Double Gray Tick (Delivered)"
+                    : "Receipt: Single Gray Tick (Sent)"
+            );
+        } catch {
+            // Silently fallback if offline
         }
     };
 
@@ -1719,15 +1754,39 @@ export const WhatsappInbox: React.FC<WhatsappInboxProps> = ({
                                             <div className="flex items-center justify-end gap-1 text-[10px] text-[#667781] mt-1">
                                                 <span>{dayjs(m.createdAt).format("h:mm A")}</span>
                                                 {isOutbound && (
-                                                    <span className="ml-0.5">
-                                                        {m.status === "read" ? (
-                                                            <CheckCircleTwoTone twoToneColor="#53bdeb" className="text-xs" />
-                                                        ) : m.status === "delivered" ? (
-                                                            <CheckOutlined className="text-[#8696a0] text-xs font-bold" />
-                                                        ) : (
-                                                            <ClockCircleOutlined className="text-[#8696a0] text-xs" />
-                                                        )}
-                                                    </span>
+                                                    <Tooltip
+                                                        title={
+                                                            m.status === "read"
+                                                                ? "Read • Double Blue Tick (Click to cycle)"
+                                                                : m.status === "delivered"
+                                                                ? "Delivered • Double Gray Tick (Click to mark Read)"
+                                                                : m.status === "sent"
+                                                                ? "Sent • Single Gray Tick (Click to mark Delivered)"
+                                                                : m.status === "failed"
+                                                                ? "Failed to deliver"
+                                                                : "Sending..."
+                                                        }
+                                                    >
+                                                        <span
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleCycleMessageStatus(m.id, m.status);
+                                                            }}
+                                                            className="inline-flex items-center ml-0.5 cursor-pointer hover:scale-110 active:scale-95 transition-transform"
+                                                        >
+                                                            {m.status === "read" ? (
+                                                                <BsCheck2All className="text-[15px] text-[#53bdeb] stroke-[0.3]" />
+                                                            ) : m.status === "delivered" ? (
+                                                                <BsCheck2All className="text-[15px] text-[#8696a0] stroke-[0.3]" />
+                                                            ) : m.status === "sent" ? (
+                                                                <BsCheck2 className="text-[14px] text-[#8696a0] stroke-[0.5]" />
+                                                            ) : m.status === "failed" ? (
+                                                                <ExclamationCircleOutlined className="text-red-500 text-[11px]" />
+                                                            ) : (
+                                                                <ClockCircleOutlined className="text-[#8696a0] text-[10px]" />
+                                                            )}
+                                                        </span>
+                                                    </Tooltip>
                                                 )}
                                             </div>
                                         </div>
