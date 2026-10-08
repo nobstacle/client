@@ -19,11 +19,13 @@ import {
     LinkOutlined, PhoneOutlined, CopyOutlined, MailOutlined,
     DownOutlined, UpOutlined, PoweroffOutlined,
     InfoCircleOutlined, SafetyCertificateOutlined,
+    MessageOutlined,
 } from "@ant-design/icons";
 import { MdWhatsapp } from "react-icons/md";
 import { FaFileDownload } from "react-icons/fa";
 import dayjs, { Dayjs } from "dayjs";
 import { useSession } from "next-auth/react";
+import WhatsappInbox from "../../../components/pages/dashboard/Whatsapp/WhatsappInbox";
 
 declare global {
     interface Window {
@@ -886,7 +888,7 @@ export default function WhatsAppPage() {
     const { data: session } = useSession();
     const token = session?.user?.backendTokens?.at;
 
-    const [activeTab, setActiveTab] = useState("contacts");
+    const [activeTab, setActiveTab] = useState("inbox");
     const [contactLists, setContactLists] = useState<ContactList[]>([]);
     const [templates, setTemplates] = useState<Template[]>([]);
     const [campaigns, setCampaigns] = useState<Campaign[]>([]);
@@ -3004,6 +3006,17 @@ export default function WhatsAppPage() {
                             </div>
                         }
                     >
+                        <TabPane tab={<span><MessageOutlined />Inbox</span>} key="inbox">
+                            <div className="p-6">
+                                <WhatsappInbox
+                                    token={token}
+                                    apiUrl={API_URL}
+                                    currentUserId={session?.user?.id ? Number(session.user.id) : undefined}
+                                    metaConnected={metaConnected}
+                                    onNavigateToTemplates={() => setActiveTab("templates")}
+                                />
+                            </div>
+                        </TabPane>
                         <TabPane tab={<span><TeamOutlined />Contact Lists <Badge count={contactLists.length} style={{ marginLeft: 6, backgroundColor: "#1890ff" }} /></span>} key="contacts">
                             <div className="p-6">
                                 <div className="flex gap-3 mb-4">
