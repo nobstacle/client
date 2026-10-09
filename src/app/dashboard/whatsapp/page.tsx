@@ -1225,7 +1225,18 @@ export default function WhatsAppPage() {
                 method: "DELETE",
             });
             message.success({ content: "WhatsApp disconnected successfully", key: "disconnect-wa" });
+            setTemplates([]);
+            setCampaigns([]);
+            setStats({
+                totalSent: 0,
+                totalDelivered: 0,
+                totalFailed: 0,
+                totalCampaigns: 0,
+                activeCampaigns: 0,
+            });
+            setUnresolvedCount(0);
             await loadMetaSettings();
+            await loadAll();
         } catch (err) {
             message.error({ content: parseErrorMessage(err) || "Failed to disconnect WhatsApp", key: "disconnect-wa" });
         }
@@ -1235,8 +1246,22 @@ export default function WhatsAppPage() {
         if (!token) return;
         setLoading(true);
         try {
-            await loadMetaSettings();
-            await Promise.all([loadContactLists(), loadTemplates(), loadCampaigns(), loadStats()]);
+            const metaRes = await loadMetaSettings();
+            if (metaRes?.connected) {
+                await Promise.all([loadContactLists(), loadTemplates(), loadCampaigns(), loadStats()]);
+            } else {
+                await loadContactLists();
+                setTemplates([]);
+                setCampaigns([]);
+                setStats({
+                    totalSent: 0,
+                    totalDelivered: 0,
+                    totalFailed: 0,
+                    totalCampaigns: 0,
+                    activeCampaigns: 0,
+                });
+                setUnresolvedCount(0);
+            }
         } catch (error) {
             message.error(parseErrorMessage(error));
         } finally {
@@ -1283,7 +1308,12 @@ export default function WhatsAppPage() {
     }, [token, isDisplayNamePending]);
 
     useEffect(() => {
-        if (!token || !API_URL) return;
+        if (!token || !API_URL || !metaConnected) {
+            if (!metaConnected) {
+                setUnresolvedCount(0);
+            }
+            return;
+        }
 
         const fetchInboxStats = async () => {
             try {
@@ -1316,7 +1346,7 @@ export default function WhatsAppPage() {
             window.clearInterval(interval);
             window.removeEventListener("whatsapp_unresolved_count_updated", handleCountEvent);
         };
-    }, [token]);
+    }, [token, metaConnected]);
 
     useEffect(() => {
         if (!token || !hasActiveCampaigns) return;
@@ -2902,7 +2932,7 @@ export default function WhatsAppPage() {
                         {metaConnected ? (
                             <Popconfirm
                                 title="Disconnect WhatsApp?"
-                                description="Your WhatsApp campaigns will be paused until you reconnect."
+                                description="Disconnecting will unlink your WhatsApp account and remove test data and messaging records. Do you wish to proceed?"
                                 onConfirm={handleDisconnectMeta}
                                 okText="Disconnect"
                                 cancelText="Cancel"
@@ -3006,9 +3036,9 @@ export default function WhatsAppPage() {
                 <Row gutter={[16, 16]}>
                     {[
                         { title: "Total Contacts", value: contactLists.reduce((a, c) => a + c.count, 0), prefix: <UserOutlined />, color: "#1890ff", bg: "#e6f7ff" },
-                        { title: "Messages Sent", value: stats.totalSent, prefix: <SendOutlined />, color: "#52c41a", bg: "#f6ffed" },
-                        { title: "Delivered", value: stats.totalDelivered, prefix: <CheckCircleOutlined />, color: "#13c2c2", bg: "#e6fffb" },
-                        { title: "Active Campaigns", value: stats.activeCampaigns, prefix: <ThunderboltOutlined />, color: "#fa8c16", bg: "#fff7e6" },
+                        { title: "Messages Sent", value: metaConnected ? stats.totalSent : 0, prefix: <SendOutlined />, color: "#52c41a", bg: "#f6ffed" },
+                        { title: "Delivered", value: metaConnected ? stats.totalDelivered : 0, prefix: <CheckCircleOutlined />, color: "#13c2c2", bg: "#e6fffb" },
+                        { title: "Active Campaigns", value: metaConnected ? stats.activeCampaigns : 0, prefix: <ThunderboltOutlined />, color: "#fa8c16", bg: "#fff7e6" },
                     ].map(stat => (
                         <Col xs={12} sm={12} md={6} key={stat.title}>
                             <Card bodyStyle={{ padding: "16px 20px" }} className="shadow-sm hover:shadow-md transition-shadow">
@@ -3043,6 +3073,7 @@ export default function WhatsAppPage() {
                                         type="primary"
                                         style={{ backgroundColor: '#3b5998' }}
                                         icon={<PlusOutlined />}
+                                        disabled={!metaConnected}
                                         onClick={() => {
                                             setEditingTemplate(null);
                                             setNewTemplate(createEmptyTemplateState());
@@ -3073,7 +3104,7 @@ export default function WhatsAppPage() {
                                 <span>
                                     <MessageOutlined />
                                     Inbox
-                                    {unresolvedCount > 0 && (
+                                    {metaConnected && unresolvedCount > 0 && (
                                         <Badge
                                             count={unresolvedCount}
                                             style={{
@@ -3120,52 +3151,98 @@ export default function WhatsAppPage() {
                             </div>
                         </TabPane>
 
-                        <TabPane tab={<span><FileTextOutlined />Templates <Badge count={templates.length} style={{ marginLeft: 6, backgroundColor: "#722ed1" }} /></span>} key="templates">
+                        <TabPane tab={<span><FileTextOutlined />Templates {metaConnected && templates.length > 0 && <Badge count={templates.length} style={{ marginLeft: 6, backgroundColor: "#722ed1" }} />}</span>} key="templates">
                             <div className="p-6">
-                                <div className="flex gap-3 mb-4">
-                                    <Input
-                                        placeholder="Search templates..."
-                                        prefix={<SearchOutlined className="text-gray-400" />}
-                                        style={{ maxWidth: 300 }}
-                                        value={templateSearch}
-                                        onChange={(e) => setTemplateSearch(e.target.value)}
-                                    />
-                                    <Select placeholder="Filter by status" allowClear style={{ width: 150 }} value={templateStatusFilter} onChange={setTemplateStatusFilter}>
-                                        <Option value="approved">Approved</Option>
-                                        <Option value="pending">Pending</Option>
-                                        <Option value="rejected">Rejected</Option>
-                                    </Select>
-                                    <Select placeholder="Filter by type" allowClear style={{ width: 150 }} value={templateTypeFilter} onChange={setTemplateTypeFilter}>
-                                        <Option value="text">Text</Option>
-                                        <Option value="image">Image</Option>
-                                        <Option value="video">Video</Option>
-                                        <Option value="carousel">Carousel</Option>
-                                    </Select>
-                                </div>
-                                <Table
-                                    rowKey="id"
-                                    columns={templateColumns}
-                                    dataSource={filteredTemplates}
-                                    pagination={false}
-                                    size="small"
-                                    bordered={false}
-                                    loading={loading}
-                                />
+                                {!metaConnected ? (
+                                    <div className="flex flex-col items-center justify-center p-12 text-center bg-gray-50 rounded-2xl border border-gray-100">
+                                        <div className="w-16 h-16 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center mb-4 text-3xl shadow-sm">
+                                            <FileTextOutlined />
+                                        </div>
+                                        <h3 className="text-xl font-bold text-gray-800 mb-2">WhatsApp Business Not Connected</h3>
+                                        <p className="text-gray-500 max-w-md mb-6">
+                                            Connect your official WhatsApp Business Account using the button in the header above to create, manage, and submit message templates to Meta.
+                                        </p>
+                                        <Button
+                                            type="primary"
+                                            style={{ backgroundColor: "#25D366", borderColor: "#25D366" }}
+                                            icon={<MdWhatsapp size={16} />}
+                                            onClick={launchWhatsAppSignup}
+                                            loading={connectingMeta}
+                                            className="rounded-xl h-10 px-6 font-medium shadow-sm hover:shadow"
+                                        >
+                                            Connect WhatsApp Business
+                                        </Button>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <div className="flex gap-3 mb-4">
+                                            <Input
+                                                placeholder="Search templates..."
+                                                prefix={<SearchOutlined className="text-gray-400" />}
+                                                style={{ maxWidth: 300 }}
+                                                value={templateSearch}
+                                                onChange={(e) => setTemplateSearch(e.target.value)}
+                                            />
+                                            <Select placeholder="Filter by status" allowClear style={{ width: 150 }} value={templateStatusFilter} onChange={setTemplateStatusFilter}>
+                                                <Option value="approved">Approved</Option>
+                                                <Option value="pending">Pending</Option>
+                                                <Option value="rejected">Rejected</Option>
+                                            </Select>
+                                            <Select placeholder="Filter by type" allowClear style={{ width: 150 }} value={templateTypeFilter} onChange={setTemplateTypeFilter}>
+                                                <Option value="text">Text</Option>
+                                                <Option value="image">Image</Option>
+                                                <Option value="video">Video</Option>
+                                                <Option value="carousel">Carousel</Option>
+                                            </Select>
+                                        </div>
+                                        <Table
+                                            rowKey="id"
+                                            columns={templateColumns}
+                                            dataSource={filteredTemplates}
+                                            pagination={false}
+                                            size="small"
+                                            bordered={false}
+                                            loading={loading}
+                                        />
+                                    </>
+                                )}
                             </div>
                         </TabPane>
 
-                        <TabPane tab={<span><SendOutlined />Campaigns <Badge count={campaigns.length} style={{ marginLeft: 6, backgroundColor: "#fa8c16" }} /></span>} key="campaigns">
+                        <TabPane tab={<span><SendOutlined />Campaigns {metaConnected && campaigns.length > 0 && <Badge count={campaigns.length} style={{ marginLeft: 6, backgroundColor: "#fa8c16" }} />}</span>} key="campaigns">
                             <div className="p-6">
-                                <Table
-                                    rowKey="id"
-                                    columns={campaignColumns}
-                                    dataSource={campaigns}
-                                    pagination={false}
-                                    size="small"
-                                    bordered={false}
-                                    scroll={{ x: 900 }}
-                                    loading={loading}
-                                />
+                                {!metaConnected ? (
+                                    <div className="flex flex-col items-center justify-center p-12 text-center bg-gray-50 rounded-2xl border border-gray-100">
+                                        <div className="w-16 h-16 rounded-2xl bg-orange-50 text-orange-600 flex items-center justify-center mb-4 text-3xl shadow-sm">
+                                            <SendOutlined />
+                                        </div>
+                                        <h3 className="text-xl font-bold text-gray-800 mb-2">WhatsApp Business Not Connected</h3>
+                                        <p className="text-gray-500 max-w-md mb-6">
+                                            Connect your official WhatsApp Business Account using the button in the header above to create, schedule, and launch broadcast campaigns.
+                                        </p>
+                                        <Button
+                                            type="primary"
+                                            style={{ backgroundColor: "#25D366", borderColor: "#25D366" }}
+                                            icon={<MdWhatsapp size={16} />}
+                                            onClick={launchWhatsAppSignup}
+                                            loading={connectingMeta}
+                                            className="rounded-xl h-10 px-6 font-medium shadow-sm hover:shadow"
+                                        >
+                                            Connect WhatsApp Business
+                                        </Button>
+                                    </div>
+                                ) : (
+                                    <Table
+                                        rowKey="id"
+                                        columns={campaignColumns}
+                                        dataSource={campaigns}
+                                        pagination={false}
+                                        size="small"
+                                        bordered={false}
+                                        scroll={{ x: 900 }}
+                                        loading={loading}
+                                    />
+                                )}
                             </div>
                         </TabPane>
                     </Tabs>
