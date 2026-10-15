@@ -6,7 +6,7 @@ import { useSocketContext } from "../../../context/SocketContextProvider";
 import "../../../styles/base.css";
 import { useSession } from "next-auth/react";
 import axios from 'axios';
-import { FaFileDownload, FaFileUpload, FaCopy, FaFilePdf, FaSearch, FaTrash, FaCheck, FaTimes, FaEdit, FaFileExport } from "react-icons/fa";
+import { FaFileDownload, FaFileUpload, FaCopy, FaFilePdf, FaSearch, FaTrash, FaCheck, FaTimes, FaEdit, FaFileExport, FaWhatsapp } from "react-icons/fa";
 import { toast, Bounce } from 'react-toastify';
 import { BsFillSendPlusFill } from "react-icons/bs";
 import { RiUploadCloudFill } from "react-icons/ri";
@@ -121,6 +121,97 @@ const buildUrlFromFormData = (
 	return queryString ? `${baseUrl}/forms/${formId}?${queryString}` : `${baseUrl}/forms/${formId}`;
 };
 
+const extractContactDetails = (item: any) => {
+	const raw = item?.formData || {};
+	const normalizePhone = (phoneStr: string) => {
+		if (!phoneStr) return '';
+		let cleaned = String(phoneStr).trim().replace(/[^\d+]/g, '').replace(/(?!^)\+/g, '');
+		if (cleaned.startsWith('00')) cleaned = `+${cleaned.slice(2)}`;
+		if (!cleaned.startsWith('+') && cleaned.length >= 7) cleaned = `+${cleaned}`;
+		return cleaned;
+	};
+
+	const isEmail = (val: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(val || '').trim());
+	const isPhone = (val: string) => {
+		const digits = String(val || '').replace(/\D/g, '');
+		return digits.length >= 7 && digits.length <= 15;
+	};
+
+	const allEntries: { key: string; value: string }[] = [];
+	const seenKeys = new Set<string>();
+
+	for (const [k, v] of Object.entries(item || {})) {
+		if (k === 'formData' || k === 'id' || k === 'key' || k === 'action') continue;
+		if (v !== undefined && v !== null && String(v).trim() !== '' && String(v).trim() !== '-') {
+			const strVal = String(v).trim();
+			allEntries.push({ key: k, value: strVal });
+			seenKeys.add(k.toLowerCase());
+		}
+	}
+
+	for (const [k, v] of Object.entries(raw || {})) {
+		if (k === 'submission_id' || k === 'form_id' || k === 'uuid') continue;
+		if (!seenKeys.has(k.toLowerCase()) && v !== undefined && v !== null && String(v).trim() !== '' && String(v).trim() !== '-') {
+			allEntries.push({ key: k, value: String(v).trim() });
+		}
+	}
+
+	// 1. Name extraction
+	let name = '';
+	const firstName = item['First Name'] || item['firstname'] || item['first_name'] || raw['first_name'] || raw['First Name'] || raw['firstname'] || '';
+	const lastName = item['Last Name'] || item['lastname'] || item['last_name'] || raw['last_name'] || raw['Last Name'] || raw['lastname'] || '';
+	if (firstName || lastName) {
+		name = `${firstName} ${lastName}`.trim();
+	} else {
+		const nameEntry = allEntries.find(e =>
+			/^(name|full\s*name|guest\s*name|client\s*name|customer\s*name)$/i.test(e.key.trim())
+		) || allEntries.find(e =>
+			/name/i.test(e.key) && !/company|file|form|user|hotel/i.test(e.key)
+		);
+		if (nameEntry) {
+			name = nameEntry.value;
+		}
+	}
+
+	// 2. Phone extraction
+	let phone = '';
+	const phoneEntry = allEntries.find(e =>
+		/^(mobile\s*phone|phone\s*number|phone|mobile|whatsapp|contact\s*number|telephone|cell)$/i.test(e.key.trim())
+	) || allEntries.find(e =>
+		/phone|mobile|whatsapp/i.test(e.key)
+	) || allEntries.find(e => isPhone(e.value));
+
+	if (phoneEntry) {
+		phone = normalizePhone(phoneEntry.value);
+	}
+
+	// 3. Email extraction
+	let email = '';
+	const emailEntry = allEntries.find(e =>
+		/^(email|email\s*address|e-mail)$/i.test(e.key.trim())
+	) || allEntries.find(e =>
+		/email/i.test(e.key)
+	) || allEntries.find(e => isEmail(e.value));
+
+	if (emailEntry) {
+		email = emailEntry.value;
+	}
+
+	// 4. Variables extraction
+	const reservedKeywords = ['name', 'phone', 'mobile', 'whatsapp', 'email', 'first name', 'last name'];
+	const variables: Record<string, string> = {};
+	for (const e of allEntries) {
+		const lowerKey = e.key.trim().toLowerCase();
+		if (reservedKeywords.some(rk => lowerKey === rk || lowerKey.includes(rk))) continue;
+		const varKey = e.key.trim().replace(/[^a-zA-Z0-9_]+/g, '_').toLowerCase();
+		if (varKey && !variables[varKey]) {
+			variables[varKey] = e.value;
+		}
+	}
+
+	return { name, phone, email, variables };
+};
+
 export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => void }) => {
 	const queryClient = useQueryClient();
 	const [isModalOpen, setIsModalOpen] = useState(false);
@@ -158,6 +249,21 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 	const [isWhatsappExportModalOpen, setIsWhatsappExportModalOpen] = useState(false);
 	const [whatsappListName, setWhatsappListName] = useState("");
 	const [whatsappListTags, setWhatsappListTags] = useState("");
+	// Single contact add to WhatsApp state
+	const [isAddContactModalOpen, setIsAddContactModalOpen] = useState(false);
+	const [isSavingContact, setIsSavingContact] = useState(false);
+	const [isLoadingContactLists, setIsLoadingContactLists] = useState(false);
+	const [contactListMode, setContactListMode] = useState<"existing" | "new">("existing");
+	const [selectedContactListId, setSelectedContactListId] = useState<number | null>(null);
+	const [newContactListName, setNewContactListName] = useState("");
+	const [newContactListTags, setNewContactListTags] = useState("");
+	const [whatsappContactLists, setWhatsappContactLists] = useState<any[]>([]);
+	const [contactModalData, setContactModalData] = useState<{
+		name: string;
+		phone: string;
+		email: string;
+		variables: Record<string, string>;
+	}>({ name: "", phone: "", email: "", variables: {} });
 	const abortControllerRef = useRef<AbortController | null>(null);
 	const [selectedFormFields, setSelectedFormFields] = useState<FormFields | null>(null);
 	const [isSearchActive, setIsSearchActive] = useState(false);
@@ -872,6 +978,16 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 							</button>
 						)}
 
+						{/* Add to WhatsApp Contact List */}
+						<button
+							title="Add to WhatsApp Contact List"
+							onClick={() => tableClosureRef.current.openAddContactModal(item)}
+							className="w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center text-white bg-[#25D366] hover:bg-[#1ebe5d] focus:ring-4 focus:ring-green-300 font-medium rounded-full text-xs transition-colors duration-200"
+							style={{ backgroundColor: '#25D366' }}
+						>
+							<FaWhatsapp size={14} />
+						</button>
+
 						<button
 							onClick={() => deleteRecord(item)}
 							disabled={userRole !== 'Admin'}
@@ -949,6 +1065,16 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 										<SendIcon size={16} />
 									</button>
 								)}
+
+								{/* Add to WhatsApp Contact List */}
+								<button
+									title="Add to WhatsApp Contact List"
+									onClick={() => tableClosureRef.current.openAddContactModal(item)}
+									className="w-8 h-8 sm:w-8 sm:h-8 flex items-center justify-center text-white bg-[#25D366] hover:bg-[#1ebe5d] focus:ring-4 focus:ring-green-300 font-medium rounded-full text-xs transition-colors duration-200"
+									style={{ backgroundColor: '#25D366' }}
+								>
+									<FaWhatsapp size={16} />
+								</button>
 
 								{/* Delete Button */}
 								<button
@@ -1262,6 +1388,163 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 		);
 	};
 
+	const fetchWhatsappContactLists = useCallback(async () => {
+		try {
+			setIsLoadingContactLists(true);
+			const Url = getBackendUrl();
+			const response = await axios.get(
+				`${Url}/api/v1/whatsapp/contacts?page=1&limit=200`,
+				{
+					headers: {
+						Authorization: `Bearer ${userData?.user?.backendTokens?.at}`,
+					},
+				}
+			);
+			const items = response?.data?.items || [];
+			setWhatsappContactLists(items);
+			return items;
+		} catch (err) {
+			console.error("Failed to load WhatsApp contact lists:", err);
+			return [];
+		} finally {
+			setIsLoadingContactLists(false);
+		}
+	}, [userData?.user?.backendTokens?.at]);
+
+	const openAddContactModal = async (item: any) => {
+		const extracted = extractContactDetails(item);
+		setContactModalData({
+			name: extracted.name,
+			phone: extracted.phone,
+			email: extracted.email,
+			variables: extracted.variables,
+		});
+		setNewContactListName("");
+		setNewContactListTags("");
+		setIsAddContactModalOpen(true);
+
+		const lists = await fetchWhatsappContactLists();
+		if (lists && lists.length > 0) {
+			setContactListMode("existing");
+			setSelectedContactListId(lists[0].id);
+		} else {
+			setContactListMode("new");
+			setSelectedContactListId(null);
+		}
+	};
+
+	const handleSaveContact = async () => {
+		if (!userData?.user?.backendTokens?.at) {
+			toast.error("Your session is missing a backend token. Please log in again.");
+			return;
+		}
+
+		const phone = contactModalData.phone.trim();
+		if (!phone) {
+			toast.error("Please enter a valid phone number with country code.");
+			return;
+		}
+
+		if (contactListMode === "existing") {
+			if (!selectedContactListId) {
+				toast.error("Please select a contact list.");
+				return;
+			}
+		} else {
+			if (!newContactListName.trim()) {
+				toast.error("Please enter a name for the new contact list.");
+				return;
+			}
+		}
+
+		setIsSavingContact(true);
+		try {
+			const Url = getBackendUrl();
+			const token = userData.user.backendTokens.at;
+			const targetListName = contactListMode === "existing"
+				? whatsappContactLists.find((l: any) => l.id === selectedContactListId)?.name || "contact list"
+				: newContactListName.trim();
+
+			if (contactListMode === "existing") {
+				await axios.post(
+					`${Url}/api/v1/whatsapp/contacts/${selectedContactListId}/contacts`,
+					{
+						name: contactModalData.name.trim(),
+						phone,
+						email: contactModalData.email.trim() || undefined,
+						variables: Object.keys(contactModalData.variables).length ? contactModalData.variables : undefined,
+					},
+					{
+						headers: {
+							Authorization: `Bearer ${token}`,
+							"Content-Type": "application/json",
+						},
+					}
+				);
+			} else {
+				const tags = newContactListTags
+					.split(",")
+					.map(t => t.trim())
+					.filter(Boolean);
+
+				await axios.post(
+					`${Url}/api/v1/whatsapp/contacts`,
+					{
+						name: newContactListName.trim(),
+						source: "form",
+						tags,
+						contacts: [
+							{
+								name: contactModalData.name.trim(),
+								phone,
+								email: contactModalData.email.trim() || undefined,
+								variables: Object.keys(contactModalData.variables).length ? contactModalData.variables : undefined,
+							},
+						],
+					},
+					{
+						headers: {
+							Authorization: `Bearer ${token}`,
+							"Content-Type": "application/json",
+						},
+					}
+				);
+			}
+
+			toast.success(
+				`Contact "${contactModalData.name.trim() || phone}" saved to WhatsApp list "${targetListName}"!`,
+				{
+					position: "bottom-right",
+					autoClose: 5000,
+					hideProgressBar: false,
+					closeOnClick: false,
+					pauseOnHover: true,
+					draggable: true,
+					progress: undefined,
+					theme: "colored",
+					transition: Bounce,
+				}
+			);
+			setIsAddContactModalOpen(false);
+		} catch (error: any) {
+			console.error("Save contact to WhatsApp error:", error);
+			const msg = error?.response?.data?.message || "Failed to save contact. Please check phone number and try again.";
+			toast.error(msg, {
+				position: "bottom-right",
+				autoClose: 5000,
+				hideProgressBar: false,
+				closeOnClick: false,
+				pauseOnHover: true,
+				draggable: true,
+				progress: undefined,
+				theme: "colored",
+				transition: Bounce,
+			});
+		} finally {
+			setIsSavingContact(false);
+		}
+	};
+
 	tableClosureRef.current = {
 		selectedForm,
 		sendJotFormMessage,
@@ -1271,7 +1554,8 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 		setManualInputValues,
 		pageSize,
 		setPageSize,
-		setLoader
+		setLoader,
+		openAddContactModal,
 	};
 
 	// const buildUrl = (formId: string, inputValues: any, UUID?: string) => {
@@ -2827,6 +3111,168 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 							className="headerButton w-full sm:w-32"
 						>
 							Create List
+						</Button>
+					</div>
+				</div>
+			</Modal>
+
+			<Modal
+				open={isAddContactModalOpen}
+				onCancel={() => setIsAddContactModalOpen(false)}
+				footer={null}
+				title={
+					<div className="flex items-center gap-2 text-base font-semibold text-gray-800">
+						<span className="flex items-center justify-center w-7 h-7 rounded-full bg-[#25D366] text-white">
+							<FaWhatsapp size={16} />
+						</span>
+						<span>Add Contact to WhatsApp List</span>
+					</div>
+				}
+				destroyOnClose
+				width={520}
+				className="whatsappAddContactModal"
+			>
+				<div className="flex flex-col gap-4 pt-2">
+					{/* Target Contact List Section */}
+					<div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+						<div className="mb-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+							Target WhatsApp Contact List
+						</div>
+						<div className="mb-3">
+							<Radio.Group
+								value={contactListMode}
+								onChange={(e) => setContactListMode(e.target.value)}
+								className="flex gap-4"
+							>
+								<Radio value="existing" disabled={whatsappContactLists.length === 0}>
+									Existing List
+								</Radio>
+								<Radio value="new">
+									+ Create New List
+								</Radio>
+							</Radio.Group>
+						</div>
+
+						{contactListMode === 'existing' ? (
+							<div>
+								<div className="mb-1 text-xs text-gray-600">Select Contact List</div>
+								<Select
+									placeholder={isLoadingContactLists ? "Loading lists..." : "Choose a WhatsApp contact list"}
+									value={selectedContactListId}
+									onChange={(val) => setSelectedContactListId(val)}
+									loading={isLoadingContactLists}
+									className="w-full"
+									showSearch
+									optionFilterProp="children"
+								>
+									{whatsappContactLists.map((list: any) => (
+										<Select.Option key={list.id} value={list.id}>
+											{list.name} ({list.count ?? 0} {list.count === 1 ? 'contact' : 'contacts'})
+										</Select.Option>
+									))}
+								</Select>
+							</div>
+						) : (
+							<div className="flex flex-col gap-2">
+								<div>
+									<div className="mb-1 text-xs text-gray-600">List Name *</div>
+									<Input
+										value={newContactListName}
+										onChange={(e) => setNewContactListName(e.target.value)}
+										placeholder="e.g. VIP Hotel Guests"
+										disabled={isSavingContact}
+									/>
+								</div>
+								<div>
+									<div className="mb-1 text-xs text-gray-600">Tags (optional, comma-separated)</div>
+									<Input
+										value={newContactListTags}
+										onChange={(e) => setNewContactListTags(e.target.value)}
+										placeholder="e.g. forms, guests, checkin"
+										disabled={isSavingContact}
+									/>
+								</div>
+							</div>
+						)}
+					</div>
+
+					{/* Contact Details Section */}
+					<div className="border border-gray-200 rounded-lg p-3 flex flex-col gap-3">
+						<div className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+							Contact Information
+						</div>
+						<div>
+							<label className="block mb-1 text-xs text-gray-600 font-medium">Full Name</label>
+							<Input
+								value={contactModalData.name}
+								onChange={(e) => setContactModalData({ ...contactModalData, name: e.target.value })}
+								placeholder="Enter contact full name"
+								disabled={isSavingContact}
+							/>
+						</div>
+						<div>
+							<label className="block mb-1 text-xs text-gray-600 font-medium">
+								Phone / WhatsApp Number <span className="text-red-500">*</span>
+							</label>
+							<Input
+								value={contactModalData.phone}
+								onChange={(e) => setContactModalData({ ...contactModalData, phone: e.target.value })}
+								placeholder="e.g. +971501234567"
+								disabled={isSavingContact}
+							/>
+							<div className="mt-1 text-[11px] text-gray-500">
+								Must include international country code (e.g. +971... or +1...).
+							</div>
+						</div>
+						<div>
+							<label className="block mb-1 text-xs text-gray-600 font-medium">Email Address (Optional)</label>
+							<Input
+								value={contactModalData.email}
+								onChange={(e) => setContactModalData({ ...contactModalData, email: e.target.value })}
+								placeholder="e.g. guest@example.com"
+								disabled={isSavingContact}
+							/>
+						</div>
+
+						{/* Form Variables Preview */}
+						{Object.keys(contactModalData.variables).length > 0 && (
+							<div className="pt-2 border-t border-gray-100">
+								<div className="mb-1 text-[11px] font-medium text-gray-500">
+									Detected Form Fields ({Object.keys(contactModalData.variables).length} custom fields will be saved as campaign merge tags):
+								</div>
+								<div className="max-h-24 overflow-y-auto flex flex-wrap gap-1 bg-gray-50 p-2 rounded border border-gray-100">
+									{Object.entries(contactModalData.variables).map(([k, v]) => (
+										<span
+											key={k}
+											className="inline-flex items-center text-[10px] bg-white border border-gray-300 rounded px-1.5 py-0.5 text-gray-700"
+										>
+											<span className="font-semibold mr-1">{k}:</span>
+											<span className="truncate max-w-[120px]">{String(v)}</span>
+										</span>
+									))}
+								</div>
+							</div>
+						)}
+					</div>
+
+					{/* Action Buttons */}
+					<div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end pt-2">
+						<Button
+							onClick={() => setIsAddContactModalOpen(false)}
+							disabled={isSavingContact}
+							className="w-full sm:w-28"
+						>
+							Cancel
+						</Button>
+						<Button
+							type="primary"
+							onClick={handleSaveContact}
+							loading={isSavingContact}
+							className="w-full sm:w-36 flex items-center justify-center gap-1.5"
+							style={{ backgroundColor: '#25D366', borderColor: '#25D366' }}
+						>
+							<FaWhatsapp size={16} />
+							<span>Save Contact</span>
 						</Button>
 					</div>
 				</div>
