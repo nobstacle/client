@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import {
     Table, Tag, Card, Input, message, Button, Space, Select, Modal,
     Tabs, Upload, Steps, Form, Progress, Badge, Tooltip,
@@ -26,6 +26,12 @@ import { FaFileDownload } from "react-icons/fa";
 import dayjs, { Dayjs } from "dayjs";
 import { useSession } from "next-auth/react";
 import WhatsappInbox from "../../../components/pages/dashboard/Whatsapp/WhatsappInbox";
+import {
+    WHATSAPP_CONTACTS_SYNC_CHANNEL,
+    WHATSAPP_CONTACTS_STORAGE_KEY,
+    WHATSAPP_CONTACTS_EVENT_NAME,
+    type WhatsappContactUpdatePayload,
+} from "../../../utils/whatsappSync";
 
 declare global {
     interface Window {
@@ -933,6 +939,7 @@ export default function WhatsAppPage() {
     const [templateTypeFilter, setTemplateTypeFilter] = useState<string | undefined>();
 
     const [loading, setLoading] = useState(false);
+    const [contactListLoading, setContactListLoading] = useState(false);
 
     const [contactModal, setContactModal] = useState(false);
     const [contactSource, setContactSource] = useState<"csv" | "form" | null>(null);
@@ -1036,9 +1043,17 @@ export default function WhatsAppPage() {
         return payload as T;
     };
 
-    const loadContactLists = async () => {
-        const response = await apiRequest<{ items: ContactList[] }>("/whatsapp/contacts?page=1&limit=200");
-        setContactLists(response.items || []);
+    const loadContactLists = async (showLoading = false) => {
+        if (!token) return;
+        if (showLoading) setContactListLoading(true);
+        try {
+            const response = await apiRequest<{ items: ContactList[] }>("/whatsapp/contacts?page=1&limit=200");
+            setContactLists(response.items || []);
+        } catch (error) {
+            console.error("Failed to load contact lists:", error);
+        } finally {
+            if (showLoading) setContactListLoading(false);
+        }
     };
 
     const loadContactListContacts = async (contactListId: number, limit = 500) => {
@@ -1272,6 +1287,99 @@ export default function WhatsAppPage() {
     useEffect(() => {
         void loadAll();
         // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [token]);
+
+    const editingContactListIdRef = useRef<number | null>(editingContactListId);
+    useEffect(() => {
+        editingContactListIdRef.current = editingContactListId;
+    }, [editingContactListId]);
+
+    // Automatically refresh contact lists when navigating to the Contact Lists tab
+    useEffect(() => {
+        if (!token) return;
+        if (activeTab === "contacts") {
+            void loadContactLists();
+        }
+    }, [activeTab, token]);
+
+    // Dynamic auto-sync across tabs/windows, SPA navigation, and modal updates
+    useEffect(() => {
+        if (!token) return;
+
+        const refreshContactsAndModal = (payload?: WhatsappContactUpdatePayload) => {
+            void loadContactLists();
+            const currentEditingId = editingContactListIdRef.current;
+            if (currentEditingId) {
+                loadContactListContacts(currentEditingId, 500)
+                    .then((res) => {
+                        const baseRows = res.items?.length ? res.items : [];
+                        const variableKeys = getContactVariableKeys(baseRows);
+                        setContactEditVariableKeys(variableKeys);
+                        setContactEditRows(
+                            baseRows.length
+                                ? prepareContactRowsForEdit(baseRows, variableKeys)
+                                : [createEmptyContactRow(variableKeys)]
+                        );
+                    })
+                    .catch((err) => {
+                        console.error("Failed to refresh editing contact list modal:", err);
+                    });
+            }
+        };
+
+        // 1. Cross-tab instant communication via BroadcastChannel
+        let channel: BroadcastChannel | null = null;
+        if (typeof window !== "undefined" && "BroadcastChannel" in window) {
+            try {
+                channel = new BroadcastChannel(WHATSAPP_CONTACTS_SYNC_CHANNEL);
+                channel.onmessage = (event) => {
+                    refreshContactsAndModal(event.data);
+                };
+            } catch {
+                // Ignore channel creation failure
+            }
+        }
+
+        // 2. Cross-tab fallback via localStorage storage event
+        const handleStorage = (event: StorageEvent) => {
+            if (event.key === WHATSAPP_CONTACTS_STORAGE_KEY && event.newValue) {
+                try {
+                    const parsed = JSON.parse(event.newValue);
+                    refreshContactsAndModal(parsed);
+                } catch {
+                    refreshContactsAndModal();
+                }
+            }
+        };
+        window.addEventListener("storage", handleStorage);
+
+        // 3. Same-tab CustomEvent
+        const handleCustomEvent = (event: Event) => {
+            const detail = (event as CustomEvent<WhatsappContactUpdatePayload>).detail;
+            refreshContactsAndModal(detail);
+        };
+        window.addEventListener(WHATSAPP_CONTACTS_EVENT_NAME, handleCustomEvent);
+
+        // 4. Focus & visibility change (auto-refresh when user clicks back into this tab/window)
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === "visible") {
+                void loadContactLists();
+            }
+        };
+        document.addEventListener("visibilitychange", handleVisibilityChange);
+        window.addEventListener("focus", handleVisibilityChange);
+
+        return () => {
+            if (channel) {
+                try {
+                    channel.close();
+                } catch {}
+            }
+            window.removeEventListener("storage", handleStorage);
+            window.removeEventListener(WHATSAPP_CONTACTS_EVENT_NAME, handleCustomEvent);
+            document.removeEventListener("visibilitychange", handleVisibilityChange);
+            window.removeEventListener("focus", handleVisibilityChange);
+        };
     }, [token]);
 
     useEffect(() => {
@@ -3130,7 +3238,7 @@ export default function WhatsAppPage() {
                         </TabPane>
                         <TabPane tab={<span><TeamOutlined />Contact Lists <Badge count={contactLists.length} style={{ marginLeft: 6, backgroundColor: "#1890ff" }} /></span>} key="contacts">
                             <div className="p-6">
-                                <div className="flex gap-3 mb-4">
+                                <div className="flex items-center gap-3 mb-4">
                                     <Input
                                         placeholder="Search contact lists..."
                                         prefix={<SearchOutlined className="text-gray-400" />}
@@ -3138,6 +3246,13 @@ export default function WhatsAppPage() {
                                         onChange={e => setContactSearch(e.target.value)}
                                         style={{ maxWidth: 300 }}
                                     />
+                                    <Tooltip title="Refresh contact lists">
+                                        <Button
+                                            icon={<ReloadOutlined />}
+                                            loading={contactListLoading}
+                                            onClick={() => { void loadContactLists(true); }}
+                                        />
+                                    </Tooltip>
                                 </div>
                                 <Table
                                     rowKey="id"
@@ -3146,7 +3261,7 @@ export default function WhatsAppPage() {
                                     pagination={false}
                                     size="small"
                                     bordered={false}
-                                    loading={loading}
+                                    loading={loading || contactListLoading}
                                 />
                             </div>
                         </TabPane>

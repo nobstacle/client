@@ -29,6 +29,7 @@ import {
 	serializeJotformTableParams,
 	type JotformTableResult,
 } from "../../../hooks/jotformResponsesQuery";
+import { broadcastWhatsappContactUpdate } from "../../../utils/whatsappSync";
 
 const { Option } = Select;
 
@@ -1465,8 +1466,12 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 				? whatsappContactLists.find((l: any) => l.id === selectedContactListId)?.name || "contact list"
 				: newContactListName.trim();
 
+			let savedListId = selectedContactListId;
+			let savedListName = targetListName;
+			let savedCount = 1;
+
 			if (contactListMode === "existing") {
-				await axios.post(
+				const existingRes = await axios.post(
 					`${Url}/api/v1/whatsapp/contacts/${selectedContactListId}/contacts`,
 					{
 						name: contactModalData.name.trim(),
@@ -1481,13 +1486,18 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 						},
 					}
 				);
+				if (existingRes?.data?.contactList) {
+					savedListId = existingRes.data.contactList.id;
+					savedListName = existingRes.data.contactList.name || targetListName;
+					savedCount = existingRes.data.contactList.count;
+				}
 			} else {
 				const tags = newContactListTags
 					.split(",")
 					.map(t => t.trim())
 					.filter(Boolean);
 
-				await axios.post(
+				const newRes = await axios.post(
 					`${Url}/api/v1/whatsapp/contacts`,
 					{
 						name: newContactListName.trim(),
@@ -1509,6 +1519,11 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 						},
 					}
 				);
+				if (newRes?.data?.id) {
+					savedListId = newRes.data.id;
+					savedListName = newRes.data.name || targetListName;
+					savedCount = newRes.data.count || 1;
+				}
 			}
 
 			toast.success(
@@ -1525,6 +1540,12 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 					transition: Bounce,
 				}
 			);
+			broadcastWhatsappContactUpdate({
+				listId: savedListId,
+				listName: savedListName,
+				count: savedCount,
+			});
+			void fetchWhatsappContactLists();
 			setIsAddContactModalOpen(false);
 		} catch (error: any) {
 			console.error("Save contact to WhatsApp error:", error);
@@ -2602,6 +2623,12 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 					transition: Bounce,
 				}
 			);
+			broadcastWhatsappContactUpdate({
+				listId: data?.contactList?.id,
+				listName: data?.contactList?.name || whatsappListName.trim(),
+				count: data?.imported,
+			});
+			void fetchWhatsappContactLists();
 			closeWhatsappExportModal();
 		} catch (error: any) {
 			console.error("WhatsApp export error:", error);
