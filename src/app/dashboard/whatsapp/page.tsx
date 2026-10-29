@@ -1165,7 +1165,7 @@ export default function WhatsAppPage() {
         // Safety timeout so button never hangs indefinitely if popup is blocked
         const safetyTimer = setTimeout(() => {
             setConnectingMeta(false);
-        }, 15000);
+        }, 180000);
 
         const parseEmbeddedSignupMessage = (rawData: any): any => {
             if (!rawData) return null;
@@ -1219,12 +1219,14 @@ export default function WhatsAppPage() {
                 const wabaCandidate =
                     payload.waba_id
                     || payload.wabaId
+                    || (Array.isArray(payload.waba_ids) && payload.waba_ids[0])
                     || payload.business_account_id
                     || payload.whatsapp_business_account_id
                     || data?.waba_id;
                 const phoneCandidate =
                     payload.phone_number_id
                     || payload.phoneNumberId
+                    || (Array.isArray(payload.phone_number_ids) && payload.phone_number_ids[0])
                     || data?.phone_number_id;
                 const businessCandidate =
                     payload.business_id
@@ -1258,8 +1260,8 @@ export default function WhatsAppPage() {
                 (response: any) => {
                     void (async () => {
                         clearTimeout(safetyTimer);
-                        // Wait up to 800ms for any in-flight postMessage from the closing Meta popup
-                        for (let attempt = 0; attempt < 8; attempt++) {
+                        // Wait up to 1500ms for any in-flight postMessage from the closing Meta popup
+                        for (let attempt = 0; attempt < 15; attempt++) {
                             if (capturedWabaId) break;
                             await new Promise((resolve) => setTimeout(resolve, 100));
                         }
@@ -1324,8 +1326,10 @@ export default function WhatsAppPage() {
                     response_type: "code",
                     override_default_response_type: true,
                     extras: {
+                        feature: "whatsapp_embedded_signup",
+                        version: 2,
+                        sessionInfoVersion: 2,
                         setup: {},
-                        sessionInfoVersion: "3",
                     },
                 }
             );
@@ -3273,12 +3277,15 @@ export default function WhatsAppPage() {
 
                 {!metaConnected && !metaWabaLinked && metaConnection.hasAccessToken && (
                     <Alert
-                        message="Meta Account Authorized — Confirm Your WhatsApp Business Account (WABA) ID"
+                        message="Meta Authorized — Reconnect with WhatsApp Popup or Confirm WABA ID"
                         description={
                             <div className="space-y-2.5">
                                 <p className="m-0 text-sm text-gray-700">
-                                    Your Meta login token is connected, but Meta did not automatically expose a WhatsApp Business Account ID from the popup session. Enter your <strong>WhatsApp Business Account ID</strong> (found in <em>Meta Business Settings → Accounts → WhatsApp Accounts</em>) below to complete linking, or re-open the Meta popup and ensure a WhatsApp Business Account is selected.
+                                    Your Meta login is authenticated, but no WhatsApp Business Account was selected. Click <strong>"Reconnect via Meta"</strong> on the right to open the WhatsApp onboarding flow, or enter your <strong>WhatsApp Business Account (WABA) ID</strong> below.
                                 </p>
+                                <div className="text-xs text-amber-900 bg-amber-100/70 p-2 rounded-lg border border-amber-200">
+                                    💡 <strong>Tip:</strong> Do not enter your Meta Business Portfolio ID (from the top-left business switcher). You need the specific <strong>WhatsApp Business Account ID</strong> found in <em>Meta Business Suite → Settings → Accounts → WhatsApp accounts</em>. The easiest and recommended path is simply clicking <strong>Reconnect via Meta</strong>.
+                                </div>
                                 <div className="flex flex-wrap items-center gap-2 pt-1">
                                     {metaConnection.availableWabas && metaConnection.availableWabas.length > 0 ? (
                                         <Select
@@ -3295,7 +3302,7 @@ export default function WhatsAppPage() {
                                         </Select>
                                     ) : null}
                                     <Input
-                                        placeholder="Enter WhatsApp Business Account ID (e.g. 102289599326934)"
+                                        placeholder="Enter numeric WABA ID (e.g. 102289599326934)"
                                         value={manualWabaIdInput}
                                         onChange={(e) => setManualWabaIdInput(e.target.value)}
                                         onPressEnter={() => void handleSelectWaba()}
@@ -3322,10 +3329,10 @@ export default function WhatsAppPage() {
                         showIcon
                         action={
                             <Button
-                                size="small"
+                                size="middle"
                                 type="primary"
                                 style={{ backgroundColor: "#25D366", borderColor: "#25D366" }}
-                                icon={<MdWhatsapp size={14} />}
+                                icon={<MdWhatsapp size={16} />}
                                 onClick={launchWhatsAppSignup}
                                 loading={connectingMeta}
                             >
