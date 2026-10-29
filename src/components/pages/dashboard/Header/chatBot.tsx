@@ -10,6 +10,7 @@ import { useCompanyControllerGetCompany, getCompanyControllerGetCompanyQueryKey 
 import { useSession } from "next-auth/react";
 import AudioRecorder from "../../../../components/AudioRecorder";
 import LiveTranslationRecorder from "../../../../components/LiveTranslationRecorder";
+import { SendIcon } from "../../../../components/icons/SendIcon";
 import { resolveActiveStation } from "../../../../utils/station";
 import { translatedAudioPlayer } from "../../../../utils/audioPlayer";
 
@@ -472,14 +473,15 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true, isMob
                   align-items: center;
                   justify-content: center;
                   min-width: 44px;
+                  min-height: 44px;
                   transition: all 0.2s;
                 "
               >
-                <svg viewBox="0 0 512 512" style="width: 20px; height: 20px;">
-                  <polygon style="fill: white;" points="97.478,235.728 147.096,478.242 512,33.758 "/>
+                <svg viewBox="0 0 512 512" style="width: 20px; height: 20px; display: block;">
+                  <polygon style="fill: rgb(46, 68, 113);" points="97.478,235.728 147.096,478.242 512,33.758 "/>
                   <polygon style="fill: #ccc;" points="251.837,373.231 147.096,478.242 164.932,325.531 231.773,327.360 "/>
-                  <polygon style="fill: white;" points="512,33.758 109.455,294.271 0,232.606"/>
-                  <polygon style="fill: white;" points="512,33.758 511.471,35.232 300.246,399.799 164.932,325.531"/>
+                  <polygon style="fill: #F4F4F5;" points="512,33.758 109.455,294.271 0,232.606"/>
+                  <polygon style="fill: #F4F4F5;" points="512,33.758 511.471,35.232 300.246,399.799 164.932,325.531"/>
                 </svg>
               </button>
 
@@ -746,8 +748,9 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true, isMob
                   }}
                 />
 
-                <div style={{ display: 'flex', gap: '12px' }}>
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
                   <button
+                    type="button"
                     onClick={() => handleSendMessage()}
                     style={{
                       padding: '12px',
@@ -760,15 +763,11 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true, isMob
                       alignItems: 'center',
                       justifyContent: 'center',
                       minWidth: '44px',
+                      minHeight: '44px',
                       transition: 'all 0.2s'
                     }}
                   >
-                    <svg viewBox="0 0 512 512" style={{ width: '20px', height: '20px' }}>
-                      <polygon style={{ fill: 'white' }} points="97.478,235.728 147.096,478.242 512,33.758 " />
-                      <polygon style={{ fill: '#ccc' }} points="251.837,373.231 147.096,478.242 164.932,325.531 231.773,327.360 " />
-                      <polygon style={{ fill: 'white' }} points="512,33.758 109.455,294.271 0,232.606" />
-                      <polygon style={{ fill: 'white' }} points="512,33.758 511.471,35.232 300.246,399.799 164.932,325.531" />
-                    </svg>
+                    <SendIcon size={20} />
                   </button>
 
                   <AudioRecorder

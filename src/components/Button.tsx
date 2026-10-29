@@ -6,7 +6,7 @@ export const Button: React.FC<
 > = ({ isLoading = false, ...props }) => {
   return (
     <button
-      className="border-1 flex justify-center rounded-md border-black  p-2 text-center text-white"
+      className="border-1 flex items-center justify-center rounded-md border-black p-2 text-center text-white"
       style={{
         backgroundColor: isLoading ? "gray" : "rgb(59, 89, 152)",
         opacity: isLoading ? 0.5 : 1,

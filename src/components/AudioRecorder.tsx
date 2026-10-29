@@ -373,7 +373,7 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
   if (!isInitialized) {
     return (
       <Button
-        className="border-1 relative flex flex-col items-center justify-center rounded-md border-black px-3 text-center text-white opacity-50 cursor-not-allowed"
+        className="border-1 relative flex min-h-[44px] min-w-[44px] flex-col items-center justify-center rounded-md border-black px-3 py-2 text-center text-white opacity-50 cursor-not-allowed"
         type="button"
         disabled
         title="Microphone not supported in this browser"
@@ -385,7 +385,7 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
 
   return (
     <Button
-      className="border-1 relative flex flex-col items-center justify-center rounded-md border-black px-3 text-center text-white"
+      className="border-1 relative flex min-h-[44px] min-w-[44px] flex-col items-center justify-center rounded-md border-black px-3 py-2 text-center text-white"
       type="button"
       onClick={recording ? stopRecording : startRecording}
       isLoading={speechToTextFileMutation.status === "pending"}

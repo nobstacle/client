@@ -172,13 +172,13 @@ export const ChatBox = React.forwardRef<HTMLDivElement, ChatBoxProps>(
               }}
             />
 
-            <div className="flex shrink-0 gap-2">
+            <div className="flex shrink-0 items-center gap-2">
               <Button
-                className="border-1 flex min-h-[44px] min-w-[56px] justify-center rounded-md border-black p-2 text-center text-white"
+                className="border-1 flex min-h-[44px] min-w-[56px] items-center justify-center rounded-md border-black p-2 text-center text-white"
                 type="button"
                 onClick={handleSendMessage}
               >
-                <SendIcon />
+                <SendIcon size={20} />
               </Button>
               <AudioRecorder
                 mode={mode || "client"}
