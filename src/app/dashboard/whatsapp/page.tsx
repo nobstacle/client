@@ -1338,9 +1338,10 @@ export default function WhatsAppPage() {
     };
 
     const handleSelectWaba = async (wabaIdInput?: string) => {
-        const wabaId = (wabaIdInput ?? manualWabaIdInput).trim();
+        const rawWaba = (wabaIdInput ?? manualWabaIdInput).trim();
+        const wabaId = rawWaba.replace(/[^0-9]/g, "");
         if (!wabaId) {
-            message.error("Please enter or select your WhatsApp Business Account (WABA) ID");
+            message.error("Please enter your numeric WhatsApp Business Account (WABA) ID");
             return;
         }
         setLinkingManualWaba(true);

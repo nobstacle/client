@@ -19,6 +19,7 @@ import {
     Space,
     Spin,
     Switch,
+    Table,
     Tabs,
     Tag,
     Tooltip,
@@ -26,6 +27,7 @@ import {
     message,
 } from "antd";
 import {
+    ApartmentOutlined,
     AppstoreOutlined,
     BulbOutlined,
     CalendarOutlined,
@@ -51,6 +53,7 @@ import {
     ThunderboltOutlined,
     ToolOutlined,
     UserAddOutlined,
+    UsergroupAddOutlined,
     WarningOutlined,
 } from "@ant-design/icons";
 import { useSession } from "next-auth/react";
@@ -99,6 +102,15 @@ interface AccountRosterMeta {
     accountUsersCount: number;
     activeHandoversCount: number;
     upcomingRemindersCount: number;
+    allCompanyUsers?: Array<{
+        id: number;
+        userId?: number;
+        name: string;
+        email?: string;
+        role?: string;
+        sk?: boolean;
+        ld?: boolean;
+    }>;
 }
 
 interface SavedRosterRecord {
@@ -174,6 +186,24 @@ export default function RosterPage() {
     const [newMemberName, setNewMemberName] = useState<string>("");
     const [newMemberSkilled, setNewMemberSkilled] = useState<boolean>(false);
     const [newMemberLeader, setNewMemberLeader] = useState<boolean>(false);
+    const [newMemberTeam, setNewMemberTeam] = useState<string>("Reception");
+    const [newMemberRoleTitle, setNewMemberRoleTitle] = useState<string>("");
+    const [newMemberEmail, setNewMemberEmail] = useState<string>("");
+    const [newMemberActive, setNewMemberActive] = useState<boolean>(true);
+
+    // Teams & Departments Management
+    const [availableTeams, setAvailableTeams] = useState<string[]>([
+        "Reception",
+        "Operator",
+        "Concierge",
+    ]);
+    const [selectedTeam, setSelectedTeam] = useState<string>("all");
+    const [memberFilterTeam, setMemberFilterTeam] = useState<string>("all");
+    const [importUsersModalVisible, setImportUsersModalVisible] = useState<boolean>(false);
+    const [importTargetTeam, setImportTargetTeam] = useState<string>("Reception");
+    const [selectedUserIdsToImport, setSelectedUserIdsToImport] = useState<number[]>([]);
+    const [manageTeamsModalVisible, setManageTeamsModalVisible] = useState<boolean>(false);
+    const [newTeamNameInput, setNewTeamNameInput] = useState<string>("");
 
     // New request form state
     const [reqMemberId, setReqMemberId] = useState<number | undefined>(undefined);
@@ -248,14 +278,25 @@ export default function RosterPage() {
         return res.json();
     };
 
-    // Purge any legacy localStorage dummy keys on mount
+    // Optimistic cache load on mount so reopening the page renders immediately (0ms)
     useEffect(() => {
         try {
-            localStorage.removeItem("nobstacle_roster_workspace_v1");
-            localStorage.removeItem("nobstacle_roster_records_v1");
+            const cached = localStorage.getItem("nobstacle_roster_cache_v2");
+            if (cached) {
+                const parsed = JSON.parse(cached);
+                if (parsed?.workspace) {
+                    applyWorkspaceResponse(parsed.workspace, parsed.account);
+                    if (Array.isArray(parsed.savedRecords)) {
+                        setSavedRecords(parsed.savedRecords);
+                    }
+                    hydratedFromBackendRef.current = true;
+                    setLoadingWorkspace(false);
+                }
+            }
         } catch {
             // ignore
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const applyWorkspaceResponse = (workspace: any, account?: AccountRosterMeta) => {
@@ -275,6 +316,17 @@ export default function RosterPage() {
             setRequests(Array.isArray(workspace.requests) ? workspace.requests : []);
             setAbsences(Array.isArray(workspace.absences) ? workspace.absences : []);
 
+            const discoveredTeams = Array.from(
+                new Set(
+                    teamList
+                        .map((m) => m.teamName)
+                        .filter(Boolean) as string[],
+                ),
+            );
+            if (discoveredTeams.length > 0) {
+                setAvailableTeams((prev) => Array.from(new Set([...prev, ...discoveredTeams])));
+            }
+
             const maxId = teamList.reduce((m: number, item: TeamMember) => Math.max(m, Number(item.id) || 0), 100);
             setNextMemberId(maxId + 1);
             setBulkMinH(mergedConfig.minH?.[0] ?? 1);
@@ -288,6 +340,15 @@ export default function RosterPage() {
             setReqToDate((prev) => prev || mergedConfig.ws);
             setAbsFromDate((prev) => prev || mergedConfig.ws);
             setAbsToDate((prev) => prev || mergedConfig.ws);
+
+            try {
+                localStorage.setItem("nobstacle_roster_cache_v2", JSON.stringify({
+                    workspace,
+                    account,
+                }));
+            } catch {
+                // ignore
+            }
         }
     };
 
@@ -297,7 +358,9 @@ export default function RosterPage() {
         let cancelled = false;
 
         void (async () => {
-            setLoadingWorkspace(true);
+            if (!hydratedFromBackendRef.current) {
+                setLoadingWorkspace(true);
+            }
             try {
                 const [wsRes, recRes] = await Promise.all([
                     apiFetch<{ workspace: any; account?: AccountRosterMeta }>("/roster/workspace"),
@@ -364,9 +427,21 @@ export default function RosterPage() {
 
     // ── Live Calculations (Capacity & Start Slots) ───────────────────────────
     const parsedStartSlots = useMemo(() => parseStarts(config.starts), [config.starts]);
+
+    // Active team members filtered by selected roster scope (team) and active status
+    const activeTeam = useMemo(() => {
+        return team.filter((m) => {
+            const isActive = m.activeInRoster !== false;
+            const matchesTeam =
+                selectedTeam === "all" ||
+                (m.teamName || "Reception").toLowerCase() === selectedTeam.toLowerCase();
+            return isActive && matchesTeam;
+        });
+    }, [team, selectedTeam]);
+
     const capacityCalc = useMemo(
-        () => calculateCapacity(config, team, absences),
-        [config, team, absences],
+        () => calculateCapacity(config, activeTeam, absences),
+        [config, activeTeam, absences],
     );
     const spareSuggestions = useMemo(
         () => (solvedState ? computeSpareList(solvedState) : []),
@@ -381,16 +456,24 @@ export default function RosterPage() {
 
     const filteredTeam = useMemo(() => {
         const q = memberSearch.trim().toLowerCase();
-        if (!q) return team.map((m, idx) => ({ member: m, idx }));
         return team
             .map((m, idx) => ({ member: m, idx }))
-            .filter(
-                ({ member }) =>
+            .filter(({ member }) => {
+                const matchesSearch =
+                    !q ||
                     member.name.toLowerCase().includes(q) ||
                     (member.email && member.email.toLowerCase().includes(q)) ||
-                    (member.role && member.role.toLowerCase().includes(q)),
-            );
-    }, [team, memberSearch]);
+                    (member.role && member.role.toLowerCase().includes(q)) ||
+                    (member.teamName && member.teamName.toLowerCase().includes(q)) ||
+                    (member.roleTitle && member.roleTitle.toLowerCase().includes(q));
+
+                const matchesTeamFilter =
+                    memberFilterTeam === "all" ||
+                    (member.teamName || "Reception").toLowerCase() === memberFilterTeam.toLowerCase();
+
+                return matchesSearch && matchesTeamFilter;
+            });
+    }, [team, memberSearch, memberFilterTeam]);
 
     // ── Handlers for Section 1 (Company Requirements & Hourly Min/Max) ───────
     const updateConfigField = <K extends keyof RosterConfig>(key: K, value: RosterConfig[K]) => {
@@ -441,28 +524,107 @@ export default function RosterPage() {
         message.info("Reset rules to dynamic defaults for your company.");
     };
 
-    // ── Handlers for Section 2 (Team Members) ────────────────────────────────
+    // ── Handlers for Section 2 (Team Members & Teams) ────────────────────────
     const handleAddMember = () => {
         const nameToUse = newMemberName.trim();
         if (!nameToUse) {
             message.warning("Please enter a team member name.");
             return;
         }
+        const assignedTeam = newMemberTeam.trim() || "Reception";
         const newMember: TeamMember = {
             id: nextMemberId,
             name: nameToUse,
+            teamName: assignedTeam,
+            roleTitle: newMemberRoleTitle.trim() || undefined,
+            email: newMemberEmail.trim() || undefined,
             sk: newMemberSkilled,
             ld: newMemberLeader,
             role: "Staff",
+            activeInRoster: newMemberActive,
         };
         setTeam((prev) => [...prev, newMember]);
+        if (!availableTeams.includes(assignedTeam)) {
+            setAvailableTeams((prev) => [...prev, assignedTeam]);
+        }
         setNextMemberId((prev) => prev + 1);
         setNewMemberName("");
+        setNewMemberRoleTitle("");
+        setNewMemberEmail("");
         setNewMemberSkilled(false);
         setNewMemberLeader(false);
+        setNewMemberActive(true);
         if (!reqMemberId) setReqMemberId(newMember.id);
         if (!absMemberId) setAbsMemberId(newMember.id);
-        message.success(`Added ${nameToUse}`);
+        message.success(`Added ${nameToUse} to ${assignedTeam} team`);
+    };
+
+    const handleCreateNewTeam = () => {
+        const clean = newTeamNameInput.trim();
+        if (!clean) {
+            message.warning("Please enter a team name.");
+            return;
+        }
+        if (availableTeams.some((t) => t.toLowerCase() === clean.toLowerCase())) {
+            message.warning("This team name already exists.");
+            return;
+        }
+        setAvailableTeams((prev) => [...prev, clean]);
+        setNewTeamNameInput("");
+        setNewMemberTeam(clean);
+        message.success(`Created team "${clean}"`);
+    };
+
+    const handleDeleteTeam = (teamNameToDelete: string) => {
+        const assignedCount = team.filter((m) => (m.teamName || "Reception") === teamNameToDelete).length;
+        if (assignedCount > 0) {
+            message.warning(`Cannot delete "${teamNameToDelete}": ${assignedCount} member(s) are assigned to it. Reassign them first.`);
+            return;
+        }
+        setAvailableTeams((prev) => prev.filter((t) => t !== teamNameToDelete));
+        if (selectedTeam === teamNameToDelete) setSelectedTeam("all");
+        if (memberFilterTeam === teamNameToDelete) setMemberFilterTeam("all");
+        message.success(`Removed team "${teamNameToDelete}"`);
+    };
+
+    const handleImportCompanyUsers = () => {
+        if (!accountMeta?.allCompanyUsers || selectedUserIdsToImport.length === 0) {
+            message.warning("Please select at least one company user to import.");
+            return;
+        }
+        const usersToImport = accountMeta.allCompanyUsers.filter((u) =>
+            selectedUserIdsToImport.includes(u.id),
+        );
+        let curId = nextMemberId;
+        const newMembers: TeamMember[] = [];
+
+        usersToImport.forEach((u) => {
+            const alreadyExists = team.some((m) => m.userId === u.id || m.id === u.id);
+            if (!alreadyExists) {
+                newMembers.push({
+                    id: curId++,
+                    userId: u.id,
+                    name: u.name,
+                    email: u.email,
+                    role: u.role || "Staff",
+                    roleTitle: u.role || "Staff",
+                    teamName: importTargetTeam || "Reception",
+                    activeInRoster: true,
+                    sk: u.sk ?? true,
+                    ld: u.ld ?? false,
+                });
+            }
+        });
+
+        if (newMembers.length === 0) {
+            message.info("All selected users are already in the roster team.");
+        } else {
+            setTeam((prev) => [...prev, ...newMembers]);
+            setNextMemberId(curId);
+            message.success(`Imported ${newMembers.length} users into "${importTargetTeam}" team.`);
+        }
+        setSelectedUserIdsToImport([]);
+        setImportUsersModalVisible(false);
     };
 
     // ── Handlers for Section 3 (Team Member Requests) ────────────────────────
@@ -599,8 +761,12 @@ export default function RosterPage() {
 
     // ── Handlers for Section 5 & 6 (Solvers, AI Analysis, OR-Tools, Export) ──
     const handleRunHeuristicSolver = () => {
-        if (!team.length) {
-            message.warning("No team members found. Add a member or sync with your company account first.");
+        if (!activeTeam.length) {
+            message.warning(
+                selectedTeam === "all"
+                    ? "No active team members found. Add a member or sync company users first."
+                    : `No active members found in "${selectedTeam}" team. Assign members to this team first.`,
+            );
             return;
         }
         if (!config.ws) {
@@ -608,17 +774,19 @@ export default function RosterPage() {
             return;
         }
         setSolving(true);
-        setSolverStatusText("Solving with Simulated Annealing + Local Steepest-Descent Polish...");
+        setSolverStatusText(
+            `Solving roster for ${selectedTeam === "all" ? "All Teams" : selectedTeam + " Team"} (${activeTeam.length} members)...`,
+        );
         setAiResult(null);
 
         setTimeout(() => {
             try {
                 const expandedReqs = expandRequestsByDay(requests);
-                const result = solveRoster(config, team, absences, expandedReqs, 150000);
+                const result = solveRoster(config, activeTeam, absences, expandedReqs, 150000);
                 setSolvedState(result);
                 const { pythonScript: script } = buildOrToolsPayloadAndScript(
                     config,
-                    team,
+                    activeTeam,
                     absences,
                     requests,
                     result,
@@ -626,9 +794,9 @@ export default function RosterPage() {
                 setPythonScript(script);
                 setActiveMainTab("schedule");
                 setSolverStatusText(
-                    `Constraint solver finished — Coverage Score: ${Math.round(result.met.score * 1000) / 10}%, Hard Violations: ${Math.round(result.met.hard * 100) / 100}.`,
+                    `Roster generated for ${selectedTeam === "all" ? "All Teams" : selectedTeam + " Team"} — Coverage Score: ${Math.round(result.met.score * 1000) / 10}%, Hard Violations: ${Math.round(result.met.hard * 100) / 100}.`,
                 );
-                message.success("Roster generated! Switched to Schedule view.");
+                message.success(`Roster generated for ${selectedTeam === "all" ? "All Teams" : selectedTeam + " Team"}! Switched to Schedule view.`);
             } catch (err: any) {
                 message.error(err?.message || "Solver failed");
             } finally {
@@ -647,7 +815,7 @@ export default function RosterPage() {
 
         setTimeout(() => {
             try {
-                const analysis = runAiAnalysis(solvedState, team, absences, requests);
+                const analysis = runAiAnalysis(solvedState, activeTeam, absences, requests);
                 setAiResult(analysis);
                 setActiveMainTab("optimizer");
                 setSolverStatusText(
@@ -679,6 +847,8 @@ export default function RosterPage() {
                 sk: false,
                 ld: false,
                 role: "Staff",
+                teamName: selectedTeam === "all" ? "Reception" : selectedTeam,
+                activeInRoster: true,
             });
         }
 
@@ -694,9 +864,12 @@ export default function RosterPage() {
 
         setTimeout(() => {
             try {
+                const targetMembers = updatedTeam.filter(
+                    (m) => m.activeInRoster !== false && (selectedTeam === "all" || m.teamName === selectedTeam),
+                );
                 const result = solveRoster(
                     updatedConfig,
-                    updatedTeam,
+                    targetMembers,
                     absences,
                     expandRequestsByDay(requests),
                     150000,
@@ -720,7 +893,7 @@ export default function RosterPage() {
     const handleGenerateOrToolsScript = () => {
         const { pythonScript: script } = buildOrToolsPayloadAndScript(
             config,
-            team,
+            activeTeam,
             absences,
             requests,
             solvedState,
@@ -730,24 +903,28 @@ export default function RosterPage() {
     };
 
     const handleRunLiveOrToolsSolver = async () => {
-        if (!team.length) {
-            message.warning("Add team members or sync with your company account first.");
+        if (!activeTeam.length) {
+            message.warning(
+                selectedTeam === "all"
+                    ? "Add team members or sync with your company account first."
+                    : `No active members found in "${selectedTeam}" team.`,
+            );
             return;
         }
         setSolvingOrTools(true);
         setSolverStatusText(
-            `Running Google OR-Tools (CP-SAT) solver on server (time limit: ${orToolsTimeLimit}s, 8 workers)...`,
+            `Running Google OR-Tools (CP-SAT) solver for ${selectedTeam === "all" ? "All Teams" : selectedTeam + " Team"} (time limit: ${orToolsTimeLimit}s, 8 workers)...`,
         );
 
         try {
             const baseSolved =
-                solvedState && solvedState.W === config.weeks && solvedState.E.length === team.length
+                solvedState && solvedState.W === config.weeks && solvedState.E.length === activeTeam.length
                     ? solvedState
-                    : solveRoster(config, team, absences, expandRequestsByDay(requests), 40000);
+                    : solveRoster(config, activeTeam, absences, expandRequestsByDay(requests), 40000);
 
             const { modelData, pythonScript: script } = buildOrToolsPayloadAndScript(
                 config,
-                team,
+                activeTeam,
                 absences,
                 requests,
                 orToolsWarmStart ? baseSolved : null,
@@ -1537,7 +1714,7 @@ export default function RosterPage() {
 
     const renderTeamAndAvailabilitySection = () => (
         <div className="space-y-6 pb-8">
-            {/* Segmented Switcher for Team vs Requests vs Absences */}
+            {/* Segmented Switcher for Team vs Teams/Departments vs Requests vs Absences */}
             <div className="flex flex-col justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-xs sm:flex-row sm:items-center">
                 <Segmented
                     size="large"
@@ -1553,6 +1730,16 @@ export default function RosterPage() {
                                 </div>
                             ),
                             value: "members",
+                        },
+                        {
+                            label: (
+                                <div className="flex items-center gap-2 px-2 py-0.5">
+                                    <ApartmentOutlined />
+                                    <span>Teams & Departments</span>
+                                    <Badge count={availableTeams.length} color="#7c3aed" showZero />
+                                </div>
+                            ),
+                            value: "teams",
                         },
                         {
                             label: (
@@ -1579,11 +1766,17 @@ export default function RosterPage() {
 
                 <Space wrap>
                     <Button
+                        icon={<UsergroupAddOutlined />}
+                        onClick={() => setImportUsersModalVisible(true)}
+                    >
+                        Import Users from Company ({accountMeta?.allCompanyUsers?.length || accountMeta?.accountUsersCount || 0})
+                    </Button>
+                    <Button
                         icon={<SyncOutlined spin={syncingAccount} />}
                         loading={syncingAccount}
                         onClick={handleSyncWithAccountUsers}
                     >
-                        Sync Account Users ({accountMeta?.accountUsersCount ?? team.filter((m) => m.userId).length})
+                        Sync Account
                     </Button>
                 </Space>
             </div>
@@ -1602,12 +1795,12 @@ export default function RosterPage() {
                                         : `Team Roster (${team.length} Members)`}
                                 </div>
                                 <div className="text-xs font-normal text-slate-500">
-                                    Automatically synced with your company&apos;s user accounts. Toggle Skilled and Leader tags to enforce role coverage.
+                                    Create team members, assign teams (e.g. Reception, Operator, Concierge), and toggle Active status.
                                 </div>
                             </div>
                             <Input
                                 prefix={<SearchOutlined className="text-slate-400" />}
-                                placeholder="Search by name, email, or role..."
+                                placeholder="Search by name, email, team, or role..."
                                 value={memberSearch}
                                 onChange={(e) => setMemberSearch(e.target.value)}
                                 allowClear
@@ -1616,54 +1809,130 @@ export default function RosterPage() {
                         </div>
                     }
                 >
-                    {/* Spacious Add Member Bar */}
-                    <div className="mb-6 flex flex-col gap-3 rounded-2xl border border-blue-100 bg-blue-50/40 p-4 sm:flex-row sm:items-center">
-                        <Input
-                            size="large"
-                            placeholder="Add additional staff member name..."
-                            value={newMemberName}
-                            onChange={(e) => setNewMemberName(e.target.value)}
-                            onPressEnter={() => handleAddMember()}
-                            className="flex-1 rounded-xl"
-                        />
-                        <div className="flex items-center gap-4 px-2">
-                            <Checkbox
-                                checked={newMemberSkilled}
-                                onChange={(e) => setNewMemberSkilled(e.target.checked)}
-                            >
-                                <span className="text-sm font-medium text-slate-700">Skilled</span>
-                            </Checkbox>
-                            <Checkbox
-                                checked={newMemberLeader}
-                                onChange={(e) => setNewMemberLeader(e.target.checked)}
-                            >
-                                <span className="text-sm font-medium text-slate-700">Leader</span>
-                            </Checkbox>
-                        </div>
-                        <Button
-                            type="primary"
-                            size="large"
-                            icon={<UserAddOutlined />}
-                            onClick={() => handleAddMember()}
-                            className="rounded-xl px-6"
-                            style={{ background: "#2f5bea" }}
+                    {/* Filter by Team Tags Bar */}
+                    <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl bg-slate-50/80 p-2.5 border border-slate-100">
+                        <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider mr-1">
+                            Filter by Team:
+                        </span>
+                        <Tag.CheckableTag
+                            checked={memberFilterTeam === "all"}
+                            onChange={() => setMemberFilterTeam("all")}
+                            className="rounded-full px-3 py-0.5 text-xs font-medium cursor-pointer"
                         >
-                            Add Staff Member
+                            All Teams ({team.length})
+                        </Tag.CheckableTag>
+                        {availableTeams.map((tName) => {
+                            const count = team.filter((m) => (m.teamName || "Reception") === tName).length;
+                            return (
+                                <Tag.CheckableTag
+                                    key={tName}
+                                    checked={memberFilterTeam === tName}
+                                    onChange={() => setMemberFilterTeam(tName)}
+                                    className="rounded-full px-3 py-0.5 text-xs font-medium cursor-pointer"
+                                >
+                                    {tName} ({count})
+                                </Tag.CheckableTag>
+                            );
+                        })}
+                        <Button
+                            size="small"
+                            type="dashed"
+                            icon={<PlusOutlined />}
+                            onClick={() => setManageTeamsModalVisible(true)}
+                            className="rounded-full text-xs ml-auto"
+                        >
+                            Manage Teams
                         </Button>
                     </div>
 
+                    {/* Rich Add Member Bar */}
+                    <div className="mb-6 flex flex-col gap-3.5 rounded-2xl border border-blue-100 bg-blue-50/40 p-4">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                            <Input
+                                size="large"
+                                placeholder="Staff member full name..."
+                                value={newMemberName}
+                                onChange={(e) => setNewMemberName(e.target.value)}
+                                onPressEnter={() => handleAddMember()}
+                                className="flex-1 rounded-xl"
+                            />
+                            <Select
+                                size="large"
+                                value={newMemberTeam}
+                                onChange={(val) => setNewMemberTeam(val)}
+                                className="w-full sm:w-52"
+                                placeholder="Assign Team"
+                            >
+                                {availableTeams.map((t) => (
+                                    <Option key={t} value={t}>
+                                        {t} Team
+                                    </Option>
+                                ))}
+                            </Select>
+                            <Input
+                                size="large"
+                                placeholder="Role / Title (e.g. Receptionist)"
+                                value={newMemberRoleTitle}
+                                onChange={(e) => setNewMemberRoleTitle(e.target.value)}
+                                className="w-full sm:w-56 rounded-xl"
+                            />
+                        </div>
+                        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-blue-100/70 pt-2">
+                            <div className="flex flex-wrap items-center gap-5">
+                                <Checkbox
+                                    checked={newMemberSkilled}
+                                    onChange={(e) => setNewMemberSkilled(e.target.checked)}
+                                >
+                                    <span className="text-sm font-medium text-slate-700">Skilled</span>
+                                </Checkbox>
+                                <Checkbox
+                                    checked={newMemberLeader}
+                                    onChange={(e) => setNewMemberLeader(e.target.checked)}
+                                >
+                                    <span className="text-sm font-medium text-slate-700">Team Leader</span>
+                                </Checkbox>
+                                <Checkbox
+                                    checked={newMemberActive}
+                                    onChange={(e) => setNewMemberActive(e.target.checked)}
+                                >
+                                    <span className="text-sm font-medium text-slate-700">Active in Roster</span>
+                                </Checkbox>
+                            </div>
+                            <Button
+                                type="primary"
+                                size="large"
+                                icon={<UserAddOutlined />}
+                                onClick={() => handleAddMember()}
+                                className="rounded-xl px-6"
+                                style={{ background: "#2f5bea" }}
+                            >
+                                Create Team Member
+                            </Button>
+                        </div>
+                    </div>
+
                     {filteredTeam.length === 0 ? (
-                        <Empty description="No team members found. Click 'Sync Account Users' or add a staff member above." />
+                        <Empty description="No team members match the current filter. Add a member above or import company users." />
                     ) : (
                         <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
                             {filteredTeam.map(({ member: m, idx }) => (
                                 <div
                                     key={m.id}
-                                    className="flex flex-col justify-between gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-2xs transition hover:border-blue-300"
+                                    className={`flex flex-col justify-between gap-3 rounded-xl border p-4 shadow-2xs transition ${
+                                        m.activeInRoster === false
+                                            ? "border-slate-200 bg-slate-50/70 opacity-70"
+                                            : "border-slate-200 bg-white hover:border-blue-300"
+                                    }`}
                                 >
                                     <div className="flex items-start justify-between gap-2">
                                         <div className="flex min-w-0 flex-1 items-center gap-3">
-                                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-xs font-bold text-blue-700">
+                                            <div
+                                                className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-xs font-bold ${
+                                                    m.activeInRoster === false
+                                                        ? "bg-slate-200 text-slate-600"
+                                                        : "bg-blue-50 text-blue-700"
+                                                }`}
+                                            >
                                                 #{idx + 1}
                                             </div>
                                             <div className="min-w-0 flex-1">
@@ -1679,27 +1948,86 @@ export default function RosterPage() {
                                                     }}
                                                     className="font-semibold"
                                                 />
-                                                {m.email && (
-                                                    <div className="mt-1 truncate text-xs text-slate-500">
-                                                        {m.email}
-                                                    </div>
-                                                )}
+                                                <div className="mt-1 flex items-center gap-2 truncate text-xs text-slate-500">
+                                                    {m.roleTitle && <span className="font-medium text-slate-600">{m.roleTitle}</span>}
+                                                    {m.email && <span className="truncate">{m.email}</span>}
+                                                </div>
                                             </div>
                                         </div>
-                                        {!m.userId && (
+
+                                        <Popconfirm
+                                            title="Remove from roster?"
+                                            description="This member will be removed from the roster team. Any user account in the company is unaffected."
+                                            onConfirm={() =>
+                                                setTeam((prev) => prev.filter((_, i) => i !== idx))
+                                            }
+                                            okText="Remove"
+                                            okButtonProps={{ danger: true }}
+                                        >
                                             <Button
                                                 type="text"
                                                 size="small"
                                                 danger
                                                 icon={<DeleteOutlined />}
-                                                onClick={() =>
-                                                    setTeam((prev) => prev.filter((_, i) => i !== idx))
-                                                }
+                                                title="Remove from roster"
                                             />
-                                        )}
+                                        </Popconfirm>
                                     </div>
 
                                     <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-2.5">
+                                        {/* Team Assignment Select */}
+                                        <div className="flex items-center gap-1.5">
+                                            <span className="text-[11px] font-medium text-slate-500">Team:</span>
+                                            <Select
+                                                size="small"
+                                                value={m.teamName || "Reception"}
+                                                onChange={(val) => {
+                                                    setTeam((prev) =>
+                                                        prev.map((item, i) =>
+                                                            i === idx ? { ...item, teamName: val } : item,
+                                                        ),
+                                                    );
+                                                }}
+                                                style={{ width: 125 }}
+                                                className="text-xs"
+                                            >
+                                                {availableTeams.map((t) => (
+                                                    <Option key={t} value={t}>
+                                                        {t}
+                                                    </Option>
+                                                ))}
+                                            </Select>
+                                        </div>
+
+                                        {/* Active in Roster Switch */}
+                                        <div className="flex items-center gap-2">
+                                            <Tooltip
+                                                title={
+                                                    m.activeInRoster !== false
+                                                        ? "Active in roster (included in solver)"
+                                                        : "Excluded from roster (not scheduled)"
+                                                }
+                                            >
+                                                <Switch
+                                                    size="small"
+                                                    checked={m.activeInRoster !== false}
+                                                    onChange={(checked) => {
+                                                        setTeam((prev) =>
+                                                            prev.map((item, i) =>
+                                                                i === idx
+                                                                    ? { ...item, activeInRoster: checked }
+                                                                    : item,
+                                                            ),
+                                                        );
+                                                    }}
+                                                    checkedChildren="Active"
+                                                    unCheckedChildren="Off"
+                                                />
+                                            </Tooltip>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-50 pt-2">
                                         <div className="flex items-center gap-1.5">
                                             {m.userId ? (
                                                 <Tag color="geekblue" className="m-0 rounded text-[11px]">
@@ -1707,6 +2035,11 @@ export default function RosterPage() {
                                                 </Tag>
                                             ) : (
                                                 <Tag className="m-0 rounded text-[11px]">Roster Staff</Tag>
+                                            )}
+                                            {m.activeInRoster === false && (
+                                                <Tag color="default" className="m-0 rounded text-[11px]">
+                                                    Excluded
+                                                </Tag>
                                             )}
                                         </div>
 
@@ -1747,6 +2080,128 @@ export default function RosterPage() {
                             ))}
                         </div>
                     )}
+                </Card>
+            )}
+
+            {/* Sub-view B: Teams & Departments */}
+            {(teamSectionTab === "teams" || viewAllSections) && (
+                <Card
+                    className="rounded-2xl border-slate-200/90 shadow-sm"
+                    bodyStyle={{ padding: "24px" }}
+                    title={
+                        <div className="flex flex-wrap items-center justify-between gap-3 py-1">
+                            <div>
+                                <div className="text-base font-semibold text-slate-800">
+                                    Teams & Departments ({availableTeams.length})
+                                </div>
+                                <div className="text-xs font-normal text-slate-500">
+                                    Organize staff members into dedicated teams (e.g. Reception, Operator, Concierge) to generate rosters per team.
+                                </div>
+                            </div>
+                        </div>
+                    }
+                >
+                    {/* Add Team Bar */}
+                    <div className="mb-6 flex flex-col gap-3 rounded-2xl border border-purple-100 bg-purple-50/40 p-4 sm:flex-row sm:items-center">
+                        <Input
+                            size="large"
+                            placeholder="New team name (e.g. Housekeeping, Security, Bar)..."
+                            value={newTeamNameInput}
+                            onChange={(e) => setNewTeamNameInput(e.target.value)}
+                            onPressEnter={handleCreateNewTeam}
+                            className="flex-1 rounded-xl"
+                        />
+                        <Button
+                            type="primary"
+                            size="large"
+                            icon={<PlusOutlined />}
+                            onClick={handleCreateNewTeam}
+                            className="rounded-xl px-6"
+                            style={{ background: "#7c3aed" }}
+                        >
+                            Add New Team
+                        </Button>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        {availableTeams.map((tName) => {
+                            const teamMembers = team.filter((m) => (m.teamName || "Reception") === tName);
+                            const activeCount = teamMembers.filter((m) => m.activeInRoster !== false).length;
+                            return (
+                                <div
+                                    key={tName}
+                                    className={`flex flex-col justify-between gap-4 rounded-2xl border p-5 shadow-xs transition ${
+                                        selectedTeam === tName
+                                            ? "border-blue-400 bg-blue-50/30 ring-2 ring-blue-200"
+                                            : "border-slate-200 bg-white hover:border-slate-300"
+                                    }`}
+                                >
+                                    <div>
+                                        <div className="flex items-center justify-between gap-2">
+                                            <div className="flex items-center gap-2.5">
+                                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-purple-100 text-purple-700">
+                                                    <ApartmentOutlined className="text-lg" />
+                                                </div>
+                                                <div>
+                                                    <div className="text-base font-bold text-slate-900">
+                                                        {tName} Team
+                                                    </div>
+                                                    <div className="text-xs text-slate-500">
+                                                        {teamMembers.length} members ({activeCount} active in roster)
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            {teamMembers.length === 0 && (
+                                                <Popconfirm
+                                                    title={`Delete ${tName} team?`}
+                                                    onConfirm={() => handleDeleteTeam(tName)}
+                                                    okText="Delete"
+                                                    okButtonProps={{ danger: true }}
+                                                >
+                                                    <Button type="text" size="small" danger icon={<DeleteOutlined />} />
+                                                </Popconfirm>
+                                            )}
+                                        </div>
+
+                                        <div className="mt-4 space-y-1.5">
+                                            <div className="text-xs font-semibold text-slate-600">Assigned Members:</div>
+                                            {teamMembers.length === 0 ? (
+                                                <div className="text-xs text-slate-400 italic">No members assigned yet.</div>
+                                            ) : (
+                                                <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto">
+                                                    {teamMembers.map((m) => (
+                                                        <Tag
+                                                            key={m.id}
+                                                            color={m.activeInRoster !== false ? "blue" : "default"}
+                                                            className="m-0 text-xs rounded-md"
+                                                        >
+                                                            {m.name}
+                                                        </Tag>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div className="border-t border-slate-100 pt-3">
+                                        <Button
+                                            type={selectedTeam === tName ? "primary" : "default"}
+                                            block
+                                            icon={<ThunderboltOutlined />}
+                                            onClick={() => {
+                                                setSelectedTeam(tName);
+                                                setActiveMainTab("rules");
+                                                message.success(`Set active roster scope to ${tName} Team (${activeCount} active members)`);
+                                            }}
+                                            style={selectedTeam === tName ? { background: "#2f5bea" } : {}}
+                                        >
+                                            {selectedTeam === tName ? "✓ Currently Active Roster Scope" : `Make Roster for ${tName} Team`}
+                                        </Button>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
                 </Card>
             )}
 
@@ -3151,6 +3606,69 @@ export default function RosterPage() {
                     </div>
                 </div>
 
+                {/* ── Team Selection & Department Scope Bar ──────────────────────── */}
+                <div className="flex flex-col gap-3.5 rounded-2xl border border-blue-200/90 bg-gradient-to-r from-blue-50/90 via-white to-blue-50/40 p-4 shadow-2xs sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex items-center gap-3">
+                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-sm">
+                            <ApartmentOutlined className="text-xl" />
+                        </div>
+                        <div>
+                            <div className="flex flex-wrap items-center gap-2.5">
+                                <span className="text-sm font-bold text-slate-800">
+                                    Roster Scope / Department:
+                                </span>
+                                <Select
+                                    value={selectedTeam}
+                                    onChange={(val) => {
+                                        setSelectedTeam(val);
+                                        setSolvedState(null);
+                                    }}
+                                    style={{ minWidth: 230 }}
+                                    size="middle"
+                                    className="font-semibold"
+                                >
+                                    <Option value="all">
+                                        All Teams ({team.filter((m) => m.activeInRoster !== false).length} Active Members)
+                                    </Option>
+                                    {availableTeams.map((tName) => {
+                                        const count = team.filter((m) => m.activeInRoster !== false && (m.teamName || "Reception") === tName).length;
+                                        return (
+                                            <Option key={tName} value={tName}>
+                                                {tName} Team ({count} Members)
+                                            </Option>
+                                        );
+                                    })}
+                                </Select>
+                                {selectedTeam !== "all" && (
+                                    <Tag color="blue" className="rounded-full px-3 py-0.5 text-xs font-semibold">
+                                        Generating exclusively for {selectedTeam} Team
+                                    </Tag>
+                                )}
+                            </div>
+                            <div className="mt-0.5 text-xs text-slate-500">
+                                {selectedTeam === "all"
+                                    ? `Solving and generating roster for all ${activeTeam.length} active members across all teams.`
+                                    : `Solving and generating roster only for the ${activeTeam.length} active members assigned to ${selectedTeam} Team.`}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                        <Button
+                            icon={<UsergroupAddOutlined />}
+                            onClick={() => setImportUsersModalVisible(true)}
+                        >
+                            Import Company Users
+                        </Button>
+                        <Button
+                            icon={<PlusOutlined />}
+                            onClick={() => setManageTeamsModalVisible(true)}
+                        >
+                            Manage Teams ({availableTeams.length})
+                        </Button>
+                    </div>
+                </div>
+
                 {/* ── 4 At-a-Glance Live Summary Cards ────────────────────────────── */}
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                     <div
@@ -3176,13 +3694,15 @@ export default function RosterPage() {
                         }}
                         className="cursor-pointer rounded-2xl border border-slate-200/90 bg-white p-4 shadow-2xs transition hover:border-blue-300"
                     >
-                        <div className="text-xs font-medium text-slate-500">Synced Team & Availability</div>
+                        <div className="text-xs font-medium text-slate-500">
+                            {selectedTeam === "all" ? "All Active Members" : `${selectedTeam} Team Members`}
+                        </div>
                         <div className="mt-1 text-lg font-bold text-slate-900">
-                            {team.length} Member{team.length === 1 ? "" : "s"}
+                            {activeTeam.length} Member{activeTeam.length === 1 ? "" : "s"}
                         </div>
                         <div className="mt-1 text-xs text-slate-500">
-                            {team.filter((m) => m.sk).length} Skilled · {team.filter((m) => m.ld).length} Leaders ·{" "}
-                            {requests.length} Requests · {absences.length} Leave
+                            {activeTeam.filter((m) => m.sk).length} Skilled · {activeTeam.filter((m) => m.ld).length} Leaders ·{" "}
+                            {requests.length} Requests
                         </div>
                     </div>
 
@@ -3480,6 +4000,178 @@ export default function RosterPage() {
                     </div>
                 )}
             </Drawer>
+
+            {/* ── Modal: Import Users from Company Account ──────────────────── */}
+            <Modal
+                title={
+                    <div className="flex items-center gap-2 text-base font-bold text-slate-800">
+                        <UsergroupAddOutlined className="text-blue-600 text-lg" />
+                        <span>Import Users from Company Account</span>
+                    </div>
+                }
+                open={importUsersModalVisible}
+                onCancel={() => {
+                    setImportUsersModalVisible(false);
+                    setSelectedUserIdsToImport([]);
+                }}
+                onOk={handleImportCompanyUsers}
+                okText={`Import ${selectedUserIdsToImport.length > 0 ? selectedUserIdsToImport.length : ""} Selected User(s)`}
+                okButtonProps={{
+                    disabled: selectedUserIdsToImport.length === 0,
+                    style: { background: "#2f5bea" },
+                }}
+                width={680}
+            >
+                <div className="space-y-4 py-2">
+                    <Alert
+                        type="info"
+                        showIcon
+                        message="Select specific company users to add to your roster, and pick which team to assign them to. Users not selected will NOT appear in the roster."
+                    />
+
+                    <div className="flex flex-col gap-2 rounded-xl bg-slate-50 p-3 sm:flex-row sm:items-center sm:justify-between border border-slate-200">
+                        <span className="text-sm font-semibold text-slate-700">Assign Selected Users To Team:</span>
+                        <Select
+                            value={importTargetTeam}
+                            onChange={(val) => setImportTargetTeam(val)}
+                            style={{ minWidth: 200 }}
+                        >
+                            {availableTeams.map((t) => (
+                                <Option key={t} value={t}>
+                                    {t} Team
+                                </Option>
+                            ))}
+                        </Select>
+                    </div>
+
+                    <Table
+                        size="small"
+                        rowKey="id"
+                        pagination={{ pageSize: 6, size: "small" }}
+                        rowSelection={{
+                            selectedRowKeys: selectedUserIdsToImport,
+                            onChange: (keys) => setSelectedUserIdsToImport(keys as number[]),
+                        }}
+                        dataSource={(accountMeta?.allCompanyUsers || []).map((u) => {
+                            const isAlreadyInTeam = team.some((m) => m.userId === u.id || m.id === u.id);
+                            return { ...u, isAlreadyInTeam };
+                        })}
+                        columns={[
+                            {
+                                title: "User Name",
+                                dataIndex: "name",
+                                render: (text, record: any) => (
+                                    <div className="font-medium text-slate-800">
+                                        {text}
+                                        {record.isAlreadyInTeam && (
+                                            <Tag color="default" className="ml-2 text-[10px]">
+                                                Already In Roster
+                                            </Tag>
+                                        )}
+                                    </div>
+                                ),
+                            },
+                            {
+                                title: "Email",
+                                dataIndex: "email",
+                                render: (email) => <span className="text-xs text-slate-500">{email || "—"}</span>,
+                            },
+                            {
+                                title: "Company Role",
+                                dataIndex: "role",
+                                render: (role) => (
+                                    <Tag color={role === "Admin" ? "purple" : "geekblue"} className="text-xs">
+                                        {role || "User"}
+                                    </Tag>
+                                ),
+                            },
+                        ]}
+                    />
+                </div>
+            </Modal>
+
+            {/* ── Modal: Manage Teams / Departments ────────────────────────── */}
+            <Modal
+                title={
+                    <div className="flex items-center gap-2 text-base font-bold text-slate-800">
+                        <ApartmentOutlined className="text-purple-600 text-lg" />
+                        <span>Manage Teams & Departments</span>
+                    </div>
+                }
+                open={manageTeamsModalVisible}
+                onCancel={() => {
+                    setManageTeamsModalVisible(false);
+                    setNewTeamNameInput("");
+                }}
+                footer={[
+                    <Button key="close" type="primary" onClick={() => setManageTeamsModalVisible(false)} style={{ background: "#2f5bea" }}>
+                        Done
+                    </Button>,
+                ]}
+                width={560}
+            >
+                <div className="space-y-4 py-2">
+                    <p className="text-xs text-slate-500 m-0">
+                        Define departments or teams for your staff (e.g. Reception, Operator, Concierge, Housekeeping, Bar, Security). You can solve rosters for each team independently.
+                    </p>
+
+                    <div className="flex items-center gap-2">
+                        <Input
+                            placeholder="New team name (e.g. Concierge, Operator)..."
+                            value={newTeamNameInput}
+                            onChange={(e) => setNewTeamNameInput(e.target.value)}
+                            onPressEnter={handleCreateNewTeam}
+                        />
+                        <Button
+                            type="primary"
+                            icon={<PlusOutlined />}
+                            onClick={handleCreateNewTeam}
+                            style={{ background: "#7c3aed" }}
+                        >
+                            Add Team
+                        </Button>
+                    </div>
+
+                    <div className="divide-y divide-slate-100 rounded-xl border border-slate-200">
+                        {availableTeams.map((tName) => {
+                            const count = team.filter((m) => (m.teamName || "Reception") === tName).length;
+                            return (
+                                <div key={tName} className="flex items-center justify-between p-3">
+                                    <div className="flex items-center gap-2.5">
+                                        <ApartmentOutlined className="text-purple-600" />
+                                        <span className="font-semibold text-slate-800">{tName} Team</span>
+                                        <Tag color="blue" className="rounded-full text-xs">
+                                            {count} member{count === 1 ? "" : "s"}
+                                        </Tag>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <Button
+                                            size="small"
+                                            onClick={() => {
+                                                setSelectedTeam(tName);
+                                                setManageTeamsModalVisible(false);
+                                                message.success(`Active roster scope switched to ${tName} Team`);
+                                            }}
+                                        >
+                                            Select Scope
+                                        </Button>
+                                        {count === 0 && (
+                                            <Popconfirm
+                                                title={`Delete ${tName} team?`}
+                                                onConfirm={() => handleDeleteTeam(tName)}
+                                                okText="Delete"
+                                                okButtonProps={{ danger: true }}
+                                            >
+                                                <Button size="small" danger icon={<DeleteOutlined />} />
+                                            </Popconfirm>
+                                        )}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            </Modal>
         </div>
     );
 }

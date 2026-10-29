@@ -20,6 +20,7 @@ export interface RosterConfig {
     pkW: Array<{ a: string; b: string }>;
     opW: Array<{ a: string; b: string }>;
     brk: number;
+    selectedTeam?: string; // Filter / generate roster for this specific team (or "all")
 }
 
 export interface TeamMember {
@@ -31,6 +32,8 @@ export interface TeamMember {
     sk: boolean; // Skilled
     ld: boolean; // Leader
     roleTitle?: string;
+    teamName?: string; // Assigned team: e.g. "Reception", "Operator", "Concierge"
+    activeInRoster?: boolean; // Whether active / included in roster solver
 }
 
 export interface TeamRequest {

@@ -20,10 +20,10 @@ type LiveTranslationRecorderProps = {
 };
 
 // Voice Activity Detection (VAD) tuning constants for real-time phrase streaming
-const SPEECH_RMS_THRESHOLD = 0.018; // RMS amplitude threshold for active voice
-const SPEECH_MIN_ACTIVE_MS = 140; // Minimum voiced duration to count as real speech
-const SILENCE_COMMIT_MS = 750; // Pause duration after speech that auto-triggers translation
-const MAX_SEGMENT_SPEECH_MS = 5500; // Auto-commit long continuous speech every ~5.5s
+const SPEECH_RMS_THRESHOLD = 0.022; // RMS amplitude threshold for active voice
+const SPEECH_MIN_ACTIVE_MS = 250; // Minimum voiced duration to count as real speech
+const SILENCE_COMMIT_MS = 1100; // Pause duration after speech that auto-triggers translation (allows natural pauses)
+const MAX_SEGMENT_SPEECH_MS = 6000; // Auto-commit long continuous speech every ~6s
 const IDLE_AUTO_STOP_MS = 5000; // Auto-stop mic if user stays silent for 5s after speaking
 
 const LiveTranslationRecorder: React.FC<LiveTranslationRecorderProps> = ({
@@ -51,8 +51,13 @@ const LiveTranslationRecorder: React.FC<LiveTranslationRecorderProps> = ({
   const accumulatedVoicedMsRef = useRef<number>(0);
   const hasSpeechInSegmentRef = useRef<boolean>(false);
   const hasAutoCommittedAnySegmentRef = useRef<boolean>(false);
+  const lastCommitTimeRef = useRef<number>(0);
   const lastFrameTimeRef = useRef<number>(0);
   const isFlushingSegmentRef = useRef<boolean>(false);
+  const lastEmittedTranscriptRef = useRef<{ text: string; time: number }>({
+    text: "",
+    time: 0,
+  });
 
   const liveTranslationMutation = useUploadControllerUploadLiveTranslationFile({
     request: {
@@ -215,6 +220,7 @@ const LiveTranslationRecorder: React.FC<LiveTranslationRecorderProps> = ({
 
       if (hadSpeech) {
         hasAutoCommittedAnySegmentRef.current = true;
+        lastCommitTimeRef.current = performance.now();
       }
 
       if (keepListening && recordingRef.current && streamRef.current?.active) {
@@ -228,6 +234,16 @@ const LiveTranslationRecorder: React.FC<LiveTranslationRecorderProps> = ({
   const stopAllRecording = (flushRemainingSpeech = true) => {
     recordingRef.current = false;
     setRecording(false);
+
+    // If an utterance was already recently committed via silence, and remaining segment is brief / noise, discard it
+    const timeSinceLastCommit = performance.now() - lastCommitTimeRef.current;
+    if (
+      hasAutoCommittedAnySegmentRef.current &&
+      timeSinceLastCommit < 2200 &&
+      accumulatedVoicedMsRef.current < 450
+    ) {
+      flushRemainingSpeech = false;
+    }
 
     if (flushRemainingSpeech) {
       flushCurrentSegment(false);
@@ -402,7 +418,22 @@ const LiveTranslationRecorder: React.FC<LiveTranslationRecorderProps> = ({
       });
 
       const transcript = res?.transcription?.trim();
+      const now = Date.now();
+
+      // Guard against duplicate trailing messages
+      if (
+        transcript &&
+        lastEmittedTranscriptRef.current.text &&
+        now - lastEmittedTranscriptRef.current.time < 3500 &&
+        (transcript.toLowerCase() === lastEmittedTranscriptRef.current.text.toLowerCase() ||
+          lastEmittedTranscriptRef.current.text.toLowerCase().endsWith(transcript.toLowerCase()))
+      ) {
+        console.log("[LiveTranslationMic] Deduped duplicate trailing transcript:", transcript);
+        return;
+      }
+
       if (transcript) {
+        lastEmittedTranscriptRef.current = { text: transcript, time: now };
         if (onTranscription) {
           onTranscription(transcript);
         }
