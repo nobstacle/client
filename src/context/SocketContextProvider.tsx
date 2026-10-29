@@ -337,21 +337,22 @@ export const SocketContextProvider = ({
       const parsedData = JSON.parse(data).data as ReceivedMessageContent;
       if (!isTargetStation(parsedData?.station)) return;
 
-      const role = userRoleRef.current || session.data?.user?.Roles?.[0];
       setReceivedMessage(parsedData);
 
       if (parsedData.isLiveTranslation && typeof window !== "undefined") {
-        const isClientRoute = window.location.pathname.startsWith("/client");
-        const isViewerAdmin =
-          !isClientRoute &&
-          ["Admin", "Staff", "SAdmin"].includes(role || "");
+        const pathname = window.location.pathname || "";
+        const isClientRoute =
+          pathname.startsWith("/client") || pathname.includes("/client");
+        const isViewerAdmin = !isClientRoute;
 
         const isSenderAdmin =
-          parsedData.senderMode === "header" ||
-          (parsedData.senderMode !== "client" &&
-            ["Admin", "Staff", "SAdmin"].includes(parsedData.role || ""));
+          parsedData.senderMode === "header"
+            ? true
+            : parsedData.senderMode === "client"
+              ? false
+              : ["Admin", "Staff", "SAdmin"].includes(parsedData.role || "");
 
-        // Auto-play audio on the receiving side
+        // Auto-play translated destination audio on the receiving side
         if (isViewerAdmin && !isSenderAdmin) {
           translatedAudioPlayer.enqueue({
             messageId: parsedData.id,

@@ -781,7 +781,6 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true, isMob
                     mode="header"
                     activeLangCode={selectedLang}
                     station={currentStation}
-                    onTranscription={(text) => setInputValue(text)}
                   />
                 </div>
 
