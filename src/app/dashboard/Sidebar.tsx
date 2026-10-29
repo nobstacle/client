@@ -242,6 +242,7 @@ const teamItems: TeamItem[] = [
     { title: "Reminder", href: "/dashboard/reminder", roles: ["Admin", "User", "Staff"], featureKey: "team" },
     { title: "Information", href: "/dashboard/information", roles: ["Admin", "User", "Staff"], featureKey: "team" },
     { title: "Documents", href: "/dashboard/documentDownload", roles: ["Admin", "User", "Staff"], featureKey: "team" },
+    { title: "Roster", href: "/dashboard/roster", roles: ["Admin", "User", "Staff"], featureKey: "team" },
 ];
 
 const settingsItems: SettingsItem[] = [

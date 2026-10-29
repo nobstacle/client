@@ -101,7 +101,7 @@ const featureFlagsByPath: Array<[RegExp, FeatureGateConfig]> = [
     },
   ],
   [
-    /^\/dashboard\/(handover|reminder|information|documentDownload)$/,
+    /^\/dashboard\/(handover|reminder|information|documentDownload|roster)$/,
     {
       featureKey: "team",
       title: "Team feature disabled",

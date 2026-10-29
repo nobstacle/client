@@ -218,6 +218,7 @@ interface MetaConnectionStatus {
     webhookVerifyToken?: string;
     phoneDetails?: MetaPhoneDetails;
     availablePhoneNumbers?: MetaPhoneDetails[];
+    availableWabas?: Array<{ id: string; name?: string }>;
 }
 
 const defaultCampaignStats: CampaignStats = {
@@ -909,6 +910,8 @@ export default function WhatsAppPage() {
     const [connectingMeta, setConnectingMeta] = useState(false);
     const [checkingMetaStatus, setCheckingMetaStatus] = useState(false);
     const [selectingPhoneNumber, setSelectingPhoneNumber] = useState(false);
+    const [manualWabaIdInput, setManualWabaIdInput] = useState("");
+    const [linkingManualWaba, setLinkingManualWaba] = useState(false);
     const [unresolvedCount, setUnresolvedCount] = useState<number>(0);
 
     const metaConnected = metaConnection.connected;
@@ -1157,30 +1160,91 @@ export default function WhatsAppPage() {
         setConnectingMeta(true);
         let capturedWabaId: string | undefined = undefined;
         let capturedPhoneNumberId: string | undefined = undefined;
+        let capturedBusinessId: string | undefined = undefined;
 
         // Safety timeout so button never hangs indefinitely if popup is blocked
         const safetyTimer = setTimeout(() => {
             setConnectingMeta(false);
         }, 15000);
 
+        const parseEmbeddedSignupMessage = (rawData: any): any => {
+            if (!rawData) return null;
+            if (typeof rawData === "object") return rawData;
+            if (typeof rawData !== "string") return null;
+
+            const trimmed = rawData.trim();
+            if (trimmed.startsWith("{")) {
+                try {
+                    return JSON.parse(trimmed);
+                } catch {
+                    // fallthrough
+                }
+            }
+
+            // Handle URL-encoded cross-domain messages from Facebook SDK
+            try {
+                const params = new URLSearchParams(trimmed);
+                const embeddedJson = params.get("data") || params.get("params") || params.get("session_info");
+                if (embeddedJson && embeddedJson.trim().startsWith("{")) {
+                    return JSON.parse(embeddedJson);
+                }
+                const wabaParam = params.get("waba_id") || params.get("business_account_id");
+                const phoneParam = params.get("phone_number_id");
+                const bizParam = params.get("business_id");
+                if (wabaParam || phoneParam || bizParam || params.get("type") === "WA_EMBEDDED_SIGNUP") {
+                    return {
+                        type: "WA_EMBEDDED_SIGNUP",
+                        event: params.get("event") || "FINISH",
+                        data: {
+                            waba_id: wabaParam || undefined,
+                            phone_number_id: phoneParam || undefined,
+                            business_id: bizParam || undefined,
+                        },
+                    };
+                }
+            } catch {
+                // Ignore
+            }
+            return null;
+        };
+
         const sessionInfoListener = (event: MessageEvent) => {
             if (!event.origin?.includes("facebook.com") && !event.origin?.includes("fb.com")) return;
             try {
-                const data = typeof event.data === "string" ? JSON.parse(event.data) : event.data;
+                const data = parseEmbeddedSignupMessage(event.data);
+                if (!data) return;
                 console.log("WA_EMBEDDED_SIGNUP event:", data);
-                if (data?.type === "WA_EMBEDDED_SIGNUP") {
-                    const payload = data.data || {};
-                    if (payload.phone_number_id) {
-                        capturedPhoneNumberId = String(payload.phone_number_id);
-                    }
-                    if (payload.waba_id) {
-                        capturedWabaId = String(payload.waba_id);
-                    }
-                    if (data.event === "CANCEL") {
-                        clearTimeout(safetyTimer);
-                        setConnectingMeta(false);
-                        message.info("WhatsApp setup was cancelled.");
-                    }
+
+                const payload = data?.data || data?.session_info || data || {};
+                const wabaCandidate =
+                    payload.waba_id
+                    || payload.wabaId
+                    || payload.business_account_id
+                    || payload.whatsapp_business_account_id
+                    || data?.waba_id;
+                const phoneCandidate =
+                    payload.phone_number_id
+                    || payload.phoneNumberId
+                    || data?.phone_number_id;
+                const businessCandidate =
+                    payload.business_id
+                    || payload.businessId
+                    || data?.business_id;
+
+                if (phoneCandidate) {
+                    capturedPhoneNumberId = String(phoneCandidate);
+                }
+                if (wabaCandidate) {
+                    capturedWabaId = String(wabaCandidate);
+                }
+                if (businessCandidate) {
+                    capturedBusinessId = String(businessCandidate);
+                }
+
+                if (data?.type === "WA_EMBEDDED_SIGNUP" && data?.event === "CANCEL") {
+                    clearTimeout(safetyTimer);
+                    setConnectingMeta(false);
+                    message.info("WhatsApp setup was cancelled.");
                 }
             } catch {
                 // Ignore non-JSON messages
@@ -1194,21 +1258,32 @@ export default function WhatsAppPage() {
                 (response: any) => {
                     void (async () => {
                         clearTimeout(safetyTimer);
-                        // Brief delay to allow any in-flight postMessage from the Meta popup to arrive
-                        await new Promise((resolve) => setTimeout(resolve, 250));
+                        // Wait up to 800ms for any in-flight postMessage from the closing Meta popup
+                        for (let attempt = 0; attempt < 8; attempt++) {
+                            if (capturedWabaId) break;
+                            await new Promise((resolve) => setTimeout(resolve, 100));
+                        }
                         window.removeEventListener("message", sessionInfoListener);
-                        console.log("FB.login response:", response);
+                        console.log("FB.login response:", response, {
+                            capturedWabaId,
+                            capturedPhoneNumberId,
+                            capturedBusinessId,
+                        });
 
-                        if (response?.authResponse?.code) {
-                            const code = response.authResponse.code;
+                        const code = response?.authResponse?.code;
+                        const directAccessToken = response?.authResponse?.accessToken;
+
+                        if (code || directAccessToken) {
                             try {
                                 message.loading({ content: "Linking WhatsApp account with Nobstacle...", key: "embedded-signup" });
                                 const linkedStatus = await apiRequest<MetaConnectionStatus>("/whatsapp/settings/embedded-signup", {
                                     method: "POST",
                                     body: JSON.stringify({
                                         code,
+                                        accessToken: directAccessToken,
                                         wabaId: capturedWabaId,
                                         phoneNumberId: capturedPhoneNumberId,
+                                        businessId: capturedBusinessId,
                                     }),
                                 });
                                 setMetaConnection(linkedStatus);
@@ -1217,6 +1292,12 @@ export default function WhatsAppPage() {
                                 } else if (linkedStatus.wabaLinked) {
                                     message.warning({
                                         content: "WhatsApp Business Account linked! No phone number was found on the account yet—please add or select a phone number.",
+                                        key: "embedded-signup",
+                                        duration: 6,
+                                    });
+                                } else if (linkedStatus.hasAccessToken) {
+                                    message.warning({
+                                        content: "Meta token connected! Please confirm your WhatsApp Business Account ID in the banner below to finish linking.",
                                         key: "embedded-signup",
                                         duration: 6,
                                     });
@@ -1243,6 +1324,7 @@ export default function WhatsAppPage() {
                     response_type: "code",
                     override_default_response_type: true,
                     extras: {
+                        feature: "whatsapp_embedded_signup",
                         setup: {},
                         sessionInfoVersion: "3",
                     },
@@ -1253,6 +1335,35 @@ export default function WhatsAppPage() {
             setConnectingMeta(false);
             console.error("Error calling FB.login:", err);
             message.error("Failed to open Facebook login popup.");
+        }
+    };
+
+    const handleSelectWaba = async (wabaIdInput?: string) => {
+        const wabaId = (wabaIdInput ?? manualWabaIdInput).trim();
+        if (!wabaId) {
+            message.error("Please enter or select your WhatsApp Business Account (WABA) ID");
+            return;
+        }
+        setLinkingManualWaba(true);
+        try {
+            message.loading({ content: "Linking WhatsApp Business Account...", key: "select-waba" });
+            const updated = await apiRequest<MetaConnectionStatus>("/whatsapp/settings/select-waba", {
+                method: "POST",
+                body: JSON.stringify({ wabaId }),
+            });
+            setMetaConnection(updated);
+            setManualWabaIdInput("");
+            message.success({
+                content: updated.connected
+                    ? "WhatsApp Business Account and phone number linked!"
+                    : "WhatsApp Business Account linked!",
+                key: "select-waba",
+            });
+            await loadAll();
+        } catch (err) {
+            message.error({ content: parseErrorMessage(err) || "Could not link WABA ID", key: "select-waba" });
+        } finally {
+            setLinkingManualWaba(false);
         }
     };
 
@@ -1287,13 +1398,7 @@ export default function WhatsAppPage() {
             message.success({ content: "WhatsApp disconnected successfully", key: "disconnect-wa" });
             setTemplates([]);
             setCampaigns([]);
-            setStats({
-                totalSent: 0,
-                totalDelivered: 0,
-                totalFailed: 0,
-                totalCampaigns: 0,
-                activeCampaigns: 0,
-            });
+            setStats(defaultCampaignStats);
             setUnresolvedCount(0);
             await loadMetaSettings();
             await loadAll();
@@ -1313,13 +1418,7 @@ export default function WhatsAppPage() {
                 await loadContactLists();
                 setTemplates([]);
                 setCampaigns([]);
-                setStats({
-                    totalSent: 0,
-                    totalDelivered: 0,
-                    totalFailed: 0,
-                    totalCampaigns: 0,
-                    activeCampaigns: 0,
-                });
+                setStats(defaultCampaignStats);
                 setUnresolvedCount(0);
             }
         } catch (error) {
@@ -3123,7 +3222,7 @@ export default function WhatsAppPage() {
                                 </Tag>
                             </Badge>
                         )}
-                        {metaConnected || metaWabaLinked ? (
+                        {metaConnected || metaWabaLinked || metaConnection.hasAccessToken ? (
                             <Popconfirm
                                 title="Disconnect WhatsApp?"
                                 description="Disconnecting will unlink your WhatsApp account and remove test data and messaging records. Do you wish to proceed?"
@@ -3150,7 +3249,7 @@ export default function WhatsAppPage() {
                     </div>
                 </div>
 
-                {!metaConnected && !metaWabaLinked && (
+                {!metaConnected && !metaWabaLinked && !metaConnection.hasAccessToken && (
                     <Alert
                         message="Connect your Hotel's WhatsApp Account"
                         description="Link your WhatsApp Business Account so guests receive messages directly from your hotel's official WhatsApp number and verified profile."
@@ -3169,6 +3268,71 @@ export default function WhatsAppPage() {
                             </Button>
                         }
                         className="rounded-xl border-green-200 bg-green-50 shadow-sm"
+                    />
+                )}
+
+                {!metaConnected && !metaWabaLinked && metaConnection.hasAccessToken && (
+                    <Alert
+                        message="Meta Account Authorized — Confirm Your WhatsApp Business Account (WABA) ID"
+                        description={
+                            <div className="space-y-2.5">
+                                <p className="m-0 text-sm text-gray-700">
+                                    Your Meta login token is connected, but Meta did not automatically expose a WhatsApp Business Account ID from the popup session. Enter your <strong>WhatsApp Business Account ID</strong> (found in <em>Meta Business Settings → Accounts → WhatsApp Accounts</em>) below to complete linking, or re-open the Meta popup and ensure a WhatsApp Business Account is selected.
+                                </p>
+                                <div className="flex flex-wrap items-center gap-2 pt-1">
+                                    {metaConnection.availableWabas && metaConnection.availableWabas.length > 0 ? (
+                                        <Select
+                                            placeholder="Select WhatsApp Business Account"
+                                            style={{ minWidth: 280 }}
+                                            loading={linkingManualWaba}
+                                            onChange={(val) => void handleSelectWaba(val)}
+                                        >
+                                            {metaConnection.availableWabas.map((waba) => (
+                                                <Option key={waba.id} value={waba.id}>
+                                                    {waba.name ? `${waba.name} (${waba.id})` : waba.id}
+                                                </Option>
+                                            ))}
+                                        </Select>
+                                    ) : null}
+                                    <Input
+                                        placeholder="Enter WhatsApp Business Account ID (e.g. 102289599326934)"
+                                        value={manualWabaIdInput}
+                                        onChange={(e) => setManualWabaIdInput(e.target.value)}
+                                        onPressEnter={() => void handleSelectWaba()}
+                                        style={{ maxWidth: 340 }}
+                                    />
+                                    <Button
+                                        type="primary"
+                                        loading={linkingManualWaba}
+                                        onClick={() => void handleSelectWaba()}
+                                    >
+                                        Link WABA ID
+                                    </Button>
+                                    <Button
+                                        icon={<ReloadOutlined />}
+                                        loading={checkingMetaStatus}
+                                        onClick={handleManualCheckStatus}
+                                    >
+                                        Retry Auto-Detect
+                                    </Button>
+                                </div>
+                            </div>
+                        }
+                        type="warning"
+                        showIcon
+                        action={
+                            <Button
+                                size="small"
+                                type="primary"
+                                style={{ backgroundColor: "#25D366", borderColor: "#25D366" }}
+                                icon={<MdWhatsapp size={14} />}
+                                onClick={launchWhatsAppSignup}
+                                loading={connectingMeta}
+                            >
+                                Reconnect via Meta
+                            </Button>
+                        }
+                        className="rounded-xl border-amber-200 bg-amber-50 shadow-sm"
                     />
                 )}
 
