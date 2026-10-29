@@ -1324,7 +1324,6 @@ export default function WhatsAppPage() {
                     response_type: "code",
                     override_default_response_type: true,
                     extras: {
-                        feature: "whatsapp_embedded_signup",
                         setup: {},
                         sessionInfoVersion: "3",
                     },
