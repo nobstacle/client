@@ -9,7 +9,9 @@ import { useMessageStore } from "../../../../lib/zustand/store/messageStore";
 import { useCompanyControllerGetCompany, getCompanyControllerGetCompanyQueryKey } from '../../../../lib/client/api';
 import { useSession } from "next-auth/react";
 import AudioRecorder from "../../../../components/AudioRecorder";
+import LiveTranslationRecorder from "../../../../components/LiveTranslationRecorder";
 import { resolveActiveStation } from "../../../../utils/station";
+import { translatedAudioPlayer } from "../../../../utils/audioPlayer";
 
 interface ChatBotProps {
   cb?: () => void;
@@ -552,8 +554,15 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true, isMob
   };
 
   const renderMessage = (messageObj: any) => {
-    const isRight = isCurrentUserMessage(messageObj.role);
+    const isRight = messageObj.senderMode
+      ? messageObj.senderMode === "header"
+      : isCurrentUserMessage(messageObj.role);
     const displayMessage = getDisplayMessage(messageObj);
+    const hasAudio = Boolean(
+      messageObj.isLiveTranslation ||
+        messageObj.adminAudioUrl ||
+        messageObj.audioUrl,
+    );
 
     return (
       <div
@@ -575,11 +584,51 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true, isMob
           }}
         >
           <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
             fontSize: '14px',
             lineHeight: '1.5',
             marginBottom: messageObj.originalMessage && messageObj.originalMessage !== displayMessage ? '8px' : '0'
           }}>
-            {displayMessage}
+            <span>{displayMessage}</span>
+            {hasAudio && (
+              <button
+                type="button"
+                title="Play translated audio"
+                onClick={() =>
+                  translatedAudioPlayer.playNow({
+                    messageId: messageObj.id,
+                    audioUrl: messageObj.adminAudioUrl || messageObj.audioUrl,
+                    fallbackText: displayMessage,
+                    langCode: "en",
+                  })
+                }
+                style={{
+                  border: 'none',
+                  background: isRight ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.08)',
+                  color: isRight ? 'white' : '#1f2937',
+                  borderRadius: '9999px',
+                  width: '24px',
+                  height: '24px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  flexShrink: 0,
+                }}
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  style={{ width: '14px', height: '14px' }}
+                >
+                  <path d="M13.5 4.06c0-1.336-1.616-2.005-2.56-1.06l-4.5 4.5H4.508c-1.141 0-2.318.664-2.66 1.905A9.76 9.76 0 001.5 12c0 .898.121 1.768.35 2.595.341 1.24 1.518 1.905 2.659 1.905h1.93l4.5 4.5c.945.945 2.561.276 2.561-1.06V4.06zM18.584 5.106a.75.75 0 011.06 0c3.808 3.807 3.808 9.98 0 13.788a.75.75 0 11-1.06-1.06 8.25 8.25 0 000-11.668.75.75 0 010-1.06z" />
+                  <path d="M15.932 7.757a.75.75 0 011.061 0 6 6 0 010 8.486.75.75 0 01-1.06-1.061 4.5 4.5 0 000-6.364.75.75 0 010-1.06z" />
+                </svg>
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -723,6 +772,13 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true, isMob
                   </button>
 
                   <AudioRecorder
+                    mode="header"
+                    activeLangCode={selectedLang}
+                    station={currentStation}
+                    onTranscription={(text) => setInputValue(text)}
+                  />
+
+                  <LiveTranslationRecorder
                     mode="header"
                     activeLangCode={selectedLang}
                     station={currentStation}

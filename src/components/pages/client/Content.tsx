@@ -2485,6 +2485,8 @@ export const Content: React.FC = () => {
                 messages={messageStore.receivedMessage}
                 sendMessage={sendMessage}
                 activeLangCode={activeLangCode}
+                station={activeStation}
+                mode="client"
               />
             </div>
           </SafeContentFrame>

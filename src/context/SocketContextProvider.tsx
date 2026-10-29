@@ -30,6 +30,7 @@ import {
   resolveActiveStation,
   STATION_CHANGED_EVENT,
 } from "../utils/station";
+import { translatedAudioPlayer } from "../utils/audioPlayer";
 
 // Add document-related types
 export interface SendDocumentPayloadType {
@@ -126,6 +127,11 @@ export const SocketContextProvider = ({
   const activateStation = useMessageStore((s) => s.activateStation);
   const activeStationRef = useRef<number>(1);
   const lastJoinedStationRef = useRef<number | null>(null);
+  const userRoleRef = useRef<string | undefined>(session.data?.user?.Roles?.[0]);
+
+  useEffect(() => {
+    userRoleRef.current = session.data?.user?.Roles?.[0];
+  }, [session.data?.user?.Roles]);
 
   // Initialize the socket once a token is available, and clean it up when the token goes away (logout)
   useEffect(() => {
@@ -331,12 +337,46 @@ export const SocketContextProvider = ({
       const parsedData = JSON.parse(data).data as ReceivedMessageContent;
       if (!isTargetStation(parsedData?.station)) return;
 
-      let role = session.data?.user?.Roles?.[0];
+      const role = userRoleRef.current || session.data?.user?.Roles?.[0];
+      setReceivedMessage(parsedData);
 
-      if (role === "Admin" || role === "Staff") {
-        setReceivedMessage(parsedData);
-      } else {
-        setReceivedMessage(parsedData);
+      if (parsedData.isLiveTranslation && typeof window !== "undefined") {
+        const isClientRoute = window.location.pathname.startsWith("/client");
+        const isViewerAdmin =
+          !isClientRoute &&
+          ["Admin", "Staff", "SAdmin"].includes(role || "");
+
+        const isSenderAdmin =
+          parsedData.senderMode === "header" ||
+          (parsedData.senderMode !== "client" &&
+            ["Admin", "Staff", "SAdmin"].includes(parsedData.role || ""));
+
+        // Auto-play audio on the receiving side
+        if (isViewerAdmin && !isSenderAdmin) {
+          translatedAudioPlayer.enqueue({
+            messageId: parsedData.id,
+            audioUrl: parsedData.adminAudioUrl || parsedData.audioUrl,
+            fallbackText:
+              parsedData.adminMessage ||
+              parsedData.originalMessage ||
+              parsedData.message,
+            langCode: "en",
+          });
+        } else if (!isViewerAdmin && isSenderAdmin) {
+          const clientLang =
+            parsedData.langCode ||
+            localStorage.getItem("lang-code") ||
+            "en";
+          translatedAudioPlayer.enqueue({
+            messageId: parsedData.id,
+            audioUrl: parsedData.clientAudioUrl || parsedData.audioUrl,
+            fallbackText:
+              parsedData.clientMessage ||
+              parsedData.message ||
+              parsedData.originalMessage,
+            langCode: clientLang,
+          });
+        }
       }
     } catch (error) {
       console.error("❌ Error parsing message response:", error);

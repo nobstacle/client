@@ -52,6 +52,13 @@ export interface SendMessagePayloadType {
   refType: ReceivedType;
   langCode: string;
   uuid?: boolean;
+  isLiveTranslation?: boolean;
+  senderMode?: "client" | "header";
+  adminMessage?: string;
+  clientMessage?: string;
+  audioUrl?: string;
+  adminAudioUrl?: string;
+  clientAudioUrl?: string;
 }
 
 export type ReceivedTemplateContent = {
@@ -74,6 +81,12 @@ export type ReceivedMessageContent = {
   clientMessage?: string;
   role: "User" | "Admin" | "Staff";
   type: ReceivedType;
+  langCode?: string;
+  isLiveTranslation?: boolean;
+  senderMode?: "client" | "header";
+  audioUrl?: string;
+  adminAudioUrl?: string;
+  clientAudioUrl?: string;
 };
 
 export interface CleanMessagesPayloadType {

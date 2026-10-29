@@ -2936,6 +2936,85 @@ export const useUploadControllerUploadSpeechToTextFile = <TError = ErrorType<Htt
 	return useMutation(mutationOptions);
 }
 
+export interface LiveTranslationRes {
+	transcription: string;
+	translatedText: string;
+	adminMessage: string;
+	clientMessage: string;
+	audioUrl?: string;
+	adminAudioUrl?: string;
+	clientAudioUrl?: string;
+	detectedLanguage?: string;
+	provider?: string;
+}
+
+export const uploadControllerUploadLiveTranslationFile = (
+	uploadControllerUploadLiveTranslationFileBody: BodyType<UploadControllerUploadSpeechToTextFileBody>,
+	options?: SecondParameter<typeof nobstacleBackendApiInstance>,
+) => {
+	const formData = new FormData();
+	formData.append('file', uploadControllerUploadLiveTranslationFileBody.file);
+	if (uploadControllerUploadLiveTranslationFileBody.langCode) {
+		formData.append('langCode', uploadControllerUploadLiveTranslationFileBody.langCode);
+	}
+
+	return nobstacleBackendApiInstance<LiveTranslationRes>(
+		{
+			url: `/api/v1/uploads/live-translation`,
+			method: 'POST',
+			headers: { 'Content-Type': 'multipart/form-data' },
+			data: formData,
+		},
+		options,
+	);
+};
+
+export const getUploadControllerUploadLiveTranslationFileMutationOptions = <
+	TError = ErrorType<HttpExceptionSchema>,
+	TContext = unknown,
+>(options?: {
+	mutation?: UseMutationOptions<
+		Awaited<ReturnType<typeof uploadControllerUploadLiveTranslationFile>>,
+		TError,
+		{ data: BodyType<UploadControllerUploadSpeechToTextFileBody> },
+		TContext
+	>;
+	request?: SecondParameter<typeof nobstacleBackendApiInstance>;
+}): UseMutationOptions<
+	Awaited<ReturnType<typeof uploadControllerUploadLiveTranslationFile>>,
+	TError,
+	{ data: BodyType<UploadControllerUploadSpeechToTextFileBody> },
+	TContext
+> => {
+	const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+
+	const mutationFn: MutationFunction<
+		Awaited<ReturnType<typeof uploadControllerUploadLiveTranslationFile>>,
+		{ data: BodyType<UploadControllerUploadSpeechToTextFileBody> }
+	> = (props) => {
+		const { data } = props ?? {};
+		return uploadControllerUploadLiveTranslationFile(data, requestOptions);
+	};
+
+	return { mutationFn, ...mutationOptions };
+};
+
+export const useUploadControllerUploadLiveTranslationFile = <
+	TError = ErrorType<HttpExceptionSchema>,
+	TContext = unknown,
+>(options?: {
+	mutation?: UseMutationOptions<
+		Awaited<ReturnType<typeof uploadControllerUploadLiveTranslationFile>>,
+		TError,
+		{ data: BodyType<UploadControllerUploadSpeechToTextFileBody> },
+		TContext
+	>;
+	request?: SecondParameter<typeof nobstacleBackendApiInstance>;
+}) => {
+	const mutationOptions = getUploadControllerUploadLiveTranslationFileMutationOptions(options);
+	return useMutation(mutationOptions);
+};
+
 export const templateControllerGetTextTemplates = (
 	params?: TemplateControllerGetTextTemplatesParams,
 	options?: SecondParameter<typeof nobstacleBackendApiInstance>, signal?: AbortSignal

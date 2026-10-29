@@ -12,6 +12,7 @@ import { Button } from "./Button";
 import { SendIcon } from "./icons/SendIcon";
 import { useSearchParams } from "next/navigation";
 import AudioRecorder from "./AudioRecorder";
+import LiveTranslationRecorder from "./LiveTranslationRecorder";
 import { useSession } from "next-auth/react";
 import { resolveActiveStation } from "../utils/station";
 
@@ -38,14 +39,19 @@ export const ChatBox = React.forwardRef<HTMLDivElement, ChatBoxProps>(
     let currentUserDefaultLang = companyData?.state?.company?.defaultLangCode || 'en';
 
     // Helper function to determine if message should be on the right
-    const isCurrentUserMessage = (messageRole: string) => {
-      return messageRole === userRole;
+    const isCurrentUserMessage = (messageObj: ReceivedMessageContent) => {
+      if (messageObj.senderMode && mode) {
+        return messageObj.senderMode === mode;
+      }
+      return messageObj.role === userRole;
     };
 
     // Function to determine which message to display based on current user's role and translation rules
     const getDisplayMessage = (messageObj: ReceivedMessageContent) => {
-      const { message, originalMessage, role, adminMessage, clientMessage } = messageObj;
-      const isViewerAdmin = ['Admin', 'Staff', 'SAdmin'].includes(userRole);
+      const { message, originalMessage, adminMessage, clientMessage } = messageObj;
+      const isViewerAdmin =
+        mode === "header" ||
+        (mode !== "client" && ["Admin", "Staff", "SAdmin"].includes(userRole));
 
       if (isViewerAdmin) {
         // Rule 1: Always render adminMessage for Admin/Staff viewer
@@ -54,6 +60,24 @@ export const ChatBox = React.forwardRef<HTMLDivElement, ChatBoxProps>(
         // Customer Viewer
         return clientMessage || originalMessage || message;
       }
+    };
+
+    const getDisplayAudioUrl = (messageObj: ReceivedMessageContent) => {
+      const isViewerAdmin =
+        mode === "header" ||
+        (mode !== "client" && ["Admin", "Staff", "SAdmin"].includes(userRole));
+      if (isViewerAdmin) {
+        return messageObj.adminAudioUrl || messageObj.audioUrl;
+      }
+      return messageObj.clientAudioUrl || messageObj.audioUrl;
+    };
+
+    const getDisplayLangCode = (messageObj: ReceivedMessageContent) => {
+      const isViewerAdmin =
+        mode === "header" ||
+        (mode !== "client" && ["Admin", "Staff", "SAdmin"].includes(userRole));
+      if (isViewerAdmin) return "en";
+      return messageObj.langCode || activeLangCode || currentUserDefaultLang;
     };
 
     const handleSendMessage = () => {
@@ -115,8 +139,12 @@ export const ChatBox = React.forwardRef<HTMLDivElement, ChatBoxProps>(
               .map((messageObj) => (
                 <ChatMessage
                   key={messageObj.id}
+                  messageId={messageObj.id}
                   message={getDisplayMessage(messageObj)}
-                  isRight={isCurrentUserMessage(messageObj.role)}
+                  isRight={isCurrentUserMessage(messageObj)}
+                  audioUrl={getDisplayAudioUrl(messageObj)}
+                  langCode={getDisplayLangCode(messageObj)}
+                  isLiveTranslation={messageObj.isLiveTranslation}
                 />
               ))}
           </div>
@@ -153,6 +181,11 @@ export const ChatBox = React.forwardRef<HTMLDivElement, ChatBoxProps>(
                 <SendIcon />
               </Button>
               <AudioRecorder
+                mode={mode || "client"}
+                activeLangCode={activeLangCode}
+                station={station}
+              />
+              <LiveTranslationRecorder
                 mode={mode || "client"}
                 activeLangCode={activeLangCode}
                 station={station}

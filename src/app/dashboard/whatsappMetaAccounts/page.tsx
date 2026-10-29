@@ -35,9 +35,11 @@ interface WhatsappMetaAssignmentRow {
     companyId: number;
     companyName: string;
     connected: boolean;
+    wabaLinked?: boolean;
     appId?: string;
     businessAccountId?: string;
     phoneNumberId?: string;
+    displayPhoneNumber?: string;
     hasAccessToken: boolean;
     webhookVerifyToken?: string;
 }
@@ -205,7 +207,14 @@ export default function WhatsappMetaAccountsPage() {
             {
                 title: "Status",
                 key: "connected",
-                render: (_, r) => (r.connected ? <Tag color="green">Connected</Tag> : <Tag>Not connected</Tag>),
+                render: (_, r) =>
+                    r.connected ? (
+                        <Tag color="green">Connected</Tag>
+                    ) : r.wabaLinked || (r.businessAccountId && r.hasAccessToken) ? (
+                        <Tag color="gold">WABA Linked (No Phone)</Tag>
+                    ) : (
+                        <Tag>Not connected</Tag>
+                    ),
             },
             {
                 title: "WABA ID",
@@ -214,10 +223,23 @@ export default function WhatsappMetaAccountsPage() {
                 render: (v) => v || <Text type="secondary">—</Text>,
             },
             {
-                title: "Phone Number ID",
-                dataIndex: "phoneNumberId",
-                key: "phoneNumberId",
-                render: (v) => v || <Text type="secondary">—</Text>,
+                title: "Phone Number",
+                key: "phoneNumber",
+                render: (_, r) =>
+                    r.displayPhoneNumber || r.phoneNumberId ? (
+                        <div>
+                            {r.displayPhoneNumber && (
+                                <div className="font-medium">{r.displayPhoneNumber}</div>
+                            )}
+                            {r.phoneNumberId && r.phoneNumberId !== r.displayPhoneNumber && (
+                                <Text type="secondary" className="text-xs">
+                                    ID: {r.phoneNumberId}
+                                </Text>
+                            )}
+                        </div>
+                    ) : (
+                        <Text type="secondary">—</Text>
+                    ),
             },
             {
                 title: "App ID",

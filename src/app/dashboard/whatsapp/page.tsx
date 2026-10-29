@@ -209,12 +209,15 @@ interface MetaPhoneDetails {
 
 interface MetaConnectionStatus {
     connected: boolean;
+    wabaLinked?: boolean;
     appId?: string;
     businessAccountId?: string;
     phoneNumberId?: string;
+    displayPhoneNumber?: string;
     hasAccessToken: boolean;
     webhookVerifyToken?: string;
     phoneDetails?: MetaPhoneDetails;
+    availablePhoneNumbers?: MetaPhoneDetails[];
 }
 
 const defaultCampaignStats: CampaignStats = {
@@ -905,9 +908,11 @@ export default function WhatsAppPage() {
     });
     const [connectingMeta, setConnectingMeta] = useState(false);
     const [checkingMetaStatus, setCheckingMetaStatus] = useState(false);
+    const [selectingPhoneNumber, setSelectingPhoneNumber] = useState(false);
     const [unresolvedCount, setUnresolvedCount] = useState<number>(0);
 
     const metaConnected = metaConnection.connected;
+    const metaWabaLinked = Boolean(metaConnection.wabaLinked || (metaConnection.businessAccountId && metaConnection.hasAccessToken));
     const isDisplayNamePending = Boolean(
         metaConnected
         && metaConnection.phoneDetails
@@ -1159,15 +1164,19 @@ export default function WhatsAppPage() {
         }, 15000);
 
         const sessionInfoListener = (event: MessageEvent) => {
-            if (!event.origin?.endsWith("facebook.com")) return;
+            if (!event.origin?.includes("facebook.com") && !event.origin?.includes("fb.com")) return;
             try {
                 const data = typeof event.data === "string" ? JSON.parse(event.data) : event.data;
                 console.log("WA_EMBEDDED_SIGNUP event:", data);
                 if (data?.type === "WA_EMBEDDED_SIGNUP") {
-                    if (data.event === "FINISH") {
-                        capturedPhoneNumberId = data.data?.phone_number_id || capturedPhoneNumberId;
-                        capturedWabaId = data.data?.waba_id || capturedWabaId;
-                    } else if (data.event === "CANCEL") {
+                    const payload = data.data || {};
+                    if (payload.phone_number_id) {
+                        capturedPhoneNumberId = String(payload.phone_number_id);
+                    }
+                    if (payload.waba_id) {
+                        capturedWabaId = String(payload.waba_id);
+                    }
+                    if (data.event === "CANCEL") {
                         clearTimeout(safetyTimer);
                         setConnectingMeta(false);
                         message.info("WhatsApp setup was cancelled.");
@@ -1185,6 +1194,8 @@ export default function WhatsAppPage() {
                 (response: any) => {
                     void (async () => {
                         clearTimeout(safetyTimer);
+                        // Brief delay to allow any in-flight postMessage from the Meta popup to arrive
+                        await new Promise((resolve) => setTimeout(resolve, 250));
                         window.removeEventListener("message", sessionInfoListener);
                         console.log("FB.login response:", response);
 
@@ -1192,7 +1203,7 @@ export default function WhatsAppPage() {
                             const code = response.authResponse.code;
                             try {
                                 message.loading({ content: "Linking WhatsApp account with Nobstacle...", key: "embedded-signup" });
-                                await apiRequest("/whatsapp/settings/embedded-signup", {
+                                const linkedStatus = await apiRequest<MetaConnectionStatus>("/whatsapp/settings/embedded-signup", {
                                     method: "POST",
                                     body: JSON.stringify({
                                         code,
@@ -1200,8 +1211,20 @@ export default function WhatsAppPage() {
                                         phoneNumberId: capturedPhoneNumberId,
                                     }),
                                 });
-                                message.success({ content: "WhatsApp account linked successfully!", key: "embedded-signup" });
+                                setMetaConnection(linkedStatus);
+                                if (linkedStatus.connected) {
+                                    message.success({ content: "WhatsApp account linked successfully!", key: "embedded-signup" });
+                                } else if (linkedStatus.wabaLinked) {
+                                    message.warning({
+                                        content: "WhatsApp Business Account linked! No phone number was found on the account yet—please add or select a phone number.",
+                                        key: "embedded-signup",
+                                        duration: 6,
+                                    });
+                                } else {
+                                    message.success({ content: "WhatsApp account linked!", key: "embedded-signup" });
+                                }
                                 await loadMetaSettings();
+                                await loadAll();
                             } catch (err) {
                                 message.error({ content: parseErrorMessage(err) || "Failed to link WhatsApp account", key: "embedded-signup" });
                             } finally {
@@ -1230,6 +1253,28 @@ export default function WhatsAppPage() {
             setConnectingMeta(false);
             console.error("Error calling FB.login:", err);
             message.error("Failed to open Facebook login popup.");
+        }
+    };
+
+    const handleSelectPhoneNumber = async (phoneNumberId: string) => {
+        if (!phoneNumberId || phoneNumberId === metaConnection.phoneNumberId) return;
+        setSelectingPhoneNumber(true);
+        try {
+            message.loading({ content: "Switching active WhatsApp phone number...", key: "select-wa-phone" });
+            const updated = await apiRequest<MetaConnectionStatus>("/whatsapp/settings/select-phone-number", {
+                method: "POST",
+                body: JSON.stringify({ phoneNumberId }),
+            });
+            setMetaConnection(updated);
+            message.success({
+                content: `Active WhatsApp phone number set to ${updated.phoneDetails?.displayPhoneNumber || phoneNumberId}`,
+                key: "select-wa-phone",
+            });
+            await loadAll();
+        } catch (err) {
+            message.error({ content: parseErrorMessage(err) || "Failed to switch phone number", key: "select-wa-phone" });
+        } finally {
+            setSelectingPhoneNumber(false);
         }
     };
 
@@ -2974,11 +3019,52 @@ export default function WhatsAppPage() {
                             <p className="text-gray-500 text-sm m-0">Manage contacts, templates & campaigns</p>
                         </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                        {!metaConnected ? (
+                    <div className="flex flex-wrap items-center gap-2">
+                        {metaConnection.availablePhoneNumbers && metaConnection.availablePhoneNumbers.length > 1 ? (
+                            <Select
+                                size="middle"
+                                value={metaConnection.phoneNumberId || undefined}
+                                placeholder="Select WhatsApp Phone Number"
+                                loading={selectingPhoneNumber}
+                                disabled={selectingPhoneNumber}
+                                onChange={(val) => void handleSelectPhoneNumber(val)}
+                                style={{ minWidth: 240 }}
+                                optionLabelProp="label"
+                            >
+                                {metaConnection.availablePhoneNumbers.map((phone) => {
+                                    const labelText = `${phone.displayPhoneNumber || phone.id}${phone.verifiedName ? ` (${phone.verifiedName})` : ""}`;
+                                    return (
+                                        <Option key={phone.id} value={phone.id} label={`📞 ${labelText}`}>
+                                            <div className="flex items-center justify-between gap-2">
+                                                <span className="font-medium">{phone.displayPhoneNumber || phone.id}</span>
+                                                {phone.verifiedName && (
+                                                    <span className="text-xs text-gray-500 truncate">{phone.verifiedName}</span>
+                                                )}
+                                            </div>
+                                        </Option>
+                                    );
+                                })}
+                            </Select>
+                        ) : (metaConnection.phoneDetails?.displayPhoneNumber || metaConnection.displayPhoneNumber) ? (
+                            <Tag color="cyan" className="px-3 py-1 text-sm font-medium inline-flex items-center gap-1.5 m-0">
+                                <PhoneOutlined />
+                                <span>
+                                    {metaConnection.phoneDetails?.displayPhoneNumber || metaConnection.displayPhoneNumber}
+                                    {metaConnection.phoneDetails?.verifiedName ? ` · ${metaConnection.phoneDetails.verifiedName}` : ""}
+                                </span>
+                            </Tag>
+                        ) : null}
+
+                        {!metaConnected && !metaWabaLinked ? (
                             <Badge status="warning">
                                 <Tag color="orange" className="px-3 py-1 text-sm font-medium">
                                     Meta Not Connected
+                                </Tag>
+                            </Badge>
+                        ) : !metaConnected && metaWabaLinked ? (
+                            <Badge status="warning">
+                                <Tag color="gold" className="px-3 py-1 text-sm font-medium">
+                                    WABA Linked (No Phone Number)
                                 </Tag>
                             </Badge>
                         ) : isDisplayNamePending ? (
@@ -3037,7 +3123,7 @@ export default function WhatsAppPage() {
                                 </Tag>
                             </Badge>
                         )}
-                        {metaConnected ? (
+                        {metaConnected || metaWabaLinked ? (
                             <Popconfirm
                                 title="Disconnect WhatsApp?"
                                 description="Disconnecting will unlink your WhatsApp account and remove test data and messaging records. Do you wish to proceed?"
@@ -3064,7 +3150,7 @@ export default function WhatsAppPage() {
                     </div>
                 </div>
 
-                {!metaConnected && (
+                {!metaConnected && !metaWabaLinked && (
                     <Alert
                         message="Connect your Hotel's WhatsApp Account"
                         description="Link your WhatsApp Business Account so guests receive messages directly from your hotel's official WhatsApp number and verified profile."
@@ -3083,6 +3169,59 @@ export default function WhatsAppPage() {
                             </Button>
                         }
                         className="rounded-xl border-green-200 bg-green-50 shadow-sm"
+                    />
+                )}
+
+                {!metaConnected && metaWabaLinked && (
+                    <Alert
+                        message={`WhatsApp Business Account Linked (WABA ID: ${metaConnection.businessAccountId}) — Phone Number Required`}
+                        description={
+                            <div className="space-y-2">
+                                <p className="m-0 text-sm text-gray-700">
+                                    Your Meta WhatsApp Business Account is linked, but no active phone number is currently selected or registered on this WABA.
+                                    {metaConnection.availablePhoneNumbers && metaConnection.availablePhoneNumbers.length > 0
+                                        ? " Please choose a phone number below to complete setup:"
+                                        : " Please add or verify a phone number in Meta Business Setup and click Refresh Status."}
+                                </p>
+                                {metaConnection.availablePhoneNumbers && metaConnection.availablePhoneNumbers.length > 0 && (
+                                    <div className="pt-1">
+                                        <Select
+                                            placeholder="Select a phone number from your WABA"
+                                            loading={selectingPhoneNumber}
+                                            onChange={(val) => void handleSelectPhoneNumber(val)}
+                                            style={{ minWidth: 280 }}
+                                        >
+                                            {metaConnection.availablePhoneNumbers.map((phone) => (
+                                                <Option key={phone.id} value={phone.id}>
+                                                    {phone.displayPhoneNumber || phone.id}
+                                                    {phone.verifiedName ? ` (${phone.verifiedName})` : ""}
+                                                </Option>
+                                            ))}
+                                        </Select>
+                                    </div>
+                                )}
+                            </div>
+                        }
+                        type="warning"
+                        showIcon
+                        action={
+                            <Space direction="vertical" size="small">
+                                <Button size="small" icon={<ReloadOutlined />} onClick={handleManualCheckStatus} loading={checkingMetaStatus}>
+                                    Refresh Numbers
+                                </Button>
+                                <Button
+                                    size="small"
+                                    type="primary"
+                                    style={{ backgroundColor: "#25D366", borderColor: "#25D366" }}
+                                    icon={<MdWhatsapp size={14} />}
+                                    onClick={launchWhatsAppSignup}
+                                    loading={connectingMeta}
+                                >
+                                    Add / Change Number
+                                </Button>
+                            </Space>
+                        }
+                        className="rounded-xl border-amber-200 bg-amber-50 shadow-sm"
                     />
                 )}
 
