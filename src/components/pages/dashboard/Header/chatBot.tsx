@@ -39,6 +39,8 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true, isMob
   const receivedMessage = useMessageStore((s) => s.receivedMessage);
   const clearReceivedContent = useMessageStore((s) => s.clearReceivedContent);
   const resetMessages = useMessageStore((s) => s.reset);
+  const receivedLangCodeByStation = useMessageStore((s) => s.receivedLangCodeByStation);
+  const receivedLangCode = useMessageStore((s) => s.receivedLangCode);
   const { data: session } = useSession();
   const { data: companyData } = useCompanyControllerGetCompany({
     query: {
@@ -52,6 +54,14 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true, isMob
   const currentUserDefaultLang = companyData?.defaultLangCode || 'en';
   const selectedLang = params.get("lang") || currentUserDefaultLang;
   const [currentStation, setCurrentStation] = useState<number>(1);
+
+  // For live translation, Admin speaks in English and translates to the Client's active station language
+  const stationClientLang =
+    receivedLangCodeByStation[currentStation] ||
+    receivedLangCode ||
+    (typeof window !== "undefined" ? localStorage.getItem("lang-code") : null) ||
+    companyData?.defaultLangCode ||
+    "en";
 
   // Sync station from URL or localStorage initially and when search params change
   useEffect(() => {
@@ -779,7 +789,7 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true, isMob
 
                   <LiveTranslationRecorder
                     mode="header"
-                    activeLangCode={selectedLang}
+                    activeLangCode={stationClientLang}
                     station={currentStation}
                   />
                 </div>

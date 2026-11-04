@@ -617,6 +617,7 @@ export const WhatsappInbox: React.FC<WhatsappInboxProps> = ({
             });
             message.success(`Template "${selectedTemplate.name}" sent successfully!`);
             setTemplateModalOpen(false);
+            setIsWindowOpen(true);
             await loadMessages(activeConversationId, true);
             await loadConversations(true);
         } catch (err: any) {
@@ -657,11 +658,18 @@ export const WhatsappInbox: React.FC<WhatsappInboxProps> = ({
             setReplyText("");
             setReplyAttachment(null);
             if (replyFileInputRef.current) replyFileInputRef.current.value = "";
+            setIsWindowOpen(true);
             await loadMessages(activeConversationId, true);
             await loadConversations(true);
             message.success("Message sent");
         } catch (err: any) {
-            message.error(err?.message || "Failed to send reply");
+            const errorMsg = String(err?.message || "");
+            if (errorMsg.includes("24-hour") || errorMsg.includes("131047") || errorMsg.includes("Template") || errorMsg.includes("template")) {
+                message.warning("The Meta 24-hour customer window is closed for freeform text. Please select an approved template to message this customer.", 5);
+                handleOpenTemplateModal();
+            } else {
+                message.error(err?.message || "Failed to send message");
+            }
         } finally {
             setSendingReply(false);
             setUploadingReplyAttachment(false);
@@ -1897,32 +1905,22 @@ export const WhatsappInbox: React.FC<WhatsappInboxProps> = ({
                     </div>
 
                     {/* 3. 24-Hour Window Expiry Notice */}
-                    {!isWindowOpen && (
-                        <div className="bg-[#fff9db] border-t border-b border-[#ffe066] px-4 py-2 flex items-center justify-between text-xs text-[#7c5e00] z-10 flex-wrap gap-2">
+                    {!isWindowOpen && messages.length > 0 && (
+                        <div className="bg-[#f0f9ff] border-t border-b border-[#bae6fd] px-4 py-2 flex items-center justify-between text-xs text-[#0369a1] z-10 flex-wrap gap-2">
                             <span>
-                                ⚠️ <strong>Meta 24-hour service window closed.</strong> Freeform text cannot be sent until customer replies or you re-open outreach with an approved WhatsApp Template.
+                                💡 <strong>Outside Meta 24-hour window.</strong> WhatsApp requires an approved template if this customer hasn't replied recently.
                             </span>
                             <div className="flex items-center gap-2 flex-shrink-0">
                                 <Button
                                     type="primary"
                                     size="small"
                                     style={{ backgroundColor: "#00a884", borderColor: "#00a884" }}
-                                    icon={<SendOutlined />}
+                                    icon={<FileTextOutlined />}
                                     onClick={handleOpenTemplateModal}
                                     className="text-xs font-semibold rounded-lg"
                                 >
                                     Send Approved Template
                                 </Button>
-                                {onNavigateToTemplates && (
-                                    <Button
-                                        type="link"
-                                        size="small"
-                                        onClick={onNavigateToTemplates}
-                                        className="p-0 text-[#7c5e00] font-bold underline"
-                                    >
-                                        Manage Templates
-                                    </Button>
-                                )}
                             </div>
                         </div>
                     )}
@@ -1993,7 +1991,6 @@ export const WhatsappInbox: React.FC<WhatsappInboxProps> = ({
                                     <Button
                                         type="text"
                                         shape="circle"
-                                        disabled={!isWindowOpen}
                                         icon={<SmileOutlined className={`text-xl ${emojiPickerOpen ? "text-[#00a884]" : "text-[#54656f]"}`} />}
                                         className="flex-shrink-0"
                                     />
@@ -2001,11 +1998,10 @@ export const WhatsappInbox: React.FC<WhatsappInboxProps> = ({
                             </Popover>
 
                             {/* Attach Media Tool (📎) */}
-                            <Tooltip title={isWindowOpen ? "Attach image, video or document" : "24h window closed"}>
+                            <Tooltip title="Attach image, video or document">
                                 <Button
                                     type="text"
                                     shape="circle"
-                                    disabled={!isWindowOpen}
                                     icon={<PaperClipOutlined className="text-xl text-[#54656f]" />}
                                     onClick={() => replyFileInputRef.current?.click()}
                                     className="flex-shrink-0"
@@ -2013,15 +2009,13 @@ export const WhatsappInbox: React.FC<WhatsappInboxProps> = ({
                             </Tooltip>
 
                             {/* Input Box */}
-                            <div className={`flex-1 rounded-lg px-3 py-1.5 shadow-xs flex items-center ${isWindowOpen ? "bg-white" : "bg-gray-100/80 cursor-not-allowed"}`}>
+                            <div className="flex-1 rounded-lg px-3 py-1.5 shadow-xs flex items-center bg-white border border-gray-200">
                                 <input
                                     type="text"
                                     placeholder={
                                         replyAttachment
                                             ? `Add caption for ${replyAttachment.file.name}...`
-                                            : isWindowOpen
-                                            ? "Type a message (Press Enter to send)"
-                                            : "24h window closed. Click Send Template to message this customer."
+                                            : "Type a message (Press Enter to send)"
                                     }
                                     value={replyText}
                                     onChange={(e) => setReplyText(e.target.value)}
@@ -2031,52 +2025,46 @@ export const WhatsappInbox: React.FC<WhatsappInboxProps> = ({
                                             handleSendReply();
                                         }
                                     }}
-                                    disabled={!isWindowOpen || sendingReply}
-                                    className="w-full bg-transparent border-none outline-none text-sm text-[#111b21] placeholder-[#667781] disabled:cursor-not-allowed"
+                                    disabled={sendingReply}
+                                    className="w-full bg-transparent border-none outline-none text-sm text-[#111b21] placeholder-[#667781]"
                                 />
                             </div>
 
-                            {/* Send Button or Template Button */}
-                            {!isWindowOpen ? (
+                            {/* Template Picker Shortcut Button */}
+                            <Tooltip title="Send Approved Template">
                                 <Button
-                                    type="primary"
-                                    icon={<FileTextOutlined />}
+                                    type="text"
+                                    shape="circle"
+                                    icon={<FileTextOutlined className="text-xl text-[#00a884] hover:text-[#008f6f]" />}
                                     onClick={handleOpenTemplateModal}
-                                    style={{
-                                        height: 40,
-                                        borderRadius: 20,
-                                        backgroundColor: "#00a884",
-                                        borderColor: "#00a884",
-                                    }}
-                                    className="font-semibold shadow-xs flex-shrink-0 px-4"
-                                >
-                                    Send Template
-                                </Button>
-                            ) : (
-                                <button
-                                    type="button"
-                                    onClick={handleSendReply}
-                                    disabled={(!replyText.trim() && !replyAttachment) || sendingReply || uploadingReplyAttachment}
-                                    style={{
-                                        width: 40,
-                                        height: 40,
-                                        minWidth: 40,
-                                        minHeight: 40,
-                                        maxWidth: 40,
-                                        maxHeight: 40,
-                                        borderRadius: "50%",
-                                        backgroundColor: (!replyText.trim() && !replyAttachment) ? "#a0dfd2" : "#00a884",
-                                    }}
-                                    className="aspect-square rounded-full text-white flex items-center justify-center flex-shrink-0 shadow-xs transition-transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer p-0 border-0 outline-none"
-                                    title="Send message"
-                                >
-                                    {sendingReply || uploadingReplyAttachment ? (
-                                        <LoadingOutlined className="text-white text-base" />
-                                    ) : (
-                                        <SendOutlined className="text-white text-base ml-0.5" />
-                                    )}
-                                </button>
-                            )}
+                                    className="flex-shrink-0"
+                                />
+                            </Tooltip>
+
+                            {/* Send Button */}
+                            <button
+                                type="button"
+                                onClick={handleSendReply}
+                                disabled={(!replyText.trim() && !replyAttachment) || sendingReply || uploadingReplyAttachment}
+                                style={{
+                                    width: 40,
+                                    height: 40,
+                                    minWidth: 40,
+                                    minHeight: 40,
+                                    maxWidth: 40,
+                                    maxHeight: 40,
+                                    borderRadius: "50%",
+                                    backgroundColor: (!replyText.trim() && !replyAttachment) ? "#a0dfd2" : "#00a884",
+                                }}
+                                className="aspect-square rounded-full text-white flex items-center justify-center flex-shrink-0 shadow-xs transition-transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer p-0 border-0 outline-none"
+                                title="Send message"
+                            >
+                                {sendingReply || uploadingReplyAttachment ? (
+                                    <LoadingOutlined className="text-white text-base" />
+                                ) : (
+                                    <SendOutlined className="text-white text-base ml-0.5" />
+                                )}
+                            </button>
                         </div>
                     </div>
                 </div>

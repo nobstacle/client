@@ -6,6 +6,7 @@ import {
   useUploadControllerUploadLiveTranslationFile,
 } from "../lib/client/api";
 import { useSocketContext } from "../context/SocketContextProvider";
+import { useMessageStore } from "../lib/zustand/store/messageStore";
 import { useSearchParams } from "next/navigation";
 import { MicIcon } from "./icons/MicIcon";
 import { Spinner } from "./Spinner";
@@ -19,12 +20,10 @@ type LiveTranslationRecorderProps = {
   onTranscription?: (text: string) => void;
 };
 
-// Voice Activity Detection (VAD) tuning constants for real-time phrase streaming
+// Voice Activity Detection (VAD) tuning constants
 const SPEECH_RMS_THRESHOLD = 0.022; // RMS amplitude threshold for active voice
-const SPEECH_MIN_ACTIVE_MS = 220; // Minimum voiced duration to count as real speech
-const SILENCE_COMMIT_MS = 550; // Pause duration after speech that auto-triggers translation (fast 550ms commit)
-const MAX_SEGMENT_SPEECH_MS = 5500; // Auto-commit long continuous speech every ~5.5s
-const MUTUAL_SILENCE_TIMEOUT_MS = 5000; // Auto-stop live translation session if neither party speaks for 5s
+const SPEECH_MIN_ACTIVE_MS = 200; // Minimum voiced duration to count as real speech
+const SILENCE_TIMEOUT_MS = 5000; // Auto-stop recording if user stops speaking for 5s (or stays silent for 5s)
 
 const LiveTranslationRecorder: React.FC<LiveTranslationRecorderProps> = ({
   mode = "header",
@@ -33,12 +32,10 @@ const LiveTranslationRecorder: React.FC<LiveTranslationRecorderProps> = ({
   onTranscription,
 }) => {
   const [recording, setRecording] = useState(false);
-  const [sessionActive, setSessionActive] = useState(false);
   const [audioLevel, setAudioLevel] = useState(0);
   const [inFlightCount, setInFlightCount] = useState(0);
 
   const recordingRef = useRef(false);
-  const sessionActiveRef = useRef(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const mimeTypeRef = useRef<string>("");
@@ -46,21 +43,13 @@ const LiveTranslationRecorder: React.FC<LiveTranslationRecorderProps> = ({
   const analyserRef = useRef<AnalyserNode | null>(null);
   const animationFrameRef = useRef<number | null>(null);
 
-  // VAD & Mutual Conversation Session state refs
-  const segmentStartTimeRef = useRef<number>(0);
-  const speechStartTimeRef = useRef<number>(0);
+  // VAD & Silence tracking refs
+  const recordingStartTimeRef = useRef<number>(0);
   const lastSpeechTimeRef = useRef<number>(0);
-  const lastMutualActivityTimeRef = useRef<number>(0);
   const accumulatedVoicedMsRef = useRef<number>(0);
-  const hasSpeechInSegmentRef = useRef<boolean>(false);
-  const hasAutoCommittedAnySegmentRef = useRef<boolean>(false);
-  const lastCommitTimeRef = useRef<number>(0);
+  const hasSpeechRef = useRef<boolean>(false);
+  const shouldSendAudioRef = useRef<boolean>(true);
   const lastFrameTimeRef = useRef<number>(0);
-  const isFlushingSegmentRef = useRef<boolean>(false);
-  const lastEmittedTranscriptRef = useRef<{ text: string; time: number }>({
-    text: "",
-    time: 0,
-  });
 
   const liveTranslationMutation = useUploadControllerUploadLiveTranslationFile({
     request: {
@@ -70,12 +59,7 @@ const LiveTranslationRecorder: React.FC<LiveTranslationRecorderProps> = ({
     },
   });
 
-  const {
-    emitSendMessage,
-    emitStartLiveTranslationSession,
-    emitEndLiveTranslationSession,
-    socketConnected,
-  } = useSocketContext();
+  const { emitSendMessage, socketConnected } = useSocketContext();
   const params = useSearchParams();
   const { data: companyData } = useCompanyControllerGetCompany();
   const [isInitialized, setIsInitialized] = useState(false);
@@ -138,7 +122,22 @@ const LiveTranslationRecorder: React.FC<LiveTranslationRecorderProps> = ({
     setAudioLevel(0);
   };
 
-  const getActiveLangCode = () => {
+  const getActiveLangCode = useCallback((): string => {
+    if (mode === "header") {
+      // In header mode (Admin speaking), the target language is the Client's active station language
+      const store = useMessageStore.getState();
+      const targetStation = getTargetStation();
+      const stationLang =
+        store.receivedLangCodeByStation[targetStation] || store.receivedLangCode;
+      const fromLocal =
+        typeof window !== "undefined" ? localStorage.getItem("lang-code") : null;
+      if (activeLangCode && activeLangCode !== "en") {
+        return activeLangCode;
+      }
+      return stationLang || fromLocal || companyData?.defaultLangCode || "en";
+    }
+
+    // In client mode (Guest speaking), language is the client's selected language
     if (activeLangCode) {
       return activeLangCode;
     }
@@ -146,155 +145,90 @@ const LiveTranslationRecorder: React.FC<LiveTranslationRecorderProps> = ({
     if (fromParams) {
       return fromParams;
     }
-    if (mode === "client") {
-      const fromLocal =
-        typeof window !== "undefined"
-          ? localStorage.getItem("lang-code")
-          : null;
-      if (fromLocal) return fromLocal;
-    }
+    const fromLocal =
+      typeof window !== "undefined" ? localStorage.getItem("lang-code") : null;
+    if (fromLocal) return fromLocal;
     return companyData?.defaultLangCode || "en";
-  };
+  }, [mode, activeLangCode, getTargetStation, params, companyData]);
 
-  const resetSegmentVadState = () => {
-    const now = performance.now();
-    segmentStartTimeRef.current = now;
-    speechStartTimeRef.current = 0;
-    lastSpeechTimeRef.current = now;
-    accumulatedVoicedMsRef.current = 0;
-    hasSpeechInSegmentRef.current = false;
-  };
+  const sendAudioForLiveTranslation = async (audioBlob: Blob) => {
+    const langCode = getActiveLangCode();
+    if (audioBlob.size < 200) return;
 
-  const spawnSegmentRecorder = (stream: MediaStream) => {
-    const mimeType = mimeTypeRef.current;
-    const chunks: Blob[] = [];
-    let segmentHadSpeech = false;
-
-    const recorderOptions: MediaRecorderOptions = {
-      ...(mimeType ? { mimeType } : {}),
-      audioBitsPerSecond: 128000,
-    };
-
-    const recorder = new MediaRecorder(stream, recorderOptions);
-
-    recorder.ondataavailable = (event) => {
-      if (event.data && event.data.size > 0) {
-        chunks.push(event.data);
-      }
-    };
-
-    recorder.onstop = () => {
-      const actualMimeType = recorder.mimeType || mimeType || "audio/webm";
-      const audioBlob = new Blob(chunks, { type: actualMimeType });
-      if (segmentHadSpeech && audioBlob.size > 200) {
-        void sendAudioForLiveTranslation(audioBlob);
-      }
-    };
-
-    recorder.onerror = (event: any) => {
-      console.error("[LiveTranslationMic] MediaRecorder error:", event?.error);
-    };
-
-    // Store a custom setter on the recorder instance so flush knows whether speech occurred
-    (recorder as any).__markHadSpeech = (val: boolean) => {
-      segmentHadSpeech = val;
-    };
-
-    resetSegmentVadState();
-    recorder.start(200);
-    mediaRecorderRef.current = recorder;
-  };
-
-  const flushCurrentSegment = (keepListening: boolean) => {
-    if (isFlushingSegmentRef.current) return;
-    isFlushingSegmentRef.current = true;
-
+    setInFlightCount((c) => c + 1);
     try {
-      const currentRecorder = mediaRecorderRef.current;
-      const hadSpeech =
-        hasSpeechInSegmentRef.current &&
-        accumulatedVoicedMsRef.current >= SPEECH_MIN_ACTIVE_MS;
+      const res = await liveTranslationMutation.mutateAsync({
+        data: { file: audioBlob, langCode },
+      });
 
-      if (currentRecorder) {
-        if (typeof (currentRecorder as any).__markHadSpeech === "function") {
-          (currentRecorder as any).__markHadSpeech(hadSpeech);
+      const transcript = res?.transcription?.trim();
+
+      if (transcript) {
+        if (onTranscription) {
+          onTranscription(transcript);
         }
+        if (!socketConnected) {
+          antMessage.error("Not connected. Please try again.");
+          return;
+        }
+
+        const targetStation = getTargetStation();
+
+        emitSendMessage({
+          message: transcript,
+          station: targetStation,
+          refType: "ChatMessage",
+          langCode,
+          isLiveTranslation: true,
+          senderMode: mode,
+          adminMessage: res.adminMessage,
+          clientMessage: res.clientMessage,
+          audioUrl: res.audioUrl,
+          adminAudioUrl: res.adminAudioUrl,
+          clientAudioUrl: res.clientAudioUrl,
+        });
+      }
+    } catch (error: any) {
+      console.error("[LiveTranslationMic] Live translation error:", error);
+      if (error?.response?.status === 401) {
+        antMessage.error("Session expired. Please refresh the page.");
+      } else {
+        antMessage.error("Translation request failed. Please try again.");
+      }
+    } finally {
+      setInFlightCount((c) => Math.max(0, c - 1));
+    }
+  };
+
+  const stopRecording = useCallback(
+    (commitAudio = true, reason: string = "user_stopped") => {
+      if (!recordingRef.current && !mediaRecorderRef.current) return;
+
+      recordingRef.current = false;
+      setRecording(false);
+      shouldSendAudioRef.current = commitAudio;
+
+      if (reason === "silence_timeout") {
+        antMessage.info("Finished speaking (5s silence)", 2);
+      } else if (reason === "no_speech_timeout") {
+        antMessage.info("No speech detected (5s silence)", 2);
+      }
+
+      const recorder = mediaRecorderRef.current;
+      if (recorder) {
         try {
-          if (currentRecorder.state === "recording") {
-            currentRecorder.requestData();
-            currentRecorder.stop();
+          if (recorder.state === "recording") {
+            recorder.stop();
           }
-        } catch {}
+        } catch (e) {
+          console.warn("[LiveTranslationMic] Error stopping recorder:", e);
+        }
         mediaRecorderRef.current = null;
       }
 
-      if (hadSpeech) {
-        hasAutoCommittedAnySegmentRef.current = true;
-        lastCommitTimeRef.current = performance.now();
-        lastMutualActivityTimeRef.current = performance.now();
-      }
-
-      if (keepListening && recordingRef.current && streamRef.current?.active) {
-        spawnSegmentRecorder(streamRef.current);
-      }
-    } finally {
-      isFlushingSegmentRef.current = false;
-    }
-  };
-
-  const stopAllRecording = (flushRemainingSpeech = true) => {
-    recordingRef.current = false;
-    setRecording(false);
-
-    // If an utterance was already recently committed via silence, and remaining segment is brief / noise, discard it
-    const timeSinceLastCommit = performance.now() - lastCommitTimeRef.current;
-    if (
-      hasAutoCommittedAnySegmentRef.current &&
-      timeSinceLastCommit < 2200 &&
-      accumulatedVoicedMsRef.current < 450
-    ) {
-      flushRemainingSpeech = false;
-    }
-
-    if (flushRemainingSpeech) {
-      flushCurrentSegment(false);
-    } else if (mediaRecorderRef.current) {
-      try {
-        if (
-          typeof (mediaRecorderRef.current as any).__markHadSpeech === "function"
-        ) {
-          (mediaRecorderRef.current as any).__markHadSpeech(false);
-        }
-        if (mediaRecorderRef.current.state === "recording") {
-          mediaRecorderRef.current.stop();
-        }
-      } catch {}
-      mediaRecorderRef.current = null;
-    }
-
-    cleanupStream();
-  };
-
-  const stopSession = useCallback(
-    (emitToRemote = true, reason: string = "user_stopped") => {
-      const wasActive = recordingRef.current || sessionActiveRef.current;
-      setSessionActive(false);
-      sessionActiveRef.current = false;
-
-      if (emitToRemote && wasActive) {
-        const targetStation = getTargetStation();
-        emitEndLiveTranslationSession(targetStation, reason);
-      }
-
-      stopAllRecording(false);
-
-      if (reason === "mutual_silence_timeout") {
-        antMessage.info("Live conversation ended (5s silence)", 2.5);
-      } else if (reason === "user_stopped" && emitToRemote) {
-        antMessage.info("Live conversation ended", 2);
-      }
+      cleanupStream();
     },
-    [emitEndLiveTranslationSession, getTargetStation],
+    [],
   );
 
   const monitorAudioAndVad = (stream: MediaStream) => {
@@ -320,12 +254,11 @@ const LiveTranslationRecorder: React.FC<LiveTranslationRecorderProps> = ({
         const dt = Math.min(100, Math.max(0, now - lastFrameTimeRef.current));
         lastFrameTimeRef.current = now;
 
-        // 1. Audio Echo Suppression:
+        // Acoustic Echo Suppression:
         // If translated audio is actively playing through the device speakers,
         // suppress mic input so it doesn't transcribe speaker output in a loop
         if (translatedAudioPlayer.getIsPlaying()) {
-          lastMutualActivityTimeRef.current = now;
-          resetSegmentVadState();
+          setAudioLevel(0);
           animationFrameRef.current = requestAnimationFrame(updateLoop);
           return;
         }
@@ -345,38 +278,30 @@ const LiveTranslationRecorder: React.FC<LiveTranslationRecorderProps> = ({
         if (isVoicedFrame) {
           accumulatedVoicedMsRef.current += dt;
           lastSpeechTimeRef.current = now;
-          lastMutualActivityTimeRef.current = now;
 
           if (
-            !hasSpeechInSegmentRef.current &&
+            !hasSpeechRef.current &&
             accumulatedVoicedMsRef.current >= SPEECH_MIN_ACTIVE_MS
           ) {
-            hasSpeechInSegmentRef.current = true;
-            speechStartTimeRef.current = now;
+            hasSpeechRef.current = true;
           }
         }
 
-        if (hasSpeechInSegmentRef.current) {
-          const silenceDuration = now - lastSpeechTimeRef.current;
-          const activeSpeechDuration = now - speechStartTimeRef.current;
-
-          // 1. User paused naturally (~550ms silence) -> immediately translate this utterance!
-          // 2. Or user has been speaking continuously for >5.5s and took a brief >220ms breath -> stream chunk!
-          if (
-            silenceDuration >= SILENCE_COMMIT_MS ||
-            (activeSpeechDuration >= MAX_SEGMENT_SPEECH_MS &&
-              silenceDuration >= 220) ||
-            activeSpeechDuration >= MAX_SEGMENT_SPEECH_MS + 2000
-          ) {
-            flushCurrentSegment(true);
+        // 5-Second Silence Rule:
+        // 1. If user spoke and then remained silent for 5s -> auto-stop and send translation
+        if (hasSpeechRef.current) {
+          const silenceMs = now - lastSpeechTimeRef.current;
+          if (silenceMs >= SILENCE_TIMEOUT_MS) {
+            stopRecording(true, "silence_timeout");
+            return;
           }
-        }
-
-        // Mutual silence check: If neither user nor client has spoken for 5s, end session automatically
-        const mutualSilenceMs = now - lastMutualActivityTimeRef.current;
-        if (mutualSilenceMs >= MUTUAL_SILENCE_TIMEOUT_MS) {
-          stopSession(true, "mutual_silence_timeout");
-          return;
+        } else {
+          // 2. If user initiated recording but did not speak at all for 5s -> auto-stop without sending empty audio
+          const durationSinceStart = now - recordingStartTimeRef.current;
+          if (durationSinceStart >= SILENCE_TIMEOUT_MS) {
+            stopRecording(false, "no_speech_timeout");
+            return;
+          }
         }
 
         animationFrameRef.current = requestAnimationFrame(updateLoop);
@@ -413,17 +338,56 @@ const LiveTranslationRecorder: React.FC<LiveTranslationRecorderProps> = ({
 
       streamRef.current = stream;
       const supportedMimeTypes = getSupportedMimeTypes();
-      mimeTypeRef.current = supportedMimeTypes[0] || "";
-      hasAutoCommittedAnySegmentRef.current = false;
+      const chosenMime = supportedMimeTypes[0] || "";
+      mimeTypeRef.current = chosenMime;
+
+      const chunks: Blob[] = [];
+      const recorderOptions: MediaRecorderOptions = {
+        ...(chosenMime ? { mimeType: chosenMime } : {}),
+        audioBitsPerSecond: 128000,
+      };
+
+      const recorder = new MediaRecorder(stream, recorderOptions);
+
+      recorder.ondataavailable = (event) => {
+        if (event.data && event.data.size > 0) {
+          chunks.push(event.data);
+        }
+      };
+
+      recorder.onstop = () => {
+        const actualMimeType = recorder.mimeType || chosenMime || "audio/webm";
+        const audioBlob = new Blob(chunks, { type: actualMimeType });
+
+        if (
+          shouldSendAudioRef.current &&
+          (hasSpeechRef.current || audioBlob.size > 800)
+        ) {
+          void sendAudioForLiveTranslation(audioBlob);
+        }
+      };
+
+      recorder.onerror = (event: any) => {
+        console.error("[LiveTranslationMic] MediaRecorder error:", event?.error);
+      };
+
+      const now = performance.now();
+      recordingStartTimeRef.current = now;
+      lastSpeechTimeRef.current = now;
+      accumulatedVoicedMsRef.current = 0;
+      hasSpeechRef.current = false;
+      shouldSendAudioRef.current = true;
 
       recordingRef.current = true;
       setRecording(true);
 
-      spawnSegmentRecorder(stream);
+      recorder.start(200);
+      mediaRecorderRef.current = recorder;
+
       monitorAudioAndVad(stream);
     } catch (error: any) {
       console.error("[LiveTranslationMic] Error accessing microphone:", error);
-      stopSession(false, "mic_error");
+      stopRecording(false, "mic_error");
 
       if (
         error.name === "NotAllowedError" ||
@@ -443,149 +407,23 @@ const LiveTranslationRecorder: React.FC<LiveTranslationRecorderProps> = ({
     }
   };
 
-  const startSession = useCallback(
-    async (isInitiator = true) => {
-      if (recordingRef.current) return;
-
-      translatedAudioPlayer.unlockAudio();
-      setSessionActive(true);
-      sessionActiveRef.current = true;
-      lastMutualActivityTimeRef.current = performance.now();
-
-      const targetStation = getTargetStation();
-      if (isInitiator) {
-        emitStartLiveTranslationSession(targetStation, mode);
-        antMessage.success("Live conversation active (both microphones listening)", 2.5);
-      }
-
-      await startRecording();
-    },
-    [emitStartLiveTranslationSession, getTargetStation, mode, isInitialized],
-  );
-
-  // Synchronize two-way conversation session across user & client via socket events
-  useEffect(() => {
-    const handleRemoteSessionStarted = (evt: Event) => {
-      const customEvt = evt as CustomEvent<{ station: number; initiatorMode?: string }>;
-      const targetStation = getTargetStation();
-      if (customEvt.detail?.station !== targetStation) return;
-
-      if (!recordingRef.current) {
-        console.log("[LiveTranslation] Remote started live conversation session, auto-starting local mic...");
-        void startSession(false);
-      }
-    };
-
-    const handleRemoteSessionEnded = (evt: Event) => {
-      const customEvt = evt as CustomEvent<{ station: number; reason?: string }>;
-      const targetStation = getTargetStation();
-      if (customEvt.detail?.station !== targetStation) return;
-
-      if (recordingRef.current || sessionActiveRef.current) {
-        console.log("[LiveTranslation] Remote ended live conversation session, stopping local mic...");
-        stopSession(false, customEvt.detail?.reason || "remote_ended");
-      }
-    };
-
-    const handleRemoteActivity = (evt: Event) => {
-      const customEvt = evt as CustomEvent<{ station: number }>;
-      const targetStation = getTargetStation();
-      if (customEvt.detail?.station !== targetStation) return;
-
-      // Keep mutual activity alive when other party speaks
-      lastMutualActivityTimeRef.current = performance.now();
-    };
-
-    window.addEventListener("live-translation-session-started", handleRemoteSessionStarted);
-    window.addEventListener("live-translation-session-ended", handleRemoteSessionEnded);
-    window.addEventListener("live-translation-activity", handleRemoteActivity);
-
-    return () => {
-      window.removeEventListener("live-translation-session-started", handleRemoteSessionStarted);
-      window.removeEventListener("live-translation-session-ended", handleRemoteSessionEnded);
-      window.removeEventListener("live-translation-activity", handleRemoteActivity);
-    };
-  }, [getTargetStation, startSession, stopSession]);
-
-  useEffect(() => {
-    return () => {
-      stopSession(false, "unmount");
-    };
-  }, [stopSession]);
-
   const handleToggleRecording = () => {
-    if (recordingRef.current || sessionActiveRef.current) {
-      stopSession(true, "user_stopped");
+    if (recordingRef.current) {
+      // User clicked while recording -> finish speaking and translate immediately
+      stopRecording(true, "user_clicked");
     } else {
-      void startSession(true);
+      // User clicked to speak -> start recording
+      void startRecording();
     }
   };
 
-  const sendAudioForLiveTranslation = async (audioBlob: Blob) => {
-    const langCode = getActiveLangCode();
-    if (audioBlob.size < 200) return;
-
-    setInFlightCount((c) => c + 1);
-    try {
-      const res = await liveTranslationMutation.mutateAsync({
-        data: { file: audioBlob, langCode },
-      });
-
-      const transcript = res?.transcription?.trim();
-      const now = Date.now();
-
-      // Guard against duplicate trailing messages
-      if (
-        transcript &&
-        lastEmittedTranscriptRef.current.text &&
-        now - lastEmittedTranscriptRef.current.time < 3500 &&
-        (transcript.toLowerCase() === lastEmittedTranscriptRef.current.text.toLowerCase() ||
-          lastEmittedTranscriptRef.current.text.toLowerCase().endsWith(transcript.toLowerCase()))
-      ) {
-        console.log("[LiveTranslationMic] Deduped duplicate trailing transcript:", transcript);
-        return;
-      }
-
-      if (transcript) {
-        lastEmittedTranscriptRef.current = { text: transcript, time: now };
-        lastMutualActivityTimeRef.current = performance.now();
-
-        if (onTranscription) {
-          onTranscription(transcript);
-        }
-        if (!socketConnected) {
-          antMessage.error("Not connected. Please try again.");
-          return;
-        }
-
-        const targetStation = getTargetStation();
-
-        emitSendMessage({
-          message: transcript,
-          station: targetStation,
-          refType: "ChatMessage",
-          langCode,
-          isLiveTranslation: true,
-          senderMode: mode,
-          adminMessage: res.adminMessage,
-          clientMessage: res.clientMessage,
-          audioUrl: res.audioUrl,
-          adminAudioUrl: res.adminAudioUrl,
-          clientAudioUrl: res.clientAudioUrl,
-        });
-      }
-    } catch (error: any) {
-      console.error("[LiveTranslationMic] Live translation error:", error);
-      if (error?.response?.status === 401) {
-        antMessage.error("Session expired. Please refresh the page.");
-      }
-    } finally {
-      setInFlightCount((c) => Math.max(0, c - 1));
-    }
-  };
+  useEffect(() => {
+    return () => {
+      stopRecording(false, "unmount");
+    };
+  }, [stopRecording]);
 
   const isTranslating = inFlightCount > 0;
-  const isLiveActive = recording || sessionActive;
   const isDisabled = !isInitialized || (!socketConnected && mode === "client");
 
   return (
@@ -594,7 +432,7 @@ const LiveTranslationRecorder: React.FC<LiveTranslationRecorderProps> = ({
         isDisabled ? "cursor-not-allowed opacity-50" : "cursor-pointer"
       }`}
       style={{
-        backgroundColor: isLiveActive
+        backgroundColor: recording
           ? "rgb(185, 28, 28)"
           : isTranslating
             ? "rgb(153, 27, 27)"
@@ -608,9 +446,11 @@ const LiveTranslationRecorder: React.FC<LiveTranslationRecorderProps> = ({
           ? "Microphone not supported in this browser"
           : !socketConnected && mode === "client"
             ? "Waiting for connection..."
-            : isLiveActive
-              ? "Live conversation active (Both mics recording — speak naturally. Auto-stops after 5s silence)"
-              : "Live AI Conversation (Click once: both user and client record automatically with live speech translation)"
+            : recording
+              ? "Recording... Speak now. (Click again or pause for 5s to finish)"
+              : isTranslating
+                ? "Translating speech..."
+                : "Live Translation (Click and speak. Auto-stops after 5s silence)"
       }
     >
       {!recording && isTranslating ? (
@@ -620,23 +460,19 @@ const LiveTranslationRecorder: React.FC<LiveTranslationRecorderProps> = ({
           <div className="relative">
             <div
               className={
-                isLiveActive ? "animate-breath text-yellow-200" : "text-white"
+                recording ? "animate-breath text-yellow-200" : "text-white"
               }
             >
               <MicIcon fill="currentColor" />
             </div>
-            {isLiveActive && (
+            {recording && (
               <div className="absolute -right-1 -top-1 flex h-3 w-3">
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-75"></span>
-                <span
-                  className={`relative inline-flex h-3 w-3 rounded-full ${
-                    isTranslating ? "bg-green-400" : "bg-yellow-300"
-                  }`}
-                ></span>
+                <span className="relative inline-flex h-3 w-3 rounded-full bg-yellow-300"></span>
               </div>
             )}
           </div>
-          {isLiveActive && (
+          {recording && (
             <div className="absolute -bottom-1 left-0 right-0 h-1 overflow-hidden rounded-full bg-red-950">
               <div
                 className="h-full bg-yellow-300 transition-all duration-150 ease-out"
