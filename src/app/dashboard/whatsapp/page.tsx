@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import {
     Table, Tag, Card, Input, message, Button, Space, Select, Modal,
     Tabs, Upload, Steps, Form, Progress, Badge, Tooltip,
@@ -926,6 +926,14 @@ export default function WhatsAppPage() {
     const [manualConnectSubmitting, setManualConnectSubmitting] = useState(false);
     const [manualConnectForm] = Form.useForm<ManualConnectFormValues>();
     const [unresolvedCount, setUnresolvedCount] = useState<number>(0);
+
+    const handleUnresolvedCountChange = useCallback((count: number) => {
+        setUnresolvedCount((prev) => (prev === count ? prev : count));
+    }, []);
+
+    const handleNavigateToTemplates = useCallback(() => {
+        setActiveTab("templates");
+    }, []);
 
     const metaConnected = metaConnection.connected;
     const metaWabaLinked = Boolean(metaConnection.wabaLinked || (metaConnection.businessAccountId && metaConnection.hasAccessToken));
@@ -3162,149 +3170,8 @@ export default function WhatsAppPage() {
     ];
 
     return (
-        <div className="min-h-screen p-6" style={{ background: "linear-gradient(135deg, #f0f7ff 0%, #f5f5f5 100%)" }}>
-            <div className="mx-auto space-y-6" style={{ maxWidth: 1400 }}>
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <div className="flex items-center justify-center w-12 h-12 rounded-2xl shadow-lg" style={{ background: "#25D366" }}>
-                            <MdWhatsapp className="text-white text-2xl" />
-                        </div>
-                        <div>
-                            <h1 className="text-2xl font-bold text-gray-800 m-0">WhatsApp Messaging</h1>
-                            <p className="text-gray-500 text-sm m-0">Manage contacts, templates & campaigns</p>
-                        </div>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2">
-                        {metaConnection.availablePhoneNumbers && metaConnection.availablePhoneNumbers.length > 1 ? (
-                            <Select
-                                size="middle"
-                                value={metaConnection.phoneNumberId || undefined}
-                                placeholder="Select WhatsApp Phone Number"
-                                loading={selectingPhoneNumber}
-                                disabled={selectingPhoneNumber}
-                                onChange={(val) => void handleSelectPhoneNumber(val)}
-                                style={{ minWidth: 240 }}
-                                optionLabelProp="label"
-                            >
-                                {metaConnection.availablePhoneNumbers.map((phone) => {
-                                    const labelText = `${phone.displayPhoneNumber || phone.id}${phone.verifiedName ? ` (${phone.verifiedName})` : ""}`;
-                                    return (
-                                        <Option key={phone.id} value={phone.id} label={`📞 ${labelText}`}>
-                                            <div className="flex items-center justify-between gap-2">
-                                                <span className="font-medium">{phone.displayPhoneNumber || phone.id}</span>
-                                                {phone.verifiedName && (
-                                                    <span className="text-xs text-gray-500 truncate">{phone.verifiedName}</span>
-                                                )}
-                                            </div>
-                                        </Option>
-                                    );
-                                })}
-                            </Select>
-                        ) : (metaConnection.phoneDetails?.displayPhoneNumber || metaConnection.displayPhoneNumber) ? (
-                            <Tag color="cyan" className="px-3 py-1 text-sm font-medium inline-flex items-center gap-1.5 m-0">
-                                <PhoneOutlined />
-                                <span>
-                                    {metaConnection.phoneDetails?.displayPhoneNumber || metaConnection.displayPhoneNumber}
-                                    {metaConnection.phoneDetails?.verifiedName ? ` · ${metaConnection.phoneDetails.verifiedName}` : ""}
-                                </span>
-                            </Tag>
-                        ) : null}
-
-                        {!metaConnected && !metaWabaLinked ? (
-                            <Badge status="warning">
-                                <Tag color="orange" className="px-3 py-1 text-sm font-medium">
-                                    Meta Not Connected
-                                </Tag>
-                            </Badge>
-                        ) : !metaConnected && metaWabaLinked ? (
-                            <Badge status="warning">
-                                <Tag color="gold" className="px-3 py-1 text-sm font-medium">
-                                    WABA Linked (No Phone Number)
-                                </Tag>
-                            </Badge>
-                        ) : isDisplayNamePending ? (
-                            <Badge status="processing">
-                                <Tag
-                                    color="blue"
-                                    className="px-3 py-1 text-sm font-medium border-blue-200 bg-blue-50 text-blue-700 inline-flex items-center gap-1.5"
-                                >
-                                    <SyncOutlined spin className="text-blue-500 text-xs" />
-                                    Meta Connected (Review in Progress)
-                                </Tag>
-                            </Badge>
-                        ) : metaConnection.phoneDetails && !metaConnection.phoneDetails.canSendMessages ? (
-                            <Popover
-                                placement="bottomRight"
-                                trigger={["hover", "click"]}
-                                content={
-                                    <div className="max-w-sm p-1.5 space-y-2">
-                                        <div className="flex items-center gap-2 text-amber-700 font-semibold text-xs">
-                                            <ExclamationCircleOutlined className="text-amber-500" />
-                                            <span>WhatsApp Verification Notice</span>
-                                        </div>
-                                        <p className="text-xs text-gray-600 m-0 leading-relaxed">
-                                            {metaConnection.phoneDetails.warning || "Your WhatsApp phone number is awaiting verification."}
-                                        </p>
-                                        <div className="pt-1 flex items-center justify-between border-t border-gray-100">
-                                            <span className="text-[11px] text-gray-400">Meta Business Manager</span>
-                                            <Button
-                                                size="small"
-                                                type="primary"
-                                                onClick={handleManualCheckStatus}
-                                                loading={checkingMetaStatus}
-                                                className="text-xs rounded-lg"
-                                            >
-                                                Check Status
-                                            </Button>
-                                        </div>
-                                    </div>
-                                }
-                            >
-                                <Badge status="warning">
-                                    <Tag
-                                        color="orange"
-                                        className="px-3 py-1 text-sm font-medium cursor-pointer inline-flex items-center gap-1.5 border-orange-200 bg-orange-50/90 text-orange-800 hover:bg-orange-100 transition-colors"
-                                    >
-                                        <ExclamationCircleOutlined className="text-orange-500" />
-                                        <span>Meta Verification Pending</span>
-                                        <InfoCircleOutlined className="text-xs text-orange-400 ml-0.5" />
-                                    </Tag>
-                                </Badge>
-                            </Popover>
-                        ) : (
-                            <Badge status="success">
-                                <Tag color="green" className="px-3 py-1 text-sm font-medium">
-                                    Meta Connected
-                                </Tag>
-                            </Badge>
-                        )}
-                        {metaConnected || metaWabaLinked || metaConnection.hasAccessToken ? (
-                            <Popconfirm
-                                title="Disconnect WhatsApp?"
-                                description="Disconnecting will unlink your WhatsApp account and remove test data and messaging records. Do you wish to proceed?"
-                                onConfirm={handleDisconnectMeta}
-                                okText="Disconnect"
-                                cancelText="Cancel"
-                            >
-                                <Button size="small" danger icon={<PoweroffOutlined />}>
-                                    Disconnect
-                                </Button>
-                            </Popconfirm>
-                        ) : (
-                            <Button
-                                type="primary"
-                                style={{ backgroundColor: "#25D366", borderColor: "#25D366" }}
-                                icon={<MdWhatsapp size={16} />}
-                                onClick={launchWhatsAppSignup}
-                                loading={connectingMeta}
-                            >
-                                Connect WhatsApp Business
-                            </Button>
-                        )}
-                        <Button icon={<ReloadOutlined />} onClick={loadAll} loading={loading} />
-                    </div>
-                </div>
-
+        <div className="min-h-screen p-3 sm:p-4" style={{ background: "linear-gradient(135deg, #f0f7ff 0%, #f5f5f5 100%)" }}>
+            <div className="mx-auto space-y-3" style={{ maxWidth: 1500 }}>
                 {!metaConnected && !metaWabaLinked && !metaConnection.hasAccessToken && (
                     <Alert
                         message="Connect your Hotel's WhatsApp Account"
@@ -3484,45 +3351,143 @@ export default function WhatsAppPage() {
                     ) : null
                 )}
 
-                <Row gutter={[16, 16]}>
-                    {[
-                        { title: "Total Contacts", value: contactLists.reduce((a, c) => a + c.count, 0), prefix: <UserOutlined />, color: "#1890ff", bg: "#e6f7ff" },
-                        { title: "Messages Sent", value: metaConnected ? stats.totalSent : 0, prefix: <SendOutlined />, color: "#52c41a", bg: "#f6ffed" },
-                        { title: "Delivered", value: metaConnected ? stats.totalDelivered : 0, prefix: <CheckCircleOutlined />, color: "#13c2c2", bg: "#e6fffb" },
-                        { title: "Active Campaigns", value: metaConnected ? stats.activeCampaigns : 0, prefix: <ThunderboltOutlined />, color: "#fa8c16", bg: "#fff7e6" },
-                    ].map(stat => (
-                        <Col xs={12} sm={12} md={6} key={stat.title}>
-                            <Card bodyStyle={{ padding: "16px 20px" }} className="shadow-sm hover:shadow-md transition-shadow">
-                                <div className="flex items-center gap-3">
-                                    <div className="flex items-center justify-center w-10 h-10 rounded-xl text-lg" style={{ background: stat.bg, color: stat.color }}>
-                                        {stat.prefix}
-                                    </div>
-                                    <div>
-                                        <div className="text-xl font-bold" style={{ color: stat?.color }}>{(stat?.value ?? 0).toLocaleString()}</div>
-                                        <div className="text-xs text-gray-500">{stat?.title}</div>
-                                    </div>
-                                </div>
-                            </Card>
-                        </Col>
-                    ))}
-                </Row>
-
-                <Card className="shadow-sm" bodyStyle={{ padding: 0 }}>
+                <Card className="shadow-sm border-gray-200" bodyStyle={{ padding: 0 }}>
                     <Tabs
                         activeKey={activeTab}
                         onChange={setActiveTab}
-                        tabBarStyle={{ padding: "0 24px", marginBottom: 0 }}
+                        tabBarStyle={{ padding: "0 16px", marginBottom: 0 }}
                         tabBarExtraContent={
-                            <div className="pr-4 py-2">
+                            <div className="pr-2 py-2 flex items-center gap-2 flex-wrap justify-end">
+                                {/* Phone Number Selector / Display */}
+                                {metaConnection.availablePhoneNumbers && metaConnection.availablePhoneNumbers.length > 1 ? (
+                                    <Select
+                                        size="small"
+                                        value={metaConnection.phoneNumberId || undefined}
+                                        placeholder="Select Phone Number"
+                                        loading={selectingPhoneNumber}
+                                        disabled={selectingPhoneNumber}
+                                        onChange={(val) => void handleSelectPhoneNumber(val)}
+                                        style={{ minWidth: 200 }}
+                                        optionLabelProp="label"
+                                    >
+                                        {metaConnection.availablePhoneNumbers.map((phone) => {
+                                            const labelText = `${phone.displayPhoneNumber || phone.id}${phone.verifiedName ? ` (${phone.verifiedName})` : ""}`;
+                                            return (
+                                                <Option key={phone.id} value={phone.id} label={`📞 ${labelText}`}>
+                                                    <div className="flex items-center justify-between gap-2">
+                                                        <span className="font-medium text-xs">{phone.displayPhoneNumber || phone.id}</span>
+                                                        {phone.verifiedName && (
+                                                            <span className="text-[11px] text-gray-500 truncate">{phone.verifiedName}</span>
+                                                        )}
+                                                    </div>
+                                                </Option>
+                                            );
+                                        })}
+                                    </Select>
+                                ) : (metaConnection.phoneDetails?.displayPhoneNumber || metaConnection.displayPhoneNumber) ? (
+                                    <Tag color="cyan" className="px-2.5 py-0.5 text-xs font-medium inline-flex items-center gap-1.5 m-0">
+                                        <PhoneOutlined />
+                                        <span>
+                                            {metaConnection.phoneDetails?.displayPhoneNumber || metaConnection.displayPhoneNumber}
+                                            {metaConnection.phoneDetails?.verifiedName ? ` · ${metaConnection.phoneDetails.verifiedName}` : ""}
+                                        </span>
+                                    </Tag>
+                                ) : null}
+
+                                {/* Meta Connection Status */}
+                                {!metaConnected && !metaWabaLinked ? (
+                                    <Tag color="orange" className="px-2.5 py-0.5 text-xs font-medium m-0">
+                                        Meta Not Connected
+                                    </Tag>
+                                ) : !metaConnected && metaWabaLinked ? (
+                                    <Tag color="gold" className="px-2.5 py-0.5 text-xs font-medium m-0">
+                                        WABA Linked (No Phone Number)
+                                    </Tag>
+                                ) : isDisplayNamePending ? (
+                                    <Tag color="blue" className="px-2.5 py-0.5 text-xs font-medium border-blue-200 bg-blue-50 text-blue-700 inline-flex items-center gap-1.5 m-0">
+                                        <SyncOutlined spin className="text-blue-500 text-xs" />
+                                        Meta Reviewing
+                                    </Tag>
+                                ) : metaConnection.phoneDetails && !metaConnection.phoneDetails.canSendMessages ? (
+                                    <Popover
+                                        placement="bottomRight"
+                                        trigger={["hover", "click"]}
+                                        content={
+                                            <div className="max-w-sm p-1.5 space-y-2">
+                                                <div className="flex items-center gap-2 text-amber-700 font-semibold text-xs">
+                                                    <ExclamationCircleOutlined className="text-amber-500" />
+                                                    <span>WhatsApp Verification Notice</span>
+                                                </div>
+                                                <p className="text-xs text-gray-600 m-0 leading-relaxed">
+                                                    {metaConnection.phoneDetails.warning || "Your WhatsApp phone number is awaiting verification."}
+                                                </p>
+                                                <div className="pt-1 flex items-center justify-between border-t border-gray-100">
+                                                    <span className="text-[11px] text-gray-400">Meta Business Manager</span>
+                                                    <Button size="small" type="primary" onClick={handleManualCheckStatus} loading={checkingMetaStatus} className="text-xs rounded-lg">
+                                                        Check Status
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        }
+                                    >
+                                        <Tag color="orange" className="px-2.5 py-0.5 text-xs font-medium cursor-pointer inline-flex items-center gap-1.5 border-orange-200 bg-orange-50/90 text-orange-800 m-0">
+                                            <ExclamationCircleOutlined className="text-orange-500" />
+                                            <span>Verification Pending</span>
+                                            <InfoCircleOutlined className="text-xs text-orange-400 ml-0.5" />
+                                        </Tag>
+                                    </Popover>
+                                ) : (
+                                    <Tag color="green" className="px-2.5 py-0.5 text-xs font-medium m-0">
+                                        Meta Connected
+                                    </Tag>
+                                )}
+
+                                {/* Connect / Disconnect */}
+                                {metaConnected || metaWabaLinked || metaConnection.hasAccessToken ? (
+                                    <Popconfirm
+                                        title="Disconnect WhatsApp?"
+                                        description="Disconnecting will unlink your WhatsApp account and remove test data and messaging records. Do you wish to proceed?"
+                                        onConfirm={handleDisconnectMeta}
+                                        okText="Disconnect"
+                                        cancelText="Cancel"
+                                    >
+                                        <Button size="small" danger icon={<PoweroffOutlined />} className="text-xs">
+                                            Disconnect
+                                        </Button>
+                                    </Popconfirm>
+                                ) : (
+                                    <Button
+                                        type="primary"
+                                        size="small"
+                                        style={{ backgroundColor: "#25D366", borderColor: "#25D366" }}
+                                        icon={<MdWhatsapp size={14} />}
+                                        onClick={launchWhatsAppSignup}
+                                        loading={connectingMeta}
+                                        className="text-xs"
+                                    >
+                                        Connect WhatsApp
+                                    </Button>
+                                )}
+
+                                <Button size="small" icon={<ReloadOutlined />} onClick={loadAll} loading={loading} />
+
+                                {/* Tab Actions */}
                                 {activeTab === "contacts" && (
-                                    <Button type="primary" icon={<PlusOutlined />} onClick={() => setContactModal(true)} style={{ background: "#25D366", borderColor: "#25D366" }}>
+                                    <Button
+                                        type="primary"
+                                        size="small"
+                                        icon={<PlusOutlined />}
+                                        onClick={() => setContactModal(true)}
+                                        style={{ backgroundColor: '#3b5998', borderColor: '#3b5998' }}
+                                    >
                                         New Contact List
                                     </Button>
                                 )}
                                 {activeTab === "templates" && (
                                     <Button
                                         type="primary"
-                                        style={{ backgroundColor: '#3b5998' }}
+                                        size="small"
+                                        style={{ backgroundColor: '#3b5998', borderColor: '#3b5998' }}
                                         icon={<PlusOutlined />}
                                         disabled={!metaConnected}
                                         onClick={() => {
@@ -3539,8 +3504,9 @@ export default function WhatsAppPage() {
                                 {activeTab === "campaigns" && (
                                     <Button
                                         type="primary"
+                                        size="small"
                                         icon={<SendOutlined />}
-                                        style={{ backgroundColor: '#3b5998' }}
+                                        style={{ backgroundColor: '#3b5998', borderColor: '#3b5998' }}
                                         disabled={!metaConnected}
                                         onClick={() => { setCampaignModal(true); setCampaignStep(0); setCampaignForm({ sendType: "now" }); }}
                                     >
@@ -3552,15 +3518,22 @@ export default function WhatsAppPage() {
                     >
                         <TabPane
                             tab={
-                                <span>
+                                <span className="inline-flex items-center">
                                     <MessageOutlined />
-                                    Inbox
+                                    <span className="ml-1.5">Inbox</span>
                                     {metaConnected && unresolvedCount > 0 && (
                                         <Badge
                                             count={unresolvedCount}
+                                            size="small"
                                             style={{
                                                 marginLeft: 6,
                                                 backgroundColor: "#f5222d",
+                                                fontSize: "11px",
+                                                height: "16px",
+                                                minWidth: "16px",
+                                                lineHeight: "16px",
+                                                padding: "0 4px",
+                                                verticalAlign: "middle",
                                             }}
                                         />
                                     )}
@@ -3568,18 +3541,40 @@ export default function WhatsAppPage() {
                             }
                             key="inbox"
                         >
-                            <div className="p-6">
+                            <div className="p-0 sm:p-2">
                                 <WhatsappInbox
                                     token={token}
                                     apiUrl={API_URL}
                                     currentUserId={session?.user?.id ? Number(session.user.id) : undefined}
                                     metaConnected={metaConnected}
-                                    onNavigateToTemplates={() => setActiveTab("templates")}
-                                    onUnresolvedCountChange={(count) => setUnresolvedCount(count)}
+                                    onNavigateToTemplates={handleNavigateToTemplates}
+                                    onUnresolvedCountChange={handleUnresolvedCountChange}
                                 />
                             </div>
                         </TabPane>
-                        <TabPane tab={<span><TeamOutlined />Contact Lists <Badge count={contactLists.length} style={{ marginLeft: 6, backgroundColor: "#1890ff" }} /></span>} key="contacts">
+                        <TabPane
+                            tab={
+                                <span className="inline-flex items-center">
+                                    <TeamOutlined />
+                                    <span className="ml-1.5">Contact Lists</span>
+                                    <Badge
+                                        count={contactLists.length}
+                                        size="small"
+                                        style={{
+                                            marginLeft: 6,
+                                            backgroundColor: "#1890ff",
+                                            fontSize: "11px",
+                                            height: "16px",
+                                            minWidth: "16px",
+                                            lineHeight: "16px",
+                                            padding: "0 4px",
+                                            verticalAlign: "middle",
+                                        }}
+                                    />
+                                </span>
+                            }
+                            key="contacts"
+                        >
                             <div className="p-6">
                                 <div className="flex items-center gap-3 mb-4">
                                     <Input
@@ -3609,7 +3604,31 @@ export default function WhatsAppPage() {
                             </div>
                         </TabPane>
 
-                        <TabPane tab={<span><FileTextOutlined />Templates {metaConnected && templates.length > 0 && <Badge count={templates.length} style={{ marginLeft: 6, backgroundColor: "#722ed1" }} />}</span>} key="templates">
+                        <TabPane
+                            tab={
+                                <span className="inline-flex items-center">
+                                    <FileTextOutlined />
+                                    <span className="ml-1.5">Templates</span>
+                                    {metaConnected && templates.length > 0 && (
+                                        <Badge
+                                            count={templates.length}
+                                            size="small"
+                                            style={{
+                                                marginLeft: 6,
+                                                backgroundColor: "#722ed1",
+                                                fontSize: "11px",
+                                                height: "16px",
+                                                minWidth: "16px",
+                                                lineHeight: "16px",
+                                                padding: "0 4px",
+                                                verticalAlign: "middle",
+                                            }}
+                                        />
+                                    )}
+                                </span>
+                            }
+                            key="templates"
+                        >
                             <div className="p-6">
                                 {!metaConnected ? (
                                     <div className="flex flex-col items-center justify-center p-12 text-center bg-gray-50 rounded-2xl border border-gray-100">
@@ -3667,7 +3686,31 @@ export default function WhatsAppPage() {
                             </div>
                         </TabPane>
 
-                        <TabPane tab={<span><SendOutlined />Campaigns {metaConnected && campaigns.length > 0 && <Badge count={campaigns.length} style={{ marginLeft: 6, backgroundColor: "#fa8c16" }} />}</span>} key="campaigns">
+                        <TabPane
+                            tab={
+                                <span className="inline-flex items-center">
+                                    <SendOutlined />
+                                    <span className="ml-1.5">Campaigns</span>
+                                    {metaConnected && campaigns.length > 0 && (
+                                        <Badge
+                                            count={campaigns.length}
+                                            size="small"
+                                            style={{
+                                                marginLeft: 6,
+                                                backgroundColor: "#fa8c16",
+                                                fontSize: "11px",
+                                                height: "16px",
+                                                minWidth: "16px",
+                                                lineHeight: "16px",
+                                                padding: "0 4px",
+                                                verticalAlign: "middle",
+                                            }}
+                                        />
+                                    )}
+                                </span>
+                            }
+                            key="campaigns"
+                        >
                             <div className="p-6">
                                 {!metaConnected ? (
                                     <div className="flex flex-col items-center justify-center p-12 text-center bg-gray-50 rounded-2xl border border-gray-100">

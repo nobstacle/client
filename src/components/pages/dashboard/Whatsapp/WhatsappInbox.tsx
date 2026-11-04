@@ -315,6 +315,20 @@ export const WhatsappInbox: React.FC<WhatsappInboxProps> = ({
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const pollingTimerRef = useRef<NodeJS.Timeout | null>(null);
+    const activeConversationIdRef = useRef<number | null>(activeConversationId);
+    activeConversationIdRef.current = activeConversationId;
+    const onUnresolvedCountChangeRef = useRef(onUnresolvedCountChange);
+    onUnresolvedCountChangeRef.current = onUnresolvedCountChange;
+    const prevMsgCountRef = useRef(0);
+    const prevConvIdRef = useRef<number | null>(null);
+
+    // Template sending modal states
+    const [templateModalOpen, setTemplateModalOpen] = useState(false);
+    const [availableTemplates, setAvailableTemplates] = useState<any[]>([]);
+    const [loadingTemplates, setLoadingTemplates] = useState(false);
+    const [selectedTemplate, setSelectedTemplate] = useState<any | null>(null);
+    const [templateVariables, setTemplateVariables] = useState<Record<string, string>>({});
+    const [sendingTemplate, setSendingTemplate] = useState(false);
 
     // ── API Helper ──────────────────────────────────────────────────────────
     const authFetch = useCallback(
@@ -452,7 +466,7 @@ export const WhatsappInbox: React.FC<WhatsappInboxProps> = ({
                         resolved: res.counts.resolved ?? 0,
                     });
                     const unresolved = res.counts.open ?? 0;
-                    onUnresolvedCountChange?.(unresolved);
+                    onUnresolvedCountChangeRef.current?.(unresolved);
                     if (typeof window !== "undefined") {
                         window.dispatchEvent(
                             new CustomEvent("whatsapp_unresolved_count_updated", {
@@ -463,8 +477,9 @@ export const WhatsappInbox: React.FC<WhatsappInboxProps> = ({
                 }
 
                 // Auto-select conversation if none selected or if previously active is no longer in view
+                const curId = activeConversationIdRef.current;
                 if (items.length > 0) {
-                    if (!activeConversationId || !items.some((it) => it.id === activeConversationId)) {
+                    if (!curId || !items.some((it) => it.id === curId)) {
                         setActiveConversationId(items[0].id);
                     }
                 } else {
@@ -476,7 +491,7 @@ export const WhatsappInbox: React.FC<WhatsappInboxProps> = ({
                 if (!silent) setLoadingConversations(false);
             }
         },
-        [token, apiUrl, scope, statusFilter, selectedCategoryId, searchQuery, activeConversationId, authFetch, onUnresolvedCountChange]
+        [token, apiUrl, scope, statusFilter, selectedCategoryId, searchQuery, authFetch]
     );
 
     useEffect(() => {
@@ -516,10 +531,20 @@ export const WhatsappInbox: React.FC<WhatsappInboxProps> = ({
         }
     }, [activeConversationId, loadMessages]);
 
-    // ── Auto-scroll to bottom of chat ───────────────────────────────────────
+    // ── Auto-scroll to bottom of chat only when needed ───────────────────────
     useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }, [messages]);
+        const isNewChat = activeConversationId !== prevConvIdRef.current;
+        const hasNewMessages = messages.length > prevMsgCountRef.current;
+
+        if (isNewChat) {
+            messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
+        } else if (hasNewMessages) {
+            messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+        }
+
+        prevMsgCountRef.current = messages.length;
+        prevConvIdRef.current = activeConversationId;
+    }, [messages, activeConversationId]);
 
     // ── Polling Interval (Every 5 seconds) ──────────────────────────────────
     useEffect(() => {
@@ -536,6 +561,70 @@ export const WhatsappInbox: React.FC<WhatsappInboxProps> = ({
             if (pollingTimerRef.current) clearInterval(pollingTimerRef.current);
         };
     }, [metaConnected, token, activeConversationId, loadConversations, loadMessages]);
+
+    // ── Template Picker Handlers ────────────────────────────────────────────
+    const handleOpenTemplateModal = async () => {
+        setTemplateModalOpen(true);
+        setSelectedTemplate(null);
+        setTemplateVariables({});
+        setLoadingTemplates(true);
+        try {
+            const res: any = await authFetch("/whatsapp/templates");
+            const list = Array.isArray(res) ? res : res?.templates || [];
+            const approved = list.filter((t: any) => String(t.status || "").toUpperCase() === "APPROVED");
+            setAvailableTemplates(approved);
+            if (approved.length > 0) {
+                handleSelectTemplate(approved[0]);
+            }
+        } catch (err: any) {
+            message.error(err?.message || "Failed to load approved templates");
+        } finally {
+            setLoadingTemplates(false);
+        }
+    };
+
+    const handleSelectTemplate = (tmpl: any) => {
+        setSelectedTemplate(tmpl);
+        const bodyText = tmpl.bodyText || tmpl.components?.find((c: any) => c.type === "BODY")?.text || "";
+        const matches = bodyText.match(/{{\s*([a-zA-Z0-9_]+)\s*}}/g) || [];
+        const vars: Record<string, string> = {};
+        matches.forEach((m: string) => {
+            const key = m.replace(/[{}]/g, "").trim();
+            if (key === "1" || key.toLowerCase().includes("name")) {
+                const activeC = conversations.find((c) => c.id === activeConversationId);
+                vars[key] = activeC?.contactName && activeC.contactName !== activeC.contactPhone ? activeC.contactName : "";
+            } else {
+                vars[key] = "";
+            }
+        });
+        setTemplateVariables(vars);
+    };
+
+    const handleSendTemplate = async () => {
+        if (!selectedTemplate || !activeConversationId) return;
+        setSendingTemplate(true);
+        try {
+            await authFetch(`/whatsapp/inbox/conversations/${activeConversationId}/template`, {
+                method: "POST",
+                body: JSON.stringify({
+                    templateName: selectedTemplate.name,
+                    languageCode: selectedTemplate.language || "en_US",
+                    type: selectedTemplate.type || "standard",
+                    mediaUrl: selectedTemplate.mediaUrl,
+                    variables: templateVariables,
+                    buttons: selectedTemplate.buttons,
+                }),
+            });
+            message.success(`Template "${selectedTemplate.name}" sent successfully!`);
+            setTemplateModalOpen(false);
+            await loadMessages(activeConversationId, true);
+            await loadConversations(true);
+        } catch (err: any) {
+            message.error(err?.message || "Failed to send template");
+        } finally {
+            setSendingTemplate(false);
+        }
+    };
 
     // ── Send Reply (with Media Attachment support) ──────────────────────────
     const handleSendReply = async () => {
@@ -1131,7 +1220,7 @@ export const WhatsappInbox: React.FC<WhatsappInboxProps> = ({
     }
 
     return (
-        <div className="bg-[#f0f2f5] rounded-2xl border border-gray-200/90 shadow-md overflow-hidden flex flex-col md:flex-row h-[760px] font-sans">
+        <div className="bg-[#f0f2f5] rounded-xl border border-gray-200 shadow-sm overflow-hidden flex flex-col md:flex-row h-[calc(100vh-140px)] min-h-[560px] max-h-[880px] w-full font-sans">
             {/* ══════════════════════════════════════════════════════════════════
                 LEFT PANEL: WHATSAPP DESKTOP CHAT LIST & OUTLOOK CATEGORIES
             ══════════════════════════════════════════════════════════════════ */}
@@ -1216,10 +1305,8 @@ export const WhatsappInbox: React.FC<WhatsappInboxProps> = ({
                             <span>Open</span>
                             {counts.open > 0 ? (
                                 <span
-                                    style={{ height: 18, minWidth: 18, lineHeight: "18px" }}
-                                    className={`text-[10px] font-bold rounded-full inline-flex items-center justify-center text-center flex-shrink-0 ${
-                                        counts.open < 10 ? "w-[18px] h-[18px] p-0" : "px-1"
-                                    } ${
+                                    style={{ height: 16, minWidth: 16, lineHeight: "16px" }}
+                                    className={`text-[10px] font-bold rounded-full inline-flex items-center justify-center text-center flex-shrink-0 px-1 ${
                                         statusFilter === "open" ? "bg-[#f5222d] text-white" : "bg-red-100 text-[#f5222d]"
                                     }`}
                                 >
@@ -1320,31 +1407,34 @@ export const WhatsappInbox: React.FC<WhatsappInboxProps> = ({
                             </button>
                         )}
 
-                        {/* Category pills with Outlook colors */}
-                        {categories.map((cat) => {
-                            const color = getCategoryOutlookColor(cat);
-                            const isSelected = selectedCategoryId === cat.id;
-                            return (
-                                <button
-                                    key={cat.id}
-                                    onClick={() => setSelectedCategoryId(isSelected ? null : cat.id)}
-                                    style={{
-                                        backgroundColor: isSelected ? color.bar : color.bg,
-                                        color: isSelected ? "#ffffff" : color.text,
-                                        borderColor: color.border,
-                                    }}
-                                    className={`px-2.5 py-0.5 text-[11px] rounded-md font-medium border flex items-center gap-1.5 flex-shrink-0 transition-all ${
-                                        isSelected ? "shadow-xs ring-1 ring-offset-1 ring-gray-400" : "hover:opacity-90"
-                                    }`}
-                                >
-                                    <span
-                                        className="w-2 h-2 rounded-full flex-shrink-0"
-                                        style={{ backgroundColor: isSelected ? "#ffffff" : color.swatch }}
-                                    />
-                                    <span>{cat.name}</span>
-                                </button>
-                            );
-                        })}
+                        {categories.length === 0 ? (
+                            <span className="text-[11px] text-gray-400 italic">None created yet</span>
+                        ) : (
+                            categories.map((cat) => {
+                                const color = getCategoryOutlookColor(cat);
+                                const isSelected = selectedCategoryId === cat.id;
+                                return (
+                                    <button
+                                        key={cat.id}
+                                        onClick={() => setSelectedCategoryId(isSelected ? null : cat.id)}
+                                        style={{
+                                            backgroundColor: isSelected ? color.bar : color.bg,
+                                            color: isSelected ? "#ffffff" : color.text,
+                                            borderColor: color.border,
+                                        }}
+                                        className={`px-2.5 py-0.5 text-[11px] rounded-md font-medium border flex items-center gap-1.5 flex-shrink-0 transition-all ${
+                                            isSelected ? "shadow-xs ring-1 ring-offset-1 ring-gray-400" : "hover:opacity-90"
+                                        }`}
+                                    >
+                                        <span
+                                            className="w-2 h-2 rounded-full flex-shrink-0"
+                                            style={{ backgroundColor: isSelected ? "#ffffff" : color.swatch }}
+                                        />
+                                        <span>{cat.name}</span>
+                                    </button>
+                                );
+                            })
+                        )}
 
                         {/* Add/Manage Categories pill */}
                         <button
@@ -1467,7 +1557,16 @@ export const WhatsappInbox: React.FC<WhatsappInboxProps> = ({
                                             {c.unreadCount > 0 && (
                                                 <Badge
                                                     count={c.unreadCount}
-                                                    style={{ backgroundColor: "#00a884" }}
+                                                    size="small"
+                                                    style={{
+                                                        backgroundColor: "#00a884",
+                                                        fontSize: "11px",
+                                                        height: "16px",
+                                                        minWidth: "16px",
+                                                        lineHeight: "16px",
+                                                        padding: "0 4px",
+                                                        verticalAlign: "middle",
+                                                    }}
                                                     className="flex-shrink-0"
                                                 />
                                             )}
@@ -1799,20 +1898,32 @@ export const WhatsappInbox: React.FC<WhatsappInboxProps> = ({
 
                     {/* 3. 24-Hour Window Expiry Notice */}
                     {!isWindowOpen && (
-                        <div className="bg-[#fff9db] border-t border-b border-[#ffe066] px-4 py-2 flex items-center justify-between text-xs text-[#7c5e00] z-10">
+                        <div className="bg-[#fff9db] border-t border-b border-[#ffe066] px-4 py-2 flex items-center justify-between text-xs text-[#7c5e00] z-10 flex-wrap gap-2">
                             <span>
                                 ⚠️ <strong>Meta 24-hour service window closed.</strong> Freeform text cannot be sent until customer replies or you re-open outreach with an approved WhatsApp Template.
                             </span>
-                            {onNavigateToTemplates && (
+                            <div className="flex items-center gap-2 flex-shrink-0">
                                 <Button
-                                    type="link"
+                                    type="primary"
                                     size="small"
-                                    onClick={onNavigateToTemplates}
-                                    className="p-0 text-[#7c5e00] font-bold underline"
+                                    style={{ backgroundColor: "#00a884", borderColor: "#00a884" }}
+                                    icon={<SendOutlined />}
+                                    onClick={handleOpenTemplateModal}
+                                    className="text-xs font-semibold rounded-lg"
                                 >
-                                    Choose Template
+                                    Send Approved Template
                                 </Button>
-                            )}
+                                {onNavigateToTemplates && (
+                                    <Button
+                                        type="link"
+                                        size="small"
+                                        onClick={onNavigateToTemplates}
+                                        className="p-0 text-[#7c5e00] font-bold underline"
+                                    >
+                                        Manage Templates
+                                    </Button>
+                                )}
+                            </div>
                         </div>
                     )}
 
@@ -1882,6 +1993,7 @@ export const WhatsappInbox: React.FC<WhatsappInboxProps> = ({
                                     <Button
                                         type="text"
                                         shape="circle"
+                                        disabled={!isWindowOpen}
                                         icon={<SmileOutlined className={`text-xl ${emojiPickerOpen ? "text-[#00a884]" : "text-[#54656f]"}`} />}
                                         className="flex-shrink-0"
                                     />
@@ -1889,10 +2001,11 @@ export const WhatsappInbox: React.FC<WhatsappInboxProps> = ({
                             </Popover>
 
                             {/* Attach Media Tool (📎) */}
-                            <Tooltip title="Attach image, video or document">
+                            <Tooltip title={isWindowOpen ? "Attach image, video or document" : "24h window closed"}>
                                 <Button
                                     type="text"
                                     shape="circle"
+                                    disabled={!isWindowOpen}
                                     icon={<PaperClipOutlined className="text-xl text-[#54656f]" />}
                                     onClick={() => replyFileInputRef.current?.click()}
                                     className="flex-shrink-0"
@@ -1900,7 +2013,7 @@ export const WhatsappInbox: React.FC<WhatsappInboxProps> = ({
                             </Tooltip>
 
                             {/* Input Box */}
-                            <div className="flex-1 bg-white rounded-lg px-3 py-1.5 shadow-xs flex items-center">
+                            <div className={`flex-1 rounded-lg px-3 py-1.5 shadow-xs flex items-center ${isWindowOpen ? "bg-white" : "bg-gray-100/80 cursor-not-allowed"}`}>
                                 <input
                                     type="text"
                                     placeholder={
@@ -1908,7 +2021,7 @@ export const WhatsappInbox: React.FC<WhatsappInboxProps> = ({
                                             ? `Add caption for ${replyAttachment.file.name}...`
                                             : isWindowOpen
                                             ? "Type a message (Press Enter to send)"
-                                            : "24h window closed. Use an approved template."
+                                            : "24h window closed. Click Send Template to message this customer."
                                     }
                                     value={replyText}
                                     onChange={(e) => setReplyText(e.target.value)}
@@ -1918,35 +2031,52 @@ export const WhatsappInbox: React.FC<WhatsappInboxProps> = ({
                                             handleSendReply();
                                         }
                                     }}
-                                    disabled={sendingReply}
-                                    className="w-full bg-transparent border-none outline-none text-sm text-[#111b21] placeholder-[#667781]"
+                                    disabled={!isWindowOpen || sendingReply}
+                                    className="w-full bg-transparent border-none outline-none text-sm text-[#111b21] placeholder-[#667781] disabled:cursor-not-allowed"
                                 />
                             </div>
 
-                            {/* WhatsApp Green Send Button */}
-                            <button
-                                type="button"
-                                onClick={handleSendReply}
-                                disabled={(!replyText.trim() && !replyAttachment) || sendingReply || uploadingReplyAttachment}
-                                style={{
-                                    width: 40,
-                                    height: 40,
-                                    minWidth: 40,
-                                    minHeight: 40,
-                                    maxWidth: 40,
-                                    maxHeight: 40,
-                                    borderRadius: "50%",
-                                    backgroundColor: (!replyText.trim() && !replyAttachment) ? "#a0dfd2" : "#00a884",
-                                }}
-                                className="aspect-square rounded-full text-white flex items-center justify-center flex-shrink-0 shadow-xs transition-transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer p-0 border-0 outline-none"
-                                title="Send message"
-                            >
-                                {sendingReply || uploadingReplyAttachment ? (
-                                    <LoadingOutlined className="text-white text-base" />
-                                ) : (
-                                    <SendOutlined className="text-white text-base ml-0.5" />
-                                )}
-                            </button>
+                            {/* Send Button or Template Button */}
+                            {!isWindowOpen ? (
+                                <Button
+                                    type="primary"
+                                    icon={<FileTextOutlined />}
+                                    onClick={handleOpenTemplateModal}
+                                    style={{
+                                        height: 40,
+                                        borderRadius: 20,
+                                        backgroundColor: "#00a884",
+                                        borderColor: "#00a884",
+                                    }}
+                                    className="font-semibold shadow-xs flex-shrink-0 px-4"
+                                >
+                                    Send Template
+                                </Button>
+                            ) : (
+                                <button
+                                    type="button"
+                                    onClick={handleSendReply}
+                                    disabled={(!replyText.trim() && !replyAttachment) || sendingReply || uploadingReplyAttachment}
+                                    style={{
+                                        width: 40,
+                                        height: 40,
+                                        minWidth: 40,
+                                        minHeight: 40,
+                                        maxWidth: 40,
+                                        maxHeight: 40,
+                                        borderRadius: "50%",
+                                        backgroundColor: (!replyText.trim() && !replyAttachment) ? "#a0dfd2" : "#00a884",
+                                    }}
+                                    className="aspect-square rounded-full text-white flex items-center justify-center flex-shrink-0 shadow-xs transition-transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer p-0 border-0 outline-none"
+                                    title="Send message"
+                                >
+                                    {sendingReply || uploadingReplyAttachment ? (
+                                        <LoadingOutlined className="text-white text-base" />
+                                    ) : (
+                                        <SendOutlined className="text-white text-base ml-0.5" />
+                                    )}
+                                </button>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -2298,6 +2428,139 @@ export const WhatsappInbox: React.FC<WhatsappInboxProps> = ({
                             Done
                         </Button>
                     </div>
+                </div>
+            </Modal>
+
+            {/* ── Choose & Send Approved Template Modal ──────────────────────── */}
+            <Modal
+                title={
+                    <div className="flex items-center gap-2">
+                        <FileTextOutlined className="text-[#00a884] text-lg" />
+                        <span className="font-bold text-gray-800">Send Approved WhatsApp Template</span>
+                    </div>
+                }
+                open={templateModalOpen}
+                onCancel={() => setTemplateModalOpen(false)}
+                footer={null}
+                width={560}
+                destroyOnClose
+            >
+                <div className="py-2 space-y-4">
+                    <p className="text-xs text-gray-500 m-0">
+                        Outside the Meta 24-hour service window, WhatsApp requires pre-approved templates to initiate or continue conversations.
+                    </p>
+
+                    {loadingTemplates ? (
+                        <div className="p-8 text-center">
+                            <Spin />
+                            <div className="text-xs text-gray-500 mt-2">Loading approved templates...</div>
+                        </div>
+                    ) : availableTemplates.length === 0 ? (
+                        <div className="p-6 text-center bg-gray-50 rounded-xl border border-gray-100">
+                            <div className="text-sm font-semibold text-gray-700">No approved templates available</div>
+                            <p className="text-xs text-gray-500 mt-1 mb-3">
+                                You need at least one approved template in your WhatsApp Business Account.
+                            </p>
+                            {onNavigateToTemplates && (
+                                <Button
+                                    type="primary"
+                                    size="small"
+                                    onClick={() => {
+                                        setTemplateModalOpen(false);
+                                        onNavigateToTemplates();
+                                    }}
+                                    style={{ backgroundColor: "#3b5998", borderColor: "#3b5998" }}
+                                >
+                                    Go to Templates
+                                </Button>
+                            )}
+                        </div>
+                    ) : (
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                                    Select Template
+                                </label>
+                                <Select
+                                    value={selectedTemplate?.name}
+                                    onChange={(name) => {
+                                        const tmpl = availableTemplates.find((t) => t.name === name);
+                                        if (tmpl) handleSelectTemplate(tmpl);
+                                    }}
+                                    className="w-full"
+                                    placeholder="Choose an approved template"
+                                >
+                                    {availableTemplates.map((tmpl) => (
+                                        <Select.Option key={tmpl.id || tmpl.name} value={tmpl.name}>
+                                            <div className="flex items-center justify-between">
+                                                <span className="font-medium text-xs">{tmpl.name}</span>
+                                                <Tag color="green" className="text-[10px] m-0">
+                                                    {tmpl.language || "en_US"}
+                                                </Tag>
+                                            </div>
+                                        </Select.Option>
+                                    ))}
+                                </Select>
+                            </div>
+
+                            {selectedTemplate && (
+                                <div className="p-3 bg-[#eefeeb] border border-[#d4f8ce] rounded-xl space-y-2">
+                                    <div className="text-xs font-semibold text-[#0f5132] flex items-center gap-1.5">
+                                        <MessageOutlined /> Template Preview ({selectedTemplate.name})
+                                    </div>
+                                    <div className="text-xs text-gray-800 whitespace-pre-wrap bg-white p-3 rounded-lg border border-[#e1f5de] shadow-2xs font-sans">
+                                        {selectedTemplate.bodyText || selectedTemplate.components?.find((c: any) => c.type === "BODY")?.text || selectedTemplate.name}
+                                    </div>
+                                </div>
+                            )}
+
+                            {selectedTemplate && Object.keys(templateVariables).length > 0 && (
+                                <div className="space-y-2">
+                                    <div className="text-xs font-semibold text-gray-700">
+                                        Template Variables
+                                    </div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                        {Object.keys(templateVariables).map((varKey) => (
+                                            <div key={varKey}>
+                                                <label className="block text-[11px] text-gray-500 mb-1">
+                                                    Variable {`{{${varKey}}}`}
+                                                </label>
+                                                <Input
+                                                    size="small"
+                                                    value={templateVariables[varKey]}
+                                                    onChange={(e) =>
+                                                        setTemplateVariables((prev) => ({
+                                                            ...prev,
+                                                            [varKey]: e.target.value,
+                                                        }))
+                                                    }
+                                                    placeholder={`Value for {{${varKey}}}`}
+                                                />
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="pt-2 flex items-center justify-end gap-2 border-t border-gray-100">
+                                <Button size="middle" onClick={() => setTemplateModalOpen(false)}>
+                                    Cancel
+                                </Button>
+                                <Button
+                                    type="primary"
+                                    size="middle"
+                                    icon={<SendOutlined />}
+                                    style={{ backgroundColor: "#00a884", borderColor: "#00a884" }}
+                                    loading={sendingTemplate}
+                                    disabled={!selectedTemplate}
+                                    onClick={handleSendTemplate}
+                                    className="font-medium shadow-xs"
+                                >
+                                    Send Template Message
+                                </Button>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </Modal>
         </div>

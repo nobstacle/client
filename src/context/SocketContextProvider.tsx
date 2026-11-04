@@ -88,6 +88,8 @@ export const SocketContext = createContext<{
   emitSendLangCode: (data: SendLangCodeMessagePayloadType) => void;
   emitUpdateInformation: (data: SendInformationUpdatePayloadType, callback?: (response: any) => void) => void;
   emitSendPackages: (data: SendPackagePayloadType, callback?: (response: any) => void) => void;
+  emitStartLiveTranslationSession: (station: number, initiatorMode?: string) => void;
+  emitEndLiveTranslationSession: (station: number, reason?: string) => void;
   socketConnected: boolean;
 } | null>(null);
 
@@ -378,6 +380,12 @@ export const SocketContextProvider = ({
             langCode: clientLang,
           });
         }
+
+        window.dispatchEvent(
+          new CustomEvent("live-translation-activity", {
+            detail: parsedData,
+          }),
+        );
       }
     } catch (error) {
       console.error("❌ Error parsing message response:", error);
@@ -546,6 +554,38 @@ const onDataSubmitted = (data: any) => {
     }
   };
 
+  const onLiveTranslationSessionStarted = (data: any) => {
+    try {
+      const parsedData = typeof data === "string" ? JSON.parse(data) : data;
+      if (!isTargetStation(parsedData?.station)) return;
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(
+          new CustomEvent("live-translation-session-started", {
+            detail: parsedData,
+          }),
+        );
+      }
+    } catch (error) {
+      console.error("❌ Error parsing live-translation-session-started:", error);
+    }
+  };
+
+  const onLiveTranslationSessionEnded = (data: any) => {
+    try {
+      const parsedData = typeof data === "string" ? JSON.parse(data) : data;
+      if (!isTargetStation(parsedData?.station)) return;
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(
+          new CustomEvent("live-translation-session-ended", {
+            detail: parsedData,
+          }),
+        );
+      }
+    } catch (error) {
+      console.error("❌ Error parsing live-translation-session-ended:", error);
+    }
+  };
+
   // Setup socket event listeners
   useEffect(() => {
     if (!socketClient) return;
@@ -569,6 +609,8 @@ const onDataSubmitted = (data: any) => {
     socketClient.on("received-packages", onReceivedPackages);
     socketClient.on("received-upsell-transaction", onRecievedUpsellPackage);
     socketClient.on("recordingSaved", onSubmittedRecordings);
+    socketClient.on("live-translation-session-started", onLiveTranslationSessionStarted);
+    socketClient.on("live-translation-session-ended", onLiveTranslationSessionEnded);
 
     return () => {
       socketClient.off("disconnect", onDisconnect);
@@ -590,6 +632,8 @@ const onDataSubmitted = (data: any) => {
       socketClient.off("received-upsell-transaction", onRecievedUpsellPackage);
       socketClient.off("received-recording", onReceivedRecording);
       socketClient.off("recordingSaved", onSubmittedRecordings);
+      socketClient.off("live-translation-session-started", onLiveTranslationSessionStarted);
+      socketClient.off("live-translation-session-ended", onLiveTranslationSessionEnded);
     };
   }, [socketClient]);
 
@@ -832,6 +876,28 @@ const onDataSubmitted = (data: any) => {
     socketClient.emit("leave-chat", stampStation(data));
   }, [socketClient, stampStation]);
 
+  const emitStartLiveTranslationSession = useCallback((station: number, initiatorMode?: string) => {
+    if (!socketClient || !socketClient.connected) {
+      console.error("❌ Socket is not connected!");
+      return;
+    }
+    socketClient.emit("start-live-translation-session", {
+      station,
+      initiatorMode: initiatorMode || "header",
+    });
+  }, [socketClient]);
+
+  const emitEndLiveTranslationSession = useCallback((station: number, reason?: string) => {
+    if (!socketClient || !socketClient.connected) {
+      console.error("❌ Socket is not connected!");
+      return;
+    }
+    socketClient.emit("end-live-translation-session", {
+      station,
+      reason: reason || "user_ended",
+    });
+  }, [socketClient]);
+
   return (
     <SocketContext.Provider
       value={{
@@ -849,7 +915,9 @@ const onDataSubmitted = (data: any) => {
         emitUpdateInformation,
         socketConnected,
         emitSendTeamDocument,
-        emitSendPackages
+        emitSendPackages,
+        emitStartLiveTranslationSession,
+        emitEndLiveTranslationSession,
       }}
     >
       {children}

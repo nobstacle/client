@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import {
   useCompanyControllerGetCompany,
   useUploadControllerUploadLiveTranslationFile,
@@ -21,10 +21,10 @@ type LiveTranslationRecorderProps = {
 
 // Voice Activity Detection (VAD) tuning constants for real-time phrase streaming
 const SPEECH_RMS_THRESHOLD = 0.022; // RMS amplitude threshold for active voice
-const SPEECH_MIN_ACTIVE_MS = 250; // Minimum voiced duration to count as real speech
-const SILENCE_COMMIT_MS = 1100; // Pause duration after speech that auto-triggers translation (allows natural pauses)
-const MAX_SEGMENT_SPEECH_MS = 6000; // Auto-commit long continuous speech every ~6s
-const IDLE_AUTO_STOP_MS = 5000; // Auto-stop mic if user stays silent for 5s after speaking
+const SPEECH_MIN_ACTIVE_MS = 220; // Minimum voiced duration to count as real speech
+const SILENCE_COMMIT_MS = 550; // Pause duration after speech that auto-triggers translation (fast 550ms commit)
+const MAX_SEGMENT_SPEECH_MS = 5500; // Auto-commit long continuous speech every ~5.5s
+const MUTUAL_SILENCE_TIMEOUT_MS = 5000; // Auto-stop live translation session if neither party speaks for 5s
 
 const LiveTranslationRecorder: React.FC<LiveTranslationRecorderProps> = ({
   mode = "header",
@@ -33,10 +33,12 @@ const LiveTranslationRecorder: React.FC<LiveTranslationRecorderProps> = ({
   onTranscription,
 }) => {
   const [recording, setRecording] = useState(false);
+  const [sessionActive, setSessionActive] = useState(false);
   const [audioLevel, setAudioLevel] = useState(0);
   const [inFlightCount, setInFlightCount] = useState(0);
 
   const recordingRef = useRef(false);
+  const sessionActiveRef = useRef(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const mimeTypeRef = useRef<string>("");
@@ -44,10 +46,11 @@ const LiveTranslationRecorder: React.FC<LiveTranslationRecorderProps> = ({
   const analyserRef = useRef<AnalyserNode | null>(null);
   const animationFrameRef = useRef<number | null>(null);
 
-  // VAD state refs
+  // VAD & Mutual Conversation Session state refs
   const segmentStartTimeRef = useRef<number>(0);
   const speechStartTimeRef = useRef<number>(0);
   const lastSpeechTimeRef = useRef<number>(0);
+  const lastMutualActivityTimeRef = useRef<number>(0);
   const accumulatedVoicedMsRef = useRef<number>(0);
   const hasSpeechInSegmentRef = useRef<boolean>(false);
   const hasAutoCommittedAnySegmentRef = useRef<boolean>(false);
@@ -67,10 +70,24 @@ const LiveTranslationRecorder: React.FC<LiveTranslationRecorderProps> = ({
     },
   });
 
-  const { emitSendMessage, socketConnected } = useSocketContext();
+  const {
+    emitSendMessage,
+    emitStartLiveTranslationSession,
+    emitEndLiveTranslationSession,
+    socketConnected,
+  } = useSocketContext();
   const params = useSearchParams();
   const { data: companyData } = useCompanyControllerGetCompany();
   const [isInitialized, setIsInitialized] = useState(false);
+
+  const getTargetStation = useCallback((): number => {
+    if (station !== undefined && station !== null) {
+      const parsed = Number(station);
+      if (Number.isFinite(parsed) && parsed >= 1) return Math.floor(parsed);
+    }
+    const fromParams = Number(params?.get("station") ?? 1);
+    return Number.isFinite(fromParams) && fromParams >= 1 ? Math.floor(fromParams) : 1;
+  }, [station, params]);
 
   useEffect(() => {
     const hasSupport =
@@ -79,13 +96,6 @@ const LiveTranslationRecorder: React.FC<LiveTranslationRecorderProps> = ({
       typeof MediaRecorder !== "undefined";
 
     setIsInitialized(hasSupport);
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      stopAllRecording(false);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function getSupportedMimeTypes() {
@@ -221,6 +231,7 @@ const LiveTranslationRecorder: React.FC<LiveTranslationRecorderProps> = ({
       if (hadSpeech) {
         hasAutoCommittedAnySegmentRef.current = true;
         lastCommitTimeRef.current = performance.now();
+        lastMutualActivityTimeRef.current = performance.now();
       }
 
       if (keepListening && recordingRef.current && streamRef.current?.active) {
@@ -264,6 +275,28 @@ const LiveTranslationRecorder: React.FC<LiveTranslationRecorderProps> = ({
     cleanupStream();
   };
 
+  const stopSession = useCallback(
+    (emitToRemote = true, reason: string = "user_stopped") => {
+      const wasActive = recordingRef.current || sessionActiveRef.current;
+      setSessionActive(false);
+      sessionActiveRef.current = false;
+
+      if (emitToRemote && wasActive) {
+        const targetStation = getTargetStation();
+        emitEndLiveTranslationSession(targetStation, reason);
+      }
+
+      stopAllRecording(false);
+
+      if (reason === "mutual_silence_timeout") {
+        antMessage.info("Live conversation ended (5s silence)", 2.5);
+      } else if (reason === "user_stopped" && emitToRemote) {
+        antMessage.info("Live conversation ended", 2);
+      }
+    },
+    [emitEndLiveTranslationSession, getTargetStation],
+  );
+
   const monitorAudioAndVad = (stream: MediaStream) => {
     try {
       const audioContext = new AudioContext();
@@ -287,6 +320,16 @@ const LiveTranslationRecorder: React.FC<LiveTranslationRecorderProps> = ({
         const dt = Math.min(100, Math.max(0, now - lastFrameTimeRef.current));
         lastFrameTimeRef.current = now;
 
+        // 1. Audio Echo Suppression:
+        // If translated audio is actively playing through the device speakers,
+        // suppress mic input so it doesn't transcribe speaker output in a loop
+        if (translatedAudioPlayer.getIsPlaying()) {
+          lastMutualActivityTimeRef.current = now;
+          resetSegmentVadState();
+          animationFrameRef.current = requestAnimationFrame(updateLoop);
+          return;
+        }
+
         analyserRef.current.getFloatTimeDomainData(timeData);
         let sumSquares = 0;
         for (let i = 0; i < timeData.length; i++) {
@@ -302,6 +345,7 @@ const LiveTranslationRecorder: React.FC<LiveTranslationRecorderProps> = ({
         if (isVoicedFrame) {
           accumulatedVoicedMsRef.current += dt;
           lastSpeechTimeRef.current = now;
+          lastMutualActivityTimeRef.current = now;
 
           if (
             !hasSpeechInSegmentRef.current &&
@@ -316,7 +360,7 @@ const LiveTranslationRecorder: React.FC<LiveTranslationRecorderProps> = ({
           const silenceDuration = now - lastSpeechTimeRef.current;
           const activeSpeechDuration = now - speechStartTimeRef.current;
 
-          // 1. User paused naturally (~750ms silence) -> immediately translate this utterance!
+          // 1. User paused naturally (~550ms silence) -> immediately translate this utterance!
           // 2. Or user has been speaking continuously for >5.5s and took a brief >220ms breath -> stream chunk!
           if (
             silenceDuration >= SILENCE_COMMIT_MS ||
@@ -326,13 +370,13 @@ const LiveTranslationRecorder: React.FC<LiveTranslationRecorderProps> = ({
           ) {
             flushCurrentSegment(true);
           }
-        } else if (hasAutoCommittedAnySegmentRef.current) {
-          // If at least one spoken phrase was already translated and the user stays silent for 5s, auto-stop
-          const idleSilence = now - segmentStartTimeRef.current;
-          if (idleSilence >= IDLE_AUTO_STOP_MS) {
-            stopAllRecording(false);
-            return;
-          }
+        }
+
+        // Mutual silence check: If neither user nor client has spoken for 5s, end session automatically
+        const mutualSilenceMs = now - lastMutualActivityTimeRef.current;
+        if (mutualSilenceMs >= MUTUAL_SILENCE_TIMEOUT_MS) {
+          stopSession(true, "mutual_silence_timeout");
+          return;
         }
 
         animationFrameRef.current = requestAnimationFrame(updateLoop);
@@ -379,7 +423,7 @@ const LiveTranslationRecorder: React.FC<LiveTranslationRecorderProps> = ({
       monitorAudioAndVad(stream);
     } catch (error: any) {
       console.error("[LiveTranslationMic] Error accessing microphone:", error);
-      stopAllRecording(false);
+      stopSession(false, "mic_error");
 
       if (
         error.name === "NotAllowedError" ||
@@ -399,11 +443,81 @@ const LiveTranslationRecorder: React.FC<LiveTranslationRecorderProps> = ({
     }
   };
 
+  const startSession = useCallback(
+    async (isInitiator = true) => {
+      if (recordingRef.current) return;
+
+      translatedAudioPlayer.unlockAudio();
+      setSessionActive(true);
+      sessionActiveRef.current = true;
+      lastMutualActivityTimeRef.current = performance.now();
+
+      const targetStation = getTargetStation();
+      if (isInitiator) {
+        emitStartLiveTranslationSession(targetStation, mode);
+        antMessage.success("Live conversation active (both microphones listening)", 2.5);
+      }
+
+      await startRecording();
+    },
+    [emitStartLiveTranslationSession, getTargetStation, mode, isInitialized],
+  );
+
+  // Synchronize two-way conversation session across user & client via socket events
+  useEffect(() => {
+    const handleRemoteSessionStarted = (evt: Event) => {
+      const customEvt = evt as CustomEvent<{ station: number; initiatorMode?: string }>;
+      const targetStation = getTargetStation();
+      if (customEvt.detail?.station !== targetStation) return;
+
+      if (!recordingRef.current) {
+        console.log("[LiveTranslation] Remote started live conversation session, auto-starting local mic...");
+        void startSession(false);
+      }
+    };
+
+    const handleRemoteSessionEnded = (evt: Event) => {
+      const customEvt = evt as CustomEvent<{ station: number; reason?: string }>;
+      const targetStation = getTargetStation();
+      if (customEvt.detail?.station !== targetStation) return;
+
+      if (recordingRef.current || sessionActiveRef.current) {
+        console.log("[LiveTranslation] Remote ended live conversation session, stopping local mic...");
+        stopSession(false, customEvt.detail?.reason || "remote_ended");
+      }
+    };
+
+    const handleRemoteActivity = (evt: Event) => {
+      const customEvt = evt as CustomEvent<{ station: number }>;
+      const targetStation = getTargetStation();
+      if (customEvt.detail?.station !== targetStation) return;
+
+      // Keep mutual activity alive when other party speaks
+      lastMutualActivityTimeRef.current = performance.now();
+    };
+
+    window.addEventListener("live-translation-session-started", handleRemoteSessionStarted);
+    window.addEventListener("live-translation-session-ended", handleRemoteSessionEnded);
+    window.addEventListener("live-translation-activity", handleRemoteActivity);
+
+    return () => {
+      window.removeEventListener("live-translation-session-started", handleRemoteSessionStarted);
+      window.removeEventListener("live-translation-session-ended", handleRemoteSessionEnded);
+      window.removeEventListener("live-translation-activity", handleRemoteActivity);
+    };
+  }, [getTargetStation, startSession, stopSession]);
+
+  useEffect(() => {
+    return () => {
+      stopSession(false, "unmount");
+    };
+  }, [stopSession]);
+
   const handleToggleRecording = () => {
-    if (recordingRef.current) {
-      stopAllRecording(true);
+    if (recordingRef.current || sessionActiveRef.current) {
+      stopSession(true, "user_stopped");
     } else {
-      void startRecording();
+      void startSession(true);
     }
   };
 
@@ -434,6 +548,8 @@ const LiveTranslationRecorder: React.FC<LiveTranslationRecorderProps> = ({
 
       if (transcript) {
         lastEmittedTranscriptRef.current = { text: transcript, time: now };
+        lastMutualActivityTimeRef.current = performance.now();
+
         if (onTranscription) {
           onTranscription(transcript);
         }
@@ -442,10 +558,7 @@ const LiveTranslationRecorder: React.FC<LiveTranslationRecorderProps> = ({
           return;
         }
 
-        const targetStation =
-          station !== undefined
-            ? station
-            : Number(params?.get("station") ?? 1);
+        const targetStation = getTargetStation();
 
         emitSendMessage({
           message: transcript,
@@ -472,6 +585,7 @@ const LiveTranslationRecorder: React.FC<LiveTranslationRecorderProps> = ({
   };
 
   const isTranslating = inFlightCount > 0;
+  const isLiveActive = recording || sessionActive;
   const isDisabled = !isInitialized || (!socketConnected && mode === "client");
 
   return (
@@ -480,7 +594,7 @@ const LiveTranslationRecorder: React.FC<LiveTranslationRecorderProps> = ({
         isDisabled ? "cursor-not-allowed opacity-50" : "cursor-pointer"
       }`}
       style={{
-        backgroundColor: recording
+        backgroundColor: isLiveActive
           ? "rgb(185, 28, 28)"
           : isTranslating
             ? "rgb(153, 27, 27)"
@@ -494,9 +608,9 @@ const LiveTranslationRecorder: React.FC<LiveTranslationRecorderProps> = ({
           ? "Microphone not supported in this browser"
           : !socketConnected && mode === "client"
             ? "Waiting for connection..."
-            : recording
-              ? "Listening & translating automatically as you speak (Click to stop)"
-              : "Live AI Translation (Click once & speak — translates automatically)"
+            : isLiveActive
+              ? "Live conversation active (Both mics recording — speak naturally. Auto-stops after 5s silence)"
+              : "Live AI Conversation (Click once: both user and client record automatically with live speech translation)"
       }
     >
       {!recording && isTranslating ? (
@@ -506,12 +620,12 @@ const LiveTranslationRecorder: React.FC<LiveTranslationRecorderProps> = ({
           <div className="relative">
             <div
               className={
-                recording ? "animate-breath text-yellow-200" : "text-white"
+                isLiveActive ? "animate-breath text-yellow-200" : "text-white"
               }
             >
               <MicIcon fill="currentColor" />
             </div>
-            {recording && (
+            {isLiveActive && (
               <div className="absolute -right-1 -top-1 flex h-3 w-3">
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-75"></span>
                 <span
@@ -522,7 +636,7 @@ const LiveTranslationRecorder: React.FC<LiveTranslationRecorderProps> = ({
               </div>
             )}
           </div>
-          {recording && (
+          {isLiveActive && (
             <div className="absolute -bottom-1 left-0 right-0 h-1 overflow-hidden rounded-full bg-red-950">
               <div
                 className="h-full bg-yellow-300 transition-all duration-150 ease-out"

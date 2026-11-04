@@ -137,6 +137,10 @@ class TranslatedAudioPlayer {
     };
   }
 
+  getIsPlaying(): boolean {
+    return this.isPlaying;
+  }
+
   private setPlayingId(id: string | number | null) {
     this.currentMessageId = id;
     this.listeners.forEach((cb) => {
