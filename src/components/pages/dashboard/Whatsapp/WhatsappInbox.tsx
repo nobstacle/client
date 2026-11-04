@@ -740,12 +740,22 @@ export const WhatsappInbox: React.FC<WhatsappInboxProps> = ({
             setNewChatAttachment(null);
             if (newChatFileInputRef.current) newChatFileInputRef.current.value = "";
 
+            setStatusFilter("open");
             await loadConversations(false);
             if (newConv?.id) {
                 setActiveConversationId(newConv.id);
             }
         } catch (err: any) {
-            message.error(err?.message || "Failed to start chat");
+            const errorMsg = String(err?.message || "");
+            if (errorMsg.includes("24-hour") || errorMsg.includes("131047") || errorMsg.includes("Template") || errorMsg.includes("template")) {
+                message.warning("Chat created, but freeform text outside the Meta 24-hour window requires an approved template. Please select an approved template.", 5);
+                setNewChatModalOpen(false);
+                setStatusFilter("open");
+                await loadConversations(false);
+                handleOpenTemplateModal();
+            } else {
+                message.error(err?.message || "Failed to start chat");
+            }
         } finally {
             setCreatingChat(false);
         }
