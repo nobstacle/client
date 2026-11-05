@@ -2,9 +2,16 @@ import { getSession } from "next-auth/react";
 
 type DirectUploadResult = { url: string; sourceId: number; isUpdate?: boolean };
 
+const getBackendBaseUrl = (): string => {
+  const url = process.env.NEXT_PUBLIC_BACKEND_URL || "";
+  return url.replace(/\/+$/, "");
+};
+
 const apiRequest = async <T>(path: string, body: unknown): Promise<T> => {
   const session = await getSession();
-  const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}${path}`, {
+  const baseUrl = getBackendBaseUrl();
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  const response = await fetch(`${baseUrl}${normalizedPath}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -14,12 +21,19 @@ const apiRequest = async <T>(path: string, body: unknown): Promise<T> => {
     },
     body: JSON.stringify(body),
   });
-  if (!response.ok) throw new Error((await response.json().catch(() => null))?.message ?? "Upload request failed");
+  if (!response.ok) {
+    const errorBody = await response.json().catch(() => null);
+    throw new Error(errorBody?.message ?? `Upload request failed (${response.status})`);
+  }
   return response.json();
 };
 
 const putWithProgress = (url: string, file: File, onProgress?: (percent: number) => void, signal?: AbortSignal) =>
   new Promise<void>((resolve, reject) => {
+    if (!url || typeof url !== "string" || !/^https?:\/\//i.test(url)) {
+      reject(new Error("Direct upload failed: Invalid or missing upload URL"));
+      return;
+    }
     const request = new XMLHttpRequest();
     request.open("PUT", url);
     request.setRequestHeader("Content-Type", file.type);
@@ -46,6 +60,9 @@ export async function uploadCompanyFileDirect(
     "/api/v1/uploads/company-file/direct-session",
     { fileName: file.name, mimeType: file.type, size: file.size, ...metadata },
   );
+  if (!session?.uploadUrl || !session?.uploadId) {
+    throw new Error("Direct upload failed: Server did not return a valid upload session");
+  }
   await putWithProgress(session.uploadUrl, file, onProgress);
   return apiRequest<DirectUploadResult>("/api/v1/uploads/company-file/direct-finalize", {
     uploadId: session.uploadId,
@@ -64,6 +81,11 @@ export async function uploadSlideshowDirect(
     "/api/v1/uploads/company-file/direct-session",
     { fileName: item.file.name, mimeType: item.file.type, size: item.file.size, ...metadata },
   )));
+  for (const session of sessions) {
+    if (!session?.uploadUrl || !session?.uploadId) {
+      throw new Error("Direct upload failed: Server did not return a valid upload session");
+    }
+  }
   let completed = 0;
   const uploadOne = async (index: number) => {
     await putWithProgress(sessions[index].uploadUrl, files[index].file, undefined, signal);
