@@ -372,7 +372,7 @@ export default function WhatsappMetaAccountsPage() {
                         label="WhatsApp Business Account ID (WABA ID)"
                         name="businessAccountId"
                         rules={[{ required: true, message: "WhatsApp Business Account ID is required" }]}
-                        extra="Required. If the hotel shared this WABA with Nobstacle's Partner Business ID (1574074800547189), you can leave Access Token and Phone Number ID blank."
+                        extra="Required. If the hotel shared this WABA with Nobstacle's Partner Business ID (854560954266234), you can leave Access Token and Phone Number ID blank."
                     >
                         <Input placeholder="e.g. 1068716125739705" />
                     </Form.Item>

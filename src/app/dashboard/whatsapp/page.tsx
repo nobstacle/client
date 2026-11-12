@@ -922,6 +922,7 @@ export default function WhatsAppPage() {
     const [connectingMeta, setConnectingMeta] = useState(false);
     const [checkingMetaStatus, setCheckingMetaStatus] = useState(false);
     const [selectingPhoneNumber, setSelectingPhoneNumber] = useState(false);
+    const [manualPhoneIdInput, setManualPhoneIdInput] = useState("");
     const [manualWabaIdInput, setManualWabaIdInput] = useState("");
     const [linkingManualWaba, setLinkingManualWaba] = useState(false);
     const [manualConnectOpen, setManualConnectOpen] = useState(false);
@@ -3382,12 +3383,12 @@ export default function WhatsAppPage() {
                     <Alert
                         message={`WhatsApp Business Account Linked (WABA ID: ${metaConnection.businessAccountId}) — Phone Number Required`}
                         description={
-                            <div className="space-y-2">
+                            <div className="space-y-2.5">
                                 <p className="m-0 text-sm text-gray-700">
-                                    Your Meta WhatsApp Business Account is linked, but no active phone number is currently selected or registered on this WABA.
+                                    Your Meta WhatsApp Business Account is linked, but no active phone number is currently registered under this WABA in Meta (a phone number already used on another WhatsApp account or mobile app will not appear automatically until migrated).
                                     {metaConnection.availablePhoneNumbers && metaConnection.availablePhoneNumbers.length > 0
                                         ? " Please choose a phone number below to complete setup:"
-                                        : " Please add or verify a phone number in Meta Business Setup and click Refresh Status."}
+                                        : " Add/verify a phone number in Meta WhatsApp Manager, or enter an existing Cloud API Phone Number ID below:"}
                                 </p>
                                 {metaConnection.availablePhoneNumbers && metaConnection.availablePhoneNumbers.length > 0 && (
                                     <div className="pt-1">
@@ -3406,6 +3407,32 @@ export default function WhatsAppPage() {
                                         </Select>
                                     </div>
                                 )}
+                                <div className="flex flex-wrap items-center gap-2 pt-1">
+                                    <Input
+                                        placeholder="Enter existing Phone Number ID (e.g. 149349568263516)"
+                                        value={manualPhoneIdInput}
+                                        onChange={(e) => setManualPhoneIdInput(e.target.value)}
+                                        style={{ maxWidth: 340 }}
+                                        className="font-mono text-xs"
+                                        onPressEnter={() => {
+                                            const cleaned = manualPhoneIdInput.replace(/[^0-9]/g, "");
+                                            if (cleaned) void handleSelectPhoneNumber(cleaned);
+                                        }}
+                                    />
+                                    <Button
+                                        type="primary"
+                                        size="middle"
+                                        style={{ backgroundColor: "#25D366", borderColor: "#25D366" }}
+                                        loading={selectingPhoneNumber}
+                                        disabled={!manualPhoneIdInput.replace(/[^0-9]/g, "")}
+                                        onClick={() => {
+                                            const cleaned = manualPhoneIdInput.replace(/[^0-9]/g, "");
+                                            if (cleaned) void handleSelectPhoneNumber(cleaned);
+                                        }}
+                                    >
+                                        Link Phone Number ID
+                                    </Button>
+                                </div>
                             </div>
                         }
                         type="warning"
@@ -5225,14 +5252,14 @@ export default function WhatsAppPage() {
                                     <div>
                                         <div className="text-[11px] text-gray-500">Nobstacle Partner Business Portfolio ID</div>
                                         <div className="font-mono font-bold text-sm text-gray-900">
-                                            {metaConnection.partnerBusinessId || "1574074800547189"}
+                                            {metaConnection.partnerBusinessId || "854560954266234"}
                                         </div>
                                     </div>
                                     <Button
                                         size="small"
                                         icon={<CopyOutlined />}
                                         onClick={() => {
-                                            const partnerId = metaConnection.partnerBusinessId || "1574074800547189";
+                                            const partnerId = metaConnection.partnerBusinessId || "854560954266234";
                                             void navigator.clipboard.writeText(partnerId);
                                             message.success(`Copied Partner Business ID: ${partnerId}`);
                                         }}
@@ -5245,7 +5272,7 @@ export default function WhatsAppPage() {
                                         Open <a href="https://business.facebook.com/settings/partners" target="_blank" rel="noopener noreferrer" className="underline font-semibold text-emerald-700">Meta Business Settings → Users → Partners</a>.
                                     </li>
                                     <li>
-                                        Click <strong>Add</strong> → <strong>Give a partner access to your assets</strong> and enter Partner ID <code>{metaConnection.partnerBusinessId || "1574074800547189"}</code>.
+                                        Click <strong>Add</strong> → <strong>Give a partner access to your assets</strong> and enter Partner ID <code>{metaConnection.partnerBusinessId || "854560954266234"}</code>.
                                     </li>
                                     <li>
                                         Select <strong>WhatsApp Business Accounts</strong> → check your hotel&apos;s WhatsApp account → toggle on <strong>Manage WhatsApp Business Account (Full Control)</strong> → click <strong>Save Changes</strong>.
@@ -5276,7 +5303,7 @@ export default function WhatsAppPage() {
                                             },
                                         },
                                     ]}
-                                    extra={<span className="text-xs text-gray-400">Found in Meta Business Settings → Accounts → WhatsApp accounts (15–16 digits). No Access Token is required after sharing with Partner ID {metaConnection.partnerBusinessId || "1574074800547189"}.</span>}
+                                    extra={<span className="text-xs text-gray-400">Found in Meta Business Settings → Accounts → WhatsApp accounts (15–16 digits). No Access Token is required after sharing with Partner ID {metaConnection.partnerBusinessId || "854560954266234"}.</span>}
                                 >
                                     <Input
                                         placeholder="e.g. 1068716125739705"
