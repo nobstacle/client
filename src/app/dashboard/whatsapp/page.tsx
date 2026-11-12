@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import React, { useState, useEffect, useLayoutEffect, useMemo, useRef, useCallback } from "react";
 import {
     Table, Tag, Card, Input, message, Button, Space, Select, Modal,
     Tabs, Upload, Steps, Form, Progress, Badge, Tooltip,
@@ -889,6 +889,32 @@ const getFailedCampaignMessages = (campaign?: CampaignDetails | null) => (
     (campaign?.messages || []).filter((item) => item.status === "failed")
 );
 
+const TEMPLATE_CONTENT_WORD_CHAR = (() => {
+    try {
+        return new RegExp("^[\\p{L}\\p{N}]", "u");
+    } catch {
+        return /^[A-Za-z0-9]/;
+    }
+})();
+
+const buildContentWithVariable = (content: string, token: string, start: number, end: number) => {
+    const nextToken = `{{${token}}}`;
+    const safeStart = Math.max(0, Math.min(start, content.length));
+    const safeEnd = Math.max(safeStart, Math.min(end, content.length));
+    const before = content.slice(0, safeStart);
+    const after = content.slice(safeEnd);
+    const needsLeadingSpace = before.length > 0 && !/\s$/.test(before);
+    const needsTrailingSpace = after.length > 0 && (TEMPLATE_CONTENT_WORD_CHAR.test(after) || after.startsWith("{{"));
+    const insertion = `${needsLeadingSpace ? " " : ""}${nextToken}${needsTrailingSpace ? " " : ""}`;
+
+    return {
+        content: `${before}${insertion}${after}`,
+        cursor: before.length + insertion.length,
+    };
+};
+
+const useBrowserLayoutEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
+
 const summarizeFailureReasons = (messages: CampaignMessage[]) => {
     const counts = messages.reduce<Record<string, number>>((acc, item) => {
         const reason = getDeliveryFailureReason(item.errorMessage);
@@ -992,6 +1018,9 @@ export default function WhatsAppPage() {
     const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
     const [editingTemplate, setEditingTemplate] = useState<Template | null>(null);
     const [newTemplate, setNewTemplate] = useState<TemplateFormState>(createEmptyTemplateState());
+    const templateContentRef = useRef<React.ElementRef<typeof TextArea> | null>(null);
+    const templateContentCaretRef = useRef({ start: 0, end: 0, placed: false });
+    const pendingTemplateCaretRef = useRef<number | null>(null);
     const [templateMediaPreviewUrl, setTemplateMediaPreviewUrl] = useState<string>();
     const [carouselMediaPreviewUrls, setCarouselMediaPreviewUrls] = useState<Record<string, string>>({});
 
@@ -1010,6 +1039,20 @@ export default function WhatsAppPage() {
     const [selectedCampaignReport, setSelectedCampaignReport] = useState<CampaignDetails | null>(null);
     const [campaignReportCache, setCampaignReportCache] = useState<Record<number, CampaignDetails>>({});
     const [submittingTemplate, setSubmittingTemplate] = useState(false);
+
+    useBrowserLayoutEffect(() => {
+        const cursor = pendingTemplateCaretRef.current;
+        if (cursor == null) return;
+
+        const textarea = templateContentRef.current?.resizableTextArea?.textArea;
+        if (!textarea) return;
+
+        pendingTemplateCaretRef.current = null;
+        const next = Math.max(0, Math.min(cursor, textarea.value.length));
+        textarea.focus();
+        textarea.setSelectionRange(next, next);
+        templateContentCaretRef.current = { start: next, end: next, placed: true };
+    }, [newTemplate.content]);
 
     const hasTrailingVariable = useMemo(() => {
         if (newTemplate.type === "carousel") return false;
@@ -2145,15 +2188,22 @@ export default function WhatsAppPage() {
         return true;
     };
 
+    const resetTemplateContentCaret = () => {
+        templateContentCaretRef.current = { start: 0, end: 0, placed: false };
+        pendingTemplateCaretRef.current = null;
+    };
+
     const closeTemplateModal = () => {
         setTemplateModal(false);
         setEditingTemplate(null);
         setNewTemplate(createEmptyTemplateState());
         setTemplateMediaPreviewUrl(undefined);
         setCarouselMediaPreviewUrls({});
+        resetTemplateContentCaret();
     };
 
     const openEditTemplate = (record: Template) => {
+        resetTemplateContentCaret();
         setEditingTemplate(record);
 
         const buttonDrafts: TemplateButtonDraft[] = (record.buttons || []).map((btn) => ({
@@ -2732,20 +2782,51 @@ export default function WhatsAppPage() {
         }));
     };
 
+    const rememberTemplateContentCaret = () => {
+        const textarea = templateContentRef.current?.resizableTextArea?.textArea;
+        if (!textarea) return;
+        templateContentCaretRef.current = {
+            start: textarea.selectionStart ?? 0,
+            end: textarea.selectionEnd ?? textarea.selectionStart ?? 0,
+            placed: true,
+        };
+    };
+
+    const handleTemplateContentChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
+        const target = event.target;
+        templateContentCaretRef.current = {
+            start: target.selectionStart ?? 0,
+            end: target.selectionEnd ?? target.selectionStart ?? 0,
+            placed: true,
+        };
+        setNewTemplate({ ...newTemplate, content: target.value });
+    };
+
     const insertTemplateVariable = (token: string) => {
         if (newTemplate.category === "authentication") {
             message.warning("Authentication templates cannot include contact variables");
             return;
         }
 
-        setNewTemplate((prev) => {
-            const nextToken = `{{${token}}}`;
-            const needsLeadingSpace = Boolean(prev.content) && !/[\s\n]$/.test(prev.content);
+        const textarea = templateContentRef.current?.resizableTextArea?.textArea;
+        const focused = Boolean(textarea && document.activeElement === textarea);
+        const savedCaret = templateContentCaretRef.current;
+        const liveStart = focused ? textarea?.selectionStart : undefined;
+        const liveEnd = focused ? textarea?.selectionEnd : undefined;
 
-            return {
-                ...prev,
-                content: `${prev.content}${needsLeadingSpace ? " " : ""}${nextToken}`,
-            };
+        setNewTemplate((prev) => {
+            const content = prev.content || "";
+            const useSavedCaret = !focused && savedCaret.placed;
+            const start = focused
+                ? (liveStart ?? content.length)
+                : (useSavedCaret ? savedCaret.start : content.length);
+            const end = focused
+                ? (liveEnd ?? start)
+                : (useSavedCaret ? savedCaret.end : content.length);
+            const next = buildContentWithVariable(content, token, start, end);
+            pendingTemplateCaretRef.current = next.cursor;
+            templateContentCaretRef.current = { start: next.cursor, end: next.cursor, placed: true };
+            return { ...prev, content: next.content };
         });
     };
 
@@ -3657,6 +3738,7 @@ export default function WhatsAppPage() {
                                             setNewTemplate(createEmptyTemplateState());
                                             setTemplateMediaPreviewUrl(undefined);
                                             setCarouselMediaPreviewUrls({});
+                                            resetTemplateContentCaret();
                                             setTemplateModal(true);
                                         }}
                                     >
@@ -4330,10 +4412,15 @@ export default function WhatsAppPage() {
                                     <Form.Item label="Message Content" required>
                                         <div className="space-y-3">
                                             <TextArea
+                                                ref={templateContentRef}
                                                 rows={5}
                                                 placeholder={"Hi {{name}}, your booking is confirmed."}
                                                 value={newTemplate.content}
-                                                onChange={(e) => setNewTemplate({ ...newTemplate, content: e.target.value })}
+                                                onChange={handleTemplateContentChange}
+                                                onSelect={rememberTemplateContentCaret}
+                                                onKeyUp={rememberTemplateContentCaret}
+                                                onClick={rememberTemplateContentCaret}
+                                                onBlur={rememberTemplateContentCaret}
                                             />
                                             {hasTrailingVariable && (
                                                 <Alert
@@ -4367,6 +4454,7 @@ export default function WhatsAppPage() {
                                                                     key={item.token}
                                                                     size="small"
                                                                     disabled={newTemplate.category === "authentication"}
+                                                                    onMouseDown={(event) => event.preventDefault()}
                                                                     onClick={() => insertTemplateVariable(item.token)}
                                                                 >
                                                                     Insert {"{{" + item.token + "}}"}
@@ -4423,10 +4511,15 @@ export default function WhatsAppPage() {
                                         <Form.Item label="Intro Text">
                                             <div className="space-y-3">
                                                 <TextArea
+                                                    ref={templateContentRef}
                                                     rows={3}
                                                     placeholder="Optional text above the carousel"
                                                     value={newTemplate.content}
-                                                    onChange={(e) => setNewTemplate({ ...newTemplate, content: e.target.value })}
+                                                    onChange={handleTemplateContentChange}
+                                                    onSelect={rememberTemplateContentCaret}
+                                                    onKeyUp={rememberTemplateContentCaret}
+                                                    onClick={rememberTemplateContentCaret}
+                                                    onBlur={rememberTemplateContentCaret}
                                                 />
                                                 <Alert
                                                     showIcon
@@ -4443,6 +4536,7 @@ export default function WhatsAppPage() {
                                                                         key={item.token}
                                                                         size="small"
                                                                         disabled={newTemplate.category === "authentication"}
+                                                                        onMouseDown={(event) => event.preventDefault()}
                                                                         onClick={() => insertTemplateVariable(item.token)}
                                                                     >
                                                                         Insert {"{{" + item.token + "}}"}
