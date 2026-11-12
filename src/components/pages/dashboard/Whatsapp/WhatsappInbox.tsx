@@ -304,6 +304,9 @@ export const WhatsappInbox: React.FC<WhatsappInboxProps> = ({
     const [newChatName, setNewChatName] = useState("");
     const [newChatCategoryId, setNewChatCategoryId] = useState<number | null>(null);
     const [newChatUserId, setNewChatUserId] = useState<number | null>(null);
+    const [newChatMode, setNewChatMode] = useState<"template" | "custom" | "none">("template");
+    const [newChatTemplate, setNewChatTemplate] = useState<any | null>(null);
+    const [newChatTemplateVars, setNewChatTemplateVars] = useState<Record<string, string>>({});
     const [newChatInitialMessage, setNewChatInitialMessage] = useState("");
     const [newChatAttachment, setNewChatAttachment] = useState<AttachmentFile | null>(null);
     const [creatingChat, setCreatingChat] = useState(false);
@@ -563,42 +566,101 @@ export const WhatsappInbox: React.FC<WhatsappInboxProps> = ({
     }, [metaConnected, token, activeConversationId, loadConversations, loadMessages]);
 
     // ── Template Picker Handlers ────────────────────────────────────────────
-    const handleOpenTemplateModal = async () => {
+    const fetchApprovedTemplates = useCallback(async () => {
+        setLoadingTemplates(true);
+        try {
+            const res: any = await authFetch("/whatsapp/templates?limit=100");
+            const list = Array.isArray(res) ? res : res?.items || res?.templates || [];
+            const approved = list.filter((t: any) => String(t.status || "").toUpperCase() === "APPROVED");
+            setAvailableTemplates(approved);
+            return approved;
+        } catch (err: any) {
+            message.error(err?.message || "Failed to load approved templates");
+            return [];
+        } finally {
+            setLoadingTemplates(false);
+        }
+    }, [authFetch]);
+
+    const extractTemplateVarDefaults = useCallback(
+        (tmpl: any, contactNameHint?: string) => {
+            const bodyText =
+                tmpl?.content ||
+                tmpl?.bodyText ||
+                tmpl?.components?.find((c: any) => c.type === "BODY")?.text ||
+                "";
+            const explicitVars: string[] = Array.isArray(tmpl?.variables) ? tmpl.variables : [];
+            const matches = bodyText.match(/{{\s*([a-zA-Z0-9_]+)\s*}}/g) || [];
+            const keys = Array.from(
+                new Set([
+                    ...explicitVars,
+                    ...matches.map((m: string) => m.replace(/[{}]/g, "").trim()),
+                ])
+            ).filter(Boolean);
+
+            const vars: Record<string, string> = {};
+            keys.forEach((key: string) => {
+                if (key === "1" || key.toLowerCase().includes("name")) {
+                    vars[key] = contactNameHint || "";
+                } else {
+                    vars[key] = "";
+                }
+            });
+            return vars;
+        },
+        []
+    );
+
+    const handleOpenTemplateModal = async (targetConvId?: number | React.MouseEvent<HTMLElement>) => {
+        const convId = typeof targetConvId === "number" ? targetConvId : activeConversationId;
+        const activeC = conversations.find((c) => c.id === convId);
+        const nameHint =
+            activeC?.contactName && activeC.contactName !== activeC.contactPhone
+                ? activeC.contactName
+                : "";
+
         setTemplateModalOpen(true);
         setSelectedTemplate(null);
         setTemplateVariables({});
-        setLoadingTemplates(true);
-        try {
-            const res: any = await authFetch("/whatsapp/templates");
-            const list = Array.isArray(res) ? res : res?.templates || [];
-            const approved = list.filter((t: any) => String(t.status || "").toUpperCase() === "APPROVED");
-            setAvailableTemplates(approved);
-            if (approved.length > 0) {
-                handleSelectTemplate(approved[0]);
-            }
-        } catch (err: any) {
-            message.error(err?.message || "Failed to load approved templates");
-        } finally {
-            setLoadingTemplates(false);
+        const approved = await fetchApprovedTemplates();
+        if (approved.length > 0) {
+            setSelectedTemplate(approved[0]);
+            setTemplateVariables(extractTemplateVarDefaults(approved[0], nameHint));
         }
     };
 
     const handleSelectTemplate = (tmpl: any) => {
         setSelectedTemplate(tmpl);
-        const bodyText = tmpl.bodyText || tmpl.components?.find((c: any) => c.type === "BODY")?.text || "";
-        const matches = bodyText.match(/{{\s*([a-zA-Z0-9_]+)\s*}}/g) || [];
-        const vars: Record<string, string> = {};
-        matches.forEach((m: string) => {
-            const key = m.replace(/[{}]/g, "").trim();
-            if (key === "1" || key.toLowerCase().includes("name")) {
-                const activeC = conversations.find((c) => c.id === activeConversationId);
-                vars[key] = activeC?.contactName && activeC.contactName !== activeC.contactPhone ? activeC.contactName : "";
-            } else {
-                vars[key] = "";
-            }
-        });
-        setTemplateVariables(vars);
+        const activeC = conversations.find((c) => c.id === activeConversationId);
+        const nameHint =
+            activeC?.contactName && activeC.contactName !== activeC.contactPhone
+                ? activeC.contactName
+                : "";
+        setTemplateVariables(extractTemplateVarDefaults(tmpl, nameHint));
     };
+
+    const handleSelectNewChatTemplate = useCallback(
+        (tmpl: any, nameOverride?: string) => {
+            setNewChatTemplate(tmpl);
+            const hint = (nameOverride !== undefined ? nameOverride : newChatName).trim();
+            setNewChatTemplateVars(extractTemplateVarDefaults(tmpl, hint));
+        },
+        [extractTemplateVarDefaults, newChatName]
+    );
+
+    useEffect(() => {
+        if (newChatModalOpen) {
+            fetchApprovedTemplates().then((approved) => {
+                if (approved.length > 0) {
+                    setNewChatTemplate((prev: any) => {
+                        const chosen = prev || approved[0];
+                        setNewChatTemplateVars(extractTemplateVarDefaults(chosen, newChatName.trim()));
+                        return chosen;
+                    });
+                }
+            });
+        }
+    }, [newChatModalOpen, fetchApprovedTemplates, extractTemplateVarDefaults]);
 
     const handleSendTemplate = async () => {
         if (!selectedTemplate || !activeConversationId) return;
@@ -609,15 +671,17 @@ export const WhatsappInbox: React.FC<WhatsappInboxProps> = ({
                 body: JSON.stringify({
                     templateName: selectedTemplate.name,
                     languageCode: selectedTemplate.language || "en_US",
-                    type: selectedTemplate.type || "standard",
+                    type: selectedTemplate.type || "text",
                     mediaUrl: selectedTemplate.mediaUrl,
                     variables: templateVariables,
+                    bodyVariableNames: Array.isArray(selectedTemplate.variables)
+                        ? selectedTemplate.variables
+                        : undefined,
                     buttons: selectedTemplate.buttons,
                 }),
             });
             message.success(`Template "${selectedTemplate.name}" sent successfully!`);
             setTemplateModalOpen(false);
-            setIsWindowOpen(true);
             await loadMessages(activeConversationId, true);
             await loadConversations(true);
         } catch (err: any) {
@@ -696,10 +760,15 @@ export const WhatsappInbox: React.FC<WhatsappInboxProps> = ({
         setReplyAttachment({ file, previewUrl, mediaType });
     };
 
-    // ── Start New Chat (with optional initial media attachment) ─────────────
+    // ── Start New Chat (with Approved Template or Direct Message) ───────────
     const handleStartNewChat = async () => {
         if (!newChatPhone.trim()) {
-            message.error("Please enter a phone number");
+            message.error("Please enter a phone number with country code");
+            return;
+        }
+
+        if (newChatMode === "template" && !newChatTemplate) {
+            message.error("Please select an approved WhatsApp template, or switch to 'Chat Thread Only'");
             return;
         }
 
@@ -709,28 +778,42 @@ export const WhatsappInbox: React.FC<WhatsappInboxProps> = ({
             let mediaType: string | undefined;
             let filename: string | undefined;
 
-            if (newChatAttachment) {
+            if (newChatMode === "custom" && newChatAttachment) {
                 const uploaded = await uploadFile(newChatAttachment.file);
                 mediaUrl = uploaded.url;
                 mediaType = uploaded.mediaType;
                 filename = uploaded.filename;
             }
 
+            const payload: Record<string, any> = {
+                contactPhone: newChatPhone.trim(),
+                contactName: newChatName.trim() || undefined,
+                categoryId: newChatCategoryId || undefined,
+                assignedUserId: newChatUserId || undefined,
+            };
+
+            if (newChatMode === "template" && newChatTemplate) {
+                payload.templateName = newChatTemplate.name;
+                payload.languageCode = newChatTemplate.language || "en_US";
+                payload.templateType = newChatTemplate.type || "text";
+                payload.mediaUrl = newChatTemplate.mediaUrl || undefined;
+                payload.templateVariables = newChatTemplateVars;
+                payload.bodyVariableNames = Array.isArray(newChatTemplate.variables)
+                    ? newChatTemplate.variables
+                    : undefined;
+                payload.buttons = newChatTemplate.buttons;
+            } else if (newChatMode === "custom") {
+                payload.initialMessage = newChatInitialMessage.trim() || undefined;
+                payload.mediaUrl = mediaUrl;
+                payload.mediaType = mediaType;
+                payload.filename = filename;
+            }
+
             const newConv: any = await authFetch("/whatsapp/inbox/conversations", {
                 method: "POST",
-                body: JSON.stringify({
-                    contactPhone: newChatPhone.trim(),
-                    contactName: newChatName.trim() || undefined,
-                    categoryId: newChatCategoryId || undefined,
-                    assignedUserId: newChatUserId || undefined,
-                    initialMessage: newChatInitialMessage.trim() || undefined,
-                    mediaUrl,
-                    mediaType,
-                    filename,
-                }),
+                body: JSON.stringify(payload),
             });
 
-            message.success(`Chat started with ${newConv.contactName || newConv.contactPhone}`);
             setNewChatModalOpen(false);
             setNewChatPhone("");
             setNewChatName("");
@@ -741,9 +824,29 @@ export const WhatsappInbox: React.FC<WhatsappInboxProps> = ({
             if (newChatFileInputRef.current) newChatFileInputRef.current.value = "";
 
             setStatusFilter("open");
+            if (scope === "mine" && newChatUserId && newChatUserId !== currentUserId) {
+                setScope("all");
+            }
+            if (selectedCategoryId && newChatCategoryId !== selectedCategoryId) {
+                setSelectedCategoryId(null);
+            }
+
             await loadConversations(false);
             if (newConv?.id) {
                 setActiveConversationId(newConv.id);
+                await loadMessages(newConv.id, false);
+            }
+
+            if (newConv?.requiresTemplate) {
+                message.warning(
+                    "Chat created! Because this contact has not messaged you in the last 24 hours, Meta requires an approved template to initiate the conversation.",
+                    6
+                );
+                await handleOpenTemplateModal(newConv?.id);
+            } else if (newConv?.initialMessageWarning) {
+                message.warning(`Chat created, but initial message could not be sent: ${newConv.initialMessageWarning}`, 6);
+            } else {
+                message.success(`Chat started with ${newConv?.contactName || newConv?.contactPhone}`);
             }
         } catch (err: any) {
             const errorMsg = String(err?.message || "");
@@ -2112,6 +2215,7 @@ export const WhatsappInbox: React.FC<WhatsappInboxProps> = ({
                 footer={null}
                 className="rounded-2xl"
                 centered
+                width={540}
             >
                 <div className="space-y-4 pt-2">
                     <div>
@@ -2122,15 +2226,45 @@ export const WhatsappInbox: React.FC<WhatsappInboxProps> = ({
                             onChange={(e) => setNewChatPhone(e.target.value)}
                             className="rounded-xl"
                         />
-                        <div className="text-[11px] text-gray-400 mt-1">Existing contact in your account: <strong>Gokce (+971588784735)</strong></div>
+                        {conversations.length > 0 && (
+                            <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
+                                <span className="text-[11px] text-gray-400">Recent contacts:</span>
+                                {conversations.slice(0, 4).map((c) => (
+                                    <button
+                                        key={c.id}
+                                        type="button"
+                                        onClick={() => {
+                                            const phoneVal = c.contactPhone.startsWith("+") ? c.contactPhone : `+${c.contactPhone}`;
+                                            const nameVal = c.contactName && c.contactName !== c.contactPhone ? c.contactName : "";
+                                            setNewChatPhone(phoneVal);
+                                            setNewChatName(nameVal);
+                                            if (newChatTemplate) {
+                                                handleSelectNewChatTemplate(newChatTemplate, nameVal);
+                                            }
+                                        }}
+                                        className="text-[11px] px-2 py-0.5 rounded-full bg-gray-100 hover:bg-[#eefeeb] hover:text-[#00a884] text-gray-600 transition-colors cursor-pointer border border-gray-200/70"
+                                    >
+                                        {c.contactName && c.contactName !== c.contactPhone
+                                            ? `${c.contactName} (+${c.contactPhone.replace(/^\+/, "")})`
+                                            : `+${c.contactPhone.replace(/^\+/, "")}`}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
                     </div>
 
                     <div>
                         <label className="text-xs font-semibold text-gray-600 mb-1 block">Contact / Guest Name (Optional)</label>
                         <Input
-                            placeholder="e.g. Gokce, Alex Johnson"
+                            placeholder="e.g. Alex Johnson"
                             value={newChatName}
-                            onChange={(e) => setNewChatName(e.target.value)}
+                            onChange={(e) => {
+                                const val = e.target.value;
+                                setNewChatName(val);
+                                if (newChatTemplate) {
+                                    handleSelectNewChatTemplate(newChatTemplate, val);
+                                }
+                            }}
                             className="rounded-xl"
                         />
                     </div>
@@ -2139,7 +2273,7 @@ export const WhatsappInbox: React.FC<WhatsappInboxProps> = ({
                         {/* Searchable WhatsApp Category */}
                         <div>
                             <div className="flex items-center justify-between mb-1">
-                                <label className="text-xs font-semibold text-gray-600">Category</label>
+                                <label className="text-xs font-semibold text-gray-600">Category (Optional)</label>
                                 <button
                                     type="button"
                                     onClick={() => setCategoryModalOpen(true)}
@@ -2150,7 +2284,7 @@ export const WhatsappInbox: React.FC<WhatsappInboxProps> = ({
                             </div>
                             <Select
                                 showSearch
-                                placeholder="Search category..."
+                                placeholder="Select or create category..."
                                 optionFilterProp="label"
                                 filterOption={(input, option) =>
                                     String(option?.label || "")
@@ -2202,77 +2336,225 @@ export const WhatsappInbox: React.FC<WhatsappInboxProps> = ({
                         </div>
                     </div>
 
-                    {/* First Message */}
+                    {/* Initial Message Type Selector */}
                     <div>
-                        <label className="text-xs font-semibold text-gray-600 mb-1 block">First Message (Optional)</label>
-                        <Input.TextArea
-                            rows={3}
-                            placeholder="Type an initial message to send to the contact..."
-                            value={newChatInitialMessage}
-                            onChange={(e) => setNewChatInitialMessage(e.target.value)}
-                            className="rounded-xl resize-none text-sm"
-                        />
+                        <label className="text-xs font-semibold text-gray-600 mb-1.5 block">First Message Type</label>
+                        <div className="grid grid-cols-3 gap-1.5 bg-gray-100 p-1 rounded-xl">
+                            <button
+                                type="button"
+                                onClick={() => setNewChatMode("template")}
+                                className={`py-1.5 px-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                                    newChatMode === "template"
+                                        ? "bg-white text-[#00a884] shadow-2xs"
+                                        : "text-gray-600 hover:text-gray-800"
+                                }`}
+                            >
+                                Approved Template
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setNewChatMode("custom")}
+                                className={`py-1.5 px-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                                    newChatMode === "custom"
+                                        ? "bg-white text-[#00a884] shadow-2xs"
+                                        : "text-gray-600 hover:text-gray-800"
+                                }`}
+                            >
+                                Direct Message (24h)
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setNewChatMode("none")}
+                                className={`py-1.5 px-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                                    newChatMode === "none"
+                                        ? "bg-white text-[#00a884] shadow-2xs"
+                                        : "text-gray-600 hover:text-gray-800"
+                                }`}
+                            >
+                                Chat Thread Only
+                            </button>
+                        </div>
                     </div>
 
-                    {/* Media Attachment in New Chat */}
-                    <div>
-                        <label className="text-xs font-semibold text-gray-600 mb-1 block">Attach Media (Image, Video, Document)</label>
-                        <input
-                            type="file"
-                            ref={newChatFileInputRef}
-                            style={{ display: "none" }}
-                            accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.txt"
-                            onChange={handleSelectNewChatFile}
-                        />
+                    {newChatMode === "template" && (
+                        <div className="space-y-3 bg-gray-50/80 p-3.5 rounded-xl border border-gray-200/80">
+                            <div className="text-[11px] text-gray-500 leading-relaxed">
+                                Meta requires an <strong>Approved WhatsApp Template</strong> to initiate a chat with any guest who has not messaged your number in the past 24 hours.
+                            </div>
 
-                        {newChatAttachment ? (
-                            <div className="p-2.5 bg-gray-50 rounded-xl border border-gray-200 flex items-center justify-between gap-3">
-                                <div className="flex items-center gap-2.5 min-w-0">
-                                    {newChatAttachment.mediaType === "image" && newChatAttachment.previewUrl ? (
-                                        <img
-                                            src={newChatAttachment.previewUrl}
-                                            alt="Preview"
-                                            className="w-10 h-10 object-cover rounded-lg flex-shrink-0"
-                                        />
-                                    ) : newChatAttachment.mediaType === "video" ? (
-                                        <div className="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center text-lg flex-shrink-0">
-                                            <VideoCameraOutlined />
-                                        </div>
-                                    ) : (
-                                        <div className="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center text-lg flex-shrink-0">
-                                            <FileOutlined />
+                            {loadingTemplates ? (
+                                <div className="py-4 text-center">
+                                    <Spin size="small" />
+                                    <span className="text-xs text-gray-500 ml-2">Loading approved templates...</span>
+                                </div>
+                            ) : availableTemplates.length === 0 ? (
+                                <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800 flex items-center justify-between gap-2">
+                                    <span>No approved templates found. Create an approved template or switch to &ldquo;Chat Thread Only&rdquo;.</span>
+                                    {onNavigateToTemplates && (
+                                        <Button
+                                            size="small"
+                                            type="primary"
+                                            onClick={() => {
+                                                setNewChatModalOpen(false);
+                                                onNavigateToTemplates();
+                                            }}
+                                            style={{ backgroundColor: "#00a884", borderColor: "#00a884" }}
+                                        >
+                                            Templates
+                                        </Button>
+                                    )}
+                                </div>
+                            ) : (
+                                <>
+                                    <div>
+                                        <label className="block text-xs font-semibold text-gray-700 mb-1">
+                                            Select Approved Template *
+                                        </label>
+                                        <Select
+                                            value={newChatTemplate?.name}
+                                            onChange={(name) => {
+                                                const tmpl = availableTemplates.find((t) => t.name === name);
+                                                if (tmpl) handleSelectNewChatTemplate(tmpl);
+                                            }}
+                                            className="w-full"
+                                            placeholder="Choose an approved template"
+                                        >
+                                            {availableTemplates.map((tmpl) => (
+                                                <Select.Option key={tmpl.id || tmpl.name} value={tmpl.name}>
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="font-medium text-xs">{tmpl.name}</span>
+                                                        <Tag color="green" className="text-[10px] m-0">
+                                                            {tmpl.language || "en_US"}
+                                                        </Tag>
+                                                    </div>
+                                                </Select.Option>
+                                            ))}
+                                        </Select>
+                                    </div>
+
+                                    {newChatTemplate && (
+                                        <div className="p-2.5 bg-[#eefeeb] border border-[#d4f8ce] rounded-lg space-y-1">
+                                            <div className="text-[11px] font-semibold text-[#0f5132]">
+                                                Preview ({newChatTemplate.name})
+                                            </div>
+                                            <div className="text-xs text-gray-800 whitespace-pre-wrap bg-white p-2.5 rounded border border-[#e1f5de] font-sans">
+                                                {newChatTemplate.content ||
+                                                    newChatTemplate.bodyText ||
+                                                    newChatTemplate.components?.find((c: any) => c.type === "BODY")?.text ||
+                                                    newChatTemplate.name}
+                                            </div>
                                         </div>
                                     )}
-                                    <div className="min-w-0">
-                                        <div className="text-xs font-semibold text-gray-800 truncate">
-                                            {newChatAttachment.file.name}
+
+                                    {newChatTemplate && Object.keys(newChatTemplateVars).length > 0 && (
+                                        <div className="space-y-1.5">
+                                            <div className="text-xs font-semibold text-gray-700">Template Variables</div>
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                                {Object.keys(newChatTemplateVars).map((varKey) => (
+                                                    <div key={varKey}>
+                                                        <label className="block text-[11px] text-gray-500 mb-0.5">
+                                                            Variable {`{{${varKey}}}`}
+                                                        </label>
+                                                        <Input
+                                                            size="small"
+                                                            value={newChatTemplateVars[varKey]}
+                                                            onChange={(e) =>
+                                                                setNewChatTemplateVars((prev) => ({
+                                                                    ...prev,
+                                                                    [varKey]: e.target.value,
+                                                                }))
+                                                            }
+                                                            placeholder={`Value for {{${varKey}}}`}
+                                                        />
+                                                    </div>
+                                                ))}
+                                            </div>
                                         </div>
-                                        <div className="text-[11px] text-gray-400">
-                                            {(newChatAttachment.file.size / 1024 / 1024).toFixed(2)} MB • {newChatAttachment.mediaType.toUpperCase()}
-                                        </div>
-                                    </div>
-                                </div>
-                                <Button
-                                    type="text"
-                                    size="small"
-                                    shape="circle"
-                                    icon={<CloseCircleOutlined className="text-gray-400 hover:text-red-500" />}
-                                    onClick={() => {
-                                        setNewChatAttachment(null);
-                                        if (newChatFileInputRef.current) newChatFileInputRef.current.value = "";
-                                    }}
+                                    )}
+                                </>
+                            )}
+                        </div>
+                    )}
+
+                    {newChatMode === "custom" && (
+                        <>
+                            <div className="p-2.5 bg-blue-50/70 border border-blue-200/70 rounded-xl text-[11px] text-blue-800">
+                                <strong>Note:</strong> Direct text and media messages are only delivered by Meta if the contact has messaged your WhatsApp number within the last 24 hours. For new contacts, use <strong>Approved Template</strong>.
+                            </div>
+
+                            {/* First Message */}
+                            <div>
+                                <label className="text-xs font-semibold text-gray-600 mb-1 block">First Message (Optional)</label>
+                                <Input.TextArea
+                                    rows={3}
+                                    placeholder="Type an initial message to send to the contact..."
+                                    value={newChatInitialMessage}
+                                    onChange={(e) => setNewChatInitialMessage(e.target.value)}
+                                    className="rounded-xl resize-none text-sm"
                                 />
                             </div>
-                        ) : (
-                            <Button
-                                icon={<PaperClipOutlined />}
-                                onClick={() => newChatFileInputRef.current?.click()}
-                                className="rounded-xl text-xs w-full text-gray-600"
-                            >
-                                Choose File (Image, Video, Document)
-                            </Button>
-                        )}
-                    </div>
+
+                            {/* Media Attachment in New Chat */}
+                            <div>
+                                <label className="text-xs font-semibold text-gray-600 mb-1 block">Attach Media (Image, Video, Document)</label>
+                                <input
+                                    type="file"
+                                    ref={newChatFileInputRef}
+                                    style={{ display: "none" }}
+                                    accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.txt"
+                                    onChange={handleSelectNewChatFile}
+                                />
+
+                                {newChatAttachment ? (
+                                    <div className="p-2.5 bg-gray-50 rounded-xl border border-gray-200 flex items-center justify-between gap-3">
+                                        <div className="flex items-center gap-2.5 min-w-0">
+                                            {newChatAttachment.mediaType === "image" && newChatAttachment.previewUrl ? (
+                                                <img
+                                                    src={newChatAttachment.previewUrl}
+                                                    alt="Preview"
+                                                    className="w-10 h-10 object-cover rounded-lg flex-shrink-0"
+                                                />
+                                            ) : newChatAttachment.mediaType === "video" ? (
+                                                <div className="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center text-lg flex-shrink-0">
+                                                    <VideoCameraOutlined />
+                                                </div>
+                                            ) : (
+                                                <div className="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center text-lg flex-shrink-0">
+                                                    <FileOutlined />
+                                                </div>
+                                            )}
+                                            <div className="min-w-0">
+                                                <div className="text-xs font-semibold text-gray-800 truncate">
+                                                    {newChatAttachment.file.name}
+                                                </div>
+                                                <div className="text-[11px] text-gray-400">
+                                                    {(newChatAttachment.file.size / 1024 / 1024).toFixed(2)} MB • {newChatAttachment.mediaType.toUpperCase()}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <Button
+                                            type="text"
+                                            size="small"
+                                            shape="circle"
+                                            icon={<CloseCircleOutlined className="text-gray-400 hover:text-red-500" />}
+                                            onClick={() => {
+                                                setNewChatAttachment(null);
+                                                if (newChatFileInputRef.current) newChatFileInputRef.current.value = "";
+                                            }}
+                                        />
+                                    </div>
+                                ) : (
+                                    <Button
+                                        icon={<PaperClipOutlined />}
+                                        onClick={() => newChatFileInputRef.current?.click()}
+                                        className="rounded-xl text-xs w-full text-gray-600"
+                                    >
+                                        Choose File (Image, Video, Document)
+                                    </Button>
+                                )}
+                            </div>
+                        </>
+                    )}
 
                     <div className="flex items-center justify-end gap-2 pt-2 border-t">
                         <Button onClick={() => setNewChatModalOpen(false)} className="rounded-xl">
@@ -2285,7 +2567,7 @@ export const WhatsappInbox: React.FC<WhatsappInboxProps> = ({
                             style={{ backgroundColor: "#00a884", borderColor: "#00a884" }}
                             className="rounded-xl shadow-xs font-semibold"
                         >
-                            Start Chat
+                            {newChatMode === "template" ? "Start Chat & Send Template" : "Start Chat"}
                         </Button>
                     </div>
                 </div>
@@ -2310,7 +2592,7 @@ export const WhatsappInbox: React.FC<WhatsappInboxProps> = ({
             >
                 <div className="space-y-5 pt-2">
                     <p className="text-xs text-gray-500 m-0 leading-relaxed">
-                        Create dedicated Outlook color-coded categories for your team inbox (e.g. <strong>SPA Services</strong>, <strong>Front Desk</strong>, <strong>Concierge</strong>, <strong>VIP Guests</strong>, <strong>Complaints</strong>). These are dedicated to WhatsApp and completely separate from room upsell categories.
+                        Create custom color-coded categories tailored to your company&apos;s workflow. No default categories are pre-assigned — each company defines its own WhatsApp inbox categories.
                     </p>
 
                     {/* Add Category Section */}
@@ -2507,7 +2789,7 @@ export const WhatsappInbox: React.FC<WhatsappInboxProps> = ({
                                         <MessageOutlined /> Template Preview ({selectedTemplate.name})
                                     </div>
                                     <div className="text-xs text-gray-800 whitespace-pre-wrap bg-white p-3 rounded-lg border border-[#e1f5de] shadow-2xs font-sans">
-                                        {selectedTemplate.bodyText || selectedTemplate.components?.find((c: any) => c.type === "BODY")?.text || selectedTemplate.name}
+                                        {selectedTemplate.content || selectedTemplate.bodyText || selectedTemplate.components?.find((c: any) => c.type === "BODY")?.text || selectedTemplate.name}
                                     </div>
                                 </div>
                             )}

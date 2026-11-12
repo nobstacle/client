@@ -49,8 +49,8 @@ interface AssignWhatsappMetaFormValues {
     appId?: string;
     appSecret?: string;
     businessAccountId: string;
-    phoneNumberId: string;
-    accessToken: string;
+    phoneNumberId?: string;
+    accessToken?: string;
     webhookVerifyToken?: string;
 }
 
@@ -369,28 +369,28 @@ export default function WhatsappMetaAccountsPage() {
                     </Form.Item>
 
                     <Form.Item
-                        label="WhatsApp Business Account ID"
+                        label="WhatsApp Business Account ID (WABA ID)"
                         name="businessAccountId"
                         rules={[{ required: true, message: "WhatsApp Business Account ID is required" }]}
-                        extra="This is mandatory because template approval and sync require the WABA ID."
+                        extra="Required. If the hotel shared this WABA with Nobstacle's Partner Business ID (1574074800547189), you can leave Access Token and Phone Number ID blank."
                     >
-                        <Input placeholder="WABA ID" />
+                        <Input placeholder="e.g. 1068716125739705" />
                     </Form.Item>
 
                     <Form.Item
-                        label="Phone Number ID"
+                        label="Phone Number ID (Optional)"
                         name="phoneNumberId"
-                        rules={[{ required: true, message: "Phone Number ID is required" }]}
+                        extra="Leave blank to automatically detect the primary phone number on this WABA."
                     >
-                        <Input placeholder="Phone Number ID" />
+                        <Input placeholder="Phone Number ID (optional)" />
                     </Form.Item>
 
                     <Form.Item
-                        label="Access Token"
+                        label="Access Token (Optional if using Partner Business Sharing)"
                         name="accessToken"
-                        rules={[{ required: true, message: "Access token is required" }]}
+                        extra="Leave blank to use Nobstacle's platform System User token (via Partner Business Sharing), or enter a custom User/System token."
                     >
-                        <Input.Password placeholder="Enter permanent access token" />
+                        <Input.Password placeholder="Leave blank for Partner Sharing, or enter token" />
                     </Form.Item>
 
                     <Form.Item label="Webhook Verify Token (optional)" name="webhookVerifyToken">

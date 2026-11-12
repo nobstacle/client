@@ -215,6 +215,9 @@ interface MetaConnectionStatus {
     phoneNumberId?: string;
     displayPhoneNumber?: string;
     hasAccessToken: boolean;
+    hasPlatformToken?: boolean;
+    partnerBusinessId?: string;
+    partnerBusinessName?: string;
     webhookVerifyToken?: string;
     phoneDetails?: MetaPhoneDetails;
     availablePhoneNumbers?: MetaPhoneDetails[];
@@ -230,14 +233,13 @@ const defaultCampaignStats: CampaignStats = {
     deliveryRate: "0%",
 };
 
-// Meta Embedded Signup only works once the Meta app is an approved Tech Provider / Solution Partner.
-// Set NEXT_PUBLIC_META_EMBEDDED_SIGNUP_ENABLED=true after Meta approves the app.
-const EMBEDDED_SIGNUP_ENABLED = process.env.NEXT_PUBLIC_META_EMBEDDED_SIGNUP_ENABLED === "true";
+// Meta Embedded Signup popup wizard or direct OAuth login
+const EMBEDDED_SIGNUP_ENABLED = process.env.NEXT_PUBLIC_META_EMBEDDED_SIGNUP_ENABLED !== "false";
 
 interface ManualConnectFormValues {
     businessAccountId: string;
     phoneNumberId?: string;
-    accessToken: string;
+    accessToken?: string;
 }
 
 const StatusTag = ({ status }: { status: string }) => {
@@ -923,6 +925,8 @@ export default function WhatsAppPage() {
     const [manualWabaIdInput, setManualWabaIdInput] = useState("");
     const [linkingManualWaba, setLinkingManualWaba] = useState(false);
     const [manualConnectOpen, setManualConnectOpen] = useState(false);
+    const [connectMode, setConnectMode] = useState<"partner" | "oauth" | "token">("partner");
+    const [oauthWabaIdInput, setOauthWabaIdInput] = useState("");
     const [manualConnectSubmitting, setManualConnectSubmitting] = useState(false);
     const [manualConnectForm] = Form.useForm<ManualConnectFormValues>();
     const [unresolvedCount, setUnresolvedCount] = useState<number>(0);
@@ -1158,10 +1162,109 @@ export default function WhatsAppPage() {
         }
     }, []);
 
-    const launchWhatsAppSignup = () => {
-        // Meta only allows Embedded Signup for apps approved as a Tech Provider / Solution Partner.
-        // Until NEXT_PUBLIC_META_EMBEDDED_SIGNUP_ENABLED=true, connect via Cloud API credentials instead.
-        if (!EMBEDDED_SIGNUP_ENABLED) {
+    const launchStandardFacebookOAuth = () => {
+        const appId = process.env.NEXT_PUBLIC_META_APP_ID || "897802113101882";
+
+        if (!window.FB) {
+            message.error("Meta SDK is not loaded. Please check if your browser blocked scripts or adblockers.");
+            return;
+        }
+
+        try {
+            window.FB.init({
+                appId,
+                cookie: true,
+                xfbml: true,
+                version: "v19.0",
+            });
+        } catch (e) {
+            console.warn("FB re-init notice:", e);
+        }
+
+        setConnectingMeta(true);
+        const safetyTimer = setTimeout(() => {
+            setConnectingMeta(false);
+        }, 180000);
+
+        try {
+            window.FB.login(
+                (response: any) => {
+                    void (async () => {
+                        clearTimeout(safetyTimer);
+                        const directAccessToken = response?.authResponse?.accessToken;
+                        const code = response?.authResponse?.code;
+                        const prefilledWaba = oauthWabaIdInput.replace(/[^0-9]/g, "") || undefined;
+
+                        if (directAccessToken || code) {
+                            try {
+                                message.loading({
+                                    content: "Authenticating with Meta & discovering WhatsApp Business Account...",
+                                    key: "embedded-signup",
+                                });
+                                const linkedStatus = await apiRequest<MetaConnectionStatus>("/whatsapp/settings/embedded-signup", {
+                                    method: "POST",
+                                    body: JSON.stringify({
+                                        accessToken: directAccessToken,
+                                        code,
+                                        wabaId: prefilledWaba,
+                                    }),
+                                });
+                                setMetaConnection(linkedStatus);
+                                if (linkedStatus.connected) {
+                                    setManualConnectOpen(false);
+                                    message.success({
+                                        content: `WhatsApp account linked${linkedStatus.displayPhoneNumber ? ` (${linkedStatus.displayPhoneNumber})` : ""}!`,
+                                        key: "embedded-signup",
+                                    });
+                                } else if (linkedStatus.wabaLinked) {
+                                    setManualConnectOpen(false);
+                                    message.warning({
+                                        content: "WhatsApp Business Account linked! Please select or verify a phone number in the banner.",
+                                        key: "embedded-signup",
+                                        duration: 6,
+                                    });
+                                } else if (linkedStatus.hasAccessToken) {
+                                    message.success({
+                                        content: "Meta login authenticated! Enter or select your WhatsApp Business Account (WABA) ID below to complete linking.",
+                                        key: "embedded-signup",
+                                        duration: 6,
+                                    });
+                                }
+                                await loadMetaSettings();
+                                await loadAll();
+                            } catch (err) {
+                                message.error({
+                                    content: parseErrorMessage(err) || "Failed to link WhatsApp account",
+                                    key: "embedded-signup",
+                                    duration: 8,
+                                });
+                            } finally {
+                                setConnectingMeta(false);
+                            }
+                        } else {
+                            setConnectingMeta(false);
+                            if (response?.status !== "connected") {
+                                message.warning("Facebook login popup was closed or not completed.");
+                            }
+                        }
+                    })();
+                },
+                {
+                    scope: "whatsapp_business_management,whatsapp_business_messaging,business_management",
+                    return_scopes: true,
+                },
+            );
+        } catch (err) {
+            clearTimeout(safetyTimer);
+            setConnectingMeta(false);
+            console.error("Error calling FB.login:", err);
+            message.error("Failed to open Facebook login popup.");
+        }
+    };
+
+    const launchWhatsAppSignup = (forcePopup?: boolean | React.MouseEvent<HTMLElement>) => {
+        const isForcePopup = forcePopup === true;
+        if (!isForcePopup && !EMBEDDED_SIGNUP_ENABLED) {
             setManualConnectOpen(true);
             return;
         }
@@ -1186,7 +1289,7 @@ export default function WhatsAppPage() {
         }
 
         setConnectingMeta(true);
-        let capturedWabaId: string | undefined = undefined;
+        let capturedWabaId: string | undefined = oauthWabaIdInput.replace(/[^0-9]/g, "") || undefined;
         let capturedPhoneNumberId: string | undefined = undefined;
         let capturedBusinessId: string | undefined = undefined;
 
@@ -1318,8 +1421,10 @@ export default function WhatsAppPage() {
                                 });
                                 setMetaConnection(linkedStatus);
                                 if (linkedStatus.connected) {
+                                    setManualConnectOpen(false);
                                     message.success({ content: "WhatsApp account linked successfully!", key: "embedded-signup" });
                                 } else if (linkedStatus.wabaLinked) {
+                                    setManualConnectOpen(false);
                                     message.warning({
                                         content: "WhatsApp Business Account linked! No phone number was found on the account yet—please add or select a phone number.",
                                         key: "embedded-signup",
@@ -1327,7 +1432,7 @@ export default function WhatsAppPage() {
                                     });
                                 } else if (linkedStatus.hasAccessToken) {
                                     message.warning({
-                                        content: "Meta token connected! Please confirm your WhatsApp Business Account ID in the banner below to finish linking.",
+                                        content: "Meta token connected! Please confirm your WhatsApp Business Account ID below to finish linking.",
                                         key: "embedded-signup",
                                         duration: 6,
                                     });
@@ -1371,13 +1476,14 @@ export default function WhatsAppPage() {
     const handleManualConnect = async (values: ManualConnectFormValues) => {
         setManualConnectSubmitting(true);
         try {
-            message.loading({ content: "Verifying credentials with Meta...", key: "manual-connect" });
+            message.loading({ content: "Verifying WhatsApp account with Meta...", key: "manual-connect" });
+            const trimmedToken = values.accessToken?.trim() || undefined;
             const updated = await apiRequest<MetaConnectionStatus>("/whatsapp/settings/connect", {
                 method: "POST",
                 body: JSON.stringify({
                     businessAccountId: values.businessAccountId.replace(/[^0-9]/g, ""),
                     phoneNumberId: values.phoneNumberId?.replace(/[^0-9]/g, "") || undefined,
-                    accessToken: values.accessToken.trim(),
+                    accessToken: connectMode === "partner" ? undefined : trimmedToken,
                 }),
             });
             setMetaConnection(updated);
@@ -3174,29 +3280,30 @@ export default function WhatsAppPage() {
             <div className="mx-auto space-y-3" style={{ maxWidth: 1500 }}>
                 {!metaConnected && !metaWabaLinked && !metaConnection.hasAccessToken && (
                     <Alert
-                        message="Connect your Hotel's WhatsApp Account"
-                        description="Link your WhatsApp Business Account so guests receive messages directly from your hotel's official WhatsApp number and verified profile."
+                        message="Connect your Hotel's WhatsApp Account (No System User Required)"
+                        description="Connect via Partner Business Sharing (enter only your WABA ID after sharing access in Meta Business Settings) or sign in directly with Meta OAuth."
                         type="info"
                         showIcon
                         icon={<MdWhatsapp className="text-2xl" style={{ color: "#25D366" }} />}
                         action={
-                            <Space>
+                            <Space wrap>
                                 <Button
                                     type="primary"
                                     style={{ backgroundColor: "#25D366", borderColor: "#25D366" }}
                                     icon={<MdWhatsapp size={16} />}
-                                    onClick={() => setManualConnectOpen(true)}
+                                    onClick={() => {
+                                        setConnectMode("partner");
+                                        setManualConnectOpen(true);
+                                    }}
                                 >
                                     Connect WhatsApp
                                 </Button>
-                                {EMBEDDED_SIGNUP_ENABLED && (
-                                    <Button
-                                        onClick={launchWhatsAppSignup}
-                                        loading={connectingMeta}
-                                    >
-                                        Login via Meta
-                                    </Button>
-                                )}
+                                <Button
+                                    onClick={launchStandardFacebookOAuth}
+                                    loading={connectingMeta}
+                                >
+                                    One-Click Meta Login
+                                </Button>
                             </Space>
                         }
                         className="rounded-xl border-green-200 bg-green-50 shadow-sm"
@@ -3205,23 +3312,51 @@ export default function WhatsAppPage() {
 
                 {!metaConnected && !metaWabaLinked && metaConnection.hasAccessToken && (
                     <Alert
-                        message="WhatsApp Business Connection Required"
+                        message="Meta Login Authenticated — Link Your WhatsApp Business Account (WABA) ID"
                         description={
                             <div className="space-y-2.5">
                                 <p className="m-0 text-sm text-gray-700">
-                                    Your Meta login was authenticated, but no WhatsApp Business Account (WABA) is linked to this session. Click <strong>"Connect with API Credentials"</strong> below to securely link your WhatsApp account using your System User token and WABA ID.
+                                    Your Meta login is active. Enter or select your <strong>WhatsApp Business Account (WABA) ID</strong> below to complete linking—no System User token is needed.
                                 </p>
-                                <div className="text-xs text-amber-900 bg-amber-100/70 p-2.5 rounded-lg border border-amber-200">
-                                    💡 <strong>Notice:</strong> Meta Embedded Signup requires Tech Provider (TP) or Business Solution Provider (BSP) status from Meta. The recommended, instant way to connect is using your permanent Meta System User token and WhatsApp Business Account ID via <strong>Connect with API Credentials</strong>.
-                                </div>
+                                {metaConnection.availableWabas && metaConnection.availableWabas.length > 0 && (
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <span className="text-xs font-medium text-gray-600">Discovered WABAs:</span>
+                                        {metaConnection.availableWabas.map((waba) => (
+                                            <Button
+                                                key={waba.id}
+                                                size="small"
+                                                type="primary"
+                                                ghost
+                                                loading={linkingManualWaba}
+                                                onClick={() => void handleSelectWaba(waba.id)}
+                                            >
+                                                {waba.name ? `${waba.name} (${waba.id})` : waba.id}
+                                            </Button>
+                                        ))}
+                                    </div>
+                                )}
                                 <div className="flex flex-wrap items-center gap-2 pt-1">
+                                    <Input
+                                        placeholder="Enter WhatsApp Business Account (WABA) ID (e.g. 1068716125739705)"
+                                        value={manualWabaIdInput}
+                                        onChange={(e) => setManualWabaIdInput(e.target.value)}
+                                        style={{ maxWidth: 360 }}
+                                        className="font-mono text-xs"
+                                        onPressEnter={() => void handleSelectWaba()}
+                                    />
                                     <Button
                                         type="primary"
                                         style={{ backgroundColor: "#25D366", borderColor: "#25D366" }}
-                                        icon={<KeyOutlined />}
+                                        loading={linkingManualWaba}
+                                        onClick={() => void handleSelectWaba()}
+                                    >
+                                        Link WABA ID
+                                    </Button>
+                                    <Button
+                                        icon={<SettingOutlined />}
                                         onClick={() => setManualConnectOpen(true)}
                                     >
-                                        Connect with API Credentials
+                                        Other Connection Options
                                     </Button>
                                     <Popconfirm
                                         title="Reset Meta connection?"
@@ -3285,7 +3420,7 @@ export default function WhatsAppPage() {
                                     type="primary"
                                     style={{ backgroundColor: "#25D366", borderColor: "#25D366" }}
                                     icon={<MdWhatsapp size={14} />}
-                                    onClick={launchWhatsAppSignup}
+                                    onClick={() => setManualConnectOpen(true)}
                                     loading={connectingMeta}
                                 >
                                     Add / Change Number
@@ -3461,7 +3596,7 @@ export default function WhatsAppPage() {
                                         size="small"
                                         style={{ backgroundColor: "#25D366", borderColor: "#25D366" }}
                                         icon={<MdWhatsapp size={14} />}
-                                        onClick={launchWhatsAppSignup}
+                                        onClick={() => setManualConnectOpen(true)}
                                         loading={connectingMeta}
                                         className="text-xs"
                                     >
@@ -5010,7 +5145,7 @@ export default function WhatsAppPage() {
                 {renderCampaignSteps()}
             </Modal>
 
-            {/* Modal: Connect WhatsApp via API Credentials */}
+            {/* Modal: Connect WhatsApp Business (Partner Sharing / One-Click Meta OAuth / API Token) */}
             <Modal
                 title={
                     <div className="flex items-center gap-2">
@@ -5019,113 +5154,358 @@ export default function WhatsAppPage() {
                         </div>
                         <div>
                             <div className="font-semibold text-base text-gray-800">Connect WhatsApp Business</div>
-                            <div className="text-xs text-gray-400 font-normal">Connect directly with your WhatsApp Cloud API credentials</div>
+                            <div className="text-xs text-gray-400 font-normal">Connect without creating a System User or use direct API credentials</div>
                         </div>
                     </div>
                 }
                 open={manualConnectOpen}
                 onCancel={() => {
-                    if (!manualConnectSubmitting) {
+                    if (!manualConnectSubmitting && !connectingMeta) {
                         setManualConnectOpen(false);
                         manualConnectForm.resetFields();
                     }
                 }}
                 footer={null}
-                width={580}
+                width={640}
                 destroyOnClose
             >
                 <div className="mt-3 space-y-4">
-                    <div className="p-3 bg-blue-50/70 border border-blue-200/80 rounded-xl text-xs text-blue-900 leading-relaxed">
-                        <div className="font-semibold mb-1 flex items-center gap-1.5">
-                            <InfoCircleOutlined className="text-blue-600" />
-                            <span>How to get these credentials in 2 minutes:</span>
-                        </div>
-                        <ol className="list-decimal pl-4 space-y-1 m-0 text-blue-800">
-                            <li>Go to <a href="https://business.facebook.com/settings/whatsapp-business-accounts" target="_blank" rel="noopener noreferrer" className="underline font-medium text-blue-700">Meta Business Settings → WhatsApp accounts</a> and copy your <strong>WhatsApp Business Account ID</strong>.</li>
-                            <li>In <a href="https://business.facebook.com/settings/system-users" target="_blank" rel="noopener noreferrer" className="underline font-medium text-blue-700">System users</a>, click your system user → <strong>Assigned Assets</strong> → Add your WhatsApp account with <strong>Full control</strong>.</li>
-                            <li>Click <strong>Generate new token</strong> with scopes: <code>whatsapp_business_management</code> &amp; <code>whatsapp_business_messaging</code>.</li>
-                        </ol>
+                    {/* Connection Mode Selector */}
+                    <div className="grid grid-cols-3 gap-2 p-1 bg-gray-100 rounded-xl">
+                        <button
+                            type="button"
+                            onClick={() => setConnectMode("partner")}
+                            className={`py-2 px-2.5 rounded-lg text-xs font-semibold transition-all text-center ${
+                                connectMode === "partner"
+                                    ? "bg-white text-emerald-700 shadow-sm border border-emerald-200"
+                                    : "text-gray-600 hover:text-gray-800"
+                            }`}
+                        >
+                            🤝 Partner Sharing
+                            <span className="block text-[10px] font-normal opacity-80">No Hotel Token Needed</span>
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setConnectMode("oauth")}
+                            className={`py-2 px-2.5 rounded-lg text-xs font-semibold transition-all text-center ${
+                                connectMode === "oauth"
+                                    ? "bg-white text-blue-700 shadow-sm border border-blue-200"
+                                    : "text-gray-600 hover:text-gray-800"
+                            }`}
+                        >
+                            ⚡ One-Click Meta Login
+                            <span className="block text-[10px] font-normal opacity-80">No System User Needed</span>
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setConnectMode("token")}
+                            className={`py-2 px-2.5 rounded-lg text-xs font-semibold transition-all text-center ${
+                                connectMode === "token"
+                                    ? "bg-white text-gray-800 shadow-sm border border-gray-200"
+                                    : "text-gray-600 hover:text-gray-800"
+                            }`}
+                        >
+                            🔑 Direct API Token
+                            <span className="block text-[10px] font-normal opacity-80">User or System Token</span>
+                        </button>
                     </div>
 
-                    <Form
-                        form={manualConnectForm}
-                        layout="vertical"
-                        onFinish={handleManualConnect}
-                        requiredMark={false}
-                    >
-                        <Form.Item
-                            name="businessAccountId"
-                            label={<span className="font-medium text-gray-700">WhatsApp Business Account (WABA) ID</span>}
-                            rules={[
-                                { required: true, message: "Please enter your WhatsApp Business Account ID" },
-                                {
-                                    validator: (_, val) => {
-                                        if (val && !/^\d+$/.test(val.trim())) {
-                                            return Promise.reject("WABA ID must contain numbers only");
-                                        }
-                                        return Promise.resolve();
-                                    },
-                                },
-                            ]}
-                            extra={<span className="text-xs text-gray-400">Found in Meta Business Suite → Accounts → WhatsApp accounts (typically 15-16 digits).</span>}
-                        >
-                            <Input
-                                placeholder="e.g. 102289599326934"
-                                size="large"
-                                className="rounded-lg font-mono text-sm"
-                            />
-                        </Form.Item>
+                    {/* MODE 1: Partner Business Sharing (No System User / No Hotel Token Needed) */}
+                    {connectMode === "partner" && (
+                        <>
+                            <div className="p-3.5 bg-emerald-50/80 border border-emerald-200 rounded-xl text-xs text-emerald-950 leading-relaxed space-y-2.5">
+                                <div className="flex items-center justify-between gap-2 flex-wrap">
+                                    <div className="font-semibold text-emerald-900 flex items-center gap-1.5">
+                                        <SafetyCertificateOutlined className="text-emerald-600 text-sm" />
+                                        <span>Recommended: Meta Partner Business Sharing (No System User or Token Needed)</span>
+                                    </div>
+                                    <Tag color="green" className="m-0 text-[11px]">Meta-Compliant</Tag>
+                                </div>
+                                <div className="p-2.5 bg-white rounded-lg border border-emerald-200 flex items-center justify-between gap-2">
+                                    <div>
+                                        <div className="text-[11px] text-gray-500">Nobstacle Partner Business Portfolio ID</div>
+                                        <div className="font-mono font-bold text-sm text-gray-900">
+                                            {metaConnection.partnerBusinessId || "1574074800547189"}
+                                        </div>
+                                    </div>
+                                    <Button
+                                        size="small"
+                                        icon={<CopyOutlined />}
+                                        onClick={() => {
+                                            const partnerId = metaConnection.partnerBusinessId || "1574074800547189";
+                                            void navigator.clipboard.writeText(partnerId);
+                                            message.success(`Copied Partner Business ID: ${partnerId}`);
+                                        }}
+                                    >
+                                        Copy Partner ID
+                                    </Button>
+                                </div>
+                                <ol className="list-decimal pl-4 space-y-1 m-0 text-emerald-900">
+                                    <li>
+                                        Open <a href="https://business.facebook.com/settings/partners" target="_blank" rel="noopener noreferrer" className="underline font-semibold text-emerald-700">Meta Business Settings → Users → Partners</a>.
+                                    </li>
+                                    <li>
+                                        Click <strong>Add</strong> → <strong>Give a partner access to your assets</strong> and enter Partner ID <code>{metaConnection.partnerBusinessId || "1574074800547189"}</code>.
+                                    </li>
+                                    <li>
+                                        Select <strong>WhatsApp Business Accounts</strong> → check your hotel&apos;s WhatsApp account → toggle on <strong>Manage WhatsApp Business Account (Full Control)</strong> → click <strong>Save Changes</strong>.
+                                    </li>
+                                    <li>
+                                        Paste your hotel&apos;s <strong>WhatsApp Business Account (WABA) ID</strong> below and click <strong>Verify &amp; Connect WhatsApp</strong>.
+                                    </li>
+                                </ol>
+                            </div>
 
-                        <Form.Item
-                            name="accessToken"
-                            label={<span className="font-medium text-gray-700">Permanent System User Access Token</span>}
-                            rules={[{ required: true, message: "Please enter your Meta System User Access Token" }]}
-                            extra={<span className="text-xs text-gray-400">Generated from Meta Business Settings → Users → System users (never expires).</span>}
-                        >
-                            <Input.Password
-                                placeholder="EAAM..."
-                                size="large"
-                                className="rounded-lg font-mono text-sm"
-                            />
-                        </Form.Item>
-
-                        <Form.Item
-                            name="phoneNumberId"
-                            label={
-                                <span className="font-medium text-gray-700">
-                                    Phone Number ID <span className="text-xs text-gray-400 font-normal">(Optional)</span>
-                                </span>
-                            }
-                            extra={<span className="text-xs text-gray-400">Leave blank to automatically use the primary phone number on this account.</span>}
-                        >
-                            <Input
-                                placeholder="e.g. 105847291847192"
-                                size="large"
-                                className="rounded-lg font-mono text-sm"
-                            />
-                        </Form.Item>
-
-                        <div className="pt-2 flex items-center justify-end gap-2 border-t border-gray-100">
-                            <Button
-                                onClick={() => {
-                                    setManualConnectOpen(false);
-                                    manualConnectForm.resetFields();
-                                }}
-                                disabled={manualConnectSubmitting}
+                            <Form
+                                form={manualConnectForm}
+                                layout="vertical"
+                                onFinish={handleManualConnect}
+                                requiredMark={false}
                             >
-                                Cancel
-                            </Button>
-                            <Button
-                                type="primary"
-                                htmlType="submit"
-                                loading={manualConnectSubmitting}
-                                style={{ backgroundColor: "#25D366", borderColor: "#25D366" }}
-                                icon={<CheckCircleOutlined />}
-                            >
-                                Verify &amp; Connect WhatsApp
-                            </Button>
+                                <Form.Item
+                                    name="businessAccountId"
+                                    label={<span className="font-medium text-gray-700">Hotel WhatsApp Business Account (WABA) ID</span>}
+                                    rules={[
+                                        { required: true, message: "Please enter the hotel's WhatsApp Business Account (WABA) ID" },
+                                        {
+                                            validator: (_, val) => {
+                                                if (val && !/^\d+$/.test(val.trim())) {
+                                                    return Promise.reject("WABA ID must contain numbers only");
+                                                }
+                                                return Promise.resolve();
+                                            },
+                                        },
+                                    ]}
+                                    extra={<span className="text-xs text-gray-400">Found in Meta Business Settings → Accounts → WhatsApp accounts (15–16 digits). No Access Token is required after sharing with Partner ID {metaConnection.partnerBusinessId || "1574074800547189"}.</span>}
+                                >
+                                    <Input
+                                        placeholder="e.g. 1068716125739705"
+                                        size="large"
+                                        className="rounded-lg font-mono text-sm"
+                                    />
+                                </Form.Item>
+
+                                <Form.Item
+                                    name="phoneNumberId"
+                                    label={
+                                        <span className="font-medium text-gray-700">
+                                            Phone Number ID <span className="text-xs text-gray-400 font-normal">(Optional — auto-detected from WABA)</span>
+                                        </span>
+                                    }
+                                    extra={<span className="text-xs text-gray-400">Leave blank to automatically detect and connect the primary phone number on this WABA.</span>}
+                                >
+                                    <Input
+                                        placeholder="e.g. 149349568263516 (optional)"
+                                        size="large"
+                                        className="rounded-lg font-mono text-sm"
+                                    />
+                                </Form.Item>
+
+                                <div className="pt-2 flex items-center justify-end gap-2 border-t border-gray-100">
+                                    <Button
+                                        onClick={() => {
+                                            setManualConnectOpen(false);
+                                            manualConnectForm.resetFields();
+                                        }}
+                                        disabled={manualConnectSubmitting}
+                                    >
+                                        Cancel
+                                    </Button>
+                                    <Button
+                                        type="primary"
+                                        htmlType="submit"
+                                        loading={manualConnectSubmitting}
+                                        style={{ backgroundColor: "#25D366", borderColor: "#25D366" }}
+                                        icon={<CheckCircleOutlined />}
+                                    >
+                                        Verify &amp; Connect WhatsApp
+                                    </Button>
+                                </div>
+                            </Form>
+                        </>
+                    )}
+
+                    {/* MODE 2: One-Click Meta Login (OAuth — No System User Required) */}
+                    {connectMode === "oauth" && (
+                        <div className="space-y-4">
+                            <div className="p-3.5 bg-blue-50/80 border border-blue-200 rounded-xl text-xs text-blue-950 leading-relaxed space-y-2">
+                                <div className="font-semibold text-blue-900 flex items-center gap-1.5">
+                                    <InfoCircleOutlined className="text-blue-600" />
+                                    <span>Sign in directly with your Facebook / Meta Business Account</span>
+                                </div>
+                                <p className="m-0 text-blue-800">
+                                    Log in with the Facebook account that manages your hotel&apos;s WhatsApp Business Account. You do <strong>not</strong> need to create a System User or generate an admin token manually—Nobstacle will automatically exchange your login for a secure 60-day WhatsApp token.
+                                </p>
+                            </div>
+
+                            <div>
+                                <label className="block font-medium text-gray-700 text-sm mb-1">
+                                    WhatsApp Business Account (WABA) ID <span className="text-xs text-gray-400 font-normal">(Optional — speeds up linking)</span>
+                                </label>
+                                <Input
+                                    placeholder="e.g. 1068716125739705 (or leave blank to auto-discover)"
+                                    value={oauthWabaIdInput}
+                                    onChange={(e) => setOauthWabaIdInput(e.target.value)}
+                                    size="large"
+                                    className="rounded-lg font-mono text-sm"
+                                />
+                                <div className="text-xs text-gray-400 mt-1">
+                                    Found in <a href="https://business.facebook.com/settings/whatsapp-business-accounts" target="_blank" rel="noopener noreferrer" className="underline text-blue-600">Meta Business Settings → WhatsApp accounts</a>.
+                                </div>
+                            </div>
+
+                            {metaConnection.hasAccessToken && !metaConnected && (
+                                <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl space-y-2">
+                                    <div className="text-xs font-semibold text-amber-900">
+                                        ✓ Meta Login Token Already Active — Link Your WABA ID Now:
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <Input
+                                            placeholder="Enter WABA ID (e.g. 1068716125739705)"
+                                            value={oauthWabaIdInput || manualWabaIdInput}
+                                            onChange={(e) => {
+                                                setOauthWabaIdInput(e.target.value);
+                                                setManualWabaIdInput(e.target.value);
+                                            }}
+                                            className="font-mono text-xs"
+                                        />
+                                        <Button
+                                            type="primary"
+                                            loading={linkingManualWaba}
+                                            onClick={() => void handleSelectWaba(oauthWabaIdInput || manualWabaIdInput)}
+                                            style={{ backgroundColor: "#25D366", borderColor: "#25D366" }}
+                                        >
+                                            Link WABA
+                                        </Button>
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-2 border-t border-gray-100">
+                                <Button
+                                    size="middle"
+                                    onClick={() => launchWhatsAppSignup(true)}
+                                    loading={connectingMeta}
+                                >
+                                    Launch Embedded Signup Wizard
+                                </Button>
+                                <div className="flex items-center gap-2">
+                                    <Button
+                                        onClick={() => setManualConnectOpen(false)}
+                                        disabled={connectingMeta}
+                                    >
+                                        Cancel
+                                    </Button>
+                                    <Button
+                                        type="primary"
+                                        size="large"
+                                        loading={connectingMeta}
+                                        onClick={launchStandardFacebookOAuth}
+                                        style={{ backgroundColor: "#1877F2", borderColor: "#1877F2" }}
+                                        icon={<MdWhatsapp size={18} />}
+                                    >
+                                        Continue with Facebook
+                                    </Button>
+                                </div>
+                            </div>
                         </div>
-                    </Form>
+                    )}
+
+                    {/* MODE 3: Direct API Token (User Access Token or System User Token) */}
+                    {connectMode === "token" && (
+                        <>
+                            <div className="p-3 bg-blue-50/70 border border-blue-200/80 rounded-xl text-xs text-blue-900 leading-relaxed">
+                                <div className="font-semibold mb-1 flex items-center gap-1.5">
+                                    <InfoCircleOutlined className="text-blue-600" />
+                                    <span>Connect with a User Access Token or System User Token:</span>
+                                </div>
+                                <ol className="list-decimal pl-4 space-y-1 m-0 text-blue-800">
+                                    <li>Go to <a href="https://business.facebook.com/settings/whatsapp-business-accounts" target="_blank" rel="noopener noreferrer" className="underline font-medium text-blue-700">Meta Business Settings → WhatsApp accounts</a> and copy your <strong>WhatsApp Business Account ID</strong>.</li>
+                                    <li>Paste either a <strong>User Access Token</strong> (automatically exchanged for a 60-day token) or a <strong>System User Token</strong> with <code>whatsapp_business_management</code> &amp; <code>whatsapp_business_messaging</code> permissions.</li>
+                                </ol>
+                            </div>
+
+                            <Form
+                                form={manualConnectForm}
+                                layout="vertical"
+                                onFinish={handleManualConnect}
+                                requiredMark={false}
+                            >
+                                <Form.Item
+                                    name="businessAccountId"
+                                    label={<span className="font-medium text-gray-700">WhatsApp Business Account (WABA) ID</span>}
+                                    rules={[
+                                        { required: true, message: "Please enter your WhatsApp Business Account ID" },
+                                        {
+                                            validator: (_, val) => {
+                                                if (val && !/^\d+$/.test(val.trim())) {
+                                                    return Promise.reject("WABA ID must contain numbers only");
+                                                }
+                                                return Promise.resolve();
+                                            },
+                                        },
+                                    ]}
+                                    extra={<span className="text-xs text-gray-400">Found in Meta Business Suite → Accounts → WhatsApp accounts (typically 15-16 digits).</span>}
+                                >
+                                    <Input
+                                        placeholder="e.g. 1068716125739705"
+                                        size="large"
+                                        className="rounded-lg font-mono text-sm"
+                                    />
+                                </Form.Item>
+
+                                <Form.Item
+                                    name="accessToken"
+                                    label={<span className="font-medium text-gray-700">Meta Access Token (User Token or System User Token)</span>}
+                                    rules={[{ required: true, message: "Please enter your Meta Access Token" }]}
+                                    extra={<span className="text-xs text-gray-400">Supports both User Access Tokens (auto-upgraded to 60-day tokens) and System User tokens.</span>}
+                                >
+                                    <Input.Password
+                                        placeholder="EAAM..."
+                                        size="large"
+                                        className="rounded-lg font-mono text-sm"
+                                    />
+                                </Form.Item>
+
+                                <Form.Item
+                                    name="phoneNumberId"
+                                    label={
+                                        <span className="font-medium text-gray-700">
+                                            Phone Number ID <span className="text-xs text-gray-400 font-normal">(Optional)</span>
+                                        </span>
+                                    }
+                                    extra={<span className="text-xs text-gray-400">Leave blank to automatically use the primary phone number on this account.</span>}
+                                >
+                                    <Input
+                                        placeholder="e.g. 149349568263516"
+                                        size="large"
+                                        className="rounded-lg font-mono text-sm"
+                                    />
+                                </Form.Item>
+
+                                <div className="pt-2 flex items-center justify-end gap-2 border-t border-gray-100">
+                                    <Button
+                                        onClick={() => {
+                                            setManualConnectOpen(false);
+                                            manualConnectForm.resetFields();
+                                        }}
+                                        disabled={manualConnectSubmitting}
+                                    >
+                                        Cancel
+                                    </Button>
+                                    <Button
+                                        type="primary"
+                                        htmlType="submit"
+                                        loading={manualConnectSubmitting}
+                                        style={{ backgroundColor: "#25D366", borderColor: "#25D366" }}
+                                        icon={<CheckCircleOutlined />}
+                                    >
+                                        Verify &amp; Connect WhatsApp
+                                    </Button>
+                                </div>
+                            </Form>
+                        </>
+                    )}
                 </div>
             </Modal>
         </div>
