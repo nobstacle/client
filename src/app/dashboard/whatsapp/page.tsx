@@ -210,6 +210,9 @@ interface MetaPhoneDetails {
 interface MetaConnectionStatus {
     connected: boolean;
     wabaLinked?: boolean;
+    wabaAccessible?: boolean;
+    wabaAccessWarning?: string;
+    systemUserName?: string;
     appId?: string;
     businessAccountId?: string;
     phoneNumberId?: string;
@@ -1527,18 +1530,26 @@ export default function WhatsAppPage() {
                 body: JSON.stringify({
                     businessAccountId: values.businessAccountId.replace(/[^0-9]/g, ""),
                     phoneNumberId: values.phoneNumberId?.replace(/[^0-9]/g, "") || undefined,
-                    accessToken: connectMode === "partner" ? undefined : trimmedToken,
+                    accessToken: trimmedToken,
                 }),
             });
             setMetaConnection(updated);
             setManualConnectOpen(false);
             manualConnectForm.resetFields();
-            message.success({
-                content: updated.connected
-                    ? `WhatsApp connected${updated.displayPhoneNumber ? ` (${updated.displayPhoneNumber})` : ""}!`
-                    : "WhatsApp Business Account linked.",
-                key: "manual-connect",
-            });
+            if (updated.wabaAccessible === false && updated.wabaAccessWarning) {
+                message.warning({
+                    content: updated.wabaAccessWarning,
+                    key: "manual-connect",
+                    duration: 10,
+                });
+            } else {
+                message.success({
+                    content: updated.connected
+                        ? `WhatsApp connected${updated.displayPhoneNumber ? ` (${updated.displayPhoneNumber})` : ""}!`
+                        : "WhatsApp Business Account linked.",
+                    key: "manual-connect",
+                });
+            }
             await loadAll();
         } catch (err) {
             message.error({
@@ -1549,6 +1560,18 @@ export default function WhatsAppPage() {
         } finally {
             setManualConnectSubmitting(false);
         }
+    };
+
+    const openUpdateConnectionModal = (preferredMode?: "partner" | "oauth" | "token") => {
+        if (preferredMode) {
+            setConnectMode(preferredMode);
+        }
+        manualConnectForm.setFieldsValue({
+            businessAccountId: metaConnection.businessAccountId || "",
+            phoneNumberId: metaConnection.phoneNumberId || "",
+            accessToken: "",
+        });
+        setManualConnectOpen(true);
     };
 
     const handleSelectWaba = async (wabaIdInput?: string) => {
@@ -3027,9 +3050,22 @@ export default function WhatsAppPage() {
                     <Tooltip title="Preview">
                         <Button size="small" icon={<EyeOutlined />} onClick={() => { setSelectedTemplate(record); setTemplatePreviewModal(true); }} />
                     </Tooltip>
-                    {record.metaSubmissionStatus === "submitted" && record.status === "pending" && (
-                        <Tooltip title="Refresh Status">
-                            <Button size="small" icon={<ReloadOutlined />} onClick={() => { void loadTemplates(); }} />
+                    {(record.metaSubmissionStatus !== "submitted" || record.status === "pending") && (
+                        <Tooltip title={record.metaSubmissionStatus === "submitted" ? "Refresh Meta Review Status" : "Retry Submitting Template to Meta"}>
+                            <Button
+                                size="small"
+                                icon={<ReloadOutlined />}
+                                onClick={() => {
+                                    message.loading({ content: "Syncing template with Meta...", key: `sync-tpl-${record.id}` });
+                                    Promise.all([loadMetaSettings(), loadTemplates()])
+                                        .then(() => {
+                                            message.success({ content: "Template status synced with Meta", key: `sync-tpl-${record.id}` });
+                                        })
+                                        .catch((err) => {
+                                            message.error({ content: parseErrorMessage(err) || "Failed to sync template", key: `sync-tpl-${record.id}` });
+                                        });
+                                }}
+                            />
                         </Tooltip>
                     )}
                     <Tooltip title={isTemplateEditable(record) ? "Edit Template" : "Templates currently in review by Meta cannot be edited"}>
@@ -3539,6 +3575,57 @@ export default function WhatsAppPage() {
                     />
                 )}
 
+                {metaConnected && metaConnection.wabaAccessible === false && (
+                    <Alert
+                        message={`WhatsApp Business Account Permission Required (WABA ID: ${metaConnection.businessAccountId || "Unknown"})`}
+                        description={
+                            <div className="space-y-2 text-xs text-amber-950 leading-relaxed">
+                                <p className="m-0 text-sm text-gray-800">
+                                    Your phone number <strong>{metaConnection.phoneDetails?.displayPhoneNumber || metaConnection.displayPhoneNumber || metaConnection.phoneNumberId}</strong> is linked, and <code>{metaConnection.businessAccountId}</code> is the valid WhatsApp Business Account ID, but Meta Graph API reports that system user <strong>&quot;{metaConnection.systemUserName || "Nobstacle-user"}&quot;</strong> does not yet have template/messaging permission on this WABA.
+                                </p>
+                                <div className="p-2.5 bg-white/90 rounded-lg border border-amber-200 space-y-1">
+                                    <div className="font-semibold text-amber-900">How to complete Meta Partner access:</div>
+                                    <ol className="list-decimal pl-4 space-y-1 m-0 text-gray-700">
+                                        <li>
+                                            In the hotel&apos;s <a href="https://business.facebook.com/settings/partners" target="_blank" rel="noopener noreferrer" className="underline font-semibold text-amber-800">Meta Business Settings → Users → Partners</a>, ensure WhatsApp Business Account <code>{metaConnection.businessAccountId}</code> is shared with <strong>{metaConnection.partnerBusinessName || "Nobstacle"}</strong> (Business ID <code>{metaConnection.partnerBusinessId || "854560954266234"}</code>) with <strong>Full Control (Manage WhatsApp Business Account)</strong>.
+                                        </li>
+                                        <li>
+                                            Switch the <strong>top-left Business Portfolio dropdown</strong> in Meta Business Settings to <strong>{metaConnection.partnerBusinessName || "Nobstacle"} ({metaConnection.partnerBusinessId || "854560954266234"})</strong> → open <a href="https://business.facebook.com/settings/whatsapp-business-accounts" target="_blank" rel="noopener noreferrer" className="underline font-semibold text-amber-800">Accounts → WhatsApp accounts</a> → select WABA <code>{metaConnection.businessAccountId}</code> → click <strong>Assign system users</strong> → assign <strong>{metaConnection.systemUserName || "Nobstacle-user"}</strong> with <strong>Full Control</strong>.
+                                        </li>
+                                        <li>
+                                            If you generated a new System User or admin token after assigning access, click <strong>Update Token / Connection</strong> to paste it, or click <strong>Re-verify &amp; Sync Templates</strong> to automatically submit any locally saved templates.
+                                        </li>
+                                    </ol>
+                                </div>
+                            </div>
+                        }
+                        type="warning"
+                        showIcon
+                        action={
+                            <Space direction="vertical" size="small">
+                                <Button
+                                    size="small"
+                                    type="primary"
+                                    icon={<SyncOutlined spin={loading} />}
+                                    onClick={() => void loadAll()}
+                                    loading={loading}
+                                    style={{ backgroundColor: "#25D366", borderColor: "#25D366" }}
+                                >
+                                    Re-verify &amp; Sync Templates
+                                </Button>
+                                <Button
+                                    size="small"
+                                    icon={<KeyOutlined />}
+                                    onClick={() => openUpdateConnectionModal("partner")}
+                                >
+                                    Update Token / Connection
+                                </Button>
+                            </Space>
+                        }
+                        className="rounded-xl border-amber-300 bg-amber-50/90 shadow-sm"
+                    />
+                )}
+
                 {metaConnected && metaConnection.phoneDetails && !metaConnection.phoneDetails.canSendMessages && (
                     isDisplayNamePending ? (
                         <div className="rounded-2xl border border-blue-200/90 bg-gradient-to-r from-blue-50/90 via-indigo-50/40 to-white p-5 shadow-sm transition-all">
@@ -3679,25 +3766,48 @@ export default function WhatsAppPage() {
                                             <InfoCircleOutlined className="text-xs text-orange-400 ml-0.5" />
                                         </Tag>
                                     </Popover>
+                                ) : metaConnection.wabaAccessible === false ? (
+                                    <Tooltip title={metaConnection.wabaAccessWarning || "System user permission or updated token is needed on this WhatsApp Business Account to submit templates"}>
+                                        <Tag
+                                            color="orange"
+                                            onClick={() => openUpdateConnectionModal("partner")}
+                                            className="px-2.5 py-0.5 text-xs font-medium cursor-pointer inline-flex items-center gap-1.5 m-0"
+                                        >
+                                            <ExclamationCircleOutlined />
+                                            <span>WABA Permission Needed</span>
+                                        </Tag>
+                                    </Tooltip>
                                 ) : (
                                     <Tag color="green" className="px-2.5 py-0.5 text-xs font-medium m-0">
                                         Meta Connected
                                     </Tag>
                                 )}
 
-                                {/* Connect / Disconnect */}
+                                {/* Connect / Update / Disconnect */}
                                 {metaConnected || metaWabaLinked || metaConnection.hasAccessToken ? (
-                                    <Popconfirm
-                                        title="Disconnect WhatsApp?"
-                                        description="Disconnecting will unlink your WhatsApp account and remove test data and messaging records. Do you wish to proceed?"
-                                        onConfirm={handleDisconnectMeta}
-                                        okText="Disconnect"
-                                        cancelText="Cancel"
-                                    >
-                                        <Button size="small" danger icon={<PoweroffOutlined />} className="text-xs">
-                                            Disconnect
-                                        </Button>
-                                    </Popconfirm>
+                                    <>
+                                        <Tooltip title="Update WABA, Phone Number, or Access Token without deleting templates or conversations">
+                                            <Button
+                                                size="small"
+                                                icon={<SettingOutlined />}
+                                                onClick={() => openUpdateConnectionModal()}
+                                                className="text-xs"
+                                            >
+                                                Update Token
+                                            </Button>
+                                        </Tooltip>
+                                        <Popconfirm
+                                            title="Disconnect WhatsApp?"
+                                            description="Disconnecting will unlink your WhatsApp account and remove test data and messaging records. Do you wish to proceed?"
+                                            onConfirm={handleDisconnectMeta}
+                                            okText="Disconnect"
+                                            cancelText="Cancel"
+                                        >
+                                            <Button size="small" danger icon={<PoweroffOutlined />} className="text-xs">
+                                                Disconnect
+                                            </Button>
+                                        </Popconfirm>
+                                    </>
                                 ) : (
                                     <Button
                                         type="primary"
@@ -5372,7 +5482,10 @@ export default function WhatsAppPage() {
                                         Select <strong>WhatsApp Business Accounts</strong> → check your hotel&apos;s WhatsApp account → toggle on <strong>Manage WhatsApp Business Account (Full Control)</strong> → click <strong>Save Changes</strong>.
                                     </li>
                                     <li>
-                                        Paste your hotel&apos;s <strong>WhatsApp Business Account (WABA) ID</strong> below and click <strong>Verify &amp; Connect WhatsApp</strong>.
+                                        Switch the <strong>top-left Business Portfolio dropdown</strong> in Meta Business Settings to <strong>{metaConnection.partnerBusinessName || "Nobstacle"} ({metaConnection.partnerBusinessId || "854560954266234"})</strong> → open <strong>Accounts → WhatsApp accounts</strong> → select your hotel&apos;s shared WABA → click <strong>Assign system users</strong> → assign <strong>{metaConnection.systemUserName || "Nobstacle-user"}</strong> with <strong>Full Control</strong>.
+                                    </li>
+                                    <li>
+                                        Paste your hotel&apos;s <strong>WhatsApp Business Account (WABA) ID</strong> below (and optionally a newly generated token if you refreshed it) and click <strong>Verify &amp; Connect WhatsApp</strong>.
                                     </li>
                                 </ol>
                             </div>
@@ -5397,10 +5510,10 @@ export default function WhatsAppPage() {
                                             },
                                         },
                                     ]}
-                                    extra={<span className="text-xs text-gray-400">Found in Meta Business Settings → Accounts → WhatsApp accounts (15–16 digits). No Access Token is required after sharing with Partner ID {metaConnection.partnerBusinessId || "854560954266234"}.</span>}
+                                    extra={<span className="text-xs text-gray-400">Found in Meta Business Settings → Accounts → WhatsApp accounts (15–18 digits).</span>}
                                 >
                                     <Input
-                                        placeholder="e.g. 1068716125739705"
+                                        placeholder="e.g. 122093011742019123"
                                         size="large"
                                         className="rounded-lg font-mono text-sm"
                                     />
@@ -5419,6 +5532,22 @@ export default function WhatsAppPage() {
                                         placeholder="e.g. 149349568263516 (optional)"
                                         size="large"
                                         className="rounded-lg font-mono text-sm"
+                                    />
+                                </Form.Item>
+
+                                <Form.Item
+                                    name="accessToken"
+                                    label={
+                                        <span className="font-medium text-gray-700">
+                                            New System User / Access Token <span className="text-xs text-gray-400 font-normal">(Optional — only if you generated a new token)</span>
+                                        </span>
+                                    }
+                                    extra={<span className="text-xs text-gray-400">Leave blank to use Nobstacle&apos;s platform system user token, or paste a newly generated token if you regenerated it after assigning the WABA.</span>}
+                                >
+                                    <Input.Password
+                                        placeholder="EAAG... (leave blank to use default Nobstacle-user token)"
+                                        size="large"
+                                        className="rounded-lg font-mono text-xs"
                                     />
                                 </Form.Item>
 
