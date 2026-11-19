@@ -51,6 +51,7 @@ export interface SendMessagePayloadType {
   station: number;
   refType: ReceivedType;
   langCode: string;
+  adminLangCode?: string;
   uuid?: boolean;
   isLiveTranslation?: boolean;
   senderMode?: "client" | "header";
@@ -82,6 +83,7 @@ export type ReceivedMessageContent = {
   role: "User" | "Admin" | "Staff";
   type: ReceivedType;
   langCode?: string;
+  adminLangCode?: string;
   isLiveTranslation?: boolean;
   senderMode?: "client" | "header";
   audioUrl?: string;

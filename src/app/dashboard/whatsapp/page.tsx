@@ -4351,7 +4351,7 @@ export default function WhatsAppPage() {
                                                             </div>
                                                             <Input
                                                                 size="large"
-                                                                placeholder="WhatsApp phone number"
+                                                                placeholder="e.g. +122233344455"
                                                                 value={row.phone}
                                                                 onChange={(e) => updateContactEditRow(index, { phone: e.target.value })}
                                                             />
@@ -4718,7 +4718,7 @@ export default function WhatsAppPage() {
                                                                             </Col>
                                                                             <Col span={12}>
                                                                                 <Input
-                                                                                    placeholder="Phone number"
+                                                                                    placeholder="e.g. +122233344455"
                                                                                     value={button.phoneNumber}
                                                                                     onChange={(e) => updateCarouselCardButton(item.id, button.id, { phoneNumber: e.target.value })}
                                                                                 />
@@ -4826,7 +4826,7 @@ export default function WhatsAppPage() {
                                                                 </Col>
                                                                 <Col span={12}>
                                                                     <Input
-                                                                        placeholder="Phone number"
+                                                                        placeholder="e.g. +122233344455"
                                                                         value={button.phoneNumber}
                                                                         onChange={(e) => updateTemplateButton(button.id, { phoneNumber: e.target.value })}
                                                                     />

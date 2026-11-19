@@ -2,8 +2,8 @@
 
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import {
+  uploadControllerUploadLiveTranslationFile,
   useCompanyControllerGetCompany,
-  useUploadControllerUploadLiveTranslationFile,
 } from "../lib/client/api";
 import { useSocketContext } from "../context/SocketContextProvider";
 import { useMessageStore } from "../lib/zustand/store/messageStore";
@@ -50,14 +50,6 @@ const LiveTranslationRecorder: React.FC<LiveTranslationRecorderProps> = ({
   const hasSpeechRef = useRef<boolean>(false);
   const shouldSendAudioRef = useRef<boolean>(true);
   const lastFrameTimeRef = useRef<number>(0);
-
-  const liveTranslationMutation = useUploadControllerUploadLiveTranslationFile({
-    request: {
-      params: {
-        mode,
-      },
-    },
-  });
 
   const { emitSendMessage, socketConnected } = useSocketContext();
   const params = useSearchParams();
@@ -130,8 +122,11 @@ const LiveTranslationRecorder: React.FC<LiveTranslationRecorderProps> = ({
       const stationLang =
         store.receivedLangCodeByStation[targetStation] || store.receivedLangCode;
       const fromLocal =
-        typeof window !== "undefined" ? localStorage.getItem("lang-code") : null;
-      if (activeLangCode && activeLangCode !== "en") {
+        typeof window !== "undefined"
+          ? localStorage.getItem(`lang-code-station-${targetStation}`) ||
+            localStorage.getItem("lang-code")
+          : null;
+      if (activeLangCode) {
         return activeLangCode;
       }
       return stationLang || fromLocal || companyData?.defaultLangCode || "en";
@@ -145,21 +140,27 @@ const LiveTranslationRecorder: React.FC<LiveTranslationRecorderProps> = ({
     if (fromParams) {
       return fromParams;
     }
+    const targetStation = getTargetStation();
     const fromLocal =
-      typeof window !== "undefined" ? localStorage.getItem("lang-code") : null;
+      typeof window !== "undefined"
+        ? localStorage.getItem(`lang-code-station-${targetStation}`) ||
+          localStorage.getItem("lang-code")
+        : null;
     if (fromLocal) return fromLocal;
     return companyData?.defaultLangCode || "en";
   }, [mode, activeLangCode, getTargetStation, params, companyData]);
 
   const sendAudioForLiveTranslation = async (audioBlob: Blob) => {
     const langCode = getActiveLangCode();
+    const adminLangCode = companyData?.defaultLangCode || "en";
     if (audioBlob.size < 200) return;
 
     setInFlightCount((c) => c + 1);
     try {
-      const res = await liveTranslationMutation.mutateAsync({
-        data: { file: audioBlob, langCode },
-      });
+      const res = await uploadControllerUploadLiveTranslationFile(
+        { file: audioBlob, langCode },
+        { params: { mode, adminLangCode } },
+      );
 
       const transcript = res?.transcription?.trim();
 
@@ -179,6 +180,7 @@ const LiveTranslationRecorder: React.FC<LiveTranslationRecorderProps> = ({
           station: targetStation,
           refType: "ChatMessage",
           langCode,
+          adminLangCode,
           isLiveTranslation: true,
           senderMode: mode,
           adminMessage: res.adminMessage,

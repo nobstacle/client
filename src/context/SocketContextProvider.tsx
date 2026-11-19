@@ -354,25 +354,30 @@ export const SocketContextProvider = ({
               ? false
               : ["Admin", "Staff", "SAdmin"].includes(parsedData.role || "");
 
-        // Auto-play translated destination audio on the receiving side
+        // Auto-play translated destination audio strictly in the receiver's own language
         if (isViewerAdmin && !isSenderAdmin) {
+          const userLang =
+            parsedData.adminLangCode ||
+            useCompanyStore.getState().company?.defaultLangCode ||
+            "en";
           translatedAudioPlayer.enqueue({
             messageId: parsedData.id,
-            audioUrl: parsedData.adminAudioUrl || parsedData.audioUrl,
+            audioUrl: parsedData.adminAudioUrl,
             fallbackText:
               parsedData.adminMessage ||
               parsedData.originalMessage ||
               parsedData.message,
-            langCode: "en",
+            langCode: userLang,
           });
         } else if (!isViewerAdmin && isSenderAdmin) {
           const clientLang =
             parsedData.langCode ||
+            localStorage.getItem(`lang-code-station-${parsedData.station}`) ||
             localStorage.getItem("lang-code") ||
             "en";
           translatedAudioPlayer.enqueue({
             messageId: parsedData.id,
-            audioUrl: parsedData.clientAudioUrl || parsedData.audioUrl,
+            audioUrl: parsedData.clientAudioUrl,
             fallbackText:
               parsedData.clientMessage ||
               parsedData.message ||
@@ -446,6 +451,7 @@ export const SocketContextProvider = ({
       if (!isTargetStation(parsedData?.station)) return;
 
       setReceivedLangCode(parsedData.langCode, parsedData.station);
+      localStorage.setItem(`lang-code-station-${parsedData.station}`, parsedData.langCode);
       localStorage.setItem("lang-code", parsedData.langCode);
     } catch (error) {
       console.error("❌ Error parsing lang code response:", error);

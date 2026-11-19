@@ -13,6 +13,30 @@ const refreshAxios = Axios.create({
   baseURL: backendBaseUrl,
 });
 
+// Deduplicate concurrent server-side token refresh calls for the same refresh token
+const pendingRefreshes = new Map<string, Promise<any>>();
+
+async function refreshBackendSession(rtc: string, at: string) {
+  const existing = pendingRefreshes.get(rtc);
+  if (existing) {
+    return existing;
+  }
+
+  const promise = refreshAxios
+    .post(
+      "/api/v1/iam/auth/refresh",
+      { rtc },
+      { headers: { Authorization: `Bearer ${at}` } },
+    )
+    .then(({ data }) => data)
+    .finally(() => {
+      pendingRefreshes.delete(rtc);
+    });
+
+  pendingRefreshes.set(rtc, promise);
+  return promise;
+}
+
 const getApiErrorMessage = (error: any) => {
   return (
     error?.response?.data?.message ||
@@ -150,10 +174,9 @@ export const authOptions: AuthOptions = {
         }
 
         try {
-          const { data } = await refreshAxios.post(
-            "/api/v1/iam/auth/refresh",
-            { rtc: token.user.backendTokens.rtc },
-            { headers: { Authorization: `Bearer ${token.user.backendTokens.at}` } },
+          const data = await refreshBackendSession(
+            token.user.backendTokens.rtc,
+            token.user.backendTokens.at,
           );
           return { ...token, user: data };
         } catch (error) {
@@ -191,10 +214,9 @@ export const authOptions: AuthOptions = {
         const t0 = Date.now();
 
         try {
-          const { data } = await refreshAxios.post(
-            "/api/v1/iam/auth/refresh",
-            { rtc: token.user.backendTokens.rtc },
-            { headers: { Authorization: `Bearer ${token.user.backendTokens.at}` } },
+          const data = await refreshBackendSession(
+            token.user.backendTokens.rtc,
+            token.user.backendTokens.at,
           );
           console.log(`[JWT] Token refresh succeeded in ${Date.now() - t0}ms`);
           return { ...token, user: data };

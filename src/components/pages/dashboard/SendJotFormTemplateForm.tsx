@@ -3244,11 +3244,11 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 							<Input
 								value={contactModalData.phone}
 								onChange={(e) => setContactModalData({ ...contactModalData, phone: e.target.value })}
-								placeholder="e.g. +971501234567"
+								placeholder="e.g. +122233344455"
 								disabled={isSavingContact}
 							/>
 							<div className="mt-1 text-[11px] text-gray-500">
-								Must include international country code (e.g. +971... or +1...).
+								Must include international country code (e.g. +122233344455).
 							</div>
 						</div>
 						<div>

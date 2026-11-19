@@ -2221,7 +2221,7 @@ export const WhatsappInbox: React.FC<WhatsappInboxProps> = ({
                     <div>
                         <label className="text-xs font-semibold text-gray-600 mb-1 block">Phone Number (with country code) *</label>
                         <Input
-                            placeholder="e.g. +971588784735 or +919876543210"
+                            placeholder="e.g. +122233344455"
                             value={newChatPhone}
                             onChange={(e) => setNewChatPhone(e.target.value)}
                             className="rounded-xl"

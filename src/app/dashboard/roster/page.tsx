@@ -29,6 +29,8 @@ import {
 import {
     ApartmentOutlined,
     AppstoreOutlined,
+    ArrowLeftOutlined,
+    ArrowRightOutlined,
     BulbOutlined,
     CalendarOutlined,
     CheckCircleOutlined,
@@ -163,6 +165,7 @@ export default function RosterPage() {
     const [selectedWeekTab, setSelectedWeekTab] = useState<string>("all");
     const [viewAllSections, setViewAllSections] = useState<boolean>(false);
     const [showAllKpis, setShowAllKpis] = useState<boolean>(false);
+    const [showAdvancedScript, setShowAdvancedScript] = useState<boolean>(false);
     const [memberSearch, setMemberSearch] = useState<string>("");
 
     // ── Account & Workspace Loading State ────────────────────────────────────
@@ -1183,9 +1186,9 @@ export default function RosterPage() {
                         </div>
                     }
                 >
-                    <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+                    <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
                         {/* Group 1: Horizon & Weekly Target */}
-                        <div className="rounded-2xl border border-slate-200/80 bg-slate-50/60 p-5">
+                        <div className="rounded-2xl border border-slate-200/80 bg-gradient-to-b from-slate-50/80 to-white p-5 shadow-2xs">
                             <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-slate-700">
                                 <CalendarOutlined className="text-blue-600" />
                                 <span>Schedule Horizon & Target</span>
@@ -1283,7 +1286,7 @@ export default function RosterPage() {
                         </div>
 
                         {/* Group 2: Daily Hours & Off Days */}
-                        <div className="rounded-2xl border border-slate-200/80 bg-slate-50/60 p-5">
+                        <div className="rounded-2xl border border-slate-200/80 bg-gradient-to-b from-slate-50/80 to-white p-5 shadow-2xs">
                             <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-slate-700">
                                 <ClockCircleOutlined className="text-indigo-600" />
                                 <span>Daily Duty & Weekly Off-Day Limits</span>
@@ -1351,7 +1354,7 @@ export default function RosterPage() {
                         </div>
 
                         {/* Group 3: Rest, Start Times & Skill Spread */}
-                        <div className="rounded-2xl border border-slate-200/80 bg-slate-50/60 p-5">
+                        <div className="rounded-2xl border border-slate-200/80 bg-gradient-to-b from-slate-50/80 to-white p-5 shadow-2xs md:col-span-2 xl:col-span-1">
                             <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-slate-700">
                                 <SwapOutlined className="text-teal-600" />
                                 <span>Shift Starts, Rest & Skill Rules</span>
@@ -1512,18 +1515,20 @@ export default function RosterPage() {
                         </div>
                     }
                 >
-                    <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-                        <Segmented
-                            value={activeHourBlock}
-                            onChange={(v) => setActiveHourBlock(String(v))}
-                            options={[
-                                { label: "All 24 Hours", value: "all" },
-                                { label: "Night (00–06)", value: "0" },
-                                { label: "Morning (06–12)", value: "1" },
-                                { label: "Afternoon (12–18)", value: "2" },
-                                { label: "Evening (18–24)", value: "3" },
-                            ]}
-                        />
+                    <div className="mb-5 flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+                        <div className="overflow-x-auto pb-1 sm:pb-0">
+                            <Segmented
+                                value={activeHourBlock}
+                                onChange={(v) => setActiveHourBlock(String(v))}
+                                options={[
+                                    { label: "All 24 Hours", value: "all" },
+                                    { label: "Night (00–06)", value: "0" },
+                                    { label: "Morning (06–12)", value: "1" },
+                                    { label: "Afternoon (12–18)", value: "2" },
+                                    { label: "Evening (18–24)", value: "3" },
+                                ]}
+                            />
+                        </div>
                         <div className="text-xs text-slate-500">
                             Daily Minimum Staffing Sum:{" "}
                             <strong className="text-slate-800">
@@ -1555,7 +1560,7 @@ export default function RosterPage() {
                                             min hrs
                                         </span>
                                     </div>
-                                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-6">
+                                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
                                         {Array.from({ length: block.end - block.start }, (_, idx) => {
                                             const h = block.start + idx;
                                             const minVal = config.minH[h] ?? 1;
@@ -1713,200 +1718,215 @@ export default function RosterPage() {
     };
 
     const renderTeamAndAvailabilitySection = () => (
-        <div className="space-y-6 pb-8">
-            {/* Segmented Switcher for Team vs Teams/Departments vs Requests vs Absences */}
-            <div className="flex flex-col justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-xs sm:flex-row sm:items-center">
-                <Segmented
-                    size="large"
-                    value={teamSectionTab}
-                    onChange={(v) => setTeamSectionTab(String(v))}
-                    options={[
-                        {
-                            label: (
-                                <div className="flex items-center gap-2 px-2 py-0.5">
-                                    <TeamOutlined />
-                                    <span>Team Members</span>
-                                    <Badge count={team.length} color="#2f5bea" showZero />
-                                </div>
-                            ),
-                            value: "members",
-                        },
-                        {
-                            label: (
-                                <div className="flex items-center gap-2 px-2 py-0.5">
-                                    <ApartmentOutlined />
-                                    <span>Teams & Departments</span>
-                                    <Badge count={availableTeams.length} color="#7c3aed" showZero />
-                                </div>
-                            ),
-                            value: "teams",
-                        },
-                        {
-                            label: (
-                                <div className="flex items-center gap-2 px-2 py-0.5">
-                                    <CalendarOutlined />
-                                    <span>Shift & Off Requests</span>
-                                    <Badge count={requests.length} color="#6366f1" showZero />
-                                </div>
-                            ),
-                            value: "requests",
-                        },
-                        {
-                            label: (
-                                <div className="flex items-center gap-2 px-2 py-0.5">
-                                    <ClockCircleOutlined />
-                                    <span>Absences & Leave</span>
-                                    <Badge count={absences.length} color="#0d9488" showZero />
-                                </div>
-                            ),
-                            value: "absences",
-                        },
-                    ]}
-                />
+        <div className="space-y-5 pb-4">
+            {/* Sub-view Switcher & Account Sync Toolbar */}
+            <div className="flex flex-col justify-between gap-3 rounded-2xl border border-slate-200/90 bg-white p-3.5 shadow-xs lg:flex-row lg:items-center">
+                <div className="overflow-x-auto pb-1 lg:pb-0">
+                    <Segmented
+                        size="large"
+                        value={teamSectionTab}
+                        onChange={(v) => setTeamSectionTab(String(v))}
+                        options={[
+                            {
+                                label: (
+                                    <div className="flex items-center gap-2 px-2 py-0.5">
+                                        <TeamOutlined />
+                                        <span>Team Members</span>
+                                        <Badge count={team.length} color="#2f5bea" showZero />
+                                    </div>
+                                ),
+                                value: "members",
+                            },
+                            {
+                                label: (
+                                    <div className="flex items-center gap-2 px-2 py-0.5">
+                                        <ApartmentOutlined />
+                                        <span>Teams</span>
+                                        <Badge count={availableTeams.length} color="#7c3aed" showZero />
+                                    </div>
+                                ),
+                                value: "teams",
+                            },
+                            {
+                                label: (
+                                    <div className="flex items-center gap-2 px-2 py-0.5">
+                                        <CalendarOutlined />
+                                        <span>Requests</span>
+                                        <Badge count={requests.length} color="#6366f1" showZero />
+                                    </div>
+                                ),
+                                value: "requests",
+                            },
+                            {
+                                label: (
+                                    <div className="flex items-center gap-2 px-2 py-0.5">
+                                        <ClockCircleOutlined />
+                                        <span>Leave</span>
+                                        <Badge count={absences.length} color="#0d9488" showZero />
+                                    </div>
+                                ),
+                                value: "absences",
+                            },
+                        ]}
+                    />
+                </div>
 
-                <Space wrap>
+                <div className="flex flex-wrap items-center gap-2">
                     <Button
                         icon={<UsergroupAddOutlined />}
                         onClick={() => setImportUsersModalVisible(true)}
+                        className="rounded-xl"
                     >
-                        Import Users from Company ({accountMeta?.allCompanyUsers?.length || accountMeta?.accountUsersCount || 0})
+                        Import Users ({accountMeta?.allCompanyUsers?.length || accountMeta?.accountUsersCount || 0})
                     </Button>
                     <Button
                         icon={<SyncOutlined spin={syncingAccount} />}
                         loading={syncingAccount}
                         onClick={handleSyncWithAccountUsers}
+                        className="rounded-xl"
                     >
                         Sync Account
                     </Button>
-                </Space>
+                </div>
             </div>
 
             {/* Sub-view A: Team Members */}
             {(teamSectionTab === "members" || viewAllSections) && (
                 <Card
-                    className="rounded-2xl border-slate-200/90 shadow-sm"
-                    bodyStyle={{ padding: "24px" }}
+                    className="rounded-2xl border-slate-200/90 shadow-xs"
+                    bodyStyle={{ padding: "20px 24px" }}
                     title={
-                        <div className="flex flex-wrap items-center justify-between gap-3 py-1">
+                        <div className="flex flex-col justify-between gap-3 py-1 sm:flex-row sm:items-center">
                             <div>
-                                <div className="text-base font-semibold text-slate-800">
+                                <div className="text-base font-bold text-slate-900">
                                     {accountMeta?.companyName
-                                        ? `${accountMeta.companyName} Team (${team.length} Members)`
-                                        : `Team Roster (${team.length} Members)`}
+                                        ? `${accountMeta.companyName} Team (${team.length})`
+                                        : `Team Roster (${team.length})`}
                                 </div>
                                 <div className="text-xs font-normal text-slate-500">
-                                    Create team members, assign teams (e.g. Reception, Operator, Concierge), and toggle Active status.
+                                    Manage members, assign teams, and toggle roster availability.
                                 </div>
                             </div>
                             <Input
                                 prefix={<SearchOutlined className="text-slate-400" />}
-                                placeholder="Search by name, email, team, or role..."
+                                placeholder="Search name, email, team, or role..."
                                 value={memberSearch}
                                 onChange={(e) => setMemberSearch(e.target.value)}
                                 allowClear
-                                className="w-full sm:w-72"
+                                className="w-full rounded-xl sm:w-72"
                             />
                         </div>
                     }
                 >
-                    {/* Filter by Team Tags Bar */}
-                    <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl bg-slate-50/80 p-2.5 border border-slate-100">
-                        <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider mr-1">
-                            Filter by Team:
+                    {/* Filter by Team Pills */}
+                    <div className="mb-5 flex flex-wrap items-center gap-2">
+                        <span className="mr-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                            Team:
                         </span>
-                        <Tag.CheckableTag
-                            checked={memberFilterTeam === "all"}
-                            onChange={() => setMemberFilterTeam("all")}
-                            className="rounded-full px-3 py-0.5 text-xs font-medium cursor-pointer"
+                        <button
+                            type="button"
+                            onClick={() => setMemberFilterTeam("all")}
+                            className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
+                                memberFilterTeam === "all"
+                                    ? "bg-blue-600 text-white shadow-xs"
+                                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                            }`}
                         >
-                            All Teams ({team.length})
-                        </Tag.CheckableTag>
+                            All ({team.length})
+                        </button>
                         {availableTeams.map((tName) => {
                             const count = team.filter((m) => (m.teamName || "Reception") === tName).length;
+                            const active = memberFilterTeam === tName;
                             return (
-                                <Tag.CheckableTag
+                                <button
                                     key={tName}
-                                    checked={memberFilterTeam === tName}
-                                    onChange={() => setMemberFilterTeam(tName)}
-                                    className="rounded-full px-3 py-0.5 text-xs font-medium cursor-pointer"
+                                    type="button"
+                                    onClick={() => setMemberFilterTeam(tName)}
+                                    className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
+                                        active
+                                            ? "bg-blue-600 text-white shadow-xs"
+                                            : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                                    }`}
                                 >
                                     {tName} ({count})
-                                </Tag.CheckableTag>
+                                </button>
                             );
                         })}
-                        <Button
-                            size="small"
-                            type="dashed"
-                            icon={<PlusOutlined />}
-                            onClick={() => setManageTeamsModalVisible(true)}
-                            className="rounded-full text-xs ml-auto"
-                        >
-                            Manage Teams
-                        </Button>
                     </div>
 
-                    {/* Rich Add Member Bar */}
-                    <div className="mb-6 flex flex-col gap-3.5 rounded-2xl border border-blue-100 bg-blue-50/40 p-4">
-                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                            <Input
-                                size="large"
-                                placeholder="Staff member full name..."
-                                value={newMemberName}
-                                onChange={(e) => setNewMemberName(e.target.value)}
-                                onPressEnter={() => handleAddMember()}
-                                className="flex-1 rounded-xl"
-                            />
-                            <Select
-                                size="large"
-                                value={newMemberTeam}
-                                onChange={(val) => setNewMemberTeam(val)}
-                                className="w-full sm:w-52"
-                                placeholder="Assign Team"
-                            >
-                                {availableTeams.map((t) => (
-                                    <Option key={t} value={t}>
-                                        {t} Team
-                                    </Option>
-                                ))}
-                            </Select>
-                            <Input
-                                size="large"
-                                placeholder="Role / Title (e.g. Receptionist)"
-                                value={newMemberRoleTitle}
-                                onChange={(e) => setNewMemberRoleTitle(e.target.value)}
-                                className="w-full sm:w-56 rounded-xl"
-                            />
+                    {/* Streamlined Add Member Bar */}
+                    <div className="mb-6 rounded-2xl border border-blue-100/90 bg-gradient-to-br from-blue-50/60 via-slate-50/40 to-white p-4">
+                        <div className="mb-2.5 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-blue-700">
+                            <UserAddOutlined />
+                            <span>Quick Add Staff Member</span>
                         </div>
-                        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-blue-100/70 pt-2">
-                            <div className="flex flex-wrap items-center gap-5">
+                        <div className="grid grid-cols-1 gap-3 md:grid-cols-12">
+                            <div className="md:col-span-5">
+                                <Input
+                                    size="large"
+                                    placeholder="Full name (e.g. Sarah Miller)"
+                                    value={newMemberName}
+                                    onChange={(e) => setNewMemberName(e.target.value)}
+                                    onPressEnter={() => handleAddMember()}
+                                    className="rounded-xl"
+                                />
+                            </div>
+                            <div className="md:col-span-3">
+                                <Select
+                                    size="large"
+                                    value={newMemberTeam}
+                                    onChange={(val) => setNewMemberTeam(val)}
+                                    className="w-full"
+                                    placeholder="Assign Team"
+                                >
+                                    {availableTeams.map((t) => (
+                                        <Option key={t} value={t}>
+                                            {t} Team
+                                        </Option>
+                                    ))}
+                                </Select>
+                            </div>
+                            <div className="md:col-span-4">
+                                <Input
+                                    size="large"
+                                    placeholder="Role / Title (optional)"
+                                    value={newMemberRoleTitle}
+                                    onChange={(e) => setNewMemberRoleTitle(e.target.value)}
+                                    onPressEnter={() => handleAddMember()}
+                                    className="rounded-xl"
+                                />
+                            </div>
+                        </div>
+                        <div className="mt-3 flex flex-col justify-between gap-3 border-t border-blue-100/70 pt-3 sm:flex-row sm:items-center">
+                            <div className="flex flex-wrap items-center gap-4">
                                 <Checkbox
                                     checked={newMemberSkilled}
                                     onChange={(e) => setNewMemberSkilled(e.target.checked)}
                                 >
-                                    <span className="text-sm font-medium text-slate-700">Skilled</span>
+                                    <span className="text-xs font-medium text-slate-700 sm:text-sm">Skilled</span>
                                 </Checkbox>
                                 <Checkbox
                                     checked={newMemberLeader}
                                     onChange={(e) => setNewMemberLeader(e.target.checked)}
                                 >
-                                    <span className="text-sm font-medium text-slate-700">Team Leader</span>
+                                    <span className="text-xs font-medium text-slate-700 sm:text-sm">Team Leader</span>
                                 </Checkbox>
                                 <Checkbox
                                     checked={newMemberActive}
                                     onChange={(e) => setNewMemberActive(e.target.checked)}
                                 >
-                                    <span className="text-sm font-medium text-slate-700">Active in Roster</span>
+                                    <span className="text-xs font-medium text-slate-700 sm:text-sm">Active in Roster</span>
                                 </Checkbox>
                             </div>
                             <Button
                                 type="primary"
-                                size="large"
-                                icon={<UserAddOutlined />}
+                                size="middle"
+                                icon={<PlusOutlined />}
                                 onClick={() => handleAddMember()}
-                                className="rounded-xl px-6"
+                                className="rounded-xl px-5 font-semibold"
                                 style={{ background: "#2f5bea" }}
                             >
-                                Create Team Member
+                                Add Team Member
                             </Button>
                         </div>
                     </div>
@@ -1914,103 +1934,113 @@ export default function RosterPage() {
                     {filteredTeam.length === 0 ? (
                         <Empty description="No team members match the current filter. Add a member above or import company users." />
                     ) : (
-                        <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
-                            {filteredTeam.map(({ member: m, idx }) => (
-                                <div
-                                    key={m.id}
-                                    className={`flex flex-col justify-between gap-3 rounded-xl border p-4 shadow-2xs transition ${
-                                        m.activeInRoster === false
-                                            ? "border-slate-200 bg-slate-50/70 opacity-70"
-                                            : "border-slate-200 bg-white hover:border-blue-300"
-                                    }`}
-                                >
-                                    <div className="flex items-start justify-between gap-2">
-                                        <div className="flex min-w-0 flex-1 items-center gap-3">
-                                            <div
-                                                className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-xs font-bold ${
-                                                    m.activeInRoster === false
-                                                        ? "bg-slate-200 text-slate-600"
-                                                        : "bg-blue-50 text-blue-700"
-                                                }`}
-                                            >
-                                                #{idx + 1}
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                            {filteredTeam.map(({ member: m, idx }) => {
+                                const initials = (m.name || "S")
+                                    .trim()
+                                    .split(/\s+/)
+                                    .slice(0, 2)
+                                    .map((p) => p[0]?.toUpperCase() || "")
+                                    .join("") || "S";
+                                const isActiveMember = m.activeInRoster !== false;
+                                return (
+                                    <div
+                                        key={m.id}
+                                        className={`group flex flex-col justify-between gap-3.5 rounded-2xl border p-4 transition-all ${
+                                            !isActiveMember
+                                                ? "border-slate-200 bg-slate-50/70 opacity-75"
+                                                : "border-slate-200/90 bg-white shadow-2xs hover:border-blue-300 hover:shadow-md"
+                                        }`}
+                                    >
+                                        <div className="flex items-start justify-between gap-2.5">
+                                            <div className="flex min-w-0 flex-1 items-center gap-3">
+                                                <div
+                                                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xs font-bold shadow-2xs ${
+                                                        !isActiveMember
+                                                            ? "bg-slate-200 text-slate-600"
+                                                            : "bg-gradient-to-br from-blue-600 to-indigo-600 text-white"
+                                                    }`}
+                                                >
+                                                    {initials}
+                                                </div>
+                                                <div className="min-w-0 flex-1">
+                                                    <Input
+                                                        value={m.name}
+                                                        onChange={(e) => {
+                                                            const val = e.target.value;
+                                                            setTeam((prev) =>
+                                                                prev.map((item, i) =>
+                                                                    i === idx ? { ...item, name: val } : item,
+                                                                ),
+                                                            );
+                                                        }}
+                                                        className="rounded-lg border-transparent bg-slate-50/70 px-2 py-0.5 text-sm font-semibold text-slate-900 hover:border-slate-200 hover:bg-white focus:border-blue-400 focus:bg-white"
+                                                    />
+                                                    <div className="mt-1 flex items-center gap-2 px-2 text-xs text-slate-500">
+                                                        <span className="font-medium text-slate-600">
+                                                            {m.roleTitle || (m.userId ? `Account ${m.role || "User"}` : "Roster Staff")}
+                                                        </span>
+                                                        {m.email && (
+                                                            <span className="truncate text-slate-400">· {m.email}</span>
+                                                        )}
+                                                    </div>
+                                                </div>
                                             </div>
-                                            <div className="min-w-0 flex-1">
-                                                <Input
-                                                    value={m.name}
-                                                    onChange={(e) => {
-                                                        const val = e.target.value;
+
+                                            <Popconfirm
+                                                title="Remove from roster?"
+                                                description="This member will be removed from the roster team. Any user account in the company is unaffected."
+                                                onConfirm={() =>
+                                                    setTeam((prev) => prev.filter((_, i) => i !== idx))
+                                                }
+                                                okText="Remove"
+                                                okButtonProps={{ danger: true }}
+                                            >
+                                                <Button
+                                                    type="text"
+                                                    size="small"
+                                                    danger
+                                                    icon={<DeleteOutlined />}
+                                                    title="Remove from roster"
+                                                    className="opacity-60 transition group-hover:opacity-100"
+                                                />
+                                            </Popconfirm>
+                                        </div>
+
+                                        <div className="flex items-center justify-between gap-2 rounded-xl bg-slate-50/80 px-3 py-2">
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-[11px] font-medium text-slate-500">Team</span>
+                                                <Select
+                                                    size="small"
+                                                    value={m.teamName || "Reception"}
+                                                    onChange={(val) => {
                                                         setTeam((prev) =>
                                                             prev.map((item, i) =>
-                                                                i === idx ? { ...item, name: val } : item,
+                                                                i === idx ? { ...item, teamName: val } : item,
                                                             ),
                                                         );
                                                     }}
-                                                    className="font-semibold"
-                                                />
-                                                <div className="mt-1 flex items-center gap-2 truncate text-xs text-slate-500">
-                                                    {m.roleTitle && <span className="font-medium text-slate-600">{m.roleTitle}</span>}
-                                                    {m.email && <span className="truncate">{m.email}</span>}
-                                                </div>
+                                                    style={{ width: 120 }}
+                                                    className="text-xs"
+                                                >
+                                                    {availableTeams.map((t) => (
+                                                        <Option key={t} value={t}>
+                                                            {t}
+                                                        </Option>
+                                                    ))}
+                                                </Select>
                                             </div>
-                                        </div>
 
-                                        <Popconfirm
-                                            title="Remove from roster?"
-                                            description="This member will be removed from the roster team. Any user account in the company is unaffected."
-                                            onConfirm={() =>
-                                                setTeam((prev) => prev.filter((_, i) => i !== idx))
-                                            }
-                                            okText="Remove"
-                                            okButtonProps={{ danger: true }}
-                                        >
-                                            <Button
-                                                type="text"
-                                                size="small"
-                                                danger
-                                                icon={<DeleteOutlined />}
-                                                title="Remove from roster"
-                                            />
-                                        </Popconfirm>
-                                    </div>
-
-                                    <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-2.5">
-                                        {/* Team Assignment Select */}
-                                        <div className="flex items-center gap-1.5">
-                                            <span className="text-[11px] font-medium text-slate-500">Team:</span>
-                                            <Select
-                                                size="small"
-                                                value={m.teamName || "Reception"}
-                                                onChange={(val) => {
-                                                    setTeam((prev) =>
-                                                        prev.map((item, i) =>
-                                                            i === idx ? { ...item, teamName: val } : item,
-                                                        ),
-                                                    );
-                                                }}
-                                                style={{ width: 125 }}
-                                                className="text-xs"
-                                            >
-                                                {availableTeams.map((t) => (
-                                                    <Option key={t} value={t}>
-                                                        {t}
-                                                    </Option>
-                                                ))}
-                                            </Select>
-                                        </div>
-
-                                        {/* Active in Roster Switch */}
-                                        <div className="flex items-center gap-2">
                                             <Tooltip
                                                 title={
-                                                    m.activeInRoster !== false
+                                                    isActiveMember
                                                         ? "Active in roster (included in solver)"
                                                         : "Excluded from roster (not scheduled)"
                                                 }
                                             >
                                                 <Switch
                                                     size="small"
-                                                    checked={m.activeInRoster !== false}
+                                                    checked={isActiveMember}
                                                     onChange={(checked) => {
                                                         setTeam((prev) =>
                                                             prev.map((item, i) =>
@@ -2025,29 +2055,14 @@ export default function RosterPage() {
                                                 />
                                             </Tooltip>
                                         </div>
-                                    </div>
 
-                                    <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-50 pt-2">
-                                        <div className="flex items-center gap-1.5">
-                                            {m.userId ? (
-                                                <Tag color="geekblue" className="m-0 rounded text-[11px]">
-                                                    Account {m.role || "User"}
-                                                </Tag>
-                                            ) : (
-                                                <Tag className="m-0 rounded text-[11px]">Roster Staff</Tag>
-                                            )}
-                                            {m.activeInRoster === false && (
-                                                <Tag color="default" className="m-0 rounded text-[11px]">
-                                                    Excluded
-                                                </Tag>
-                                            )}
-                                        </div>
-
-                                        <div className="flex items-center gap-2">
-                                            <Tooltip title="Toggle Skilled status">
-                                                <Tag
-                                                    color={m.sk ? "blue" : "default"}
-                                                    className="m-0 cursor-pointer select-none rounded-lg px-2.5 py-0.5 text-xs font-medium"
+                                        <div className="flex items-center justify-between gap-2 pt-0.5">
+                                            <span className="text-[11px] font-medium text-slate-400">
+                                                #{idx + 1} · {m.userId ? "Synced User" : "Manual"}
+                                            </span>
+                                            <div className="flex items-center gap-1.5">
+                                                <button
+                                                    type="button"
                                                     onClick={() =>
                                                         setTeam((prev) =>
                                                             prev.map((item, i) =>
@@ -2055,14 +2070,16 @@ export default function RosterPage() {
                                                             ),
                                                         )
                                                     }
+                                                    className={`rounded-full border px-2.5 py-0.5 text-xs font-medium transition ${
+                                                        m.sk
+                                                            ? "border-blue-200 bg-blue-50 text-blue-700"
+                                                            : "border-slate-200 bg-white text-slate-500 hover:bg-slate-50"
+                                                    }`}
                                                 >
                                                     {m.sk ? "✓ Skilled" : "Skilled"}
-                                                </Tag>
-                                            </Tooltip>
-                                            <Tooltip title="Toggle Leader status">
-                                                <Tag
-                                                    color={m.ld ? "purple" : "default"}
-                                                    className="m-0 cursor-pointer select-none rounded-lg px-2.5 py-0.5 text-xs font-medium"
+                                                </button>
+                                                <button
+                                                    type="button"
                                                     onClick={() =>
                                                         setTeam((prev) =>
                                                             prev.map((item, i) =>
@@ -2070,14 +2087,19 @@ export default function RosterPage() {
                                                             ),
                                                         )
                                                     }
+                                                    className={`rounded-full border px-2.5 py-0.5 text-xs font-medium transition ${
+                                                        m.ld
+                                                            ? "border-purple-200 bg-purple-50 text-purple-700"
+                                                            : "border-slate-200 bg-white text-slate-500 hover:bg-slate-50"
+                                                    }`}
                                                 >
                                                     {m.ld ? "✓ Leader" : "Leader"}
-                                                </Tag>
-                                            </Tooltip>
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     )}
                 </Card>
@@ -2223,7 +2245,7 @@ export default function RosterPage() {
                         </div>
                     }
                 >
-                    <div className="mb-6 grid grid-cols-1 gap-4 rounded-2xl border border-slate-200 bg-slate-50/70 p-5 sm:grid-cols-2 lg:grid-cols-6">
+                    <div className="mb-6 grid grid-cols-1 gap-4 rounded-2xl border border-slate-200 bg-slate-50/70 p-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
                         <div>
                             <label className="mb-1.5 block text-xs font-medium text-slate-600">
                                 Team Member
@@ -2404,7 +2426,7 @@ export default function RosterPage() {
                         </div>
                     }
                 >
-                    <div className="mb-6 grid grid-cols-1 gap-4 rounded-2xl border border-slate-200 bg-slate-50/70 p-5 sm:grid-cols-2 lg:grid-cols-7">
+                    <div className="mb-6 grid grid-cols-1 gap-4 rounded-2xl border border-slate-200 bg-slate-50/70 p-5 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
                         <div>
                             <label className="mb-1.5 block text-xs font-medium text-slate-600">
                                 Team Member
@@ -2577,28 +2599,32 @@ export default function RosterPage() {
                             </div>
                         }
                     >
-                        <Space size="middle" className="mt-2">
-                            <Button
-                                type="primary"
-                                size="large"
-                                icon={<ThunderboltOutlined />}
-                                loading={solving}
-                                onClick={handleRunHeuristicSolver}
-                                style={{ background: "#2f5bea" }}
-                            >
-                                Solve Roster Now
-                            </Button>
-                            <Button
-                                type="primary"
-                                size="large"
-                                icon={<RocketOutlined />}
-                                loading={solvingOrTools}
-                                onClick={handleRunLiveOrToolsSolver}
-                                style={{ background: "#0f766e", borderColor: "#0f766e" }}
-                            >
-                                Solve with Google OR-Tools (CP-SAT)
-                            </Button>
-                        </Space>
+                        <Button
+                            type="primary"
+                            size="large"
+                            icon={<ThunderboltOutlined />}
+                            loading={solving}
+                            onClick={handleRunHeuristicSolver}
+                            style={{ background: "#2f5bea" }}
+                        >
+                            Quick Generate Roster
+                        </Button>
+                        <Button
+                            type="primary"
+                            size="large"
+                            icon={<RocketOutlined />}
+                            loading={solvingOrTools}
+                            onClick={handleRunLiveOrToolsSolver}
+                            style={{ background: "#0f766e", borderColor: "#0f766e" }}
+                        >
+                            Best-Fit Optimizer
+                        </Button>
+                        <Button
+                            size="large"
+                            onClick={() => setActiveMainTab("optimizer")}
+                        >
+                            Go to Step 3: Generate
+                        </Button>
                     </Empty>
                 </Card>
             );
@@ -2724,6 +2750,7 @@ export default function RosterPage() {
 
                 {/* Sub-navigation Bar for Weekly Schedule vs 24h Heatmap vs Diagnostics */}
                 <div className="flex flex-col justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-xs lg:flex-row lg:items-center">
+                    <div className="overflow-x-auto pb-1 lg:pb-0">
                     <Segmented
                         size="large"
                         value={scheduleSubTab}
@@ -2761,6 +2788,7 @@ export default function RosterPage() {
                             },
                         ]}
                     />
+                    </div>
 
                     <Space wrap>
                         <Button
@@ -2839,7 +2867,7 @@ export default function RosterPage() {
                                         <table className="w-full border-collapse text-left text-xs sm:text-sm">
                                             <thead className="bg-slate-100/90 text-slate-700">
                                                 <tr>
-                                                    <th className="sticky left-0 z-10 min-w-[160px] bg-slate-100 px-4 py-3 font-semibold">
+                                                    <th className="sticky left-0 z-10 min-w-[160px] bg-slate-100 px-4 py-3 font-semibold shadow-[2px_0_6px_-2px_rgba(15,23,42,0.08)]">
                                                         Team Member
                                                     </th>
                                                     {DAY_NAMES.map((d, i) => (
@@ -3272,8 +3300,93 @@ export default function RosterPage() {
     };
 
     const renderOptimizerAndOrToolsSection = () => (
-        <div className="grid grid-cols-1 gap-6 pb-8 lg:grid-cols-12">
-            {/* Left Column: Google OR-Tools (CP-SAT) Studio */}
+        <div className="space-y-6 pb-8">
+            {/* Step 3 Readiness & Two-Mode Engine Picker */}
+            <Card className="overflow-hidden rounded-2xl border-slate-200/90 shadow-sm" bodyStyle={{ padding: "24px" }}>
+                <div className="mb-5 flex flex-col justify-between gap-3 border-b border-slate-100 pb-4 sm:flex-row sm:items-center">
+                    <div>
+                        <div className="flex flex-wrap items-center gap-2">
+                            <Tag color="blue" className="m-0 rounded-full px-3 py-0.5 font-semibold">
+                                Step 3 of 4
+                            </Tag>
+                            <span className="text-lg font-bold text-slate-900">
+                                Generate & Optimize Your Roster
+                            </span>
+                        </div>
+                        <p className="mt-1 mb-0 text-xs text-slate-500 sm:text-sm">
+                            Scope: <strong>{selectedTeam === "all" ? "All Teams" : `${selectedTeam} Team`}</strong> ·{" "}
+                            <strong>{activeTeam.length}</strong> active member{activeTeam.length === 1 ? "" : "s"} ·{" "}
+                            <strong>{config.weeks} week{config.weeks > 1 ? "s" : ""}</strong> starting {config.ws} ·{" "}
+                            Capacity:{" "}
+                            <span className={capacityCalc.totalBalance >= 0 ? "font-semibold text-emerald-700" : "font-semibold text-red-600"}>
+                                {capacityCalc.totalBalance >= 0 ? `+${capacityCalc.totalBalance}h surplus` : `${capacityCalc.totalBalance}h shortfall`}
+                            </span>
+                        </p>
+                    </div>
+                </div>
+
+                {activeTeam.length === 0 && (
+                    <Alert
+                        type="warning"
+                        showIcon
+                        className="mb-5 rounded-xl"
+                        message="No active team members in the selected scope. Go back to Step 2 to add or activate team members before generating."
+                    />
+                )}
+
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <div className="flex flex-col justify-between gap-4 rounded-2xl border border-blue-200/80 bg-gradient-to-br from-blue-50/70 via-white to-white p-5">
+                        <div>
+                            <div className="flex items-center justify-between gap-2">
+                                <span className="text-base font-bold text-slate-900">Quick Generate</span>
+                                <Tag color="blue" className="m-0 rounded-full text-xs font-medium">Instant</Tag>
+                            </div>
+                            <p className="mt-1.5 mb-0 text-xs leading-relaxed text-slate-600 sm:text-sm">
+                                Builds a complete shift schedule in milliseconds right in your browser. Ideal for quick drafts and testing rules.
+                            </p>
+                        </div>
+                        <Button
+                            type="primary"
+                            size="large"
+                            block
+                            icon={<ThunderboltOutlined />}
+                            loading={solving}
+                            onClick={handleRunHeuristicSolver}
+                            className="rounded-xl font-semibold"
+                            style={{ background: "#2f5bea" }}
+                        >
+                            Quick Generate Roster
+                        </Button>
+                    </div>
+
+                    <div className="flex flex-col justify-between gap-4 rounded-2xl border border-teal-200/80 bg-gradient-to-br from-teal-50/70 via-white to-white p-5">
+                        <div>
+                            <div className="flex items-center justify-between gap-2">
+                                <span className="text-base font-bold text-slate-900">Best-Fit Server Optimizer</span>
+                                <Tag color="cyan" className="m-0 rounded-full text-xs font-medium">OR-Tools CP-SAT</Tag>
+                            </div>
+                            <p className="mt-1.5 mb-0 text-xs leading-relaxed text-slate-600 sm:text-sm">
+                                Runs exact mathematical optimization on the server to minimize conflicts and maximize employee request fairness.
+                            </p>
+                        </div>
+                        <Button
+                            type="primary"
+                            size="large"
+                            block
+                            icon={<RocketOutlined />}
+                            loading={solvingOrTools}
+                            onClick={handleRunLiveOrToolsSolver}
+                            className="rounded-xl font-semibold"
+                            style={{ background: "#0f766e", borderColor: "#0f766e" }}
+                        >
+                            Run Best-Fit Optimizer
+                        </Button>
+                    </div>
+                </div>
+            </Card>
+
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+            {/* Left Column: Optimizer Settings & Optional Developer Script */}
             <div className="lg:col-span-7">
                 <Card
                     className="h-full rounded-2xl border-slate-200/90 shadow-sm"
@@ -3286,10 +3399,10 @@ export default function RosterPage() {
                                 </div>
                                 <div>
                                     <div className="text-base font-semibold text-slate-800">
-                                        Google OR-Tools (CP-SAT) Optimization Engine
+                                        Optimizer Settings (OR-Tools CP-SAT)
                                     </div>
                                     <div className="text-xs font-normal text-slate-500">
-                                        Exact Integer Linear Programming solver (`ortools.sat.python.cp_model`)
+                                        Fine-tune server optimization time when using Best-Fit Optimizer
                                     </div>
                                 </div>
                             </div>
@@ -3319,7 +3432,7 @@ export default function RosterPage() {
                                         onChange={(e) => setOrToolsWarmStart(e.target.checked)}
                                     >
                                         <span className="text-sm font-medium text-slate-700">
-                                            Warm-start with heuristic hint
+                                            Warm-start with quick draft
                                         </span>
                                     </Checkbox>
                                 </div>
@@ -3334,12 +3447,28 @@ export default function RosterPage() {
                                 className="rounded-xl"
                                 style={{ background: "#0f766e", borderColor: "#0f766e" }}
                             >
-                                Solve Live on Server (CP-SAT)
+                                Run Best-Fit Optimizer
                             </Button>
                         </div>
                     </div>
 
-                    <div className="mb-4 flex flex-wrap items-center gap-2.5">
+                    <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                        <div>
+                            <div className="text-xs font-semibold text-slate-700">Advanced: Developer Python Script</div>
+                            <div className="text-xs text-slate-500">Optional CP-SAT formulation export for technical review</div>
+                        </div>
+                        <Button
+                            size="small"
+                            icon={<CodeOutlined />}
+                            onClick={() => setShowAdvancedScript((v) => !v)}
+                        >
+                            {showAdvancedScript ? "Hide Script" : "Show Advanced"}
+                        </Button>
+                    </div>
+
+                    {showAdvancedScript && (
+                        <div className="mt-4">
+                    <div className="mb-3 flex flex-wrap items-center gap-2.5">
                         <Button icon={<CodeOutlined />} onClick={handleGenerateOrToolsScript}>
                             Generate Standalone Python Script
                         </Button>
@@ -3379,7 +3508,9 @@ export default function RosterPage() {
                         />
                     ) : (
                         <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center text-xs text-slate-500">
-                            Click &quot;Solve Live on Server (CP-SAT)&quot; or &quot;Generate Standalone Python Script&quot; to inspect the complete CP-SAT mathematical formulation.
+                            Click &quot;Generate Standalone Python Script&quot; to inspect the CP-SAT mathematical formulation.
+                        </div>
+                    )}
                         </div>
                     )}
                 </Card>
@@ -3506,6 +3637,7 @@ export default function RosterPage() {
                     )}
                 </Card>
             </div>
+            </div>
         </div>
     );
 
@@ -3521,317 +3653,382 @@ export default function RosterPage() {
     }
 
     return (
-        <div className="w-full flex-1 bg-slate-50/80 px-4 pt-4 pb-24 sm:px-6 sm:pt-6 lg:px-8 lg:pt-8">
-            <div className="mx-auto space-y-6" style={{ maxWidth: 1480 }}>
-                {/* ── Top Hero Header ──────────────────────────────────────────────── */}
-                <div className="flex flex-col justify-between gap-4 rounded-2xl border border-slate-200/90 bg-white p-5 shadow-xs lg:flex-row lg:items-center lg:p-6">
-                    <div className="flex items-start gap-4 sm:items-center">
-                        <div
-                            className="flex shrink-0 items-center justify-center rounded-2xl text-white shadow-md"
-                            style={{
-                                width: 52,
-                                height: 52,
-                                background: "linear-gradient(135deg, #2f5bea 0%, #1e3a8a 100%)",
-                            }}
-                        >
-                            <CalendarOutlined className="text-2xl" />
-                        </div>
-                        <div>
-                            <div className="flex flex-wrap items-center gap-2.5">
-                                <Title level={3} className="!m-0 !text-slate-900">
-                                    {accountMeta?.companyName
-                                        ? `${accountMeta.companyName} — Team Roster`
-                                        : "Team Roster & Constraint Solver"}
-                                </Title>
-                                <Tag color="blue" className="rounded-full px-3 py-0.5 font-medium">
-                                    15-Min Grid · CP-SAT
-                                </Tag>
-                                {accountMeta && (
-                                    <Tag color="geekblue" className="rounded-full px-3 py-0.5 font-medium">
-                                        {accountMeta.stationCount} Station{accountMeta.stationCount === 1 ? "" : "s"} ·{" "}
-                                        {accountMeta.accountUsersCount} Account User{accountMeta.accountUsersCount === 1 ? "" : "s"}
-                                    </Tag>
-                                )}
-                                {solvedState?.solverEngine === "ortools-cpsat" && (
-                                    <Tag color="purple" className="rounded-full px-3 py-0.5 font-semibold">
-                                        OR-Tools ({solvedState.orToolsMeta?.status})
-                                    </Tag>
-                                )}
+        <div className="w-full flex-1 bg-gradient-to-b from-slate-50 via-slate-50/90 to-slate-100/70 px-3 pt-4 pb-20 sm:px-6 sm:pt-6 lg:px-8">
+            <div className="mx-auto space-y-5" style={{ maxWidth: 1440 }}>
+                {/* ── Unified Command Hero (Title + Scope + Live Stats) ─────────────── */}
+                <div className="overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-sm">
+                    <div className="flex flex-col justify-between gap-4 border-b border-slate-100 bg-gradient-to-r from-blue-50/70 via-white to-indigo-50/40 px-5 py-4 lg:flex-row lg:items-center lg:px-6">
+                        <div className="flex items-start gap-3.5 sm:items-center">
+                            <div
+                                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-white shadow-md"
+                                style={{
+                                    background: "linear-gradient(135deg, #2f5bea 0%, #1e3a8a 100%)",
+                                }}
+                            >
+                                <CalendarOutlined className="text-xl" />
                             </div>
-                            <Text className="mt-1 block text-xs text-slate-500 sm:text-sm">
-                                Live-synced with your company account users and dynamic rules.
-                            </Text>
+                            <div className="min-w-0">
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <Title level={4} className="!m-0 !text-slate-900">
+                                        {accountMeta?.companyName
+                                            ? `${accountMeta.companyName} — Team Roster`
+                                            : "Team Roster"}
+                                    </Title>
+                                    {accountMeta && (
+                                        <Tag color="geekblue" className="m-0 rounded-full px-2.5 py-0.5 text-xs font-medium">
+                                            {accountMeta.stationCount} Station{accountMeta.stationCount === 1 ? "" : "s"} ·{" "}
+                                            {accountMeta.accountUsersCount} Users
+                                        </Tag>
+                                    )}
+                                    {solvedState?.solverEngine === "ortools-cpsat" && (
+                                        <Tag color="purple" className="m-0 rounded-full px-2.5 py-0.5 text-xs font-semibold">
+                                            OR-Tools ({solvedState.orToolsMeta?.status})
+                                        </Tag>
+                                    )}
+                                </div>
+                                <Text className="mt-0.5 block text-xs text-slate-500">
+                                    Build an optimized shift schedule in 4 simple steps.
+                                </Text>
+                            </div>
                         </div>
-                    </div>
 
-                    <div className="flex flex-wrap items-center gap-2.5">
-                        <Tooltip title="Switch between clean step-by-step tabs or full single-page scroll view">
-                            <Button
-                                icon={viewAllSections ? <AppstoreOutlined /> : <LayoutOutlined />}
-                                onClick={() => setViewAllSections((v) => !v)}
-                            >
-                                {viewAllSections ? "Tabbed View" : "Full Page View"}
-                            </Button>
-                        </Tooltip>
-                        <Badge count={savedRecords.length} showZero={false} color="#2f5bea">
-                            <Button
-                                icon={<HistoryOutlined />}
-                                onClick={() => setRecordsDrawerOpen(true)}
-                            >
-                                Saved Records
-                            </Button>
-                        </Badge>
-                        <Button
-                            type="primary"
-                            size="large"
-                            icon={<ThunderboltOutlined />}
-                            loading={solving}
-                            onClick={handleRunHeuristicSolver}
-                            className="rounded-xl font-medium"
-                            style={{ background: "#2f5bea" }}
-                        >
-                            Solve Roster
-                        </Button>
-                        <Button
-                            type="primary"
-                            size="large"
-                            icon={<RocketOutlined />}
-                            loading={solvingOrTools}
-                            onClick={handleRunLiveOrToolsSolver}
-                            className="rounded-xl font-medium"
-                            style={{ background: "#0f766e", borderColor: "#0f766e" }}
-                        >
-                            OR-Tools (CP-SAT)
-                        </Button>
-                    </div>
-                </div>
-
-                {/* ── Team Selection & Department Scope Bar ──────────────────────── */}
-                <div className="flex flex-col gap-3.5 rounded-2xl border border-blue-200/90 bg-gradient-to-r from-blue-50/90 via-white to-blue-50/40 p-4 shadow-2xs sm:flex-row sm:items-center sm:justify-between">
-                    <div className="flex items-center gap-3">
-                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-sm">
-                            <ApartmentOutlined className="text-xl" />
-                        </div>
-                        <div>
-                            <div className="flex flex-wrap items-center gap-2.5">
-                                <span className="text-sm font-bold text-slate-800">
-                                    Roster Scope / Department:
-                                </span>
+                        <div className="flex flex-wrap items-center gap-2.5">
+                            <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-2.5 py-1 shadow-2xs">
+                                <ApartmentOutlined className="text-blue-600" />
+                                <span className="text-xs font-semibold text-slate-500">Scope:</span>
                                 <Select
+                                    bordered={false}
+                                    size="small"
                                     value={selectedTeam}
                                     onChange={(val) => {
                                         setSelectedTeam(val);
                                         setSolvedState(null);
                                     }}
-                                    style={{ minWidth: 230 }}
-                                    size="middle"
-                                    className="font-semibold"
+                                    style={{ minWidth: 165 }}
+                                    className="font-semibold text-slate-800"
                                 >
                                     <Option value="all">
-                                        All Teams ({team.filter((m) => m.activeInRoster !== false).length} Active Members)
+                                        All Teams ({team.filter((m) => m.activeInRoster !== false).length})
                                     </Option>
                                     {availableTeams.map((tName) => {
                                         const count = team.filter((m) => m.activeInRoster !== false && (m.teamName || "Reception") === tName).length;
                                         return (
                                             <Option key={tName} value={tName}>
-                                                {tName} Team ({count} Members)
+                                                {tName} ({count})
                                             </Option>
                                         );
                                     })}
                                 </Select>
-                                {selectedTeam !== "all" && (
-                                    <Tag color="blue" className="rounded-full px-3 py-0.5 text-xs font-semibold">
-                                        Generating exclusively for {selectedTeam} Team
-                                    </Tag>
-                                )}
                             </div>
-                            <div className="mt-0.5 text-xs text-slate-500">
-                                {selectedTeam === "all"
-                                    ? `Solving and generating roster for all ${activeTeam.length} active members across all teams.`
-                                    : `Solving and generating roster only for the ${activeTeam.length} active members assigned to ${selectedTeam} Team.`}
-                            </div>
-                        </div>
-                    </div>
 
-                    <div className="flex flex-wrap items-center gap-2">
-                        <Button
-                            icon={<UsergroupAddOutlined />}
-                            onClick={() => setImportUsersModalVisible(true)}
-                        >
-                            Import Company Users
-                        </Button>
-                        <Button
-                            icon={<PlusOutlined />}
-                            onClick={() => setManageTeamsModalVisible(true)}
-                        >
-                            Manage Teams ({availableTeams.length})
-                        </Button>
-                    </div>
-                </div>
-
-                {/* ── 4 At-a-Glance Live Summary Cards ────────────────────────────── */}
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                    <div
-                        onClick={() => {
-                            setViewAllSections(false);
-                            setActiveMainTab("rules");
-                        }}
-                        className="cursor-pointer rounded-2xl border border-slate-200/90 bg-white p-4 shadow-2xs transition hover:border-blue-300"
-                    >
-                        <div className="text-xs font-medium text-slate-500">Roster Horizon</div>
-                        <div className="mt-1 text-lg font-bold text-slate-900">
-                            {config.weeks} Week{config.weeks > 1 ? "s" : ""} · Starts {config.ws}
-                        </div>
-                        <div className="mt-1 text-xs text-slate-500">
-                            {config.T}h/wk target · {config.rest}h min rest
-                        </div>
-                    </div>
-
-                    <div
-                        onClick={() => {
-                            setViewAllSections(false);
-                            setActiveMainTab("team");
-                        }}
-                        className="cursor-pointer rounded-2xl border border-slate-200/90 bg-white p-4 shadow-2xs transition hover:border-blue-300"
-                    >
-                        <div className="text-xs font-medium text-slate-500">
-                            {selectedTeam === "all" ? "All Active Members" : `${selectedTeam} Team Members`}
-                        </div>
-                        <div className="mt-1 text-lg font-bold text-slate-900">
-                            {activeTeam.length} Member{activeTeam.length === 1 ? "" : "s"}
-                        </div>
-                        <div className="mt-1 text-xs text-slate-500">
-                            {activeTeam.filter((m) => m.sk).length} Skilled · {activeTeam.filter((m) => m.ld).length} Leaders ·{" "}
-                            {requests.length} Requests
-                        </div>
-                    </div>
-
-                    <div
-                        onClick={() => {
-                            setViewAllSections(false);
-                            setActiveMainTab("rules");
-                        }}
-                        className="cursor-pointer rounded-2xl border border-slate-200/90 bg-white p-4 shadow-2xs transition hover:border-blue-300"
-                    >
-                        <div className="text-xs font-medium text-slate-500">Live Capacity Balance</div>
-                        <div
-                            className={`mt-1 text-lg font-bold ${
-                                capacityCalc.totalBalance >= 0 ? "text-emerald-600" : "text-red-600"
-                            }`}
-                        >
-                            {capacityCalc.totalBalance >= 0
-                                ? `+${capacityCalc.totalBalance}h Surplus`
-                                : `${capacityCalc.totalBalance}h Shortfall`}
-                        </div>
-                        <div className="mt-1 text-xs text-slate-500">
-                            {capacityCalc.totalRequired}h required / {capacityCalc.totalAvailable}h available (
-                            {capacityCalc.totalUtilizationPct}%)
-                        </div>
-                    </div>
-
-                    <div
-                        onClick={() => {
-                            setViewAllSections(false);
-                            setActiveMainTab("schedule");
-                        }}
-                        className="cursor-pointer rounded-2xl border border-slate-200/90 bg-white p-4 shadow-2xs transition hover:border-blue-300"
-                    >
-                        <div className="text-xs font-medium text-slate-500">Active Schedule Status</div>
-                        {solvedState ? (
-                            <>
-                                <div
-                                    className={`mt-1 text-lg font-bold ${
-                                        solvedState.met.hard === 0 ? "text-emerald-600" : "text-amber-600"
-                                    }`}
+                            <Tooltip title="Toggle between guided 4-step menu and full single-page view">
+                                <Button
+                                    icon={viewAllSections ? <AppstoreOutlined /> : <LayoutOutlined />}
+                                    onClick={() => setViewAllSections((v) => !v)}
+                                    className="rounded-xl"
                                 >
-                                    {Math.round(solvedState.met.score * 1000) / 10}% Coverage
-                                </div>
-                                <div className="mt-1 text-xs text-slate-500">
-                                    Hard Violations: {Math.round(solvedState.met.hard * 100) / 100} · Unmet Soft:{" "}
-                                    {solvedState.met.unmet}
-                                </div>
-                            </>
-                        ) : (
-                            <>
-                                <div className="mt-1 text-lg font-bold text-slate-400">Not Solved Yet</div>
-                                <div className="mt-1 text-xs text-blue-600">
-                                    Click &quot;Solve Roster&quot; to generate →
-                                </div>
-                            </>
-                        )}
+                                    {viewAllSections ? "4-Step Menu" : "View All"}
+                                </Button>
+                            </Tooltip>
+
+                            <Badge count={savedRecords.length} showZero={false} color="#2f5bea">
+                                <Button
+                                    icon={<HistoryOutlined />}
+                                    onClick={() => setRecordsDrawerOpen(true)}
+                                    className="rounded-xl"
+                                >
+                                    Saved Records
+                                </Button>
+                            </Badge>
+                        </div>
+                    </div>
+
+                    {/* Compact 4-Metric Summary Bar */}
+                    <div className="grid grid-cols-2 divide-y divide-slate-100 bg-white sm:divide-y-0 sm:divide-x lg:grid-cols-4">
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setViewAllSections(false);
+                                setActiveMainTab("rules");
+                            }}
+                            className="flex flex-col items-start px-5 py-3 text-left transition hover:bg-slate-50/80"
+                        >
+                            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                                Horizon
+                            </span>
+                            <span className="mt-0.5 text-sm font-bold text-slate-900 sm:text-base">
+                                {config.weeks} Week{config.weeks > 1 ? "s" : ""} · {config.ws}
+                            </span>
+                            <span className="text-xs text-slate-500">
+                                {config.T}h/wk target · {config.rest}h min rest
+                            </span>
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setViewAllSections(false);
+                                setActiveMainTab("team");
+                            }}
+                            className="flex flex-col items-start px-5 py-3 text-left transition hover:bg-slate-50/80"
+                        >
+                            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                                {selectedTeam === "all" ? "Active Team" : `${selectedTeam} Team`}
+                            </span>
+                            <span className="mt-0.5 text-sm font-bold text-slate-900 sm:text-base">
+                                {activeTeam.length} Member{activeTeam.length === 1 ? "" : "s"}
+                            </span>
+                            <span className="text-xs text-slate-500">
+                                {activeTeam.filter((m) => m.sk).length} Skilled · {activeTeam.filter((m) => m.ld).length} Leaders ·{" "}
+                                {requests.length} Req
+                            </span>
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setViewAllSections(false);
+                                setActiveMainTab("rules");
+                            }}
+                            className="flex flex-col items-start px-5 py-3 text-left transition hover:bg-slate-50/80"
+                        >
+                            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                                Capacity Balance
+                            </span>
+                            <span
+                                className={`mt-0.5 text-sm font-bold sm:text-base ${
+                                    capacityCalc.totalBalance >= 0 ? "text-emerald-600" : "text-red-600"
+                                }`}
+                            >
+                                {capacityCalc.totalBalance >= 0
+                                    ? `+${capacityCalc.totalBalance}h Surplus`
+                                    : `${capacityCalc.totalBalance}h Shortfall`}
+                            </span>
+                            <span className="text-xs text-slate-500">
+                                {capacityCalc.totalRequired}h req / {capacityCalc.totalAvailable}h avail ({capacityCalc.totalUtilizationPct}%)
+                            </span>
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setViewAllSections(false);
+                                setActiveMainTab(solvedState ? "schedule" : "optimizer");
+                            }}
+                            className="flex flex-col items-start px-5 py-3 text-left transition hover:bg-slate-50/80"
+                        >
+                            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                                Schedule Status
+                            </span>
+                            {solvedState ? (
+                                <>
+                                    <span
+                                        className={`mt-0.5 text-sm font-bold sm:text-base ${
+                                            solvedState.met.hard === 0 ? "text-emerald-600" : "text-amber-600"
+                                        }`}
+                                    >
+                                        {Math.round(solvedState.met.score * 1000) / 10}% Coverage
+                                    </span>
+                                    <span className="text-xs text-slate-500">
+                                        Conflicts: {Math.round(solvedState.met.hard * 100) / 100} · Unmet: {solvedState.met.unmet}
+                                    </span>
+                                </>
+                            ) : (
+                                <>
+                                    <span className="mt-0.5 text-sm font-bold text-slate-500 sm:text-base">
+                                        Not Generated
+                                    </span>
+                                    <span className="text-xs font-medium text-blue-600">
+                                        Go to Step 3 to generate →
+                                    </span>
+                                </>
+                            )}
+                        </button>
                     </div>
                 </div>
 
-                {/* ── Main Step-by-Step Navigation Tabs (when in Tabbed View) ──────── */}
+                {/* ── Guided 4-Step Menu (All actions organized into 4 clear steps) ──── */}
                 {!viewAllSections ? (
                     <div className="space-y-6">
-                        <div className="rounded-2xl border border-slate-200 bg-white px-4 pt-2 shadow-2xs">
-                            <Tabs
-                                activeKey={activeMainTab}
-                                onChange={setActiveMainTab}
-                                size="large"
-                                items={[
-                                    {
-                                        key: "rules",
-                                        label: (
-                                            <span className="flex items-center gap-2 px-1 py-1 font-medium">
-                                                <SettingOutlined />
-                                                1. Company Rules & Staffing
-                                            </span>
-                                        ),
-                                    },
-                                    {
-                                        key: "team",
-                                        label: (
-                                            <span className="flex items-center gap-2 px-1 py-1 font-medium">
-                                                <TeamOutlined />
-                                                2. Team, Requests & Leave
-                                                <Badge count={team.length} color="#2f5bea" showZero />
-                                            </span>
-                                        ),
-                                    },
-                                    {
-                                        key: "schedule",
-                                        label: (
-                                            <span className="flex items-center gap-2 px-1 py-1 font-medium">
-                                                <CalendarOutlined />
-                                                3. Generated Roster & Heatmap
-                                                {solvedState && (
-                                                    <Tag
-                                                        color={solvedState.met.hard === 0 ? "success" : "warning"}
-                                                        className="m-0 rounded-full text-xs"
-                                                    >
-                                                        {Math.round(solvedState.met.score * 1000) / 10}%
-                                                    </Tag>
-                                                )}
-                                            </span>
-                                        ),
-                                    },
-                                    {
-                                        key: "optimizer",
-                                        label: (
-                                            <span className="flex items-center gap-2 px-1 py-1 font-medium">
-                                                <RocketOutlined />
-                                                4. AI Optimizer & OR-Tools (CP-SAT)
-                                            </span>
-                                        ),
-                                    },
-                                ]}
-                            />
-                        </div>
+                        {(() => {
+                            const stepsConfig = [
+                                {
+                                    key: "rules",
+                                    stepNum: 1,
+                                    title: "Rules & Staffing",
+                                    subtitle: `${config.weeks}w · ${config.T}h/wk · ${config.rest}h rest`,
+                                    hint: "Step 1: Choose your roster dates, working hour limits, and hourly minimum staffing.",
+                                    icon: <SettingOutlined />,
+                                    done: config.weeks > 0 && config.T > 0,
+                                },
+                                {
+                                    key: "team",
+                                    stepNum: 2,
+                                    title: "Team & Time Off",
+                                    subtitle: `${activeTeam.length} active · ${requests.length} req · ${absences.length} leave`,
+                                    hint: "Step 2: Review active team members, shift/off-day requests, and approved leave.",
+                                    icon: <TeamOutlined />,
+                                    done: activeTeam.length > 0,
+                                },
+                                {
+                                    key: "optimizer",
+                                    stepNum: 3,
+                                    title: "Generate Roster",
+                                    subtitle: solvedState ? "Generated — re-run anytime" : "Ready to generate",
+                                    hint: "Step 3: Check readiness and click Quick Generate or Best-Fit Optimizer to build the roster.",
+                                    icon: <RocketOutlined />,
+                                    done: Boolean(solvedState),
+                                },
+                                {
+                                    key: "schedule",
+                                    stepNum: 4,
+                                    title: "Review & Export",
+                                    subtitle: solvedState
+                                        ? `${Math.round(solvedState.met.score * 1000) / 10}% coverage`
+                                        : "Awaiting step 3",
+                                    hint: "Step 4: Review the schedule, click any shift to adjust manually, then Save or Export.",
+                                    icon: <CalendarOutlined />,
+                                    done: Boolean(solvedState),
+                                },
+                            ];
 
-                        {activeMainTab === "rules" && renderCompanyRulesSection()}
-                        {activeMainTab === "team" && renderTeamAndAvailabilitySection()}
-                        {activeMainTab === "schedule" && renderScheduleAndResultsSection()}
-                        {activeMainTab === "optimizer" && renderOptimizerAndOrToolsSection()}
+                            const currentIdx = Math.max(
+                                0,
+                                stepsConfig.findIndex((s) => s.key === activeMainTab),
+                            );
+                            const currentStep = stepsConfig[currentIdx];
+                            const prevStep = currentIdx > 0 ? stepsConfig[currentIdx - 1] : null;
+                            const nextStep = currentIdx < stepsConfig.length - 1 ? stepsConfig[currentIdx + 1] : null;
+
+                            const handleStepTransition = (targetKey: string) => {
+                                if (
+                                    (targetKey === "optimizer" || targetKey === "schedule") &&
+                                    activeTeam.length === 0
+                                ) {
+                                    message.warning("Please add or activate at least 1 team member in Step 2 first.");
+                                    setActiveMainTab("team");
+                                    return;
+                                }
+                                setActiveMainTab(targetKey);
+                            };
+
+                            return (
+                                <>
+                                    <div className="rounded-2xl border border-slate-200/90 bg-white p-3 shadow-xs sm:p-4">
+                                        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
+                                            {stepsConfig.map((step) => {
+                                                const isActive = activeMainTab === step.key;
+                                                return (
+                                                    <button
+                                                        key={step.key}
+                                                        type="button"
+                                                        onClick={() => handleStepTransition(step.key)}
+                                                        className={`flex items-center gap-3 rounded-xl border px-3.5 py-3 text-left transition-all ${
+                                                            isActive
+                                                                ? "border-blue-600 bg-gradient-to-r from-blue-50 to-indigo-50/60 shadow-xs ring-1 ring-blue-600/20"
+                                                                : "border-slate-200/80 bg-slate-50/40 hover:border-blue-300 hover:bg-white"
+                                                        }`}
+                                                    >
+                                                        <div
+                                                            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold transition ${
+                                                                isActive
+                                                                    ? "bg-blue-600 text-white shadow-sm"
+                                                                    : step.done
+                                                                      ? "bg-emerald-100 text-emerald-700"
+                                                                      : "bg-slate-200 text-slate-600"
+                                                            }`}
+                                                        >
+                                                            {step.done && !isActive ? (
+                                                                <CheckCircleOutlined />
+                                                            ) : (
+                                                                step.stepNum
+                                                            )}
+                                                        </div>
+                                                        <div className="min-w-0 flex-1">
+                                                            <div className="flex items-center justify-between gap-1.5">
+                                                                <span
+                                                                    className={`truncate text-sm font-bold ${
+                                                                        isActive ? "text-blue-700" : "text-slate-800"
+                                                                    }`}
+                                                                >
+                                                                    {step.stepNum}. {step.title}
+                                                                </span>
+                                                                {isActive && (
+                                                                    <span className="h-2 w-2 shrink-0 rounded-full bg-blue-600" />
+                                                                )}
+                                                            </div>
+                                                            <div className="mt-0.5 truncate text-xs text-slate-500">
+                                                                {step.subtitle}
+                                                            </div>
+                                                        </div>
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+
+                                        <div className="mt-3 flex items-center justify-between gap-3 rounded-xl bg-slate-50/90 px-4 py-2 text-xs font-medium text-slate-600 sm:text-sm">
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-blue-600">{currentStep.icon}</span>
+                                                <span>{currentStep.hint}</span>
+                                            </div>
+                                            <span className="hidden shrink-0 rounded-full bg-white px-2.5 py-0.5 text-xs font-semibold text-slate-500 shadow-2xs sm:inline-block">
+                                                Step {currentStep.stepNum} of 4
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    {activeMainTab === "rules" && renderCompanyRulesSection()}
+                                    {activeMainTab === "team" && renderTeamAndAvailabilitySection()}
+                                    {activeMainTab === "optimizer" && renderOptimizerAndOrToolsSection()}
+                                    {activeMainTab === "schedule" && renderScheduleAndResultsSection()}
+
+                                    {/* Bottom Guided Step Footer */}
+                                    <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-2xs">
+                                        <div>
+                                            {prevStep ? (
+                                                <Button
+                                                    size="large"
+                                                    icon={<ArrowLeftOutlined />}
+                                                    onClick={() => {
+                                                        setActiveMainTab(prevStep.key);
+                                                        window.scrollTo({ top: 0, behavior: "smooth" });
+                                                    }}
+                                                >
+                                                    Back: {prevStep.stepNum}. {prevStep.title}
+                                                </Button>
+                                            ) : (
+                                                <span className="text-xs text-slate-500">
+                                                    Step 1 of 4 — Configure rules, then continue to Team & Time Off.
+                                                </span>
+                                            )}
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            {nextStep && (
+                                                <Button
+                                                    type="primary"
+                                                    size="large"
+                                                    onClick={() => {
+                                                        handleStepTransition(nextStep.key);
+                                                        window.scrollTo({ top: 0, behavior: "smooth" });
+                                                    }}
+                                                    style={{ background: "#2f5bea" }}
+                                                >
+                                                    Continue to Step {nextStep.stepNum}: {nextStep.title} <ArrowRightOutlined />
+                                                </Button>
+                                            )}
+                                        </div>
+                                    </div>
+                                </>
+                            );
+                        })()}
                     </div>
                 ) : (
-                    /* Full Page View (All sections stacked with generous spacing) */
+                    /* Full Page View (All 4 steps stacked in sequence) */
                     <div className="space-y-8">
                         {renderCompanyRulesSection()}
                         {renderTeamAndAvailabilitySection()}
-                        {renderScheduleAndResultsSection()}
                         {renderOptimizerAndOrToolsSection()}
+                        {renderScheduleAndResultsSection()}
                     </div>
                 )}
 

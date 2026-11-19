@@ -1,8 +1,9 @@
 "use client";
-import React from "react";
+import React, { useEffect, useRef } from "react";
 
 import dynamic from "next/dynamic";
-import { useSession } from "next-auth/react";
+import { Session } from "next-auth";
+import { signOut, useSession } from "next-auth/react";
 import ClientSidebar from "./Sidebar";
 import { TrialDashboardNotice } from "../../components/trial/TrialDashboardNotice";
 import DashboardFeatureGate from "../../components/pages/dashboard/DashboardFeatureGate";
@@ -59,15 +60,33 @@ function DashboardContentArea({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function DashboardShell({ children }: { children: React.ReactNode }) {
-  const { data: user } = useSession();
+export function DashboardShell({
+  children,
+  initialSession,
+}: {
+  children: React.ReactNode;
+  initialSession?: Session | null;
+}) {
+  const { data: user, status } = useSession();
+  const activeUser = user ?? (status === "loading" ? initialSession ?? null : null);
+  const recoveryTriggeredRef = useRef(false);
+
+  // If the client session resolves without a valid user (e.g. token refresh failed),
+  // clear the stale session cleanly instead of leaving a broken Display-only sidebar.
+  useEffect(() => {
+    if (recoveryTriggeredRef.current) return;
+    if (status === "unauthenticated" || (status === "authenticated" && !user?.user)) {
+      recoveryTriggeredRef.current = true;
+      void signOut({ callbackUrl: "/" });
+    }
+  }, [status, user]);
 
   return (
     <DashboardNavigationProvider>
-      <ClientHeader user={user ?? null} />
+      <ClientHeader user={activeUser} />
       <TrialDashboardNotice />
       <div className="flex flex-1 min-h-0 min-w-0 flex-row overflow-hidden bg-white">
-        <ClientSidebar user={user ?? null} />
+        <ClientSidebar user={activeUser} sessionStatus={status} />
         <DashboardContentArea>{children}</DashboardContentArea>
       </div>
     </DashboardNavigationProvider>

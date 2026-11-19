@@ -55,13 +55,16 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true, isMob
   const selectedLang = params.get("lang") || currentUserDefaultLang;
   const [currentStation, setCurrentStation] = useState<number>(1);
 
-  // For live translation, Admin speaks in English and translates to the Client's active station language
+  // For live translation, Admin speaks in user language and translates to the Client's active station language
   const stationClientLang =
     receivedLangCodeByStation[currentStation] ||
+    params.get("lang") ||
     receivedLangCode ||
-    (typeof window !== "undefined" ? localStorage.getItem("lang-code") : null) ||
-    companyData?.defaultLangCode ||
-    "en";
+    (typeof window !== "undefined"
+      ? localStorage.getItem(`lang-code-station-${currentStation}`) ||
+        localStorage.getItem("lang-code")
+      : null) ||
+    currentUserDefaultLang;
 
   // Sync station from URL or localStorage initially and when search params change
   useEffect(() => {
@@ -232,6 +235,8 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true, isMob
         station: currentStation,
         refType: "ChatMessage",
         langCode: selectedLang,
+        adminLangCode: currentUserDefaultLang,
+        senderMode: "header",
       });
 
       setInputValue("");
@@ -573,7 +578,7 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true, isMob
     const hasAudio = Boolean(
       messageObj.isLiveTranslation ||
         messageObj.adminAudioUrl ||
-        messageObj.audioUrl,
+        (!isRight && displayMessage),
     );
 
     return (
@@ -607,13 +612,13 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true, isMob
             {hasAudio && (
               <button
                 type="button"
-                title="Play translated audio"
+                title="Play message in your language"
                 onClick={() =>
                   translatedAudioPlayer.playNow({
                     messageId: messageObj.id,
-                    audioUrl: messageObj.adminAudioUrl || messageObj.audioUrl,
+                    audioUrl: messageObj.adminAudioUrl,
                     fallbackText: displayMessage,
-                    langCode: "en",
+                    langCode: messageObj.adminLangCode || currentUserDefaultLang,
                   })
                 }
                 style={{

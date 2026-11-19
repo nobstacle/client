@@ -30,6 +30,7 @@ import {
   lastPublicContentKey,
   resolveActiveStation,
 } from "../../../utils/station";
+import { translatedAudioPlayer } from "../../../utils/audioPlayer";
 
 const { Title, Text } = Typography;
 const DisplayLoading = () => <div className="flex h-full w-full items-center justify-center">Loading…</div>;
@@ -997,6 +998,7 @@ export const Content: React.FC = () => {
   const [packageImageIndexes, setPackageImageIndexes] = useState<Record<number, number>>({});
   const [isMuted, setIsMuted] = useState(true);
   const [showUnmutePrompt, setShowUnmutePrompt] = useState(true);
+  const [hasBlockedVoiceAudio, setHasBlockedVoiceAudio] = useState(false);
   const [contentToDisplay, setContentToDisplay] = useState(null);
   const [pdfKey, setPdfKey] = useState(0);
   const [retryCount, setRetryCount] = useState(0);
@@ -2082,7 +2084,12 @@ export const Content: React.FC = () => {
     }
   }, [messageStore.receivedContent?.content, messageStore.receivedType]);
 
+  useEffect(() => {
+    return translatedAudioPlayer.subscribeBlocked(setHasBlockedVoiceAudio);
+  }, []);
+
   const handleUnmute = () => {
+    translatedAudioPlayer.unlockAudio();
     if (videoElement.current) {
       videoElement.current.muted = false;
       setIsMuted(false);
@@ -2391,6 +2398,16 @@ export const Content: React.FC = () => {
     return (
       <>
         <style>{scrollViewerStyles}</style>
+        {hasBlockedVoiceAudio && (
+          <button
+            type="button"
+            onClick={() => translatedAudioPlayer.replayBlockedItem()}
+            className="fixed bottom-5 right-5 z-[9999] flex items-center gap-2 rounded-full bg-[#3b5998] px-4 py-2.5 text-sm font-semibold text-white shadow-lg ring-2 ring-white/80 transition hover:bg-[#2f4980]"
+          >
+            <span>🔊</span>
+            <span>Tap to play translated voice</span>
+          </button>
+        )}
         {!["Scroll", "Slideshow", "Screens"].includes(contentToDisplay?.type as string) && (
           <TrialWatermark trial={company.data ?? data?.user} />
         )}

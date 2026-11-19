@@ -1,10 +1,14 @@
-import React, {  PropsWithChildren  } from "react";
+import React from "react";
+import { getServerSession } from "next-auth";
+import { authOptions } from "../../lib/auth";
 import { SocketContextProvider } from "../../context/SocketContextProvider";
 import { CompanyContextProvider } from "../../context/CompanyProvider";
 import { ShortcutsProvider } from "./ShortcutProvider";
 import { DashboardShell } from "./DashboardShell";
 
-function DashboardLayout({ children }: { children: React.ReactNode }) {
+async function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const session = await getServerSession(authOptions);
+
   return (
     <div
       id="parent"
@@ -14,7 +18,7 @@ function DashboardLayout({ children }: { children: React.ReactNode }) {
       <CompanyContextProvider>
         <SocketContextProvider>
           <ShortcutsProvider>
-            <DashboardShell>{children}</DashboardShell>
+            <DashboardShell initialSession={session}>{children}</DashboardShell>
           </ShortcutsProvider>
         </SocketContextProvider>
       </CompanyContextProvider>

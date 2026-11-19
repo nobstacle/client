@@ -8,6 +8,7 @@ export interface PlayTranslatedAudioOptions {
 }
 
 type PlaybackListener = (playingMessageId: string | number | null) => void;
+type BlockedListener = (hasBlockedAudio: boolean) => void;
 
 // 1-sample silent WAV data URL used to warm up HTMLAudioElement on user interaction
 const SILENT_WAV_DATA_URL =
@@ -22,6 +23,7 @@ class TranslatedAudioPlayer {
   private currentBufferSource: AudioBufferSourceNode | null = null;
   private currentMessageId: string | number | null = null;
   private listeners = new Set<PlaybackListener>();
+  private blockedListeners = new Set<BlockedListener>();
   private audioUnlocked = false;
   private pendingBlockedItem: PlayTranslatedAudioOptions | null = null;
   private globalListenersAttached = false;
@@ -70,7 +72,7 @@ class TranslatedAudioPlayer {
       this.unlockAudio();
       if (this.pendingBlockedItem && !this.isPlaying) {
         const pending = this.pendingBlockedItem;
-        this.pendingBlockedItem = null;
+        this.setPendingBlockedItem(null);
         this.enqueue(pending);
       }
     };
@@ -137,6 +139,33 @@ class TranslatedAudioPlayer {
     };
   }
 
+  subscribeBlocked(listener: BlockedListener): () => void {
+    this.blockedListeners.add(listener);
+    listener(this.pendingBlockedItem !== null);
+    return () => {
+      this.blockedListeners.delete(listener);
+    };
+  }
+
+  private setPendingBlockedItem(item: PlayTranslatedAudioOptions | null) {
+    this.pendingBlockedItem = item;
+    const hasBlocked = item !== null;
+    this.blockedListeners.forEach((cb) => {
+      try {
+        cb(hasBlocked);
+      } catch {}
+    });
+  }
+
+  replayBlockedItem() {
+    this.unlockAudio();
+    if (this.pendingBlockedItem && !this.isPlaying) {
+      const pending = this.pendingBlockedItem;
+      this.setPendingBlockedItem(null);
+      this.enqueue(pending);
+    }
+  }
+
   getIsPlaying(): boolean {
     return this.isPlaying;
   }
@@ -181,7 +210,7 @@ class TranslatedAudioPlayer {
 
   stopAll() {
     this.queue = [];
-    this.pendingBlockedItem = null;
+    this.setPendingBlockedItem(null);
     if (this.currentBufferSource) {
       try {
         this.currentBufferSource.onended = null;
@@ -240,7 +269,7 @@ class TranslatedAudioPlayer {
     // 4. If browser blocked all autoplay because zero user gestures have occurred on this tab yet,
     // save item so the very next tap/click anywhere on the screen plays it immediately.
     if (!playedSuccessfully) {
-      this.pendingBlockedItem = nextItem;
+      this.setPendingBlockedItem(nextItem);
     }
 
     void this.playNext();
@@ -380,20 +409,48 @@ class TranslatedAudioPlayer {
         const utterance = new SpeechSynthesisUtterance(text);
         if (langCode) {
           utterance.lang = langCode;
+          const voices = window.speechSynthesis.getVoices?.() || [];
+          const baseLang = langCode.toLowerCase().split(/[-_]/)[0];
+          const matchedVoice =
+            voices.find((v) => v.lang.toLowerCase() === langCode.toLowerCase()) ||
+            voices.find((v) => v.lang.toLowerCase().startsWith(baseLang));
+          if (matchedVoice) {
+            utterance.voice = matchedVoice;
+          }
         }
 
+        let settled = false;
+        let started = false;
+
+        const finish = (ok: boolean) => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timeout);
+          clearTimeout(startGuard);
+          resolve(ok);
+        };
+
+        // Fail fast if browser blocks SpeechSynthesis silently without firing onerror
+        const startGuard = setTimeout(() => {
+          if (!started && !window.speechSynthesis.speaking && !window.speechSynthesis.pending) {
+            finish(false);
+          }
+        }, 1500);
+
         const timeout = setTimeout(() => {
-          resolve(false);
+          finish(started);
         }, 30000);
 
+        utterance.onstart = () => {
+          started = true;
+        };
+
         utterance.onend = () => {
-          clearTimeout(timeout);
-          resolve(true);
+          finish(true);
         };
 
         utterance.onerror = () => {
-          clearTimeout(timeout);
-          resolve(false);
+          finish(false);
         };
 
         window.speechSynthesis.speak(utterance);

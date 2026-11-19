@@ -67,16 +67,16 @@ export const ChatBox = React.forwardRef<HTMLDivElement, ChatBoxProps>(
         mode === "header" ||
         (mode !== "client" && ["Admin", "Staff", "SAdmin"].includes(userRole));
       if (isViewerAdmin) {
-        return messageObj.adminAudioUrl || messageObj.audioUrl;
+        return messageObj.adminAudioUrl;
       }
-      return messageObj.clientAudioUrl || messageObj.audioUrl;
+      return messageObj.clientAudioUrl;
     };
 
     const getDisplayLangCode = (messageObj: ReceivedMessageContent) => {
       const isViewerAdmin =
         mode === "header" ||
         (mode !== "client" && ["Admin", "Staff", "SAdmin"].includes(userRole));
-      if (isViewerAdmin) return "en";
+      if (isViewerAdmin) return messageObj.adminLangCode || currentUserDefaultLang;
       return messageObj.langCode || activeLangCode || currentUserDefaultLang;
     };
 

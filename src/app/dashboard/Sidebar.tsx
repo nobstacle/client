@@ -35,6 +35,7 @@ import { IoCaretDownCircle } from "react-icons/io5";
 
 interface ClientSidebarProps {
     user: Session | null;
+    sessionStatus?: "loading" | "authenticated" | "unauthenticated";
 }
 
 interface MenuItem {
@@ -251,7 +252,7 @@ const settingsItems: SettingsItem[] = [
     { title: "Upsell Packages", href: "/dashboard/package", roles: ["Admin", "User"], featureKey: "upsell" },
 ];
 
-const ClientSidebar = ({ user }: ClientSidebarProps) => {
+const ClientSidebar = ({ user, sessionStatus }: ClientSidebarProps) => {
     const [isOpen, setIsOpen] = useState(false);
     const [isMobile, setIsMobile] = useState(false);
     const [windowWidth, setWindowWidth] = useState(0);
@@ -265,8 +266,15 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
     const searchParamsString = searchParams.toString();
     const company = useCompanyStore((state) => state.company);
 
-    // Check if user is SAdmin
-    const isSAdmin = user?.user?.Roles?.includes("SAdmin" as GetUserResRolesItem);
+    // Normalize roles safely so missing/loading sessions never fall back to a Display-only menu
+    const rawRoles = user?.user?.Roles;
+    const userRoles = Array.isArray(rawRoles)
+        ? rawRoles
+        : typeof rawRoles === "string"
+            ? [rawRoles]
+            : [];
+    const hasUserSession = Boolean(user?.user) && userRoles.length > 0;
+    const isSAdmin = userRoles.includes("SAdmin" as GetUserResRolesItem);
     const featureFlags = {
         display: company?.displayEnabled ?? true,
         screens: company?.screensEnabled ?? true,
@@ -404,8 +412,9 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
     };
 
     const hasAccess = (roles?: string[]) => {
+        if (!hasUserSession) return false;
         if (!roles) return true;
-        return roles.some(role => user?.user.Roles?.includes(role as GetUserResRolesItem));
+        return roles.some(role => userRoles.includes(role as GetUserResRolesItem));
     };
 
     const isFeatureEnabled = (featureKey?: FeatureKey) => {
@@ -571,9 +580,10 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
         );
     };
 
-    const hasTeamAccess = teamItems.some(item => hasAccess(item.roles));
+    const hasDisplayAccess = hasUserSession && !isSAdmin && displayItems.some(item => hasAccess(item.roles));
+    const hasTeamAccess = hasUserSession && teamItems.some(item => hasAccess(item.roles));
     const isTeamActive = teamItems.some(item => item.href === pathname);
-    const hasSettingsAccess = settingsItems.some(item => hasAccess(item.roles));
+    const hasSettingsAccess = hasUserSession && settingsItems.some(item => hasAccess(item.roles));
     const isSettingsActive = settingsItems.some(item => item.href === pathname);
 
     return (
@@ -626,9 +636,17 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
             >
                 <div className="flex h-full w-full flex-col justify-between" style={{ overflow: 'hidden' }}>
                     <div className="flex-1 overflow-y-auto">
+                        {!hasUserSession ? (
+                            <ul className="w-full py-3 px-4 space-y-3" aria-label="Loading navigation">
+                                {Array.from({ length: sessionStatus === "loading" ? 7 : 4 }).map((_, idx) => (
+                                    <li key={idx} className="h-9 rounded bg-white/10 animate-pulse" />
+                                ))}
+                            </ul>
+                        ) : (
+                        <>
                         <ul className="w-full py-2">
-                            {/* Display Dropdown (only for non-SAdmin) */}
-                            {!isSAdmin && (
+                            {/* Display Dropdown (only for authenticated non-SAdmin with Display access) */}
+                            {hasDisplayAccess && (
                                 <div className="w-full">
                                     <div
                                         onClick={toggleDisplay}
@@ -762,6 +780,8 @@ const ClientSidebar = ({ user }: ClientSidebarProps) => {
                                     </div>
                                 )}
                             </>
+                        )}
+                        </>
                         )}
                     </div>
                 </div>
