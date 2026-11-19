@@ -238,6 +238,7 @@ const defaultCampaignStats: CampaignStats = {
 
 // Meta Embedded Signup popup wizard or direct OAuth login
 const EMBEDDED_SIGNUP_ENABLED = process.env.NEXT_PUBLIC_META_EMBEDDED_SIGNUP_ENABLED !== "false";
+const META_GRAPH_API_VERSION = process.env.NEXT_PUBLIC_META_GRAPH_API_VERSION || "v22.0";
 
 interface ManualConnectFormValues {
     businessAccountId: string;
@@ -955,7 +956,7 @@ export default function WhatsAppPage() {
     const [manualWabaIdInput, setManualWabaIdInput] = useState("");
     const [linkingManualWaba, setLinkingManualWaba] = useState(false);
     const [manualConnectOpen, setManualConnectOpen] = useState(false);
-    const [connectMode, setConnectMode] = useState<"partner" | "oauth" | "token">("partner");
+    const [connectMode, setConnectMode] = useState<"partner" | "coexistence" | "oauth" | "token">("partner");
     const [oauthWabaIdInput, setOauthWabaIdInput] = useState("");
     const [manualConnectSubmitting, setManualConnectSubmitting] = useState(false);
     const [manualConnectForm] = Form.useForm<ManualConnectFormValues>();
@@ -1194,7 +1195,7 @@ export default function WhatsAppPage() {
                 appId: process.env.NEXT_PUBLIC_META_APP_ID || "897802113101882",
                 cookie: true,
                 xfbml: true,
-                version: "v19.0",
+                version: META_GRAPH_API_VERSION,
             });
         };
 
@@ -1222,7 +1223,7 @@ export default function WhatsAppPage() {
                 appId,
                 cookie: true,
                 xfbml: true,
-                version: "v19.0",
+                version: META_GRAPH_API_VERSION,
             });
         } catch (e) {
             console.warn("FB re-init notice:", e);
@@ -1309,14 +1310,21 @@ export default function WhatsAppPage() {
         }
     };
 
-    const launchWhatsAppSignup = (forcePopup?: boolean | React.MouseEvent<HTMLElement>) => {
+    const launchWhatsAppSignup = (
+        forcePopup?: boolean | React.MouseEvent<HTMLElement>,
+        options?: { coexistence?: boolean },
+    ) => {
         const isForcePopup = forcePopup === true;
+        const isCoexistenceRequested = Boolean(options?.coexistence);
         if (!isForcePopup && !EMBEDDED_SIGNUP_ENABLED) {
             setManualConnectOpen(true);
             return;
         }
 
-        const configId = process.env.NEXT_PUBLIC_META_EMBEDDED_CONFIG_ID || "2298223317579621";
+        const configId =
+            (isCoexistenceRequested
+                ? process.env.NEXT_PUBLIC_META_COEXISTENCE_CONFIG_ID || process.env.NEXT_PUBLIC_META_EMBEDDED_CONFIG_ID
+                : process.env.NEXT_PUBLIC_META_EMBEDDED_CONFIG_ID) || "2298223317579621";
         const appId = process.env.NEXT_PUBLIC_META_APP_ID || "897802113101882";
 
         if (!window.FB) {
@@ -1329,7 +1337,7 @@ export default function WhatsAppPage() {
                 appId,
                 cookie: true,
                 xfbml: true,
-                version: "v19.0",
+                version: META_GRAPH_API_VERSION,
             });
         } catch (e) {
             console.warn("FB re-init notice:", e);
@@ -1339,6 +1347,7 @@ export default function WhatsAppPage() {
         let capturedWabaId: string | undefined = oauthWabaIdInput.replace(/[^0-9]/g, "") || undefined;
         let capturedPhoneNumberId: string | undefined = undefined;
         let capturedBusinessId: string | undefined = undefined;
+        let capturedOnboardingEvent: string | undefined = undefined;
 
         // Safety timeout so button never hangs indefinitely if popup is blocked
         const safetyTimer = setTimeout(() => {
@@ -1420,6 +1429,9 @@ export default function WhatsAppPage() {
                 if (businessCandidate) {
                     capturedBusinessId = String(businessCandidate);
                 }
+                if (typeof data?.event === "string" && data.event.trim()) {
+                    capturedOnboardingEvent = data.event.trim();
+                }
 
                 if (data?.type === "WA_EMBEDDED_SIGNUP" && data?.event === "CANCEL") {
                     clearTimeout(safetyTimer);
@@ -1455,7 +1467,15 @@ export default function WhatsAppPage() {
 
                         if (code || directAccessToken) {
                             try {
-                                message.loading({ content: "Linking WhatsApp account with Nobstacle...", key: "embedded-signup" });
+                                const isCoexistence =
+                                    isCoexistenceRequested
+                                    || capturedOnboardingEvent === "FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING";
+                                message.loading({
+                                    content: isCoexistence
+                                        ? "Linking WhatsApp Business App in Coexistence mode..."
+                                        : "Linking WhatsApp account with Nobstacle...",
+                                    key: "embedded-signup",
+                                });
                                 const linkedStatus = await apiRequest<MetaConnectionStatus>("/whatsapp/settings/embedded-signup", {
                                     method: "POST",
                                     body: JSON.stringify({
@@ -1464,12 +1484,19 @@ export default function WhatsAppPage() {
                                         wabaId: capturedWabaId,
                                         phoneNumberId: capturedPhoneNumberId,
                                         businessId: capturedBusinessId,
+                                        isCoexistence,
+                                        onboardingEvent: capturedOnboardingEvent,
                                     }),
                                 });
                                 setMetaConnection(linkedStatus);
                                 if (linkedStatus.connected) {
                                     setManualConnectOpen(false);
-                                    message.success({ content: "WhatsApp account linked successfully!", key: "embedded-signup" });
+                                    message.success({
+                                        content: isCoexistence
+                                            ? "WhatsApp Business App linked in Coexistence mode! Mobile app and dashboard inbox will stay synced."
+                                            : "WhatsApp account linked successfully!",
+                                        key: "embedded-signup",
+                                    });
                                 } else if (linkedStatus.wabaLinked) {
                                     setManualConnectOpen(false);
                                     message.warning({
@@ -1507,7 +1534,7 @@ export default function WhatsAppPage() {
                     override_default_response_type: true,
                     extras: {
                         setup: {},
-                        featureType: "",
+                        featureType: isCoexistenceRequested ? "whatsapp_business_app_onboarding" : "",
                         sessionInfoVersion: "3",
                     },
                 }
@@ -3417,6 +3444,15 @@ export default function WhatsAppPage() {
                                     Connect WhatsApp
                                 </Button>
                                 <Button
+                                    onClick={() => {
+                                        setConnectMode("coexistence");
+                                        setManualConnectOpen(true);
+                                    }}
+                                    loading={connectingMeta}
+                                >
+                                    Mobile + API (Coexistence)
+                                </Button>
+                                <Button
                                     onClick={launchStandardFacebookOAuth}
                                     loading={connectingMeta}
                                 >
@@ -3997,7 +4033,10 @@ export default function WhatsAppPage() {
                                             type="primary"
                                             style={{ backgroundColor: "#25D366", borderColor: "#25D366" }}
                                             icon={<MdWhatsapp size={16} />}
-                                            onClick={launchWhatsAppSignup}
+                                            onClick={() => {
+                                                setConnectMode("coexistence");
+                                                setManualConnectOpen(true);
+                                            }}
                                             loading={connectingMeta}
                                             className="rounded-xl h-10 px-6 font-medium shadow-sm hover:shadow"
                                         >
@@ -4079,7 +4118,10 @@ export default function WhatsAppPage() {
                                             type="primary"
                                             style={{ backgroundColor: "#25D366", borderColor: "#25D366" }}
                                             icon={<MdWhatsapp size={16} />}
-                                            onClick={launchWhatsAppSignup}
+                                            onClick={() => {
+                                                setConnectMode("coexistence");
+                                                setManualConnectOpen(true);
+                                            }}
                                             loading={connectingMeta}
                                             className="rounded-xl h-10 px-6 font-medium shadow-sm hover:shadow"
                                         >
@@ -5402,7 +5444,7 @@ export default function WhatsAppPage() {
             >
                 <div className="mt-3 space-y-4">
                     {/* Connection Mode Selector */}
-                    <div className="grid grid-cols-3 gap-2 p-1 bg-gray-100 rounded-xl">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 p-1 bg-gray-100 rounded-xl">
                         <button
                             type="button"
                             onClick={() => setConnectMode("partner")}
@@ -5417,6 +5459,18 @@ export default function WhatsAppPage() {
                         </button>
                         <button
                             type="button"
+                            onClick={() => setConnectMode("coexistence")}
+                            className={`py-2 px-2.5 rounded-lg text-xs font-semibold transition-all text-center ${
+                                connectMode === "coexistence"
+                                    ? "bg-white text-green-700 shadow-sm border border-green-300"
+                                    : "text-gray-600 hover:text-gray-800"
+                            }`}
+                        >
+                            📱 Mobile + API
+                            <span className="block text-[10px] font-normal opacity-80">WhatsApp Coexistence</span>
+                        </button>
+                        <button
+                            type="button"
                             onClick={() => setConnectMode("oauth")}
                             className={`py-2 px-2.5 rounded-lg text-xs font-semibold transition-all text-center ${
                                 connectMode === "oauth"
@@ -5424,8 +5478,8 @@ export default function WhatsAppPage() {
                                     : "text-gray-600 hover:text-gray-800"
                             }`}
                         >
-                            ⚡ One-Click Meta Login
-                            <span className="block text-[10px] font-normal opacity-80">No System User Needed</span>
+                            ⚡ One-Click Meta
+                            <span className="block text-[10px] font-normal opacity-80">Cloud API Login</span>
                         </button>
                         <button
                             type="button"
@@ -5436,10 +5490,54 @@ export default function WhatsAppPage() {
                                     : "text-gray-600 hover:text-gray-800"
                             }`}
                         >
-                            🔑 Direct API Token
+                            🔑 API Token
                             <span className="block text-[10px] font-normal opacity-80">User or System Token</span>
                         </button>
                     </div>
+
+                    {/* MODE 1B: WhatsApp Coexistence (Keep Mobile App + Cloud API Together) */}
+                    {connectMode === "coexistence" && (
+                        <div className="space-y-4">
+                            <div className="p-3.5 bg-green-50/80 border border-green-200 rounded-xl text-xs text-green-950 leading-relaxed space-y-2">
+                                <div className="flex items-center justify-between gap-2 flex-wrap">
+                                    <div className="font-semibold text-green-900 flex items-center gap-1.5">
+                                        <MdWhatsapp className="text-green-600 text-base" />
+                                        <span>Keep Using WhatsApp Business Mobile App + Cloud API Together</span>
+                                    </div>
+                                    <Tag color="green" className="m-0 text-[11px]">Coexistence</Tag>
+                                </div>
+                                <ol className="list-decimal pl-4 space-y-1 m-0 text-green-900">
+                                    <li><strong>Do not delete</strong> your existing WhatsApp Business mobile app account.</li>
+                                    <li>Click <strong>Connect WhatsApp Business App</strong> below to launch Meta&apos;s Embedded Signup wizard.</li>
+                                    <li>Select <strong>&ldquo;Connect your existing WhatsApp Business App&rdquo;</strong> and enter your current number.</li>
+                                    <li>Scan the QR code shown by Meta using your phone&apos;s WhatsApp Business app to pair both channels.</li>
+                                </ol>
+                            </div>
+
+                            <div className="p-3 bg-amber-50/80 border border-amber-200 rounded-xl text-xs text-amber-900 leading-relaxed">
+                                <strong>Note:</strong> Replies sent from your mobile app will automatically sync into this dashboard Inbox (requires <code>smb_message_echoes</code> &amp; <code>smb_app_state_sync</code> webhooks enabled on your Meta App). Once linked, Meta disables disappearing messages, view-once media, and mobile broadcast lists on the paired app.
+                            </div>
+
+                            <div className="pt-2 flex items-center justify-end gap-2 border-t border-gray-100">
+                                <Button
+                                    onClick={() => setManualConnectOpen(false)}
+                                    disabled={connectingMeta}
+                                >
+                                    Cancel
+                                </Button>
+                                <Button
+                                    type="primary"
+                                    size="large"
+                                    loading={connectingMeta}
+                                    onClick={() => launchWhatsAppSignup(true, { coexistence: true })}
+                                    style={{ backgroundColor: "#25D366", borderColor: "#25D366" }}
+                                    icon={<MdWhatsapp size={18} />}
+                                >
+                                    Connect WhatsApp Business App (Coexistence)
+                                </Button>
+                            </div>
+                        </div>
+                    )}
 
                     {/* MODE 1: Partner Business Sharing (No System User / No Hotel Token Needed) */}
                     {connectMode === "partner" && (
