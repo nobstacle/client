@@ -427,7 +427,7 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 			lastFetchParams.current.search !== currentParams.search ||
 			lastFetchParams.current.filter !== currentParams.filter;
 
-		if (paramsChanged) {
+		if (paramsChanged && userData?.user?.backendTokens?.at) {
 			// If only the page/size changed (same form, search and filter) we can
 			// reuse the cached total and tell the backend to skip the count query.
 			const onlyPageOrSizeChanged =
@@ -439,16 +439,18 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 			lastFetchParams.current = currentParams;
 			getTableResponse(selectedForm, currentPage, pageSize, lastSearchedValue, selectedFilter, onlyPageOrSizeChanged);
 		}
-	}, [currentPage, pageSize, selectedForm, lastSearchedValue, selectedFilter]);
+	}, [currentPage, pageSize, selectedForm, lastSearchedValue, selectedFilter, userData?.user?.backendTokens?.at]);
 
 	async function deleteWithPathParam(id: any, UUID?: any) {
 		const Url = getBackendUrl();
+		const token = userData?.user?.backendTokens?.at;
 		const url = UUID
 			? `${Url}/api/jotform/responses/${id}/${UUID}`
 			: `${Url}/api/jotform/responses/${id}`;
 
 		const response = await fetch(url, {
 			method: 'DELETE',
+			headers: token ? { Authorization: `Bearer ${token}` } : undefined,
 		});
 
 		return await response.json();
@@ -1276,9 +1278,13 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 			// Fetch through our backend proxy so the JotForm API key stays
 			// server-side (and benefits from the server-side questions cache).
 			const Url = getBackendUrl();
+			const token = userData?.user?.backendTokens?.at;
 			const response = await fetch(
 				`${Url}/api/jotform/form/${form_id}/questions`,
-				{ signal: fetchControllerRef.current?.signal }
+				{
+					signal: fetchControllerRef.current?.signal,
+					headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+				}
 			);
 
 			if (!response.ok) {
@@ -1699,9 +1705,11 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 				queryKey,
 				queryFn: async () => {
 					const apiUrl = buildJotformResponsesUrl(tableParams, Url);
+					const token = userData?.user?.backendTokens?.at;
 					const response = await axios.get(apiUrl, {
 						signal: abortControllerRef.current?.signal,
 						timeout: 30_000,
+						headers: token ? { Authorization: `Bearer ${token}` } : undefined,
 					});
 					return response.data as JotformTableResult;
 				},
@@ -1855,9 +1863,11 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 		const uploadURL = `${Url}/api/jotform/upload-single-record/${selectedForm || ""}`;
 
 		try {
+			const token = userData?.user?.backendTokens?.at;
 			const response = await axios.post(uploadURL, formData, {
 				headers: {
-					'Content-Type': 'application/json'
+					'Content-Type': 'application/json',
+					...(token ? { Authorization: `Bearer ${token}` } : {}),
 				}
 			});
 
@@ -1915,9 +1925,11 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 		const uploadURL = Url + `/api/jotform/upload-blank-record/${selectedForm || ""}`;
 
 		try {
+			const token = userData?.user?.backendTokens?.at;
 			const response = await axios.post(uploadURL, {}, {
 				headers: {
-					'Content-Type': 'application/json'
+					'Content-Type': 'application/json',
+					...(token ? { Authorization: `Bearer ${token}` } : {}),
 				}
 			});
 
@@ -2086,10 +2098,16 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 
 				const payload = { data };
 				try {
+					const token = userData?.user?.backendTokens?.at;
 					const response = await axios.post(
 						`${Url}/api/jotform/upload/${selectedForm}`,
 						payload,
-						{ headers: { "Content-Type": "application/json" } }
+						{
+							headers: {
+								"Content-Type": "application/json",
+								...(token ? { Authorization: `Bearer ${token}` } : {}),
+							},
+						}
 					);
 
 					if (response.status === 201) {
@@ -2423,10 +2441,12 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 				}
 			}
 
+			const token = userData?.user?.backendTokens?.at;
 			const response = await fetch(Url + `/api/jotform/update-field/${recordId}`, {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
+					...(token ? { Authorization: `Bearer ${token}` } : {}),
 				},
 				body: JSON.stringify({
 					fieldName,
@@ -2520,9 +2540,11 @@ export const SendJotFormTemplateForm = ({ onSend }: { onSend: (url: string) => v
 			}
 
 			// Make the API call
+			const token = userData?.user?.backendTokens?.at;
 			const response = await axios.get(API_URL, {
 				responseType: 'blob',
 				timeout: 30_000,
+				headers: token ? { Authorization: `Bearer ${token}` } : undefined,
 			});
 
 			// Create download link

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Modal, Button, Input, Select, DatePicker, Radio, message } from 'antd';
 import { IoClose } from 'react-icons/io5';
 import dayjs from 'dayjs';
+import { useSession } from 'next-auth/react';
 import { SendIcon } from '@/components/icons/SendIcon';
 
 const { Option } = Select;
@@ -13,6 +14,8 @@ const JotFormPrefillModal = ({
   onSendForm,
   socketConnected 
 }) => {
+  const { data: session } = useSession();
+  const authToken = session?.user?.backendTokens?.at;
   const [formFields, setFormFields] = useState(null);
   const [formValues, setFormValues] = useState({});
   const [isLoading, setIsLoading] = useState(false);
@@ -40,7 +43,10 @@ const JotFormPrefillModal = ({
       // and benefits from the 5-minute server-side cache.
       const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
       const response = await fetch(
-        `${backendUrl}/api/jotform/form/${formId}/questions`
+        `${backendUrl}/api/jotform/form/${formId}/questions`,
+        {
+          headers: authToken ? { Authorization: `Bearer ${authToken}` } : undefined,
+        }
       );
 
       if (!response.ok) {
@@ -232,7 +238,8 @@ const JotFormPrefillModal = ({
       const response = await fetch(uploadURL, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
         },
         body: JSON.stringify({
           formId: selectedForm.form_id,

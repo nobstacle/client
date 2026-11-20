@@ -44,9 +44,14 @@ const AsignForms: React.FC = () => {
 	const [form] = Form.useForm(); // Ant Design's form instance
 
 	const getAssignedFormData = async () => {
-		if (!companies) return;
+		const token = userData?.user?.backendTokens?.at;
+		if (!companies || !token) return;
 		try {
-			const response = await axios.get(API_URL);
+			const response = await axios.get(API_URL, {
+				headers: {
+					Authorization: `Bearer ${token}`,
+				},
+			});
 			if (response.status === 200) {
 				const formsWithCompanies = response.data.map((form: FormData) => ({
 					...form,
@@ -88,7 +93,7 @@ const AsignForms: React.FC = () => {
 		};
 
 		try {
-			const result = await saveFormData(formDataObject);
+			const result = await saveFormData(formDataObject, userData?.user?.backendTokens?.at);
 			getAssignedFormData();
 			form.resetFields();
 			setFormData({ form_id: "", form_name: "", assigned_companies: [], previous_year_url: "", this_month_url: "", this_year_url: "", previous_month_url: "" }); // Clear the formData state as well
@@ -138,10 +143,12 @@ const AsignForms: React.FC = () => {
 	};
 
 	async function deleteWithBody(formData: any) {
+		const token = userData?.user?.backendTokens?.at;
 		const response = await fetch(Url + '/api/jotform/delete-assigned-form', {
 			method: 'DELETE',
 			headers: {
 				'Content-Type': 'application/json',
+				...(token ? { Authorization: `Bearer ${token}` } : {}),
 			},
 			body: JSON.stringify(formData),
 		});

@@ -30,7 +30,15 @@ function Layout({ children }: { children: React.ReactNode }) {
         boxSizing: "border-box",
       }}
     >
-      <SocketContextProvider>{children}</SocketContextProvider>
+      <React.Suspense
+        fallback={
+          <div className="flex h-screen w-screen items-center justify-center bg-black text-white">
+            Loading...
+          </div>
+        }
+      >
+        <SocketContextProvider>{children}</SocketContextProvider>
+      </React.Suspense>
     </main>
   );
 }

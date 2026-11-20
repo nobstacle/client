@@ -30,9 +30,13 @@ async function fetchWithTimeout(input: RequestInfo, init?: RequestInit): Promise
   }
 }
 
-async function fetchAssignedForms(companyId: number): Promise<AssignedForm[]> {
+async function fetchAssignedForms(companyId: number, token: string): Promise<AssignedForm[]> {
   const baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
-  const response = await fetchWithTimeout(`${baseUrl}/api/assigned-form/${companyId}`);
+  const response = await fetchWithTimeout(`${baseUrl}/api/assigned-form/${companyId}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
   if (!response.ok) {
     throw new Error("Failed to fetch assigned forms");
   }
@@ -64,8 +68,8 @@ export function useAssignedFormsData() {
 
   const assignedFormsQuery = useQuery({
     queryKey: [ASSIGNED_FORMS_QUERY_KEY, companyId],
-    queryFn: () => fetchAssignedForms(companyId!),
-    enabled: !!companyId,
+    queryFn: () => fetchAssignedForms(companyId!, token!),
+    enabled: !!companyId && !!token,
     staleTime: FORMS_STALE_TIME_MS,
     gcTime: FORMS_STALE_TIME_MS * 2,
   });

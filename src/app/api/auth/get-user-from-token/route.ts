@@ -51,11 +51,6 @@ export async function POST(req: NextRequest) {
       }, { status: 401 });
     }
 
-    console.log('[get-user-from-token] ✓ User authenticated:', user.email || user.name);
-    console.log('[get-user-from-token] User has backendTokens:', !!user.backendTokens);
-    console.log('[get-user-from-token] backendTokens structure:', JSON.stringify(user.backendTokens));
-    console.log('[get-user-from-token] Backend token (atc):', user.backendTokens);
-
     return NextResponse.json({
       authenticated: true,
       user: user, // This includes backendTokens
@@ -63,10 +58,10 @@ export async function POST(req: NextRequest) {
     });
 
   } catch (error) {
-    console.error('[get-user-from-token] Error:', error);
+    console.error('[get-user-from-token] Error:', error instanceof Error ? error.message : 'Unknown error');
     return NextResponse.json({ 
       authenticated: false, 
-      error: error instanceof Error ? error.message : 'Failed to decode token'
+      error: 'Failed to decode token'
     }, { status: 500 });
   }
 }

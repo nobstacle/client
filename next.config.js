@@ -79,6 +79,43 @@ const nextConfig = {
   async headers() {
     return [
       {
+        // Baseline security headers for all routes (CSP starts in Report-Only to guarantee zero UI/iframe breakage)
+        source: "/(.*)",
+        headers: [
+          {
+            key: "Strict-Transport-Security",
+            value: "max-age=31536000; includeSubDomains; preload",
+          },
+          {
+            key: "X-Content-Type-Options",
+            value: "nosniff",
+          },
+          {
+            key: "Referrer-Policy",
+            value: "strict-origin-when-cross-origin",
+          },
+          {
+            key: "Permissions-Policy",
+            value: "camera=(self), microphone=(self), geolocation=(self)",
+          },
+          {
+            key: "Content-Security-Policy-Report-Only",
+            value:
+              "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://connect.facebook.net https://maps.googleapis.com https://www.googletagmanager.com https://pagead2.googlesyndication.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com; frame-src 'self' https://form.jotform.com https://*.jotform.com https://www.facebook.com https://web.facebook.com https://*.google.com; connect-src 'self' https: wss:;",
+          },
+        ],
+      },
+      {
+        // Prevent clickjacking on main app routes (excludes /header-only which is embedded by the Chrome extension)
+        source: "/((?!header-only).*)",
+        headers: [
+          {
+            key: "X-Frame-Options",
+            value: "SAMEORIGIN",
+          },
+        ],
+      },
+      {
         // Prevent browsers from caching the service worker file.
         // A stale sw.js prevents users from receiving new deployments
         // without manually clearing cache or using Incognito mode.

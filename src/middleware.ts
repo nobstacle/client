@@ -20,6 +20,9 @@ export async function middleware(req: NextRequest) {
     if (process.env.DEBUG_MIDDLEWARE) console.log("✅ PUBLIC / BLOG / PAIRING PATH — bypassing auth:", pathname);
     const response = NextResponse.next();
     response.headers.delete("X-Frame-Options");
+    if (pathname.startsWith("/forms/") || pathname === "/forms") {
+      response.headers.set("Referrer-Policy", "no-referrer");
+    }
     return response;
   }
 
@@ -54,10 +57,15 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
+  const secret = process.env.NEXTAUTH_SECRET;
+  if (!secret && process.env.NODE_ENV === "production") {
+    throw new Error("NEXTAUTH_SECRET must be configured in production");
+  }
+
   const t0 = Date.now();
   const token = await getToken({
     req,
-    secret: process.env.NEXTAUTH_SECRET || "asdfgh1234",
+    secret: secret || "dev-only-insecure-secret-do-not-use-in-prod",
     cookieName:
       process.env.NODE_ENV === "production"
         ? "__Secure-next-auth.session-token"
@@ -83,12 +91,24 @@ export async function middleware(req: NextRequest) {
       "Content-Security-Policy",
       "frame-ancestors 'self' chrome-extension://* https://* http://localhost:* http://127.0.0.1:*"
     );
+    // Restrict credentialed CORS to Nobstacle domains and Chrome extension origins only (no arbitrary origin reflection)
     const origin = req.headers.get("origin");
-    if (origin) {
+    const isAllowedCorsOrigin = Boolean(
+      origin &&
+      (
+        origin === "https://nobstacle.com" ||
+        origin === "https://www.nobstacle.com" ||
+        origin.startsWith("chrome-extension://") ||
+        (process.env.NODE_ENV !== "production" &&
+          (origin.startsWith("http://localhost:") || origin.startsWith("http://127.0.0.1:")))
+      )
+    );
+    if (origin && isAllowedCorsOrigin) {
       response.headers.set("Access-Control-Allow-Origin", origin);
       response.headers.set("Access-Control-Allow-Credentials", "true");
       response.headers.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
       response.headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+      response.headers.set("Vary", "Origin");
     }
     return response;
   }

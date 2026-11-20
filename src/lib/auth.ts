@@ -46,6 +46,14 @@ const getApiErrorMessage = (error: any) => {
   );
 };
 
+const getNextAuthSecret = () => {
+  const secret = process.env.NEXTAUTH_SECRET;
+  if (!secret && process.env.NODE_ENV === "production") {
+    throw new Error("NEXTAUTH_SECRET environment variable must be set in production");
+  }
+  return secret || "dev-only-insecure-secret-do-not-use-in-prod";
+};
+
 export const authOptions: AuthOptions = {
   providers: [
     CredentialsProvider({
@@ -57,7 +65,6 @@ export const authOptions: AuthOptions = {
       },
       async authorize(credentials) {
         if (typeof credentials === "undefined") {
-          console.log("OUT");
           return null;
         }
 
@@ -81,45 +88,6 @@ export const authOptions: AuthOptions = {
           return null;
         } catch (error: any) {
           throw new Error(getApiErrorMessage(error));
-        }
-      },
-    }),
-
-    CredentialsProvider({
-      id: "pairing-credentials",
-      name: "Pairing Guest",
-      credentials: {
-        accessToken: { type: "text" },
-        user: { type: "text" },
-        expiresInMs: { type: "text" },
-        stationNo: { type: "text" },
-        pairingToken: { type: "text" },
-      },
-      async authorize(credentials) {
-        if (!credentials?.accessToken || !credentials?.user) {
-          return null;
-        }
-
-        try {
-          const user = JSON.parse(credentials.user as string);
-          const expiresInMs = Number(credentials.expiresInMs);
-          const expiresAt = Date.now() + expiresInMs;
-
-          return {
-            ...user,
-            backendTokens: {
-              at: credentials.accessToken,
-              rt: null,
-              rtc: null,
-              expiresIn: expiresAt,
-            },
-            isGuest: true,
-            pairingToken: credentials.pairingToken,
-            stationNo: Number(credentials.stationNo),
-          } as any;
-        } catch (err) {
-          console.error("[PairingCredentials] authorize error:", err);
-          return null;
         }
       },
     }),
@@ -243,7 +211,7 @@ export const authOptions: AuthOptions = {
     },
   },
 
-  secret: process.env.NEXTAUTH_SECRET || "asdfgh1234",
+  secret: getNextAuthSecret(),
 
   pages: {
     signIn: "/login",

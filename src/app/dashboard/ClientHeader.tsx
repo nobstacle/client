@@ -761,7 +761,8 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
             const response = await fetch(uploadURL, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
                 },
                 body: JSON.stringify({})
             });
@@ -1575,9 +1576,13 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                 }
             }
 
-            const API_KEY = process.env.NEXT_PUBLIC_JOTFORM_API_KEY;
+            // Route through the authenticated backend proxy so the JotForm API key stays server-side
+            const Url = getBackendUrl();
             const response = await fetch(
-                `https://api.jotform.com/form/${form_id}/questions?apiKey=${API_KEY}`
+                `${Url}/api/jotform/form/${form_id}/questions`,
+                {
+                    headers: authToken ? { Authorization: `Bearer ${authToken}` } : undefined,
+                }
             );
 
             if (!response.ok) {
@@ -2377,7 +2382,10 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                             formId: formId,
                             data: formData
                         }, {
-                            headers: { 'Content-Type': 'application/json' }
+                            headers: {
+                                'Content-Type': 'application/json',
+                                ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+                            }
                         });
 
                         if (response.status === 201) {
@@ -2438,7 +2446,10 @@ const ClientHeader = ({ user }: ClientHeaderProps) => {
                             formId: formId,
                             data: formData
                         }, {
-                            headers: { 'Content-Type': 'application/json' }
+                            headers: {
+                                'Content-Type': 'application/json',
+                                ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+                            }
                         });
 
                         if (response.status === 201) {

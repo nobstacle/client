@@ -40,15 +40,21 @@ export const DefaultFormShortcut: React.FC = () => {
     const { data } = useSession();
 
     const getAssignedFormByID = React.useCallback(async (company_id: number) => {
+        const token = data?.user?.backendTokens?.at;
+        if (!token) return;
         const Url = getBackendUrl();
         const API_URL = `${Url}/api/assigned-form/${company_id}`;
 
         setLoadingForms(true);
         try {
-            const response = await fetch(API_URL);
+            const response = await fetch(API_URL, {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            });
             if (response.ok) {
-                const data = await response.json();
-                setAssignedForms(data);
+                const resData = await response.json();
+                setAssignedForms(resData);
             } else {
                 console.error('Unexpected response status:', response.status);
                 setError('Failed to load forms');
@@ -59,7 +65,7 @@ export const DefaultFormShortcut: React.FC = () => {
         } finally {
             setLoadingForms(false);
         }
-    }, []);
+    }, [data?.user?.backendTokens?.at]);
 
     const getExistingShortcut = React.useCallback(async (data) => {
         const Url = getBackendUrl();
