@@ -1977,6 +1977,7 @@ export const Content: React.FC = () => {
       station: activeStation,
       refType: "ChatMessage",
       langCode,
+      senderMode: "client",
     });
   };
 

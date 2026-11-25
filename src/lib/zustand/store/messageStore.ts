@@ -101,7 +101,29 @@ export const useMessageStore = create<MessageState>((set, get) => ({
 
   setReceivedMessage: (receivedMessage) =>
     set(() => {
-      const next = [...get().receivedMessage, receivedMessage];
+      const current = get().receivedMessage;
+      const existingIdx =
+        receivedMessage.id != null
+          ? current.findIndex((m) => m.id === receivedMessage.id)
+          : -1;
+
+      if (existingIdx !== -1) {
+        // In-place update for two-phase instant delivery (raw -> translated -> audio ready)
+        const updated = [...current];
+        updated[existingIdx] = {
+          ...updated[existingIdx],
+          ...receivedMessage,
+          audioUrl: receivedMessage.audioUrl ?? updated[existingIdx].audioUrl,
+          adminAudioUrl: receivedMessage.adminAudioUrl ?? updated[existingIdx].adminAudioUrl,
+          clientAudioUrl: receivedMessage.clientAudioUrl ?? updated[existingIdx].clientAudioUrl,
+        };
+        return {
+          receivedMessage: updated,
+          receivedType: receivedMessage.type,
+        };
+      }
+
+      const next = [...current, receivedMessage];
       return {
         receivedMessage:
           next.length > MAX_RECEIVED_MESSAGES

@@ -130,6 +130,7 @@ export const SocketContextProvider = ({
   const activeStationRef = useRef<number>(1);
   const lastJoinedStationRef = useRef<number | null>(null);
   const userRoleRef = useRef<string | undefined>(session.data?.user?.Roles?.[0]);
+  const playedVoiceMessageIdsRef = useRef<Set<string | number>>(new Set());
 
   useEffect(() => {
     userRoleRef.current = session.data?.user?.Roles?.[0];
@@ -336,12 +337,13 @@ export const SocketContextProvider = ({
 
   const onReceivedMessage = (data: any) => {
     try {
-      const parsedData = JSON.parse(data).data as ReceivedMessageContent;
+      const parsedData = JSON.parse(data).data as ReceivedMessageContent & { isTranslating?: boolean };
       if (!isTargetStation(parsedData?.station)) return;
 
       setReceivedMessage(parsedData);
 
-      if (parsedData.isLiveTranslation && typeof window !== "undefined") {
+      // Don't auto-play TTS while Phase-1 raw message is still being translated
+      if (parsedData.isLiveTranslation && !parsedData.isTranslating && typeof window !== "undefined") {
         const pathname = window.location.pathname || "";
         const isClientRoute =
           pathname.startsWith("/client") || pathname.includes("/client");
@@ -354,12 +356,21 @@ export const SocketContextProvider = ({
               ? false
               : ["Admin", "Staff", "SAdmin"].includes(parsedData.role || "");
 
-        // Auto-play translated destination audio strictly in the receiver's own language
-        if (isViewerAdmin && !isSenderAdmin) {
+        const msgKey = parsedData.id;
+        const alreadyPlayed = msgKey != null && playedVoiceMessageIdsRef.current.has(msgKey);
+
+        // Auto-play translated destination audio strictly once in the receiver's own language
+        if (!alreadyPlayed && isViewerAdmin && !isSenderAdmin) {
           const userLang =
             parsedData.adminLangCode ||
             useCompanyStore.getState().company?.defaultLangCode ||
             "en";
+          if (msgKey != null) {
+            if (playedVoiceMessageIdsRef.current.size > 200) {
+              playedVoiceMessageIdsRef.current.clear();
+            }
+            playedVoiceMessageIdsRef.current.add(msgKey);
+          }
           translatedAudioPlayer.enqueue({
             messageId: parsedData.id,
             audioUrl: parsedData.adminAudioUrl,
@@ -369,12 +380,18 @@ export const SocketContextProvider = ({
               parsedData.message,
             langCode: userLang,
           });
-        } else if (!isViewerAdmin && isSenderAdmin) {
+        } else if (!alreadyPlayed && !isViewerAdmin && isSenderAdmin) {
           const clientLang =
             parsedData.langCode ||
             localStorage.getItem(`lang-code-station-${parsedData.station}`) ||
             localStorage.getItem("lang-code") ||
             "en";
+          if (msgKey != null) {
+            if (playedVoiceMessageIdsRef.current.size > 200) {
+              playedVoiceMessageIdsRef.current.clear();
+            }
+            playedVoiceMessageIdsRef.current.add(msgKey);
+          }
           translatedAudioPlayer.enqueue({
             messageId: parsedData.id,
             audioUrl: parsedData.clientAudioUrl,

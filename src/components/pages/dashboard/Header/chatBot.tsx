@@ -240,7 +240,7 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true, isMob
       return;
     }
 
-    const selectedLang = params.get("lang") || currentUserDefaultLang;
+    const targetLang = stationClientLang;
 
     try {
       // Send English message with selected language code
@@ -249,7 +249,7 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true, isMob
         message: textToSend,
         station: currentStation,
         refType: "ChatMessage",
-        langCode: selectedLang,
+        langCode: targetLang,
         adminLangCode: currentUserDefaultLang,
         senderMode: "header",
       });
