@@ -1298,7 +1298,9 @@ export default function WhatsAppPage() {
                     })();
                 },
                 {
-                    scope: "whatsapp_business_management,whatsapp_business_messaging,business_management",
+                    scope:
+                        process.env.NEXT_PUBLIC_META_OAUTH_SCOPES ||
+                        "whatsapp_business_management,whatsapp_business_messaging",
                     return_scopes: true,
                 },
             );
