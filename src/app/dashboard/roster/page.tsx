@@ -154,19 +154,30 @@ const HOUR_BLOCKS = [
     { label: "Evening (18:00 – 24:00)", start: 18, end: 24, badgeColor: "geekblue" },
 ];
 
+const getTodayLocalIso = (): string => {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, "0");
+    const d = String(now.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+};
+
 export default function RosterPage() {
     const { data: session } = useSession();
     const token = (session as any)?.user?.backendTokens?.at;
 
     // ── Layout & Navigation State ────────────────────────────────────────────
     const [activeMainTab, setActiveMainTab] = useState<string>("rules");
-    const [teamSectionTab, setTeamSectionTab] = useState<string>("members");
+    const [teamSectionTab, setTeamSectionTab] = useState<string>("requests");
     const [scheduleSubTab, setScheduleSubTab] = useState<string>("weekly");
     const [selectedWeekTab, setSelectedWeekTab] = useState<string>("all");
     const [viewAllSections, setViewAllSections] = useState<boolean>(false);
     const [showAllKpis, setShowAllKpis] = useState<boolean>(false);
-    const [showAdvancedScript, setShowAdvancedScript] = useState<boolean>(false);
     const [memberSearch, setMemberSearch] = useState<string>("");
+    const [savingWorkspace, setSavingWorkspace] = useState<boolean>(false);
+    const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
+    const [generationStage, setGenerationStage] = useState<0 | 1 | 2 | 3>(0);
+    const [generationStageDetail, setGenerationStageDetail] = useState<string>("");
 
     // ── Account & Workspace Loading State ────────────────────────────────────
     const [loadingWorkspace, setLoadingWorkspace] = useState<boolean>(true);
@@ -208,18 +219,18 @@ export default function RosterPage() {
     const [manageTeamsModalVisible, setManageTeamsModalVisible] = useState<boolean>(false);
     const [newTeamNameInput, setNewTeamNameInput] = useState<string>("");
 
-    // New request form state
+    // New request form state (default to today's local date)
     const [reqMemberId, setReqMemberId] = useState<number | undefined>(undefined);
-    const [reqFromDate, setReqFromDate] = useState<string>("");
-    const [reqToDate, setReqToDate] = useState<string>("");
+    const [reqFromDate, setReqFromDate] = useState<string>(() => getTodayLocalIso());
+    const [reqToDate, setReqToDate] = useState<string>(() => getTodayLocalIso());
     const [reqTypeSlot, setReqTypeSlot] = useState<number>(-1);
     const [reqGranted, setReqGranted] = useState<boolean>(false);
 
-    // New absence form state
+    // New absence form state (default to today's local date)
     const [absMemberId, setAbsMemberId] = useState<number | undefined>(undefined);
     const [absReason, setAbsReason] = useState<string>("Annual Leave");
-    const [absFromDate, setAbsFromDate] = useState<string>("");
-    const [absToDate, setAbsToDate] = useState<string>("");
+    const [absFromDate, setAbsFromDate] = useState<string>(() => getTodayLocalIso());
+    const [absToDate, setAbsToDate] = useState<string>(() => getTodayLocalIso());
     const [absFromTime, setAbsFromTime] = useState<string>("");
     const [absToTime, setAbsToTime] = useState<string>("");
 
@@ -281,10 +292,14 @@ export default function RosterPage() {
         return res.json();
     };
 
-    // Optimistic cache load on mount so reopening the page renders immediately (0ms)
+    // Optimistic cache load on mount (never marks hydratedFromBackendRef so stale cache cannot overwrite DB)
     useEffect(() => {
         try {
-            const cached = localStorage.getItem("nobstacle_roster_cache_v2");
+            const companyId = (session as any)?.user?.companyId;
+            const cacheKey = companyId
+                ? `nobstacle_roster_cache_v3_${companyId}`
+                : "nobstacle_roster_cache_v2";
+            const cached = localStorage.getItem(cacheKey);
             if (cached) {
                 const parsed = JSON.parse(cached);
                 if (parsed?.workspace) {
@@ -292,7 +307,6 @@ export default function RosterPage() {
                     if (Array.isArray(parsed.savedRecords)) {
                         setSavedRecords(parsed.savedRecords);
                     }
-                    hydratedFromBackendRef.current = true;
                     setLoadingWorkspace(false);
                 }
             }
@@ -312,12 +326,17 @@ export default function RosterPage() {
             const baseCfg = createDefaultRosterConfig(stationCount, teamList.length || 1);
             const mergedConfig: RosterConfig = {
                 ...baseCfg,
+                staffingMode: "hourly",
+                enforceHardMin: true,
                 ...(workspace.config || {}),
             };
             setConfig(mergedConfig);
             setTeam(teamList);
             setRequests(Array.isArray(workspace.requests) ? workspace.requests : []);
             setAbsences(Array.isArray(workspace.absences) ? workspace.absences : []);
+            if (workspace.updatedAt) {
+                setLastSavedAt(workspace.updatedAt);
+            }
 
             const discoveredTeams = Array.from(
                 new Set(
@@ -339,19 +358,60 @@ export default function RosterPage() {
                 setReqMemberId((prev) => prev ?? teamList[0].id);
                 setAbsMemberId((prev) => prev ?? teamList[0].id);
             }
-            setReqFromDate((prev) => prev || mergedConfig.ws);
-            setReqToDate((prev) => prev || mergedConfig.ws);
-            setAbsFromDate((prev) => prev || mergedConfig.ws);
-            setAbsToDate((prev) => prev || mergedConfig.ws);
+            const todayIso = getTodayLocalIso();
+            setReqFromDate((prev) => prev || todayIso);
+            setReqToDate((prev) => prev || todayIso);
+            setAbsFromDate((prev) => prev || todayIso);
+            setAbsToDate((prev) => prev || todayIso);
 
             try {
-                localStorage.setItem("nobstacle_roster_cache_v2", JSON.stringify({
+                const companyKey = account?.companyId
+                    ? `nobstacle_roster_cache_v3_${account.companyId}`
+                    : "nobstacle_roster_cache_v2";
+                localStorage.setItem(companyKey, JSON.stringify({
                     workspace,
                     account,
                 }));
             } catch {
                 // ignore
             }
+        }
+    };
+
+    const persistWorkspaceNow = async (showToast = false) => {
+        if (!token || !API_URL) return;
+        const snapshot = { config, team, requests, absences };
+        setSavingWorkspace(true);
+        try {
+            const res = await apiFetch<{ success: boolean; updatedAt?: string }>("/roster/workspace", {
+                method: "PUT",
+                body: JSON.stringify(snapshot),
+            });
+            const updatedAt = res?.updatedAt || new Date().toISOString();
+            setLastSavedAt(updatedAt);
+            try {
+                const companyKey = accountMeta?.companyId
+                    ? `nobstacle_roster_cache_v3_${accountMeta.companyId}`
+                    : "nobstacle_roster_cache_v2";
+                localStorage.setItem(
+                    companyKey,
+                    JSON.stringify({
+                        workspace: { ...snapshot, updatedAt },
+                        account: accountMeta,
+                    }),
+                );
+            } catch {
+                // ignore
+            }
+            if (showToast) {
+                message.success("All shift rules, working hours, and staffing targets saved for future logins.");
+            }
+        } catch (err: any) {
+            if (showToast) {
+                message.error(err?.message || "Failed to save workspace settings");
+            }
+        } finally {
+            setSavingWorkspace(false);
         }
     };
 
@@ -392,16 +452,12 @@ export default function RosterPage() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [token]);
 
-    // Auto-save workspace changes to PostgreSQL backend
+    // Auto-save workspace changes to PostgreSQL backend (persists all updated hours & rules for future logins)
     useEffect(() => {
         if (!hydratedFromBackendRef.current || !token || !API_URL) return;
-        const snapshot = { config, team, requests, absences };
         const timer = setTimeout(() => {
-            void apiFetch("/roster/workspace", {
-                method: "PUT",
-                body: JSON.stringify(snapshot),
-            }).catch(() => {});
-        }, 900);
+            void persistWorkspaceNow(false);
+        }, 700);
 
         return () => clearTimeout(timer);
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -633,7 +689,7 @@ export default function RosterPage() {
     // ── Handlers for Section 3 (Team Member Requests) ────────────────────────
     const handleAddRequest = () => {
         const mId = reqMemberId ?? team[0]?.id;
-        const from = reqFromDate || config.ws;
+        const from = reqFromDate || getTodayLocalIso();
         const to = reqToDate || from;
         if (!mId || !from) {
             message.warning("Please choose a team member and a From date.");
@@ -680,7 +736,7 @@ export default function RosterPage() {
     // ── Handlers for Section 4 (Absences) ────────────────────────────────────
     const handleAddAbsence = () => {
         const mId = absMemberId ?? team[0]?.id;
-        const from = absFromDate || config.ws;
+        const from = absFromDate || getTodayLocalIso();
         const to = absToDate || from;
         if (!mId || !from || !to || to < from) {
             message.warning("Please choose a team member and a valid date range.");
@@ -808,21 +864,148 @@ export default function RosterPage() {
         }, 40);
     };
 
+    // ── Unified Multi-Stage AI Roster Pipeline (Stage 1 -> Stage 2 -> Stage 3) ─
+    const handleUnifiedGenerateRoster = async () => {
+        if (!activeTeam.length) {
+            message.warning(
+                selectedTeam === "all"
+                    ? "No active team members found. Add a member or sync company users first."
+                    : `No active members found in "${selectedTeam}" team. Assign members to this team first.`,
+            );
+            return;
+        }
+        if (!config.ws) {
+            message.warning("Set the roster start date in Step 1 first.");
+            return;
+        }
+
+        const scopeLabel = selectedTeam === "all" ? "All Teams" : `${selectedTeam} Team`;
+        setSolving(true);
+        setSolvingOrTools(true);
+        setAiResult(null);
+        setGenerationStage(1);
+        setGenerationStageDetail(`Stage 1 of 3 — Building initial draft for ${scopeLabel} (${activeTeam.length} members)...`);
+        setSolverStatusText(`Stage 1/3: Building quick draft for ${scopeLabel}...`);
+
+        // Persist latest rules before generating so future logins always match
+        void persistWorkspaceNow(false);
+
+        await new Promise((r) => setTimeout(r, 40));
+
+        let stage1Result: SolvedRosterState;
+        try {
+            const expandedReqs = expandRequestsByDay(requests);
+            stage1Result = solveRoster(config, activeTeam, absences, expandedReqs, 150000);
+            setSolvedState(stage1Result);
+        } catch (err: any) {
+            message.error(err?.message || "Failed to generate initial roster draft");
+            setSolving(false);
+            setSolvingOrTools(false);
+            setGenerationStage(0);
+            setGenerationStageDetail("");
+            return;
+        }
+
+        // Stage 2: Server Best-Fit Mathematical Optimizer (OR-Tools CP-SAT warm-started from Stage 1)
+        setGenerationStage(2);
+        setGenerationStageDetail(
+            `Stage 2 of 3 — Optimizing with Best-Fit Server Engine (OR-Tools CP-SAT, ${orToolsTimeLimit}s limit, enforcing hard 15-min minimums)...`,
+        );
+        setSolverStatusText(`Stage 2/3: Running Best-Fit Server Optimizer (OR-Tools CP-SAT)...`);
+
+        let finalResult: SolvedRosterState = stage1Result;
+        let usedOrTools = false;
+        let hardMinEnforcedNote = "";
+
+        try {
+            const { modelData, pythonScript: script } = buildOrToolsPayloadAndScript(
+                config,
+                activeTeam,
+                absences,
+                requests,
+                orToolsWarmStart ? stage1Result : null,
+            );
+            setPythonScript(script);
+
+            const response = await apiFetch<{
+                status: string;
+                feasible: boolean;
+                hardMinEnforced?: boolean;
+                objectiveValue?: number;
+                bestObjectiveBound?: number;
+                slackViolations?: number;
+                solveTimeMs?: number;
+                assignments: Array<{
+                    memberIndex: number;
+                    dayIndex: number;
+                    startSlot: number;
+                    durationQuarters: number;
+                    hours: number;
+                }>;
+            }>("/roster/solve-ortools", {
+                method: "POST",
+                body: JSON.stringify({
+                    modelData,
+                    timeLimitSeconds: orToolsTimeLimit,
+                    useHint: orToolsWarmStart,
+                }),
+            });
+
+            if (response.feasible && response.assignments?.length) {
+                finalResult = applyOrToolsAssignmentsToSolveResult(stage1Result, response.assignments, {
+                    status: response.status,
+                    objectiveValue: response.objectiveValue,
+                    bestObjectiveBound: response.bestObjectiveBound,
+                    slackViolations: response.slackViolations,
+                    solveTimeMs: response.solveTimeMs,
+                });
+                usedOrTools = true;
+                hardMinEnforcedNote = response.hardMinEnforced
+                    ? " · Hard 15-min minimums enforced"
+                    : "";
+            }
+        } catch (err: any) {
+            console.warn("OR-Tools server optimizer skipped, keeping Stage 1 draft:", err?.message || err);
+        }
+
+        // Stage 3: Verify rules, finalize KPIs & navigate to Step 4
+        setGenerationStage(3);
+        setGenerationStageDetail(
+            `Stage 3 of 3 — Verified ${Math.round(finalResult.met.score * 1000) / 10}% coverage (${Math.round(finalResult.met.hard * 100) / 100} hard violations). Opening schedule...`,
+        );
+        setSolvedState(finalResult);
+        setSolverStatusText(
+            `${usedOrTools ? `AI Best-Fit Optimizer (${finalResult.orToolsMeta?.status || "SOLVED"})` : "AI Quick Draft Solver"} completed for ${scopeLabel} — Coverage: ${Math.round(finalResult.met.score * 1000) / 10}%, Hard Violations: ${Math.round(finalResult.met.hard * 100) / 100}${hardMinEnforcedNote}.`,
+        );
+
+        await new Promise((r) => setTimeout(r, 350));
+        setSolving(false);
+        setSolvingOrTools(false);
+        setGenerationStage(0);
+        setGenerationStageDetail("");
+        setScheduleSubTab("weekly");
+        setActiveMainTab("schedule");
+        message.success(
+            `Roster generated for ${scopeLabel}! Coverage: ${Math.round(finalResult.met.score * 1000) / 10}%`,
+        );
+    };
+
     const handleRunAiAnalysis = () => {
         if (!solvedState) {
-            message.warning("Run the constraint solver first.");
+            message.warning("Generate a roster first in Step 3.");
             return;
         }
         setAnalyzingAi(true);
-        setSolverStatusText("AI analysis running... simulating candidate fixes with the solver...");
+        setSolverStatusText("AI What-If Simulator running... evaluating staffing & rule scenarios...");
 
         setTimeout(() => {
             try {
                 const analysis = runAiAnalysis(solvedState, activeTeam, absences, requests);
                 setAiResult(analysis);
-                setActiveMainTab("optimizer");
+                setActiveMainTab("schedule");
+                setScheduleSubTab("ai");
                 setSolverStatusText(
-                    "AI analysis complete. Review the scenario comparison or click 'Apply Best Fix & Re-solve'.",
+                    "AI What-If analysis complete. Review the scenario comparison in Step 4.",
                 );
                 message.success("AI What-If analysis complete!");
             } catch (err: any) {
@@ -1017,7 +1200,7 @@ export default function RosterPage() {
                 }),
             });
             setSavedRecords((prev) => [saved, ...prev]);
-            message.success(`Saved roster record "${nameToSave}"!`);
+            message.success(`Saved "${nameToSave}" to Saved Records (click "Saved Records" at top-right anytime to view or reload it).`);
             setSaveRecordModalOpen(false);
             setRecordTitleInput("");
         } catch (err: any) {
@@ -1151,6 +1334,7 @@ export default function RosterPage() {
         const peakEnd = config.pkW?.[0]?.b || "";
         const offPeakStart = config.opW?.[0]?.a || "";
         const offPeakEnd = config.opW?.[0]?.b || "";
+        const staffingMode = config.staffingMode || "hourly";
 
         return (
             <div className="space-y-6 pb-8">
@@ -1171,14 +1355,27 @@ export default function RosterPage() {
                                             : "Company Shift & Working Hour Rules"}
                                     </div>
                                     <div className="text-xs font-normal text-slate-500">
-                                        Dynamic company rules saved to your account workspace (Stations: {accountMeta?.stationCount ?? 1})
+                                        All updated hours & rules are saved automatically for future logins (Stations: {accountMeta?.stationCount ?? 1})
                                     </div>
                                 </div>
                             </div>
                             <Space size="middle" wrap>
-                                <Tag color="green" className="m-0 rounded-full px-3 py-0.5 text-xs">
-                                    Synced with Account DB
+                                <Tag color={savingWorkspace ? "processing" : "green"} className="m-0 rounded-full px-3 py-0.5 text-xs">
+                                    {savingWorkspace
+                                        ? "Saving changes..."
+                                        : lastSavedAt
+                                          ? `Saved (${new Date(lastSavedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })})`
+                                          : "Synced with Account DB"}
                                 </Tag>
+                                <Button
+                                    type="primary"
+                                    icon={<SaveOutlined />}
+                                    loading={savingWorkspace}
+                                    onClick={() => void persistWorkspaceNow(true)}
+                                    style={{ background: "#2f5bea" }}
+                                >
+                                    Save Rules
+                                </Button>
                                 <Button icon={<ReloadOutlined />} onClick={handleResetDefaults}>
                                     Reset to Account Defaults
                                 </Button>
@@ -1206,10 +1403,10 @@ export default function RosterPage() {
                                         className="rounded-lg"
                                     />
                                 </div>
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="grid grid-cols-3 gap-3">
                                     <div>
                                         <label className="mb-1.5 block text-xs font-medium text-slate-600">
-                                            Roster Length (Weeks)
+                                            Length (Wks)
                                         </label>
                                         <InputNumber
                                             size="large"
@@ -1222,7 +1419,7 @@ export default function RosterPage() {
                                     </div>
                                     <div>
                                         <label className="mb-1.5 block text-xs font-medium text-slate-600">
-                                            Target Hours / Week
+                                            Target / Wk
                                         </label>
                                         <InputNumber
                                             size="large"
@@ -1234,51 +1431,19 @@ export default function RosterPage() {
                                             addonAfter="h"
                                         />
                                     </div>
-                                </div>
-                                <div className="grid grid-cols-3 gap-3 pt-1">
                                     <div>
-                                        <label className="mb-1 block text-xs font-medium text-slate-600">
+                                        <label className="mb-1.5 block text-xs font-medium text-slate-600">
                                             Unpaid Break
                                         </label>
                                         <InputNumber
-                                            size="middle"
+                                            size="large"
                                             min={0}
                                             max={120}
                                             step={15}
                                             value={config.brk || 0}
                                             onChange={(v) => updateConfigField("brk", Number(v) || 0)}
-                                            className="w-full"
+                                            className="w-full rounded-lg"
                                             addonAfter="m"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="mb-1 block text-xs font-medium text-slate-600">
-                                            Peak Start
-                                        </label>
-                                        <Input
-                                            size="middle"
-                                            type="time"
-                                            value={peakStart}
-                                            onChange={(e) => {
-                                                const a = e.target.value;
-                                                const b = peakEnd || "14:00";
-                                                updateConfigField("pkW", a ? [{ a, b }] : []);
-                                            }}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="mb-1 block text-xs font-medium text-slate-600">
-                                            Peak End
-                                        </label>
-                                        <Input
-                                            size="middle"
-                                            type="time"
-                                            value={peakEnd}
-                                            onChange={(e) => {
-                                                const b = e.target.value;
-                                                const a = peakStart || "11:00";
-                                                updateConfigField("pkW", b ? [{ a, b }] : []);
-                                            }}
                                         />
                                     </div>
                                 </div>
@@ -1430,44 +1595,24 @@ export default function RosterPage() {
                                         </Select>
                                     </div>
                                 </div>
-                                <div className="grid grid-cols-2 gap-3 pt-1">
+                                <div className="flex items-center justify-between rounded-xl border border-emerald-100 bg-emerald-50/50 px-3 py-2">
                                     <div>
-                                        <label className="mb-1 block text-xs font-medium text-slate-600">
-                                            Off-Peak Start (opt)
-                                        </label>
-                                        <Input
-                                            size="middle"
-                                            type="time"
-                                            value={offPeakStart}
-                                            onChange={(e) => {
-                                                const a = e.target.value;
-                                                const b = offPeakEnd || "08:00";
-                                                updateConfigField("opW", a ? [{ a, b }] : []);
-                                            }}
-                                        />
+                                        <div className="text-xs font-semibold text-slate-700">Hard 15-Min Minimum Rule</div>
+                                        <div className="text-[11px] text-slate-500">Prevent 15-min slots from dropping below min staff</div>
                                     </div>
-                                    <div>
-                                        <label className="mb-1 block text-xs font-medium text-slate-600">
-                                            Off-Peak End (opt)
-                                        </label>
-                                        <Input
-                                            size="middle"
-                                            type="time"
-                                            value={offPeakEnd}
-                                            onChange={(e) => {
-                                                const b = e.target.value;
-                                                const a = offPeakStart || "04:00";
-                                                updateConfigField("opW", b ? [{ a, b }] : []);
-                                            }}
-                                        />
-                                    </div>
+                                    <Switch
+                                        checked={config.enforceHardMin !== false}
+                                        onChange={(checked) => updateConfigField("enforceHardMin", checked)}
+                                        checkedChildren="Hard"
+                                        unCheckedChildren="Soft"
+                                    />
                                 </div>
                             </div>
                         </div>
                     </div>
                 </Card>
 
-                {/* Sub-card 1B: 24-Hour Staffing Requirements */}
+                {/* Sub-card 1B: Optional Staffing Setup Mode (Peak / Off-Peak OR Hourly Min / Max) */}
                 <Card
                     className="rounded-2xl border-slate-200/90 shadow-sm"
                     bodyStyle={{ padding: "24px" }}
@@ -1475,148 +1620,302 @@ export default function RosterPage() {
                         <div className="flex flex-col justify-between gap-4 py-1 lg:flex-row lg:items-center">
                             <div>
                                 <div className="text-base font-semibold text-slate-800">
-                                    Hourly On-Site Staffing Targets (00:00 – 24:00)
+                                    On-Site Staffing Targets
                                 </div>
                                 <div className="text-xs font-normal text-slate-500">
-                                    Define the minimum required and maximum allowed staff on site for each hour of the day
+                                    Choose either Peak / Off-Peak windows or detailed hourly Min / Max staff targets
                                 </div>
                             </div>
-                            <div className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2">
-                                <span className="text-xs font-medium text-slate-600">Quick Bulk Set:</span>
-                                <div className="flex items-center gap-1.5">
-                                    <span className="text-xs text-slate-500">Min</span>
-                                    <InputNumber
-                                        size="small"
-                                        min={0}
-                                        value={bulkMinH}
-                                        onChange={(v) => setBulkMinH(Number(v) || 0)}
-                                        style={{ width: 64 }}
-                                    />
-                                </div>
-                                <div className="flex items-center gap-1.5">
-                                    <span className="text-xs text-slate-500">Max</span>
-                                    <InputNumber
-                                        size="small"
-                                        min={0}
-                                        value={bulkMaxH}
-                                        onChange={(v) => setBulkMaxH(Number(v) || 0)}
-                                        style={{ width: 64 }}
-                                    />
-                                </div>
-                                <Button
-                                    size="small"
-                                    type="primary"
-                                    onClick={handleApplyBulkMinMax}
-                                    style={{ background: "#2f5bea" }}
-                                >
-                                    Apply to All 24h
-                                </Button>
-                            </div>
-                        </div>
-                    }
-                >
-                    <div className="mb-5 flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
-                        <div className="overflow-x-auto pb-1 sm:pb-0">
                             <Segmented
-                                value={activeHourBlock}
-                                onChange={(v) => setActiveHourBlock(String(v))}
+                                size="middle"
+                                value={staffingMode}
+                                onChange={(v) => updateConfigField("staffingMode", v as "hourly" | "peak_offpeak")}
                                 options={[
-                                    { label: "All 24 Hours", value: "all" },
-                                    { label: "Night (00–06)", value: "0" },
-                                    { label: "Morning (06–12)", value: "1" },
-                                    { label: "Afternoon (12–18)", value: "2" },
-                                    { label: "Evening (18–24)", value: "3" },
+                                    { label: "Hourly Min / Max Setup", value: "hourly" },
+                                    { label: "Peak & Off-Peak Setup", value: "peak_offpeak" },
                                 ]}
                             />
                         </div>
-                        <div className="text-xs text-slate-500">
-                            Daily Minimum Staffing Sum:{" "}
-                            <strong className="text-slate-800">
-                                {config.minH.reduce((a, b) => a + b, 0)} person-hours / day
-                            </strong>
+                    }
+                >
+                    {/* Peak & Off-Peak Hours Side-by-Side */}
+                    <div className="mb-5 grid grid-cols-1 gap-4 rounded-2xl border border-slate-200/80 bg-slate-50/60 p-4 md:grid-cols-2">
+                        <div className="rounded-xl border border-amber-200/80 bg-white p-4">
+                            <div className="mb-3 flex items-center justify-between">
+                                <span className="text-xs font-bold uppercase tracking-wider text-amber-700">
+                                    Peak Hours
+                                </span>
+                                {staffingMode === "hourly" && (
+                                    <Tag color="default" className="m-0 text-[11px]">Optional in Hourly Mode</Tag>
+                                )}
+                            </div>
+                            <div className={`grid gap-3 ${staffingMode === "peak_offpeak" ? "grid-cols-3" : "grid-cols-2"}`}>
+                                <div>
+                                    <label className="mb-1 block text-xs font-medium text-slate-600">Peak Start</label>
+                                    <Input
+                                        size="middle"
+                                        type="time"
+                                        value={peakStart}
+                                        onChange={(e) => {
+                                            const a = e.target.value;
+                                            const b = peakEnd || "14:00";
+                                            updateConfigField("pkW", a ? [{ a, b }] : []);
+                                        }}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="mb-1 block text-xs font-medium text-slate-600">Peak End</label>
+                                    <Input
+                                        size="middle"
+                                        type="time"
+                                        value={peakEnd}
+                                        onChange={(e) => {
+                                            const b = e.target.value;
+                                            const a = peakStart || "11:00";
+                                            updateConfigField("pkW", b ? [{ a, b }] : []);
+                                        }}
+                                    />
+                                </div>
+                                {staffingMode === "peak_offpeak" && (
+                                    <div>
+                                        <label className="mb-1 block text-xs font-medium text-slate-600">Peak Min Staff</label>
+                                        <InputNumber
+                                            size="middle"
+                                            min={0}
+                                            value={config.peakMinStaff ?? 3}
+                                            onChange={(v) => updateConfigField("peakMinStaff", Number(v) || 0)}
+                                            className="w-full"
+                                        />
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="rounded-xl border border-sky-200/80 bg-white p-4">
+                            <div className="mb-3 flex items-center justify-between">
+                                <span className="text-xs font-bold uppercase tracking-wider text-sky-700">
+                                    Off-Peak Hours
+                                </span>
+                                {staffingMode === "hourly" && (
+                                    <Tag color="default" className="m-0 text-[11px]">Optional in Hourly Mode</Tag>
+                                )}
+                            </div>
+                            <div className={`grid gap-3 ${staffingMode === "peak_offpeak" ? "grid-cols-3" : "grid-cols-2"}`}>
+                                <div>
+                                    <label className="mb-1 block text-xs font-medium text-slate-600">Off-Peak Start</label>
+                                    <Input
+                                        size="middle"
+                                        type="time"
+                                        value={offPeakStart}
+                                        onChange={(e) => {
+                                            const a = e.target.value;
+                                            const b = offPeakEnd || "08:00";
+                                            updateConfigField("opW", a ? [{ a, b }] : []);
+                                        }}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="mb-1 block text-xs font-medium text-slate-600">Off-Peak End</label>
+                                    <Input
+                                        size="middle"
+                                        type="time"
+                                        value={offPeakEnd}
+                                        onChange={(e) => {
+                                            const b = e.target.value;
+                                            const a = offPeakStart || "04:00";
+                                            updateConfigField("opW", b ? [{ a, b }] : []);
+                                        }}
+                                    />
+                                </div>
+                                {staffingMode === "peak_offpeak" && (
+                                    <div>
+                                        <label className="mb-1 block text-xs font-medium text-slate-600">Off-Peak Min Staff</label>
+                                        <InputNumber
+                                            size="middle"
+                                            min={0}
+                                            value={config.offPeakMinStaff ?? 1}
+                                            onChange={(v) => updateConfigField("offPeakMinStaff", Number(v) || 0)}
+                                            className="w-full"
+                                        />
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
 
-                    <div className="space-y-5">
-                        {HOUR_BLOCKS.map((block, bIdx) => {
-                            if (activeHourBlock !== "all" && activeHourBlock !== String(bIdx)) return null;
-                            return (
-                                <div
-                                    key={block.label}
-                                    className="rounded-2xl border border-slate-200/80 bg-slate-50/40 p-4"
-                                >
-                                    <div className="mb-3 flex items-center justify-between">
-                                        <Tag
-                                            color={block.badgeColor}
-                                            className="rounded-md px-2.5 py-0.5 text-xs font-semibold"
-                                        >
-                                            {block.label}
-                                        </Tag>
-                                        <span className="text-xs text-slate-400">
-                                            Subtotal:{" "}
-                                            {config.minH
-                                                .slice(block.start, block.end)
-                                                .reduce((a, b) => a + b, 0)}{" "}
-                                            min hrs
-                                        </span>
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-                                        {Array.from({ length: block.end - block.start }, (_, idx) => {
-                                            const h = block.start + idx;
-                                            const minVal = config.minH[h] ?? 1;
-                                            const maxVal = config.maxH[h] ?? Math.max(1, team.length);
-                                            return (
-                                                <div
-                                                    key={h}
-                                                    className="rounded-xl border border-slate-200 bg-white p-3 shadow-xs transition hover:border-blue-300"
-                                                >
-                                                    <div className="mb-2 flex items-center justify-between">
-                                                        <span className="text-xs font-bold text-slate-800">
-                                                            {String(h).padStart(2, "0")}:00 –{" "}
-                                                            {String((h + 1) % 24).padStart(2, "0")}:00
-                                                        </span>
-                                                    </div>
-                                                    <div className="grid grid-cols-2 gap-2">
-                                                        <div>
-                                                            <span className="mb-1 block text-[11px] font-medium text-slate-500">
-                                                                Min
-                                                            </span>
-                                                            <InputNumber
-                                                                size="middle"
-                                                                min={0}
-                                                                value={minVal}
-                                                                onChange={(v) =>
-                                                                    updateHourMin(h, Number(v) || 0)
-                                                                }
-                                                                className="w-full"
-                                                            />
-                                                        </div>
-                                                        <div>
-                                                            <span className="mb-1 block text-[11px] font-medium text-slate-500">
-                                                                Max
-                                                            </span>
-                                                            <InputNumber
-                                                                size="middle"
-                                                                min={0}
-                                                                value={maxVal}
-                                                                onChange={(v) =>
-                                                                    updateHourMax(h, Number(v) || 0)
-                                                                }
-                                                                className="w-full"
-                                                            />
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
+                    {staffingMode === "peak_offpeak" ? (
+                        <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-slate-200 bg-white px-4 py-3">
+                            <div>
+                                <div className="text-sm font-semibold text-slate-800">Standard Hours Minimum Staff</div>
+                                <div className="text-xs text-slate-500">
+                                    Applied to all hours outside your Peak and Off-Peak windows above (Hourly Min/Max grid is optional and hidden in this mode).
                                 </div>
-                            );
-                        })}
-                    </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <span className="text-xs font-medium text-slate-600">Standard Min Staff:</span>
+                                <InputNumber
+                                    size="middle"
+                                    min={0}
+                                    value={config.baseMinStaff ?? 2}
+                                    onChange={(v) => updateConfigField("baseMinStaff", Number(v) || 0)}
+                                    style={{ width: 90 }}
+                                />
+                            </div>
+                        </div>
+                    ) : (
+                        <>
+                            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                                <div className="overflow-x-auto pb-1 sm:pb-0">
+                                    <Segmented
+                                        value={activeHourBlock}
+                                        onChange={(v) => setActiveHourBlock(String(v))}
+                                        options={[
+                                            { label: "All 24 Hours", value: "all" },
+                                            { label: "Night (00–06)", value: "0" },
+                                            { label: "Morning (06–12)", value: "1" },
+                                            { label: "Afternoon (12–18)", value: "2" },
+                                            { label: "Evening (18–24)", value: "3" },
+                                        ]}
+                                    />
+                                </div>
+                                <div className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2">
+                                    <span className="text-xs font-medium text-slate-600">Quick Bulk Set:</span>
+                                    <div className="flex items-center gap-1.5">
+                                        <span className="text-xs text-slate-500">Min</span>
+                                        <InputNumber
+                                            size="small"
+                                            min={0}
+                                            value={bulkMinH}
+                                            onChange={(v) => setBulkMinH(Number(v) || 0)}
+                                            style={{ width: 64 }}
+                                        />
+                                    </div>
+                                    <div className="flex items-center gap-1.5">
+                                        <span className="text-xs text-slate-500">Max</span>
+                                        <InputNumber
+                                            size="small"
+                                            min={0}
+                                            value={bulkMaxH}
+                                            onChange={(v) => setBulkMaxH(Number(v) || 0)}
+                                            style={{ width: 64 }}
+                                        />
+                                    </div>
+                                    <Button
+                                        size="small"
+                                        type="primary"
+                                        onClick={handleApplyBulkMinMax}
+                                        style={{ background: "#2f5bea" }}
+                                    >
+                                        Apply to All 24h
+                                    </Button>
+                                </div>
+                            </div>
+
+                            <div className="mb-4 flex flex-wrap items-center gap-4 text-xs text-slate-500">
+                                <span>
+                                    Daily Minimum Sum:{" "}
+                                    <strong className="text-slate-800">
+                                        {config.minH.reduce((a, b) => a + b, 0)} person-hrs/day
+                                    </strong>
+                                </span>
+                                <span>
+                                    Daily Maximum Sum:{" "}
+                                    <strong className="text-slate-800">
+                                        {config.maxH.reduce((a, b) => a + b, 0)} person-hrs/day
+                                    </strong>
+                                </span>
+                                <span>
+                                    Daily Min–Max Spread:{" "}
+                                    <strong className="text-blue-700">
+                                        +{config.maxH.reduce((a, b) => a + b, 0) - config.minH.reduce((a, b) => a + b, 0)} person-hrs/day
+                                    </strong>
+                                </span>
+                            </div>
+
+                            <div className="space-y-5">
+                                {HOUR_BLOCKS.map((block, bIdx) => {
+                                    if (activeHourBlock !== "all" && activeHourBlock !== String(bIdx)) return null;
+                                    const blockMinSum = config.minH.slice(block.start, block.end).reduce((a, b) => a + b, 0);
+                                    const blockMaxSum = config.maxH.slice(block.start, block.end).reduce((a, b) => a + b, 0);
+                                    return (
+                                        <div
+                                            key={block.label}
+                                            className="rounded-2xl border border-slate-200/80 bg-slate-50/40 p-4"
+                                        >
+                                            <div className="mb-3 flex items-center justify-between">
+                                                <Tag
+                                                    color={block.badgeColor}
+                                                    className="rounded-md px-2.5 py-0.5 text-xs font-semibold"
+                                                >
+                                                    {block.label}
+                                                </Tag>
+                                                <span className="text-xs text-slate-500">
+                                                    Subtotal: <strong>{blockMinSum}</strong> min / <strong>{blockMaxSum}</strong> max hrs (Δ {blockMaxSum - blockMinSum})
+                                                </span>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+                                                {Array.from({ length: block.end - block.start }, (_, idx) => {
+                                                    const h = block.start + idx;
+                                                    const minVal = config.minH[h] ?? 1;
+                                                    const maxVal = config.maxH[h] ?? Math.max(1, team.length);
+                                                    const spread = Math.max(0, maxVal - minVal);
+                                                    return (
+                                                        <div
+                                                            key={h}
+                                                            className="rounded-xl border border-slate-200 bg-white p-3 shadow-xs transition hover:border-blue-300"
+                                                        >
+                                                            <div className="mb-2 flex items-center justify-between">
+                                                                <span className="text-xs font-bold text-slate-800">
+                                                                    {String(h).padStart(2, "0")}:00 –{" "}
+                                                                    {String((h + 1) % 24).padStart(2, "0")}:00
+                                                                </span>
+                                                                <span className="text-[10px] font-semibold text-slate-400">
+                                                                    Δ {spread}
+                                                                </span>
+                                                            </div>
+                                                            <div className="grid grid-cols-2 gap-2">
+                                                                <div>
+                                                                    <span className="mb-1 block text-[11px] font-medium text-slate-500">
+                                                                        Min
+                                                                    </span>
+                                                                    <InputNumber
+                                                                        size="middle"
+                                                                        min={0}
+                                                                        value={minVal}
+                                                                        onChange={(v) =>
+                                                                            updateHourMin(h, Number(v) || 0)
+                                                                        }
+                                                                        className="w-full"
+                                                                    />
+                                                                </div>
+                                                                <div>
+                                                                    <span className="mb-1 block text-[11px] font-medium text-slate-500">
+                                                                        Max
+                                                                    </span>
+                                                                    <InputNumber
+                                                                        size="middle"
+                                                                        min={0}
+                                                                        value={maxVal}
+                                                                        onChange={(v) =>
+                                                                            updateHourMax(h, Number(v) || 0)
+                                                                        }
+                                                                        className="w-full"
+                                                                    />
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </>
+                    )}
                 </Card>
 
-                {/* Sub-card 1C: Live Capacity & Feasibility Check */}
+                {/* Sub-card 1C: Live Capacity & Feasibility Check (Both Min & Max Differences) */}
                 <Card
                     className="mb-8 rounded-2xl border-slate-200/90 shadow-sm"
                     bodyStyle={{ padding: "24px" }}
@@ -1627,18 +1926,31 @@ export default function RosterPage() {
                                     Live Capacity & Feasibility Check
                                 </div>
                                 <div className="text-xs font-normal text-slate-500">
-                                    Compares minimum required work hours against available team work hours (after full-day absences)
+                                    Compares available team work hours against both minimum required and maximum allowed staffing limits
                                 </div>
                             </div>
-                            <Tag
-                                color={capacityCalc.totalBalance >= 0 ? "success" : "error"}
-                                className="m-0 rounded-full px-3.5 py-1 text-sm font-semibold"
-                            >
-                                Net Balance:{" "}
-                                {capacityCalc.totalBalance >= 0
-                                    ? `+${capacityCalc.totalBalance}h Surplus`
-                                    : `${capacityCalc.totalBalance}h Shortfall`}
-                            </Tag>
+                            <Space wrap>
+                                <Tag
+                                    color={capacityCalc.totalBalance >= 0 ? "success" : "error"}
+                                    className="m-0 rounded-full px-3.5 py-1 text-xs font-semibold sm:text-sm"
+                                >
+                                    Diff vs Min:{" "}
+                                    {capacityCalc.totalBalance >= 0
+                                        ? `+${capacityCalc.totalBalance}h Surplus`
+                                        : `${capacityCalc.totalBalance}h Shortfall`}
+                                </Tag>
+                                {staffingMode !== "peak_offpeak" && (
+                                    <Tag
+                                        color={capacityCalc.totalBalanceVsMax <= 0 ? "blue" : "error"}
+                                        className="m-0 rounded-full px-3.5 py-1 text-xs font-semibold sm:text-sm"
+                                    >
+                                        Diff vs Max:{" "}
+                                        {capacityCalc.totalBalanceVsMax <= 0
+                                            ? `${capacityCalc.totalBalanceVsMax}h (${Math.abs(capacityCalc.totalBalanceVsMax)}h below max)`
+                                            : `+${capacityCalc.totalBalanceVsMax}h Over Max`}
+                                    </Tag>
+                                )}
+                            </Space>
                         </div>
                     }
                 >
@@ -1647,10 +1959,16 @@ export default function RosterPage() {
                             <thead>
                                 <tr className="border-b border-slate-200 bg-slate-50 text-slate-600">
                                     <th className="px-4 py-3 font-semibold">Period</th>
-                                    <th className="px-4 py-3 font-semibold">Min Required Hours</th>
-                                    <th className="px-4 py-3 font-semibold">Available Team Hours</th>
-                                    <th className="px-4 py-3 font-semibold">Net Balance</th>
-                                    <th className="px-4 py-3 font-semibold">Utilization</th>
+                                    <th className="px-4 py-3 font-semibold">Min Required</th>
+                                    {staffingMode !== "peak_offpeak" && (
+                                        <th className="px-4 py-3 font-semibold">Max Allowed</th>
+                                    )}
+                                    <th className="px-4 py-3 font-semibold">Available Team Hrs</th>
+                                    <th className="px-4 py-3 font-semibold">Diff vs Min</th>
+                                    {staffingMode !== "peak_offpeak" && (
+                                        <th className="px-4 py-3 font-semibold">Diff vs Max</th>
+                                    )}
+                                    <th className="px-4 py-3 font-semibold">Min Utilization</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -1658,7 +1976,10 @@ export default function RosterPage() {
                                     <tr key={r.week} className="border-b border-slate-100 hover:bg-slate-50/50">
                                         <td className="px-4 py-3 font-medium text-slate-800">Week {r.week}</td>
                                         <td className="px-4 py-3 text-slate-700">{r.requiredHours}h</td>
-                                        <td className="px-4 py-3 text-slate-700">{r.availableHours}h</td>
+                                        {staffingMode !== "peak_offpeak" && (
+                                            <td className="px-4 py-3 text-slate-700">{r.maxAllowedHours}h</td>
+                                        )}
+                                        <td className="px-4 py-3 font-medium text-slate-800">{r.availableHours}h</td>
                                         <td className="px-4 py-3 font-semibold">
                                             <span
                                                 className={
@@ -1668,7 +1989,18 @@ export default function RosterPage() {
                                                 {r.balance >= 0 ? `+${r.balance}h` : `${r.balance}h`}
                                             </span>
                                         </td>
-                                        <td className="w-56 px-4 py-3">
+                                        {staffingMode !== "peak_offpeak" && (
+                                            <td className="px-4 py-3 font-semibold">
+                                                <span
+                                                    className={
+                                                        r.balanceVsMax <= 0 ? "text-blue-600" : "text-red-600"
+                                                    }
+                                                >
+                                                    {r.balanceVsMax > 0 ? `+${r.balanceVsMax}h` : `${r.balanceVsMax}h`}
+                                                </span>
+                                            </td>
+                                        )}
+                                        <td className="w-52 px-4 py-3">
                                             <div className="flex items-center gap-3">
                                                 <Progress
                                                     percent={Math.min(100, r.utilizationPct)}
@@ -1719,34 +2051,14 @@ export default function RosterPage() {
 
     const renderTeamAndAvailabilitySection = () => (
         <div className="space-y-5 pb-4">
-            {/* Sub-view Switcher & Account Sync Toolbar */}
+            {/* Sub-view Switcher: Requests & Leave (per-roster) on left; Team Members, Teams, Import & Sync (one-time setup) on right */}
             <div className="flex flex-col justify-between gap-3 rounded-2xl border border-slate-200/90 bg-white p-3.5 shadow-xs lg:flex-row lg:items-center">
                 <div className="overflow-x-auto pb-1 lg:pb-0">
                     <Segmented
                         size="large"
-                        value={teamSectionTab}
+                        value={teamSectionTab === "requests" || teamSectionTab === "absences" ? teamSectionTab : ""}
                         onChange={(v) => setTeamSectionTab(String(v))}
                         options={[
-                            {
-                                label: (
-                                    <div className="flex items-center gap-2 px-2 py-0.5">
-                                        <TeamOutlined />
-                                        <span>Team Members</span>
-                                        <Badge count={team.length} color="#2f5bea" showZero />
-                                    </div>
-                                ),
-                                value: "members",
-                            },
-                            {
-                                label: (
-                                    <div className="flex items-center gap-2 px-2 py-0.5">
-                                        <ApartmentOutlined />
-                                        <span>Teams</span>
-                                        <Badge count={availableTeams.length} color="#7c3aed" showZero />
-                                    </div>
-                                ),
-                                value: "teams",
-                            },
                             {
                                 label: (
                                     <div className="flex items-center gap-2 px-2 py-0.5">
@@ -1772,6 +2084,24 @@ export default function RosterPage() {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                        type={teamSectionTab === "members" ? "primary" : "default"}
+                        icon={<TeamOutlined />}
+                        onClick={() => setTeamSectionTab("members")}
+                        className="rounded-xl"
+                        style={teamSectionTab === "members" ? { background: "#2f5bea" } : undefined}
+                    >
+                        Team Members ({team.length})
+                    </Button>
+                    <Button
+                        type={teamSectionTab === "teams" ? "primary" : "default"}
+                        icon={<ApartmentOutlined />}
+                        onClick={() => setTeamSectionTab("teams")}
+                        className="rounded-xl"
+                        style={teamSectionTab === "teams" ? { background: "#7c3aed", borderColor: "#7c3aed" } : undefined}
+                    >
+                        Teams ({availableTeams.length})
+                    </Button>
                     <Button
                         icon={<UsergroupAddOutlined />}
                         onClick={() => setImportUsersModalVisible(true)}
@@ -2594,37 +2924,29 @@ export default function RosterPage() {
                                     No Roster Generated Yet
                                 </div>
                                 <div className="text-xs text-slate-500">
-                                    Click &quot;Solve Roster&quot; for fast browser optimization or &quot;OR-Tools (CP-SAT)&quot; for exact server-side mathematical programming.
+                                    Click below to run the guided multi-stage AI Roster Optimizer (Quick Draft → Best-Fit Server Optimizer → Verification).
                                 </div>
                             </div>
                         }
                     >
-                        <Button
-                            type="primary"
-                            size="large"
-                            icon={<ThunderboltOutlined />}
-                            loading={solving}
-                            onClick={handleRunHeuristicSolver}
-                            style={{ background: "#2f5bea" }}
-                        >
-                            Quick Generate Roster
-                        </Button>
-                        <Button
-                            type="primary"
-                            size="large"
-                            icon={<RocketOutlined />}
-                            loading={solvingOrTools}
-                            onClick={handleRunLiveOrToolsSolver}
-                            style={{ background: "#0f766e", borderColor: "#0f766e" }}
-                        >
-                            Best-Fit Optimizer
-                        </Button>
-                        <Button
-                            size="large"
-                            onClick={() => setActiveMainTab("optimizer")}
-                        >
-                            Go to Step 3: Generate
-                        </Button>
+                        <Space wrap>
+                            <Button
+                                type="primary"
+                                size="large"
+                                icon={<RocketOutlined />}
+                                loading={solving || solvingOrTools}
+                                onClick={() => void handleUnifiedGenerateRoster()}
+                                style={{ background: "#2f5bea" }}
+                            >
+                                Generate AI-Optimized Roster
+                            </Button>
+                            <Button
+                                size="large"
+                                onClick={() => setActiveMainTab("optimizer")}
+                            >
+                                Go to Step 3: Generate
+                            </Button>
+                        </Space>
                     </Empty>
                 </Card>
             );
@@ -2786,6 +3108,15 @@ export default function RosterPage() {
                                 ),
                                 value: "diagnostics",
                             },
+                            {
+                                label: (
+                                    <div className="flex items-center gap-2 px-2 py-0.5">
+                                        <ThunderboltOutlined />
+                                        <span>AI What-If Simulator</span>
+                                    </div>
+                                ),
+                                value: "ai",
+                            },
                         ]}
                     />
                     </div>
@@ -2798,12 +3129,14 @@ export default function RosterPage() {
                         >
                             AI What-If Analysis
                         </Button>
-                        <Button
-                            icon={<SaveOutlined />}
-                            onClick={() => setSaveRecordModalOpen(true)}
-                        >
-                            Save Record
-                        </Button>
+                        <Tooltip title="Saves a permanent named snapshot of this generated schedule, KPIs, and hourly coverage to 'Saved Records' (top-right) so you can reload or compare it later.">
+                            <Button
+                                icon={<SaveOutlined />}
+                                onClick={() => setSaveRecordModalOpen(true)}
+                            >
+                                Save Record
+                            </Button>
+                        </Tooltip>
                         <Button
                             type="primary"
                             icon={<FileExcelOutlined />}
@@ -3295,351 +3628,278 @@ export default function RosterPage() {
                         </Card>
                     </div>
                 )}
+                {/* View 4: AI What-If Scenario Simulator (Now in Step 4 alongside results) */}
+                {(scheduleSubTab === "ai" || viewAllSections) && (
+                    <Card
+                        className="rounded-2xl border-slate-200/90 shadow-sm"
+                        bodyStyle={{ padding: "24px" }}
+                        title={
+                            <div className="flex flex-wrap items-center justify-between gap-2 py-1">
+                                <div className="flex items-center gap-3">
+                                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
+                                        <BulbOutlined className="text-lg" />
+                                    </div>
+                                    <div>
+                                        <div className="text-base font-semibold text-slate-800">
+                                            AI What-If Scenario Simulator
+                                        </div>
+                                        <div className="text-xs font-normal text-slate-500">
+                                            Tests practical adjustments (e.g., adding 1–2 staff or tweaking min/max limits) to see which change eliminates remaining conflicts
+                                        </div>
+                                    </div>
+                                </div>
+                                <Button
+                                    type="primary"
+                                    icon={<BulbOutlined />}
+                                    loading={analyzingAi}
+                                    disabled={!solvedState}
+                                    onClick={handleRunAiAnalysis}
+                                    style={{ background: "#2f5bea" }}
+                                >
+                                    Run AI What-If Simulation
+                                </Button>
+                            </div>
+                        }
+                    >
+                        <Alert
+                            type="info"
+                            showIcon
+                            className="mb-4 rounded-xl"
+                            message="What does this do?"
+                            description="If your generated schedule still has understaffed slots or unmet staff requests, the AI Simulator safely tests alternative scenarios (such as hiring 1 extra team member or relaxing hourly minimums by 1) without changing your current rules until you click Apply."
+                        />
+                        {!aiResult ? (
+                            <Empty
+                                description={
+                                    <span className="text-xs text-slate-500">
+                                        Click &quot;Run AI What-If Simulation&quot; above to compare practical improvement options for this schedule.
+                                    </span>
+                                }
+                            />
+                        ) : (
+                            <div className="space-y-4">
+                                <ul className="list-disc space-y-1.5 pl-5 text-xs sm:text-sm">
+                                    {aiResult.findings.map((f, i) => (
+                                        <li
+                                            key={i}
+                                            className={
+                                                f.type === "bad"
+                                                    ? "text-red-700"
+                                                    : f.type === "ok"
+                                                      ? "text-emerald-700"
+                                                      : "text-slate-700"
+                                            }
+                                            dangerouslySetInnerHTML={{ __html: f.html }}
+                                        />
+                                    ))}
+                                </ul>
+
+                                <div className="overflow-x-auto rounded-xl border border-slate-200">
+                                    <table className="w-full border-collapse text-left text-xs sm:text-sm">
+                                        <thead className="bg-slate-50 text-slate-600">
+                                            <tr>
+                                                <th className="px-3 py-2.5 font-semibold">Simulated Scenario</th>
+                                                <th className="px-3 py-2.5 font-semibold">Hard Violations</th>
+                                                <th className="px-3 py-2.5 font-semibold">Unmet Soft Requests</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {aiResult.candidates.map((c, idx) => (
+                                                <tr
+                                                    key={c.l}
+                                                    className={`border-t border-slate-100 ${
+                                                        idx === 0 ? "bg-emerald-50/60 font-semibold" : ""
+                                                    }`}
+                                                >
+                                                    <td className="px-3 py-2.5">
+                                                        {idx === 0 ? "★ Recommended: " : ""}
+                                                        {c.l}
+                                                    </td>
+                                                    <td
+                                                        className={`px-3 py-2.5 font-bold ${
+                                                            c.S.met.hard > 0 ? "text-red-600" : "text-emerald-600"
+                                                        }`}
+                                                    >
+                                                        {Math.round(c.S.met.hard * 100) / 100}
+                                                    </td>
+                                                    <td className="px-3 py-2.5">{c.S.met.unmet}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <div className="flex flex-col justify-between gap-3 rounded-xl border border-blue-100 bg-blue-50/50 p-3.5 sm:flex-row sm:items-center">
+                                    <div className="text-xs sm:text-sm">
+                                        {aiResult.recommended.l.startsWith("Base") ? (
+                                            <span className="font-medium text-emerald-700">
+                                                Your current roster is already the best balance across all tested scenarios.
+                                            </span>
+                                        ) : (
+                                            <span>
+                                                Recommended Improvement: <strong>{aiResult.recommended.l}</strong>
+                                            </span>
+                                        )}
+                                    </div>
+                                    <Button
+                                        type="primary"
+                                        icon={<ToolOutlined />}
+                                        onClick={handleApplyBestAiFix}
+                                        style={{ background: "#2f5bea" }}
+                                    >
+                                        Apply Best Fix & Re-solve
+                                    </Button>
+                                </div>
+                            </div>
+                        )}
+                    </Card>
+                )}
             </div>
         );
     };
 
-    const renderOptimizerAndOrToolsSection = () => (
-        <div className="space-y-6 pb-8">
-            {/* Step 3 Readiness & Two-Mode Engine Picker */}
-            <Card className="overflow-hidden rounded-2xl border-slate-200/90 shadow-sm" bodyStyle={{ padding: "24px" }}>
-                <div className="mb-5 flex flex-col justify-between gap-3 border-b border-slate-100 pb-4 sm:flex-row sm:items-center">
-                    <div>
-                        <div className="flex flex-wrap items-center gap-2">
-                            <Tag color="blue" className="m-0 rounded-full px-3 py-0.5 font-semibold">
-                                Step 3 of 4
-                            </Tag>
-                            <span className="text-lg font-bold text-slate-900">
-                                Generate & Optimize Your Roster
-                            </span>
-                        </div>
-                        <p className="mt-1 mb-0 text-xs text-slate-500 sm:text-sm">
-                            Scope: <strong>{selectedTeam === "all" ? "All Teams" : `${selectedTeam} Team`}</strong> ·{" "}
-                            <strong>{activeTeam.length}</strong> active member{activeTeam.length === 1 ? "" : "s"} ·{" "}
-                            <strong>{config.weeks} week{config.weeks > 1 ? "s" : ""}</strong> starting {config.ws} ·{" "}
-                            Capacity:{" "}
-                            <span className={capacityCalc.totalBalance >= 0 ? "font-semibold text-emerald-700" : "font-semibold text-red-600"}>
-                                {capacityCalc.totalBalance >= 0 ? `+${capacityCalc.totalBalance}h surplus` : `${capacityCalc.totalBalance}h shortfall`}
-                            </span>
-                        </p>
-                    </div>
-                </div>
+    const renderOptimizerAndOrToolsSection = () => {
+        const isGenerating = solving || solvingOrTools;
+        const stages = [
+            {
+                num: 1,
+                title: "Stage 1: Quick Draft (AI Heuristic)",
+                desc: "Instantly builds a valid baseline schedule honoring shift rules, rest hours, and granted requests.",
+            },
+            {
+                num: 2,
+                title: "Stage 2: Best-Fit Mathematical Optimizer (OR-Tools CP-SAT)",
+                desc: "Refines the draft on the server with hard 15-minute minimum staffing enforcement and fairness optimization.",
+            },
+            {
+                num: 3,
+                title: "Stage 3: Verification & Results",
+                desc: "Validates coverage scores, diagnostics, and opens your interactive schedule in Step 4.",
+            },
+        ];
 
-                {activeTeam.length === 0 && (
-                    <Alert
-                        type="warning"
-                        showIcon
-                        className="mb-5 rounded-xl"
-                        message="No active team members in the selected scope. Go back to Step 2 to add or activate team members before generating."
-                    />
-                )}
-
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    <div className="flex flex-col justify-between gap-4 rounded-2xl border border-blue-200/80 bg-gradient-to-br from-blue-50/70 via-white to-white p-5">
+        return (
+            <div className="space-y-6 pb-8">
+                <Card className="overflow-hidden rounded-2xl border-slate-200/90 shadow-sm" bodyStyle={{ padding: "28px" }}>
+                    <div className="mb-6 flex flex-col justify-between gap-3 border-b border-slate-100 pb-4 sm:flex-row sm:items-center">
                         <div>
-                            <div className="flex items-center justify-between gap-2">
-                                <span className="text-base font-bold text-slate-900">Quick Generate</span>
-                                <Tag color="blue" className="m-0 rounded-full text-xs font-medium">Instant</Tag>
-                            </div>
-                            <p className="mt-1.5 mb-0 text-xs leading-relaxed text-slate-600 sm:text-sm">
-                                Builds a complete shift schedule in milliseconds right in your browser. Ideal for quick drafts and testing rules.
-                            </p>
-                        </div>
-                        <Button
-                            type="primary"
-                            size="large"
-                            block
-                            icon={<ThunderboltOutlined />}
-                            loading={solving}
-                            onClick={handleRunHeuristicSolver}
-                            className="rounded-xl font-semibold"
-                            style={{ background: "#2f5bea" }}
-                        >
-                            Quick Generate Roster
-                        </Button>
-                    </div>
-
-                    <div className="flex flex-col justify-between gap-4 rounded-2xl border border-teal-200/80 bg-gradient-to-br from-teal-50/70 via-white to-white p-5">
-                        <div>
-                            <div className="flex items-center justify-between gap-2">
-                                <span className="text-base font-bold text-slate-900">Best-Fit Server Optimizer</span>
-                                <Tag color="cyan" className="m-0 rounded-full text-xs font-medium">OR-Tools CP-SAT</Tag>
-                            </div>
-                            <p className="mt-1.5 mb-0 text-xs leading-relaxed text-slate-600 sm:text-sm">
-                                Runs exact mathematical optimization on the server to minimize conflicts and maximize employee request fairness.
-                            </p>
-                        </div>
-                        <Button
-                            type="primary"
-                            size="large"
-                            block
-                            icon={<RocketOutlined />}
-                            loading={solvingOrTools}
-                            onClick={handleRunLiveOrToolsSolver}
-                            className="rounded-xl font-semibold"
-                            style={{ background: "#0f766e", borderColor: "#0f766e" }}
-                        >
-                            Run Best-Fit Optimizer
-                        </Button>
-                    </div>
-                </div>
-            </Card>
-
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
-            {/* Left Column: Optimizer Settings & Optional Developer Script */}
-            <div className="lg:col-span-7">
-                <Card
-                    className="h-full rounded-2xl border-slate-200/90 shadow-sm"
-                    bodyStyle={{ padding: "24px" }}
-                    title={
-                        <div className="flex flex-wrap items-center justify-between gap-2 py-1">
-                            <div className="flex items-center gap-3">
-                                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-teal-50 text-teal-700">
-                                    <RocketOutlined className="text-lg" />
-                                </div>
-                                <div>
-                                    <div className="text-base font-semibold text-slate-800">
-                                        Optimizer Settings (OR-Tools CP-SAT)
-                                    </div>
-                                    <div className="text-xs font-normal text-slate-500">
-                                        Fine-tune server optimization time when using Best-Fit Optimizer
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    }
-                >
-                    <div className="mb-5 rounded-2xl border border-teal-200/70 bg-teal-50/40 p-4">
-                        <div className="flex flex-wrap items-center justify-between gap-4">
-                            <div className="flex flex-wrap items-center gap-4">
-                                <div>
-                                    <label className="mb-1 block text-xs font-medium text-slate-600">
-                                        Server Time Limit (seconds)
-                                    </label>
-                                    <InputNumber
-                                        size="middle"
-                                        min={3}
-                                        max={120}
-                                        value={orToolsTimeLimit}
-                                        onChange={(v) => setOrToolsTimeLimit(Number(v) || 15)}
-                                        addonAfter="sec"
-                                        style={{ width: 120 }}
-                                    />
-                                </div>
-                                <div className="pt-4">
-                                    <Checkbox
-                                        checked={orToolsWarmStart}
-                                        onChange={(e) => setOrToolsWarmStart(e.target.checked)}
-                                    >
-                                        <span className="text-sm font-medium text-slate-700">
-                                            Warm-start with quick draft
-                                        </span>
-                                    </Checkbox>
-                                </div>
-                            </div>
-
-                            <Button
-                                type="primary"
-                                size="large"
-                                icon={<RocketOutlined />}
-                                loading={solvingOrTools}
-                                onClick={handleRunLiveOrToolsSolver}
-                                className="rounded-xl"
-                                style={{ background: "#0f766e", borderColor: "#0f766e" }}
-                            >
-                                Run Best-Fit Optimizer
-                            </Button>
-                        </div>
-                    </div>
-
-                    <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-                        <div>
-                            <div className="text-xs font-semibold text-slate-700">Advanced: Developer Python Script</div>
-                            <div className="text-xs text-slate-500">Optional CP-SAT formulation export for technical review</div>
-                        </div>
-                        <Button
-                            size="small"
-                            icon={<CodeOutlined />}
-                            onClick={() => setShowAdvancedScript((v) => !v)}
-                        >
-                            {showAdvancedScript ? "Hide Script" : "Show Advanced"}
-                        </Button>
-                    </div>
-
-                    {showAdvancedScript && (
-                        <div className="mt-4">
-                    <div className="mb-3 flex flex-wrap items-center gap-2.5">
-                        <Button icon={<CodeOutlined />} onClick={handleGenerateOrToolsScript}>
-                            Generate Standalone Python Script
-                        </Button>
-                        <Button
-                            icon={<CopyOutlined />}
-                            disabled={!pythonScript}
-                            onClick={() => {
-                                navigator.clipboard.writeText(pythonScript);
-                                message.success("OR-Tools Python script copied to clipboard!");
-                            }}
-                        >
-                            Copy Script
-                        </Button>
-                        <Button
-                            icon={<DownloadOutlined />}
-                            disabled={!pythonScript}
-                            onClick={() => {
-                                const blob = new Blob([pythonScript], { type: "text/x-python" });
-                                const url = URL.createObjectURL(blob);
-                                const a = document.createElement("a");
-                                a.href = url;
-                                a.download = `roster_ortools_${config.ws}.py`;
-                                a.click();
-                                URL.revokeObjectURL(url);
-                            }}
-                        >
-                            Download .py
-                        </Button>
-                    </div>
-
-                    {pythonScript ? (
-                        <textarea
-                            readOnly
-                            value={pythonScript}
-                            rows={14}
-                            className="w-full rounded-xl border border-slate-800 bg-slate-950 p-4 font-mono text-xs leading-relaxed text-emerald-300"
-                        />
-                    ) : (
-                        <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center text-xs text-slate-500">
-                            Click &quot;Generate Standalone Python Script&quot; to inspect the CP-SAT mathematical formulation.
-                        </div>
-                    )}
-                        </div>
-                    )}
-                </Card>
-            </div>
-
-            {/* Right Column: AI What-If Scenario Simulator */}
-            <div className="lg:col-span-5">
-                <Card
-                    className="h-full rounded-2xl border-slate-200/90 shadow-sm"
-                    bodyStyle={{ padding: "24px" }}
-                    title={
-                        <div className="flex flex-wrap items-center justify-between gap-2 py-1">
-                            <div className="flex items-center gap-3">
-                                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
-                                    <BulbOutlined className="text-lg" />
-                                </div>
-                                <div>
-                                    <div className="text-base font-semibold text-slate-800">
-                                        AI What-If Scenario Simulator
-                                    </div>
-                                    <div className="text-xs font-normal text-slate-500">
-                                        Tests candidate rule & headcount adjustments against the solver
-                                    </div>
-                                </div>
-                            </div>
-                            <Button
-                                type="primary"
-                                icon={<BulbOutlined />}
-                                loading={analyzingAi}
-                                disabled={!solvedState}
-                                onClick={handleRunAiAnalysis}
-                                style={{ background: "#2f5bea" }}
-                            >
-                                Run AI Simulator
-                            </Button>
-                        </div>
-                    }
-                >
-                    {!aiResult ? (
-                        <Empty
-                            description={
-                                <span className="text-xs text-slate-500">
-                                    {solvedState
-                                        ? "Click 'Run AI Simulator' above to benchmark candidate fixes and see how to eliminate violations."
-                                        : "Solve a roster first, then run the AI What-If Simulator."}
+                            <div className="flex flex-wrap items-center gap-2">
+                                <Tag color="blue" className="m-0 rounded-full px-3 py-0.5 font-semibold">
+                                    Step 3 of 4
+                                </Tag>
+                                <span className="text-lg font-bold text-slate-900">
+                                    AI Roster Generator & Best-Fit Optimizer
                                 </span>
-                            }
-                        />
-                    ) : (
-                        <div className="space-y-4">
-                            <ul className="list-disc space-y-1.5 pl-5 text-xs sm:text-sm">
-                                {aiResult.findings.map((f, i) => (
-                                    <li
-                                        key={i}
-                                        className={
-                                            f.type === "bad"
-                                                ? "text-red-700"
-                                                : f.type === "ok"
-                                                  ? "text-emerald-700"
-                                                  : "text-slate-700"
-                                        }
-                                        dangerouslySetInnerHTML={{ __html: f.html }}
-                                    />
-                                ))}
-                            </ul>
-
-                            <div className="overflow-x-auto rounded-xl border border-slate-200">
-                                <table className="w-full border-collapse text-left text-xs sm:text-sm">
-                                    <thead className="bg-slate-50 text-slate-600">
-                                        <tr>
-                                            <th className="px-3 py-2.5 font-semibold">Scenario</th>
-                                            <th className="px-3 py-2.5 font-semibold">Hard Viol.</th>
-                                            <th className="px-3 py-2.5 font-semibold">Unmet Req.</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {aiResult.candidates.map((c, idx) => (
-                                            <tr
-                                                key={c.l}
-                                                className={`border-t border-slate-100 ${
-                                                    idx === 0 ? "bg-emerald-50/60 font-semibold" : ""
-                                                }`}
-                                            >
-                                                <td className="px-3 py-2.5">
-                                                    {idx === 0 ? "★ " : ""}
-                                                    {c.l}
-                                                </td>
-                                                <td
-                                                    className={`px-3 py-2.5 font-bold ${
-                                                        c.S.met.hard > 0 ? "text-red-600" : "text-emerald-600"
-                                                    }`}
-                                                >
-                                                    {Math.round(c.S.met.hard * 100) / 100}
-                                                </td>
-                                                <td className="px-3 py-2.5">{c.S.met.unmet}</td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
                             </div>
-
-                            <div className="flex flex-col justify-between gap-3 rounded-xl border border-blue-100 bg-blue-50/50 p-3.5 sm:flex-row sm:items-center">
-                                <div className="text-xs sm:text-sm">
-                                    {aiResult.recommended.l.startsWith("Base") ? (
-                                        <span className="font-medium text-emerald-700">
-                                            Baseline is already optimal.
-                                        </span>
-                                    ) : (
-                                        <span>
-                                            Best Fix: <strong>{aiResult.recommended.l}</strong>
-                                        </span>
-                                    )}
-                                </div>
-                                <Button
-                                    type="primary"
-                                    icon={<ToolOutlined />}
-                                    onClick={handleApplyBestAiFix}
-                                    style={{ background: "#2f5bea" }}
-                                >
-                                    Apply Best Fix & Re-solve
-                                </Button>
-                            </div>
+                            <p className="mt-1 mb-0 text-xs text-slate-500 sm:text-sm">
+                                Scope: <strong>{selectedTeam === "all" ? "All Teams" : `${selectedTeam} Team`}</strong> ·{" "}
+                                <strong>{activeTeam.length}</strong> active member{activeTeam.length === 1 ? "" : "s"} ·{" "}
+                                <strong>{config.weeks} week{config.weeks > 1 ? "s" : ""}</strong> starting {config.ws} ·{" "}
+                                Capacity vs Min:{" "}
+                                <span className={capacityCalc.totalBalance >= 0 ? "font-semibold text-emerald-700" : "font-semibold text-red-600"}>
+                                    {capacityCalc.totalBalance >= 0 ? `+${capacityCalc.totalBalance}h surplus` : `${capacityCalc.totalBalance}h shortfall`}
+                                </span>
+                            </p>
                         </div>
+                        <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5">
+                            <span className="text-xs font-medium text-slate-600">Max Optimize Time:</span>
+                            <InputNumber
+                                size="small"
+                                min={5}
+                                max={120}
+                                value={orToolsTimeLimit}
+                                onChange={(v) => setOrToolsTimeLimit(Number(v) || 15)}
+                                addonAfter="s"
+                                style={{ width: 92 }}
+                                disabled={isGenerating}
+                            />
+                        </div>
+                    </div>
+
+                    {activeTeam.length === 0 && (
+                        <Alert
+                            type="warning"
+                            showIcon
+                            className="mb-5 rounded-xl"
+                            message="No active team members in the selected scope. Go back to Step 2 to add or activate team members before generating."
+                        />
                     )}
+
+                    {/* 3-Stage Visual Pipeline */}
+                    <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">
+                        {stages.map((st) => {
+                            const isDone = generationStage > st.num || (Boolean(solvedState) && generationStage === 0);
+                            const isActive = generationStage === st.num;
+                            return (
+                                <div
+                                    key={st.num}
+                                    className={`rounded-2xl border p-4 transition-all ${
+                                        isActive
+                                            ? "border-blue-500 bg-blue-50/70 ring-2 ring-blue-200"
+                                            : isDone
+                                              ? "border-emerald-200 bg-emerald-50/40"
+                                              : "border-slate-200 bg-slate-50/50"
+                                    }`}
+                                >
+                                    <div className="mb-2 flex items-center justify-between gap-2">
+                                        <span
+                                            className={`inline-flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${
+                                                isActive
+                                                    ? "bg-blue-600 text-white"
+                                                    : isDone
+                                                      ? "bg-emerald-600 text-white"
+                                                      : "bg-slate-200 text-slate-600"
+                                            }`}
+                                        >
+                                            {isActive ? <SyncOutlined spin /> : isDone ? <CheckCircleOutlined /> : st.num}
+                                        </span>
+                                        <Tag
+                                            color={isActive ? "processing" : isDone ? "success" : "default"}
+                                            className="m-0 rounded-full text-[11px]"
+                                        >
+                                            {isActive ? "Running..." : isDone ? "Ready" : `Stage ${st.num}`}
+                                        </Tag>
+                                    </div>
+                                    <div className="text-sm font-bold text-slate-900">{st.title}</div>
+                                    <p className="mt-1 mb-0 text-xs leading-relaxed text-slate-600">{st.desc}</p>
+                                </div>
+                            );
+                        })}
+                    </div>
+
+                    {generationStageDetail && (
+                        <Alert
+                            type="info"
+                            showIcon
+                            icon={<SyncOutlined spin />}
+                            message={generationStageDetail}
+                            className="mb-5 rounded-xl"
+                        />
+                    )}
+
+                    <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-blue-100 bg-gradient-to-r from-blue-50/60 via-white to-teal-50/60 p-6 text-center">
+                        <Button
+                            type="primary"
+                            size="large"
+                            icon={<RocketOutlined />}
+                            loading={isGenerating}
+                            disabled={activeTeam.length === 0}
+                            onClick={() => void handleUnifiedGenerateRoster()}
+                            className="h-12 rounded-xl px-10 text-base font-bold shadow-md"
+                            style={{ background: "linear-gradient(135deg, #2f5bea 0%, #0f766e 100%)", border: "none" }}
+                        >
+                            {isGenerating
+                                ? `Running Stage ${generationStage} of 3...`
+                                : "Generate AI-Optimized Roster"}
+                        </Button>
+                        <div className="text-xs text-slate-500">
+                            Automatically runs Stage 1 (AI Quick Draft) → Stage 2 (Best-Fit OR-Tools CP-SAT) → Stage 3 (Results & AI What-If Simulator in Step 4).
+                        </div>
+                    </div>
                 </Card>
             </div>
-            </div>
-        </div>
-    );
+        );
+    };
 
     if (loadingWorkspace && !hydratedFromBackendRef.current) {
         return (
@@ -3805,7 +4065,10 @@ export default function RosterPage() {
                                     : `${capacityCalc.totalBalance}h Shortfall`}
                             </span>
                             <span className="text-xs text-slate-500">
-                                {capacityCalc.totalRequired}h req / {capacityCalc.totalAvailable}h avail ({capacityCalc.totalUtilizationPct}%)
+                                Min: {capacityCalc.totalRequired}h · Avail: {capacityCalc.totalAvailable}h
+                                {config.staffingMode !== "peak_offpeak"
+                                    ? ` · Max: ${capacityCalc.totalMaxAllowed}h (${capacityCalc.totalBalanceVsMax > 0 ? `+${capacityCalc.totalBalanceVsMax}h` : `${capacityCalc.totalBalanceVsMax}h`})`
+                                    : ` (${capacityCalc.totalUtilizationPct}%)`}
                             </span>
                         </button>
 
@@ -3873,20 +4136,20 @@ export default function RosterPage() {
                                 {
                                     key: "optimizer",
                                     stepNum: 3,
-                                    title: "Generate Roster",
+                                    title: "Generate AI Roster",
                                     subtitle: solvedState ? "Generated — re-run anytime" : "Ready to generate",
-                                    hint: "Step 3: Check readiness and click Quick Generate or Best-Fit Optimizer to build the roster.",
+                                    hint: "Step 3: Click 'Generate AI-Optimized Roster' to run Stage 1 (Quick Draft) → Stage 2 (Best-Fit OR-Tools) → Stage 3 (Verify).",
                                     icon: <RocketOutlined />,
                                     done: Boolean(solvedState),
                                 },
                                 {
                                     key: "schedule",
                                     stepNum: 4,
-                                    title: "Review & Export",
+                                    title: "Review, What-If & Export",
                                     subtitle: solvedState
                                         ? `${Math.round(solvedState.met.score * 1000) / 10}% coverage`
                                         : "Awaiting step 3",
-                                    hint: "Step 4: Review the schedule, click any shift to adjust manually, then Save or Export.",
+                                    hint: "Step 4: Review the schedule, run AI What-If Simulator, adjust any shift manually, then Save Record or Export.",
                                     icon: <CalendarOutlined />,
                                     done: Boolean(solvedState),
                                 },
@@ -4124,9 +4387,13 @@ export default function RosterPage() {
                 okText="Save Roster Record"
             >
                 <div className="space-y-3 py-2">
-                    <Text className="text-xs text-slate-500">
-                        Save a permanent snapshot of this solved roster, its KPIs, and hourly coverage calculations to your company account database.
-                    </Text>
+                    <Alert
+                        type="info"
+                        showIcon
+                        className="rounded-xl"
+                        message="What happens when you Save Record?"
+                        description="This stores a permanent named snapshot of this generated schedule, shift assignments, KPIs, and hourly coverage in your company database. You can view, reload, or delete it anytime from the 'Saved Records' button in the top-right corner."
+                    />
                     <Input
                         size="large"
                         placeholder={`${accountMeta?.companyName || "Company"} Roster ${config.ws} (${config.weeks}w)`}

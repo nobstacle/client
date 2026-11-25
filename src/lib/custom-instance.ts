@@ -69,15 +69,33 @@ export const nobstacleBackendApiInstance = async <T>(
   config: AxiosRequestConfig,
   options?: AxiosRequestConfig,
 ): Promise<T> => {
-  const token = await getCachedSession();
+  let token: Awaited<ReturnType<typeof getSession>> | null = null;
+  try {
+    token = await getCachedSession();
+  } catch {
+    // Allow unauthenticated/embedded WebView calls (e.g. live-translation in Neorcha) to proceed cleanly
+    token = null;
+  }
+
+  const mergedHeaders: Record<string, any> = {
+    ...(config.headers as Record<string, any> | undefined),
+    ...(options?.headers as Record<string, any> | undefined),
+  };
+
+  if (config.data instanceof FormData) {
+    delete mergedHeaders["Content-Type"];
+    delete mergedHeaders["content-type"];
+  }
+
+  if (token?.user?.backendTokens?.at) {
+    mergedHeaders.Authorization = `Bearer ${token.user.backendTokens.at}`;
+  }
 
   const source = Axios.CancelToken.source();
   const promise = AXIOS_INSTANCE({
     ...config,
     ...options,
-    headers: token?.user.backendTokens.at
-      ? { Authorization: `Bearer ${token?.user.backendTokens.at}` }
-      : undefined,
+    headers: Object.keys(mergedHeaders).length > 0 ? mergedHeaders : undefined,
     cancelToken: source.token,
     withCredentials: true,
   }).then(({ data }) => data);

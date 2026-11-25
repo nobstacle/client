@@ -298,14 +298,14 @@ class TranslatedAudioPlayer {
       const ctx = this.getOrCreateAudioContext();
       if (!ctx) return false;
 
-      if (ctx.state === "suspended") {
+      if (ctx.state === "suspended" || (ctx.state as string) === "interrupted") {
         try {
           await Promise.race([
             ctx.resume(),
-            new Promise((_, reject) => setTimeout(() => reject(new Error("resume timeout")), 400)),
+            new Promise((_, reject) => setTimeout(() => reject(new Error("resume timeout")), 800)),
           ]);
         } catch {
-          // If still suspended after 400ms, fall through to HTMLAudioElement
+          // If still suspended after 800ms, fall through to HTMLAudioElement
         }
       }
 
@@ -353,29 +353,62 @@ class TranslatedAudioPlayer {
 
   private playViaHtmlAudio(audioUrl: string): Promise<boolean> {
     return new Promise((resolve) => {
+      let settled = false;
+      let objectUrl: string | null = null;
+      let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
       try {
         const audio = this.getOrCreateSharedAudio() || new Audio();
         audio.volume = 1;
-        audio.src = audioUrl;
+
+        // Convert base64 data URLs to Blob URLs for more reliable playback in embedded WebViews
+        let srcToPlay = audioUrl;
+        if (audioUrl.startsWith("data:")) {
+          const ab = this.dataUrlToArrayBuffer(audioUrl);
+          if (ab) {
+            const mimeMatch = audioUrl.match(/^data:([^;]+);/);
+            const blob = new Blob([ab], { type: mimeMatch?.[1] || "audio/mpeg" });
+            objectUrl = URL.createObjectURL(blob);
+            srcToPlay = objectUrl;
+          }
+        }
+
+        audio.src = srcToPlay;
         this.currentAudio = audio;
 
-        const cleanup = () => {
+        const finish = (ok: boolean) => {
+          if (settled) return;
+          settled = true;
+          if (timeoutId) {
+            clearTimeout(timeoutId);
+            timeoutId = null;
+          }
           audio.onended = null;
           audio.onerror = null;
+          audio.onabort = null;
           if (this.currentAudio === audio) {
             this.currentAudio = null;
           }
+          if (objectUrl) {
+            try {
+              URL.revokeObjectURL(objectUrl);
+            } catch {}
+            objectUrl = null;
+          }
+          resolve(ok);
         };
 
-        audio.onended = () => {
-          cleanup();
-          resolve(true);
-        };
+        // Prevent permanent queue deadlock if WebView/tablet never fires onended
+        timeoutId = setTimeout(() => {
+          try {
+            audio.pause();
+          } catch {}
+          finish(false);
+        }, 25000);
 
-        audio.onerror = () => {
-          cleanup();
-          resolve(false);
-        };
+        audio.onended = () => finish(true);
+        audio.onerror = () => finish(false);
+        audio.onabort = () => finish(false);
 
         const playPromise = audio.play();
         if (playPromise !== undefined) {
@@ -384,11 +417,16 @@ class TranslatedAudioPlayer {
               "[TranslatedAudioPlayer] Audio.play() blocked or failed, trying fallback:",
               err?.message || err,
             );
-            cleanup();
-            resolve(false);
+            finish(false);
           });
         }
       } catch {
+        if (timeoutId) clearTimeout(timeoutId);
+        if (objectUrl) {
+          try {
+            URL.revokeObjectURL(objectUrl);
+          } catch {}
+        }
         resolve(false);
       }
     });
@@ -405,7 +443,10 @@ class TranslatedAudioPlayer {
       }
 
       try {
-        window.speechSynthesis.cancel();
+        // Only cancel if speechSynthesis is actively speaking/pending to avoid the Chromium silent-drop bug
+        if (window.speechSynthesis.speaking || window.speechSynthesis.pending) {
+          window.speechSynthesis.cancel();
+        }
         const utterance = new SpeechSynthesisUtterance(text);
         if (langCode) {
           utterance.lang = langCode;

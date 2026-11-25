@@ -21,6 +21,11 @@ export interface RosterConfig {
     opW: Array<{ a: string; b: string }>;
     brk: number;
     selectedTeam?: string; // Filter / generate roster for this specific team (or "all")
+    staffingMode?: "hourly" | "peak_offpeak"; // Optional mode: per-hour min/max OR peak/off-peak hours
+    peakMinStaff?: number; // Min staff during peak window (when staffingMode === "peak_offpeak")
+    offPeakMinStaff?: number; // Min staff during off-peak window (when staffingMode === "peak_offpeak")
+    baseMinStaff?: number; // Min staff during standard/other hours (when staffingMode === "peak_offpeak")
+    enforceHardMin?: boolean; // Hard rule: never let 15-min slots fall below minimum when feasible
 }
 
 export interface TeamMember {
@@ -145,16 +150,20 @@ export interface SolvedRosterState {
 export interface CapacityWeekRow {
     week: number;
     requiredHours: number;
+    maxAllowedHours: number;
     availableHours: number;
-    balance: number;
+    balance: number; // availableHours - requiredHours (difference to minimum)
+    balanceVsMax: number; // availableHours - maxAllowedHours (difference to maximum; <= 0 means within max)
     utilizationPct: number;
 }
 
 export interface CapacityCalculationResult {
     rows: CapacityWeekRow[];
     totalRequired: number;
+    totalMaxAllowed: number;
     totalAvailable: number;
-    totalBalance: number;
+    totalBalance: number; // totalAvailable - totalRequired (difference to minimum)
+    totalBalanceVsMax: number; // totalAvailable - totalMaxAllowed (difference to maximum)
     totalUtilizationPct: number;
     shortfallHours: number;
     extraMembersNeeded: number;
@@ -300,8 +309,50 @@ export function winSet(L?: Array<{ a: string; b: string }>): boolean[] {
     return r;
 }
 
-export function needV(c: RosterConfig, pk: boolean[]): number[] {
-    return pk.map((_, q) => c.minH[Math.floor(q / 4)] ?? 0);
+export function getEffectiveHourlyBounds(
+    c: RosterConfig,
+    teamCount = 1,
+): { minH: number[]; maxH: number[] } {
+    if (c.staffingMode === "peak_offpeak") {
+        const pk = winSet(c.pkW);
+        const op = winSet(c.opW);
+        const baseMin = Math.max(0, Math.floor(Number(c.baseMinStaff ?? 1) || 0));
+        const peakMin = Math.max(0, Math.floor(Number(c.peakMinStaff ?? Math.max(baseMin + 1, 2)) || 0));
+        const offPeakMin = Math.max(0, Math.floor(Number(c.offPeakMinStaff ?? Math.max(1, baseMin)) || 0));
+        const upperCap = Math.max(peakMin, baseMin, offPeakMin, Math.max(1, teamCount), 99);
+        const minH = Array.from({ length: 24 }, (_, h) => {
+            const q = h * 4;
+            const isPeak = pk[q] || pk[q + 1] || pk[q + 2] || pk[q + 3];
+            const isOffPeak = op[q] || op[q + 1] || op[q + 2] || op[q + 3];
+            if (isPeak) return peakMin;
+            if (isOffPeak) return offPeakMin;
+            return baseMin;
+        });
+        const maxH = Array(24).fill(upperCap);
+        return { minH, maxH };
+    }
+
+    const minH = Array.from({ length: 24 }, (_, h) => Math.max(0, Math.floor(Number(c.minH?.[h] ?? 0) || 0)));
+    const maxH = Array.from({ length: 24 }, (_, h) =>
+        Math.max(minH[h], Math.floor(Number(c.maxH?.[h] ?? Math.max(minH[h], teamCount)) || 0)),
+    );
+    return { minH, maxH };
+}
+
+export function needV(c: RosterConfig, pk: boolean[], teamCount = 1): number[] {
+    if (c.staffingMode === "peak_offpeak") {
+        const op = winSet(c.opW);
+        const baseMin = Math.max(0, Math.floor(Number(c.baseMinStaff ?? 1) || 0));
+        const peakMin = Math.max(0, Math.floor(Number(c.peakMinStaff ?? Math.max(baseMin + 1, 2)) || 0));
+        const offPeakMin = Math.max(0, Math.floor(Number(c.offPeakMinStaff ?? Math.max(1, baseMin)) || 0));
+        return pk.map((isPeak, q) => {
+            if (isPeak) return peakMin;
+            if (op[q]) return offPeakMin;
+            return baseMin;
+        });
+    }
+    const { minH } = getEffectiveHourlyBounds(c, teamCount);
+    return pk.map((_, q) => minH[Math.floor(q / 4)] ?? 0);
 }
 
 export function absDays(c: RosterConfig, ab: TeamAbsence[], id: number, D: number): boolean[] {
@@ -333,10 +384,13 @@ export function calculateCapacity(
     absences: TeamAbsence[],
 ): CapacityCalculationResult {
     const W = Math.max(1, Math.min(8, Math.floor(c.weeks) || 1));
-    const req = c.minH.reduce((a, b) => a + b, 0) * 7;
+    const { minH, maxH } = getEffectiveHourlyBounds(c, team.length);
+    const req = minH.reduce((a, b) => a + b, 0) * 7;
+    const mxPerWeek = maxH.reduce((a, b) => a + b, 0) * 7;
     const ok = Boolean(c.ws && !isNaN(Date.parse(c.ws)));
     const rows: CapacityWeekRow[] = [];
     let tr = 0;
+    let tm = 0;
     let ta = 0;
 
     for (let w = 0; w < W; w++) {
@@ -351,18 +405,21 @@ export function calculateCapacity(
             av += Math.round((c.T * (7 - na)) / 7);
         });
         tr += req;
+        tm += mxPerWeek;
         ta += av;
         rows.push({
             week: w + 1,
             requiredHours: req,
+            maxAllowedHours: mxPerWeek,
             availableHours: av,
             balance: av - req,
+            balanceVsMax: av - mxPerWeek,
             utilizationPct: av ? Math.round((req / av) * 100) : 0,
         });
     }
 
-    const hi = c.maxH.filter((v, h) => v < c.minH[h]).length;
-    const mxT = c.maxH.reduce((a, b) => a + b, 0) * 7;
+    const hi = c.staffingMode === "peak_offpeak" ? 0 : c.maxH.filter((v, h) => v < c.minH[h]).length;
+    const mxT = mxPerWeek;
     const short = tr - ta;
     const perW = Math.max(1, c.T);
     const messages: Array<{ type: "ok" | "bad" | "info"; text: string }> = [];
@@ -370,13 +427,28 @@ export function calculateCapacity(
     if (short > 0) {
         messages.push({
             type: "bad",
-            text: `Shortfall of ${short}h across ${W} week(s): about ${Math.ceil(short / W / perW)} more team member(s) needed.`,
+            text: `Shortfall of ${short}h vs minimum across ${W} week(s): about ${Math.ceil(short / W / perW)} more team member(s) needed.`,
         });
     } else {
         messages.push({
             type: "ok",
-            text: `Enough hours available (${-short}h spare across ${W} week${W > 1 ? "s" : ""}).`,
+            text: `Minimum target covered (+${-short}h above minimum across ${W} week${W > 1 ? "s" : ""}).`,
         });
+    }
+
+    if (c.staffingMode !== "peak_offpeak") {
+        const diffMax = ta - tm;
+        if (diffMax > 0) {
+            messages.push({
+                type: "bad",
+                text: `Exceeds hourly maximum ceiling by +${diffMax}h (${ta}h available vs ${tm}h max allowed across ${W} week${W > 1 ? "s" : ""}).`,
+            });
+        } else {
+            messages.push({
+                type: "ok",
+                text: `Within hourly maximum ceiling (${Math.abs(diffMax)}h below maximum capacity of ${tm}h across ${W} week${W > 1 ? "s" : ""}).`,
+            });
+        }
     }
 
     messages.push({
@@ -404,10 +476,10 @@ export function calculateCapacity(
     }
 
     const pr = ta ? tr / ta : 0;
-    const strictEnforced = pr <= 0.95;
+    const strictEnforced = c.enforceHardMin !== false && ta >= tr;
     messages.push({
         type: strictEnforced ? "ok" : "info",
-        text: `Required is ${Math.round(pr * 100)}% of available: hourly minimums are ${strictEnforced ? "enforced strictly (≤ 95%)" : "best effort (above 95%)"}.`,
+        text: `Required is ${Math.round(pr * 100)}% of available: 15-minute hourly minimums are ${strictEnforced ? "enforced as a hard rule" : "best effort (insufficient available hours)"}.`,
     });
 
     if (hi) {
@@ -417,18 +489,13 @@ export function calculateCapacity(
         });
     }
 
-    if (ta > mxT * W) {
-        messages.push({
-            type: "bad",
-            text: `Available hours (${ta}h) exceed what the maximum staff limit can absorb (${mxT * W}h).`,
-        });
-    }
-
     return {
         rows,
         totalRequired: tr,
+        totalMaxAllowed: tm,
         totalAvailable: ta,
         totalBalance: ta - tr,
+        totalBalanceVsMax: ta - tm,
         totalUtilizationPct: ta ? Math.round((tr / ta) * 100) : 0,
         shortfallHours: Math.max(0, short),
         extraMembersNeeded: short > 0 ? Math.ceil(short / W / perW) : 0,
@@ -436,7 +503,7 @@ export function calculateCapacity(
         feasibleDaysPerWeek: fe,
         strictEnforced,
         maxBelowMinCount: hi,
-        exceedsMaxStaffCeiling: ta > mxT * W,
+        exceedsMaxStaffCeiling: c.staffingMode !== "peak_offpeak" && ta > mxT * W,
         maxStaffCeilingHours: mxT * W,
         messages,
     };
@@ -542,6 +609,19 @@ export function computeStats(S: Omit<SolvedRosterState, "met">): SolvedRosterSta
     E.forEach((e) => {
         const bad: string[] = [];
         let fl = false;
+        const weekGrantedExceedsWork: boolean[] = Array(W).fill(false);
+        for (let w = 0; w < W; w++) {
+            let gCount = 0;
+            let wCount = 0;
+            for (let d = 0; d < 7; d++) {
+                const g = w * 7 + d;
+                if (e.gStO[g] >= 0 && !e.abs[g] && !e.gOff[g]) gCount++;
+                if (e.h[g] > 0) wCount++;
+            }
+            if (gCount > Math.max(wCount, 7 - c.minOff)) {
+                weekGrantedExceedsWork[w] = true;
+            }
+        }
         for (let g = 0; g < D; g++) {
             if ((e.h[g] && e.h[g] < c.minD) || e.h[g] > c.maxD) fl = true;
             if (g < D - 1 && e.h[g] && e.h[g + 1] && 96 + e.s[g + 1] - (e.s[g] + 4 * e.h[g] + bl) < RQ) {
@@ -556,15 +636,25 @@ export function computeStats(S: Omit<SolvedRosterState, "met">): SolvedRosterSta
                 if (!e.h[g]) gM++;
             }
             if (e.gStO[g] >= 0) {
-                gT++;
-                if (e.h[g] && e.s[g] === e.gStO[g]) gM++;
+                const w = (g / 7) | 0;
+                if (weekGrantedExceedsWork[w]) {
+                    // Range spans more days than allowed work days in the week:
+                    // honor granted start on every worked day in the range without penalizing mandatory off days
+                    if (e.h[g]) {
+                        gT++;
+                        if (e.s[g] === e.gStO[g]) gM++;
+                    }
+                } else {
+                    gT++;
+                    if (e.h[g] && e.s[g] === e.gStO[g]) gM++;
+                }
             }
             if (e.roff[g]) {
                 oT++;
                 if (!e.h[g]) oM++;
                 else bad.push("off " + addDaysIso(c.ws, g).slice(5));
             }
-            if (e.rst[g] >= 0 && !e.abs[g]) {
+            if (e.rst[g] >= 0 && !e.abs[g] && e.gStO[g] < 0) {
                 sT++;
                 if (e.h[g] && e.s[g] === e.rst[g]) sM++;
                 else bad.push("start " + slotToTimeStr(e.rst[g]) + " on " + addDaysIso(c.ws, g).slice(5));
@@ -646,11 +736,12 @@ export function solveRoster(
     rq0: ExpandedRequestDay[],
     baseIters = 150000,
 ): SolvedRosterState {
+    const effBounds = getEffectiveHourlyBounds(rawCfg, team.length);
     const c: RosterConfig = {
         ...rawCfg,
         weeks: Math.max(1, Math.min(8, Math.floor(rawCfg.weeks) || 1)),
-        minH: rawCfg.minH.slice(0, 24),
-        maxH: rawCfg.maxH.slice(0, 24).map((v, h) => Math.max(v, rawCfg.minH[h] ?? 0)),
+        minH: effBounds.minH,
+        maxH: effBounds.maxH,
     };
 
     const W = c.weeks;
@@ -658,7 +749,7 @@ export function solveRoster(
     const QN = 96 * D;
     const N = team.length;
     const pk = winSet(c.pkW);
-    const need = needV(c, pk);
+    const need = needV(c, pk, team.length);
     const cov = new Int32Array(QN);
     const cs = new Int32Array(QN);
     const cl = new Int32Array(QN);
@@ -676,6 +767,8 @@ export function solveRoster(
     const pickBo = (hh: number) => 4 + R(Math.max(1, 4 * hh - 7));
     const gapBadAt = (h: number[], s: number[], g: number) =>
         g > 0 && g < D && h[g - 1] > 0 && h[g] > 0 && 96 + s[g] - (s[g - 1] + 4 * h[g - 1] + bl) < RQ;
+
+    const gStMustWorkByEmp: boolean[][] = [];
 
     const E: EmployeeScheduleState[] = team.map((m, ix) => {
         const abs = absDays(c, ab, m.id, D);
@@ -699,13 +792,15 @@ export function solveRoster(
         });
 
         const gSt = gStO.map((x, g) => (x >= 0 && !abs[g] && !gOff[g] && ST.includes(x) ? x : -1));
+        const gStMustWork = Array(D).fill(false);
         const h = Array(D).fill(0);
         const s = Array(D).fill(0);
         const bo = Array(D).fill(0);
         const Tw: number[] = [];
         const Tw0: number[] = [];
         let flag = false;
-        const fr = rst.find((x) => x >= 0);
+        const firstGranted = gSt.find((x) => x >= 0);
+        const fr = firstGranted !== undefined ? firstGranted : rst.find((x) => x >= 0);
         const base0 = fr !== undefined ? fr : ST[ix % ST.length];
 
         for (let w = 0; w < W; w++) {
@@ -715,17 +810,18 @@ export function solveRoster(
             const av = 7 - na - gc;
             let T = Math.round(((c.T * (7 - na)) / 7) * 4) / 4;
             const T0 = T;
-            let lw = days.filter((g) => gSt[g] >= 0);
+            const lw = days.filter((g) => gSt[g] >= 0);
             const nmax = Math.min(av, 7 - c.minOff);
+            const minWorkNeeded = lw.length <= nmax ? lw.length : 1;
             const ns: number[] = [];
-            for (let n = Math.max(1, lw.length, 7 - Math.max(c.maxOff, na + gc)); n <= nmax; n++) {
+            for (let n = Math.max(1, minWorkNeeded, 7 - Math.max(c.maxOff, na + gc)); n <= nmax; n++) {
                 if (n * mnD <= T && T <= n * mxD) ns.push(n);
             }
             const rc = days.filter((g) => roff[g] && !abs[g]).length;
             let n = 0;
             let upN = 0;
             if (!ns.length) {
-                for (let n2 = Math.max(1, lw.length, 7 - Math.max(c.maxOff, na + gc)); n2 <= nmax; n2++) {
+                for (let n2 = Math.max(1, minWorkNeeded, 7 - Math.max(c.maxOff, na + gc)); n2 <= nmax; n2++) {
                     if (n2 * mnD <= Math.min(c.T, n2 * mxD) + 1e-9) {
                         upN = n2;
                         break;
@@ -745,9 +841,14 @@ export function solveRoster(
                 n = Math.max(1, Math.min(nmax, Math.floor(T / mnD + 1e-9)));
                 T = Math.min(T, n * mxD);
             }
-            if (n < lw.length) {
-                lw.forEach((g) => (gSt[g] = -1));
-                lw = [];
+
+            // If all granted start days in this week fit within n working days, lock all of them as must-work.
+            // If the employee marked more days than n (e.g. full week/month "06:30"), keep gSt[g] intact so EVERY
+            // working day in the range starts at gSt[g], while allowing mandatory weekly off-days!
+            if (lw.length <= n) {
+                lw.forEach((g) => {
+                    gStMustWork[g] = true;
+                });
             }
             Tw.push(T);
             Tw0.push(T0);
@@ -755,17 +856,18 @@ export function solveRoster(
 
             const free = days.filter((g) => !abs[g] && !gOff[g]);
             const ex = free.length - n;
-            const offC = free.filter((g) => !lw.includes(g));
+            const lockedWork = lw.length <= n ? lw : [];
+            const offC = free.filter((g) => !lockedWork.includes(g));
             let off = shuf(offC.filter((g) => roff[g]))
                 .concat(
-                    shuf(offC.filter((g) => !roff[g] && rst[g] < 0)),
-                    shuf(offC.filter((g) => !roff[g] && rst[g] >= 0)),
+                    shuf(offC.filter((g) => !roff[g] && rst[g] < 0 && gSt[g] < 0)),
+                    shuf(offC.filter((g) => !roff[g] && (rst[g] >= 0 || gSt[g] >= 0))),
                 )
                 .slice(0, ex);
 
             if (ex === 2 && rc === 0) {
                 const pr = offC.filter(
-                    (g) => offC.includes(g + 1) && g % 7 < 6 && rst[g] < 0 && rst[g + 1] < 0,
+                    (g) => offC.includes(g + 1) && g % 7 < 6 && rst[g] < 0 && rst[g + 1] < 0 && gSt[g] < 0 && gSt[g + 1] < 0,
                 );
                 if (pr.length) {
                     const g0 = pr[R(pr.length)];
@@ -779,19 +881,20 @@ export function solveRoster(
                 continue;
             }
 
+            const weekGrantedStart = lw.length > 0 ? gSt[lw[0]] : base0;
             const Tq = Math.round(T * 4);
             const base = Math.floor(Tq / work.length);
             const rem = Tq - base * work.length;
             shuf(work).forEach((g, k) => {
                 h[g] = Math.min(mxD, (base + (k < rem ? 1 : 0)) / 4);
-                s[g] = base0;
+                s[g] = gSt[g] >= 0 ? gSt[g] : weekGrantedStart;
                 bo[g] = pickBo(h[g]);
             });
             work.forEach((g) => {
                 if (gSt[g] >= 0) {
                     s[g] = gSt[g];
                     bo[g] = pickBo(h[g]);
-                } else if (rst[g] >= 0 && rst[g] !== base0) {
+                } else if (rst[g] >= 0 && rst[g] !== weekGrantedStart) {
                     const old = s[g];
                     s[g] = rst[g];
                     if (gapBadAt(h, s, g) || gapBadAt(h, s, g + 1)) s[g] = old;
@@ -800,6 +903,8 @@ export function solveRoster(
             });
             if (Math.abs(work.reduce((a, g) => a + h[g], 0) - T) > 1e-9) flag = true;
         }
+
+        gStMustWorkByEmp.push(gStMustWork);
 
         return {
             m,
@@ -844,14 +949,16 @@ export function solveRoster(
 
     const reqH = (need.reduce((a, b) => a + b, 0) / 4) * 7 * W;
     const availH = E.reduce((a, e) => a + e.T, 0);
-    const strict = reqH <= 0.95 * availH;
-    const WU = strict ? 1500 : 100;
+    const strict = c.enforceHardMin !== false && availH >= reqH;
+    const WU_UNDER = strict ? 50000 : 2500;
+    const WU_OVER = strict ? 2500 : 1200;
 
     const slotC = (k: number) => {
         const v = cov[k];
         const nd = need[k % 96];
         let x =
-            WU * (Math.max(0, nd - v) + Math.max(0, v - c.maxH[(k % 96) >> 2])) +
+            WU_UNDER * Math.max(0, nd - v) +
+            WU_OVER * Math.max(0, v - c.maxH[(k % 96) >> 2]) +
             0.6 * (v - tg[k % 96]) ** 2 +
             0.4 * (v - cov[(k + QN - 1) % QN]) ** 2 +
             0.4 * bk[k] * bk[k];
@@ -924,11 +1031,19 @@ export function solveRoster(
 
     const rcnt = (i: number) => {
         const e = E[i];
+        const mustWork = gStMustWorkByEmp[i];
         let n = 0;
         for (let g = 0; g < D; g++) {
-            if (g > 0 && e.h[g] && e.h[g - 1] && 96 + e.s[g] - (e.s[g - 1] + 4 * e.h[g - 1] + bl) < RQ) n++;
-            if (e.gOff[g] && e.h[g]) n++;
-            if (e.gSt[g] >= 0 && !(e.h[g] && e.s[g] === e.gSt[g])) n++;
+            if (g > 0 && e.h[g] && e.h[g - 1] && 96 + e.s[g] - (e.s[g - 1] + 4 * e.h[g - 1] + bl) < RQ) n += 1;
+            if (e.gOff[g] && e.h[g]) n += 100;
+            if (e.gSt[g] >= 0) {
+                if (mustWork[g]) {
+                    if (!(e.h[g] && e.s[g] === e.gSt[g])) n += 100;
+                } else {
+                    // Range spans more days than work days: if working on day g, MUST use granted start!
+                    if (e.h[g] && e.s[g] !== e.gSt[g]) n += 100;
+                }
+            }
         }
         return n;
     };
@@ -1291,14 +1406,86 @@ export function solveRoster(
         }
     };
 
+    const repairUnderstaffing = () => {
+        for (let pass = 0; pass < 8 && underNow() > 0 && N; pass++) {
+            let improved = false;
+            // Scan all 15-minute slots that are currently below minimum
+            for (let k = 0; k < QN; k++) {
+                if (cov[k] >= need[k % 96]) continue;
+                const g = Math.floor(k / 96);
+                const w = Math.floor(g / 7);
+                const weekDays = [0, 1, 2, 3, 4, 5, 6].map((d) => w * 7 + d);
+
+                // Try moving a non-granted working day from another day in the same week to day g, or changing shift start on day g/g-1
+                let fixedSlot = false;
+                for (let i = 0; i < N && !fixedSlot; i++) {
+                    const e = E[i];
+                    // Option 1: Change shift start on day g (or g-1 for overnight coverage) to cover slot k
+                    for (const tgDay of [g, g - 1]) {
+                        if (tgDay < 0 || !e.h[tgDay] || e.gSt[tgDay] >= 0) continue;
+                        for (const st of ST) {
+                            if (st === e.s[tgDay]) continue;
+                            const endQ = tgDay * 96 + st + Math.round(e.h[tgDay] * 4);
+                            const startQ = tgDay * 96 + st;
+                            const covers = (k >= startQ && k < endQ) || (k + QN >= startQ && k + QN < endQ);
+                            if (!covers) continue;
+                            if (
+                                tryMove(i, [tgDay], (x) => {
+                                    x.s[tgDay] = st;
+                                    x.bo[tgDay] = pickBo(x.h[tgDay]);
+                                })
+                            ) {
+                                improved = true;
+                                fixedSlot = cov[k] >= need[k % 96];
+                                break;
+                            }
+                        }
+                        if (fixedSlot) break;
+                    }
+                    if (fixedSlot) break;
+
+                    // Option 2: Move one of employee i's working days in week w to day g (if employee i is off on day g)
+                    if (!e.h[g] && !e.abs[g] && !e.gOff[g]) {
+                        const allowedStarts = e.gSt[g] >= 0 ? [e.gSt[g]] : ST;
+                        for (const srcDay of weekDays) {
+                            if (srcDay === g || !e.h[srcDay] || gStMustWorkByEmp[i][srcDay]) continue;
+                            for (const st of allowedStarts) {
+                                const startQ = g * 96 + st;
+                                const endQ = startQ + Math.round(e.h[srcDay] * 4);
+                                const covers = (k >= startQ && k < endQ) || (k + QN >= startQ && k + QN < endQ);
+                                if (!covers) continue;
+                                if (
+                                    tryMove(i, [srcDay, g], (x) => {
+                                        x.h[g] = x.h[srcDay];
+                                        x.s[g] = st;
+                                        x.bo[g] = pickBo(x.h[g]);
+                                        x.h[srcDay] = 0;
+                                    })
+                                ) {
+                                    improved = true;
+                                    fixedSlot = cov[k] >= need[k % 96];
+                                    break;
+                                }
+                            }
+                            if (fixedSlot) break;
+                        }
+                    }
+                }
+            }
+            if (!improved) break;
+        }
+    };
+
     const totalIters = baseIters * Math.min(c.weeks, 4);
     const tt0 = Date.now();
     anneal(totalIters, 3);
     polish();
     if (strict) {
+        repairUnderstaffing();
         for (let r = 0; r < 6 && underNow() > 0 && Date.now() - tt0 < 8000; r++) {
             anneal(Math.round(totalIters / 2), 1.5);
             polish();
+            repairUnderstaffing();
         }
     }
     fixRest();
@@ -1404,11 +1591,25 @@ export function getCellViolations(S: SolvedRosterState, e: EmployeeScheduleState
         H.push("under " + c.rest + "h rest after previous duty");
     }
     if (e.gOff[g] && e.h[g]) H.push("granted day off not respected");
-    if (e.gStO[g] >= 0 && e.s[g] !== e.gStO[g]) {
-        H.push("granted start " + slotToTimeStr(e.gStO[g]) + " not respected");
+    if (e.gStO[g] >= 0) {
+        if (e.h[g] > 0 && e.s[g] !== e.gStO[g]) {
+            H.push("granted start " + slotToTimeStr(e.gStO[g]) + " not respected");
+        } else if (e.h[g] === 0) {
+            const w = (g / 7) | 0;
+            let gCount = 0;
+            let wCount = 0;
+            for (let d = 0; d < 7; d++) {
+                const dg = w * 7 + d;
+                if (e.gStO[dg] >= 0 && !e.abs[dg] && !e.gOff[dg]) gCount++;
+                if (e.h[dg] > 0) wCount++;
+            }
+            if (gCount <= Math.max(wCount, 7 - c.minOff)) {
+                H.push("granted start " + slotToTimeStr(e.gStO[g]) + " not scheduled");
+            }
+        }
     }
     if (e.roff[g]) So.push("requested off");
-    if (e.rst[g] >= 0 && e.s[g] !== e.rst[g]) {
+    if (e.rst[g] >= 0 && e.gStO[g] < 0 && e.s[g] !== e.rst[g]) {
         So.push("wanted start " + slotToTimeStr(e.rst[g]));
     }
     return { H, So };
@@ -1724,11 +1925,12 @@ export function buildOrToolsPayloadAndScript(
     requests: TeamRequest[],
     lastSolved?: SolvedRosterState | null,
 ): { modelData: Record<string, any>; pythonScript: string } {
+    const effBounds = getEffectiveHourlyBounds(c, team.length);
     const pk = winSet(c.pkW);
     const W = c.weeks;
     const Dd = 7 * W;
-    const need = needV(c, pk);
-    const mxq = Array.from({ length: 96 }, (_, q) => c.maxH[q >> 2]);
+    const need = needV(c, pk, team.length);
+    const mxq = Array.from({ length: 96 }, (_, q) => effBounds.maxH[q >> 2]);
     const ST = parseStarts(c.starts);
     const mn = Math.ceil(c.minD * 4 - 1e-9) / 4;
     const rqDays = expandRequestsByDay(requests);
@@ -1744,6 +1946,7 @@ export function buildOrToolsPayloadAndScript(
 
     const modelData = {
         hint,
+        enforceHardMin: c.enforceHardMin !== false,
         c: {
             T: c.T,
             minD: c.minD,
@@ -1766,6 +1969,7 @@ export function buildOrToolsPayloadAndScript(
             const rst = Array(Dd).fill(-1);
             const goff = Array(Dd).fill(false);
             const gst = Array(Dd).fill(-1);
+            const gstMustWork = Array(Dd).fill(false);
             const abs = absDays(c, absences, m.id, Dd);
             rqDays.forEach((r) => {
                 if (r.m !== m.id) return;
@@ -1788,12 +1992,17 @@ export function buildOrToolsPayloadAndScript(
                 const dd = [0, 1, 2, 3, 4, 5, 6].map((d) => w * 7 + d);
                 const na = dd.filter((g) => abs[g]).length;
                 const gc = dd.filter((g) => goff[g] && !abs[g]).length;
-                let lw = dd.filter((g) => gst[g] >= 0).length;
-                if (lw * mn > wkT(c, na, gc, lw).T) {
-                    dd.forEach((g) => (gst[g] = -1));
-                    lw = 0;
+                const grantedDays = dd.filter((g) => gst[g] >= 0);
+                const nmax = Math.min(7 - na - gc, 7 - c.minOff);
+                const effLw = grantedDays.length <= nmax ? grantedDays.length : 0;
+                const r = wkT(c, na, gc, effLw);
+                if (grantedDays.length > 0 && grantedDays.length <= nmax && grantedDays.length * mn <= r.T + 1e-9) {
+                    grantedDays.forEach((g) => {
+                        gstMustWork[g] = true;
+                    });
                 }
-                const r = wkT(c, na, gc, lw);
+                // Note: if grantedDays.length > nmax, we keep gst[g] intact (do NOT wipe to -1) and leave gstMustWork[g]=false
+                // so CP-SAT enforces start == gst[g] on every working day in that range while still taking mandatory off-days!
                 tw.push(r.T);
                 ofm.push(r.off);
             }
@@ -1809,6 +2018,7 @@ export function buildOrToolsPayloadAndScript(
                 rst,
                 goff,
                 gst,
+                gstMustWork,
                 tw,
                 offmax: ofm,
             };

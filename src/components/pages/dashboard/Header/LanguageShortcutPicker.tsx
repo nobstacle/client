@@ -6,6 +6,8 @@ import { useRouterWithQueryParams } from "../../../../hooks/useRouterWithQueryPa
 import { useSearchParams } from "next/navigation";
 import { useSocketContext } from "../../../../context/SocketContextProvider";
 import { useShortcuts } from "../../../../app/dashboard/ShortcutProvider";
+import { useMessageStore } from "../../../../lib/zustand/store/messageStore";
+import { resolveActiveStation } from "../../../../utils/station";
 
 
 export const LanguageShortcutPicker = ({
@@ -18,6 +20,7 @@ export const LanguageShortcutPicker = ({
   const router = useRouterWithQueryParams();
   const params = useSearchParams();
   const { emitSendLangCode } = useSocketContext();
+  const setReceivedLangCode = useMessageStore((s) => s.setReceivedLangCode);
   const isHydrated = useHasHydrated();
 
   // Get from shared provider (no API call here!)
@@ -35,11 +38,19 @@ export const LanguageShortcutPicker = ({
   }, [currentLang]);
 
   const handleLanguageChange = (value: string) => {
+    const activeStation = resolveActiveStation({ searchParams: params });
     setChecked(value);
+    setReceivedLangCode(value, activeStation);
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem(`lang-code-station-${activeStation}`, value);
+        localStorage.setItem("lang-code", value);
+      } catch {}
+    }
     router.push("lang", value);
     emitSendLangCode({
       langCode: value,
-      station: Number(params.get("station") ?? 1),
+      station: activeStation,
     });
   };
 

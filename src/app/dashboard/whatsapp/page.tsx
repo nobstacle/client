@@ -1534,7 +1534,7 @@ export default function WhatsAppPage() {
                     override_default_response_type: true,
                     extras: {
                         setup: {},
-                        featureType: isCoexistenceRequested ? "whatsapp_business_app_onboarding" : "",
+                        ...(isCoexistenceRequested ? { featureType: "whatsapp_business_app_onboarding" } : {}),
                         sessionInfoVersion: "3",
                     },
                 }
@@ -1677,7 +1677,17 @@ export default function WhatsAppPage() {
         try {
             const metaRes = await loadMetaSettings();
             if (metaRes?.connected) {
-                await Promise.all([loadContactLists(), loadTemplates(), loadCampaigns(), loadStats()]);
+                const results = await Promise.allSettled([
+                    loadContactLists(),
+                    loadTemplates(),
+                    loadCampaigns(),
+                    loadStats(),
+                ]);
+                results.forEach((res, idx) => {
+                    if (res.status === "rejected") {
+                        console.warn(`WhatsApp data section ${idx} failed to load:`, res.reason);
+                    }
+                });
             } else {
                 await loadContactLists();
                 setTemplates([]);

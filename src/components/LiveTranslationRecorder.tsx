@@ -40,8 +40,10 @@ const LiveTranslationRecorder: React.FC<LiveTranslationRecorderProps> = ({
   const streamRef = useRef<MediaStream | null>(null);
   const mimeTypeRef = useRef<string>("");
   const audioContextRef = useRef<AudioContext | null>(null);
+  const mediaSourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const animationFrameRef = useRef<number | null>(null);
+  const fallbackMaxTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // VAD & Silence tracking refs
   const recordingStartTimeRef = useRef<number>(0);
@@ -93,62 +95,73 @@ const LiveTranslationRecorder: React.FC<LiveTranslationRecorderProps> = ({
   }
 
   const cleanupStream = () => {
+    if (fallbackMaxTimerRef.current) {
+      clearTimeout(fallbackMaxTimerRef.current);
+      fallbackMaxTimerRef.current = null;
+    }
+
     if (animationFrameRef.current) {
       cancelAnimationFrame(animationFrameRef.current);
       animationFrameRef.current = null;
     }
 
+    if (mediaSourceRef.current) {
+      try {
+        mediaSourceRef.current.disconnect();
+      } catch {}
+      mediaSourceRef.current = null;
+    }
+
+    if (analyserRef.current) {
+      try {
+        analyserRef.current.disconnect();
+      } catch {}
+      analyserRef.current = null;
+    }
+
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((track) => {
-        track.stop();
+        try {
+          track.stop();
+        } catch {}
       });
       streamRef.current = null;
     }
 
     if (audioContextRef.current && audioContextRef.current.state !== "closed") {
-      audioContextRef.current.close().catch(() => {});
+      try {
+        audioContextRef.current.close().catch(() => {});
+      } catch {}
       audioContextRef.current = null;
     }
 
-    analyserRef.current = null;
     setAudioLevel(0);
   };
 
   const getActiveLangCode = useCallback((): string => {
-    if (mode === "header") {
-      // In header mode (Admin speaking), the target language is the Client's active station language
-      const store = useMessageStore.getState();
-      const targetStation = getTargetStation();
-      const stationLang =
-        store.receivedLangCodeByStation[targetStation] || store.receivedLangCode;
-      const fromLocal =
-        typeof window !== "undefined"
-          ? localStorage.getItem(`lang-code-station-${targetStation}`) ||
-            localStorage.getItem("lang-code")
-          : null;
-      if (activeLangCode) {
-        return activeLangCode;
-      }
-      return stationLang || fromLocal || companyData?.defaultLangCode || "en";
-    }
-
-    // In client mode (Guest speaking), language is the client's selected language
-    if (activeLangCode) {
-      return activeLangCode;
-    }
-    const fromParams = params?.get("lang");
-    if (fromParams) {
-      return fromParams;
-    }
+    const store = useMessageStore.getState();
     const targetStation = getTargetStation();
+    const stationLang =
+      store.receivedLangCodeByStation[targetStation] || store.receivedLangCode;
+    const fromParams = params?.get("lang");
     const fromLocal =
       typeof window !== "undefined"
         ? localStorage.getItem(`lang-code-station-${targetStation}`) ||
           localStorage.getItem("lang-code")
         : null;
-    if (fromLocal) return fromLocal;
-    return companyData?.defaultLangCode || "en";
+
+    if (mode === "header") {
+      // In header mode (Admin speaking), target language is the Client's active station language
+      if (activeLangCode) return activeLangCode;
+      return fromParams || stationLang || fromLocal || companyData?.defaultLangCode || "en";
+    }
+
+    // In client mode (Guest speaking), prioritize live store/prop so mid-chat language changes take effect immediately
+    if (activeLangCode) return activeLangCode;
+    return stationLang || fromParams || fromLocal || companyData?.defaultLangCode || "en";
   }, [mode, activeLangCode, getTargetStation, params, companyData]);
+
+  const sendAudioForLiveTranslationRef = useRef<(audioBlob: Blob) => Promise<void>>(async () => {});
 
   const sendAudioForLiveTranslation = async (audioBlob: Blob) => {
     const langCode = getActiveLangCode();
@@ -174,12 +187,13 @@ const LiveTranslationRecorder: React.FC<LiveTranslationRecorderProps> = ({
         }
 
         const targetStation = getTargetStation();
+        const latestLangCode = getActiveLangCode();
 
         emitSendMessage({
           message: transcript,
           station: targetStation,
           refType: "ChatMessage",
-          langCode,
+          langCode: latestLangCode,
           adminLangCode,
           isLiveTranslation: true,
           senderMode: mode,
@@ -201,6 +215,8 @@ const LiveTranslationRecorder: React.FC<LiveTranslationRecorderProps> = ({
       setInFlightCount((c) => Math.max(0, c - 1));
     }
   };
+
+  sendAudioForLiveTranslationRef.current = sendAudioForLiveTranslation;
 
   const stopRecording = useCallback(
     (commitAudio = true, reason: string = "user_stopped") => {
@@ -235,7 +251,17 @@ const LiveTranslationRecorder: React.FC<LiveTranslationRecorderProps> = ({
 
   const monitorAudioAndVad = (stream: MediaStream) => {
     try {
-      const audioContext = new AudioContext();
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioCtx) {
+        // Fallback for restricted embedded WebViews (e.g., Neorcha): still allow manual stop + 30s safety cap
+        hasSpeechRef.current = true;
+        fallbackMaxTimerRef.current = setTimeout(() => {
+          if (recordingRef.current) stopRecording(true, "max_duration");
+        }, 30000);
+        return;
+      }
+
+      const audioContext = new AudioCtx();
       audioContextRef.current = audioContext;
 
       const analyser = audioContext.createAnalyser();
@@ -244,6 +270,7 @@ const LiveTranslationRecorder: React.FC<LiveTranslationRecorderProps> = ({
       analyserRef.current = analyser;
 
       const source = audioContext.createMediaStreamSource(stream);
+      mediaSourceRef.current = source;
       source.connect(analyser);
 
       const timeData = new Float32Array(analyser.fftSize);
@@ -317,8 +344,6 @@ const LiveTranslationRecorder: React.FC<LiveTranslationRecorderProps> = ({
 
   const startRecording = async () => {
     try {
-      translatedAudioPlayer.unlockAudio();
-
       if (!isInitialized) {
         antMessage.error(
           "Your browser does not support microphone access. Please use Chrome, Firefox, or Safari.",
@@ -328,15 +353,34 @@ const LiveTranslationRecorder: React.FC<LiveTranslationRecorderProps> = ({
 
       if (recordingRef.current) return;
 
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          channelCount: 1,
-          sampleRate: 48000,
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-        },
-      });
+      // Pause any currently playing TTS before requesting the microphone so embedded WebViews
+      // (such as Neorcha at the reception desk) never hit a concurrent playback/capture audio session conflict.
+      try {
+        if (translatedAudioPlayer.getIsPlaying()) {
+          translatedAudioPlayer.stopAll();
+        }
+      } catch {}
+
+      // Use WebView-safe constraints (matching Blue mic) with a plain `{ audio: true }` fallback
+      // to avoid OverconstrainedError or WebView renderer crashes in embedded apps like Neorcha.
+      let stream: MediaStream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+          },
+        });
+      } catch (constraintErr: any) {
+        if (
+          constraintErr?.name === "NotAllowedError" ||
+          constraintErr?.name === "PermissionDeniedError"
+        ) {
+          throw constraintErr;
+        }
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      }
 
       streamRef.current = stream;
       const supportedMimeTypes = getSupportedMimeTypes();
@@ -344,12 +388,12 @@ const LiveTranslationRecorder: React.FC<LiveTranslationRecorderProps> = ({
       mimeTypeRef.current = chosenMime;
 
       const chunks: Blob[] = [];
-      const recorderOptions: MediaRecorderOptions = {
-        ...(chosenMime ? { mimeType: chosenMime } : {}),
-        audioBitsPerSecond: 128000,
-      };
-
-      const recorder = new MediaRecorder(stream, recorderOptions);
+      let recorder: MediaRecorder;
+      try {
+        recorder = new MediaRecorder(stream, chosenMime ? { mimeType: chosenMime } : undefined);
+      } catch {
+        recorder = new MediaRecorder(stream);
+      }
 
       recorder.ondataavailable = (event) => {
         if (event.data && event.data.size > 0) {
@@ -361,11 +405,18 @@ const LiveTranslationRecorder: React.FC<LiveTranslationRecorderProps> = ({
         const actualMimeType = recorder.mimeType || chosenMime || "audio/webm";
         const audioBlob = new Blob(chunks, { type: actualMimeType });
 
+        // Unlock audio playback AFTER mic capture finishes so subsequent TTS replies play reliably
+        // without conflicting with active microphone capture in embedded WebViews.
+        try {
+          translatedAudioPlayer.unlockAudio();
+        } catch {}
+
         if (
           shouldSendAudioRef.current &&
           (hasSpeechRef.current || audioBlob.size > 800)
         ) {
-          void sendAudioForLiveTranslation(audioBlob);
+          // Always invoke via ref so mid-chat language changes take effect immediately
+          void sendAudioForLiveTranslationRef.current(audioBlob);
         }
       };
 
@@ -409,7 +460,9 @@ const LiveTranslationRecorder: React.FC<LiveTranslationRecorderProps> = ({
     }
   };
 
-  const handleToggleRecording = () => {
+  const handleToggleRecording = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
     if (recordingRef.current) {
       // User clicked while recording -> finish speaking and translate immediately
       stopRecording(true, "user_clicked");

@@ -972,11 +972,20 @@ export const Content: React.FC = () => {
     sessionStation: data?.user?.stationNo,
   });
   const [activeLangCode, setActiveLangCode] = useState<string>("en");
+  const stationReceivedLang = messageStore.receivedLangCodeByStation?.[activeStation];
 
   useEffect(() => {
-    const currentLang = messageStore.receivedLangCode || (typeof window !== "undefined" ? localStorage.getItem("lang-code") : null) || company.data?.defaultLangCode || "en";
+    const currentLang =
+      stationReceivedLang ||
+      messageStore.receivedLangCode ||
+      (typeof window !== "undefined"
+        ? localStorage.getItem(`lang-code-station-${activeStation}`) ||
+          localStorage.getItem("lang-code")
+        : null) ||
+      company.data?.defaultLangCode ||
+      "en";
     setActiveLangCode(currentLang);
-  }, [messageStore.receivedLangCode, company.data?.defaultLangCode]);
+  }, [stationReceivedLang, messageStore.receivedLangCode, activeStation, company.data?.defaultLangCode]);
   const hasHydrated = useHasHydrated();
   const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
   const [keepMapMounted, setKeepMapMounted] = useState(false);

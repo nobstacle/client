@@ -9,6 +9,8 @@ import { useRouterWithQueryParams } from "../../../../hooks/useRouterWithQueryPa
 import { useHasHydrated } from "../../../../hooks/useHydrated";
 import { useSocketContext } from "../../../../context/SocketContextProvider";
 import { useShortcuts } from "../../../../app/dashboard/ShortcutProvider";
+import { useMessageStore } from "../../../../lib/zustand/store/messageStore";
+import { resolveActiveStation } from "../../../../utils/station";
 
 interface LanguagePickerPropsI {
   onChange?: (e: React.ChangeEvent<HTMLSelectElement>) => void;
@@ -88,6 +90,7 @@ export const HeaderLanguagePicker = ({
   const { data } = useCompanyControllerGetCompany();
   const isHydrated = useHasHydrated();
   const { emitSendLangCode, socketConnected } = useSocketContext();
+  const setReceivedLangCode = useMessageStore((s) => s.setReceivedLangCode);
 
   // Get language shortcuts to check if selected language exists
   const { languageShortcuts, addLanguageShortcut } = useShortcuts();
@@ -100,26 +103,44 @@ export const HeaderLanguagePicker = ({
   // Automatically sync language code to the client on mount or socket reconnection
   useEffect(() => {
     if (isHydrated && socketConnected && headerLangaugePickerDefault) {
-      const stationNo = Number(params.get("station") ?? 1);
+      const stationNo = resolveActiveStation({ searchParams: params });
       const emitKey = `${headerLangaugePickerDefault}-${stationNo}`;
       if (lastEmittedRef.current === emitKey) return;
       lastEmittedRef.current = emitKey;
+
+      setReceivedLangCode(headerLangaugePickerDefault, stationNo);
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.setItem(`lang-code-station-${stationNo}`, headerLangaugePickerDefault);
+          localStorage.setItem("lang-code", headerLangaugePickerDefault);
+        } catch {}
+      }
 
       emitSendLangCode({
         langCode: headerLangaugePickerDefault,
         station: stationNo,
       });
     }
-  }, [isHydrated, socketConnected, headerLangaugePickerDefault, params, emitSendLangCode]);
+  }, [isHydrated, socketConnected, headerLangaugePickerDefault, params, emitSendLangCode, setReceivedLangCode]);
 
   const handleLanguageChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newLang = e.currentTarget.value;
+    const stationNo = resolveActiveStation({ searchParams: params });
+
+    // Immediately sync store & localStorage so Blue and Red microphones use the new language right away
+    setReceivedLangCode(newLang, stationNo);
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem(`lang-code-station-${stationNo}`, newLang);
+        localStorage.setItem("lang-code", newLang);
+      } catch {}
+    }
 
     // Update URL and emit socket event
     router.push("lang", newLang);
     emitSendLangCode({
       langCode: newLang,
-      station: Number(params.get("station") ?? 1),
+      station: stationNo,
     });
 
     // Check if the selected language exists in shortcuts

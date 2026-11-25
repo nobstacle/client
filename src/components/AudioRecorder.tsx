@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import {
   useCompanyControllerGetCompany,
   useUploadControllerUploadSpeechToTextFile,
@@ -8,6 +8,8 @@ import { useSearchParams } from "next/navigation";
 import { MicIcon } from "./icons/MicIcon";
 import { Button } from "./Button";
 import { message as antMessage } from "antd";
+import { useMessageStore } from "../lib/zustand/store/messageStore";
+import { resolveActiveStation } from "../utils/station";
 
 type AudioRecorderProps = {
   mode?: "client" | "header";
@@ -113,7 +115,9 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
 
   const monitorAudioLevel = (stream: MediaStream) => {
     try {
-      const audioContext = new AudioContext();
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioCtx) return;
+      const audioContext = new AudioCtx();
       audioContextRef.current = audioContext;
       
       const analyser = audioContext.createAnalyser();
@@ -148,6 +152,34 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
     }
   };
 
+  const getTargetStation = useCallback((): number => {
+    if (station !== undefined && station !== null) {
+      const parsed = Number(station);
+      if (Number.isFinite(parsed) && parsed >= 1) return Math.floor(parsed);
+    }
+    return resolveActiveStation({ searchParams: params });
+  }, [station, params]);
+
+  const getActiveLangCode = useCallback((): string => {
+    const store = useMessageStore.getState();
+    const targetStation = getTargetStation();
+    const stationLang =
+      store.receivedLangCodeByStation[targetStation] || store.receivedLangCode;
+    const fromParams = params?.get("lang");
+    const fromLocal =
+      typeof window !== "undefined"
+        ? localStorage.getItem(`lang-code-station-${targetStation}`) ||
+          localStorage.getItem("lang-code")
+        : null;
+
+    if (mode === "header") {
+      return activeLangCode || fromParams || stationLang || fromLocal || companyData?.defaultLangCode || "en";
+    }
+    return activeLangCode || stationLang || fromParams || fromLocal || companyData?.defaultLangCode || "en";
+  }, [activeLangCode, mode, getTargetStation, params, companyData?.defaultLangCode]);
+
+  const sendAudioToBackendRef = useRef<(audioBlob: Blob) => Promise<void>>(async () => {});
+
   const startRecording = async () => {
     try {
       if (!isInitialized) {
@@ -164,13 +196,18 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
       audioChunks.current = [];
       console.log("[Mic] Requesting microphone access...");
 
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-        },
-      });
+      let stream: MediaStream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+          },
+        });
+      } catch {
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      }
 
       streamRef.current = stream;
       
@@ -209,7 +246,8 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
           }
 
           console.log("[Mic] Audio recorded, size:", audioBlob.size, "MIME:", actualMimeType);
-          await sendAudioToBackend(audioBlob);
+          // Always invoke via ref so mid-chat language changes are reflected immediately
+          await sendAudioToBackendRef.current(audioBlob);
         } catch (error) {
           console.error("[Mic] Error in onstop:", error);
           cleanupStream();
@@ -273,15 +311,20 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
   };
 
   const sendAudioToBackend = async (audioBlob: Blob) => {
-    const langCode = getActiveLangCode();
+    const clientLangCode = getActiveLangCode();
+    const adminLangCode = companyData?.defaultLangCode || "en";
+    // In header mode (Admin speaking), give STT the admin's spoken language hint while sending clientLangCode as the translation target
+    const sttHintLangCode = mode === "header" ? adminLangCode : clientLangCode;
 
     console.log(
       "[Mic] Sending audio to backend. Size:",
       audioBlob.size,
       "Type:",
       audioBlob.type,
-      "Lang:",
-      langCode
+      "STT Hint:",
+      sttHintLangCode,
+      "Client Lang:",
+      clientLangCode
     );
 
     if (audioBlob.size === 0) {
@@ -292,7 +335,7 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
 
     try {
       speechToTextFileMutation.mutate(
-        { data: { file: audioBlob, langCode } },
+        { data: { file: audioBlob, langCode: sttHintLangCode } },
         {
           onSuccess: (res) => {
             console.log("[Mic] Transcription received:", res.transcription);
@@ -300,7 +343,9 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
               if (onTranscription) {
                 onTranscription(res.transcription);
               }
-              sendMessage(res.transcription, langCode);
+              // Re-read latest client language right before emitting so mid-request language switches apply too
+              const latestClientLang = getActiveLangCode();
+              sendMessage(res.transcription, latestClientLang, adminLangCode);
             } else {
               antMessage.warning("No speech detected. Please try again.");
             }
@@ -331,22 +376,13 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
     }
   };
 
-  const getActiveLangCode = () => {
-    if (activeLangCode) {
-      return activeLangCode;
-    }
-    const fromParams = params?.get("lang");
-    if (fromParams) {
-      return fromParams;
-    }
-    if (mode === "client") {
-      const fromLocal = typeof window !== "undefined" ? localStorage.getItem("lang-code") : null;
-      if (fromLocal) return fromLocal;
-    }
-    return companyData?.defaultLangCode || "en";
-  };
+  sendAudioToBackendRef.current = sendAudioToBackend;
 
-  const sendMessage = (message: string, langCode = getActiveLangCode()) => {
+  const sendMessage = (
+    message: string,
+    langCode = getActiveLangCode(),
+    adminLangCode = companyData?.defaultLangCode || "en",
+  ) => {
     if (!message.trim()) {
       // Empty transcript after trim — STT returned whitespace-only string
       antMessage.warning("No speech detected. Please speak clearly and try again.");
@@ -360,13 +396,15 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
 
     console.log("[Mic] Sending message via socket:", message);
 
-    const targetStation = station !== undefined ? station : Number(params.get("station") ?? 1);
+    const targetStation = getTargetStation();
 
     emitSendMessage({
       message: message,
       station: targetStation,
       refType: "ChatMessage",
       langCode,
+      adminLangCode,
+      senderMode: mode,
     });
   };
 

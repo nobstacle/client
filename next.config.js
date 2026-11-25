@@ -96,7 +96,7 @@ const nextConfig = {
           },
           {
             key: "Permissions-Policy",
-            value: "camera=(self), microphone=(self), geolocation=(self)",
+            value: "camera=(self), microphone=*, geolocation=(self)",
           },
           {
             key: "Content-Security-Policy-Report-Only",
@@ -106,8 +106,8 @@ const nextConfig = {
         ],
       },
       {
-        // Prevent clickjacking on main app routes (excludes /header-only which is embedded by the Chrome extension)
-        source: "/((?!header-only).*)",
+        // Prevent clickjacking on admin routes while allowing /header-only (Chrome extension) and /client (Neorcha desk embedding)
+        source: "/((?!header-only|client).*)",
         headers: [
           {
             key: "X-Frame-Options",

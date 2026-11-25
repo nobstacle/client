@@ -52,19 +52,34 @@ export const ChatBot: React.FC<ChatBotProps> = ({ cb, checkTooltip = true, isMob
 
   const userRole = session?.user?.Roles?.[0];
   const currentUserDefaultLang = companyData?.defaultLangCode || 'en';
-  const selectedLang = params.get("lang") || currentUserDefaultLang;
+  const urlLang = params.get("lang");
   const [currentStation, setCurrentStation] = useState<number>(1);
+  const setReceivedLangCode = useMessageStore((s) => s.setReceivedLangCode);
 
-  // For live translation, Admin speaks in user language and translates to the Client's active station language
+  // Keep store synchronized immediately whenever header URL lang param changes
+  useEffect(() => {
+    if (urlLang) {
+      setReceivedLangCode(urlLang, currentStation);
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.setItem(`lang-code-station-${currentStation}`, urlLang);
+          localStorage.setItem("lang-code", urlLang);
+        } catch {}
+      }
+    }
+  }, [urlLang, currentStation, setReceivedLangCode]);
+
+  // Single authoritative active language for BOTH Blue and Red microphones on this station
   const stationClientLang =
+    urlLang ||
     receivedLangCodeByStation[currentStation] ||
-    params.get("lang") ||
     receivedLangCode ||
     (typeof window !== "undefined"
       ? localStorage.getItem(`lang-code-station-${currentStation}`) ||
         localStorage.getItem("lang-code")
       : null) ||
     currentUserDefaultLang;
+  const selectedLang = stationClientLang;
 
   // Sync station from URL or localStorage initially and when search params change
   useEffect(() => {
